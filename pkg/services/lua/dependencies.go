@@ -1,8 +1,8 @@
 package lua
 
 import (
+	"github.com/gravestench/runtime"
 	"github.com/gravestench/runtime/examples/services/config_file"
-	"github.com/gravestench/runtime/pkg"
 )
 
 func (s *Service) DependenciesResolved() bool {
@@ -17,7 +17,7 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(rt pkg.IsRuntime) {
+func (s *Service) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
 		if candidate, ok := service.(config_file.Manager); ok {
 			s.cfg = candidate

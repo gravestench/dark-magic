@@ -1,7 +1,7 @@
 package map_generator
 
 import (
-	"github.com/gravestench/runtime/pkg"
+	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
@@ -23,7 +23,7 @@ func (s *Service) Logger() *zerolog.Logger {
 	return s.logger
 }
 
-func (s *Service) Init(rt pkg.IsRuntime) {
+func (s *Service) Init(rt runtime.R) {
 
 }
 
@@ -39,8 +39,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(runtime pkg.IsRuntime) {
-	for _, service := range runtime.Services() {
+func (s *Service) ResolveDependencies(rt runtime.R) {
+	for _, service := range rt.Services() {
 		if candidate, ok := service.(d2_asset_loader.Dependency); ok {
 			s.assets = candidate
 		}
