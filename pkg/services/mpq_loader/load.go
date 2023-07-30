@@ -2,6 +2,7 @@ package mpq_loader
 
 import (
 	"path/filepath"
+	"time"
 )
 
 func (s *Service) loadArchivesFromFiles() {
@@ -21,9 +22,16 @@ func (s *Service) loadArchivesFromFiles() {
 		absPath := filepath.Join(rootDir, fileName)
 
 		if err = s.AddArchive(absPath); err != nil {
-			s.logger.Fatal().Msgf("adding MPQ: %v", err)
+			s.logger.Warn().Msgf("adding MPQ: %v", err)
+			continue
 		}
 
 		s.logger.Info().Msgf("loaded MPQ: %v", absPath)
+	}
+
+	if len(s.archives) == 0 {
+		time.Sleep(time.Second * 3)
+		s.logger.Error().Msg("no MPQ files found")
+		s.logger.Fatal().Msgf("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFilePath()))
 	}
 }
