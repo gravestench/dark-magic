@@ -4,7 +4,6 @@ import (
 	"github.com/gravestench/runtime"
 	"github.com/gravestench/runtime/examples/services/config_file"
 	"github.com/gravestench/runtime/examples/services/web_router"
-	"github.com/gravestench/runtime/examples/services/web_server"
 
 	"github.com/gravestench/dark-magic/pkg/services/d2_asset_loader"
 	"github.com/gravestench/dark-magic/pkg/services/dc6_loader"
@@ -20,6 +19,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/tbl_loader"
 	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
 	"github.com/gravestench/dark-magic/pkg/services/wav_loader"
+	"github.com/gravestench/dark-magic/pkg/services/web_server"
 )
 
 const (
