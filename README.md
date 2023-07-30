@@ -1,6 +1,8 @@
 <h1 align="center">Dark Magic</h1>
 <h3 align="center">An Open-Source Diablo 2 Engine Rewrite</h3>
-<p align=""center"><img src="https://github.com.com/dark-magic/pkg/dark-magic-logo.png" alt="logo"></p>
+<div style="text-align: center;">
+  <img src="pkg/dark-magic-logo.png" alt="Dark Magic Logo">
+</div>
 
 # THIS IS BASICALLY LOREM IPSUM RIGHT NOW
 
