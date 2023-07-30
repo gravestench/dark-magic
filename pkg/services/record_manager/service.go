@@ -1,6 +1,7 @@
 package record_manager
 
 import (
+	"github.com/gravestench/runtime"
 	"github.com/gravestench/runtime/examples/services/config_file"
 	"github.com/rs/zerolog"
 
@@ -198,14 +199,14 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if !s.assets.(pkg.HasDependencies).DependenciesResolved() {
+	if !s.assets.(runtime.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
 	return true
 }
 
-func (s *Service) ResolveDependencies(runtime pkg.IsRuntime) {
+func (s *Service) ResolveDependencies(runtime runtime.R) {
 	for _, service := range runtime.Services() {
 		switch candidate := service.(type) {
 		case config_file.Dependency:
