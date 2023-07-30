@@ -6,7 +6,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/pkg"
 
 	"github.com/gravestench/dark-magic/pkg/services/mpq_loader"
 )
@@ -38,7 +37,7 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 	}
 }
 
-func (s *Service) Init(rt pkg.IsRuntime) {
+func (s *Service) Init(rt runtime.R) {
 
 }
 
