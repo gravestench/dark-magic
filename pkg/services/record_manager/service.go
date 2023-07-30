@@ -2,7 +2,6 @@ package record_manager
 
 import (
 	"github.com/gravestench/runtime/examples/services/config_file"
-	"github.com/gravestench/runtime/pkg"
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
@@ -217,7 +216,7 @@ func (s *Service) ResolveDependencies(runtime pkg.IsRuntime) {
 	}
 }
 
-func (s *Service) Init(rt pkg.IsRuntime) {
+func (s *Service) Init(rt runtime.R) {
 	s.LoadRecords()
 }
 
