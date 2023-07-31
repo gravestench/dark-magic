@@ -3,7 +3,12 @@ module github.com/gravestench/dark-magic
 go 1.19
 
 require (
+	github.com/faiface/beep v1.1.0
+	github.com/foomo/simplecert v1.8.7
+	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-audio/audio v1.0.0
+	github.com/go-audio/wav v1.0.0
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
@@ -53,16 +58,15 @@ require (
 	github.com/dnsimple/dnsimple-go v0.63.0 // indirect
 	github.com/exoscale/egoscale v0.46.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/foomo/simplecert v1.8.7 // indirect
-	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/gzip v0.0.6 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-acme/lego/v4 v4.3.1 // indirect
+	github.com/go-audio/riff v1.0.0 // indirect
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.14.0 // indirect
+	github.com/go-playground/validator/v10 v10.14.1 // indirect
 	github.com/go-resty/resty/v2 v2.4.0 // indirect
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
@@ -78,6 +82,7 @@ require (
 	github.com/gophercloud/utils v0.0.0-20210216074907-f6de111f2eae // indirect
 	github.com/gravestench/bitstream v0.0.0-20230725041847-d02b4f2bac63 // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e // indirect
+	github.com/hajimehoshi/oto v0.7.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/iij/doapi v0.0.0-20190504054126-0bbf12d6d7df // indirect
@@ -111,7 +116,7 @@ require (
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/ovh/go-ovh v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/otp v1.3.0 // indirect
@@ -127,11 +132,14 @@ require (
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/ratelimit v0.1.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/exp v0.0.0-20201008143054-e3b2a7f2fdc7 // indirect
+	golang.org/x/image v0.0.0-20220302094943-723b81ca9867 // indirect
+	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
+	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
 	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
