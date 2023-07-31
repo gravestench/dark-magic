@@ -25,13 +25,15 @@ func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 
 	stream, err := s.Load(path)
 	if err != nil {
-		c.Abort()
+		s.logger.Error().Msgf("loading file: %v", err)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		c.Abort()
+		s.logger.Error().Msgf("loading file: %v", err)
+		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 

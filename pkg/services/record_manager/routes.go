@@ -19,10 +19,6 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", guide)
 	})
 
-	group.GET("ActInfo", func(c *gin.Context) {
-		serveJSONData(c, s.ActInfo)
-	})
-
 	group.GET("Inventory", func(c *gin.Context) {
 		serveJSONData(c, s.Inventory)
 	})
