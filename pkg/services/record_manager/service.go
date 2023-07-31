@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/d2_asset_loader"
+	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
 )
 
 const (
@@ -102,9 +102,8 @@ const (
 type Service struct {
 	logger *zerolog.Logger
 	cfg    config_file.Dependency
-	assets d2_asset_loader.Dependency
+	tsv    tsv_loader.Dependency
 
-	ActInfo                []models.ActInfoData
 	Belts                  []models.BeltData
 	CharStartingAttributes []models.CharStats
 	Inventory              []models.InventoryData
@@ -195,11 +194,11 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if s.assets == nil {
+	if s.tsv == nil {
 		return false
 	}
 
-	if !s.assets.(runtime.HasDependencies).DependenciesResolved() {
+	if !s.tsv.(runtime.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
@@ -211,8 +210,8 @@ func (s *Service) ResolveDependencies(runtime runtime.R) {
 		switch candidate := service.(type) {
 		case config_file.Dependency:
 			s.cfg = candidate
-		case d2_asset_loader.Dependency:
-			s.assets = candidate
+		case tsv_loader.Dependency:
+			s.tsv = candidate
 		}
 	}
 }
@@ -306,7 +305,7 @@ func (s *Service) LoadRecords() error {
 			continue
 		}
 
-		if err := s.assets.LoadTsv(path, destination); err != nil {
+		if err := s.tsv.Load(path, destination); err != nil {
 			s.logger.Error().Msgf("parsing records for '%s': %v", path, err)
 		}
 	}
