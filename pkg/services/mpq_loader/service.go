@@ -1,6 +1,7 @@
 package mpq_loader
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	mpq "github.com/gravestench/mpq/pkg"
+	"github.com/gravestench/mpq"
 	"github.com/rs/zerolog"
 	"k8s.io/utils/strings/slices"
 
@@ -145,7 +146,8 @@ func (s *Service) Load(filepath string) (io.Reader, error) {
 		archive := s.archives[key]
 
 		if stream, err := archive.ReadFileStream(filepath); err == nil {
-			return stream, nil
+			data, _ := io.ReadAll(stream)
+			return bytes.NewReader(data), nil
 		}
 
 		allErrors = append(allErrors, fmt.Errorf("not found in %v", key))
@@ -162,11 +164,11 @@ func (s *Service) Load(filepath string) (io.Reader, error) {
 		}
 
 		if errMsg == "" {
-			errMsg = err.Error()
+			errMsg = fmt.Sprintf("not found in: %v", err)
 			continue
 		}
 
-		errMsg = fmt.Sprintf("%s\n%s", errMsg, err.Error())
+		errMsg = fmt.Sprintf("%s, %s", errMsg, err.Error())
 	}
 
 	return nil, errors.New(errMsg)
