@@ -3,8 +3,7 @@ package mpq_loader
 import (
 	"io"
 
-	mpq "github.com/gravestench/mpq/pkg"
-
+	"github.com/gravestench/mpq"
 	"github.com/gravestench/runtime"
 	"github.com/gravestench/runtime/examples/services/config_file"
 )
