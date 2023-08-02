@@ -12,10 +12,9 @@ import (
 	gpl "github.com/gravestench/gpl/pkg"
 	"github.com/gravestench/mpq"
 	"github.com/gravestench/pl2"
+	"github.com/gravestench/runtime"
 	tbl "github.com/gravestench/tbl_text"
 	"github.com/rs/zerolog"
-
-	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/dc6_loader"
 	"github.com/gravestench/dark-magic/pkg/services/dcc_loader"
