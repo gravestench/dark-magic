@@ -89,6 +89,8 @@ func (s *audioFileTestService) Init(rt runtime.R) {
 		s.logger.Fatal().Msgf("loading sound records: %v", err)
 	}
 
+	s.logger.Info().Msgf("%d sound records loaded", len(s.Sounds))
+
 	//target := "button.wav"
 	//for _, record := range s.Sounds {
 	//	if strings.Contains(record.FileName, target) {

@@ -18,6 +18,7 @@ func main() {
 	rt := runtime.New(projectName)
 
 	rt.Add(&config_file.Service{RootDirectory: projectConfigDir})
+
 	rt.Add(&tsv_loader.Service{})
 	rt.Add(&wav_loader.Service{})
 	rt.Add(&mpq_loader.Service{})
