@@ -16,6 +16,7 @@ const (
 	PathLevelWarp             = "/data/global/excel/LvlWarp.txt"
 	PathLevelDetails          = "/data/global/excel/Levels.txt"
 	PathLevelMaze             = "/data/global/excel/LvlMaze.txt"
+	PathLevelGroups           = "/data/global/excel/LevelGroups.txt"
 	PathLevelSubstitutions    = "/data/global/excel/LvlSub.txt"
 	PathObjectDetails         = "/data/global/excel/Objects.txt"
 	PathObjectMode            = "/data/global/excel/ObjMode.txt"
@@ -167,7 +168,7 @@ type Service struct {
 	LevelDetails       []models.LevelData
 	LevelMaze          []models.LevelMazeData
 	LevelSubstitutions []models.LevelSubstitutionData
-	LevelGroups        []models.LevelGroup
+	//LevelGroups        []models.LevelGroup // d2r ?
 
 	MonsterUniqueModifiers []models.MonsterUniqueModifier
 	MonsterEquipment       []models.MonsterEquipment
@@ -179,6 +180,8 @@ type Service struct {
 	MonsterStats2          []models.MonsterStats2
 	MonsterSounds          []models.MonsterSounds
 	MonsterUniqueNames     []models.MonsterUniqueName
+
+	loaded bool
 }
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {
@@ -224,6 +227,10 @@ func (s *Service) Name() string {
 	return "Diablo II Record Manager"
 }
 
+func (s *Service) IsLoaded() bool {
+	return len(s.Sounds) > 0
+}
+
 func (s *Service) LoadRecords() error {
 	for path, destination := range map[string]any{
 		PathLevelPreset:        &s.LevelPresets,
@@ -232,6 +239,7 @@ func (s *Service) LoadRecords() error {
 		PathLevelDetails:       &s.LevelDetails,
 		PathLevelMaze:          &s.LevelMaze,
 		PathLevelSubstitutions: &s.LevelSubstitutions,
+		//PathLevelGroups:        &s.LevelGroups, // d2r ?
 
 		PathObjectDetails: &s.Objects,
 		PathObjectType:    &s.ObjectTypes,
@@ -310,6 +318,7 @@ func (s *Service) LoadRecords() error {
 		}
 	}
 
+	s.loaded = true
 	s.logger.Info().Msg("done")
 
 	return nil
