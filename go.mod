@@ -3,12 +3,9 @@ module github.com/gravestench/dark-magic
 go 1.19
 
 require (
-	github.com/faiface/beep v1.1.0
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-audio/audio v1.0.0
-	github.com/go-audio/wav v1.0.0
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
@@ -16,12 +13,13 @@ require (
 	github.com/gravestench/eventemitter v0.0.0-20210902014026-73feeec3a47f
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/gpl v0.0.0-20230725161559-fe12f2cbd18e
-	github.com/gravestench/mpq v0.0.0-20230725090929-5da754dd3b7b
+	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
 	github.com/gravestench/runtime v0.0.0-20230729213029-48aac0fbfc9d
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
-	github.com/gravestench/wav v0.0.0-20230725090738-df23070f0194
+	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
+	github.com/hajimehoshi/oto v0.7.1
 	github.com/rs/zerolog v1.29.1
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
@@ -42,7 +40,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
 	github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87 // indirect
-	github.com/OpenDiablo2/OpenDiablo2 v0.0.0-20211021131836-7f92c571bf04 // indirect
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.1.0 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.976 // indirect
 	github.com/aws/aws-sdk-go v1.37.27 // indirect
@@ -62,7 +59,6 @@ require (
 	github.com/gin-contrib/gzip v0.0.6 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-acme/lego/v4 v4.3.1 // indirect
-	github.com/go-audio/riff v1.0.0 // indirect
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -80,9 +76,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gophercloud/gophercloud v0.16.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20210216074907-f6de111f2eae // indirect
-	github.com/gravestench/bitstream v0.0.0-20230725041847-d02b4f2bac63 // indirect
+	github.com/gravestench/bitstream v0.0.0-20230728184458-917abdef8ae3 // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e // indirect
-	github.com/hajimehoshi/oto v0.7.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/iij/doapi v0.0.0-20190504054126-0bbf12d6d7df // indirect
