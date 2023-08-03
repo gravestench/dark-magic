@@ -3,6 +3,8 @@ module github.com/gravestench/dark-magic
 go 1.19
 
 require (
+	github.com/foomo/simplecert v1.8.7
+	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
@@ -11,12 +13,13 @@ require (
 	github.com/gravestench/eventemitter v0.0.0-20210902014026-73feeec3a47f
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/gpl v0.0.0-20230725161559-fe12f2cbd18e
-	github.com/gravestench/mpq v0.0.0-20230725090929-5da754dd3b7b
+	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
 	github.com/gravestench/runtime v0.0.0-20230729213029-48aac0fbfc9d
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
-	github.com/gravestench/wav v0.0.0-20230725090738-df23070f0194
+	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
+	github.com/hajimehoshi/oto v0.7.1
 	github.com/rs/zerolog v1.29.1
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
@@ -37,7 +40,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
 	github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87 // indirect
-	github.com/OpenDiablo2/OpenDiablo2 v0.0.0-20211021131836-7f92c571bf04 // indirect
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.1.0 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.976 // indirect
 	github.com/aws/aws-sdk-go v1.37.27 // indirect
@@ -53,8 +55,6 @@ require (
 	github.com/dnsimple/dnsimple-go v0.63.0 // indirect
 	github.com/exoscale/egoscale v0.46.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/foomo/simplecert v1.8.7 // indirect
-	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/gzip v0.0.6 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.14.0 // indirect
+	github.com/go-playground/validator/v10 v10.14.1 // indirect
 	github.com/go-resty/resty/v2 v2.4.0 // indirect
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gophercloud/gophercloud v0.16.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20210216074907-f6de111f2eae // indirect
-	github.com/gravestench/bitstream v0.0.0-20230725041847-d02b4f2bac63 // indirect
+	github.com/gravestench/bitstream v0.0.0-20230728184458-917abdef8ae3 // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
@@ -111,7 +111,7 @@ require (
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/ovh/go-ovh v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/otp v1.3.0 // indirect
@@ -127,11 +127,14 @@ require (
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/ratelimit v0.1.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/exp v0.0.0-20201008143054-e3b2a7f2fdc7 // indirect
+	golang.org/x/image v0.0.0-20220302094943-723b81ca9867 // indirect
+	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
+	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
 	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -143,4 +146,5 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	layeh.com/gopher-luar v1.0.11 // indirect
 )
