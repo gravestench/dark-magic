@@ -8,7 +8,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ExportToLua exports the foo object to a Lua table.
 func (s *Service) ExportToLua(state *lua.LState) {
 	for !s.IsLoaded() {
 		time.Sleep(time.Second)
@@ -16,7 +15,8 @@ func (s *Service) ExportToLua(state *lua.LState) {
 
 	table := state.NewTable()
 
-	// Set the "Sounds" field to the Lua table containing the SoundEntry objects.
+	// for each set of records, create an array. Each element is
+	// a lua table for the record, with all fields exported and available.
 	for key, records := range map[string]any{
 		"Belts":                  s.Belts,
 		"CharStartingAttributes": s.CharStartingAttributes,
@@ -53,7 +53,7 @@ func (s *Service) ExportToLua(state *lua.LState) {
 		"Skills":                 s.Skills,
 		"SkillDesc":              s.SkillDesc,
 		"Treasures":              s.Treasures,
-		"TreasuresExpansion":     s.TreasuresExpansion,
+		"TreasuresEx":            s.TreasuresExpansion,
 		"MagicPrefixes":          s.MagicPrefixes,
 		"MagicSuffixes":          s.MagicSuffixes,
 		"RarePrefixes":           s.RarePrefixes,
@@ -156,8 +156,6 @@ func toLuaValue(value interface{}, state *lua.LState) lua.LValue {
 			luaTable.RawSetInt(i+1, lua.LString(str))
 		}
 		return luaTable
-	case []any:
-		return toLuaValue(v, state)
 	default:
 		return lua.LString(fmt.Sprintf("%+v", v))
 	}
