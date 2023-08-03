@@ -28,16 +28,29 @@ func (s *Service) Init(rt runtime.R) {
 		}
 	}
 
+	// wait for all siblings to be ready before we launch scripts
+	for _, service := range rt.Services() {
+		if candidate, ok := service.(runtime.HasDependencies); ok {
+			if !candidate.DependenciesResolved() {
+				continue
+			}
+		}
+
+		break // all deps resolved for all siblings
+	}
+
 	cfg, err := s.Config()
 	if err != nil {
 		s.logger.Fatal().Msgf("getting config: %v", err)
 	}
 
-	initScript := cfg.Group(s.Name()).GetString("init script")
+	initScriptPath := cfg.Group(s.Name()).GetString("init script")
 
-	if err = s.state.DoFile(initScript); err != nil {
-		s.logger.Warn().Msgf("executing init script '%s': %v", initScript, err)
-	}
+	s.runScript(initScriptPath)
+
+	go s.watchFileAndCallOnChange(initScriptPath, func() {
+		s.runScript(initScriptPath)
+	})
 }
 
 func (s *Service) Name() string {
