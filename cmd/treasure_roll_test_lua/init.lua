@@ -1,3 +1,23 @@
+function sprintf(format, ...)
+    local args = {...}
+    local numArgs = select("#", ...)
+    local index = 1
+    local result = format:gsub("%%.", function(subst)
+        local specifier = subst:sub(-1)
+        if specifier == "s" then
+            local arg = args[index]
+            index = index + 1
+            return tostring(arg)
+        elseif specifier == "d" or specifier == "i" or specifier == "f" then
+            local arg = args[index]
+            index = index + 1
+            return string.format("%" .. subst, arg)
+        end
+        return subst
+    end)
+    return result
+end
+
 function randomIntn(n)
     -- Generate a random number between 0 and (n-1)
     local randomNumber = math.random(n)
@@ -141,6 +161,7 @@ function randomLoot(monsterID, lvlMon, lvlChar, lvlArea)
     return picks
 end
 
-randomMonsterRecord = records.MonsterStats[randomIntn(#records.MonsterStats)]
-
-randomLoot(randomMonsterRecord.BaseId, 50, 50, 50)
+for _ = 1, 100 do
+    randomMonsterRecord = records.MonsterStats[randomIntn(#records.MonsterStats)]
+    randomLoot(randomMonsterRecord.BaseId, 50, 50, 50)
+end
