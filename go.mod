@@ -15,12 +15,12 @@ require (
 	github.com/gravestench/gpl v0.0.0-20230725161559-fe12f2cbd18e
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/runtime v0.0.0-20230729213029-48aac0fbfc9d
+	github.com/gravestench/runtime v0.0.0-20230805184607-5723c7454943
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
 	github.com/hajimehoshi/oto v0.7.1
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
 )
@@ -133,7 +133,7 @@ require (
 	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.36.0 // indirect
