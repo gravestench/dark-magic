@@ -10,6 +10,9 @@ func (s *Service) BindsEvents(emitter *ee.EventEmitter) {
 }
 
 func (s *Service) tryToExportToLuaEnvironment(args ...any) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	if len(args) < 1 {
 		return
 	}
