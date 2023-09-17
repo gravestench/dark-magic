@@ -5,7 +5,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 )
 
 type Service struct {

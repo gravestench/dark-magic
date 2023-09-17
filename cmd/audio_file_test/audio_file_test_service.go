@@ -16,10 +16,10 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/wavLoader"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/record_manager"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
 
 type audioFileTestService struct {

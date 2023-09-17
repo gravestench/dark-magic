@@ -16,17 +16,17 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 	"github.com/rs/zerolog"
 
-	"github.com/gravestench/dark-magic/pkg/services/loaders/dc6Loader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/dccLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/ds1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/dt1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/fontTableLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/gplLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/pl2Loader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/wavLoader"
+	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
+	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
+	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
 
 type Service struct {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/config_file"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 type Service struct {
