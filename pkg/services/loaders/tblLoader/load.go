@@ -6,7 +6,7 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 )
 
-func (s *Service) Load(filepath string) (*tbl.TextTable, error) {
+func (s *Service) Load(filepath string) (tbl.TextTable, error) {
 	s.logger.Info().Msgf("loading %v", filepath)
 
 	stream, err := s.mpq.Load(filepath)
@@ -24,5 +24,5 @@ func (s *Service) Load(filepath string) (*tbl.TextTable, error) {
 		s.logger.Fatal().Msgf("parsing dt1: %v", err)
 	}
 
-	return &table, nil
+	return table, nil
 }

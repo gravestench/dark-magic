@@ -16,5 +16,5 @@ var (
 type Dependency = LoadsTblFiles
 
 type LoadsTblFiles = interface {
-	Load(filepath string) (*tbl.TextTable, error)
+	Load(filepath string) (tbl.TextTable, error)
 }
