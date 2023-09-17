@@ -20,35 +20,35 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 	})
 
 	group.GET("Inventory", func(c *gin.Context) {
-		serveJSONData(c, s.Inventory)
+		serveJSONData(c, s.inventory)
 	})
 
 	group.GET("ItemArmor", func(c *gin.Context) {
-		serveJSONData(c, s.ItemArmor)
+		serveJSONData(c, s.itemArmor)
 	})
 
 	group.GET("ObjectTypes", func(c *gin.Context) {
-		serveJSONData(c, s.ObjectTypes)
+		serveJSONData(c, s.objectTypes)
 	})
 
 	group.GET("LevelPresets", func(c *gin.Context) {
-		serveJSONData(c, s.LevelPresets)
+		serveJSONData(c, s.levelPresets)
 	})
 
 	group.GET("LevelType", func(c *gin.Context) {
-		serveJSONData(c, s.LevelType)
+		serveJSONData(c, s.levelType)
 	})
 
 	group.GET("LevelWarp", func(c *gin.Context) {
-		serveJSONData(c, s.LevelWarp)
+		serveJSONData(c, s.levelWarp)
 	})
 
 	group.GET("LevelDetails", func(c *gin.Context) {
-		serveJSONData(c, s.LevelDetails)
+		serveJSONData(c, s.levelDetails)
 	})
 
 	group.GET("LevelMaze", func(c *gin.Context) {
-		serveJSONData(c, s.LevelMaze)
+		serveJSONData(c, s.levelMaze)
 	})
 }
 
