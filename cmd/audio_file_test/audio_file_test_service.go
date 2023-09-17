@@ -16,18 +16,18 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/mpq_loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/wavLoader"
 	"github.com/gravestench/dark-magic/pkg/services/record_manager"
-	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
-	"github.com/gravestench/dark-magic/pkg/services/wav_loader"
 )
 
 type audioFileTestService struct {
 	logger *zerolog.Logger
 
-	mpq mpq_loader.Dependency
-	tsv tsv_loader.Dependency
-	wav wav_loader.Dependency
+	mpq mpqLoader.Dependency
+	tsv tsvLoader.Dependency
+	wav wavLoader.Dependency
 
 	ctx *oto.Context
 
@@ -69,11 +69,11 @@ func (s *audioFileTestService) DependenciesResolved() bool {
 func (s *audioFileTestService) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
 		switch candidate := service.(type) {
-		case tsv_loader.Dependency:
+		case tsvLoader.Dependency:
 			s.tsv = candidate
-		case wav_loader.Dependency:
+		case wavLoader.Dependency:
 			s.wav = candidate
-		case mpq_loader.Dependency:
+		case mpqLoader.Dependency:
 			s.mpq = candidate
 		}
 	}

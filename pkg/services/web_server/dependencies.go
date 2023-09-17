@@ -1,9 +1,10 @@
 package web_server
 
 import (
-	"github.com/gravestench/runtime/examples/services/config_file"
-	"github.com/gravestench/runtime/examples/services/web_router"
 	"github.com/gravestench/runtime/pkg"
+
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/web_router"
 )
 
 func (s *Service) DependenciesResolved() bool {
@@ -20,7 +21,7 @@ func (s *Service) DependenciesResolved() bool {
 
 func (s *Service) ResolveDependencies(runtime pkg.IsRuntime) {
 	for _, other := range runtime.Services() {
-		if router, ok := other.(web_router.IsWebRouter); ok {
+		if router, ok := other.(web_router.Dependency); ok {
 			if router.RouteRoot() != nil {
 				s.router = router
 			}

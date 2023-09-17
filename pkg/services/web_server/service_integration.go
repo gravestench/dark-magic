@@ -2,7 +2,8 @@ package web_server
 
 import (
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/examples/services/config_file"
+
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
 )
 
 var (

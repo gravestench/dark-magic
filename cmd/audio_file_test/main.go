@@ -2,11 +2,11 @@ package main
 
 import (
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/examples/services/config_file"
 
-	"github.com/gravestench/dark-magic/pkg/services/mpq_loader"
-	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
-	"github.com/gravestench/dark-magic/pkg/services/wav_loader"
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/wavLoader"
 )
 
 const (
@@ -19,9 +19,9 @@ func main() {
 
 	rt.Add(&config_file.Service{RootDirectory: projectConfigDir})
 
-	rt.Add(&tsv_loader.Service{})
-	rt.Add(&wav_loader.Service{})
-	rt.Add(&mpq_loader.Service{})
+	rt.Add(&tsvLoader.Service{})
+	rt.Add(&wavLoader.Service{})
+	rt.Add(&mpqLoader.Service{})
 
 	rt.Add(&audioFileTestService{})
 

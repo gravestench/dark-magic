@@ -3,10 +3,11 @@ package lua
 import (
 	ee "github.com/gravestench/eventemitter"
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/examples/services/config_file"
 	"github.com/gravestench/runtime/pkg/events"
 	"github.com/rs/zerolog"
 	"github.com/yuin/gopher-lua"
+
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
 )
 
 type Service struct {
@@ -20,7 +21,7 @@ func (s *Service) Init(rt runtime.R) {
 	s.state = lua.NewState()
 	s.bindLoggerToLuaEnvironment()
 
-	s.events.On(events.EventServiceAdded, s.tryToExportToLuaEnvironment)
+	rt.Events().On(events.EventServiceAdded, s.tryToExportToLuaEnvironment)
 
 	for _, service := range rt.Services() {
 		if candidate, ok := service.(UsesLuaEnvironment); ok {
