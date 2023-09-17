@@ -1,6 +1,8 @@
 package lua
 
 import (
+	"sync"
+
 	ee "github.com/gravestench/eventemitter"
 	"github.com/gravestench/runtime"
 	"github.com/gravestench/runtime/pkg/events"
@@ -15,6 +17,7 @@ type Service struct {
 	logger *zerolog.Logger
 	state  *lua.LState
 	events *ee.EventEmitter
+	mux    sync.Mutex
 }
 
 func (s *Service) Init(rt runtime.R) {
