@@ -38,8 +38,8 @@ type ItemStatCost struct {
 	ItemEvent2     string `csv:"itemevent2"`      // Event that will activate the specified function defined by itemeventfunc2.
 	ItemEventFunc1 string `csv:"itemeventfunc1"`  // Function to use after the related item event occurred.
 	ItemEventFunc2 string `csv:"itemeventfunc2"`  // Function to use after the related item event occurred.
-	DescPriority   string `csv:"descpriority"`    // Controls how this stat is sorted in item tooltips.
-	DescFunc       string `csv:"descfunc"`        // Controls how the stat is displayed in tooltips.
+	DescPriority   int    `csv:"descpriority"`    // Controls how this stat is sorted in item tooltips.
+	DescFunc       int    `csv:"descfunc"`        // Controls how the stat is displayed in tooltips.
 	DescVal        string `csv:"descval"`         // Possible parameter value for the DescFunc function. Controls how the value of the stat is displayed.
 	DescStrPos     string `csv:"descstrpos"`      // Possible parameter value for the DescFunc function. Uses a string to display the item stat in a tooltip when its value is positive.
 	DescStrNeg     string `csv:"descstrneg"`      // Possible parameter value for the DescFunc function. Uses a string to display the item stat in a tooltip when its value is negative.
