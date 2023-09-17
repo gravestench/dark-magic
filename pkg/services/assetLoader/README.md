@@ -1,7 +1,6 @@
 # Unified Asset Loader
-
 The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a single dependency
-which can has all file loading methods available for use by other high-level
+which has all file loading methods available for use by other high-level
 D2 runtime services.
 
 ## Dependencies
@@ -20,14 +19,32 @@ This service has dependencies on all other Diablo2 file-loader services:
 
 
 
-## Integrations
-
+## Integration with other services
 This service integrates with the following services:
-* [lua service](../lua) - exports a global `assets` table with loader functions for all of the loaders
-* [web router service](../web_router) - defines web routes for yielding files from the mpqs
+* [lua service](../lua)
+* [web router service](../web_router)
 
-This integration is optional, if neither are added to the runtime then the 
+The integration is optional; if neither are added to the runtime then the 
 integration methods will never be called.
+
+This service exports an integration interface `LoadsDiabloFiles` with an alias 
+`Dependencncy` which are intended to be used by other services for dependency
+resolution (see runtime.HasDependencies), and expose just the methods which 
+other services should use.
+```golang
+type LoadsDiabloFiles interface {
+    Load(filepath string) (io.Reader, error)
+    LoadDc6(filepath string) (*dc6.DC6, error)
+    LoadDcc(filepath string) (*dcc.DCC, error)
+    LoadDs1(filepath string) (*ds1.DS1, error)
+    LoadDt1(filepath string) (*dt1.DT1, error)
+    LoadGpl(filepath string) (*gpl.GPL, error)
+    LoadPl2(filepath string) (*pl2.PL2, error)
+    LoadTbl(filepath string) (tbl.TextTable, error)
+    LoadTsv(filepath string, destination any) error
+    LoadWav(filepath string) ([]byte, error)
+}
+```
 
 ## Lua service integration
 A global `assets` variable is exported to lua. At the time of writing, there is 
@@ -40,7 +57,6 @@ data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
 ```
 
 ## Web router service integration
-
 The route slug for this service is `asset`, so all routes defined will be under 
 that route group.
 
