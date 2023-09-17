@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Service) Slug() string {
-	return "mpq"
+	return "asset"
 }
 
 func (s *Service) InitRoutes(group *gin.RouterGroup) {
