@@ -162,7 +162,7 @@ func (s *Service) LoadTsv(filepath string, destination any) error {
 	return s.tsv.Load(filepath, destination)
 }
 
-func (s *Service) LoadTbl(filepath string) (*tbl.TextTable, error) {
+func (s *Service) LoadTbl(filepath string) (tbl.TextTable, error) {
 	return s.tbl.Load(filepath)
 }
 
