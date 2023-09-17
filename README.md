@@ -16,7 +16,9 @@ authentic and faithful journey into the dark and dangerous world of Sanctuary.
 Together, we can bring back the magic of this iconic game and shape its future.
 
 ## Directory Structure
-* `pkg/models` contains all of the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
+* `cmd` - contains a directory for each binary that can be compiled. come of what is here may be migrated to a `tools` directory in the future. 
+* `pkg/models` - contains all the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
+* `pkg/services` - contains all the high-level application services like file loaders, lua environment, config file manager, etc.
 
 ## Services
 This project uses the [Runtime](https://github.com/gravestench/runtime) framework, 
