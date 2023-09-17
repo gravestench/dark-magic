@@ -7,8 +7,8 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 	"github.com/rs/zerolog"
 
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 	"github.com/gravestench/dark-magic/pkg/services/web_router"
 )
 

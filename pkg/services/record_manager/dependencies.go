@@ -4,7 +4,7 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/config_file"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {

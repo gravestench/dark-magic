@@ -4,27 +4,16 @@
   <img align="center" src="pkg/dark-magic-logo.png" alt="Dark Magic Logo">
 </div>
 
-# THIS IS BASICALLY LOREM IPSUM RIGHT NOW
-
 ### About
 
-Dark Magic is a community-driven open-source project that aims to recreate the legendary Diablo 2 gaming experience from scratch. Our mission is to modernize and enhance the game engine while preserving the classic gameplay mechanics and nostalgia that made Diablo 2 a timeless masterpiece.
+Dark Magic is a community-driven open-source project that aims to recreate the 
+legendary Diablo 2 gaming experience from scratch. Our mission is to modernize 
+and enhance the game engine while preserving the classic gameplay mechanics and 
+nostalgia that made Diablo 2 a timeless masterpiece.
 
-Inspired by the passion of the Diablo community, we strive to deliver an authentic and faithful journey into the dark and dangerous world of Sanctuary. Together, we can bring back the magic of this iconic game and shape its future.
-
-### Key Features
-
-- **Engine Reinvented:** Dark Magic is a comprehensive reimagining of the original Diablo 2 game engine, built with modern programming practices for improved performance and stability.
-- **True to the Original:** We remain dedicated to preserving the core gameplay, itemization, classes, and skill trees that players cherished, ensuring an authentic Diablo 2 experience.
-- **Open Source Power:** Embrace the spirit of open-source collaboration and contribute to the development of Dark Magic. Join our community and help shape the future of this project.
-- **Graphical Enhancements:** Experience the realm of Sanctuary like never before with enhanced graphics, visual effects, and animations, all while staying true to the game's classic art style.
-- **Multi-platform Support:** Dark Magic aims to be accessible across various platforms, allowing you to play the game on your favorite devices.
-- **Modding Support:** We provide accessible modding tools to empower creativity and encourage the development of player-created content, expanding the possibilities within the Diablo 2 universe.
-- **Community-Driven:** We value the input of our passionate Diablo 2 community. Your feedback, suggestions, and ideas are essential in shaping the evolution of Dark Magic.
-
-### How to Contribute
-
-We welcome contributions from developers, artists, designers, and Diablo enthusiasts of all levels of expertise. If you want to be part of this journey, check out our [CONTRIBUTING.md](https://github.com/dark-magic/CONTRIBUTING.md) guide to get started.
+Inspired by the passion of the Diablo community, we strive to deliver an 
+authentic and faithful journey into the dark and dangerous world of Sanctuary. 
+Together, we can bring back the magic of this iconic game and shape its future.
 
 ## Directory Structure
 * `pkg/models` contains all of the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
@@ -38,19 +27,18 @@ their corresponding directories.
 * `Character Generator` - uses the record manager to create character instances
 * `Config File` - manages config files in a root diectory. almost all other services will use this to read and write their config to disk.
 * `Item Generator` - generates items using the record manager
-* Loaders
-  * `Asset Loader` - a composite loader, combines all of the other loaders
-  * `DC6 Loader` - loads DC6 image files using the mpq loader
-  * `DCC Loader` - loads DCC image files using the mpq loader
-  * `DS1 Loader` - loads DS1 map "stamp" files using the mpq loader
-  * `DT1 Loader` - loads DT1 map tileset files using the mpq loader
-  * `Font Table Loader` - loads font tables files using the mpq loader
-  * `GPL Loader` - loads GIMP palette files
-  * `MPQ Loader` - loads the diablo2 mpq's, will load files from them by checking one at a time in order.
-  * `PL2 Loader` - loads PL2 palette transformation files using the mpq loader
-  * `TBL Loader` - loads TBL text table files (locale strings) using the mpq loader
-  * `TSV Loader` - loads TSV tab-separated value spreadsheet files using the mpq loader
-  * `WAV Loader` - loads WAV audio files using the mpq loader
+* `Asset Loader` - a composite loader, combines all of the other loaders, exports stuff to lua, and provides debug web routes 
+* `DC6 Loader` - loads DC6 image files using the mpq loader
+* `DCC Loader` - loads DCC image files using the mpq loader
+* `DS1 Loader` - loads DS1 map "stamp" files using the mpq loader
+* `DT1 Loader` - loads DT1 map tileset files using the mpq loader
+* `Font Table Loader` - loads font tables files using the mpq loader
+* `GPL Loader` - loads GIMP palette files
+* `MPQ Loader` - loads the diablo2 mpq's, will load files from them by checking one at a time in order.
+* `PL2 Loader` - loads PL2 palette transformation files using the mpq loader
+* `TBL Loader` - loads TBL text table files (locale strings) using the mpq loader
+* `TSV Loader` - loads TSV tab-separated value spreadsheet files using the mpq loader
+* `WAV Loader` - loads WAV audio files using the mpq loader
 * `Locale` - uses the TBL and MPQ loaders and exposes an interface for things like locale string-lookups
 * `Loot Generator` - uses the record manager to roll loot (generates items)
 * `Lua` - manages a single global lua state machine, uses an exported interface that all other services may optionally implement in order to export syuff into the lua environment for use in scripting. This service also executes scripts.
@@ -59,18 +47,27 @@ their corresponding directories.
 * `Record Manager` - uses the mpq and tsv loaders to parse all the excel files into arrays of structs defined in `pkg/models`
 * `Web Router` - exposes an interface other services can optionally implement to expose web routes. Several of the other services expose web routes for debug purposes (like pulling files out of the mpq's) 
 * `Web Server` - uses the web router to serve requests
-* 
+
+### How to Contribute
+
+We welcome contributions from developers, artists, designers, and Diablo 
+enthusiasts of all levels of expertise. If you want to be part of this journey, 
+check out our [CONTRIBUTING.md](https://github.com/dark-magic/CONTRIBUTING.md) guide to get started.
+
 ## Contributing
 
-If you'd like to contribute to this project, please follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).
+If you'd like to contribute to this project, please follow the guidelines 
+in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the [License Name] License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the [License Name] License - see the 
+[LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 
-List any acknowledgments or credits for libraries, frameworks, or individuals who contributed to this project.
+List any acknowledgments or credits for libraries, frameworks, or individuals 
+who contributed to this project.
 ```
 
 In this template, I've added individual sections for each package/module under the `pkg` directory. You can fill in the descriptions and details for each package/module as needed.

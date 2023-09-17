@@ -15,9 +15,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	tsv_loader2 "github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
 	luaservice "github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 const luaRandomLootPreInit = `
@@ -169,7 +169,7 @@ func Benchmark_RandomLoot(b *testing.B) {
 	luaService := &luaservice.Service{}
 
 	rt.Add(&config_file.Service{})
-	rt.Add(&tsv_loader2.Service{})
+	rt.Add(&tsvLoader.Service{})
 	rt.Add(&mpqLoader.Service{})
 	rt.Add(luaService)
 	rt.Add(records)
@@ -287,7 +287,7 @@ func TestService_BindLogger(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -445,7 +445,7 @@ func TestService_DependenciesResolved(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -602,7 +602,7 @@ func TestService_ExportToLua(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -760,7 +760,7 @@ func TestService_Init(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -918,7 +918,7 @@ func TestService_InitRoutes(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1076,7 +1076,7 @@ func TestService_IsLoaded(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1233,7 +1233,7 @@ func TestService_LoadRecords(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1390,7 +1390,7 @@ func TestService_Logger(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1547,7 +1547,7 @@ func TestService_Name(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1704,7 +1704,7 @@ func TestService_ResolveDependencies(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData
@@ -1862,7 +1862,7 @@ func TestService_Slug(t *testing.T) {
 	type fields struct {
 		logger                 *zerolog.Logger
 		cfg                    config_file.Dependency
-		tsv                    tsv_loader2.Dependency
+		tsv                    tsvLoader.Dependency
 		Belts                  []models.BeltData
 		CharStartingAttributes []models.CharStats
 		Inventory              []models.InventoryData

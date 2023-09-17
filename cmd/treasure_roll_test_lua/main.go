@@ -4,10 +4,10 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/config_file"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/record_manager"
+	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 const (

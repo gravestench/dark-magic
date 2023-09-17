@@ -1,4 +1,4 @@
-package wavLoader
+package pl2Loader
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/gravestench/runtime"
 
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 )
 
 type Service struct {
@@ -42,7 +42,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "WAV Loader"
+	return "PL2 Loader"
 }
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {

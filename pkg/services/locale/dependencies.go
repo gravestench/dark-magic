@@ -5,8 +5,8 @@ import (
 
 	"github.com/gravestench/runtime"
 
-	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {
