@@ -2,11 +2,11 @@ package record_manager
 
 import (
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/examples/services/config_file"
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
 )
 
 const (
@@ -103,7 +103,7 @@ const (
 type Service struct {
 	logger *zerolog.Logger
 	cfg    config_file.Dependency
-	tsv    tsv_loader.Dependency
+	tsv    tsvLoader.Dependency
 
 	Belts                  []models.BeltData
 	CharStartingAttributes []models.CharStats
@@ -213,7 +213,7 @@ func (s *Service) ResolveDependencies(runtime runtime.R) {
 		switch candidate := service.(type) {
 		case config_file.Dependency:
 			s.cfg = candidate
-		case tsv_loader.Dependency:
+		case tsvLoader.Dependency:
 			s.tsv = candidate
 		}
 	}

@@ -5,12 +5,12 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/d2_asset_loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/assetLoader"
 )
 
 type Service struct {
 	logger *zerolog.Logger
-	assets d2_asset_loader.Dependency
+	assets assetLoader.Dependency
 
 	seed uint64
 }
@@ -41,7 +41,7 @@ func (s *Service) DependenciesResolved() bool {
 
 func (s *Service) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
-		if candidate, ok := service.(d2_asset_loader.Dependency); ok {
+		if candidate, ok := service.(assetLoader.Dependency); ok {
 			s.assets = candidate
 		}
 	}

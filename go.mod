@@ -10,12 +10,12 @@ require (
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
 	github.com/gravestench/dt1 v0.0.0-20230725082703-401c90343d4c
-	github.com/gravestench/eventemitter v0.0.0-20210902014026-73feeec3a47f
+	github.com/gravestench/eventemitter v0.0.0-20230917012622-9c67d0fb27f0
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/gpl v0.0.0-20230725161559-fe12f2cbd18e
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/runtime v0.0.0-20230805184607-5723c7454943
+	github.com/gravestench/runtime v0.0.0-20230917012730-fc711c4046c5
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
@@ -133,7 +133,7 @@ require (
 	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.36.0 // indirect

@@ -2,23 +2,23 @@ package main
 
 import (
 	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/examples/services/config_file"
-	"github.com/gravestench/runtime/examples/services/web_router"
 
-	"github.com/gravestench/dark-magic/pkg/services/d2_asset_loader"
-	"github.com/gravestench/dark-magic/pkg/services/dc6_loader"
-	"github.com/gravestench/dark-magic/pkg/services/dcc_loader"
-	"github.com/gravestench/dark-magic/pkg/services/ds1_loader"
-	"github.com/gravestench/dark-magic/pkg/services/dt1_loader"
-	"github.com/gravestench/dark-magic/pkg/services/font_table_loader"
-	"github.com/gravestench/dark-magic/pkg/services/gpl_loader"
+	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/dccLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/ds1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/fontTableLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/gplLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/pl2Loader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/loaders/wavLoader"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
-	"github.com/gravestench/dark-magic/pkg/services/mpq_loader"
-	"github.com/gravestench/dark-magic/pkg/services/pl2_loader"
 	"github.com/gravestench/dark-magic/pkg/services/record_manager"
-	"github.com/gravestench/dark-magic/pkg/services/tbl_loader"
-	"github.com/gravestench/dark-magic/pkg/services/tsv_loader"
-	"github.com/gravestench/dark-magic/pkg/services/wav_loader"
+	"github.com/gravestench/dark-magic/pkg/services/web_router"
 	"github.com/gravestench/dark-magic/pkg/services/web_server"
 )
 
@@ -37,20 +37,20 @@ func main() {
 	rt.Add(&config_file.Service{RootDirectory: projectConfigDir})
 
 	// d2 file loaders
-	rt.Add(&font_table_loader.Service{})
-	rt.Add(&dc6_loader.Service{})
-	rt.Add(&dcc_loader.Service{})
-	rt.Add(&ds1_loader.Service{})
-	rt.Add(&dt1_loader.Service{})
-	rt.Add(&gpl_loader.Service{})
-	rt.Add(&pl2_loader.Service{})
-	rt.Add(&tbl_loader.Service{})
-	rt.Add(&tsv_loader.Service{})
-	rt.Add(&wav_loader.Service{})
-	rt.Add(&mpq_loader.Service{})
+	rt.Add(&fontTableLoader.Service{})
+	rt.Add(&dc6Loader.Service{})
+	rt.Add(&dccLoader.Service{})
+	rt.Add(&ds1Loader.Service{})
+	rt.Add(&dt1Loader.Service{})
+	rt.Add(&gplLoader.Service{})
+	rt.Add(&pl2Loader.Service{})
+	rt.Add(&tblLoader.Service{})
+	rt.Add(&tsvLoader.Service{})
+	rt.Add(&wavLoader.Service{})
+	rt.Add(&mpqLoader.Service{})
 
 	// high level d2 services
-	rt.Add(&d2_asset_loader.Service{})
+	rt.Add(&assetLoader.Service{})
 	rt.Add(&record_manager.Service{})
 
 	rt.Run()
