@@ -3,7 +3,7 @@ The purpose of this [runtime](https://github.com/gravestench/runtime) service is
 
 
 ## Dependencies
-This service has dependencies on all other Diablo2 file-loader services:
+This service has dependencies on the following services:
 * [bar](.)
 * [baz](.)
 
