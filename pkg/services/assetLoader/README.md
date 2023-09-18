@@ -22,7 +22,7 @@ This service has dependencies on all other Diablo2 file-loader services:
 ## Integration with other services
 This service integrates with the following services:
 * [lua service](../lua)
-* [web router service](../web_router)
+* [web router service](../webRouter)
 
 The integration is optional; if neither are added to the runtime then the 
 integration methods will never be called.
@@ -57,7 +57,7 @@ data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
 ```
 
 ## Web router service integration
-If the [web router service](../web_router) is present at runtime, this service will
+If the [web router service](../webRouter) is present at runtime, this service will
 register routes for retrieving data.
 
 The route slug for this service is `asset`, so all routes defined will be under 

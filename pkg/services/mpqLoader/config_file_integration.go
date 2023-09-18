@@ -3,14 +3,14 @@ package mpqLoader
 import (
 	"fmt"
 
-	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 func (s *Service) ConfigFileName() string {
 	return "mpq_loader.json"
 }
 
-func (s *Service) Config() (*config_file.Config, error) {
+func (s *Service) Config() (*configFile.Config, error) {
 	if s.cfgManager == nil {
 		return nil, fmt.Errorf("config manager is nil")
 	}
@@ -18,7 +18,7 @@ func (s *Service) Config() (*config_file.Config, error) {
 	return s.cfgManager.GetConfigByFileName(s.ConfigFileName())
 }
 
-func (s *Service) DefaultConfig() (cfg config_file.Config) {
+func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	g := cfg.Group(s.Name())
 
 	g.SetDefault("load order", []string{

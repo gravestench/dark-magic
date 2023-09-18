@@ -9,7 +9,7 @@ a README.md or in a LUA.md
 
 ## Dependencies
 
-This service depends upon the [config file service](../config_file) and will
+This service depends upon the [config file service](../configFile) and will
 initialize its own default config.
 
 ## Integration with other services

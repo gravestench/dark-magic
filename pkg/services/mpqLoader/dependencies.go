@@ -3,7 +3,7 @@ package mpqLoader
 import (
 	"github.com/gravestench/runtime"
 
-	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 func (s *Service) DependenciesResolved() bool {
@@ -16,7 +16,7 @@ func (s *Service) DependenciesResolved() bool {
 
 func (s *Service) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
-		if candidate, ok := service.(config_file.Manager); ok {
+		if candidate, ok := service.(configFile.Manager); ok {
 			s.cfgManager = candidate
 		}
 	}

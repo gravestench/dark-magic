@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gravestench/runtime"
 
-	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
@@ -17,7 +17,7 @@ const (
 func main() {
 	rt := runtime.New(projectName)
 
-	rt.Add(&config_file.Service{RootDirectory: projectConfigDir})
+	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 
 	rt.Add(&tsvLoader.Service{})
 	rt.Add(&wavLoader.Service{})

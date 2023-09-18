@@ -1,4 +1,4 @@
-package lua
+package webRouter
 
 import (
 	"github.com/gravestench/runtime"
@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.cfg == nil {
+	if s.cfgManager == nil {
 		return false
 	}
 
@@ -15,9 +15,9 @@ func (s *Service) DependenciesResolved() bool {
 }
 
 func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(configFile.Manager); ok {
-			s.cfg = candidate
+	for _, other := range rt.Services() {
+		if cfg, ok := other.(configFile.Manager); ok {
+			s.cfgManager = cfg
 		}
 	}
 }

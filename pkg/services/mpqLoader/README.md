@@ -6,7 +6,7 @@ files from the collection of MPQ archive files used by diablo.
 
 ## Dependencies
 
-This service depends upon the [config file service](../config_file) and will
+This service depends upon the [config file service](../configFile) and will
 initialize its own default config.
 
 There is an external dependency of this service, namely the presence of the

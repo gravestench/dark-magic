@@ -17,7 +17,7 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/record_manager"
+	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
@@ -84,7 +84,7 @@ func (s *audioFileTestService) Init(rt runtime.R) {
 	rand.Seed(time.Now().UnixNano())
 
 	// load the tsv file into our array of record models
-	err := s.tsv.Load(record_manager.PathSoundSettings, &s.Sounds)
+	err := s.tsv.Load(recordManager.PathSoundSettings, &s.Sounds)
 	if err != nil {
 		s.logger.Fatal().Msgf("loading sound records: %v", err)
 	}

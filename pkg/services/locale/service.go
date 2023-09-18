@@ -9,15 +9,15 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/web_router"
+	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
 type recipe interface {
 	runtime.Service
 	runtime.HasLogger
 	runtime.HasDependencies
-	web_router.HasRouteSlug
-	web_router.IsRouteInitializer
+	webRouter.HasRouteSlug
+	webRouter.IsRouteInitializer
 	LoadsStringTables
 }
 

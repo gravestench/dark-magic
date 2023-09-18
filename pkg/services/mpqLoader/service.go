@@ -17,12 +17,12 @@ import (
 
 	"github.com/gravestench/runtime"
 
-	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
 	logger     *zerolog.Logger
-	cfgManager config_file.Dependency
+	cfgManager configFile.Dependency
 	archives   map[string]*mpq.MPQ
 	ordering   []string
 	mux        sync.Mutex

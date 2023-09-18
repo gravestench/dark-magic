@@ -7,7 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/record_manager"
+	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
 type recipe interface {
@@ -17,7 +17,7 @@ type recipe interface {
 
 // Service is responsible for creating stats
 type Service struct {
-	records record_manager.Dependency
+	records recordManager.Dependency
 	tables  tblLoader.Dependency
 }
 
@@ -44,7 +44,7 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(rt runtime.Runtime) {
 	for _, service := range rt.Services() {
 		switch candidate := service.(type) {
-		case record_manager.Dependency:
+		case recordManager.Dependency:
 			s.records = candidate
 		case tblLoader.Dependency:
 			s.tables = candidate

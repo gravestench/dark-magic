@@ -9,11 +9,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/yuin/gopher-lua"
 
-	"github.com/gravestench/dark-magic/pkg/services/config_file"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
-	cfg    config_file.Dependency
+	cfg    configFile.Dependency
 	logger *zerolog.Logger
 	state  *lua.LState
 	events *ee.EventEmitter

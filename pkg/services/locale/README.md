@@ -32,7 +32,7 @@ Other services should use the `LoadsStringTables` or `Dependency` interfaces to 
 their dependency on this service.
 
 ## Web router service integration
-If the [web router service](../web_router) is present at runtime, this service will 
+If the [web router service](../webRouter) is present at runtime, this service will 
 register routes for retrieving data.
 
 The route slug for this service is `locale`, so all routes defined will be under
