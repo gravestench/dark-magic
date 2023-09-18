@@ -22,37 +22,77 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", s.extractGzip(guide))
 	})
 
-	group.GET("Inventory", func(c *gin.Context) {
-		serveJSONData(c, s.inventory)
-	})
+	for subgroup, records := range map[string]any{
+		"Belts":                  s.belts,
+		"CharStartingAttributes": s.charStartingAttributes,
+		"Inventory":              s.inventory,
+		"Overlays":               s.overlays,
+		"PetTypes":               s.petTypes,
+		"AutoMapEntries":         s.autoMapEntries,
+		"States":                 s.states,
+		"Hirelings":              s.hirelings,
+		"HirelingDescriptions":   s.hirelingDescriptions,
+		"Missiles":               s.missiles,
+		"DifficultyLevels":       s.difficultyLevels,
+		"Shrines":                s.shrines,
+		"GambleRecords":          s.gambleRecords,
+		"NpcTradeRecords":        s.npcTradeRecords,
+		"ExperienceBreakpoints":  s.experienceBreakpoints,
+		"ItemArmor":              s.itemArmor,
+		"ItemWeapon":             s.itemWeapon,
+		"ItemWeaponClass":        s.itemWeaponClass,
+		"ItemMisc":               s.itemMisc,
+		"ItemTypes":              s.itemTypes,
+		"ItemAutoMagic":          s.itemAutoMagic,
+		"ItemStatCost":           s.itemStatCost,
+		"ItemRatio":              s.itemRatio,
+		"ItemUnique":             s.itemUnique,
+		"ItemHiQualityMods":      s.itemHiQualityMods,
+		"ItemProperties":         s.itemProperties,
+		"CubeRecipes":            s.cubeRecipes,
+		"Books":                  s.books,
+		"Gems":                   s.gems,
+		"Runes":                  s.runes,
+		"SetItems":               s.setItems,
+		"SetBonuses":             s.setBonuses,
+		"Skills":                 s.skills,
+		"SkillDesc":              s.skillDesc,
+		"Treasures":              s.treasures,
+		"TreasuresEx":            s.treasuresExpansion,
+		"MagicPrefixes":          s.magicPrefixes,
+		"MagicSuffixes":          s.magicSuffixes,
+		"RarePrefixes":           s.rarePrefixes,
+		"RareSuffixes":           s.rareSuffixes,
+		"UniquePrefixes":         s.uniquePrefixes,
+		"UniqueSuffixes":         s.uniqueSuffixes,
+		"Objects":                s.objects,
+		"ObjectTypes":            s.objectTypes,
+		"ObjectGroups":           s.objectGroups,
+		"ObjectModes":            s.objectModes,
+		"Sounds":                 s.sounds,
+		"SoundEnvironments":      s.soundEnvironments,
+		"LevelPresets":           s.levelPresets,
+		"LevelType":              s.levelType,
+		"LevelWarp":              s.levelWarp,
+		"LevelDetails":           s.levelDetails,
+		"LevelMaze":              s.levelMaze,
+		"LevelSubstitutions":     s.levelSubstitutions,
+		"MonsterUniqueModifiers": s.monsterUniqueModifiers,
+		"MonsterEquipment":       s.monsterEquipment,
+		"MonsterLevelStats":      s.monsterLevelStats,
+		"MonsterPresets":         s.monsterPresets,
+		"MonsterProperties":      s.monsterProperties,
+		"MonsterSequences":       s.monsterSequences,
+		"MonsterStats":           s.monsterStats,
+		"MonsterStats2":          s.monsterStats2,
+		"MonsterSounds":          s.monsterSounds,
+		"MonsterUniqueNames":     s.monsterUniqueNames,
+	} {
+		group.GET(subgroup, func(c *gin.Context) {
+			serveJSONData(c, records)
+		})
+	}
 
-	group.GET("ItemArmor", func(c *gin.Context) {
-		serveJSONData(c, s.itemArmor)
-	})
-
-	group.GET("ObjectTypes", func(c *gin.Context) {
-		serveJSONData(c, s.objectTypes)
-	})
-
-	group.GET("LevelPresets", func(c *gin.Context) {
-		serveJSONData(c, s.levelPresets)
-	})
-
-	group.GET("LevelType", func(c *gin.Context) {
-		serveJSONData(c, s.levelType)
-	})
-
-	group.GET("LevelWarp", func(c *gin.Context) {
-		serveJSONData(c, s.levelWarp)
-	})
-
-	group.GET("LevelDetails", func(c *gin.Context) {
-		serveJSONData(c, s.levelDetails)
-	})
-
-	group.GET("LevelMaze", func(c *gin.Context) {
-		serveJSONData(c, s.levelMaze)
-	})
 }
 
 func serveJSONData(c *gin.Context, data interface{}) {

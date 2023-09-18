@@ -37,3 +37,7 @@ func (s *Service) ExportToLua(state *lua.LState) {
 	state.SetField(table, "load", fn)
 	state.SetGlobal("assets", table)
 }
+
+func (s *Service) UnexportFromLua(state *lua.LState) {
+	state.SetGlobal("assets", lua.LNil)
+}

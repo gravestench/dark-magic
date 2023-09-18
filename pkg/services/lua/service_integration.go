@@ -19,4 +19,5 @@ type ManagesLuaEnvironment interface {
 
 type UsesLuaEnvironment interface {
 	ExportToLua(state *lua.LState)
+	UnexportFromLua(state *lua.LState)
 }

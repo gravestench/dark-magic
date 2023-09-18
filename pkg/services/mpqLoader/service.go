@@ -163,3 +163,7 @@ func removeStringFromArray(target string, array []string) []string {
 
 	return result
 }
+
+func (s *Service) RequiredArchivesLoaded() bool {
+	return len(s.Archives()) >= 11
+}

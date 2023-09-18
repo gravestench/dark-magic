@@ -13,7 +13,7 @@ import (
 )
 
 type Service struct {
-	cfg    config_file.Manager
+	cfg    config_file.Dependency
 	logger *zerolog.Logger
 	state  *lua.LState
 	events *ee.EventEmitter
@@ -43,7 +43,7 @@ func (s *Service) Init(rt runtime.R) {
 		break // all deps resolved for all siblings
 	}
 
-	cfg, err := s.Config()
+	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
 	if err != nil {
 		s.logger.Fatal().Msgf("getting config: %v", err)
 	}

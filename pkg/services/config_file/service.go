@@ -44,7 +44,7 @@ func (s *Service) Init(rt runtime.Runtime) {
 	s.servicesWithDefaultConfigs = make(map[string]HasDefaultConfig)
 
 	for _, candidate := range rt.Services() {
-		err := s.applyDefaultConfig(candidate)
+		err := s.initConfigForServiceCandidate(candidate)
 		if err != nil {
 			s.log.Error().Msgf("applying default config for %q: %v", candidate.Name(), err)
 		}
@@ -56,7 +56,7 @@ func (s *Service) Init(rt runtime.Runtime) {
 		}
 
 		if candidate, ok := args[0].(runtime.Service); ok {
-			err := s.applyDefaultConfig(candidate)
+			err := s.initConfigForServiceCandidate(candidate)
 			if err != nil {
 				s.log.Error().Msgf("applying default config for %q: %v", candidate.Name(), err)
 			}

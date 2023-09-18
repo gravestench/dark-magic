@@ -20,6 +20,7 @@ var (
 type Dependency = ReadsMpqArchives
 
 type ReadsMpqArchives interface {
+	RequiredArchivesLoaded() bool
 	Archives() map[string]*mpq.MPQ
 	AddArchive(filepath string) error
 	RemoveArchive(filepath string) error

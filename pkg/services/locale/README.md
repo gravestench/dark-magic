@@ -1,23 +1,44 @@
-# GPL Palette Loader Service
+# Diablo 2 Locale Service
+
 The purpose of this [runtime](https://github.com/gravestench/runtime) service is
-to provide a single service that is responsible for loading GPL palette files.
+to provide a single service that is responsible for retrieving locale-specific
+data from the MPQ files. This includes string translation, character sets, etc.
 
 ## Dependencies
-This service has a single dependency on the MPQ loader service
+
+This service has two required dependencies:
+
 * [mpq loader service](../mpqLoader)
+* [tbl loader service](../tblLoader)
 
 ## Integration with other services
-This service exports an integration interface `LoadsGplFiles` with an alias
+
+This service exports an integration interface `LoadsStringTables` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
 resolution (see runtime.HasDependencies), and expose just the methods which
 other services should use.
-```golang
-type Dependency = LoadsGplFiles
 
-type LoadsGplFiles = interface {
-    Load(filepath string) (*gpl.GPL, error)
+```golang
+type Dependency = LoadsStringTables
+
+type LoadsStringTables interface {
+    GetSupportedLanguages() []string
+    GetSupportedCharsets() []string
+    GetTextByKey(key string) (string, error)
 }
 ```
 
-Other services should use the `LoadsGplFiles` or `Dependency` interfaces to resolve
+Other services should use the `LoadsStringTables` or `Dependency` interfaces to resolve
 their dependency on this service.
+
+## Web router service integration
+If the [web router service](../web_router) is present at runtime, this service will 
+register routes for retrieving data.
+
+The route slug for this service is `locale`, so all routes defined will be under
+that route group.
+
+| route                | method | purpose                                                      |
+|----------------------|--------|--------------------------------------------------------------|
+| `locale/`            | GET    | yields the entire composite string translation table as json |
+| `locale/lookup/:key` | GET    | yields a single string tarnslation for the given key         |

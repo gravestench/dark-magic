@@ -57,6 +57,9 @@ data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
 ```
 
 ## Web router service integration
+If the [web router service](../web_router) is present at runtime, this service will
+register routes for retrieving data.
+
 The route slug for this service is `asset`, so all routes defined will be under 
 that route group.
 

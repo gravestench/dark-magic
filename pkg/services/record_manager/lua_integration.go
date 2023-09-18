@@ -91,6 +91,10 @@ func (s *Service) ExportToLua(state *lua.LState) {
 	state.SetGlobal("records", table)
 }
 
+func (s *Service) UnexportFromLua(state *lua.LState) {
+	state.SetGlobal("records", lua.LNil)
+}
+
 // genericExportArrayToLua exports an array of structs to a Lua table using "lua" struct tags.
 func genericExportArrayToLua(arr interface{}, state *lua.LState) *lua.LTable {
 	value := reflect.ValueOf(arr)

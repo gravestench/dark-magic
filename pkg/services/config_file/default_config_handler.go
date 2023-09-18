@@ -6,7 +6,7 @@ import (
 	"github.com/gravestench/runtime"
 )
 
-func (s *Service) applyDefaultConfig(candidate runtime.S) error {
+func (s *Service) initConfigForServiceCandidate(candidate runtime.S) error {
 	// check if the service does not have defaults
 	target, ok := candidate.(HasDefaultConfig)
 	if !ok {

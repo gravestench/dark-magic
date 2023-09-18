@@ -1,8 +1,6 @@
 package locale
 
 import (
-	"time"
-
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
@@ -18,8 +16,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if len(s.mpq.Archives()) != 11 {
-		time.Sleep(time.Second)
+	if !s.mpq.RequiredArchivesLoaded() {
 		return false
 	}
 

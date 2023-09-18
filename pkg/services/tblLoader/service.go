@@ -1,8 +1,6 @@
 package tblLoader
 
 import (
-	"time"
-
 	"github.com/rs/zerolog"
 
 	"github.com/gravestench/runtime"
@@ -20,8 +18,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if len(s.mpq.Archives()) != 11 {
-		time.Sleep(time.Second)
+	if !s.mpq.RequiredArchivesLoaded() {
 		return false
 	}
 

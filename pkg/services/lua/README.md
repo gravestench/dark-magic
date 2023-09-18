@@ -1,44 +1,44 @@
-# Diablo 2 Locale Service
+# Global Lua Environment Service
 
 The purpose of this [runtime](https://github.com/gravestench/runtime) service is
-to provide a single service that is responsible for retrieving locale-specific
-data from the MPQ files. This includes string translation, character sets, etc.
+to manage the state of a single lua state machine. Other services are intended to implement an exported 
+integration interface in order to populate the state machine with anything
+they want. Any type of lua API for a given service should be exposed through
+this service. It is recommended that other services document their API in either
+a README.md or in a LUA.md
 
 ## Dependencies
 
-This service has two required dependencies:
-
-* [mpq loader service](../mpqLoader)
-* [tbl loader service](../tblLoader)
+This service depends upon the [config file service](../config_file) and will
+initialize its own default config.
 
 ## Integration with other services
 
-This service exports an integration interface `LoadsStringTables` with an alias
+This service exports an integration interface `ManagesLuaEnvironment` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
 resolution (see runtime.HasDependencies), and expose just the methods which
 other services should use.
 
+ Another service may merely store a reference to this service and use the
+lua state machine explicitly with the folloing interface:
 ```golang
-type Dependency = LoadsStringTables
+type Dependency = ManagesLuaEnvironment
 
-type LoadsStringTables interface {
-    GetSupportedLanguages() []string
-    GetSupportedCharsets() []string
-    GetTextByKey(key string) (string, error)
+type ManagesLuaEnvironment interface {
+    LuaState() *lua.LState
 }
 ```
 
-Other services should use the `LoadsStringTables` or `Dependency` interfaces to resolve
+Other services should use the `ManagesLuaEnvironment` or `Dependency` interfaces to resolve
 their dependency on this service.
 
-## Web router service integration
-If the [web router service](../web_router) is present at runtime, this service will 
-register routes for retrieving data.
+__________
 
-The route slug for this service is `locale`, so all routes defined will be under
-that route group.
-
-| route                | method | purpose                                                      |
-|----------------------|--------|--------------------------------------------------------------|
-| `locale/`            | GET    | yields the entire composite string translation table as json |
-| `locale/lookup/:key` | GET    | yields a single string tarnslation for the given key         |
+However, implementors of the following interface methods are invoked by the lua
+service indirectly whenever the service is added or removed from the runtime.
+```golang
+type UsesLuaEnvironment interface {
+    ExportToLua(state *lua.LState)
+    UnexportFromLua(state *lua.LState)
+}
+```

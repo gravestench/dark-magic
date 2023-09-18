@@ -54,3 +54,7 @@ func (s *Service) ExportToLua(state *lua.LState) {
 
 	state.SetGlobal("map_generator", table)
 }
+
+func (s *Service) UnexportFromLua(state *lua.LState) {
+	state.SetGlobal("map_generator", lua.LNil)
+}
