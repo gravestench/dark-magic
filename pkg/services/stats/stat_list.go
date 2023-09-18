@@ -1,4 +1,4 @@
-package d2stats
+package stats
 
 // StatList is useful for reducing stats.
 // They provide a context for stats to alter other stats or infer values

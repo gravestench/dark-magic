@@ -1,4 +1,4 @@
-package diablo2stats
+package stats
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 var testAssetManager *d2asset.AssetManager
 
 // nolint:gochecknoglobals // just a test
-var testStatFactory *StatFactory
+var testStatFactory *Service
 
 func TestSetup_StatList(t *testing.T) {
 	testAssetManager = &d2asset.AssetManager{}

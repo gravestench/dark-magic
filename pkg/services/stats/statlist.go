@@ -1,4 +1,4 @@
-package diablo2stats
+package stats
 
 import (
 	"github.com/OpenDiablo2/OpenDiablo2/d2core/d2stats"

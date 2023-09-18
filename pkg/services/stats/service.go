@@ -6,14 +6,9 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
 	"github.com/gravestench/dark-magic/pkg/services/record_manager"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 )
-
-type recipe interface {
-	runtime.Service
-	runtime.HasDependencies
-}
 
 // Service is responsible for creating stats
 type Service struct {
@@ -147,7 +142,9 @@ func (s *Service) stringerClassAllSkills(sv StatValue) string {
 	heroIndex := sv.Int()
 
 	heroMap := s.getHeroMap()
-	classRecord := s.records.CharStartingAttributes().Stats[heroMap[heroIndex]]
+	for idx, candidate := range s.records.CharStartingAttributes() {
+		if candidate.Class == heroMap[heroIndex]
+	}
 
 	return s.records.TranslateString(classRecord.SkillStrAll)
 }
@@ -155,7 +152,7 @@ func (s *Service) stringerClassAllSkills(sv StatValue) string {
 func (s *Service) stringerClassOnly(sv StatValue) string {
 	heroMap := s.getHeroMap()
 	heroIndex := sv.Int()
-	classRecord := s.records.Character.Stats[heroMap[heroIndex]]
+	classRecord := s.records.CharStartingAttributes().Stats[heroMap[heroIndex]]
 	classOnlyKey := classRecord.SkillStrClassOnly
 
 	return s.records.TranslateString(classOnlyKey)
