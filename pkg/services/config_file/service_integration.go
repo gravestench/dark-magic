@@ -18,8 +18,7 @@ var (
 
 // HasConfig represents a something with a configuration file path and retrieval methods.
 type HasConfig interface {
-	ConfigFilePath() string   // ConfigFilePath returns the path to the configuration file.
-	Config() (*Config, error) // Config retrieves the configuration from the file.
+	ConfigFileName() string // ConfigFilePath returns the path to the configuration file.
 }
 
 // HasDefaultConfig represents something with a default configuration.
@@ -32,12 +31,12 @@ type Dependency = Manager
 
 // Manager represents something that manages configurations.
 type Manager interface {
-	GetPath(path string) string
-	ConfigDirectory() string                   // ConfigDirectory returns the directory path where configurations are stored.
-	SetConfigDirectory(string) error           // SetConfigDirectory sets the directory path for configurations.
-	Configs() map[string]*Config               // Configs returns all configurations stored in the service.
-	GetConfig(string) (*Config, error)         // GetConfig retrieves a configuration by its path.
-	CreateConfig(path string) (*Config, error) // CreateConfig creates a new configuration file at the specified path.
-	LoadConfig(string) (*Config, error)        // LoadConfig loads a configuration from the specified path.
-	SaveConfig(string) error                   // SaveConfig saves a configuration to the specified path.
+	GetFilePath(path string) string
+	ConfigDirectory() string                               // ConfigDirectory returns the directory path where configurations are stored.
+	SetConfigDirectory(string) error                       // SetConfigDirectory sets the directory path for configurations.
+	Configs() map[string]*Config                           // Configs returns all configurations stored in the service.
+	GetConfigByFileName(name string) (*Config, error)      // GetConfig retrieves a configuration by its path.
+	CreateConfigWithFileName(name string) (*Config, error) // CreateConfig creates a new configuration file at the specified path.
+	LoadConfigWithFileName(name string) (*Config, error)   // LoadConfig loads a configuration from the specified path.
+	SaveConfigWithFileName(name string) error              // SaveConfig saves a configuration to the specified path.
 }

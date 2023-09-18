@@ -6,7 +6,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/config_file"
 )
 
-func (s *Service) ConfigFilePath() string {
+func (s *Service) ConfigFileName() string {
 	return "mpq_loader.json"
 }
 
@@ -15,7 +15,7 @@ func (s *Service) Config() (*config_file.Config, error) {
 		return nil, fmt.Errorf("config manager is nil")
 	}
 
-	return s.cfgManager.GetConfig(s.ConfigFilePath())
+	return s.cfgManager.GetConfigByFileName(s.ConfigFileName())
 }
 
 func (s *Service) DefaultConfig() (cfg config_file.Config) {

@@ -47,22 +47,6 @@ func (s *Service) Logger() *zerolog.Logger {
 	return s.logger
 }
 
-func (s *Service) DependenciesResolved() bool {
-	if s.cfgManager == nil {
-		return false
-	}
-
-	return true
-}
-
-func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(config_file.Manager); ok {
-			s.cfgManager = candidate
-		}
-	}
-}
-
 func (s *Service) Archives() map[string]*mpq.MPQ {
 	return s.archives
 }

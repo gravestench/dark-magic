@@ -21,12 +21,12 @@ const (
 	defaultKeyFilepath = "cert.key"
 )
 
-func (s *Service) ConfigFilePath() string {
+func (s *Service) ConfigFileName() string {
 	return "web_server.json"
 }
 
 func (s *Service) Config() (*config_file.Config, error) {
-	return s.cfgManager.GetConfig(s.ConfigFilePath())
+	return s.cfgManager.GetConfigByFileName(s.ConfigFileName())
 }
 
 func (s *Service) DefaultConfig() (cfg config_file.Config) {

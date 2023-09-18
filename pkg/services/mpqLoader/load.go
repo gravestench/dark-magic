@@ -32,6 +32,6 @@ func (s *Service) loadArchivesFromFiles() {
 	if len(s.archives) == 0 {
 		time.Sleep(time.Second * 3)
 		s.logger.Error().Msg("no MPQ files found")
-		s.logger.Fatal().Msgf("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFilePath()))
+		s.logger.Fatal().Msgf("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFileName()))
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 var _ config_file.HasDefaultConfig = &Service{}
 
-func (s *Service) ConfigFilePath() string {
+func (s *Service) ConfigFileName() string {
 	return "lua_environment.json"
 }
 
@@ -17,7 +17,7 @@ func (s *Service) Config() (*config_file.Config, error) {
 		return nil, fmt.Errorf("config manager is nil")
 	}
 
-	return s.cfg.GetConfig(s.ConfigFilePath())
+	return s.cfg.GetConfigByFileName(s.ConfigFileName())
 }
 
 func (s *Service) DefaultConfig() (cfg config_file.Config) {

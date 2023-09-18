@@ -23,12 +23,12 @@ func (s *Service) applyDefaultConfig(candidate runtime.S) error {
 	s.servicesWithDefaultConfigs[name] = target
 
 	// get the current and default configs
-	cfgPath := prefixIfPathRelative(s.ConfigDirectory(), target.ConfigFilePath())
+	cfgPath := prefixIfPathRelative(s.ConfigDirectory(), target.ConfigFileName())
 	cfgDefault := target.DefaultConfig()
-	cfgCurrent, err := s.GetConfig(cfgPath)
+	cfgCurrent, err := s.GetConfigByFileName(cfgPath)
 
 	if err != nil || cfgCurrent == nil {
-		cfgCurrent, err = s.CreateConfig(cfgPath)
+		cfgCurrent, err = s.CreateConfigWithFileName(cfgPath)
 		if err != nil {
 			return fmt.Errorf("creating config %q: %v", cfgPath, err)
 		}
@@ -41,7 +41,7 @@ func (s *Service) applyDefaultConfig(candidate runtime.S) error {
 		}
 	}
 
-	s.log.Info().Msgf("config file for %q service can be found at: %v", name, s.GetPath(target.ConfigFilePath()))
+	s.log.Info().Msgf("config file for %q service can be found at: %v", name, s.GetFilePath(target.ConfigFileName()))
 
-	return s.SaveConfig(cfgPath)
+	return s.SaveConfigWithFileName(cfgPath)
 }
