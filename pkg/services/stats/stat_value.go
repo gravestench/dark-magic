@@ -1,9 +1,9 @@
-package d2stats
+package stats
 
 // StatNumberType is a value type for a stat value
 type StatNumberType int
 
-//  Stat value types
+// Stat value types
 const (
 	StatValueInt StatNumberType = iota
 	StatValueFloat
@@ -56,4 +56,78 @@ type StatValue interface {
 	Float() float64
 	String() string
 	Stringer() func(StatValue) string
+}
+
+// Diablo2StatValue is a diablo 2 implementation of a stat value
+type Diablo2StatValue struct {
+	number      float64
+	stringerFn  func(StatValue) string
+	numberType  StatNumberType
+	combineType ValueCombineType
+}
+
+// NumberType returns the stat value type
+func (sv *Diablo2StatValue) NumberType() StatNumberType {
+	return sv.numberType
+}
+
+// CombineType returns the stat value combination type
+func (sv *Diablo2StatValue) CombineType() ValueCombineType {
+	return sv.combineType
+}
+
+// Clone returns a deep copy of the stat value
+func (sv Diablo2StatValue) Clone() StatValue {
+	clone := &Diablo2StatValue{}
+
+	switch sv.numberType {
+	case StatValueInt:
+		clone.SetInt(sv.Int())
+	case StatValueFloat:
+		clone.SetFloat(sv.Float())
+	}
+
+	clone.stringerFn = sv.stringerFn
+
+	return clone
+}
+
+// Int returns the integer version of the stat value
+func (sv *Diablo2StatValue) Int() int {
+	return int(sv.number)
+}
+
+// String returns a string version of the value
+func (sv *Diablo2StatValue) String() string {
+	return sv.stringerFn(sv)
+}
+
+// Float returns a float64 version of the value
+func (sv *Diablo2StatValue) Float() float64 {
+	return sv.number
+}
+
+// SetInt sets the stat value using an int
+func (sv *Diablo2StatValue) SetInt(i int) StatValue {
+	sv.number = float64(i)
+
+	return sv
+}
+
+// SetFloat sets the stat value using a float64
+func (sv *Diablo2StatValue) SetFloat(f float64) StatValue {
+	sv.number = f
+
+	return sv
+}
+
+// Stringer returns the string evaluation function
+func (sv *Diablo2StatValue) Stringer() func(StatValue) string {
+	return sv.stringerFn
+}
+
+// SetStringer sets the string evaluation function
+func (sv *Diablo2StatValue) SetStringer(f func(StatValue) string) StatValue {
+	sv.stringerFn = f
+	return sv
 }
