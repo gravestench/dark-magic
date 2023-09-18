@@ -40,7 +40,7 @@ their corresponding directories.
 * `TSV Loader` - loads TSV tab-separated value spreadsheet files using the mpq loader
 * `WAV Loader` - loads WAV audio files using the mpq loader
 * `Locale` - uses the TBL and MPQ loaders and exposes an interface for things like locale string-lookups
-* `Lua` - manages a single global lua state machine, uses an exported interface that all other services may optionally implement in order to export syuff into the lua environment for use in scripting. This service also executes scripts. 
+* `Lua` - manages a single global lua state machine, uses an exported interface that all other services may optionally implement in order to export stuff into the lua environment for use in scripting. This service also executes scripts. 
 * `Record Manager` - uses the mpq and tsv loaders to parse all the excel files into arrays of structs defined in `pkg/models`
 * `Web Router` - exposes an interface other services can optionally implement to expose web routes. Several of the other services expose web routes for debug purposes (like pulling files out of the mpq's) 
 * `Web Server` - uses the web router to serve requests
@@ -62,6 +62,7 @@ The following services need to be implemented:
 * `Map Generator` - uses the record manager and asset loaders to generate maps
 * `Monster Generator` - uses the record manager to create instances of monsters
 * `Renderer` - a wrapper around the rendering backend
+* TBD
 
 ## How to Contribute
 We welcome contributions from developers, artists, designers, and Diablo 
