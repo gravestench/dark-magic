@@ -70,9 +70,6 @@ This project is licensed under the [License Name] License - see the
 
 List any acknowledgments or credits for libraries, frameworks, or individuals 
 who contributed to this project.
-```
-
-In this template, I've added individual sections for each package/module under the `pkg` directory. You can fill in the descriptions and details for each package/module as needed.
 
 ### Join the Quest
 
