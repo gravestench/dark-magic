@@ -56,10 +56,8 @@ We welcome contributions from developers, artists, designers, and Diablo
 enthusiasts of all levels of expertise. If you want to be part of this journey, 
 check out our [CONTRIBUTING.md](https://github.com/dark-magic/CONTRIBUTING.md) guide to get started.
 
-## Contributing
-
-If you'd like to contribute to this project, please follow the guidelines 
-in [CONTRIBUTING.md](CONTRIBUTING.md).
+Also, you can copy/paste the [Service Template](./internal/service_template) 
+into `pkg/services` for a head start on creating a new service. 
 
 ## License
 
