@@ -4,6 +4,7 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
@@ -50,6 +51,7 @@ func main() {
 	rt.Add(&tblLoader.Service{})
 	rt.Add(&tsvLoader.Service{})
 	rt.Add(&wavLoader.Service{})
+	rt.Add(&cofLoader.Service{})
 	rt.Add(&mpqLoader.Service{})
 
 	// high level d2 services

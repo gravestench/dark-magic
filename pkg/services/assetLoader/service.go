@@ -15,6 +15,7 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 	"github.com/rs/zerolog"
 
+	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
@@ -36,6 +37,7 @@ type Service struct {
 	dcc  dccLoader.Dependency
 	ds1  ds1Loader.Dependency
 	dt1  dt1Loader.Dependency
+	cof  cofLoader.Dependency
 	font fontTableLoader.Dependency
 	gpl  gplLoader.Dependency
 	pl2  pl2Loader.Dependency

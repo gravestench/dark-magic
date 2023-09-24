@@ -7,6 +7,7 @@ require (
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
+	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c

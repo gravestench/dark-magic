@@ -5,6 +5,7 @@ import (
 
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
@@ -29,6 +30,7 @@ func (s *Service) DependenciesResolved() bool {
 		s.tbl,
 		s.tsv,
 		s.wav,
+		s.cof,
 	} {
 		if dependency == nil {
 			return false
@@ -68,6 +70,8 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 			s.tsv = candidate
 		case wavLoader.Dependency:
 			s.wav = candidate
+		case cofLoader.Dependency:
+			s.cof = candidate
 		}
 	}
 }
