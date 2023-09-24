@@ -17,6 +17,7 @@ type Dependency = LoadsDiablo2Records
 
 type LoadsDiablo2Records interface {
 	LoadRecords() error
+	IsLoaded() bool
 	Belts() []models.BeltData
 	CharStartingAttributes() []models.CharStats
 	Inventory() []models.InventoryData

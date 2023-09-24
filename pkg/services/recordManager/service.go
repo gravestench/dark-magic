@@ -112,7 +112,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) IsLoaded() bool {
-	return len(s.sounds) > 0
+	return s.loaded
 }
 
 func (s *Service) LoadRecords() error {
