@@ -4,25 +4,20 @@ import (
 	"fmt"
 
 	"github.com/gravestench/runtime"
+	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 )
 
-type recipe interface {
-	runtime.Service
-	runtime.HasDependencies
-}
-
 // Service is responsible for creating stats
 type Service struct {
+	logger  *zerolog.Logger
 	records recordManager.Dependency
 	tables  tblLoader.Dependency
 	locale  locale.Dependency
-	hero    hero.Dependency
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
@@ -33,27 +28,12 @@ func (s *Service) Name() string {
 	return "Stats"
 }
 
-func (s *Service) DependenciesResolved() bool {
-	if s.records == nil {
-		return false
-	}
-
-	if s.tables == nil {
-		return false
-	}
-
-	return true
+func (s *Service) BindLogger(logger *zerolog.Logger) {
+	s.logger = logger
 }
 
-func (s *Service) ResolveDependencies(rt runtime.Runtime) {
-	for _, service := range rt.Services() {
-		switch candidate := service.(type) {
-		case recordManager.Dependency:
-			s.records = candidate
-		case tblLoader.Dependency:
-			s.tables = candidate
-		}
-	}
+func (s *Service) Logger() *zerolog.Logger {
+	return s.logger
 }
 
 // NewStat creates a stat instance with the given record and values
@@ -88,8 +68,8 @@ func (s *Service) NewStatList(stats ...Stat) *StatList {
 	return &StatList{stats}
 }
 
-// NewValue creates a stat value of the given type
-func (s *Service) NewValue(t StatNumberType, c ValueCombineType) *StatValue {
+// NewStatValue creates a stat value of the given type
+func (s *Service) NewStatValue(t StatNumberType, c ValueCombineType) *StatValue {
 	sv := &StatValue{
 		numberType:  t,
 		combineType: c,
