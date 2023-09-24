@@ -11,6 +11,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
 	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
+	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
@@ -54,6 +55,7 @@ func main() {
 	rt.Add(&assetLoader.Service{})
 	rt.Add(&recordManager.Service{})
 	rt.Add(&locale.Service{})
+	rt.Add(&hero.Service{})
 
 	rt.Run()
 }
