@@ -15,8 +15,6 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 	"github.com/rs/zerolog"
 
-	"github.com/gravestench/dark-magic/pkg/cache"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
@@ -33,20 +31,17 @@ import (
 type Service struct {
 	logger *zerolog.Logger
 
-	config configFile.Dependency
-	mpq    mpqLoader.Dependency
-	dc6    dc6Loader.Dependency
-	dcc    dccLoader.Dependency
-	ds1    ds1Loader.Dependency
-	dt1    dt1Loader.Dependency
-	font   fontTableLoader.Dependency
-	gpl    gplLoader.Dependency
-	pl2    pl2Loader.Dependency
-	tbl    tblLoader.Dependency
-	tsv    tsvLoader.Dependency
-	wav    wavLoader.Dependency
-
-	spriteCache *cache.Cache
+	mpq  mpqLoader.Dependency
+	dc6  dc6Loader.Dependency
+	dcc  dccLoader.Dependency
+	ds1  ds1Loader.Dependency
+	dt1  dt1Loader.Dependency
+	font fontTableLoader.Dependency
+	gpl  gplLoader.Dependency
+	pl2  pl2Loader.Dependency
+	tbl  tblLoader.Dependency
+	tsv  tsvLoader.Dependency
+	wav  wavLoader.Dependency
 }
 
 func (s *Service) Archives() map[string]*mpq.MPQ {
@@ -71,27 +66,6 @@ func (s *Service) Logger() *zerolog.Logger {
 }
 
 func (s *Service) Init(rt runtime.R) {
-	s.initSpriteCache()
-}
-
-func (s *Service) initSpriteCache() {
-	const (
-		kb = 1024 * 8
-		mb = 1024 * kb
-	)
-
-	cfg, err := s.config.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		s.spriteCache = cache.New(500 * mb)
-		return
-	}
-
-	budget := cfg.Group(s.Name()).GetInt(configKeySpriteCacheBudgetMB)
-	if budget == 0 {
-		budget = 500
-	}
-
-	s.spriteCache = cache.New(budget * mb)
 }
 
 func (s *Service) Name() string {

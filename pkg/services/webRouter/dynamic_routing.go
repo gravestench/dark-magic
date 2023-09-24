@@ -106,6 +106,12 @@ func (s *Service) bindNewRoutes(rt runtime.R) {
 			continue
 		}
 
+		if svc, ok := candidate.(runtime.HasDependencies); ok {
+			if !svc.DependenciesResolved() {
+				continue
+			}
+		}
+
 		if _, alreadyBound := s.boundServices[svcToInit.Name()]; alreadyBound {
 			continue
 		}

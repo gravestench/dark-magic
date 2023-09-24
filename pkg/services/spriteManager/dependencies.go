@@ -1,34 +1,32 @@
-package assetLoader
+package spriteManager
 
 import (
 	"time"
 
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
-	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
+
+// the following methods are invoked by the runtime
+// automatically in an endless loop. As soon as the
+// dependencies are resolved, the Init method is called.
 
 func (s *Service) DependenciesResolved() bool {
 	for _, dependency := range []any{
-		s.mpq,
+		s.config,
 		s.dc6,
 		s.dcc,
 		s.ds1,
 		s.dt1,
-		s.gpl,
 		s.pl2,
-		s.tbl,
-		s.tsv,
-		s.wav,
+		s.mpq,
 	} {
 		if dependency == nil {
 			return false
@@ -42,14 +40,20 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
+	// make sure our config is loaded
+	cfg, err := s.config.GetConfigByFileName(s.ConfigFileName())
+	if cfg == nil || err != nil {
+		return false
+	}
+
 	return true
 }
 
 func (s *Service) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
 		switch candidate := service.(type) {
-		case mpqLoader.Dependency:
-			s.mpq = candidate
+		case configFile.Dependency:
+			s.config = candidate
 		case dc6Loader.Dependency:
 			s.dc6 = candidate
 		case dccLoader.Dependency:
@@ -58,16 +62,10 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 			s.ds1 = candidate
 		case dt1Loader.Dependency:
 			s.dt1 = candidate
-		case gplLoader.Dependency:
-			s.gpl = candidate
 		case pl2Loader.Dependency:
 			s.pl2 = candidate
-		case tblLoader.Dependency:
-			s.tbl = candidate
-		case tsvLoader.Dependency:
-			s.tsv = candidate
-		case wavLoader.Dependency:
-			s.wav = candidate
+		case mpqLoader.Dependency:
+			s.mpq = candidate
 		}
 	}
 }

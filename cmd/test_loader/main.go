@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
+	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
@@ -54,6 +55,7 @@ func main() {
 	// high level d2 services
 	rt.Add(&assetLoader.Service{})
 	rt.Add(&recordManager.Service{})
+	rt.Add(&spriteManager.Service{})
 	rt.Add(&locale.Service{})
 	rt.Add(&hero.Service{})
 

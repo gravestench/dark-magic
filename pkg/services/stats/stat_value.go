@@ -1,9 +1,9 @@
-package d2stats
+package stats
 
 // StatNumberType is a value type for a stat value
 type StatNumberType int
 
-//  Stat value types
+// Stat value types
 const (
 	StatValueInt StatNumberType = iota
 	StatValueFloat
@@ -42,18 +42,58 @@ const (
 // StatValue is something that can have both integer and float
 // number components, as well as a means of retrieving a string for
 // its values.
-type StatValue interface {
-	NumberType() StatNumberType
-	CombineType() ValueCombineType
+type StatValue struct {
+	numberType  StatNumberType
+	combineType ValueCombineType
+	stringerFn  func(StatValue) string
+}
 
-	Clone() StatValue
+func (s *StatValue) NumberType() StatNumberType {
+	//TODO implement me
+	panic("implement me")
+}
 
-	SetInt(int) StatValue
-	SetFloat(float64) StatValue
-	SetStringer(func(StatValue) string) StatValue
+func (s *StatValue) CombineType() ValueCombineType {
+	//TODO implement me
+	panic("implement me")
+}
 
-	Int() int
-	Float() float64
-	String() string
-	Stringer() func(StatValue) string
+func (s *StatValue) Clone() StatValue {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) SetInt(i int) StatValue {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) SetFloat(f float64) StatValue {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) SetStringer(f func(StatValue) string) StatValue {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) Int() int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) Float() float64 {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) String() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StatValue) Stringer() func(StatValue) string {
+	//TODO implement me
+	panic("implement me")
 }

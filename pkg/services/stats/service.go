@@ -6,8 +6,10 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/loaders/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/hero"
+	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
+	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
 )
 
 type recipe interface {
@@ -19,6 +21,8 @@ type recipe interface {
 type Service struct {
 	records recordManager.Dependency
 	tables  tblLoader.Dependency
+	locale  locale.Dependency
+	hero    hero.Dependency
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
@@ -53,7 +57,7 @@ func (s *Service) ResolveDependencies(rt runtime.Runtime) {
 }
 
 // NewStat creates a stat instance with the given record and values
-func (s *Service) NewStat(key string, values ...float64) Stat {
+func (s *Service) NewStat(key string, values ...float64) *Stat {
 	var record *models.ItemStatCost
 
 	for _, candidate := range s.records.ItemStatCost() {
@@ -69,9 +73,9 @@ func (s *Service) NewStat(key string, values ...float64) Stat {
 		return nil
 	}
 
-	stat := &diablo2Stat{
-		factory: s,
-		record:  record,
+	stat := &Stat{
+		statService: s,
+		statRecord:  record,
 	}
 
 	stat.init(values...) // init stat values, value types, and value combination rules
@@ -80,13 +84,13 @@ func (s *Service) NewStat(key string, values ...float64) Stat {
 }
 
 // NewStatList creates a stat list
-func (s *Service) NewStatList(stats ...Stat) StatList {
-	return &Diablo2StatList{stats}
+func (s *Service) NewStatList(stats ...Stat) *StatList {
+	return &StatList{stats}
 }
 
 // NewValue creates a stat value of the given type
-func (s *Service) NewValue(t StatNumberType, c ValueCombineType) StatValue {
-	sv := &Diablo2StatValue{
+func (s *Service) NewValue(t StatNumberType, c ValueCombineType) *StatValue {
+	sv := &StatValue{
 		numberType:  t,
 		combineType: c,
 	}
@@ -102,10 +106,6 @@ func (s *Service) NewValue(t StatNumberType, c ValueCombineType) StatValue {
 
 	return sv
 }
-
-const (
-	monsterNotFound = "{Monster not found!}"
-)
 
 func (s *Service) getHeroMap() []models.Hero {
 	return []models.Hero{
@@ -145,31 +145,46 @@ func (s *Service) stringerIntPercentageUnsigned(sv StatValue) string {
 
 func (s *Service) stringerClassAllSkills(sv StatValue) string {
 	heroIndex := sv.Int()
+	startingCharStats := s.records.CharStartingAttributes()
+	classRecord := startingCharStats[heroIndex]
+	str, _ := s.locale.GetTextByKey(classRecord.StrAllSkills)
 
-	heroMap := s.getHeroMap()
-	classRecord := s.records.CharStartingAttributes().Stats[heroMap[heroIndex]]
-
-	return s.records.TranslateString(classRecord.SkillStrAll)
+	return str
 }
 
 func (s *Service) stringerClassOnly(sv StatValue) string {
-	heroMap := s.getHeroMap()
 	heroIndex := sv.Int()
-	classRecord := s.records.Character.Stats[heroMap[heroIndex]]
-	classOnlyKey := classRecord.SkillStrClassOnly
+	startingCharStats := s.records.CharStartingAttributes()
+	classRecord := startingCharStats[heroIndex]
+	str, _ := s.locale.GetTextByKey(classRecord.StrClassOnly)
 
-	return s.records.TranslateString(classOnlyKey)
+	return str
 }
 
 func (s *Service) stringerSkillName(sv StatValue) string {
-	skillRecord := s.records.Skill.Details[sv.Int()]
-	return skillRecord.Skill
+	const (
+		skillNotFound = "{Monster not found!}"
+	)
+
+	skills := s.records.Skills()
+
+	for _, skill := range skills {
+		if skill.ID == sv.String() {
+			return skill.SkillDesc
+		}
+	}
+
+	return "{Skill not found!}"
 }
 
 func (s *Service) stringerMonsterName(sv StatValue) string {
-	for key := range s.records.Monster.Stats {
-		if s.records.Monster.Stats[key].ID == sv.Int() {
-			return s.records.Monster.Stats[key].NameString
+	const (
+		monsterNotFound = "{Monster not found!}"
+	)
+
+	for _, record := range s.records.MonsterStats() {
+		if record.Id == sv.String() {
+			return record.NameStr
 		}
 	}
 

@@ -1,4 +1,4 @@
-package assetLoader
+package spriteManager
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ type frameInfo struct {
 }
 
 func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byte, error) {
-	cacheKey := fmt.Sprintf("png: %s", pathDC6)
+	cacheKey := fmt.Sprintf("png: %s %s", pathDC6, pathPL2)
 	cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
 	if isCached {
 		return cachedData.([]byte), nil
@@ -32,7 +32,7 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 		return nil, fmt.Errorf("extracting palette from pl2: %v", err)
 	}
 
-	dc6Image, err := s.LoadDc6(pathDC6)
+	dc6Image, err := s.dc6.Load(pathDC6)
 	if err != nil {
 		return nil, fmt.Errorf("loading dc6: %v", err)
 	}
@@ -58,6 +58,32 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 	return pngData, nil
 }
 
+func (s *Service) LoadDc6ToAnimatedGif(pathDC6 string, pathPL2 string) ([]byte, error) {
+	data, err := s.LoadDc6ToPngSpriteAtlas(pathDC6, pathPL2)
+	if err != nil {
+		return nil, fmt.Errorf("loading file: %v", err)
+	}
+
+	var gifImage []byte
+
+	cacheKey := fmt.Sprintf("gif: %s %s", pathDC6, pathPL2)
+	cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
+	if isCached {
+		return cachedData.([]byte), nil
+	}
+
+	gifImage, err = generateAnimatedGifFromPngSpriteAtlasData(data)
+	if err != nil {
+		return nil, fmt.Errorf("creating animated GIF from png sprite atlas: %v", err)
+	}
+
+	if err = s.spriteCache.Insert(cacheKey, gifImage, len(gifImage)); err != nil {
+		s.logger.Error().Msgf("caching animated gif: %v", err)
+	}
+
+	return gifImage, nil
+}
+
 func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	cacheKey := fmt.Sprintf("pl2: %s", pathPL2)
 	cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
@@ -65,7 +91,7 @@ func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 		return cachedData.(color.Palette), nil
 	}
 
-	paletteStream, err := s.Load(pathPL2)
+	paletteStream, err := s.mpq.Load(pathPL2)
 	if err != nil {
 		return nil, fmt.Errorf("loading pl2: %v", err)
 	}

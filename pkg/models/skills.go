@@ -4,6 +4,7 @@ package models
 type SkillData struct {
 	ID                string `csv:"Id"`                // Unique identifier for the skill.
 	CharClass         string `csv:"charclass"`         // Character class associated with the skill.
+	SkillName         string `csv:"skill"`             // Description of the skill.
 	SkillDesc         string `csv:"skilldesc"`         // Description of the skill.
 	SrvStFunc         string `csv:"srvstfunc"`         // Server Start function used by the skill.
 	SrvDoFunc         string `csv:"srvdofunc"`         // Server Do function used by the skill.

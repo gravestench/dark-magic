@@ -1,4 +1,4 @@
-package assetLoader
+package spriteManager
 
 import (
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -9,7 +9,7 @@ const (
 )
 
 func (s *Service) ConfigFileName() string {
-	return "asset_loader.json"
+	return "sprite_manager.json"
 }
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {

@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
+	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
@@ -56,7 +57,6 @@ require (
 	github.com/exoscale/egoscale v0.46.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
-	github.com/gin-contrib/gzip v0.0.6 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-acme/lego/v4 v4.3.1 // indirect
 	github.com/go-errors/errors v1.1.1 // indirect
@@ -146,5 +146,4 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	layeh.com/gopher-luar v1.0.11 // indirect
 )
