@@ -19,6 +19,29 @@ const (
 	HeroDruid                   // Druid
 )
 
+func (h Hero) String() string {
+	switch h {
+	case HeroBarbarian:
+		return "Barbarian"
+	case HeroNecromancer:
+		return "Necromancer"
+	case HeroPaladin:
+		return "Paladin"
+	case HeroAssassin:
+		return "Assassin"
+	case HeroSorceress:
+		return "Sorceress"
+	case HeroAmazon:
+		return "Amazon"
+	case HeroDruid:
+		return "Druid"
+	default:
+		log.Fatalf("Unknown hero token: %d", h)
+	}
+
+	return ""
+}
+
 // GetToken returns a 2 letter token
 func (h Hero) GetToken() string {
 	switch h {
