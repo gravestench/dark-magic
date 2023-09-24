@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// GetPath returns the absolute path for a given incoming file
+// GetFilePath returns the absolute path for a given incoming file
 func (s *Service) GetFilePath(name string) string {
 	p, _ := filepath.Abs(expandHomeDirectory(filepath.Join(s.ConfigDirectory(), name)))
 	return p
@@ -24,7 +24,7 @@ func (s *Service) ConfigDirectory() string {
 	return s.RootDirectory
 }
 
-// GetConfig retrieves a configuration by its path from the service's internal map.
+// GetConfigByFileName retrieves a configuration by its path from the service's internal map.
 // It locks the service's mutex to ensure safe concurrent access.
 func (s *Service) GetConfigByFileName(path string) (*Config, error) {
 	s.mux.Lock()
@@ -79,7 +79,7 @@ func (s *Service) Configs() map[string]*Config {
 	return s.configs
 }
 
-// CreateConfig creates a new configuration file at the specified path.
+// CreateConfigWithFileName creates a new configuration file at the specified path.
 // It locks the service's mutex to ensure safe concurrent access.
 func (s *Service) CreateConfigWithFileName(path string) (*Config, error) {
 	s.mux.Lock()
@@ -134,7 +134,7 @@ func (s *Service) createConfigUnsafe(path string) (*Config, error) {
 	return s.configs[path], nil
 }
 
-// LoadConfig loads a configuration from the specified path.
+// LoadConfigWithFileName loads a configuration from the specified path.
 // It locks the service's mutex to ensure safe concurrent access.
 func (s *Service) LoadConfigWithFileName(path string) (*Config, error) {
 	s.mux.Lock()
@@ -172,7 +172,7 @@ func (s *Service) loadConfigUnsafe(path string) (*Config, error) {
 	return s.configs[path], nil
 }
 
-// SaveConfig saves a configuration to the specified path.
+// SaveConfigWithFileName saves a configuration to the specified path.
 // It locks the service's mutex to ensure safe concurrent access.
 func (s *Service) SaveConfigWithFileName(path string) error {
 	s.mux.Lock()
