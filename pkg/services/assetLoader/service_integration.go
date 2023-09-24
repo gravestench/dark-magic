@@ -13,15 +13,17 @@ import (
 
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
-	_ lua.UsesLuaEnvironment  = &Service{}
-	_ LoadsDiabloFiles        = &Service{}
+	_ runtime.Service             = &Service{}
+	_ runtime.HasLogger           = &Service{}
+	_ runtime.HasDependencies     = &Service{}
+	_ configFile.HasDefaultConfig = &Service{}
+	_ lua.UsesLuaEnvironment      = &Service{}
+	_ LoadsDiabloFiles            = &Service{}
 )
 
 type Dependency = LoadsDiabloFiles

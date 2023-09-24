@@ -5,6 +5,7 @@ import (
 
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
@@ -19,6 +20,7 @@ import (
 
 func (s *Service) DependenciesResolved() bool {
 	for _, dependency := range []any{
+		s.config,
 		s.mpq,
 		s.dc6,
 		s.dcc,
@@ -42,12 +44,20 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
+	// make sure our config is loaded
+	cfg, err := s.config.GetConfigByFileName(s.ConfigFileName())
+	if cfg == nil || err != nil {
+		return false
+	}
+
 	return true
 }
 
 func (s *Service) ResolveDependencies(rt runtime.R) {
 	for _, service := range rt.Services() {
 		switch candidate := service.(type) {
+		case configFile.Dependency:
+			s.config = candidate
 		case mpqLoader.Dependency:
 			s.mpq = candidate
 		case dc6Loader.Dependency:
