@@ -13,20 +13,28 @@ import (
 )
 
 type Service struct {
-	cfg    configFile.Dependency
-	logger *zerolog.Logger
-	state  *lua.LState
-	events *ee.EventEmitter
-	mux    sync.Mutex
+	cfg           configFile.Dependency
+	logger        *zerolog.Logger
+	state         *lua.LState
+	events        *ee.EventEmitter
+	mux           sync.Mutex
+	boundServices map[string]any
 }
 
 func (s *Service) Init(rt runtime.R) {
+	s.boundServices = make(map[string]any)
 	s.state = lua.NewState()
 	s.bindLoggerToLuaEnvironment()
 
 	rt.Events().On(events.EventServiceAdded, s.tryToExportToLuaEnvironment)
 
 	for _, service := range rt.Services() {
+		if candidate, ok := service.(runtime.HasDependencies); ok {
+			if !candidate.DependenciesResolved() {
+				continue
+			}
+		}
+
 		if candidate, ok := service.(UsesLuaEnvironment); ok {
 			s.tryToExportToLuaEnvironment(candidate)
 		}

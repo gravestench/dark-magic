@@ -1,13 +1,8 @@
 package lua
 
 import (
-	ee "github.com/gravestench/eventemitter"
 	"github.com/gravestench/runtime"
 )
-
-func (s *Service) BindsEvents(emitter *ee.EventEmitter) {
-	s.events = emitter
-}
 
 func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 	s.mux.Lock()
@@ -27,6 +22,17 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 		return
 	}
 
-	luaUser.ExportToLua(s.state)
+	if candidate, ok := service.(runtime.HasDependencies); ok {
+		if !candidate.DependenciesResolved() {
+			return
+		}
+	}
+
+	if _, exists := s.boundServices[service.Name()]; exists {
+		return
+	}
+
+	go luaUser.ExportToLua(s.state)
+	s.boundServices[service.Name()] = service
 	s.logger.Info().Msgf("successfully exported '%s' to lua", service.Name())
 }
