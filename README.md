@@ -67,7 +67,7 @@ The following services need to be implemented:
 ## How to Contribute
 We welcome contributions from developers, artists, designers, and Diablo 
 enthusiasts of all levels of expertise. If you want to be part of this journey, 
-check out our [CONTRIBUTING.md](https://github.com/dark-magic/CONTRIBUTING.md) guide to get started.
+check out our [CONTRIBUTING.md](https://github.com/gravestench/dark-magic/blob/main/CONTRIBUTING.md) guide to get started.
 
 Also, you can copy/paste the [Service Template](./internal/service_template) 
 into `pkg/services` for a head start on creating a new service. 
@@ -78,11 +78,11 @@ This project is licensed under the MIT License - see the
 [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-* [Zerolog](github.com/rs/zerolog)
-* [Gin](github.com/gin-gonic/gin)
-* [Gopher LUA](github.com/yuin/gopher-lua)
-* [Open Diablo 2](github.com/opendiablo2/opendiablo2)
-* [Runtime](github.com/gravestench/runtime)
+* [Zerolog](https://github.com/rs/zerolog)
+* [Gin](https://github.com/gin-gonic/gin)
+* [Gopher LUA](https://github.com/yuin/gopher-lua)
+* [Open Diablo 2](https://github.com/opendiablo2/opendiablo2)
+* [Runtime](https://github.com/gravestench/runtime)
 
 ---
 *Dark Magic is not affiliated with or endorsed by Blizzard Entertainment, Inc. Diablo is a registered trademark of Blizzard Entertainment, Inc. All in-game content, imagery, and lore are the property of Blizzard Entertainment, Inc.*
