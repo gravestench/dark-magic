@@ -2,7 +2,7 @@ package models
 
 // ItemStatCost represents the functionalities for each possible stat on a unit.
 type ItemStatCost struct {
-	Stat           string `csv:"Stat"`            // Defines the unique pointer for this stat, used in other files.
+	Name           string `csv:"Stat"`            // Defines the unique pointer for this stat, used in other files.
 	SendOther      int    `csv:"Send Other"`      // If 1, add the stat to a new monster if it has no state and an item mask; else ignore.
 	Signed         int    `csv:"Signed"`          // If 1, stat is treated as a signed integer; else it's an unsigned integer. Applies to stats with state bits.
 	SendBits       int    `csv:"Send Bits"`       // Controls how many bits of data for the stat to send to the game client.
@@ -25,7 +25,7 @@ type ItemStatCost struct {
 	SaveAdd        int    `csv:"Save Add"`        // Controls how many bits are allocated for the stat's value when saving/reading an item from a Character Save.
 	SaveParamBits  int    `csv:"Save Param Bits"` // Controls how many bits for the stat's parameter value to use when saving/reading an item from a Character Save.
 	KeepZero       int    `csv:"keepzero"`        // If 1, this stat remains on the change list even if its value is 0; else ignore.
-	Op             string `csv:"op"`              // Stat operator for advanced stat modification when calculating the value of a stat.
+	Op             string `csv:"op"`              // Name operator for advanced stat modification when calculating the value of a stat.
 	OpParam        string `csv:"op param"`        // Possible parameter value for the Op function.
 	OpBase         string `csv:"op base"`         // Possible parameter value for the Op function.
 	OpStat1        string `csv:"op stat1"`        // Possible parameter value for the Op function.
