@@ -4,6 +4,7 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
@@ -11,7 +12,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
-	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	projectName      = "Dark Magic Runtime"
+	projectName      = "Dark Magic"
 	projectConfigDir = "~/.config/dark-magic"
 )
 
@@ -36,9 +36,10 @@ func main() {
 
 	// utility services
 	rt.Add(&lua.Service{})
+	rt.Add(&cacheManager.Service{})
+	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 
 	// d2 file loaders
 	rt.Add(&fontTableLoader.Service{})
@@ -46,7 +47,6 @@ func main() {
 	rt.Add(&dccLoader.Service{})
 	rt.Add(&ds1Loader.Service{})
 	rt.Add(&dt1Loader.Service{})
-	rt.Add(&gplLoader.Service{})
 	rt.Add(&pl2Loader.Service{})
 	rt.Add(&tblLoader.Service{})
 	rt.Add(&tsvLoader.Service{})

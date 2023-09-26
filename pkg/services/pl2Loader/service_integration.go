@@ -4,13 +4,18 @@ import (
 	"github.com/gravestench/pl2"
 
 	"github.com/gravestench/runtime"
+
+	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
-	_ LoadsPl2Files           = &Service{}
+	_ runtime.Service             = &Service{}
+	_ runtime.HasLogger           = &Service{}
+	_ runtime.HasDependencies     = &Service{}
+	_ configFile.HasDefaultConfig = &Service{}
+	_ cacheManager.HasCache       = &Service{}
+	_ LoadsPl2Files               = &Service{}
 )
 
 type Dependency = LoadsPl2Files

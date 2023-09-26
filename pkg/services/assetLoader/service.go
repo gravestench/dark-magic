@@ -8,7 +8,6 @@ import (
 	"github.com/gravestench/ds1"
 	"github.com/gravestench/dt1"
 	"github.com/gravestench/font_table"
-	gpl "github.com/gravestench/gpl/pkg"
 	"github.com/gravestench/mpq"
 	"github.com/gravestench/pl2"
 	"github.com/gravestench/runtime"
@@ -21,7 +20,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
-	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
@@ -39,7 +37,6 @@ type Service struct {
 	dt1  dt1Loader.Dependency
 	cof  cofLoader.Dependency
 	font fontTableLoader.Dependency
-	gpl  gplLoader.Dependency
 	pl2  pl2Loader.Dependency
 	tbl  tblLoader.Dependency
 	tsv  tsvLoader.Dependency
@@ -88,10 +85,6 @@ func (s *Service) LoadDs1(filepath string) (*ds1.DS1, error) {
 
 func (s *Service) LoadDt1(filepath string) (*dt1.DT1, error) {
 	return s.dt1.Load(filepath)
-}
-
-func (s *Service) LoadGpl(filepath string) (*gpl.GPL, error) {
-	return s.gpl.Load(filepath)
 }
 
 func (s *Service) LoadFontTable(filepath string) (*font_table.Font, error) {

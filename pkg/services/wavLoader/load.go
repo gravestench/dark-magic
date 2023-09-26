@@ -8,6 +8,13 @@ import (
 )
 
 func (s *Service) Load(filepath string) ([]byte, error) {
+	if s.cache != nil {
+		cachedData, isCached := s.cache.Retrieve(filepath)
+		if isCached {
+			return cachedData.([]byte), nil
+		}
+	}
+
 	s.logger.Info().Msgf("loading %v", filepath)
 
 	stream, err := s.mpq.Load(filepath)
@@ -29,6 +36,12 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 		err = fmt.Errorf("parsing wav: %v", err)
 		s.logger.Debug().Msg(err.Error())
 		return nil, err
+	}
+
+	if s.cache != nil {
+		if err = s.cache.Insert(filepath, audioData, len(audioData)); err != nil {
+			s.logger.Error().Msgf("caching file '%s': %v", err)
+		}
 	}
 
 	return audioData, nil

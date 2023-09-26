@@ -1,16 +1,22 @@
 package mapGenerator
 
 import (
+	"fmt"
+
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
-	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
 type Service struct {
 	logger *zerolog.Logger
-	assets assetLoader.Dependency
+
+	dt1     dt1Loader.Dependency
+	ds1     ds1Loader.Dependency
+	records recordManager.Dependency
 
 	seed uint64
 }
@@ -28,23 +34,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "Diablo2Map Generator"
-}
-
-func (s *Service) DependenciesResolved() bool {
-	if s.assets == nil {
-		return false
-	}
-
-	return true
-}
-
-func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(assetLoader.Dependency); ok {
-			s.assets = candidate
-		}
-	}
+	return "WorldMap Generator"
 }
 
 func (s *Service) Seed() uint64 {
@@ -55,6 +45,49 @@ func (s *Service) SetSeed(u uint64) {
 	s.seed = u
 }
 
-func (s *Service) GenerateMap(act, difficulty uint) (models.Diablo2Map, error) {
-	return models.Diablo2Map{}, nil
+func (s *Service) GenerateMap(act, difficulty uint) (*WorldMap, error) {
+	m := &WorldMap{}
+
+	if err := s.loadLevelTypeRecordsToWorldMap(act, m); err != nil {
+		return nil, fmt.Errorf("loading level type records into map: %v", err)
+	}
+
+	return m, nil
+}
+
+func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
+	for _, r := range s.records.LevelType() {
+		if r.Act != act {
+			continue
+		}
+
+		lvl := Level{}
+		lvl.Name = r.Name
+
+		for _, dt1Path := range []string{
+			r.File1, r.File2, r.File3, r.File4,
+			r.File5, r.File6, r.File7, r.File8,
+			r.File9, r.File10, r.File11, r.File12,
+			r.File13, r.File14, r.File15, r.File16,
+			r.File17, r.File18, r.File19, r.File20,
+			r.File21, r.File22, r.File23, r.File24,
+			r.File25, r.File26, r.File27, r.File28,
+			r.File29, r.File30, r.File31, r.File32,
+		} {
+			if dt1Path == "" {
+				continue
+			}
+
+			tileset, err := s.dt1.Load(dt1Path)
+			if err != nil {
+				return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+			}
+
+			lvl.tileSets = append(lvl.tileSets, *tileset)
+		}
+
+		m.Levels[r.Act] = append(m.Levels[r.Act], lvl)
+	}
+
+	return nil
 }

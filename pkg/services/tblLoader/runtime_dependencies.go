@@ -1,17 +1,11 @@
-package gplLoader
+package tblLoader
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 )
-
-type Service struct {
-	logger *zerolog.Logger
-	mpq    mpqLoader.Dependency
-}
 
 func (s *Service) DependenciesResolved() bool {
 	if s.mpq == nil {
@@ -19,6 +13,10 @@ func (s *Service) DependenciesResolved() bool {
 	}
 
 	if !s.mpq.RequiredArchivesLoaded() {
+		return false
+	}
+
+	if s.config == nil {
 		return false
 	}
 
@@ -30,22 +28,8 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 		switch candidate := service.(type) {
 		case mpqLoader.Dependency:
 			s.mpq = candidate
+		case configFile.Dependency:
+			s.config = candidate
 		}
 	}
-}
-
-func (s *Service) Init(rt runtime.R) {
-
-}
-
-func (s *Service) Name() string {
-	return "GPL Loader"
-}
-
-func (s *Service) BindLogger(logger *zerolog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *zerolog.Logger {
-	return s.logger
 }

@@ -23,7 +23,7 @@ func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 
 	s.logger.Info().Msg(path)
 
-	stream, err := s.Load(path)
+	stream, err := s.mpq.Load(path)
 	if err != nil {
 		s.logger.Error().Msgf("loading file: %v", err)
 		c.JSON(http.StatusBadRequest, err)

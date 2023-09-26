@@ -7,7 +7,6 @@ import (
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"
 	"github.com/gravestench/dt1"
-	gpl "github.com/gravestench/gpl/pkg"
 	"github.com/gravestench/pl2"
 	tbl "github.com/gravestench/tbl_text"
 
@@ -32,7 +31,6 @@ type LoadsDiabloFiles interface {
 	LoadDcc(filepath string) (*dcc.DCC, error)
 	LoadDs1(filepath string) (*ds1.DS1, error)
 	LoadDt1(filepath string) (*dt1.DT1, error)
-	LoadGpl(filepath string) (*gpl.GPL, error)
 	LoadPl2(filepath string) (*pl2.PL2, error)
 	LoadTbl(filepath string) (tbl.TextTable, error)
 	LoadTsv(filepath string, destination any) error

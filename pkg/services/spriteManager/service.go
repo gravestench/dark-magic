@@ -51,6 +51,7 @@ func (s *Service) initSpriteCache() {
 
 	s.spriteCache = cache.New(budget * mb)
 }
+
 func (s *Service) Name() string {
 	return "Sprite Manager"
 }

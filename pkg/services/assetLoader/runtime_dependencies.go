@@ -10,7 +10,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/gplLoader"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
@@ -25,7 +24,6 @@ func (s *Service) DependenciesResolved() bool {
 		s.dcc,
 		s.ds1,
 		s.dt1,
-		s.gpl,
 		s.pl2,
 		s.tbl,
 		s.tsv,
@@ -60,8 +58,6 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 			s.ds1 = candidate
 		case dt1Loader.Dependency:
 			s.dt1 = candidate
-		case gplLoader.Dependency:
-			s.gpl = candidate
 		case pl2Loader.Dependency:
 			s.pl2 = candidate
 		case tblLoader.Dependency:
