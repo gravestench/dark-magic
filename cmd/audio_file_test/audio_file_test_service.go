@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -163,7 +162,7 @@ func playWavWithMPlayer(filename string, data []byte) error {
 	}
 
 	// Create a temporary WAV file.
-	tmpFile, err := ioutil.TempFile("", "*.wav")
+	tmpFile, err := os.CreateTemp("", "*.wav")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
