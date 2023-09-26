@@ -22,7 +22,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "GPL Loader"
+	return "Font Table Loader"
 }
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {

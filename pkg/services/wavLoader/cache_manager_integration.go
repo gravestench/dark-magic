@@ -7,7 +7,7 @@ import (
 // CacheBudget implements cacheManager.HasCache
 func (s *Service) CacheBudget() int {
 	const (
-		kb = 1024 * 8
+		kb = 1024
 		mb = 1024 * kb
 	)
 

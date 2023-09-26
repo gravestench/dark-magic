@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
@@ -40,6 +42,8 @@ func main() {
 	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
+
+	time.Sleep(time.Second)
 
 	// d2 file loaders
 	rt.Add(&fontTableLoader.Service{})

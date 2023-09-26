@@ -34,7 +34,7 @@ func (s *Service) Init(rt runtime.R) {
 
 func (s *Service) initSpriteCache() {
 	const (
-		kb = 1024 * 8
+		kb = 1024
 		mb = 1024 * kb
 	)
 

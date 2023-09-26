@@ -7,12 +7,12 @@ import (
 	"github.com/gravestench/dark-magic/pkg/cache"
 )
 
-type cacheLookup = map[string]any
+type cacheLookup = map[string]*cache.Cache
 
 type Service struct {
-	runtime       runtime.Runtime
-	logger        *zerolog.Logger
-	boundServices cacheLookup
+	runtime runtime.Runtime
+	logger  *zerolog.Logger
+	caches  cacheLookup
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
@@ -34,7 +34,7 @@ func (s *Service) Logger() *zerolog.Logger {
 }
 
 func (s *Service) FlushAllCaches() {
-	s.boundServices = make(cacheLookup)
+	s.caches = make(cacheLookup)
 
 	for _, service := range s.runtime.Services() {
 		s.tryToFlushCacheForService(service)
@@ -48,7 +48,7 @@ func (s *Service) tryToFlushAllCaches(rt runtime.Runtime) {
 }
 
 func (s *Service) tryToFlushCacheForService(service runtime.Service) {
-	if _, exists := s.boundServices[service.Name()]; exists {
+	if _, exists := s.caches[service.Name()]; exists {
 		return
 	}
 
@@ -59,7 +59,8 @@ func (s *Service) tryToFlushCacheForService(service runtime.Service) {
 
 	s.logger.Info().Msgf("flushing cache for service: %v", service.Name())
 
-	candidate.FlushCache(cache.New(candidate.CacheBudget()))
+	newCache := cache.New(candidate.CacheBudget())
+	candidate.FlushCache(newCache)
 
-	s.boundServices[service.Name()] = nil
+	s.caches[service.Name()] = newCache
 }
