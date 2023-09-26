@@ -29,27 +29,7 @@ type Service struct {
 }
 
 func (s *Service) Init(rt runtime.R) {
-	s.initSpriteCache()
-}
 
-func (s *Service) initSpriteCache() {
-	const (
-		kb = 1024
-		mb = 1024 * kb
-	)
-
-	cfg, err := s.config.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		s.spriteCache = cache.New(500 * mb)
-		return
-	}
-
-	budget := cfg.Group(s.Name()).GetInt(configKeySpriteCacheBudgetMB)
-	if budget == 0 {
-		budget = 500
-	}
-
-	s.spriteCache = cache.New(budget * mb)
 }
 
 func (s *Service) Name() string {

@@ -21,9 +21,12 @@ type frameInfo struct {
 
 func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byte, error) {
 	cacheKey := fmt.Sprintf("png: %s %s", pathDC6, pathPL2)
-	cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
-	if isCached {
-		return cachedData.([]byte), nil
+
+	if s.spriteCache != nil {
+		cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
+		if isCached {
+			return cachedData.([]byte), nil
+		}
 	}
 
 	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
@@ -51,8 +54,10 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 		return nil, fmt.Errorf("generating sprite atlas")
 	}
 
-	if err = s.spriteCache.Insert(cacheKey, pngData, len(pngData)); err != nil {
-		s.logger.Error().Msgf("caching %s: %v", pathDC6, err)
+	if s.spriteCache != nil {
+		if err = s.spriteCache.Insert(cacheKey, pngData, len(pngData)); err != nil {
+			s.logger.Error().Msgf("caching %s: %v", pathDC6, err)
+		}
 	}
 
 	return pngData, nil
@@ -86,9 +91,12 @@ func (s *Service) LoadDc6ToAnimatedGif(pathDC6 string, pathPL2 string) ([]byte, 
 
 func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	cacheKey := fmt.Sprintf("pl2: %s", pathPL2)
-	cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
-	if isCached {
-		return cachedData.(color.Palette), nil
+
+	if s.spriteCache != nil {
+		cachedData, isCached := s.spriteCache.Retrieve(cacheKey)
+		if isCached {
+			return cachedData.(color.Palette), nil
+		}
 	}
 
 	paletteStream, err := s.mpq.Load(pathPL2)
@@ -126,8 +134,10 @@ func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 		}
 	}
 
-	if err = s.spriteCache.Insert(cacheKey, p, numBytesRGBA); err != nil {
-		s.logger.Error().Msgf("caching %s: %v", pathPL2, err)
+	if s.spriteCache != nil {
+		if err = s.spriteCache.Insert(cacheKey, p, numBytesRGBA); err != nil {
+			s.logger.Error().Msgf("caching %s: %v", pathPL2, err)
+		}
 	}
 
 	return p, nil
