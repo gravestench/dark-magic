@@ -2,6 +2,8 @@ module github.com/gravestench/dark-magic
 
 go 1.19
 
+replace github.com/gravestench/dt1 => /Users/dylanknuth/src/od2_codecs/dt1
+
 require (
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
@@ -11,10 +13,9 @@ require (
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
-	github.com/gravestench/dt1 v0.0.0-20230725082703-401c90343d4c
+	github.com/gravestench/dt1 v0.0.0-20230927053827-79713c1e1a90
 	github.com/gravestench/eventemitter v0.0.0-20230922020814-8ccd81f6aaf9
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
-	github.com/gravestench/gpl v0.0.0-20230725161559-fe12f2cbd18e
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
 	github.com/gravestench/runtime v0.0.0-20230922020855-14472034e427
