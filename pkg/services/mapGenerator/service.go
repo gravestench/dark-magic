@@ -2,6 +2,7 @@ package mapGenerator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
@@ -46,7 +47,7 @@ func (s *Service) SetSeed(u uint64) {
 }
 
 func (s *Service) GenerateMap(act, difficulty uint) (*WorldMap, error) {
-	m := &WorldMap{}
+	m := NewWorldMap()
 
 	if err := s.loadLevelTypeRecordsToWorldMap(act, m); err != nil {
 		return nil, fmt.Errorf("loading level type records into map: %v", err)
@@ -63,8 +64,9 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 
 		lvl := Level{}
 		lvl.Name = r.Name
+		lvl.Type = r
 
-		for _, dt1Path := range []string{
+		for _, filePath := range []string{
 			r.File1, r.File2, r.File3, r.File4,
 			r.File5, r.File6, r.File7, r.File8,
 			r.File9, r.File10, r.File11, r.File12,
@@ -74,16 +76,37 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 			r.File25, r.File26, r.File27, r.File28,
 			r.File29, r.File30, r.File31, r.File32,
 		} {
-			if dt1Path == "" {
+			if filePath == "" {
 				continue
 			}
 
-			tileset, err := s.dt1.Load(dt1Path)
-			if err != nil {
-				return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+			if filePath == "0" {
+				continue
 			}
 
-			lvl.tileSets = append(lvl.tileSets, *tileset)
+			if strings.HasSuffix(strings.ToLower(filePath), ".dt1") {
+				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
+
+				tileset, err := s.dt1.Load(filePath)
+				if err != nil {
+					continue
+					//return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+				}
+
+				lvl.TileSets = append(lvl.TileSets, *tileset)
+			}
+
+			if strings.HasSuffix(strings.ToLower(filePath), ".ds1") {
+				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
+
+				tileStamp, err := s.ds1.Load(filePath)
+				if err != nil {
+					continue
+					//return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+				}
+
+				lvl.TileStamps = append(lvl.TileStamps, *tileStamp)
+			}
 		}
 
 		m.Levels[r.Act] = append(m.Levels[r.Act], lvl)
