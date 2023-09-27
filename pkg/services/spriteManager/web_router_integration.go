@@ -62,6 +62,8 @@ func (s *Service) handleCreatePngSpriteAtlas(c *gin.Context) {
 		s.handleCreatePngSpriteAtlasFromDc6(c)
 	case ".dcc":
 		s.handleCreatePngSpriteAtlasFromDcc(c)
+	case ".dt1":
+		s.handleCreatePngSpriteAtlasFromDt1(c)
 	default:
 		c.JSON(http.StatusBadRequest, fmt.Errorf("cannot create sprite for file with extension '%s'", fileExtension))
 		return
@@ -95,6 +97,25 @@ func (s *Service) handleCreatePngSpriteAtlasFromDcc(c *gin.Context) {
 	s.logger.Info().Msg(path)
 
 	data, err := s.LoadDccToPngSpriteAtlas(path, palette)
+	if err != nil {
+		s.logger.Error().Msgf("loading file: %v", err)
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	c.Header("Content-Disposition", "inline")
+	c.Header("Content-Type", "image/png")
+	c.Data(http.StatusOK, "application/octet-stream", data)
+}
+
+func (s *Service) handleCreatePngSpriteAtlasFromDt1(c *gin.Context) {
+	paletteKey := c.Param("palette")
+	path := c.Param("path")
+	palette := s.lookupPalettePathByKey(paletteKey)
+
+	s.logger.Info().Msg(path)
+
+	data, err := s.LoadDt1ToPngSpriteAtlas(path, palette)
 	if err != nil {
 		s.logger.Error().Msgf("loading file: %v", err)
 		c.JSON(http.StatusBadRequest, err)
