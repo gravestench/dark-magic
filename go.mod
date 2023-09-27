@@ -2,8 +2,6 @@ module github.com/gravestench/dark-magic
 
 go 1.19
 
-replace github.com/gravestench/dt1 => /Users/dylanknuth/src/od2_codecs/dt1
-
 require (
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9

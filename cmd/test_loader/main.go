@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
@@ -64,6 +65,7 @@ func main() {
 	rt.Add(&spriteManager.Service{})
 	rt.Add(&locale.Service{})
 	rt.Add(&hero.Service{})
+	rt.Add(&mapGenerator.Service{})
 
 	rt.Run()
 }
