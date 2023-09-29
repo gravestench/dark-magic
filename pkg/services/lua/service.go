@@ -58,11 +58,9 @@ func (s *Service) Init(rt runtime.R) {
 
 	initScriptPath := cfg.Group(s.Name()).GetString("init script")
 
-	s.runScript(initScriptPath)
-
-	go s.watchFileAndCallOnChange(initScriptPath, func() {
-		s.runScript(initScriptPath)
-	})
+	if err = s.runScript(initScriptPath); err != nil {
+		s.logger.Error().Msgf("running script: %v", err)
+	}
 }
 
 func (s *Service) Name() string {
