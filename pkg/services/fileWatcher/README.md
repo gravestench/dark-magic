@@ -1,4 +1,4 @@
-# Template service
+# File Watcher Service
 The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a single service
 responsible watching for filesystem changes to files and calling handler
 functions when those files change.

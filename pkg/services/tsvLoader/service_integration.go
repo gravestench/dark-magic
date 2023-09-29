@@ -14,5 +14,6 @@ var (
 type Dependency = LoadsTsvFiles
 
 type LoadsTsvFiles = interface {
-	Load(filepath string, destination any) error
+	Load(filepath string) ([]byte, error)
+	Unmarshal(filepath string, destination any) error
 }
