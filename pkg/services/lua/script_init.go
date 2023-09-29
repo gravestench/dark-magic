@@ -7,7 +7,7 @@ import (
 
 func (s *Service) runScript(script string) {
 	if err := s.state.DoFile(script); err != nil {
-		s.logger.Warn().Msgf("executing init script '%s': %v", script, err)
+		s.logger.Warn().Msgf("executing init script %q: %v", script, err)
 	}
 }
 

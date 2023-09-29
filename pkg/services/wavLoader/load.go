@@ -40,7 +40,7 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, audioData, len(audioData)); err != nil {
-			s.logger.Error().Msgf("caching file '%s': %v", err)
+			s.logger.Error().Msgf("caching file %q: %v", err)
 		}
 	}
 

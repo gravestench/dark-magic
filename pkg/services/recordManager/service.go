@@ -199,7 +199,7 @@ func (s *Service) LoadRecords() error {
 		}
 
 		if err := s.tsv.Load(path, destination); err != nil {
-			s.logger.Error().Msgf("parsing records for '%s': %v", path, err)
+			s.logger.Error().Msgf("parsing records for %q: %v", path, err)
 		}
 	}
 

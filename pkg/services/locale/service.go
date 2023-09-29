@@ -74,7 +74,7 @@ func (s *Service) GetSupportedCharsets() []string {
 func (s *Service) GetTextByKey(key string) (string, error) {
 	val, found := s.compositeStringTable[key]
 	if !found {
-		return key, fmt.Errorf("no value found for key '%s'", key)
+		return key, fmt.Errorf("no value found for key %q", key)
 	}
 
 	return val, nil

@@ -34,5 +34,5 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 
 	go luaUser.ExportToLua(s.state)
 	s.boundServices[service.Name()] = service
-	s.logger.Info().Msgf("successfully exported '%s' to lua", service.Name())
+	s.logger.Info().Msgf("successfully exported %q to lua", service.Name())
 }

@@ -65,7 +65,7 @@ func (s *Service) handleCreatePngSpriteAtlas(c *gin.Context) {
 	case ".dt1":
 		s.handleCreatePngSpriteAtlasFromDt1(c)
 	default:
-		c.JSON(http.StatusBadRequest, fmt.Errorf("cannot create sprite for file with extension '%s'", fileExtension))
+		c.JSON(http.StatusBadRequest, fmt.Errorf("cannot create sprite for file with extension %q", fileExtension))
 		return
 	}
 }
@@ -137,7 +137,7 @@ func (s *Service) createAnimatedGifFromSpriteAtlas(c *gin.Context) {
 	case ".dcc":
 		s.handleCreateAnimatedGifFromDcc(c)
 	default:
-		c.JSON(http.StatusBadRequest, fmt.Errorf("cannot create sprite for file with extension '%s'", fileExtension))
+		c.JSON(http.StatusBadRequest, fmt.Errorf("cannot create sprite for file with extension %q", fileExtension))
 		return
 	}
 }

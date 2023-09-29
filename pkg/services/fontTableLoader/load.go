@@ -33,7 +33,7 @@ func (s *Service) Load(filepath string) (*font_table.Font, error) {
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, font, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file '%s': %v", err)
+			s.logger.Error().Msgf("caching file %q: %v", err)
 		}
 	}
 
