@@ -22,6 +22,7 @@ require (
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
 	github.com/hajimehoshi/oto v0.7.1
 	github.com/rs/zerolog v1.31.0
+	github.com/traefik/yaegi v0.15.1
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
 )
@@ -131,11 +132,13 @@ require (
 	golang.org/x/exp v0.0.0-20201008143054-e3b2a7f2fdc7 // indirect
 	golang.org/x/image v0.0.0-20220302094943-723b81ca9867 // indirect
 	golang.org/x/mobile v0.0.0-20200801112145-973feb4309de // indirect
+	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210119180700-e258113e47cc // indirect
@@ -147,3 +150,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/traefik/yaegi => github.com/switchupcb/yaegi v0.10.1-0.20220810033723-715142863099
