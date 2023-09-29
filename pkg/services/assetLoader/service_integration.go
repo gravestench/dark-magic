@@ -33,6 +33,7 @@ type LoadsDiabloFiles interface {
 	LoadDt1(filepath string) (*dt1.DT1, error)
 	LoadPl2(filepath string) (*pl2.PL2, error)
 	LoadTbl(filepath string) (tbl.TextTable, error)
-	LoadTsv(filepath string, destination any) error
+	UnmarshalTsv(filepath string, destination any) error
+	LoadTsv(filepath string) ([]byte, error)
 	LoadWav(filepath string) ([]byte, error)
 }

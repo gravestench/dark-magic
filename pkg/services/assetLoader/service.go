@@ -95,8 +95,12 @@ func (s *Service) LoadPl2(filepath string) (*pl2.PL2, error) {
 	return s.pl2.Load(filepath)
 }
 
-func (s *Service) LoadTsv(filepath string, destination any) error {
-	return s.tsv.Load(filepath, destination)
+func (s *Service) UnmarshalTsv(filepath string, destination any) error {
+	return s.tsv.Unmarshal(filepath, destination)
+}
+
+func (s *Service) LoadTsv(filepath string) ([]byte, error) {
+	return s.tsv.Load(filepath)
 }
 
 func (s *Service) LoadTbl(filepath string) (tbl.TextTable, error) {
