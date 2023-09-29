@@ -2,7 +2,6 @@ package dt1Loader
 
 import (
 	"github.com/gravestench/dt1"
-
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"

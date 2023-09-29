@@ -310,8 +310,8 @@ github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/gravestench/bitstream v0.0.0-20230728184458-917abdef8ae3 h1:A9GtB9S48VwezFBZI2U8+lamZFMJp0XJiBUH3Cp0E24=
-github.com/gravestench/bitstream v0.0.0-20230728184458-917abdef8ae3/go.mod h1:n9EqYA4ZZM9S8wdwSSVVHXzSVFtlxg2OIWRvbEqTxpM=
+github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f h1:n47zmhKTdMYyxaFbfkXo6z9FgBI2WelPMlxTyKIRt1s=
+github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f/go.mod h1:n9EqYA4ZZM9S8wdwSSVVHXzSVFtlxg2OIWRvbEqTxpM=
 github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8 h1:9VrkZ0VOLlcWYmaMB7xVyZM6sScBC4nIE7KxA1mV000=
 github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8/go.mod h1:ABI03DtRmA7YFUn0LqnPy/MRuknT1ELY/MvTDfBfD0M=
 github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5 h1:m34jo0ff+z0Lv3YNIUFeJhQJGvMCblDRWy+2lQqS/Dg=
@@ -320,8 +320,8 @@ github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12 h1:VzQwWtANwsl/QyQ
 github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12/go.mod h1:P2DSp78K9p1pDuWyz0GvG8OITIMOnuM3jiL/FUq/WjY=
 github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c h1:wgObfLu4FFsvx0LZxkD1/v/HEQ21p409XukQ6f5XUMc=
 github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c/go.mod h1:oIy1OCRY1DsGjO6oisv4PXINwv8Kwj+vfid+VuJqwdY=
-github.com/gravestench/dt1 v0.0.0-20230927053827-79713c1e1a90 h1:YAkvMb9jpGbhL/1Z3rNcELoN0+B2wqSxDggx8LZuT54=
-github.com/gravestench/dt1 v0.0.0-20230927053827-79713c1e1a90/go.mod h1:bW/Gst73SdYINbihPKyO+a853BaiSOm22zLrJ8uxYZg=
+github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f h1:EwcCfGVaELR5Id+jOD73/BW/ipLsw0D0PPZenbyJ32w=
+github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f/go.mod h1:eC7SwOWMcf0EeEeuCvs8MnFFHGOVMbVgJnpjnaddgb0=
 github.com/gravestench/eventemitter v0.0.0-20230922020814-8ccd81f6aaf9 h1:BmgberOQkQa3TUYUHHCJAy46GX2SWsovn/Xwd7MNjG0=
 github.com/gravestench/eventemitter v0.0.0-20230922020814-8ccd81f6aaf9/go.mod h1:AOYcQnhSDvzecfC09AZTOuDngPfjMlU6uZU463J3Uw0=
 github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5 h1:u2KM0/IqMq5Nt4BSBH3+ULoRq1tO8vlqVVv7GsXozuQ=

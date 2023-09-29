@@ -11,7 +11,7 @@ require (
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
-	github.com/gravestench/dt1 v0.0.0-20230927053827-79713c1e1a90
+	github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f
 	github.com/gravestench/eventemitter v0.0.0-20230922020814-8ccd81f6aaf9
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
@@ -76,7 +76,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gophercloud/gophercloud v0.16.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20210216074907-f6de111f2eae // indirect
-	github.com/gravestench/bitstream v0.0.0-20230728184458-917abdef8ae3 // indirect
+	github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
