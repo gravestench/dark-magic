@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
@@ -21,6 +22,7 @@ require (
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
 	github.com/hajimehoshi/oto v0.7.1
+	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.31.0
 	github.com/traefik/yaegi v0.15.1
 	github.com/yuin/gopher-lua v1.1.0
@@ -113,7 +115,6 @@ require (
 	github.com/ovh/go-ovh v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/otp v1.3.0 // indirect
 	github.com/sacloud/libsacloud v1.36.2 // indirect
