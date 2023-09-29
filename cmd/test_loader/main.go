@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/goscript"
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
@@ -39,6 +40,7 @@ func main() {
 
 	// utility services
 	rt.Add(&lua.Service{})
+	rt.Add(&goscript.Service{})
 	rt.Add(&cacheManager.Service{})
 	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
