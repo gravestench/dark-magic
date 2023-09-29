@@ -33,7 +33,7 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, dc6Image, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file '%s': %v", err)
+			s.logger.Error().Msgf("caching file %q: %v", err)
 		}
 	}
 

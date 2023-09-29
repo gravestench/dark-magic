@@ -13,10 +13,13 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
+	"github.com/gravestench/dark-magic/pkg/services/goscript"
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
@@ -38,7 +41,9 @@ func main() {
 
 	// utility services
 	rt.Add(&lua.Service{})
+	rt.Add(&goscript.Service{})
 	rt.Add(&cacheManager.Service{})
+	rt.Add(&fileWatcher.Service{})
 	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
@@ -64,6 +69,7 @@ func main() {
 	rt.Add(&spriteManager.Service{})
 	rt.Add(&locale.Service{})
 	rt.Add(&hero.Service{})
+	rt.Add(&mapGenerator.Service{})
 
 	rt.Run()
 }

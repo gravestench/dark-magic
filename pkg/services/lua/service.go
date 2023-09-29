@@ -56,13 +56,13 @@ func (s *Service) Init(rt runtime.R) {
 		s.logger.Fatal().Msgf("getting config: %v", err)
 	}
 
+	// TODO :: race condition where this script inits before other services
+	//   have a chance to export their stuff to the lua state machine
 	initScriptPath := cfg.Group(s.Name()).GetString("init script")
 
-	s.runScript(initScriptPath)
-
-	go s.watchFileAndCallOnChange(initScriptPath, func() {
-		s.runScript(initScriptPath)
-	})
+	if err = s.runScript(initScriptPath); err != nil {
+		s.logger.Error().Msgf("running script: %v", err)
+	}
 }
 
 func (s *Service) Name() string {

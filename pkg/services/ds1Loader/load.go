@@ -33,7 +33,7 @@ func (s *Service) Load(filepath string) (*ds1.DS1, error) {
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, ds1Object, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file '%s': %v", err)
+			s.logger.Error().Msgf("caching file %q: %v", err)
 		}
 	}
 

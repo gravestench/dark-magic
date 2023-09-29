@@ -3,6 +3,7 @@ package mapGenerator
 import (
 	"github.com/gravestench/ds1"
 	"github.com/gravestench/dt1"
+	lua "github.com/yuin/gopher-lua"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 )
@@ -18,23 +19,25 @@ func NewWorldMap() *WorldMap {
 }
 
 type WorldMap struct {
-	LevelData             models.LevelData
-	LevelGroup            models.LevelGroup
-	LevelName             models.LevelName
-	LevelMazeData         models.LevelMazeData
-	LevelPreset           models.LevelPreset
-	LevelSubstitutionData models.LevelSubstitutionData
-	LevelType             models.LevelType
-	LevelWarp             models.LevelWarp
-
 	Levels map[act][]Level
 }
 
-type Level struct {
-	Name string
+func (wm *WorldMap) LuaTable(state *lua.LState) *lua.LTable {
+	return nil
+}
 
-	tileSets   []dt1.DT1
-	tileStamps []ds1.DS1
+type Level struct {
+	Name             string
+	Data             models.LevelData
+	Group            models.LevelGroup
+	MazeData         models.LevelMazeData
+	Preset           models.LevelPreset
+	SubstitutionData models.LevelSubstitutionData
+	Type             models.LevelType
+	Warp             models.LevelWarp
+
+	TileSets   []dt1.DT1
+	TileStamps []ds1.DS1
 
 	Act int
 }
