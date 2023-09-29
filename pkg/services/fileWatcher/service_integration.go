@@ -30,6 +30,8 @@ type IsFileWatcher interface {
 	CloseWatcher()
 }
 
+// TODO :: other services should be able to un-watch stuff, too...
+
 // NeedsFileWatcher is an integration interface intended to be implemented by
 // other services to integrate with and be maintained by this file watcher
 // service.
