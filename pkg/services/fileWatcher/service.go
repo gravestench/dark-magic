@@ -55,7 +55,7 @@ func (s *Service) setupServiceToWatchFiles(service runtime.Service) {
 
 	dependent, ok := service.(runtime.HasDependencies)
 	if ok {
-		// we wan tto wait for the other service to resolve its dependencies,
+		// we want to wait for the other service to resolve its dependencies,
 		// like in the case that it depends on the config file service.
 		for !dependent.DependenciesResolved() {
 			time.Sleep(time.Millisecond * 10)
