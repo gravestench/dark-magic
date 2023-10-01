@@ -6,10 +6,13 @@ import (
 
 type State struct {
 	Name                  string
-	experience            int
-	Type                  models.Hero
-	level                 int
+	Experience            int
+	Class                 models.Hero `json:"Class,string"`
+	Level                 int
+	record                models.CharStats
 	experienceProgression []experienceBreakpoint // comes from character class records
+	Attributes            map[string]int
+	Skills                []string
 }
 
 type experienceBreakpoint struct {
@@ -17,15 +20,15 @@ type experienceBreakpoint struct {
 	Ratio      float32
 }
 
-func (s *State) Level() int {
-	if s.level != 0 {
-		return s.level
+func (s *State) updateLevel() int {
+	if s.Level != 0 {
+		return s.Level
 	}
 
 	level := 1
 
 	for idx, progression := range s.experienceProgression {
-		if s.experience > progression.Experience {
+		if s.Experience > progression.Experience {
 			continue
 		}
 
@@ -34,27 +37,37 @@ func (s *State) Level() int {
 		break
 	}
 
-	s.level = level
+	s.Level = level
 
 	return level
 }
 
 func (s *State) ExperienceRatio() float32 {
-	return s.experienceProgression[s.Level()-1].Ratio
+	s.updateLevel()
+	return s.experienceProgression[s.Level-1].Ratio
 }
 
 func (s *State) SetExperience(set int) {
-	s.experience = set
-	s.level = 0
+	s.Experience = set
+	s.Level = 0
+	s.updateLevel()
 }
 
 func (s *State) AddExperience(amount int) {
 	ratio := s.ExperienceRatio()
-	s.level = 0
+	s.Level = 0
 
-	s.experience += int(ratio * float32(amount))
+	s.Experience += int(ratio * float32(amount))
 }
 
 func (s *State) SubtractExperience(amount int) {
 	s.AddExperience(-amount)
+}
+
+func (s *State) SetAttribute(key string, value int) {
+	if s.Attributes == nil {
+		s.Attributes = make(map[string]int)
+	}
+
+	s.Attributes[key] = value
 }

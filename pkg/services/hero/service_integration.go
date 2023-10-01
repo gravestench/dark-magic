@@ -34,6 +34,6 @@ type ManagesHeros interface {
 	LoadHeros() error
 	SaveHeros() error
 	CreateHero(name string, hero models.Hero) State
-	GetHeros() map[models.Hero]map[string]*State
-	GetHero(t models.Hero, name string) (*State, error)
+	GetHeros() []State
+	GetHeroByName(name string) *State
 }
