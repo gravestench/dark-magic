@@ -26,7 +26,7 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 		c.JSON(http.StatusOK, &s.belts)
 	})
 
-	group.GET("CharStartingAttributes", func(c *gin.Context) {
+	group.GET("CharStats", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &s.charStartingAttributes)
 	})
 
