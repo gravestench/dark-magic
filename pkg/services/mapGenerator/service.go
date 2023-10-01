@@ -53,6 +53,10 @@ func (s *Service) GenerateMap(act, difficulty uint) (*WorldMap, error) {
 		return nil, fmt.Errorf("loading level type records into map: %v", err)
 	}
 
+	if err := s.loadLevelPresetRecordsToWorldMap(m); err != nil {
+		return nil, fmt.Errorf("loading level type records into map: %v", err)
+	}
+
 	return m, nil
 }
 
@@ -110,6 +114,44 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 		}
 
 		m.Levels[r.Act] = append(m.Levels[r.Act], lvl)
+	}
+
+	return nil
+}
+
+func (s *Service) loadLevelPresetRecordsToWorldMap(m *WorldMap) error {
+	for _, levels := range m.Levels {
+		for _, level := range levels {
+			for _, record := range s.records.LevelPresets() {
+				if level.Name == record.Name {
+					level.Preset = record
+					break
+				}
+			}
+
+			for _, filePath := range []string{
+				level.Preset.File1,
+				level.Preset.File2,
+				level.Preset.File3,
+				level.Preset.File4,
+				level.Preset.File5,
+				level.Preset.File6,
+			} {
+				if !strings.HasSuffix(filePath, ".ds1") {
+					continue
+				}
+
+				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
+
+				stamp, err := s.ds1.Load(filePath)
+				if err != nil {
+					s.logger.Error().Msgf("loading ds1 %q for level %q: %v", filePath, level.Name, err)
+					continue
+				}
+
+				level.TileStamps = append(level.TileStamps, *stamp)
+			}
+		}
 	}
 
 	return nil
