@@ -1,6 +1,7 @@
 package dc6Loader
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/gravestench/dc6"
@@ -18,17 +19,17 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
-		s.logger.Fatal().Msgf("loading file %q: %v", filepath, err)
+		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		s.logger.Fatal().Msgf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data: %v", err)
 	}
 
 	dc6Image, err := dc6.FromBytes(data)
 	if err != nil {
-		s.logger.Fatal().Msgf("parsing dc6: %v", err)
+		return nil, fmt.Errorf("parsing dc6: %v", err)
 	}
 
 	if s.cache != nil {
