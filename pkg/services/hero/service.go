@@ -22,7 +22,9 @@ type Service struct {
 func (s *Service) Init(rt runtime.Runtime) {
 	s.expBreakpoints = make(map[models.Hero][]experienceBreakpoint)
 	s.heroStates = make([]State, 0)
-	s.LoadHeros()
+	if err := s.LoadHeroes(); err != nil {
+		s.logger.Error().Msgf("loading heroes from config: %v", err)
+	}
 
 	s.loadExperienceBreakpoints()
 }
@@ -30,9 +32,6 @@ func (s *Service) Init(rt runtime.Runtime) {
 func (s *Service) Name() string {
 	return "Character Generator"
 }
-
-// the following methods are boilerplate, but they are used
-// by the runtime to enforce a standard logging format.
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {
 	s.logger = logger
@@ -85,7 +84,7 @@ func (s *Service) CreateHero(name string, hero models.Hero) State {
 	return state
 }
 
-func (s *Service) GetHeros() []State {
+func (s *Service) GetHeroes() []State {
 	return s.heroStates
 }
 

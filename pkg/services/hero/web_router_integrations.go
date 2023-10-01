@@ -10,39 +10,39 @@ import (
 )
 
 func (s *Service) Slug() string {
-	return "heros"
+	return "heroes"
 }
 
 func (s *Service) InitRoutes(group *gin.RouterGroup) {
-	group.GET("", s.handleGetHeros)
-	group.GET("load", s.handleLoadHeros)
-	group.GET("save", s.handleSaveHeros)
+	group.GET("", s.handleGetHeroes)
+	group.GET("load", s.handleLoadHeroes)
+	group.GET("save", s.handleSaveHeroes)
 	group.GET("create/:class/:name", s.handleCreateHero)
 }
 
-func (s *Service) handleGetHeros(c *gin.Context) {
-	heros := s.GetHeros()
-	c.JSON(http.StatusOK, heros)
+func (s *Service) handleGetHeroes(c *gin.Context) {
+	heroes := s.GetHeroes()
+	c.JSON(http.StatusOK, heroes)
 }
 
-func (s *Service) handleLoadHeros(c *gin.Context) {
-	err := s.LoadHeros()
+func (s *Service) handleLoadHeroes(c *gin.Context) {
+	err := s.LoadHeroes()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, fmt.Sprintf("loading heros: %v", err))
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("loading heroes: %v", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, fmt.Sprintf("loaded %d heros", len(s.heroStates)))
+	c.JSON(http.StatusOK, fmt.Sprintf("loaded %d heroes", len(s.heroStates)))
 }
 
-func (s *Service) handleSaveHeros(c *gin.Context) {
-	err := s.SaveHeros()
+func (s *Service) handleSaveHeroes(c *gin.Context) {
+	err := s.SaveHeroes()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, fmt.Sprintf("saving heros: %v", err))
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("saving heroes: %v", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, fmt.Sprintf("saved %d heros", len(s.heroStates)))
+	c.JSON(http.StatusOK, fmt.Sprintf("saved %d heroes", len(s.heroStates)))
 }
 
 func (s *Service) handleCreateHero(c *gin.Context) {

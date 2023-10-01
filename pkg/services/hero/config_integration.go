@@ -9,13 +9,20 @@ import (
 )
 
 func (s *Service) ConfigFileName() string {
-	return "heros.json"
+	return "heroes.json"
 }
 
-func (s *Service) LoadHeros() error {
+func (s *Service) LoadHeroes() error {
 	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
 	if err != nil {
 		return fmt.Errorf("loading config: %v", err)
+	}
+
+	if cfg == nil {
+		cfg, err = s.config.CreateConfigWithFileName(s.ConfigFileName())
+		if err != nil {
+			return fmt.Errorf("creating config: %v", err)
+		}
 	}
 
 	for _, group := range cfg.GroupKeys() {
@@ -50,7 +57,7 @@ func (s *Service) loadHeroStateFromConfigGroup(cfg configFile.Object) State {
 	return state
 }
 
-func (s *Service) SaveHeros() error {
+func (s *Service) SaveHeroes() error {
 	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
 	if err != nil {
 		return fmt.Errorf("loading config: %v", err)
