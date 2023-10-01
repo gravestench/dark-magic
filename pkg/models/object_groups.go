@@ -6,15 +6,36 @@ type ObjectGroup struct {
 	GroupName string `csv:"GroupName"`
 
 	// ObjectIDs contains the IDs of Objects assigned to this Object Group.
-	ObjectIDs [8]int `csv:"ID0,ID1,ID2,ID3,ID4,ID5,ID6,ID7"`
+	ObjectID0 int `csv:"ID0"`
+	ObjectID1 int `csv:"ID1"`
+	ObjectID2 int `csv:"ID2"`
+	ObjectID3 int `csv:"ID3"`
+	ObjectID4 int `csv:"ID4"`
+	ObjectID5 int `csv:"ID5"`
+	ObjectID6 int `csv:"ID6"`
+	ObjectID7 int `csv:"ID7"`
 
 	// ObjectDensities controls the number of Objects to spawn in the area level.
 	// This is also affected by the Object's populate function defined by the "PopulateFn" field from the objects.txt file.
 	// The maximum value allowed is 128.
-	ObjectDensities [8]int `csv:"DENSITY0,DENSITY1,DENSITY2,DENSITY3,DENSITY4,DENSITY5,DENSITY6,DENSITY7"`
+	ObjectDesnity0 int `csv:"DENSITY0"`
+	ObjectDesnity1 int `csv:"DENSITY1"`
+	ObjectDesnity2 int `csv:"DENSITY2"`
+	ObjectDesnity3 int `csv:"DENSITY3"`
+	ObjectDesnity4 int `csv:"DENSITY4"`
+	ObjectDesnity5 int `csv:"DENSITY5"`
+	ObjectDesnity6 int `csv:"DENSITY6"`
+	ObjectDesnity7 int `csv:"DENSITY7"`
 
 	// ObjectProbabilities control the probability that the Object will spawn in the area level.
 	// This is calculated in order, so the first probability that is successful will be chosen.
 	// These field values should add up to exactly 100 in total to guarantee that one of the objects spawns.
-	ObjectProbabilities [8]int `csv:"PROB0,PROB1,PROB2,PROB3,PROB4,PROB5,PROB6,PROB7"`
+	ObjectProbability0 int `csv:"PROB0"`
+	ObjectProbability1 int `csv:"PROB1"`
+	ObjectProbability2 int `csv:"PROB2"`
+	ObjectProbability3 int `csv:"PROB3"`
+	ObjectProbability4 int `csv:"PROB4"`
+	ObjectProbability5 int `csv:"PROB5"`
+	ObjectProbability6 int `csv:"PROB6"`
+	ObjectProbability7 int `csv:"PROB7"`
 }
