@@ -1,6 +1,9 @@
 package assetLoader
 
 import (
+	"bytes"
+	"compress/gzip"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,12 +13,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+//go:embed d2_uber_file_list.txt.gz
+var uberFileList []byte
+
 func (s *Service) Slug() string {
 	return "asset"
 }
 
 func (s *Service) InitRoutes(group *gin.RouterGroup) {
+	group.GET("", s.handleGetUberFileList)
 	group.GET("raw/*path", s.extractAndDownloadFromMpq)
+}
+
+func (s *Service) handleGetUberFileList(c *gin.Context) {
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", s.extractGzip(uberFileList))
 }
 
 func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
@@ -48,4 +59,21 @@ func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	c.Data(http.StatusOK, "application/octet-stream", data)
+}
+
+func (s *Service) extractGzip(data []byte) []byte {
+	r, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		s.logger.Fatal().Msg("ExtractTarGz: NewReader failed")
+	}
+
+	out := bytes.NewBuffer([]byte{})
+
+	// Copy the decompressed content to the output file
+	_, err = io.Copy(out, r)
+	if err != nil {
+		s.logger.Fatal().Msgf("extracting file: %v", err)
+	}
+
+	return out.Bytes()
 }
