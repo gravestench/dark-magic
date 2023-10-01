@@ -19,19 +19,16 @@ func (s *Service) Load(filepath string) (*dt1.DT1, error) {
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
-		s.logger.Error().Msgf("loading file %q: %v", filepath, err)
 		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		s.logger.Error().Msgf("reading data: %v", err)
 		return nil, fmt.Errorf("reading data: %v", err)
 	}
 
 	dt1Object, err := dt1.FromBytes(data)
 	if err != nil {
-		s.logger.Error().Msgf("parsing dt1: %v", err)
 		return nil, fmt.Errorf("parsing dt1: %v", err)
 	}
 

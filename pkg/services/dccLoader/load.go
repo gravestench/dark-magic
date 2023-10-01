@@ -1,6 +1,7 @@
 package dccLoader
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/gravestench/dcc"
@@ -18,17 +19,17 @@ func (s *Service) Load(filepath string) (*dcc.DCC, error) {
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
-		s.logger.Fatal().Msgf("loading file %q: %v", filepath, err)
+		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		s.logger.Fatal().Msgf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data: %v", err)
 	}
 
 	dccImage, err := dcc.FromBytes(data)
 	if err != nil {
-		s.logger.Fatal().Msgf("parsing dcc: %v", err)
+		return nil, fmt.Errorf("parsing dcc: %v", err)
 	}
 
 	if s.cache != nil {
