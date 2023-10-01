@@ -7,6 +7,9 @@ import (
 )
 
 func (s *Service) initConfigForServiceCandidate(candidate runtime.S) error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	// check if the service does not have defaults
 	target, ok := candidate.(HasDefaultConfig)
 	if !ok {
@@ -25,10 +28,10 @@ func (s *Service) initConfigForServiceCandidate(candidate runtime.S) error {
 	// get the current and default configs
 	cfgPath := prefixIfPathRelative(s.ConfigDirectory(), target.ConfigFileName())
 	cfgDefault := target.DefaultConfig()
-	cfgCurrent, err := s.GetConfigByFileName(cfgPath)
+	cfgCurrent, err := s.getConfigUnsafe(cfgPath)
 
 	if err != nil || cfgCurrent == nil {
-		cfgCurrent, err = s.CreateConfigWithFileName(cfgPath)
+		cfgCurrent, err = s.createConfigUnsafe(cfgPath)
 		if err != nil {
 			return fmt.Errorf("creating config %q: %v", cfgPath, err)
 		}
@@ -43,5 +46,5 @@ func (s *Service) initConfigForServiceCandidate(candidate runtime.S) error {
 
 	s.log.Info().Msgf("config file for %q service can be found at: %v", name, s.GetFilePath(target.ConfigFileName()))
 
-	return s.SaveConfigWithFileName(cfgPath)
+	return s.saveConfigUnsafe(cfgPath)
 }
