@@ -5,16 +5,18 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 )
 
 // these are static declarations that force a
 // compile-time error if the service does not
 // implement them.
 var (
-	_ runtime.Service        = &Service{} // implement in`service.go`
-	_ runtime.HasLogger      = &Service{} // implement in`service.go`
-	_ lua.UsesLuaEnvironment = &Service{} // implement in`lua_integration.go`
-	_ IsCacheManager         = &Service{} // implement in`service.go`
+	_ runtime.Service                    = &Service{} // implement in`service.go`
+	_ runtime.HasLogger                  = &Service{} // implement in`service.go`
+	_ lua.UsesLuaEnvironment             = &Service{} // implement in`lua_integration.go`
+	_ modalTui.HasModalTextUserInterface = &Service{} // implement in`service.go`
+	_ IsCacheManager                     = &Service{} // implement in`service.go`
 )
 
 // this is an alias which can be used to make

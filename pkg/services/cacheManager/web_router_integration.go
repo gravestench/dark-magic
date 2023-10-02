@@ -56,7 +56,7 @@ func formatBytes(byteCount int) string {
 	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
 
 	if byteCount == 0 {
-		return "0 B"
+		return "0B"
 	}
 
 	// Calculate the appropriate unit and value
@@ -64,5 +64,5 @@ func formatBytes(byteCount int) string {
 	value := float64(byteCount) / math.Pow(1024, float64(unitIndex))
 
 	// Use %g to format the value and trim unnecessary zeros
-	return fmt.Sprintf("%.2f %s", value, units[unitIndex])
+	return fmt.Sprintf("%.2f%s", value, units[unitIndex])
 }
