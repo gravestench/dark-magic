@@ -16,6 +16,7 @@ const (
 
 // Service is a config file manager that marshals to and from json files.
 type Service struct {
+	rt                         runtime.Runtime
 	log                        *zerolog.Logger
 	mux                        sync.Mutex
 	configs                    map[string]*Config
@@ -40,6 +41,7 @@ func (s *Service) Name() string {
 
 // Init satisfies the runtime.IsRuntimeService interface
 func (s *Service) Init(rt runtime.Runtime) {
+	s.rt = rt
 	s.configs = make(map[string]*Config)
 	s.servicesWithDefaultConfigs = make(map[string]HasDefaultConfig)
 
