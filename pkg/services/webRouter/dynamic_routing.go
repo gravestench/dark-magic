@@ -50,7 +50,9 @@ func (s *Service) Reload() {
 	// IMPORTANT, add the common middleware needs to be added before
 	// creating the protected route group, otherwise it wont have the
 	// middleware
-	s.root.Use(logger.Logger("gin", s.log))
+	s.root.Use(func(c *gin.Context) {
+		logger.Logger("gin", s.Logger())(c)
+	})
 }
 
 func (s *Service) beginDynamicRouteBinding(rt runtime.R) {
