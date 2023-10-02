@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Service) ConfigFileName() string {
-	return "mpq_loader.json"
+	return "loaders.json"
 }
 
 func (s *Service) Config() (*configFile.Config, error) {
