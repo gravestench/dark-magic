@@ -39,7 +39,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "DC6 Loader"
+	return "COF Loader"
 }
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {
