@@ -1,11 +1,14 @@
-# Template service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is ...
+# Hero Manager Service
+The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+to provide a means of managing heroes (player characters) for the game. This
+service uses the record manager to load up various records for character
+starting attributes items, graphois, etc.
 
 
 ## Dependencies
 This service has dependencies on the following services:
-* [bar](.)
-* [baz](.)
+* [config file manager](../configFile)
+* [record manager](../recordManager)
 
 
 ## Integration with other services

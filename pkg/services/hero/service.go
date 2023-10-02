@@ -22,6 +22,7 @@ type Service struct {
 func (s *Service) Init(rt runtime.Runtime) {
 	s.expBreakpoints = make(map[models.Hero][]experienceBreakpoint)
 	s.heroStates = make([]State, 0)
+
 	if err := s.LoadHeroes(); err != nil {
 		s.logger.Error().Msgf("loading heroes from config: %v", err)
 	}
@@ -30,7 +31,7 @@ func (s *Service) Init(rt runtime.Runtime) {
 }
 
 func (s *Service) Name() string {
-	return "Character Generator"
+	return "Hero Manager"
 }
 
 func (s *Service) BindLogger(logger *zerolog.Logger) {
