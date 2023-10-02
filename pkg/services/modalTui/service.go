@@ -21,12 +21,12 @@ type Service struct {
 	cfg    configFile.Dependency
 	isInit bool
 	mux    sync.Mutex
-	model
+	modalUiModel
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
 	s.rt = rt
-	s.model.modals = make(map[string]tea.Model)
+	s.modalUiModel.modals = make(map[string]tea.Model)
 
 	dir := s.cfg.ConfigDirectory()
 	logPath := expandHomeDirectory(filepath.Join(dir, "output.log"))

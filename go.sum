@@ -343,6 +343,8 @@ github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd h1:TXjqMxdMQ4ZuDBj
 github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd/go.mod h1:WvjrGNJt/5dSSsd8PtSVKVNtGnfthvgOgx23QClA3SM=
 github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1 h1:UwZVjtHZxwDpw0hnFIeZI1D12sizb5xlA01hzEbeNsM=
 github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1/go.mod h1:nu8b5oIz96uvR5VEOxleAdij//n82cZiSCASR5D4shA=
+github.com/gravestench/runtime v0.0.0-20231002182113-640425b821c6 h1:dmtrB06QVqT0784JOBai04TXPKemRTHhvatHPMdUl5U=
+github.com/gravestench/runtime v0.0.0-20231002182113-640425b821c6/go.mod h1:mNoqRXYMwH7opGomjbika1n9Uh7DL8bRiCKnJY4MIIs=
 github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a h1:txLTWwljPhNMdcVxoiHCNp69fsTzmohZX0ZsyQlQKUg=
 github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a/go.mod h1:nCgGopQFXiXrGtzA735Tl6I7LqwQ1YNo0RQrmbnG/vs=
 github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988 h1:UFbntCBaqCMOlx2JZ8hcaP0yEOewAZpBswOkqI7Ydxg=

@@ -11,7 +11,7 @@ import (
 
 func (s *Service) OnRuntimeRunLoopInitiated(_ ...interface{}) {
 	go mainthread.Call(func() {
-		p := tea.NewProgram(&s.model)
+		p := tea.NewProgram(&s.modalUiModel)
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Alas, there's been an error: %v", err)
 			os.Exit(1)

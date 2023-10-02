@@ -3,23 +3,24 @@ package modalTui
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type model struct {
+type modalUiModel struct {
 	modals        map[string]tea.Model
 	selectedModal string
 }
 
-func (m *model) Init() tea.Cmd {
+func (m *modalUiModel) Init() tea.Cmd {
 	// Just return `nil`, which means "no I/O right now, please."
 	return nil
 }
 
-func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *modalUiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	// Is it a key press?
@@ -45,7 +46,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, doTick()
 }
 
-func (m *model) View() string {
+func (m *modalUiModel) View() string {
 	current, exists := m.modals[m.selectedModal]
 	if !exists {
 		return (&defaultModel{}).View()
@@ -63,13 +64,14 @@ func (m *model) View() string {
 	return view
 }
 
-func (m *model) headerLine() string {
+func (m *modalUiModel) headerLine() string {
 	selectionLine := ""
 
 	for idx, name := range m.GetModalNames() {
 		if name == m.selectedModal {
 			style := lipgloss.NewStyle().
 				Bold(true).
+				Padding(0, 1).
 				Foreground(lipgloss.Color("#FAFAFA")).
 				Background(lipgloss.Color("#7D56F4"))
 
@@ -87,15 +89,30 @@ func (m *model) headerLine() string {
 	return selectionLine
 }
 
-func (m *model) footerLine() string {
-	const (
-		helpString = "( Previous ctrl+[ ) ( Next ctrl+] )"
-	)
+func (m *modalUiModel) footerLine() string {
+	styleItem := lipgloss.NewStyle().Width(18).Align(lipgloss.Center)
+	styleLabel := lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("#7D56F4")).Align(lipgloss.Right)
+	styleHotkey := lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("#7D56F4")).Bold(true).Align(lipgloss.Left)
 
-	return fmt.Sprintf("\r\n%s", helpString)
+	var footer string
+
+	hotkeys := []string{
+		"Previous::ctrl+[",
+		"Next::ctrl+]",
+	}
+
+	for _, entry := range hotkeys {
+		label := strings.Split(entry, "::")[0]
+		hotkey := strings.Split(entry, "::")[1]
+		label = styleLabel.Render(label)
+		hotkey = styleHotkey.Render(hotkey)
+		footer += styleItem.Render(label + hotkey)
+	}
+
+	return footer
 }
 
-func (m *model) CurrentModal() tea.Model {
+func (m *modalUiModel) CurrentModal() tea.Model {
 	if current, exists := m.modals[m.selectedModal]; exists {
 		return current
 	}
@@ -103,21 +120,21 @@ func (m *model) CurrentModal() tea.Model {
 	return &defaultModel{}
 }
 
-func (m *model) CurrentModalName() string {
+func (m *modalUiModel) CurrentModalName() string {
 	return m.selectedModal
 }
 
-func (m *model) GetModalNames() (keys []string) {
+func (m *modalUiModel) GetModalNames() (keys []string) {
 	return m.getSortedModalNameList()
 }
 
-func (m *model) SwitchModal(name string) {
+func (m *modalUiModel) SwitchModal(name string) {
 	if _, exists := m.modals[name]; exists {
 		m.selectedModal = name
 	}
 }
 
-func (m *model) getSortedModalNameList() (keys []string) {
+func (m *modalUiModel) getSortedModalNameList() (keys []string) {
 	for key := range m.modals {
 		keys = append(keys, key)
 	}
@@ -127,15 +144,15 @@ func (m *model) getSortedModalNameList() (keys []string) {
 	return
 }
 
-func (m *model) switchPreviousModal() {
+func (m *modalUiModel) switchPreviousModal() {
 	m.SwitchModal(m.previous(m.CurrentModalName()))
 }
 
-func (m *model) switchNextModal() {
+func (m *modalUiModel) switchNextModal() {
 	m.SwitchModal(m.next(m.CurrentModalName()))
 }
 
-func (m *model) previous(current string) string {
+func (m *modalUiModel) previous(current string) string {
 	keys := m.GetModalNames()
 
 	for i, item := range keys {
@@ -156,7 +173,7 @@ func (m *model) previous(current string) string {
 	return keys[0]
 }
 
-func (m *model) next(current string) string {
+func (m *modalUiModel) next(current string) string {
 	keys := m.GetModalNames()
 
 	for i, item := range keys {

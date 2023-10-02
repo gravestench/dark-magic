@@ -2,8 +2,6 @@ module github.com/gravestench/dark-magic
 
 go 1.19
 
-replace github.com/gravestench/runtime => /Users/dylanknuth/src/runtime
-
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
@@ -22,7 +20,7 @@ require (
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/runtime v0.0.0-20230922020855-14472034e427
+	github.com/gravestench/runtime v0.0.0-20231002182113-640425b821c6
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
