@@ -68,7 +68,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "Diablo II Unified Asset Loader"
+	return "Unified Asset Loader"
 }
 
 func (s *Service) LoadDc6(filepath string) (*dc6.DC6, error) {
