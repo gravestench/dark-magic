@@ -1,0 +1,105 @@
+package guiManager
+
+import (
+	"image"
+	"image/color"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/gravestench/runtime"
+	"github.com/rs/zerolog"
+
+	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
+	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
+)
+
+type Service struct {
+	logger *zerolog.Logger
+
+	sprite   spriteManager.Dependency
+	renderer raylibRenderer.Dependency
+
+	inputState struct {
+		keys []int
+	}
+
+	texture *rl.Texture2D
+
+	root node
+}
+
+func (s *Service) Init(rt runtime.Runtime) {
+	// This init method will be invoked by the runtime
+	// as soon as the dependency resolution has finished.
+	// If the service does not implement runtime.HasDependencies,
+	// then this method is invoked immediately.
+	//keyboard.Listen(s.updateKeyboardKeys)
+
+	s.root = NewTreeNode(800, 600)
+
+	n1 := s.NewNode()
+
+	n1.SetImageFunc(func() image.Image {
+		width, height := 100, 100
+		img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+		// Fill the image with a white background
+		white := color.RGBA{255, 0, 0, 255}
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				img.Set(x, y, white)
+			}
+		}
+
+		return img
+	})
+
+	n2 := s.NewNode()
+	n2.SetParent(n1)
+	n2.SetPosition(image.Point{2, 2})
+
+	n2.SetImageFunc(func() image.Image {
+		width, height := 10, 10
+		img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+		// Fill the image with a white background
+		white := color.RGBA{0, 255, 0, 255}
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				img.Set(x, y, white)
+			}
+		}
+
+		return img
+	})
+}
+
+func (s *Service) Name() string {
+	return "GUI"
+}
+
+// the following methods are boilerplate, but they are used
+// by the runtime to enforce a standard logging format.
+
+func (s *Service) BindLogger(logger *zerolog.Logger) {
+	s.logger = logger
+}
+
+func (s *Service) Logger() *zerolog.Logger {
+	return s.logger
+}
+
+func (s *Service) NewNode() node {
+	n := NewTreeNode(0, 0)
+
+	s.root.AddChild(n)
+
+	return n
+}
+
+func (s *Service) Nodes() []node {
+	return s.root.Children()
+}
+
+func (s *Service) Update() {
+	s.root.Update()
+}

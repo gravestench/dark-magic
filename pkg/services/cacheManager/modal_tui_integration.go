@@ -2,7 +2,6 @@ package cacheManager
 
 import (
 	"fmt"
-	"sort"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,48 +24,15 @@ func (m *tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *tui) View() string {
-	type CacheStats struct {
-		ServiceName string
-		Size        string
-		Budget      string
-		Saturation  float64
-	}
-
-	cacheStats := make([]CacheStats, 0)
+	var output string
 
 	longestName := 0
 
-	var keys []string
 	for name := range m.caches {
 		if len(name) > longestName {
 			longestName = len(name)
 		}
-
-		keys = append(keys, name)
 	}
-
-	sort.Strings(keys)
-
-	if len(m.caches) < 1 {
-		return "no caches present"
-	}
-
-	for _, name := range keys {
-		cache := m.caches[name]
-		w := cache.GetWeight()
-		b := cache.GetBudget()
-
-		stats := CacheStats{
-			ServiceName: name,
-			Size:        formatBytes(w),
-			Budget:      formatBytes(b),
-			Saturation:  float64(w) / float64(b),
-		}
-
-		cacheStats = append(cacheStats, stats)
-	}
-
-	var output string
 
 	styleHeader := lipgloss.NewStyle().Foreground(lipgloss.Color("#ef7aef"))
 
@@ -80,20 +46,26 @@ func (m *tui) View() string {
 		Padding(0, 1).
 		Align(lipgloss.Left)
 
-	header := rAlign.Render("Service Name") + lAlign.Render("Size") + lAlign.Render("Budget") + lAlign.Render("Saturation")
+	header := rAlign.Render("Service Name") +
+		lAlign.Render("Size") +
+		lAlign.Render("Budget") +
+		lAlign.Render("Saturation")
+
 	output += styleHeader.Render(header)
-	for _, stats := range cacheStats {
+
+	for _, stats := range m.getCacheStats() {
 		red := uint8(stats.Saturation * 255)
 		green := 255 - uint8(stats.Saturation*196)
 		fgSaturation := fmt.Sprintf("#%X%X22", red, green)
 		styleSaturation := lipgloss.NewStyle().Foreground(lipgloss.Color(fgSaturation))
 		percentSaturation := fmt.Sprintf("%0.2f%%", stats.Saturation*100)
+		saturation := fmt.Sprintf("%7s", styleSaturation.Render(percentSaturation))
 
 		output += "\r\n"
 		output += rAlign.Render(stats.ServiceName) +
 			lAlign.Render(stats.Size) +
 			lAlign.Render(stats.Budget) +
-			lAlign.Render(fmt.Sprintf("%7s", styleSaturation.Render(percentSaturation)))
+			lAlign.Render(saturation)
 	}
 
 	return output

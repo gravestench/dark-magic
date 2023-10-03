@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/faiface/mainthread"
 	"github.com/gravestench/runtime"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
 	"github.com/gravestench/dark-magic/pkg/services/goscript"
+	"github.com/gravestench/dark-magic/pkg/services/guiManager"
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
@@ -24,6 +23,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
+	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
@@ -43,7 +43,6 @@ func main() {
 
 	// utility services
 	rt.Add(&modalTui.Service{})
-	time.Sleep(time.Second) // wait for logging redirect
 	rt.Add(&lua.Service{})
 	rt.Add(&goscript.Service{})
 	rt.Add(&cacheManager.Service{})
@@ -51,8 +50,7 @@ func main() {
 	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
-
-	// d2 file loaders
+	rt.Add(&raylibRenderer.Service{})
 	rt.Add(&fontTableLoader.Service{})
 	rt.Add(&dc6Loader.Service{})
 	rt.Add(&dccLoader.Service{})
@@ -65,13 +63,14 @@ func main() {
 	rt.Add(&cofLoader.Service{})
 	rt.Add(&mpqLoader.Service{})
 
-	// high level d2 services
+	// high level services
 	rt.Add(&assetLoader.Service{})
 	rt.Add(&recordManager.Service{})
 	rt.Add(&spriteManager.Service{})
 	rt.Add(&locale.Service{})
 	rt.Add(&hero.Service{})
 	rt.Add(&mapGenerator.Service{})
+	rt.Add(&guiManager.Service{})
 
 	mainthread.Run(rt.Run)
 }

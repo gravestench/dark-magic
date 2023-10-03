@@ -1,6 +1,8 @@
 package cacheManager
 
 import (
+	"sort"
+
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
@@ -63,4 +65,43 @@ func (s *Service) tryToFlushCacheForService(service runtime.Service) {
 	candidate.FlushCache(newCache)
 
 	s.caches[service.Name()] = newCache
+}
+
+type CacheStats struct {
+	ServiceName string
+	Size        string
+	Budget      string
+	Saturation  float64
+}
+
+func (s *Service) getCacheStats() []CacheStats {
+	cacheStats := make([]CacheStats, 0)
+
+	var keys []string
+	for name := range s.caches {
+		keys = append(keys, name)
+	}
+
+	sort.Strings(keys)
+
+	if len(s.caches) < 1 {
+		return nil
+	}
+
+	for _, name := range keys {
+		c := s.caches[name]
+		w := c.GetWeight()
+		b := c.GetBudget()
+
+		stats := CacheStats{
+			ServiceName: name,
+			Size:        formatBytes(w),
+			Budget:      formatBytes(b),
+			Saturation:  float64(w) / float64(b),
+		}
+
+		cacheStats = append(cacheStats, stats)
+	}
+
+	return cacheStats
 }

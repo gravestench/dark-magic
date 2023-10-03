@@ -6,9 +6,11 @@ require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
 	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
+	github.com/fogleman/gg v1.3.0
 	github.com/foomo/simplecert v1.8.7
 	github.com/foomo/tlsconfig v0.0.0-20180418120404-b67861b076c9
 	github.com/fsnotify/fsnotify v1.4.9
+	github.com/gen2brain/raylib-go/raylib v0.0.0-20230928181314-dc2584151090
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
@@ -76,6 +78,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/goodhosts/hostsfile v0.0.7 // indirect

@@ -9,8 +9,10 @@ This service will use other services that implement an integration interface
 current mode, and one or more possible modes to switch between. Only a single
 modal will be shown at a time.
 
+This service implements the TUI using the [bubbletea](https://github.com/charmbracelet/bubbletea) library.
+
 ## Dependencies
-This service has no dependencies.
+This service depends upon the [config file manager](../configFile) service.
 
 
 ## Integration with other services

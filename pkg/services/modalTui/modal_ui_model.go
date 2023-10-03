@@ -35,15 +35,17 @@ func (m *modalUiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// switching the current modal
 		case tea.KeyCtrlOpenBracket.String():
 			m.switchPreviousModal()
+			return m, nil
 
 		case tea.KeyCtrlCloseBracket.String():
 			m.switchNextModal()
+			return m, nil
 		}
 	}
 
-	m.CurrentModal().Update(msg)
+	_, cmd := m.CurrentModal().Update(msg)
 
-	return m, doTick()
+	return m, tea.Batch(doTick(), cmd)
 }
 
 func (m *modalUiModel) View() string {

@@ -108,7 +108,7 @@ func (s *Service) Init(rt runtime.R) {
 }
 
 func (s *Service) Name() string {
-	return "Diablo II Record Manager"
+	return "Record Manager"
 }
 
 func (s *Service) IsLoaded() bool {
