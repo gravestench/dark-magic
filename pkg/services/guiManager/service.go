@@ -25,7 +25,7 @@ type Service struct {
 
 	texture *rl.Texture2D
 
-	root node
+	root Node
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
@@ -107,7 +107,7 @@ func (s *Service) Logger() *zerolog.Logger {
 	return s.logger
 }
 
-func (s *Service) NewNode() node {
+func (s *Service) NewNode() Node {
 	n := NewTreeNode(0, 0)
 
 	s.root.AddChild(n)
@@ -115,7 +115,7 @@ func (s *Service) NewNode() node {
 	return n
 }
 
-func (s *Service) Nodes() []node {
+func (s *Service) Nodes() []Node {
 	return s.root.Children()
 }
 

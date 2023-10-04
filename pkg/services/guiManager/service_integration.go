@@ -33,8 +33,8 @@ type Dependency = ManagesGui
 // should know about this service.
 
 type ManagesGui interface {
-	NewNode() node
-	Nodes() []node
+	NewNode() Node
+	Nodes() []Node
 	Update()
 }
 
@@ -71,23 +71,23 @@ type element interface {
 	SetPosition(point image.Point)
 }
 
-type node interface {
+type Node interface {
 	element
 
-	Parent() node
-	SetParent(node)
+	Parent() Node
+	SetParent(Node)
 
-	Children() []node
-	AddChild(child node)
-	RemoveChild(child node)
+	Children() []Node
+	AddChild(child Node)
+	RemoveChild(child Node)
 
-	LayerIndexOf(child node) int
-	SetLayerIndexOf(child node, index int)
+	LayerIndexOf(child Node) int
+	SetLayerIndexOf(child Node, index int)
 
-	BringToTop(child node)
-	BringToBottom(child node)
-	Raise(child node)
-	Lower(child node)
+	BringToTop(child Node)
+	BringToBottom(child Node)
+	Raise(child Node)
+	Lower(child Node)
 
 	HandleInput(InputState) (terminate bool)
 
@@ -99,5 +99,5 @@ type node interface {
 	UpdateFunc() func()
 	SetUpdateFunc(func())
 
-	GetRelativePosition(target node) (relativePosition image.Point, found bool)
+	GetRelativePosition(target Node) (relativePosition image.Point, found bool)
 }

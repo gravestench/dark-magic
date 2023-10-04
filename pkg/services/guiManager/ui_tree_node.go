@@ -13,15 +13,15 @@ type YieldsImage interface {
 	Image() image.Image
 }
 
-// TreeNode represents a node in the GUI tree.
+// TreeNode represents a Node in the GUI tree.
 type TreeNode struct {
 	uuid uuid.UUID
 
 	X, Y     float64
 	Canvas   *gg.Context
-	children []node
+	children []Node
 
-	parent  node
+	parent  Node
 	enabled bool
 
 	inputVector  InputState
@@ -31,14 +31,14 @@ type TreeNode struct {
 	updateFunc func()
 }
 
-// NewTreeNode creates a new tree node.
+// NewTreeNode creates a new tree Node.
 func NewTreeNode(x, y float64) *TreeNode {
 	canvas := gg.NewContext(int(x), int(y))
 	return &TreeNode{
 		X:            x,
 		Y:            y,
 		Canvas:       canvas,
-		children:     []node{},
+		children:     []Node{},
 		enabled:      true,
 		InputHandler: nil,
 		uuid:         uuid.New(),
@@ -94,25 +94,25 @@ func (n *TreeNode) SetPosition(point image.Point) {
 
 // Other element methods (Scale, Opacity, Origin, Rotation) can be implemented similarly.
 
-// Implement node methods
-func (n *TreeNode) Parent() node {
+// Implement Node methods
+func (n *TreeNode) Parent() Node {
 	return n.parent
 }
 
-func (n *TreeNode) SetParent(parent node) {
+func (n *TreeNode) SetParent(parent Node) {
 	n.parent = parent
 }
 
-func (n *TreeNode) Children() []node {
+func (n *TreeNode) Children() []Node {
 	return n.children
 }
 
-func (n *TreeNode) AddChild(child node) {
+func (n *TreeNode) AddChild(child Node) {
 	n.children = append(n.children, child)
 	child.SetParent(n)
 }
 
-func (n *TreeNode) RemoveChild(child node) {
+func (n *TreeNode) RemoveChild(child Node) {
 	for i, c := range n.children {
 		if c == child {
 			n.children = append(n.children[:i], n.children[i+1:]...)
@@ -121,7 +121,7 @@ func (n *TreeNode) RemoveChild(child node) {
 	}
 }
 
-func (n *TreeNode) LayerIndexOf(child node) int {
+func (n *TreeNode) LayerIndexOf(child Node) int {
 	for i, c := range n.children {
 		if c == child {
 			return i
@@ -130,7 +130,7 @@ func (n *TreeNode) LayerIndexOf(child node) int {
 	return -1
 }
 
-func (n *TreeNode) SetLayerIndexOf(child node, index int) {
+func (n *TreeNode) SetLayerIndexOf(child Node, index int) {
 	currentIndex := n.LayerIndexOf(child)
 	if currentIndex == -1 {
 		return
@@ -142,11 +142,11 @@ func (n *TreeNode) SetLayerIndexOf(child node, index int) {
 		index = len(n.children) - 1
 	}
 	n.children = append(n.children[:currentIndex], n.children[currentIndex+1:]...)
-	n.children = append(n.children[:index], append([]node{child}, n.children[index:]...)...)
+	n.children = append(n.children[:index], append([]Node{child}, n.children[index:]...)...)
 }
 
-// BringToTop moves the specified child node to the top of the z-order.
-func (n *TreeNode) BringToTop(child node) {
+// BringToTop moves the specified child Node to the top of the z-order.
+func (n *TreeNode) BringToTop(child Node) {
 	currentIndex := n.LayerIndexOf(child)
 	if currentIndex == -1 {
 		return
@@ -155,26 +155,26 @@ func (n *TreeNode) BringToTop(child node) {
 	n.AddChild(child)
 }
 
-// BringToBottom moves the specified child node to the bottom of the z-order.
-func (n *TreeNode) BringToBottom(child node) {
+// BringToBottom moves the specified child Node to the bottom of the z-order.
+func (n *TreeNode) BringToBottom(child Node) {
 	currentIndex := n.LayerIndexOf(child)
 	if currentIndex == -1 {
 		return
 	}
 	n.RemoveChild(child)
-	n.children = append([]node{child}, n.children...)
+	n.children = append([]Node{child}, n.children...)
 }
 
-// Raise moves the specified child node one layer up in the z-order.
-func (n *TreeNode) Raise(child node) {
+// Raise moves the specified child Node one layer up in the z-order.
+func (n *TreeNode) Raise(child Node) {
 	currentIndex := n.LayerIndexOf(child)
 	if currentIndex > 0 {
 		n.SetLayerIndexOf(child, currentIndex-1)
 	}
 }
 
-// Lower moves the specified child node one layer down in the z-order.
-func (n *TreeNode) Lower(child node) {
+// Lower moves the specified child Node one layer down in the z-order.
+func (n *TreeNode) Lower(child Node) {
 	currentIndex := n.LayerIndexOf(child)
 	if currentIndex < len(n.children)-1 {
 		n.SetLayerIndexOf(child, currentIndex+1)
@@ -234,17 +234,17 @@ func (n *TreeNode) SetUpdateFunc(f func()) {
 	n.updateFunc = f
 }
 
-// GetRelativePosition calculates the relative position of a given node within the subtree.
-func (n *TreeNode) GetRelativePosition(target node) (relativePosition image.Point, found bool) {
-	// Check if the target node is the current node
+// GetRelativePosition calculates the relative position of a given Node within the subtree.
+func (n *TreeNode) GetRelativePosition(target Node) (relativePosition image.Point, found bool) {
+	// Check if the target Node is the current Node
 	if n == target {
 		return image.Point{0, 0}, true
 	}
 
-	// Recursively search for the target node in children
+	// Recursively search for the target Node in children
 	for _, child := range n.children {
 		if childRelativePos, found := child.GetRelativePosition(target); found {
-			// If the target node is found in a child subtree, calculate the relative position
+			// If the target Node is found in a child subtree, calculate the relative position
 			childPosition := child.Position()
 			return image.Point{
 				childRelativePos.X + childPosition.X - int(n.X),
@@ -253,6 +253,6 @@ func (n *TreeNode) GetRelativePosition(target node) (relativePosition image.Poin
 		}
 	}
 
-	// If the target node is not found in the subtree, return (0,0) and false
+	// If the target Node is not found in the subtree, return (0,0) and false
 	return image.Point{}, false
 }
