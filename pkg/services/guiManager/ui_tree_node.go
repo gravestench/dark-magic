@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/fogleman/gg"
+	"github.com/google/uuid"
 )
 
 // YieldsImage represents an interface for nodes that yield an image.
@@ -14,6 +15,8 @@ type YieldsImage interface {
 
 // TreeNode represents a node in the GUI tree.
 type TreeNode struct {
+	uuid uuid.UUID
+
 	X, Y     float64
 	Canvas   *gg.Context
 	children []node
@@ -38,7 +41,12 @@ func NewTreeNode(x, y float64) *TreeNode {
 		children:     []node{},
 		enabled:      true,
 		InputHandler: nil,
+		uuid:         uuid.New(),
 	}
+}
+
+func (n *TreeNode) UUID() uuid.UUID {
+	return n.uuid
 }
 
 // Implement inputHandler methods
@@ -209,11 +217,9 @@ func (n *TreeNode) SetImageFunc(f func() image.Image) {
 }
 
 func (n *TreeNode) Update() {
-	if n.updateFunc == nil {
-		return
+	if n.updateFunc != nil {
+		n.updateFunc()
 	}
-
-	n.updateFunc()
 
 	for _, child := range n.children {
 		child.Update()

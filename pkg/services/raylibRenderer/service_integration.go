@@ -3,8 +3,10 @@ package raylibRenderer
 import (
 	"image"
 
+	"github.com/google/uuid"
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 )
@@ -18,6 +20,7 @@ var (
 	_ runtime.HasDependencies     = &Service{} // implement in`dependencies.go`
 	_ lua.UsesLuaEnvironment      = &Service{} // implement in`lua_integration.go`
 	_ configFile.HasDefaultConfig = &Service{} // implement in`lua_integration.go`
+	_ cacheManager.HasCache       = &Service{} // implement in`lua_integration.go`
 	_ IsRenderer                  = &Service{} // implement in`service.go`
 )
 
@@ -41,6 +44,7 @@ type IsRenderer interface {
 // IsRenderableLayer is an integration interface that other services
 // can implement to be picked up by this raylib renderer service.
 type IsRenderableLayer interface {
+	UUID() uuid.UUID
 	LayerIndex() int
 	Position() (x, y int)
 	Rotation() (degrees float32)

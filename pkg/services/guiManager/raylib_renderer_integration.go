@@ -2,7 +2,13 @@ package guiManager
 
 import (
 	"image"
+
+	"github.com/google/uuid"
 )
+
+func (s *Service) UUID() uuid.UUID {
+	return s.root.UUID()
+}
 
 func (s *Service) LayerIndex() int {
 	return 1000

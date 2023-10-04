@@ -18,6 +18,9 @@ const (
 	groupKeyResolution  = "Resolution"
 	keyResolutionWidth  = "width"
 	keyResolutionHeight = "height"
+
+	groupKeyCache  = "Cache"
+	keyCacheBudget = "budget (B)"
 )
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {
@@ -35,6 +38,12 @@ func (s *Service) DefaultConfig() (cfg configFile.Config) {
 		keyResolutionHeight: 600,
 	} {
 		cfg.Group(groupKeyResolution).Set(key, val)
+	}
+
+	for key, val := range map[string]any{
+		keyCacheBudget: 100,
+	} {
+		cfg.Group(groupKeyCache).Set(key, val)
 	}
 
 	return cfg

@@ -1,24 +1,24 @@
 package raylibRenderer
 
 import (
-	"sort"
-
 	"github.com/faiface/mainthread"
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
+	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
 	logger *zerolog.Logger
 
-	cfg configFile.Dependency
+	cfg   configFile.Dependency
+	cache *cache.Cache
 
 	renderableLayers []IsRenderableLayer
 
-	init bool
+	isInit bool
 }
 
 func (s *Service) WindowSize() (width, height int) {
@@ -30,13 +30,17 @@ func (s *Service) Resolution() (width, height int) {
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
-	s.initRenderer()
+	go s.initRenderer()
 
 	for _, service := range rt.Services() {
 		if candidate, ok := service.(IsRenderableLayer); ok {
 			s.renderableLayers = append(s.renderableLayers, candidate)
 		}
 	}
+}
+
+func (s *Service) IsInit() bool {
+	return s.isInit
 }
 
 func (s *Service) OnServiceAdded(args ...any) {
@@ -72,10 +76,6 @@ func (s *Service) Logger() *zerolog.Logger {
 	return s.logger
 }
 
-func (s *Service) IsInit() bool {
-	return s.init
-}
-
 func (s *Service) initRenderer() {
 	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
 	if err != nil {
@@ -86,10 +86,27 @@ func (s *Service) initRenderer() {
 	width := cfg.Group(groupKeyWindow).GetInt(keyWindowWidth)
 	height := cfg.Group(groupKeyWindow).GetInt(keyWindowHeight)
 
+	s.isInit = true
+
+	rl.SetTraceLogCallback(func(level int, msg string) {
+		switch level {
+		case 0:
+			s.logger.Trace().Msg(msg)
+		case 1:
+			s.logger.Debug().Msg(msg)
+		case 2:
+			s.logger.Info().Msg(msg)
+		case 3:
+			s.logger.Warn().Msg(msg)
+		case 4:
+			s.logger.Fatal().Msg(msg)
+		}
+	})
+
 	mainthread.Call(func() {
 		rl.InitWindow(int32(width), int32(height), title)
-		rl.SetTargetFPS(24)
-		s.init = true
+		rl.SetTargetFPS(60)
+		rl.HideCursor()
 
 		for !rl.WindowShouldClose() {
 			rl.BeginDrawing()
@@ -104,16 +121,4 @@ func (s *Service) initRenderer() {
 
 func (s *Service) SetWindowTitle(title string) {
 	rl.SetWindowTitle(title)
-}
-
-func (s *Service) drawRenderableLayers() {
-	sort.Slice(s.renderableLayers, func(i, j int) bool {
-		return s.renderableLayers[i].LayerIndex() > s.renderableLayers[j].LayerIndex()
-	})
-
-	for _, layer := range s.renderableLayers {
-		tx := rl.LoadTextureFromImage(rl.NewImageFromImage(layer.LayerImage()))
-		x, y := layer.Position()
-		rl.DrawTextureEx(tx, rl.Vector2{float32(x), float32(y)}, layer.Rotation(), layer.Scale(), rl.NewColor(255, 255, 255, uint8(layer.Opacity()*255)))
-	}
 }

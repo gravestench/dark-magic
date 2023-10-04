@@ -3,6 +3,7 @@ package guiManager
 import (
 	"image"
 	"image/color"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/runtime"
@@ -56,6 +57,11 @@ func (s *Service) Init(rt runtime.Runtime) {
 	n2 := s.NewNode()
 	n2.SetParent(n1)
 	n2.SetPosition(image.Point{2, 2})
+	n2.SetUpdateFunc(func() {
+		p := n2.Position()
+		p.X++
+		n2.SetPosition(p)
+	})
 
 	n2.SetImageFunc(func() image.Image {
 		width, height := 10, 10
@@ -71,6 +77,19 @@ func (s *Service) Init(rt runtime.Runtime) {
 
 		return img
 	})
+
+	ticker := time.NewTicker(time.Second / 60)
+
+	// Create a Goroutine to handle the ticker
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				// Call your function here
+				s.Update()
+			}
+		}
+	}()
 }
 
 func (s *Service) Name() string {

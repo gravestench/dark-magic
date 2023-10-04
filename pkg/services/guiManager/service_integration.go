@@ -3,6 +3,7 @@ package guiManager
 import (
 	"image"
 
+	"github.com/google/uuid"
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/lua"
@@ -59,6 +60,8 @@ type inputHandler interface {
 
 type element interface {
 	inputHandler
+
+	UUID() uuid.UUID
 
 	Enable()
 	Disable()
