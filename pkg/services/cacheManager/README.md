@@ -1,37 +1,59 @@
-# Template service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is ...
+# Cache Manager
+The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a generic caching
+implementation, and an integration interface for cache initialization.
 
 
 ## Dependencies
-This service has dependencies on the following services:
-* [bar](.)
-* [baz](.)
+There are no runtime dependencies on other services.
 
 
 ## Integration with other services
 This service integrates with the following services:
-* [buzz](.)
-* [quzz](.)
-
-* describe where the integration is optonal or not ...
+* [lua](../lua)
+* [modal TUI](../modalTui)
+* [web router](../webRouter)
 
 _______
-This service exports an integration interface `IsFoo` with an alias 
+This service exports an integration interface `IsCacheManager` with an alias 
 `Dependencncy` which are intended to be used by other services for dependency
 resolution (see runtime.HasDependencies), and expose just the methods which 
 other services should use.
 ```golang
 type Dependency = Foo
 
-type IsFoo interface {
-    Foo()
+type IsCacheManager interface {
+    FlushAllCaches()
+}
+```
+
+Other service can implement the following integration interface
+to automatically have their cache flushed (which passes a new cache)
+using their specific cache budget (which is given in bytes):
+```golang
+type HasCache interface {
+    CacheBudget() int
+    FlushCache(newCache *cache.Cache)
 }
 ```
 
 ## Lua service integration
-Describe how this service integrates with the lua service (this is just an example).
+Nothing is implemented for the lua integration at the time of writing.
 
-You should show an example of the lua API usage:
-```lua
-data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
-```
+## Modal TUI service integration
+This service integrates with the modal TUI service to provide a dashboard
+for viewing the current state of all caches being managed.
+
+![img.png](internal/img.png)
+
+## Web router service integration
+
+If the [web router service](../webRouter) is present at runtime, this service will
+register routes for retrieving data.
+
+The route slug for this service is `cache`, so all routes defined will be under
+that route group.
+
+| route                             | method | purpose                                               |
+|-----------------------------------|--------|-------------------------------------------------------|
+| `cache/stats`                     | GET    | yields the stats for all caches being manages as json |
+| `cache/flush`                     | GET    | flushes all caches being managed                      |
