@@ -35,7 +35,7 @@ func (s *Service) Init(rt runtime.Runtime) {
 	// then this method is invoked immediately.
 	//keyboard.Listen(s.updateKeyboardKeys)
 
-	s.root = NewTreeNode(800, 600)
+	s.root = s.NewTreeNode(800, 600)
 
 	n1 := s.NewNode()
 
@@ -108,7 +108,7 @@ func (s *Service) Logger() *zerolog.Logger {
 }
 
 func (s *Service) NewNode() Node {
-	n := NewTreeNode(0, 0)
+	n := s.NewTreeNode(0, 0)
 
 	s.root.AddChild(n)
 

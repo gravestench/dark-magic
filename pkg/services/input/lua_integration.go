@@ -1,4 +1,4 @@
-package raylibInput
+package input
 
 import (
 	lua "github.com/yuin/gopher-lua"

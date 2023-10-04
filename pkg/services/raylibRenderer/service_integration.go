@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"image"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
 	"github.com/gravestench/runtime"
 
@@ -36,19 +37,59 @@ type Dependency = IsRenderer
 
 type IsRenderer interface {
 	IsInit() bool
+	ManagesWindow
+	ManagesCameras
+	ProvidesTextures
+	ProvidesRenderables
+}
+
+type ManagesWindow interface {
 	SetWindowTitle(string)
 	WindowSize() (width, height int)
 	Resolution() (width, height int)
 }
 
-// IsRenderableLayer is an integration interface that other services
-// can implement to be picked up by this raylib renderer service.
-type IsRenderableLayer interface {
+type ManagesCameras interface {
+	GetDefaultCamera() *rl.Camera2D
+	AddCamera(name string) *rl.Camera2D
+	GetCamera(name string) *rl.Camera2D
+	RemoveCamera(name string)
+}
+
+type ProvidesTextures interface {
+	GetTexture(uuid.UUID, image.Image) (texture rl.Texture2D, isNew bool)
+}
+
+type ProvidesRenderables interface {
+	NewRenderable() Renderable
+}
+
+// Renderable is a thing that the renderer provides to other services, which
+// encapsulates the necessary behavior of something that can be rendered
+type Renderable interface {
 	UUID() uuid.UUID
-	LayerIndex() int
+
+	ZIndex() int
+	SetZIndex(int)
+
 	Position() (x, y int)
+	SetPosition(x, y int)
+
 	Rotation() (degrees float32)
+	SetRotation(degrees float32)
+
 	Scale() (scale float32)
-	Opacity() (opcaity float64)
-	LayerImage() image.Image
+	SetScale(scale float32)
+
+	Opacity() (opacity float32)
+	SetOpacity(opacity float32)
+
+	BlendMode() (mode rl.BlendMode)
+	SetBlendMode(mode rl.BlendMode)
+
+	Texture() rl.Texture2D
+	SetTexture(rl.Texture2D)
+
+	Image() image.Image
+	SetImage(image.Image)
 }

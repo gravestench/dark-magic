@@ -1,8 +1,11 @@
 package raylibRenderer
 
 import (
+	"time"
+
 	"github.com/faiface/mainthread"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/google/uuid"
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
@@ -16,49 +19,36 @@ type Service struct {
 	cfg   configFile.Dependency
 	cache *cache.Cache
 
-	renderableLayers []IsRenderableLayer
+	cameras map[string]*rl.Camera2D
+
+	renderables map[uuid.UUID]Renderable
 
 	isInit bool
 }
 
-func (s *Service) WindowSize() (width, height int) {
-	return rl.GetRenderWidth(), rl.GetRenderHeight()
-}
-
-func (s *Service) Resolution() (width, height int) {
-	return rl.GetRenderWidth(), rl.GetRenderHeight()
-}
-
 func (s *Service) Init(rt runtime.Runtime) {
-	go s.initRenderer()
-
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(IsRenderableLayer); ok {
-			s.renderableLayers = append(s.renderableLayers, candidate)
-		}
+	if s.isInit {
+		return
 	}
+
+	s.cameras = make(map[string]*rl.Camera2D)
+	s.renderables = make(map[uuid.UUID]Renderable)
+
+	c := s.GetDefaultCamera()
+	s.NewRenderable()
+
+	go func() {
+		for {
+			time.Sleep(time.Millisecond)
+			c.Rotation += 0.01
+		}
+	}()
+
+	go s.initRenderer()
 }
 
 func (s *Service) IsInit() bool {
 	return s.isInit
-}
-
-func (s *Service) OnServiceAdded(args ...any) {
-	if len(args) < 1 {
-		return
-	}
-
-	service, ok := args[0].(runtime.Service)
-	if !ok {
-		return
-	}
-
-	layer, ok := service.(IsRenderableLayer)
-	if !ok {
-		return
-	}
-
-	s.renderableLayers = append(s.renderableLayers, layer)
 }
 
 func (s *Service) Name() string {
@@ -111,14 +101,13 @@ func (s *Service) initRenderer() {
 		for !rl.WindowShouldClose() {
 			rl.BeginDrawing()
 			rl.ClearBackground(rl.Black)
-			s.drawRenderableLayers()
+			rl.BeginMode2D(*s.GetDefaultCamera())
+			s.render()
+			rl.EndMode2D()
+
 			rl.EndDrawing()
 		}
 
 		rl.CloseWindow()
 	})
-}
-
-func (s *Service) SetWindowTitle(title string) {
-	rl.SetWindowTitle(title)
 }

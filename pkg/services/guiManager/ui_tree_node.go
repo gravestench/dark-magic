@@ -6,6 +6,8 @@ import (
 
 	"github.com/fogleman/gg"
 	"github.com/google/uuid"
+
+	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 // YieldsImage represents an interface for nodes that yield an image.
@@ -15,7 +17,7 @@ type YieldsImage interface {
 
 // TreeNode represents a Node in the GUI tree.
 type TreeNode struct {
-	uuid uuid.UUID
+	raylibRenderer.Renderable
 
 	X, Y     float64
 	Canvas   *gg.Context
@@ -32,21 +34,24 @@ type TreeNode struct {
 }
 
 // NewTreeNode creates a new tree Node.
-func NewTreeNode(x, y float64) *TreeNode {
+func (s *Service) NewTreeNode(x, y float64) *TreeNode {
 	canvas := gg.NewContext(int(x), int(y))
-	return &TreeNode{
+
+	node := &TreeNode{
+		Renderable:   s.renderer.NewRenderable(),
 		X:            x,
 		Y:            y,
 		Canvas:       canvas,
 		children:     []Node{},
 		enabled:      true,
 		InputHandler: nil,
-		uuid:         uuid.New(),
 	}
+
+	return node
 }
 
 func (n *TreeNode) UUID() uuid.UUID {
-	return n.uuid
+	return n.Renderable.UUID()
 }
 
 // Implement inputHandler methods
@@ -217,6 +222,10 @@ func (n *TreeNode) SetImageFunc(f func() image.Image) {
 }
 
 func (n *TreeNode) Update() {
+	if point, found := n.GetRelativePosition(n.Parent()); found {
+		n.Renderable.SetPosition(point.X, point.X)
+	}
+
 	if n.updateFunc != nil {
 		n.updateFunc()
 	}
