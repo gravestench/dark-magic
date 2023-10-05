@@ -7,6 +7,7 @@ import (
 	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 // these are static declarations that force a
@@ -57,6 +58,7 @@ type inputHandler interface {
 }
 
 type element interface {
+	raylibRenderer.Renderable
 	inputHandler
 
 	UUID() uuid.UUID
@@ -64,9 +66,6 @@ type element interface {
 	Enable()
 	Disable()
 	IsEnabled() bool
-
-	Position() (point image.Point)
-	SetPosition(point image.Point)
 }
 
 type Node interface {
@@ -78,6 +77,7 @@ type Node interface {
 	Children() []Node
 	AddChild(child Node)
 	RemoveChild(child Node)
+	ContainsChild(child Node) bool
 
 	LayerIndexOf(child Node) int
 	SetLayerIndexOf(child Node, index int)
@@ -90,8 +90,7 @@ type Node interface {
 	HandleInput(InputState) (terminate bool)
 
 	Image() image.Image
-	ImageFunc() func() image.Image
-	SetImageFunc(func() image.Image)
+	SetImage(image.Image)
 
 	Update()
 	UpdateFunc() func()

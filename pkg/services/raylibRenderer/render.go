@@ -13,17 +13,24 @@ func (s *Service) render() {
 		time.Sleep(time.Second)
 	}
 
-	for _, r := range s.renderables {
-		x, y := r.Position()
-		tx := r.Texture()
-		rl.UpdateTexture(tx, getAllPixelData(r.Image()))
+	for _, child := range s.rootNode.(hasChildren).Children() {
+		x, y := child.Position()
+
+		px := getAllPixelData(child.Image())
+		if len(px) < 4 {
+			continue
+		}
+
+		tx := child.Texture()
+
+		rl.UpdateTexture(tx, px)
 
 		rl.DrawTextureEx(
 			tx,
 			rl.Vector2{X: float32(x), Y: float32(y)},
-			r.Rotation(),
-			r.Scale(),
-			rl.NewColor(255, 255, 255, uint8(r.Opacity()*255)))
+			child.Rotation(),
+			child.Scale(),
+			rl.NewColor(255, 255, 255, uint8(child.Opacity()*255)))
 	}
 }
 

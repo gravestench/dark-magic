@@ -69,11 +69,11 @@ type ProvidesRenderables interface {
 type Renderable interface {
 	UUID() uuid.UUID
 
-	ZIndex() int
-	SetZIndex(int)
+	ZIndex() float32
+	SetZIndex(float32)
 
-	Position() (x, y int)
-	SetPosition(x, y int)
+	Position() (x, y float32)
+	SetPosition(x, y float32)
 
 	Rotation() (degrees float32)
 	SetRotation(degrees float32)
@@ -92,4 +92,21 @@ type Renderable interface {
 
 	Image() image.Image
 	SetImage(image.Image)
+
+	Enable()
+	Disable()
+	IsEnabled() bool
+}
+
+type hasChildren interface {
+	SetParent(Renderable)
+	addChild(Renderable)
+	removeChild(Renderable)
+	Children() []Renderable
+}
+
+type hasMatrix interface {
+	GetWorldMatrix() rl.Matrix
+	GetLocalMatrix() rl.Matrix
+	UpdateWorldMatrix(other rl.Matrix)
 }

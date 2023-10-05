@@ -30,6 +30,6 @@ type Dependency = GetsInputState
 type GetsInputState interface {
 	KeyboardState()
 	KeyboardModifierState()
-	MouseCursorState()
+	MouseCursorState() (x, y int)
 	MouseButtonState()
 }

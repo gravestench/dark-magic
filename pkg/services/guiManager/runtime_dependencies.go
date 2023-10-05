@@ -3,6 +3,9 @@ package guiManager
 import (
 	"github.com/gravestench/runtime"
 
+	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/input"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 )
@@ -24,6 +27,22 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
+	if s.input == nil {
+		return false
+	}
+
+	if s.dc6 == nil {
+		return false
+	}
+
+	if s.mpq == nil {
+		return false
+	}
+
+	if !s.mpq.RequiredArchivesLoaded() {
+		return false
+	}
+
 	return true
 }
 
@@ -34,6 +53,12 @@ func (s *Service) ResolveDependencies(rt runtime.R) {
 			s.sprite = candidate
 		case raylibRenderer.Dependency:
 			s.renderer = candidate
+		case input.Dependency:
+			s.input = candidate
+		case dc6Loader.Dependency:
+			s.dc6 = candidate
+		case mpqLoader.Dependency:
+			s.mpq = candidate
 		}
 	}
 }

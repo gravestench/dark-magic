@@ -9,6 +9,10 @@ import (
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
+	"github.com/gravestench/dark-magic/pkg/paths"
+	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/input"
+	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 )
@@ -16,8 +20,11 @@ import (
 type Service struct {
 	logger *zerolog.Logger
 
+	dc6      dc6Loader.Dependency
+	mpq      mpqLoader.Dependency
 	sprite   spriteManager.Dependency
 	renderer raylibRenderer.Dependency
+	input    input.Dependency
 
 	inputState struct {
 		keys []int
@@ -33,49 +40,64 @@ func (s *Service) Init(rt runtime.Runtime) {
 	// as soon as the dependency resolution has finished.
 	// If the service does not implement runtime.HasDependencies,
 	// then this method is invoked immediately.
-	//keyboard.Listen(s.updateKeyboardKeys)
 
-	s.root = s.NewTreeNode(800, 600)
+	s.root = s.NewTreeNode()
 
-	n1 := s.NewNode()
+	paletteStream, err := s.mpq.Load(paths.PaletteTransformAct1)
+	for err != nil {
+		// TODO :: fix a race condition with the mpq loader
+		time.Sleep(time.Millisecond * 5)
+		paletteStream, err = s.mpq.Load(paths.PaletteTransformAct1)
+	}
 
-	n1.SetImageFunc(func() image.Image {
-		width, height := 100, 100
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
+	const (
+		numColors    = 256
+		numBytesRGBA = numColors * 4
+		opaque       = 255
+	)
 
-		// Fill the image with a white background
-		white := color.RGBA{255, 0, 0, 255}
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				img.Set(x, y, white)
-			}
+	paletteData := make([]byte, numBytesRGBA)
+	numRead, err := paletteStream.Read(paletteData)
+	if err != nil {
+		s.logger.Fatal().Msgf("reading from PL2 stream: %v", err)
+	} else if numRead != numBytesRGBA {
+		s.logger.Fatal().Msgf("couldn't read all palette bytes")
+	}
+
+	act1 := make(color.Palette, numColors)
+	for idx := range act1 {
+		if idx == 0 {
+			act1[idx] = image.Transparent
+
+			continue
 		}
 
-		return img
-	})
-
-	n2 := s.NewNode()
-	n2.SetParent(n1)
-	n2.SetPosition(image.Point{2, 2})
-	n2.SetUpdateFunc(func() {
-		p := n2.Position()
-		p.X++
-		n2.SetPosition(p)
-	})
-
-	n2.SetImageFunc(func() image.Image {
-		width, height := 10, 10
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-
-		// Fill the image with a white background
-		white := color.RGBA{0, 255, 0, 255}
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				img.Set(x, y, white)
-			}
+		act1[idx] = color.RGBA{
+			R: paletteData[(idx*4)+0],
+			G: paletteData[(idx*4)+1],
+			B: paletteData[(idx*4)+2],
+			A: opaque,
 		}
+	}
 
-		return img
+	dc6Cursor, err := s.dc6.Load(paths.CursorDefault)
+	for err != nil {
+		// TODO :: fix a race condition with the mpq loader
+		time.Sleep(time.Millisecond * 10)
+		dc6Cursor, err = s.dc6.Load(paths.CursorDefault)
+	}
+
+	dc6Cursor.SetPalette(act1)
+
+	cursor := s.NewNode()
+	cursor.SetImage(dc6Cursor.Directions[0].Frames[0].ToImageRGBA())
+
+	cursor.SetUpdateFunc(func() {
+		x, y := s.input.MouseCursorState()
+		cursor.SetPosition(float32(x), float32(y))
+		r := cursor.Rotation()
+		r += 0.01
+		cursor.SetRotation(r)
 	})
 
 	ticker := time.NewTicker(time.Second / 60)
@@ -108,7 +130,7 @@ func (s *Service) Logger() *zerolog.Logger {
 }
 
 func (s *Service) NewNode() Node {
-	n := s.NewTreeNode(0, 0)
+	n := s.NewTreeNode()
 
 	s.root.AddChild(n)
 

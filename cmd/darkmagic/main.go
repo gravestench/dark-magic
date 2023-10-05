@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/goscript"
 	"github.com/gravestench/dark-magic/pkg/services/guiManager"
 	"github.com/gravestench/dark-magic/pkg/services/hero"
+	"github.com/gravestench/dark-magic/pkg/services/input"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
@@ -51,6 +52,7 @@ func main() {
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
 	rt.Add(&raylibRenderer.Service{})
+	rt.Add(&input.Service{})
 	rt.Add(&fontTableLoader.Service{})
 	rt.Add(&dc6Loader.Service{})
 	rt.Add(&dccLoader.Service{})

@@ -3,11 +3,16 @@ package dc6Loader
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/gravestench/dc6"
 )
 
 func (s *Service) Load(filepath string) (*dc6.DC6, error) {
+	for !s.mpq.RequiredArchivesLoaded() {
+		time.Sleep(time.Millisecond * 5)
+	}
+
 	if s.cache != nil {
 		cachedData, isCached := s.cache.Retrieve(filepath)
 		if isCached {

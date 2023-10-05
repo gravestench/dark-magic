@@ -2,6 +2,7 @@ package raylibRenderer
 
 import (
 	"image"
+	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
@@ -12,10 +13,12 @@ func (s *Service) NewRenderable() Renderable {
 		renderer: s,
 		uuid:     uuid.New(),
 		opacity:  1,
-		scale:    1,
+		enabled:  true,
+		local:    rl.MatrixIdentity(),
+		world:    rl.MatrixIdentity(),
 	}
 
-	s.renderables[n.uuid] = n
+	n.SetParent(s.rootNode)
 
 	return n
 }
@@ -23,49 +26,68 @@ func (s *Service) NewRenderable() Renderable {
 type node struct {
 	renderer  *Service
 	uuid      uuid.UUID
-	zIndex    int
-	position  rl.Vector2
-	rotation  float32
-	scale     float32
 	opacity   float32
 	blendMode rl.BlendMode
 	image     image.Image
+	enabled   bool
+
+	world    rl.Matrix
+	local    rl.Matrix
+	parent   Renderable
+	children []Renderable
 }
 
 func (n *node) UUID() uuid.UUID {
 	return n.uuid
 }
 
-func (n *node) ZIndex() int {
-	return n.zIndex
+func (n *node) ZIndex() float32 {
+	return n.local.M14
 }
 
-func (n *node) SetZIndex(i int) {
-	n.zIndex = i
+func (n *node) SetZIndex(i float32) {
+	n.local.M14 = i
 }
 
-func (n *node) Position() (x, y int) {
-	return int(n.position.X), int(n.position.Y)
+func (n *node) Position() (x, y float32) {
+	x = n.local.M12
+	y = n.local.M13
+	//z = float32(matrix.M14)
+	return x, y
 }
 
-func (n *node) SetPosition(x, y int) {
-	n.position.X, n.position.Y = float32(x), float32(y)
+func (n *node) SetPosition(x, y float32) {
+	n.local.M12 = x
+	n.local.M13 = y
+	//matrix.M14 = z
 }
 
 func (n *node) Rotation() (degrees float32) {
-	return n.rotation
+	degrees = float32(math.Atan2(float64(n.local.M8), float64(n.local.M0))) * (180.0 / math.Pi)
+	//degrees = float32(math.Asin(-float64(n.local.M4))) * (180.0 / math.Pi)
+	//degrees = float32(math.Atan2(float64(n.local.M9), float64(n.local.M5))) * (180.0 / math.Pi)
+
+	return degrees
 }
 
 func (n *node) SetRotation(degrees float32) {
-	n.rotation = degrees
+	radians := degrees * (math.Pi / 180.0) // Convert degrees to radians
+	rotationMatrix := rl.MatrixRotateZ(radians)
+	n.local = rl.MatrixMultiply(rotationMatrix, n.local)
 }
 
 func (n *node) Scale() (scale float32) {
-	return n.scale
+	scale = float32(n.local.M0)
+	//y := float32(n.matrix.M5)
+	//z := float32(n.matrix.M10)
+
+	return scale
 }
 
 func (n *node) SetScale(scale float32) {
-	n.scale = scale
+	n.local.M0 = scale
+	n.local.M5 = scale
+	n.local.M10 = scale
 }
 
 func (n *node) Opacity() (opacity float32) {
@@ -116,4 +138,90 @@ func (n *node) Image() image.Image {
 
 func (n *node) SetImage(image image.Image) {
 	n.image = image
+}
+
+func (n *node) Enable() {
+	n.enabled = true
+}
+
+func (n *node) Disable() {
+	n.enabled = false
+}
+
+func (n *node) IsEnabled() bool {
+	return n.enabled
+}
+
+// SetParent sets the parent of this scene graph node
+func (n *node) SetParent(p Renderable) {
+	if n == p {
+		return
+	}
+
+	if n.parent != nil {
+		n.parent.(hasChildren).removeChild(n)
+	}
+
+	n.parent = p
+
+	if p != nil {
+		n.parent.(hasChildren).addChild(n)
+	}
+}
+
+func (n *node) addChild(m Renderable) {
+	if m == nil {
+		return
+	}
+
+	var exists bool
+
+	for _, child := range n.children {
+		if child == m {
+			exists = true
+		}
+	}
+
+	if !exists {
+		n.children = append(n.children, m)
+	}
+}
+
+func (n *node) removeChild(m Renderable) {
+	if m == nil {
+		return
+	}
+
+	for idx := len(n.children) - 1; idx >= 0; idx-- {
+		if n.children[idx] != m {
+			continue
+		}
+
+		n.children = append(n.children[:idx], n.children[idx+1:]...)
+	}
+}
+
+// Children yields the child nodes for this node
+func (n *node) Children() []Renderable {
+	return n.children
+}
+
+// UpdateWorldMatrix recursively updates the children world matrices with this
+// nodes world matrix
+func (n *node) UpdateWorldMatrix(parent rl.Matrix) {
+	n.world = parent
+
+	for idx := range n.children {
+		n.children[idx].(hasMatrix).UpdateWorldMatrix(n.GetWorldMatrix())
+	}
+}
+
+// GetWorldMatrix applies the local transform to the world matrix and returns it
+func (n *node) GetWorldMatrix() rl.Matrix {
+	return rl.MatrixMultiply(n.world, n.local)
+}
+
+// GetLocalMatrix gets the local matrix
+func (n *node) GetLocalMatrix() rl.Matrix {
+	return n.local
 }

@@ -1,11 +1,8 @@
 package raylibRenderer
 
 import (
-	"time"
-
 	"github.com/faiface/mainthread"
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/google/uuid"
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
@@ -21,28 +18,14 @@ type Service struct {
 
 	cameras map[string]*rl.Camera2D
 
-	renderables map[uuid.UUID]Renderable
+	rootNode Renderable
 
 	isInit bool
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
-	if s.isInit {
-		return
-	}
-
 	s.cameras = make(map[string]*rl.Camera2D)
-	s.renderables = make(map[uuid.UUID]Renderable)
-
-	c := s.GetDefaultCamera()
-	s.NewRenderable()
-
-	go func() {
-		for {
-			time.Sleep(time.Millisecond)
-			c.Rotation += 0.01
-		}
-	}()
+	s.rootNode = s.NewRenderable()
 
 	go s.initRenderer()
 }
@@ -102,6 +85,7 @@ func (s *Service) initRenderer() {
 			rl.BeginDrawing()
 			rl.ClearBackground(rl.Black)
 			rl.BeginMode2D(*s.GetDefaultCamera())
+			s.update()
 			s.render()
 			rl.EndMode2D()
 

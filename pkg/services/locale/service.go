@@ -40,7 +40,7 @@ func (s *Service) Init(rt runtime.Runtime) {
 	languages := s.GetSupportedLanguages()
 
 	if len(languages) < 1 {
-		s.logger.Fatal().Msg("no locale languages found")
+		s.logger.Error().Msg("no locale languages found")
 	}
 
 	s.language = languages[0]
@@ -90,19 +90,19 @@ func (s *Service) loadTextTables() {
 	localePathPatchStringTable := fmt.Sprintf(PatchStringTable, s.language)
 
 	if tbl, err := s.tbl.Load(localePathStringTable); err != nil {
-		s.logger.Fatal().Msg("loading Vanilla string table")
+		s.logger.Error().Msg("loading Vanilla string table")
 	} else {
 		s.stringTables.Vanilla = tbl
 	}
 
 	if tbl, err := s.tbl.Load(localePathExpansionStringTable); err != nil {
-		s.logger.Fatal().Msg("loading Expansion string table")
+		s.logger.Error().Msg("loading Expansion string table")
 	} else {
 		s.stringTables.Expansion = tbl
 	}
 
 	if tbl, err := s.tbl.Load(localePathPatchStringTable); err != nil {
-		s.logger.Fatal().Msg("loading Patch string table")
+		s.logger.Error().Msg("loading Patch string table")
 	} else {
 		s.stringTables.Patch = tbl
 	}
