@@ -10,19 +10,18 @@ import (
 func (s *Service) GetTexture(uuid uuid.UUID, img image.Image) (texture rl.Texture2D, isNew bool) {
 	key := uuid.String()
 
-	tx, exists := s.cache.Retrieve(key)
+	bounds := img.Bounds()
+	numBytes := bounds.Dx() * bounds.Dy() * 4 // RGBA
+
+	cached, exists := s.cache.Retrieve(key)
 	if !exists {
-		bounds := img.Bounds()
-		numBytes := bounds.Dx() * bounds.Dy() * 4 // RGBA
-
-		tx = rl.LoadTextureFromImage(rl.NewImageFromImage(img))
-
-		if err := s.cache.Insert(key, tx, numBytes); err != nil {
+		cached = rl.LoadTextureFromImage(rl.NewImageFromImage(img))
+		if err := s.cache.Insert(key, cached, numBytes); err != nil {
 			s.logger.Error().Msgf("[%s] caching texture: %v", key, err)
 		}
 
-		return tx.(rl.Texture2D), true
+		return cached.(rl.Texture2D), true
 	}
 
-	return tx.(rl.Texture2D), false
+	return cached.(rl.Texture2D), false
 }

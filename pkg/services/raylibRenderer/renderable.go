@@ -31,10 +31,26 @@ type node struct {
 	image     image.Image
 	enabled   bool
 
+	onUpdate func()
+
 	world    rl.Matrix
 	local    rl.Matrix
 	parent   Renderable
 	children []Renderable
+}
+
+func (n *node) update() {
+	if n.onUpdate != nil {
+		n.onUpdate()
+	}
+
+	for _, child := range n.children {
+		child.update()
+	}
+}
+
+func (n *node) OnUpdate(f func()) {
+	n.onUpdate = f
 }
 
 func (n *node) UUID() uuid.UUID {
@@ -50,8 +66,8 @@ func (n *node) SetZIndex(i float32) {
 }
 
 func (n *node) Position() (x, y float32) {
-	x = n.local.M12
-	y = n.local.M13
+	x = n.world.M12
+	y = n.world.M13
 	//z = float32(matrix.M14)
 	return x, y
 }
@@ -63,23 +79,68 @@ func (n *node) SetPosition(x, y float32) {
 }
 
 func (n *node) Rotation() (degrees float32) {
-	degrees = float32(math.Atan2(float64(n.local.M8), float64(n.local.M0))) * (180.0 / math.Pi)
-	//degrees = float32(math.Asin(-float64(n.local.M4))) * (180.0 / math.Pi)
-	//degrees = float32(math.Atan2(float64(n.local.M9), float64(n.local.M5))) * (180.0 / math.Pi)
+	// Compute scale factors
+	scaleX := math.Sqrt(float64(n.world.M0*n.world.M0 + n.world.M1*n.world.M1 + n.world.M2*n.world.M2))
 
-	return degrees
+	// Normalize matrix components to remove scale
+	m0Prime := n.world.M0 / float32(scaleX)
+	m1Prime := n.world.M1 / float32(scaleX)
+
+	// Get rotation in radians
+	theta := math.Atan2(float64(m1Prime), float64(m0Prime))
+
+	// Convert to degrees if necessary
+	angleInDegrees := theta * 180.0 / math.Pi
+
+	return float32(angleInDegrees)
 }
 
+//func (n *node) SetRotation(degrees float32) {
+//	n.rotation = degrees
+//	//// TODO :: setting rotation in the matrix isnt working right...
+//	//radians := degrees * (math.Pi / 180.0) // Convert degrees to radians
+//	//rotationMatrix := rl.MatrixRotateZ(radians)
+//	//n.local = rl.MatrixMultiply(rotationMatrix, n.local)
+//}
+
 func (n *node) SetRotation(degrees float32) {
-	radians := degrees * (math.Pi / 180.0) // Convert degrees to radians
-	rotationMatrix := rl.MatrixRotateZ(radians)
-	n.local = rl.MatrixMultiply(rotationMatrix, n.local)
+	// Extract existing scale factors
+	scaleX := math.Sqrt(float64(n.local.M0*n.local.M0 + n.local.M1*n.local.M1 + n.local.M2*n.local.M2))
+	scaleY := math.Sqrt(float64(n.local.M4*n.local.M4 + n.local.M5*n.local.M5 + n.local.M6*n.local.M6))
+	scaleZ := math.Sqrt(float64(n.local.M8*n.local.M8 + n.local.M9*n.local.M9 + n.local.M10*n.local.M10))
+
+	// Extract translation components
+	tx := n.local.M12
+	ty := n.local.M13
+	tz := n.local.M14
+
+	// Calculate new rotation matrix for Z-axis
+	radians := float64(degrees) * math.Pi / 180.0
+	cosTheta := math.Cos(radians)
+	sinTheta := math.Sin(radians)
+
+	// Set new rotation while maintaining existing scale and translation
+	n.local.M0 = float32(cosTheta) * float32(scaleX)
+	n.local.M1 = float32(sinTheta) * float32(scaleX)
+	n.local.M4 = float32(-sinTheta) * float32(scaleY)
+	n.local.M5 = float32(cosTheta) * float32(scaleY)
+
+	// Z-axis values remain unchanged for 2D rotation
+	n.local.M8 = n.local.M8 / float32(scaleZ)
+	n.local.M9 = n.local.M9 / float32(scaleZ)
+	n.local.M10 = float32(scaleZ)
+
+	// Restore translation components
+	n.local.M12 = tx
+	n.local.M13 = ty
+	n.local.M14 = tz
 }
 
 func (n *node) Scale() (scale float32) {
-	scale = float32(n.local.M0)
+	//x := float32(n.world.M0)
 	//y := float32(n.matrix.M5)
 	//z := float32(n.matrix.M10)
+	scale = float32(n.world.M10)
 
 	return scale
 }
@@ -159,13 +220,13 @@ func (n *node) SetParent(p Renderable) {
 	}
 
 	if n.parent != nil {
-		n.parent.(hasChildren).removeChild(n)
+		n.parent.removeChild(n)
 	}
 
 	n.parent = p
 
 	if p != nil {
-		n.parent.(hasChildren).addChild(n)
+		n.parent.addChild(n)
 	}
 }
 
@@ -209,19 +270,19 @@ func (n *node) Children() []Renderable {
 // UpdateWorldMatrix recursively updates the children world matrices with this
 // nodes world matrix
 func (n *node) UpdateWorldMatrix(parent rl.Matrix) {
-	n.world = parent
+	n.world = rl.MatrixMultiply(n.local, parent)
 
 	for idx := range n.children {
-		n.children[idx].(hasMatrix).UpdateWorldMatrix(n.GetWorldMatrix())
+		n.children[idx].UpdateWorldMatrix(n.world)
 	}
 }
 
-// GetWorldMatrix applies the local transform to the world matrix and returns it
-func (n *node) GetWorldMatrix() rl.Matrix {
-	return rl.MatrixMultiply(n.world, n.local)
+// WorldMatrix applies the local transform to the world matrix and returns it
+func (n *node) WorldMatrix() rl.Matrix {
+	return n.world
 }
 
-// GetLocalMatrix gets the local matrix
-func (n *node) GetLocalMatrix() rl.Matrix {
+// LocalMatrix gets the local matrix
+func (n *node) LocalMatrix() rl.Matrix {
 	return n.local
 }

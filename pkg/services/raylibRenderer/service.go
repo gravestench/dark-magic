@@ -26,6 +26,7 @@ type Service struct {
 func (s *Service) Init(rt runtime.Runtime) {
 	s.cameras = make(map[string]*rl.Camera2D)
 	s.rootNode = s.NewRenderable()
+	s.rootNode.Disable() // dont render
 
 	go s.initRenderer()
 }

@@ -13,25 +13,37 @@ func (s *Service) render() {
 		time.Sleep(time.Second)
 	}
 
-	for _, child := range s.rootNode.(hasChildren).Children() {
-		x, y := child.Position()
+	s.renderRecursively(s.rootNode)
+}
 
-		px := getAllPixelData(child.Image())
-		if len(px) < 4 {
-			continue
-		}
-
-		tx := child.Texture()
-
-		rl.UpdateTexture(tx, px)
-
-		rl.DrawTextureEx(
-			tx,
-			rl.Vector2{X: float32(x), Y: float32(y)},
-			child.Rotation(),
-			child.Scale(),
-			rl.NewColor(255, 255, 255, uint8(child.Opacity()*255)))
+func (s *Service) renderRecursively(node Renderable) {
+	if node.IsEnabled() {
+		s.renderNode(node)
 	}
+
+	for _, child := range node.Children() {
+		s.renderRecursively(child)
+	}
+}
+
+func (s *Service) renderNode(node Renderable) {
+	x, y := node.Position()
+
+	px := getAllPixelData(node.Image())
+	if len(px) < 4 {
+		return
+	}
+
+	tx := node.Texture()
+
+	rl.UpdateTexture(tx, px)
+
+	rl.DrawTextureEx(
+		tx,
+		rl.Vector2{X: float32(x), Y: float32(y)},
+		node.Rotation(),
+		node.Scale(),
+		rl.NewColor(255, 255, 255, uint8(node.Opacity()*255)))
 }
 
 func getAllPixelData(img image.Image) []color.RGBA {

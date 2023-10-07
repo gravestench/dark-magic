@@ -67,6 +67,10 @@ type ProvidesRenderables interface {
 // Renderable is a thing that the renderer provides to other services, which
 // encapsulates the necessary behavior of something that can be rendered
 type Renderable interface {
+	hasChildren
+	hasUpdate
+	hasMatrix
+
 	UUID() uuid.UUID
 
 	ZIndex() float32
@@ -98,6 +102,11 @@ type Renderable interface {
 	IsEnabled() bool
 }
 
+type hasUpdate interface {
+	update()
+	OnUpdate(func())
+}
+
 type hasChildren interface {
 	SetParent(Renderable)
 	addChild(Renderable)
@@ -106,7 +115,7 @@ type hasChildren interface {
 }
 
 type hasMatrix interface {
-	GetWorldMatrix() rl.Matrix
-	GetLocalMatrix() rl.Matrix
-	UpdateWorldMatrix(other rl.Matrix)
+	WorldMatrix() rl.Matrix
+	LocalMatrix() rl.Matrix
+	UpdateWorldMatrix(parent rl.Matrix)
 }

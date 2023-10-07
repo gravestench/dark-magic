@@ -32,9 +32,6 @@ type Dependency = ManagesGui
 // should know about this service.
 
 type ManagesGui interface {
-	NewNode() Node
-	Nodes() []Node
-	Update()
 }
 
 type Key int
@@ -68,33 +65,34 @@ type element interface {
 	IsEnabled() bool
 }
 
-type Node interface {
-	element
-
-	Parent() Node
-	SetParent(Node)
-
-	Children() []Node
-	AddChild(child Node)
-	RemoveChild(child Node)
-	ContainsChild(child Node) bool
-
-	LayerIndexOf(child Node) int
-	SetLayerIndexOf(child Node, index int)
-
-	BringToTop(child Node)
-	BringToBottom(child Node)
-	Raise(child Node)
-	Lower(child Node)
-
-	HandleInput(InputState) (terminate bool)
-
-	Image() image.Image
-	SetImage(image.Image)
-
-	Update()
-	UpdateFunc() func()
-	SetUpdateFunc(func())
-
-	GetRelativePosition(target Node) (relativePosition image.Point, found bool)
-}
+//
+//type Node interface {
+//	element
+//
+//	Parent() Node
+//	SetParent(Node)
+//
+//	Children() []Node
+//	AddChild(child Node)
+//	RemoveChild(child Node)
+//	ContainsChild(child Node) bool
+//
+//	LayerIndexOf(child Node) int
+//	SetLayerIndexOf(child Node, index int)
+//
+//	BringToTop(child Node)
+//	BringToBottom(child Node)
+//	Raise(child Node)
+//	Lower(child Node)
+//
+//	HandleInput(InputState) (terminate bool)
+//
+//	Image() image.Image
+//	SetImage(image.Image)
+//
+//	Update()
+//	UpdateFunc() func()
+//	SetUpdateFunc(func())
+//
+//	GetRelativePosition(target Node) (relativePosition image.Point, found bool)
+//}

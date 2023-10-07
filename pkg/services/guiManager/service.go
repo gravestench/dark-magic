@@ -3,9 +3,9 @@ package guiManager
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"time"
 
-	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/runtime"
 	"github.com/rs/zerolog"
 
@@ -29,10 +29,6 @@ type Service struct {
 	inputState struct {
 		keys []int
 	}
-
-	texture *rl.Texture2D
-
-	root Node
 }
 
 func (s *Service) Init(rt runtime.Runtime) {
@@ -40,8 +36,6 @@ func (s *Service) Init(rt runtime.Runtime) {
 	// as soon as the dependency resolution has finished.
 	// If the service does not implement runtime.HasDependencies,
 	// then this method is invoked immediately.
-
-	s.root = s.NewTreeNode()
 
 	paletteStream, err := s.mpq.Load(paths.PaletteTransformAct1)
 	for err != nil {
@@ -89,29 +83,60 @@ func (s *Service) Init(rt runtime.Runtime) {
 
 	dc6Cursor.SetPalette(act1)
 
-	cursor := s.NewNode()
-	cursor.SetImage(dc6Cursor.Directions[0].Frames[0].ToImageRGBA())
+	test := s.renderer.NewRenderable()
+	// Create a new 10x10 image with RGBA color model
+	img := image.NewRGBA(image.Rect(0, 0, 3, 3))
 
-	cursor.SetUpdateFunc(func() {
+	// Fill the image with red color
+	red := color.RGBA{255, 0, 0, 255}
+	draw.Draw(img, img.Bounds(), &image.Uniform{red}, image.Point{}, draw.Src)
+
+	test.SetImage(img)
+
+	cursor := s.renderer.NewRenderable()
+	test.SetParent(cursor)
+	test.SetPosition(-3, -3)
+	cursor.SetScale(3)
+	d1 := dc6Cursor.Directions[0]
+	frames := d1.Frames
+	frame := 0
+	forward := true
+	cursor.SetImage(frames[frame].ToImageRGBA())
+
+	t := time.Now()
+
+	sampler := s.logger.Sample(&zerolog.BasicSampler{N: 24})
+
+	cursor.OnUpdate(func() {
+		if time.Since(t) < time.Second/24 {
+			return
+		}
+
+		t = time.Now()
+
+		if frame == len(frames)-1 {
+			forward = false
+		} else if frame == 0 {
+			forward = true
+		}
+
+		if forward {
+			frame++
+		} else {
+			frame--
+		}
+
+		r := cursor.Rotation()
+		r += 2
+		cursor.SetRotation(r)
+
+		tx, ty := test.Position()
+		sampler.Info().Msgf("test: %v, %v", tx, ty)
+
 		x, y := s.input.MouseCursorState()
 		cursor.SetPosition(float32(x), float32(y))
-		r := cursor.Rotation()
-		r += 0.01
-		cursor.SetRotation(r)
+		cursor.SetImage(frames[frame%len(frames)].ToImageRGBA())
 	})
-
-	ticker := time.NewTicker(time.Second / 60)
-
-	// Create a Goroutine to handle the ticker
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				// Call your function here
-				s.Update()
-			}
-		}
-	}()
 }
 
 func (s *Service) Name() string {
@@ -127,20 +152,4 @@ func (s *Service) BindLogger(logger *zerolog.Logger) {
 
 func (s *Service) Logger() *zerolog.Logger {
 	return s.logger
-}
-
-func (s *Service) NewNode() Node {
-	n := s.NewTreeNode()
-
-	s.root.AddChild(n)
-
-	return n
-}
-
-func (s *Service) Nodes() []Node {
-	return s.root.Children()
-}
-
-func (s *Service) Update() {
-	s.root.Update()
 }
