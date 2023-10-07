@@ -1,6 +1,8 @@
 package pl2Loader
 
 import (
+	"image/color"
+
 	"github.com/gravestench/pl2"
 
 	"github.com/gravestench/runtime"
@@ -22,4 +24,5 @@ type Dependency = LoadsPl2Files
 
 type LoadsPl2Files = interface {
 	Load(filepath string) (*pl2.PL2, error)
+	ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error)
 }

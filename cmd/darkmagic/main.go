@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/faiface/mainthread"
 	"github.com/gravestench/runtime"
 
@@ -21,6 +23,8 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
+	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
+	"github.com/gravestench/dark-magic/pkg/services/modalGameUI/ui/loading"
 	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
@@ -73,6 +77,13 @@ func main() {
 	rt.Add(&hero.Service{})
 	rt.Add(&mapGenerator.Service{})
 	rt.Add(&guiManager.Service{})
+	rt.Add(&modalGameUI.Service{})
+
+	// game screens
+	go func() {
+		time.Sleep(time.Second * 5)
+		rt.Add(&loading.Screen{})
+	}()
 
 	mainthread.Run(rt.Run)
 }

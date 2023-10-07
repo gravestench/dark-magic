@@ -235,17 +235,7 @@ func (n *node) addChild(m Renderable) {
 		return
 	}
 
-	var exists bool
-
-	for _, child := range n.children {
-		if child == m {
-			exists = true
-		}
-	}
-
-	if !exists {
-		n.children = append(n.children, m)
-	}
+	n.children = append(n.children, m)
 }
 
 func (n *node) removeChild(m Renderable) {
