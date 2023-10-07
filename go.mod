@@ -15,7 +15,7 @@ require (
 	github.com/go-gl/mathgl v1.1.0
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
-	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
+	github.com/gravestench/dc6 v0.0.0-20231007020112-5562cb20fe35
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
 	github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f
