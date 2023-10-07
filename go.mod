@@ -12,7 +12,6 @@ require (
 	github.com/gen2brain/raylib-go/raylib v0.0.0-20230928181314-dc2584151090
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-gl/mathgl v1.1.0
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
 	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5

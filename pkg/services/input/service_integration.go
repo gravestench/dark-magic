@@ -28,8 +28,8 @@ type Dependency = GetsInputState
 // should know about this service.
 
 type GetsInputState interface {
-	KeyboardState()
-	KeyboardModifierState()
+	KeyboardState() map[int32]InputState
+	KeyboardModifierState() map[int32]InputState
 	MouseCursorState() (x, y int)
-	MouseButtonState()
+	MouseButtonState() map[int32]InputState
 }
