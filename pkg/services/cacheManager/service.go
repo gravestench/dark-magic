@@ -1,10 +1,10 @@
 package cacheManager
 
 import (
+	"log/slog"
 	"sort"
 
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
 )
@@ -12,13 +12,13 @@ import (
 type cacheLookup = map[string]*cache.Cache
 
 type Service struct {
-	runtime runtime.Runtime
-	logger  *zerolog.Logger
-	caches  cacheLookup
+	mesh   servicemesh.Mesh
+	logger *slog.Logger
+	caches cacheLookup
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
-	s.runtime = rt
+func (s *Service) Init(mesh servicemesh.Mesh) {
+	s.mesh = mesh
 
 	s.FlushAllCaches()
 }
@@ -27,29 +27,29 @@ func (s *Service) Name() string {
 	return "Cache Manager"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
 func (s *Service) FlushAllCaches() {
 	s.caches = make(cacheLookup)
 
-	for _, service := range s.runtime.Services() {
+	for _, service := range s.mesh.Services() {
 		s.tryToFlushCacheForService(service)
 	}
 }
 
-func (s *Service) tryToFlushAllCaches(rt runtime.Runtime) {
-	for _, service := range rt.Services() {
+func (s *Service) tryToFlushAllCaches(mesh servicemesh.Mesh) {
+	for _, service := range mesh.Services() {
 		s.tryToFlushCacheForService(service)
 	}
 }
 
-func (s *Service) tryToFlushCacheForService(service runtime.Service) {
+func (s *Service) tryToFlushCacheForService(service servicemesh.Service) {
 	if _, exists := s.caches[service.Name()]; exists {
 		return
 	}
@@ -59,7 +59,7 @@ func (s *Service) tryToFlushCacheForService(service runtime.Service) {
 		return
 	}
 
-	s.logger.Info().Msgf("flushing cache for service: %v", service.Name())
+	s.logger.Info("flushing cache", "for", service.Name())
 
 	newCache := cache.New(candidate.CacheBudget())
 	candidate.FlushCache(newCache)

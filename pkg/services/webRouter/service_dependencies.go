@@ -1,7 +1,7 @@
 package webRouter
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
@@ -14,8 +14,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, other := range rt.Services() {
+func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, other := range mesh.Services() {
 		if cfg, ok := other.(configFile.Manager); ok {
 			s.cfgManager = cfg
 		}

@@ -8,30 +8,33 @@ import (
 func (s *Service) loadArchivesFromFiles() {
 	cfg, err := s.Config()
 	if err != nil {
-		s.logger.Fatal().Msgf("getting config: %v", err)
+		s.logger.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	g := cfg.Group(s.Name())
 
 	rootDir, err := expandHomeDirAlias(g.GetString("directory"))
 	if err != nil {
-		s.logger.Fatal().Msgf("formatting root dir: %v", err)
+		s.logger.Error("formatting root dir", "error", err)
+		panic(err)
 	}
 
 	for _, fileName := range g.GetStrings("load order") {
 		absPath := filepath.Join(rootDir, fileName)
 
 		if err = s.AddArchive(absPath); err != nil {
-			s.logger.Warn().Msgf("adding MPQ: %v", err)
+			s.logger.Warn("adding MPQ", "error", err)
 			continue
 		}
 
-		s.logger.Info().Msgf("loaded MPQ: %v", absPath)
+		s.logger.Info("loaded MPQ", "path", absPath)
 	}
 
 	if len(s.archives) == 0 {
 		time.Sleep(time.Second * 3)
-		s.logger.Error().Msg("no MPQ files found")
-		s.logger.Fatal().Msgf("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFileName()))
+		s.logger.Error("no MPQ files found")
+		s.logger.Error("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFileName()))
+		panic(err)
 	}
 }

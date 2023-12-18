@@ -7,7 +7,7 @@ import (
 func (s *Service) StartServer() {
 	cfg, err := s.Config()
 	if err != nil {
-		s.log.Fatal().Msgf("getting config: %v", err)
+		s.log.Error("getting config", "error", err)
 	}
 
 	g := cfg.Group("Web Server")
@@ -21,16 +21,16 @@ func (s *Service) StartServer() {
 	}
 
 	if tlsEnabled && autocertEnabled {
-		s.log.Info().Msgf("starting autocert HTTPS server, listening on %d", port)
+		s.log.Info("starting autocert HTTPS server", "port", port)
 		go s.initAutocertTlsDebugServer()
 		return
 	} else if tlsEnabled && !autocertEnabled {
-		s.log.Info().Msgf("starting HTTPS server, listening on %d", port)
+		s.log.Info("starting HTTPS server", "port", port)
 		go s.initTlsServer()
 		return
 	}
 
-	s.log.Info().Msgf("starting HTTP server, listening on %d", port)
+	s.log.Info("starting HTTP server", "port", port)
 	go s.initHttpServer()
 }
 
@@ -39,14 +39,14 @@ func (s *Service) StopServer() {
 		return
 	}
 
-	s.log.Warn().Msg("stopping server")
+	s.log.Warn("stopping server")
 
 	_ = s.server.Close()
 	s.server = nil
 }
 
 func (s *Service) RestartServer() {
-	s.log.Warn().Msg("restarting server")
+	s.log.Warn("restarting server")
 	time.Sleep(time.Second)
 	s.StopServer()
 	s.StartServer()

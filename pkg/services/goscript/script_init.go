@@ -6,11 +6,11 @@ import (
 )
 
 func (s *Service) runScript(scriptPath string) {
-	s.logger.Info().Msgf("running script %q", scriptPath)
+	s.logger.Info("running script", "path", scriptPath)
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	//i.Use(darkapi.Symbols)
 	if _, err := i.EvalPath(scriptPath); err != nil {
-		s.logger.Warn().Msgf("executing init script '%s': %v", scriptPath, err)
+		s.logger.Warn("executing init script", "path", scriptPath, "error", err)
 	}
 }

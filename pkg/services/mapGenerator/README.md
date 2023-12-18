@@ -1,6 +1,6 @@
 # Map Generator Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a way of generating "map" objects for diablo2, which are
 
 ## Dependencies
@@ -12,7 +12,7 @@ initialize its own default config.
 
 This service exports an integration interface `GeneratesDiablo2Maps` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
 ```golang

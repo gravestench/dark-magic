@@ -21,12 +21,12 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
 	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("extracting palette from pl2: %v", err)
+		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
 	}
 
 	dt1, err := s.dt1.Load(pathDT1)
 	if err != nil {
-		return nil, fmt.Errorf("loading DT1 tileset: %v", err)
+		return nil, fmt.Errorf("loading DT1 tileset", "error", err)
 	}
 
 	dt1.SetPalette(pl2Palette)
@@ -52,14 +52,14 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 
 	//atlasInfoData, err := json.Marshal(atlasInfo)
 	//if err != nil {
-	//	return nil, fmt.Errorf("marshalling atlas frame info: %v", err)
+	//	return nil, fmt.Errorf("marshalling atlas frame info", "error", err)
 	//}
 	//
 	//pngDataWithExtras := append(pngData.Bytes(), atlasInfoData...)
 
 	if s.spriteCache != nil {
 		if err = s.spriteCache.Insert(cacheKey, pngData.Bytes(), len(pngData.Bytes())); err != nil {
-			s.logger.Error().Msgf("caching %s: %v", pathPL2, err)
+			s.logger.Error("caching %s: %v", pathPL2, err)
 		}
 	}
 

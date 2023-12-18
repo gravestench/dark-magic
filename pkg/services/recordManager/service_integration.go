@@ -1,14 +1,14 @@
 package recordManager
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasDependencies = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
 	//_ configFile.HasDefaultConfig = &Service{}
 	_ LoadsDiablo2Records = &Service{}
 )

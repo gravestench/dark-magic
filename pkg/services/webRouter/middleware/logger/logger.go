@@ -1,15 +1,15 @@
 package logger
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 type ginHands struct {
-	*zerolog.Logger
+	*slog.Logger
 	SerName    string
 	Path       string
 	Latency    time.Duration
@@ -19,7 +19,7 @@ type ginHands struct {
 	MsgStr     string
 }
 
-func Logger(serName string, l *zerolog.Logger) gin.HandlerFunc {
+func Logger(serName string, l *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
 		// before request
@@ -60,14 +60,10 @@ func Logger(serName string, l *zerolog.Logger) gin.HandlerFunc {
 }
 
 func logSwitch(data *ginHands) {
-	var e *zerolog.Event
-
 	switch {
 	case data.StatusCode >= http.StatusBadRequest && data.StatusCode <= http.StatusInternalServerError:
-		e = data.Warn()
+		data.Warn(data.Method, "status", data.StatusCode, "path", data.Path, "latency", data.Latency)
 	default:
-		e = data.Info()
+		data.Error(data.Method, "status", data.StatusCode, "path", data.Path, "latency", data.Latency)
 	}
-
-	e.Msgf("%v %v %v %v", data.StatusCode, data.Method, data.Path, data.Latency)
 }

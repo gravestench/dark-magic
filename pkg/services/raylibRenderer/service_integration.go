@@ -5,21 +5,19 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
 )
 
 // these are static declarations that force a
 // compile-time error if the service does not
 // implement them.
 var (
-	_ runtime.Service             = &Service{} // implement in`service.go`
-	_ runtime.HasLogger           = &Service{} // implement in`service.go`
-	_ runtime.HasDependencies     = &Service{} // implement in`dependencies.go`
-	_ lua.UsesLuaEnvironment      = &Service{} // implement in`lua_integration.go`
+	_ servicemesh.Service         = &Service{} // implement in`service.go`
+	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
+	_ servicemesh.HasDependencies = &Service{} // implement in`dependencies.go`
 	_ configFile.HasDefaultConfig = &Service{} // implement in`lua_integration.go`
 	_ cacheManager.HasCache       = &Service{} // implement in`lua_integration.go`
 	_ IsRenderer                  = &Service{} // implement in`service.go`
@@ -67,11 +65,13 @@ type ProvidesRenderables interface {
 // Renderable is a thing that the renderer provides to other services, which
 // encapsulates the necessary behavior of something that can be rendered
 type Renderable interface {
+	UUID() uuid.UUID
+	dirty() bool
+
 	hasChildren
 	hasUpdate
 	hasMatrix
-
-	UUID() uuid.UUID
+	hasOrigin
 
 	ZIndex() float32
 	SetZIndex(float32)
@@ -105,6 +105,11 @@ type Renderable interface {
 type hasUpdate interface {
 	update()
 	OnUpdate(func())
+}
+
+type hasOrigin interface {
+	Origin() rl.Vector2
+	SetOrigin(x, y float64)
 }
 
 type hasChildren interface {

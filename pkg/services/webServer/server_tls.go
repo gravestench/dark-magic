@@ -11,7 +11,8 @@ func (s *Service) initTlsServer() {
 
 	cfg, err := s.Config()
 	if err != nil {
-		s.log.Fatal().Msgf("getting config: %v", err)
+		s.log.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	g := cfg.Group("Web Server")
@@ -28,5 +29,5 @@ func (s *Service) initTlsServer() {
 	// anything crashed
 	err = s.server.ListenAndServeTLS(g.GetString(keyCertFilepath), g.GetString(keyKeyFilepath))
 
-	s.log.Warn().Msgf("TLS server not running: %v", err)
+	s.log.Warn("TLS server not running", "error", err)
 }

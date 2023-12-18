@@ -1,33 +1,32 @@
 package webServer
 
 import (
+	"log/slog"
 	"net/http"
 
-	"github.com/rs/zerolog"
-
-	"github.com/gravestench/runtime/pkg"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
 type Service struct {
-	log        *zerolog.Logger
+	log        *slog.Logger
 	router     webRouter.Dependency
 	cfgManager configFile.Dependency
 	server     *http.Server
 	lastConfig string
 }
 
-func (s *Service) Init(rt pkg.IsRuntime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.StartServer()
 }
 
-func (s *Service) BindLogger(l *zerolog.Logger) {
+func (s *Service) SetLogger(l *slog.Logger) {
 	s.log = l
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.log
 }
 

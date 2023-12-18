@@ -1,5 +1,5 @@
 # COF Loader Service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for loading COF animation files.
 COF likely stands for "Composite Object File", which is coherent considering that
 all of the character animations are composed of many separate dcc images.
@@ -11,7 +11,7 @@ This service has a single dependency on the MPQ loader service
 ## Integration with other services
 This service exports an integration interface `LoadsCofFiles` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 ```golang
 type Dependency = LoadsCofFiles

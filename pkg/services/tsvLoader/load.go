@@ -18,7 +18,7 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 		}
 	}
 
-	s.logger.Info().Msgf("loading %v", filepath)
+	s.logger.Info("loading", "path", filepath)
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
@@ -27,12 +27,12 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data", "error", err)
 	}
 
 	if s.cache != nil {
 		if err = s.cache.Insert(cacheKey, data, len(data)); err != nil {
-			s.logger.Warn().Msgf("caching data: %v", err)
+			s.logger.Warn("caching data", "error", err)
 		}
 	}
 
@@ -42,11 +42,11 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 func (s *Service) Unmarshal(filepath string, destination any) error {
 	data, err := s.Load(filepath)
 	if err != nil {
-		return fmt.Errorf("loading file: %v", err)
+		return fmt.Errorf("loading file", "error", err)
 	}
 
 	if err = tsv.Unmarshal([]byte(strings.ReplaceAll(string(data), "\"", "")), destination); err != nil {
-		return fmt.Errorf("parsing data: %v", err)
+		return fmt.Errorf("parsing data", "error", err)
 	}
 
 	return nil

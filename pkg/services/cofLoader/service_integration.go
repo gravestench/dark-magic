@@ -2,14 +2,14 @@ package cofLoader
 
 import (
 	"github.com/gravestench/cof"
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
-	_ LoadsDc6Files           = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
+	_ LoadsDc6Files               = &Service{}
 )
 
 type Dependency = LoadsDc6Files

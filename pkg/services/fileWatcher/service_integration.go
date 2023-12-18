@@ -1,17 +1,17 @@
 package fileWatcher
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 // these are static declarations that force a
 // compile-time error if the service does not
 // implement them.
 var (
-	_ runtime.Service         = &Service{} // implement in`service.go`
-	_ runtime.HasLogger       = &Service{} // implement in`service.go`
-	_ runtime.HasDependencies = &Service{} // implement in`dependencies.go`
-	_ IsFileWatcher           = &Service{} // implement in`service.go`
+	_ servicemesh.Service         = &Service{} // implement in`service.go`
+	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
+	_ servicemesh.HasDependencies = &Service{} // implement in`dependencies.go`
+	_ IsFileWatcher               = &Service{} // implement in`service.go`
 )
 
 // this is an alias which can be used to make

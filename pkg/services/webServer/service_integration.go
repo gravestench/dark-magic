@@ -1,14 +1,14 @@
 package webServer
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 var (
-	_ runtime.Service             = &Service{}
-	_ runtime.HasLogger           = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
 	_ configFile.HasDefaultConfig = &Service{}
 	_ IsWebServer                 = &Service{}
 )

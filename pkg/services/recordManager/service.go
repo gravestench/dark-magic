@@ -1,8 +1,9 @@
 package recordManager
 
 import (
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"log/slog"
+
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -11,7 +12,7 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 	cfg    configFile.Dependency
 	tsv    tsvLoader.Dependency
 	tbl    tblLoader.Dependency
@@ -95,15 +96,15 @@ type Service struct {
 	loaded bool
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.LoadRecords()
 }
 
@@ -116,7 +117,7 @@ func (s *Service) IsLoaded() bool {
 }
 
 func (s *Service) LoadRecords() error {
-	s.logger.Info().Msg("loading records")
+	s.logger.Info("loading records")
 	for path, destination := range map[string]any{
 		PathLevelPreset:        &s.levelPresets,
 		PathLevelType:          &s.levelType,
@@ -199,12 +200,12 @@ func (s *Service) LoadRecords() error {
 		}
 
 		if err := s.tsv.Unmarshal(path, destination); err != nil {
-			s.logger.Error().Msgf("parsing records for %q: %v", path, err)
+			s.logger.Error("parsing records for %q: %v", path, err)
 		}
 	}
 
 	s.loaded = true
-	s.logger.Info().Msg("done")
+	s.logger.Info("done")
 
 	return nil
 }

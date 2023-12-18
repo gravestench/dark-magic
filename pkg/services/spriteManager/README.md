@@ -1,6 +1,6 @@
 # Sprite Manager Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to use the DC6, DCC,
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to use the DC6, DCC,
 DS1, and DT1 files to generate graphical sprites in PNG and GIF format.
 
 ## Dependencies
@@ -23,12 +23,12 @@ This service integrates with the following services:
 * [cache manager](../cacheManager)
 
 The integrations are optional, meaning that the web router and cache
-manager can be safely omitted from the runtime.
+manager can be safely omitted from the servicemesh.
 
 _______
 This service exports an integration interface `IsSpriteLoader` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
 ```golang
@@ -49,7 +49,7 @@ type IsSpriteLoader interface {
 
 ## Web router service integration
 
-If the [web router service](../webRouter) is present at runtime, this service will
+If the [web router service](../webRouter) is present at servicemesh, this service will
 register routes for flushing all caches and for getting cache statistics.
 
 The route slug for this service is `sprite`, so all routes defined will be under

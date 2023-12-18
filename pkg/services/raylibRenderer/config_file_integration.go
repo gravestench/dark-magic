@@ -25,7 +25,7 @@ const (
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	for key, val := range map[string]any{
-		keyWindowTitle:      "Dark Magic",
+		keyWindowTitle:      "MTG",
 		keyWindowWidth:      800,
 		keyWindowHeight:     600,
 		keyWindowFullscreen: false,

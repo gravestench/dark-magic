@@ -13,7 +13,8 @@ import (
 func (s *Service) initAutocertTlsDebugServer() {
 	cfg, err := s.Config()
 	if err != nil {
-		s.log.Fatal().Msgf("getting config: %v", err)
+		s.log.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	g := cfg.Group("Web Server")
@@ -25,11 +26,12 @@ func (s *Service) initAutocertTlsDebugServer() {
 	certConfig.Local = true
 	certReloader, err := simplecert.Init(certConfig, func() {})
 	if err != nil {
-		s.log.Fatal().Msgf("simplecert init failed: %v", err)
+		s.log.Error("simplecert init failed", "error", err)
+		panic(err)
 	}
 
 	//// redirect HTTP to HTTPS
-	//s.log.Info().Msg("starting HTTP Listener on Port 80")
+	//s.log.Info("starting HTTP Listener on Port 80")
 	//go http.ListenAndServe(":80", http.HandlerFunc(simplecert.Redirect))
 
 	// init strict tlsConfig with certReloader
@@ -45,7 +47,7 @@ func (s *Service) initAutocertTlsDebugServer() {
 		Handler:   s.router.RouteRoot(),
 	}
 
-	s.log.Info().Msg("serving: https://" + certConfig.Domains[0])
+	s.log.Info("serving: https://" + certConfig.Domains[0])
 
 	_ = s.server.ListenAndServeTLS("", "")
 }
@@ -53,7 +55,8 @@ func (s *Service) initAutocertTlsDebugServer() {
 func (s *Service) initAutocertTlsProductionServer() {
 	cfg, err := s.Config()
 	if err != nil {
-		s.log.Fatal().Msgf("getting config: %v", err)
+		s.log.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	g := cfg.Group("Web Server")
@@ -88,13 +91,14 @@ func (s *Service) initAutocertTlsProductionServer() {
 			// lets go
 			go func() {
 				if err := srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-					s.log.Fatal().Msgf("listen: %+s\n", err)
+					s.log.Error("listen: %+s\n", err)
+					panic(err)
 				}
 			}()
 
-			s.log.Info().Msgf("server started")
+			s.log.Info("server started")
 			<-ctx.Done()
-			s.log.Info().Msgf("server stopped")
+			s.log.Info("server stopped")
 
 			ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer func() {
@@ -103,9 +107,9 @@ func (s *Service) initAutocertTlsProductionServer() {
 
 			err := srv.Shutdown(ctxShutDown)
 			if err == http.ErrServerClosed {
-				s.log.Info().Msgf("server exited properly")
+				s.log.Info("server exited properly")
 			} else if err != nil {
-				s.log.Info().Msgf("server encountered an error on exit: %+s\n", err)
+				s.log.Info("server encountered an error on exit", "error", err)
 			}
 		}
 	)
@@ -146,7 +150,8 @@ func (s *Service) initAutocertTlsProductionServer() {
 	// on subsequent runs, simplecert will load the certificate from the cache directory on disk.
 	certReloader, err = simplecert.Init(certConfig, func() {})
 	if err != nil {
-		s.log.Fatal().Msgf("simplecert init failed: ", err)
+		s.log.Error("simplecert init failed", "error", err)
+		panic(err)
 	}
 
 	//// redirect HTTP to HTTPS
@@ -157,6 +162,6 @@ func (s *Service) initAutocertTlsProductionServer() {
 	tlsConf.GetCertificate = certReloader.GetCertificateFunc()
 
 	// start serving
-	s.log.Info().Msgf("will serve at: https://%s", certConfig.Domains[0])
+	s.log.Info(fmt.Sprintf("will serve at: https://%s", certConfig.Domains[0]))
 	serve(ctx, srv)
 }

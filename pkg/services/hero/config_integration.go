@@ -15,13 +15,13 @@ func (s *Service) ConfigFileName() string {
 func (s *Service) LoadHeroes() error {
 	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
 	if err != nil {
-		return fmt.Errorf("loading config: %v", err)
+		return fmt.Errorf("loading config", "error", err)
 	}
 
 	if cfg == nil {
 		cfg, err = s.config.CreateConfigWithFileName(s.ConfigFileName())
 		if err != nil {
-			return fmt.Errorf("creating config: %v", err)
+			return fmt.Errorf("creating config", "error", err)
 		}
 	}
 
@@ -60,7 +60,7 @@ func (s *Service) loadHeroStateFromConfigGroup(cfg configFile.Object) State {
 func (s *Service) SaveHeroes() error {
 	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
 	if err != nil {
-		return fmt.Errorf("loading config: %v", err)
+		return fmt.Errorf("loading config", "error", err)
 	}
 
 	for _, heroState := range s.heroStates {

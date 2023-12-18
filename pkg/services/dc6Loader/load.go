@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/gravestench/dc6"
+	dc6 "github.com/gravestench/dc6/pkg"
 )
 
 func (s *Service) Load(filepath string) (*dc6.DC6, error) {
@@ -20,7 +20,7 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 		}
 	}
 
-	s.logger.Info().Msgf("loading %v", filepath)
+	s.logger.Info("loading", "path", filepath)
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
@@ -29,17 +29,17 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data", "error", err)
 	}
 
 	dc6Image, err := dc6.FromBytes(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing dc6: %v", err)
+		return nil, fmt.Errorf("parsing dc6", "error", err)
 	}
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, dc6Image, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file %q: %v", err)
+			s.logger.Error("caching file", "error", err)
 		}
 	}
 

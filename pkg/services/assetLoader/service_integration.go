@@ -3,24 +3,23 @@ package assetLoader
 import (
 	"io"
 
-	"github.com/gravestench/dc6"
+	dc6 "github.com/gravestench/dc6/pkg"
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"
 	"github.com/gravestench/dt1"
 	"github.com/gravestench/pl2"
+	"github.com/gravestench/servicemesh"
 	tbl "github.com/gravestench/tbl_text"
-
-	"github.com/gravestench/runtime"
 
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
-	_ lua.UsesLuaEnvironment  = &Service{}
-	_ LoadsDiabloFiles        = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
+	_ lua.UsesLuaEnvironment      = &Service{}
+	_ LoadsDiabloFiles            = &Service{}
 )
 
 type Dependency = LoadsDiabloFiles

@@ -1,10 +1,10 @@
 # Cache Manager
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a generic caching
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a generic caching
 implementation, and an integration interface for cache initialization.
 
 
 ## Dependencies
-There are no runtime dependencies on other services.
+There are no servicemesh dependencies on other services.
 
 
 ## Integration with other services
@@ -16,7 +16,7 @@ This service integrates with the following services:
 _______
 This service exports an integration interface `IsCacheManager` with an alias 
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which 
+resolution (see servicemesh.HasDependencies), and expose just the methods which 
 other services should use.
 ```golang
 type Dependency = Foo
@@ -47,7 +47,7 @@ for viewing the current state of all caches being managed.
 
 ## Web router service integration
 
-If the [web router service](../webRouter) is present at runtime, this service will
+If the [web router service](../webRouter) is present at servicemesh, this service will
 register routes for retrieving data.
 
 The route slug for this service is `cache`, so all routes defined will be under

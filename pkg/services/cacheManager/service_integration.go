@@ -1,7 +1,7 @@
 package cacheManager
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
@@ -12,8 +12,8 @@ import (
 // compile-time error if the service does not
 // implement them.
 var (
-	_ runtime.Service                    = &Service{} // implement in`service.go`
-	_ runtime.HasLogger                  = &Service{} // implement in`service.go`
+	_ servicemesh.Service                = &Service{} // implement in`service.go`
+	_ servicemesh.HasLogger              = &Service{} // implement in`service.go`
 	_ lua.UsesLuaEnvironment             = &Service{} // implement in`lua_integration.go`
 	_ modalTui.HasModalTextUserInterface = &Service{} // implement in`service.go`
 	_ IsCacheManager                     = &Service{} // implement in`service.go`

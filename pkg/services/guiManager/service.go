@@ -1,8 +1,9 @@
 package guiManager
 
 import (
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"log/slog"
+
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/input"
@@ -12,7 +13,7 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	dc6      dc6Loader.Dependency
 	mpq      mpqLoader.Dependency
@@ -25,7 +26,7 @@ type Service struct {
 	}
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 
 }
 
@@ -34,12 +35,12 @@ func (s *Service) Name() string {
 }
 
 // the following methods are boilerplate, but they are used
-// by the runtime to enforce a standard logging format.
+// by the servicemesh to enforce a standard logging format.
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }

@@ -1,7 +1,7 @@
 package lua
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 func (s *Service) tryToExportToLuaEnvironment(args ...any) {
@@ -12,7 +12,7 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 		return
 	}
 
-	service, ok := args[0].(runtime.Service)
+	service, ok := args[0].(servicemesh.Service)
 	if !ok {
 		return
 	}
@@ -22,7 +22,7 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 		return
 	}
 
-	if candidate, ok := service.(runtime.HasDependencies); ok {
+	if candidate, ok := service.(servicemesh.HasDependencies); ok {
 		if !candidate.DependenciesResolved() {
 			return
 		}
@@ -34,5 +34,5 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 
 	go luaUser.ExportToLua(s.state)
 	s.boundServices[service.Name()] = service
-	s.logger.Info().Msgf("successfully exported %q to lua", service.Name())
+	s.logger.Info("successfully exported to lua", "exported", service.Name())
 }

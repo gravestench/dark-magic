@@ -4,10 +4,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"log/slog"
 	"time"
 
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
@@ -19,14 +19,14 @@ import (
 )
 
 type recipe interface {
-	runtime.Service
-	runtime.HasLogger
-	runtime.HasDependencies
+	servicemesh.Service
+	servicemesh.HasLogger
+	servicemesh.HasDependencies
 	modalGameUI.ModalGameUI
 }
 
 type Screen struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	renderer raylibRenderer.Dependency
 	mpq      mpqLoader.Dependency
@@ -40,7 +40,7 @@ type Screen struct {
 	progress []bool
 }
 
-func (s *Screen) Init(rt runtime.Runtime) {
+func (s *Screen) Init(mesh servicemesh.Mesh) {
 	s.root = s.renderer.NewRenderable()
 
 	s.progress = make([]bool, 100)
@@ -72,28 +72,34 @@ func (s *Screen) initBackground() {
 }
 
 func (s *Screen) initLoadingImage() {
+	// load the dc6 image
 	dc6Image, err := s.dc6.Load(paths.LoadingScreen)
 	for err != nil {
 		time.Sleep(time.Second)
 		dc6Image, err = s.dc6.Load(paths.LoadingScreen)
 	}
 
+	// load a palette
 	palette, err := s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformLoading)
 	if err != nil {
-		s.logger.Fatal().Msgf("couldn't load the palette transform for the loading screen: %v", err)
+		s.logger.Error("couldn't load the palette transform for the loading screen", "error", err)
+		panic(err)
 	}
 
+	// apply the palette
 	dc6Image.SetPalette(palette)
 
-	loading := s.renderer.NewRenderable()
-	d1 := dc6Image.Directions[0]
-	frames := d1.Frames
+	frames := dc6Image.Directions[0].Frames
 	currentFrame := 0
-	loading.SetImage(frames[currentFrame].ToImageRGBA())
+
+	// get a renderable
+	r := s.renderer.NewRenderable()
+	r.SetImage(frames[currentFrame].ToImageRGBA())
 
 	t := time.Now()
 
-	loading.OnUpdate(func() {
+	// example update callback for the renderable
+	r.OnUpdate(func() {
 		if time.Since(t) < time.Second/24 {
 			return
 		}
@@ -111,8 +117,11 @@ func (s *Screen) initLoadingImage() {
 		}
 
 		currentFrame = int(float64(current/total) * float64(len(frames)))
-		loading.SetPosition(float32(400-(frames[currentFrame].Width/2)), float32(300-(frames[currentFrame].Height/2)))
-		loading.SetImage(frames[currentFrame%len(frames)].ToImageRGBA())
+		centerX := float32(400 - (frames[currentFrame].Width / 2))
+		centerY := float32(300 - (frames[currentFrame].Height / 2))
+
+		r.SetPosition(centerX, centerY)
+		r.SetImage(frames[currentFrame%len(frames)].ToImageRGBA())
 	})
 }
 
@@ -120,11 +129,11 @@ func (s *Screen) Name() string {
 	return "Loading Screen"
 }
 
-func (s *Screen) BindLogger(logger *zerolog.Logger) {
+func (s *Screen) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Screen) Logger() *zerolog.Logger {
+func (s *Screen) Logger() *slog.Logger {
 	return s.logger
 }
 
@@ -160,8 +169,8 @@ func (s *Screen) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Screen) ResolveDependencies(rt runtime.Runtime) {
-	for _, service := range rt.Services() {
+func (s *Screen) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, service := range mesh.Services() {
 		switch candidate := service.(type) {
 		case mpqLoader.Dependency:
 			s.mpq = candidate

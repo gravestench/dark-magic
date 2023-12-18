@@ -84,7 +84,7 @@ func (s *Service) ExportToLua(state *lua.LState) {
 		"MonsterSounds":          s.monsterSounds,
 		"MonsterUniqueNames":     s.monsterUniqueNames,
 	} {
-		s.logger.Info().Msgf("exporting: %s", key)
+		s.logger.Info("exporting to lua", "table", key)
 		table.RawSetString(key, genericExportArrayToLua(records, state))
 	}
 

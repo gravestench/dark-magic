@@ -1,14 +1,14 @@
 package tsvLoader
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
-	_ LoadsTsvFiles           = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
+	_ LoadsTsvFiles               = &Service{}
 )
 
 type Dependency = LoadsTsvFiles

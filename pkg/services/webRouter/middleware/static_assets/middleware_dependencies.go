@@ -1,7 +1,7 @@
 package static_assets
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 func (m *Middleware) DependenciesResolved() bool {
@@ -12,8 +12,8 @@ func (m *Middleware) DependenciesResolved() bool {
 	return true
 }
 
-func (m *Middleware) ResolveDependencies(rt runtime.R) {
-	for _, candidate := range rt.Services() {
+func (m *Middleware) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, candidate := range mesh.Services() {
 		if router, ok := candidate.(IsWebRouter); ok {
 			if router.RouteRoot() == nil {
 				return

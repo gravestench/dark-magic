@@ -1,12 +1,13 @@
 package service_template
 
 import (
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"log/slog"
+
+	"github.com/gravestench/servicemesh"
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	// these should be the exported integration
 	// interface exported by other services
@@ -14,10 +15,10 @@ type Service struct {
 	baz any
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
-	// This init method will be invoked by the runtime
+func (s *Service) Init(mesh servicemesh.Mesh) {
+	// This init method will be invoked by the servicemesh
 	// as soon as the dependency resolution has finished.
-	// If the service does not implement runtime.HasDependencies,
+	// If the service does not implement servicemesh.HasDependencies,
 	// then this method is invoked immediately.
 }
 
@@ -26,13 +27,13 @@ func (s *Service) Name() string {
 }
 
 // the following methods are boilerplate, but they are used
-// by the runtime to enforce a standard logging format.
+// by the servicemesh to enforce a standard logging format.
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 

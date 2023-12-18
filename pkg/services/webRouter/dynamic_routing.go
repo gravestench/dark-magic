@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"k8s.io/utils/strings/slices"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/webRouter/middleware/logger"
 )
@@ -22,12 +22,12 @@ func (s *Service) Reload() {
 
 	s.reloadDebounce = time.Now()
 
-	s.log.Warn().Msg("reloading")
+	s.log.Warn("reloading")
 
 	if s.boundServices == nil {
-		s.log.Info().Msg("initializing routes")
+		s.log.Info("initializing routes")
 	} else {
-		s.log.Info().Msg("re-initializing routes")
+		s.log.Info("re-initializing routes")
 	}
 
 	// forget any already-bound services
@@ -55,18 +55,18 @@ func (s *Service) Reload() {
 	})
 }
 
-func (s *Service) beginDynamicRouteBinding(rt runtime.R) {
+func (s *Service) beginDynamicRouteBinding(mesh servicemesh.Mesh) {
 	for {
-		if s.shouldInit(rt) {
+		if s.shouldInit(mesh) {
 			s.Reload()
 		}
 
-		s.bindNewRoutes(rt)
+		s.bindNewRoutes(mesh)
 		time.Sleep(time.Second)
 	}
 }
 
-func (s *Service) shouldInit(rt runtime.R) bool {
+func (s *Service) shouldInit(mesh servicemesh.Mesh) bool {
 	if s.boundServices == nil {
 		return true // base case, happens at app start
 	}
@@ -83,7 +83,7 @@ func (s *Service) shouldInit(rt runtime.R) bool {
 	// we will check if any of the services that have routes are no longer
 	// in the list of the service managers services
 	allExistingServiceNames := make([]string, 0)
-	for _, candidate := range rt.Services() {
+	for _, candidate := range mesh.Services() {
 		if svc, ok := candidate.(IsRouteInitializer); ok {
 			allExistingServiceNames = append(allExistingServiceNames, svc.Name())
 			continue
@@ -101,14 +101,14 @@ func (s *Service) shouldInit(rt runtime.R) bool {
 	return false
 }
 
-func (s *Service) bindNewRoutes(rt runtime.R) {
-	for _, candidate := range rt.Services() {
-		svcToInit, ok := candidate.(runtime.Service)
+func (s *Service) bindNewRoutes(mesh servicemesh.Mesh) {
+	for _, candidate := range mesh.Services() {
+		svcToInit, ok := candidate.(servicemesh.Service)
 		if !ok {
 			continue
 		}
 
-		if svc, ok := candidate.(runtime.HasDependencies); ok {
+		if svc, ok := candidate.(servicemesh.HasDependencies); ok {
 			if !svc.DependenciesResolved() {
 				continue
 			}
@@ -131,7 +131,7 @@ func (s *Service) bindNewRoutes(rt runtime.R) {
 		if r, ok := candidate.(IsRouteInitializer); ok {
 			r.InitRoutes(s.root.Group(groupPrefix))
 			s.boundServices[svcToInit.Name()] = nil // make 0-size entry
-			s.log.Info().Msgf("binding routes for the %q service", svcToInit.Name())
+			s.log.Info("binding routes", "for", svcToInit.Name())
 
 			continue
 		}

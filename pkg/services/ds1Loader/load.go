@@ -15,7 +15,7 @@ func (s *Service) Load(filepath string) (*ds1.DS1, error) {
 		}
 	}
 
-	s.logger.Info().Msgf("loading %v", filepath)
+	s.logger.Info("loading", "path", filepath)
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
@@ -24,17 +24,17 @@ func (s *Service) Load(filepath string) (*ds1.DS1, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data", "error", err)
 	}
 
 	ds1Object, err := ds1.FromBytes(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing ds1: %v", err)
+		return nil, fmt.Errorf("parsing ds1", "error", err)
 	}
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, ds1Object, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file %q: %v", err)
+			s.logger.Error("caching file", "error", err)
 		}
 	}
 

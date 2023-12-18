@@ -24,18 +24,18 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 	path := c.Param("path")
 
-	s.logger.Info().Msg(path)
-
 	stream, err := s.mpq.Load(path)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 
+	s.logger.Info(path)
+
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -75,11 +75,11 @@ func (s *Service) handleCreatePngSpriteAtlasFromDc6(c *gin.Context) {
 	path := c.Param("path")
 	palette := s.lookupPalettePathByKey(paletteKey)
 
-	s.logger.Info().Msg(path)
+	s.logger.Info(path)
 
 	data, err := s.LoadDc6ToPngSpriteAtlas(path, palette)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -94,11 +94,11 @@ func (s *Service) handleCreatePngSpriteAtlasFromDcc(c *gin.Context) {
 	path := c.Param("path")
 	palette := s.lookupPalettePathByKey(paletteKey)
 
-	s.logger.Info().Msg(path)
+	s.logger.Info(path)
 
 	data, err := s.LoadDccToPngSpriteAtlas(path, palette)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -113,11 +113,11 @@ func (s *Service) handleCreatePngSpriteAtlasFromDt1(c *gin.Context) {
 	path := c.Param("path")
 	palette := s.lookupPalettePathByKey(paletteKey)
 
-	s.logger.Info().Msg(path)
+	s.logger.Info(path)
 
 	data, err := s.LoadDt1ToPngSpriteAtlas(path, palette)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}

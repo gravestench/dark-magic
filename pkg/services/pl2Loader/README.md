@@ -1,5 +1,5 @@
 # PL2 Loader Service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for loading PL2 palette transformation files.
 
 The palette transformations are pre-computed indexes into the standard diablo2 
@@ -13,7 +13,7 @@ This service has a single dependency on the MPQ loader service
 ## Integration with other services
 This service exports an integration interface `LoadsPl2Files` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 ```golang
 type Dependency = LoadsPl2Files

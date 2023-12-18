@@ -11,7 +11,7 @@ func (s *Service) FileHandlers() map[string]fileWatcher.FileHandlerFunc {
 
 	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
 	if err != nil {
-		s.logger.Error().Msgf("getting config: %v", err)
+		s.logger.Error("getting config", "error", err)
 		return handlers
 	}
 

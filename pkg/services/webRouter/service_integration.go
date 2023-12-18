@@ -3,15 +3,15 @@ package webRouter
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 var (
-	_ runtime.Service             = &Service{}
-	_ runtime.HasLogger           = &Service{}
-	_ runtime.HasDependencies     = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
 	_ configFile.HasDefaultConfig = &Service{}
 	_ IsWebRouter                 = &Service{}
 )
@@ -28,7 +28,7 @@ type IsWebRouter interface {
 // IsRouteInitializer is a type of service that will
 // set up its own web routes using a base route group
 type IsRouteInitializer interface {
-	runtime.Service
+	servicemesh.Service
 	InitRoutes(*gin.RouterGroup)
 }
 

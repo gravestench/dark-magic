@@ -28,7 +28,7 @@ func (s *Service) handleGetHeroes(c *gin.Context) {
 func (s *Service) handleLoadHeroes(c *gin.Context) {
 	err := s.LoadHeroes()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, fmt.Sprintf("loading heroes: %v", err))
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("loading heroes", "error", err))
 		return
 	}
 
@@ -38,7 +38,7 @@ func (s *Service) handleLoadHeroes(c *gin.Context) {
 func (s *Service) handleSaveHeroes(c *gin.Context) {
 	err := s.SaveHeroes()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, fmt.Sprintf("saving heroes: %v", err))
+		c.JSON(http.StatusInternalServerError, fmt.Sprintf("saving heroes", "error", err))
 		return
 	}
 

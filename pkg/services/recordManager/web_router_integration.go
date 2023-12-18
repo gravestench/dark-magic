@@ -282,7 +282,7 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 func (s *Service) extractGzip(data []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		s.logger.Fatal().Msg("ExtractTarGz: NewReader failed")
+		s.logger.Error("ExtractTarGz: NewReader failed", "error", err)
 	}
 
 	out := bytes.NewBuffer([]byte{})
@@ -290,7 +290,8 @@ func (s *Service) extractGzip(data []byte) []byte {
 	// Copy the decompressed content to the output file
 	_, err = io.Copy(out, r)
 	if err != nil {
-		s.logger.Fatal().Msgf("extracting file: %v", err)
+		s.logger.Error("extracting file", "error", err)
+		panic(err)
 	}
 
 	return out.Bytes()

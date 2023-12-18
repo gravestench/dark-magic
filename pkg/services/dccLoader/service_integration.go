@@ -3,16 +3,16 @@ package dccLoader
 import (
 	"github.com/gravestench/dcc"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 var (
-	_ runtime.Service             = &Service{}
-	_ runtime.HasLogger           = &Service{}
-	_ runtime.HasDependencies     = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
 	_ configFile.HasDefaultConfig = &Service{}
 	_ cacheManager.HasCache       = &Service{}
 	_ LoadsDccFiles               = &Service{}

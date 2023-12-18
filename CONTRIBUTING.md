@@ -30,9 +30,9 @@ services depend upon it.
 // compile-time error if the service does not 
 // implement them. 
 var (
-	_ runtime.Service         = &Service{}
-	_ runtime.HasLogger       = &Service{}
-	_ runtime.HasDependencies = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
 	_ lua.UsesLuaEnvironment  = &Service{}
 	_ IsFooService        = &Service{}
 )
@@ -57,13 +57,13 @@ always be called `Service` so that when importing there is no stutter in
 the name being imported (eg `foo.Service`).
 
 Here are some main points:
-* The `runtime.Service` and `runtime.HasLogger` methods belong in `service.go`.
+* The `servicemesh.Service` and `servicemesh.HasLogger` methods belong in `service.go`.
 * The methods that are described by this service's integration interface are defined here
 
 _____________
 #### Step 3: Implement other intergration interfaces in separate files
 For example:
-* methods for runtime dependency resolution belong in `dependencies.go`
+* methods for servicemesh dependency resolution belong in `dependencies.go`
 * methods for integrating with the lua service belong in `lua_integration.go`
 * methods for integrating with the web router belong in `web_router_integration.go`
 

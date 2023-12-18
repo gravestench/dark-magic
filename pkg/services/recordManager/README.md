@@ -1,10 +1,10 @@
 # Record Manager Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a single point of
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a single point of
 access for all records, which are instances of models that are marshalled from
 the diablo2 excel files (which are tab-separated value format).
 
-This runtime service also exports the records into the lua environment
+This servicemesh service also exports the records into the lua environment
 for scripting access.
 
 ## Dependencies
@@ -22,11 +22,11 @@ This service integrates with the following services:
 * [web router service](../webRouter)
 
 The integration is optional; if either of the lua or web router services are
-omitted from the runtime then the integration methods will never be called.
+omitted from the servicemesh then the integration methods will never be called.
 
 This service exports an integration interface `LoadsDiablo2Records` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
 this is a rather large interface, but there are getters for all of the record
@@ -119,7 +119,7 @@ end
 
 ## Web router service integration
 
-If the [web router service](../webRouter) is present at runtime, this service will
+If the [web router service](../webRouter) is present at servicemesh, this service will
 register routes for retrieving data.
 
 The route slug for this service is `records`, so all routes defined will be under

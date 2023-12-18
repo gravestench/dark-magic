@@ -32,18 +32,18 @@ func (s *Service) handleGetUberFileList(c *gin.Context) {
 func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 	path := c.Param("path")
 
-	s.logger.Info().Msg(path)
+	s.logger.Info(path)
 
 	stream, err := s.mpq.Load(path)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		s.logger.Error().Msgf("loading file: %v", err)
+		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -64,7 +64,8 @@ func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 func (s *Service) extractGzip(data []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		s.logger.Fatal().Msg("ExtractTarGz: NewReader failed")
+		s.logger.Error("ExtractTarGz: NewReader failed", "error", err)
+		panic(err)
 	}
 
 	out := bytes.NewBuffer([]byte{})
@@ -72,7 +73,8 @@ func (s *Service) extractGzip(data []byte) []byte {
 	// Copy the decompressed content to the output file
 	_, err = io.Copy(out, r)
 	if err != nil {
-		s.logger.Fatal().Msgf("extracting file: %v", err)
+		s.logger.Error("extracting file", "error", err)
+		panic(err)
 	}
 
 	return out.Bytes()

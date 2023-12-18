@@ -20,7 +20,7 @@ func (m *Middleware) staticWebUIHandler(c *gin.Context) {
 
 	data, readErr := m.ReadFile(file)
 	if readErr != nil {
-		m.log.Warn().Msgf("reading file: %v", readErr)
+		m.log.Warn("reading file", "path", file, "error", readErr)
 		c.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 		return
 	}
@@ -44,7 +44,7 @@ func (m *Middleware) isRouterChanged() bool {
 		return false
 	}
 
-	m.log.Info().Msg("router change detected")
+	m.log.Info("router change detected")
 
 	m.lastRouter = m.router.RouteRoot()
 

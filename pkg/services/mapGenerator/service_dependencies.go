@@ -1,7 +1,7 @@
 package mapGenerator
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
@@ -24,8 +24,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
+func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, service := range mesh.Services() {
 		switch candidate := service.(type) {
 		case dt1Loader.Dependency:
 			s.dt1 = candidate

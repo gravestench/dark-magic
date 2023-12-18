@@ -1,6 +1,6 @@
 # Diablo 2 Locale Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for retrieving locale-specific
 data from the MPQ files. This includes string translation, character sets, etc.
 
@@ -15,7 +15,7 @@ This service has two required dependencies:
 
 This service exports an integration interface `LoadsStringTables` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
 ```golang
@@ -32,7 +32,7 @@ Other services should use the `LoadsStringTables` or `Dependency` interfaces to 
 their dependency on this service.
 
 ## Web router service integration
-If the [web router service](../webRouter) is present at runtime, this service will 
+If the [web router service](../webRouter) is present at servicemesh, this service will 
 register routes for retrieving data.
 
 The route slug for this service is `locale`, so all routes defined will be under

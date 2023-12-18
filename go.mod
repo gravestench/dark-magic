@@ -1,6 +1,8 @@
 module github.com/gravestench/dark-magic
 
-go 1.19
+go 1.21.3
+
+replace github.com/gravestench/dc6 => /Users/dylanknuth/src/od2_codecs/dc6
 
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -22,13 +24,12 @@ require (
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/runtime v0.0.0-20231002182113-640425b821c6
+	github.com/gravestench/servicemesh v0.0.0-20231217235950-624027da9951
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
 	github.com/hajimehoshi/oto v0.7.1
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.31.0
 	github.com/traefik/yaegi v0.15.1
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
@@ -49,6 +50,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
 	github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87 // indirect
+	github.com/OpenDiablo2/bitstream v0.0.0-20210818234514-9fca7e40e2b3 // indirect
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.1.0 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.976 // indirect
 	github.com/aws/aws-sdk-go v1.37.27 // indirect
@@ -104,7 +106,6 @@ require (
 	github.com/liquidweb/liquidweb-cli v0.6.9 // indirect
 	github.com/liquidweb/liquidweb-go v1.6.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect

@@ -17,7 +17,7 @@ func (s *Service) GetTexture(uuid uuid.UUID, img image.Image) (texture rl.Textur
 	if !exists {
 		cached = rl.LoadTextureFromImage(rl.NewImageFromImage(img))
 		if err := s.cache.Insert(key, cached, numBytes); err != nil {
-			s.logger.Error().Msgf("[%s] caching texture: %v", key, err)
+			s.logger.Error("[%s] caching texture: %v", key, err)
 		}
 
 		return cached.(rl.Texture2D), true

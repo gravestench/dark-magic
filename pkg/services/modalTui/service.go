@@ -2,6 +2,7 @@ package modalTui
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,23 +10,22 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
-	rt     runtime.Runtime
-	logger *zerolog.Logger
+	mesh   servicemesh.Mesh
+	logger *slog.Logger
 	cfg    configFile.Dependency
 	isInit bool
 	mux    sync.Mutex
 	modalUiModel
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
-	s.rt = rt
+func (s *Service) Init(mesh servicemesh.Mesh) {
+	s.mesh = mesh
 	s.modalUiModel.modals = make(map[string]tea.Model)
 
 	dir := s.cfg.ConfigDirectory()
@@ -33,16 +33,17 @@ func (s *Service) Init(rt runtime.Runtime) {
 
 	redirect, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		s.logger.Fatal().Msgf("Error opening or creating the file: %v", err)
+		s.logger.Error("opening or creating the file", "error", err)
+		panic(err)
 	}
 
-	rt.SetLogDestination(redirect)
+	mesh.SetLogDestination(redirect)
 
 	clearScreen()
 
-	// bubbletea kicked off using runtime event handler
+	// bubbletea kicked off using servicemesh event handler
 
-	for _, service := range rt.Services() {
+	for _, service := range mesh.Services() {
 		go s.attemptBindService(service)
 	}
 
@@ -50,12 +51,12 @@ func (s *Service) Init(rt runtime.Runtime) {
 }
 
 func (s *Service) OnShutdown() {
-	s.rt.SetLogDestination(os.Stdout)
+	s.mesh.SetLogDestination(os.Stdout)
 
 	dir := s.cfg.ConfigDirectory()
 	logPath := filepath.Join(dir, "output.log")
 
-	s.logger.Info().Msgf("see %q for log output", logPath)
+	s.logger.Info(fmt.Sprintf("see %q for log output", logPath))
 }
 
 func (s *Service) Name() string {
@@ -63,13 +64,13 @@ func (s *Service) Name() string {
 }
 
 // the following methods are boilerplate, but they are used
-// by the runtime to enforce a standard logging format.
+// by the servicemesh to enforce a standard logging format.
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
@@ -78,7 +79,7 @@ func clearScreen() {
 	fmt.Print("\033[H\033[2J")
 }
 
-func (s *Service) attemptBindService(service runtime.Service) {
+func (s *Service) attemptBindService(service servicemesh.Service) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 

@@ -1,7 +1,7 @@
 # Modal Text User Interface
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a modal text 
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a modal text 
 user interface. This means that a text-based user interface will be
-shown on standard output. The normal runtime logging output will be 
+shown on standard output. The normal servicemesh logging output will be 
 redirected to a file, while `stdout` will be used to display the TUI.
 
 This service will use other services that implement an integration interface
@@ -18,7 +18,7 @@ This service depends upon the [config file manager](../configFile) service.
 ## Integration with other services
 This service exports an integration interface `ManagesModalTextUserInterface` 
 with an alias `Dependencncy` which are intended to be used by other services 
-for dependency resolution (see runtime.HasDependencies), and expose just the 
+for dependency resolution (see servicemesh.HasDependencies), and expose just the 
 methods which other services should use.
 ```golang
 type Dependency = ManagesModalTextUserInterface

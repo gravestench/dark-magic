@@ -10,7 +10,7 @@ func (s *Service) bindLoggerToLuaEnvironment() {
 
 		args := L.CheckAny(numArgs)
 
-		s.logger.Info().Msgf(args.String())
+		s.logger.Info(args.String())
 
 		return 0
 	})

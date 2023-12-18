@@ -1,12 +1,11 @@
 package lua
 
 import (
+	"log/slog"
 	"sync"
 
 	ee "github.com/gravestench/eventemitter"
-	"github.com/gravestench/runtime"
-	"github.com/gravestench/runtime/pkg/events"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 	"github.com/yuin/gopher-lua"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -14,22 +13,22 @@ import (
 
 type Service struct {
 	cfg           configFile.Dependency
-	logger        *zerolog.Logger
+	logger        *slog.Logger
 	state         *lua.LState
 	events        *ee.EventEmitter
 	mux           sync.Mutex
 	boundServices map[string]any
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.boundServices = make(map[string]any)
 	s.state = lua.NewState()
 	s.bindLoggerToLuaEnvironment()
 
-	rt.Events().On(events.EventServiceAdded, s.tryToExportToLuaEnvironment)
+	mesh.Events().On(servicemesh.EventServiceAdded, s.tryToExportToLuaEnvironment)
 
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(runtime.HasDependencies); ok {
+	for _, service := range mesh.Services() {
+		if candidate, ok := service.(servicemesh.HasDependencies); ok {
 			if !candidate.DependenciesResolved() {
 				continue
 			}
@@ -41,8 +40,8 @@ func (s *Service) Init(rt runtime.R) {
 	}
 
 	// wait for all siblings to be ready before we launch scripts
-	for _, service := range rt.Services() {
-		if candidate, ok := service.(runtime.HasDependencies); ok {
+	for _, service := range mesh.Services() {
+		if candidate, ok := service.(servicemesh.HasDependencies); ok {
 			if !candidate.DependenciesResolved() {
 				continue
 			}
@@ -53,7 +52,8 @@ func (s *Service) Init(rt runtime.R) {
 
 	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
 	if err != nil {
-		s.logger.Fatal().Msgf("getting config: %v", err)
+		s.logger.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	// TODO :: race condition where this script inits before other services
@@ -61,7 +61,7 @@ func (s *Service) Init(rt runtime.R) {
 	initScriptPath := cfg.Group(s.Name()).GetString("init script")
 
 	if err = s.runScript(initScriptPath); err != nil {
-		s.logger.Error().Msgf("running script: %v", err)
+		s.logger.Error("running script", "error", err)
 	}
 }
 
@@ -69,10 +69,10 @@ func (s *Service) Name() string {
 	return "Lua Environment"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }

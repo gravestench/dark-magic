@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,23 +13,22 @@ import (
 	"sync"
 
 	"github.com/gravestench/mpq"
-	"github.com/rs/zerolog"
 	"k8s.io/utils/strings/slices"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
-	logger     *zerolog.Logger
+	logger     *slog.Logger
 	cfgManager configFile.Dependency
 	archives   map[string]*mpq.MPQ
 	ordering   []string
 	mux        sync.Mutex
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.archives = make(map[string]*mpq.MPQ)
 	s.ordering = make([]string, 0)
 
@@ -39,11 +39,11 @@ func (s *Service) Name() string {
 	return "MPQ Archive Loader"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
@@ -61,7 +61,7 @@ func (s *Service) AddArchive(filepath string) error {
 
 	loaded, err := mpq.FromFile(filepath)
 	if err != nil {
-		return fmt.Errorf("loading archive: %v", err)
+		return fmt.Errorf("loading archive", "error", err)
 	}
 
 	s.archives[filepath] = loaded
@@ -96,8 +96,7 @@ func (s *Service) Load(filepath string) (io.Reader, error) {
 	for _, key := range s.ordering {
 		archive := s.archives[key]
 
-		if stream, err := archive.ReadFileStream(filepath); err == nil {
-			data, _ := io.ReadAll(stream)
+		if data, err := archive.ReadFile(filepath); err == nil {
 			return bytes.NewReader(data), nil
 		}
 
@@ -115,7 +114,7 @@ func (s *Service) Load(filepath string) (io.Reader, error) {
 		}
 
 		if errMsg == "" {
-			errMsg = fmt.Sprintf("not found in: %v", err)
+			errMsg = fmt.Sprintf("not found in", "error", err)
 			continue
 		}
 

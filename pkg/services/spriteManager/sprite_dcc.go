@@ -23,12 +23,12 @@ func (s *Service) LoadDccToPngSpriteAtlas(pathDCC string, pathPL2 string) ([]byt
 	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
 	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("extracting palette from pl2: %v", err)
+		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
 	}
 
 	dccImage, err := s.dcc.Load(pathDCC)
 	if err != nil {
-		return nil, fmt.Errorf("loading dc6: %v", err)
+		return nil, fmt.Errorf("loading dc6", "error", err)
 	}
 
 	dccImage.SetPalette(pl2Palette)
@@ -47,7 +47,7 @@ func (s *Service) LoadDccToPngSpriteAtlas(pathDCC string, pathPL2 string) ([]byt
 
 	if s.spriteCache != nil {
 		if err = s.spriteCache.Insert(cacheKey, pngData, len(pngData)); err != nil {
-			s.logger.Error().Msgf("caching %s: %v", pathDCC, err)
+			s.logger.Error("caching %s: %v", pathDCC, err)
 		}
 	}
 
@@ -122,7 +122,7 @@ func generateDccSpriteAtlasPng(frames []*dcc.Frame) ([]byte, error) {
 
 	atlasInfoData, err := json.Marshal(atlasInfo)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling atlas frame info: %v", err)
+		return nil, fmt.Errorf("marshalling atlas frame info", "error", err)
 	}
 
 	pngDataWithExtras := append(pngData.Bytes(), atlasInfoData...)

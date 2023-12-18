@@ -1,18 +1,18 @@
 package configFile
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 )
 
 // Ensure that Service implements the required interfaces.
 var (
-	_ runtime.Service   = &Service{}
-	_ runtime.HasLogger = &Service{}
-	_ Manager           = &Service{}
+	_ servicemesh.Service   = &Service{}
+	_ servicemesh.HasLogger = &Service{}
+	_ Manager               = &Service{}
 )
 
 // The following interfaces are to be used much like the service interfaces
-// found inside of runtime/pkg. These can be used by other services to
+// found inside of servicemesh/pkg. These can be used by other services to
 // declare and resolve their dependencies to the service defined in this
 // package.
 

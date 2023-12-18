@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/faiface/mainthread"
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
@@ -25,7 +25,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
 	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
 	"github.com/gravestench/dark-magic/pkg/services/modalGameUI/ui/loading"
-	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
@@ -44,10 +43,10 @@ const (
 )
 
 func main() {
-	rt := runtime.New(projectName)
+	rt := servicemesh.New(projectName)
 
 	// utility services
-	rt.Add(&modalTui.Service{})
+	//rt.Add(&modalTui.Service{})
 	rt.Add(&lua.Service{})
 	rt.Add(&goscript.Service{})
 	rt.Add(&cacheManager.Service{})
@@ -77,11 +76,10 @@ func main() {
 	rt.Add(&hero.Service{})
 	rt.Add(&mapGenerator.Service{})
 	rt.Add(&guiManager.Service{})
-	rt.Add(&modalGameUI.Service{})
 
-	// game screens
 	go func() {
 		time.Sleep(time.Second * 5)
+		rt.Add(&modalGameUI.Service{})
 		rt.Add(&loading.Screen{})
 	}()
 

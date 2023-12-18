@@ -30,7 +30,7 @@ func (m *tui) View() string {
 	longestServiceName := 0
 	longestConfigName := 0
 
-	for _, service := range m.rt.Services() {
+	for _, service := range m.mesh.Services() {
 		if candidate, ok := service.(HasConfig); ok {
 			name := service.Name()
 			path := filepath.Join(m.ConfigDirectory(), candidate.ConfigFileName())

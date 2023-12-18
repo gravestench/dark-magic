@@ -1,5 +1,5 @@
 # Web Router Service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a way for other services to expose web routes on a locally hosted 
 web server. 
 
@@ -18,7 +18,7 @@ absence of the web server renders this service inert.
 ## Integration with other services
 This service exports an integration interface `IsWebRouter` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 ```golang
 type Dependency = IsWebRouter
@@ -36,7 +36,7 @@ their dependency on this service.
 
 _____________
 
-The following interfaces can be optionally implemented by other runtime services
+The following interfaces can be optionally implemented by other servicemesh services
 to expose web routes on the locally hosted web server.
 
 ```golang
@@ -50,7 +50,7 @@ type HasRouteSlug interface {
 // IsRouteInitializer is a type of service that will
 // set up its own web routes using a base route group
 type IsRouteInitializer interface {
-    runtime.Service
+    servicemesh.Service
     InitRoutes(*gin.RouterGroup)
 }
 ```

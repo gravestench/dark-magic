@@ -1,15 +1,15 @@
 package mapGenerator
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
 var (
-	_ runtime.Service              = &Service{}
-	_ runtime.HasLogger            = &Service{}
-	_ runtime.HasDependencies      = &Service{}
+	_ servicemesh.Service          = &Service{}
+	_ servicemesh.HasLogger        = &Service{}
+	_ servicemesh.HasDependencies  = &Service{}
 	_ webRouter.IsRouteInitializer = &Service{}
 	_ GeneratesDiablo2Maps         = &Service{}
 )

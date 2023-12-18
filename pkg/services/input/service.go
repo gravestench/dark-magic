@@ -1,17 +1,17 @@
 package input
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 type Service struct {
-	logger            *zerolog.Logger
+	logger            *slog.Logger
 	renderer          raylibRenderer.Dependency
 	keyStates         map[int32]InputState
 	keyModStates      map[int32]InputState
@@ -23,7 +23,7 @@ type Service struct {
 	mux sync.Mutex
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.keyStates = make(map[int32]InputState)
 	s.keyModStates = make(map[int32]InputState)
 	s.mouseButtonStates = make(map[int32]InputState)
@@ -50,13 +50,13 @@ func (s *Service) Name() string {
 }
 
 // the following methods are boilerplate, but they are used
-// by the runtime to enforce a standard logging format.
+// by the servicemesh to enforce a standard logging format.
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 

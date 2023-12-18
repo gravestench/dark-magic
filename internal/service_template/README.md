@@ -1,5 +1,5 @@
 # Template service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is ...
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is ...
 
 
 ## Dependencies
@@ -18,7 +18,7 @@ This service integrates with the following services:
 _______
 This service exports an integration interface `IsFoo` with an alias 
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which 
+resolution (see servicemesh.HasDependencies), and expose just the methods which 
 other services should use.
 ```golang
 type Dependency = Foo

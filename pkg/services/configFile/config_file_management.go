@@ -122,10 +122,10 @@ func (s *Service) createConfigUnsafe(path string) (*Config, error) {
 	config := newConfig()
 	data, err := json.Marshal(config)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling new config: %v", err)
+		return nil, fmt.Errorf("unmarshalling new config", "error", err)
 	}
 	if _, err = file.Write(data); err != nil {
-		return nil, fmt.Errorf("writing to new config file: %v", err)
+		return nil, fmt.Errorf("writing to new config file", "error", err)
 	}
 
 	// keep track of the config

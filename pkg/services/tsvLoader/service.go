@@ -1,9 +1,9 @@
 package tsvLoader
 
 import (
-	"github.com/rs/zerolog"
+	"log/slog"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -11,13 +11,13 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 	mpq    mpqLoader.Dependency
 	config configFile.Dependency
 	cache  *cache.Cache
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 
 }
 
@@ -25,10 +25,10 @@ func (s *Service) Name() string {
 	return "TSV Loader"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }

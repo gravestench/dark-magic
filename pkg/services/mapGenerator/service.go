@@ -2,10 +2,10 @@ package mapGenerator
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
@@ -13,7 +13,7 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	dt1     dt1Loader.Dependency
 	ds1     ds1Loader.Dependency
@@ -22,15 +22,15 @@ type Service struct {
 	seed uint64
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 
 }
 
@@ -50,11 +50,11 @@ func (s *Service) GenerateMap(act, difficulty uint) (*WorldMap, error) {
 	m := NewWorldMap()
 
 	if err := s.loadLevelTypeRecordsToWorldMap(act, m); err != nil {
-		return nil, fmt.Errorf("loading level type records into map: %v", err)
+		return nil, fmt.Errorf("loading level type records into map", "error", err)
 	}
 
 	if err := s.loadLevelPresetRecordsToWorldMap(m); err != nil {
-		return nil, fmt.Errorf("loading level type records into map: %v", err)
+		return nil, fmt.Errorf("loading level type records into map", "error", err)
 	}
 
 	return m, nil
@@ -94,7 +94,7 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 				tileset, err := s.dt1.Load(filePath)
 				if err != nil {
 					continue
-					//return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+					//return fmt.Errorf("loading dt1 specified in level type record", "error", err)
 				}
 
 				lvl.TileSets = append(lvl.TileSets, *tileset)
@@ -106,7 +106,7 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 				tileStamp, err := s.ds1.Load(filePath)
 				if err != nil {
 					continue
-					//return fmt.Errorf("loading dt1 specified in level type record: %v", err)
+					//return fmt.Errorf("loading dt1 specified in level type record", "error", err)
 				}
 
 				lvl.TileStamps = append(lvl.TileStamps, *tileStamp)
@@ -145,7 +145,7 @@ func (s *Service) loadLevelPresetRecordsToWorldMap(m *WorldMap) error {
 
 				stamp, err := s.ds1.Load(filePath)
 				if err != nil {
-					s.logger.Error().Msgf("loading ds1 %q for level %q: %v", filePath, level.Name, err)
+					s.logger.Error("loading ds1 %q for level %q: %v", filePath, level.Name, err)
 					continue
 				}
 

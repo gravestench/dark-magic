@@ -1,13 +1,13 @@
 package hero
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
-// the following methods are invoked by the runtime
+// the following methods are invoked by the servicemesh
 // automatically in an endless loop. As soon as the
 // dependencies are resolved, the Init method is called.
 
@@ -27,8 +27,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
+func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, service := range mesh.Services() {
 		switch candidate := service.(type) {
 		case configFile.Dependency:
 			s.config = candidate

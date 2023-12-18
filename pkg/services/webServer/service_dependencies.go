@@ -1,7 +1,7 @@
 package webServer
 
 import (
-	"github.com/gravestench/runtime/pkg"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
@@ -19,8 +19,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(runtime pkg.IsRuntime) {
-	for _, other := range runtime.Services() {
+func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, other := range mesh.Services() {
 		if router, ok := other.(webRouter.Dependency); ok {
 			if router.RouteRoot() != nil {
 				s.router = router

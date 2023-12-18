@@ -15,7 +15,7 @@ func (s *Service) Load(filepath string) (tbl.TextTable, error) {
 		}
 	}
 
-	s.logger.Info().Msgf("loading %v", filepath)
+	s.logger.Info("loading", "path", filepath)
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
@@ -24,17 +24,17 @@ func (s *Service) Load(filepath string) (tbl.TextTable, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data", "error", err)
 	}
 
 	table, err := tbl.Unmarshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing dt1: %v", err)
+		return nil, fmt.Errorf("parsing dt1", "error", err)
 	}
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, table, len(data)); err != nil {
-			s.logger.Error().Msgf("caching file %q: %v", err)
+			s.logger.Error("caching file", "error", err)
 		}
 	}
 

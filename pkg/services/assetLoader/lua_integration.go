@@ -22,7 +22,7 @@ func (s *Service) ExportToLua(state *lua.LState) {
 
 		data, err := io.ReadAll(reader)
 		if err != nil {
-			s.logger.Error().Msgf("LUA: loading asset: %v", err)
+			s.logger.Error("LUA: loading asset", "error", err)
 			return 0
 		}
 

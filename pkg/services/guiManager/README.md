@@ -1,5 +1,5 @@
 # GUI Manager
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide a GUI which
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a GUI which
 integrates with the raylib renderer and exposes itself as a renderable layer.
 
 The GUI manager maintains a "node tree", where each node can (optionally) do 
@@ -28,7 +28,7 @@ init is part of the dependency resoltuion loop.
 _______
 This service exports an integration interface `ManagesGui` with an alias 
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which 
+resolution (see servicemesh.HasDependencies), and expose just the methods which 
 other services should use.
 ```golang
 type Dependency = ManagesGui

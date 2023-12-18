@@ -1,6 +1,6 @@
 # Global Lua Environment Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to manage the state of a single lua state machine. Other services are intended to implement an exported 
 integration interface in order to populate the state machine with anything
 they want. Any type of lua API for a given service should be exposed through
@@ -16,7 +16,7 @@ initialize its own default config.
 
 This service exports an integration interface `ManagesLuaEnvironment` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
  Another service may merely store a reference to this service and use the
@@ -35,7 +35,7 @@ their dependency on this service.
 __________
 
 However, implementors of the following interface methods are invoked by the lua
-service indirectly whenever the service is added or removed from the runtime.
+service indirectly whenever the service is added or removed from the servicemesh.
 ```golang
 type UsesLuaEnvironment interface {
     ExportToLua(state *lua.LState)

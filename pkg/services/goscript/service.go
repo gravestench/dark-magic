@@ -1,20 +1,23 @@
 package goscript
 
 import (
+	"log/slog"
+
+	"github.com/gravestench/servicemesh"
+
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
 )
 
 type Service struct {
 	cfg    configFile.Dependency
-	logger *zerolog.Logger
+	logger *slog.Logger
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
 	if err != nil {
-		s.logger.Fatal().Msgf("getting config: %v", err)
+		s.logger.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	initScriptPath := cfg.Group(s.Name()).GetString("init script")
@@ -28,10 +31,10 @@ func (s *Service) Name() string {
 	return "Goscript"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -11,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 	"github.com/hajimehoshi/oto"
-	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
@@ -23,7 +23,7 @@ import (
 )
 
 type audioFileTestService struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	mpq mpqLoader.Dependency
 	tsv tsvLoader.Dependency
@@ -51,23 +51,23 @@ func (s *audioFileTestService) DependenciesResolved() bool {
 		return false
 	}
 
-	if !s.mpq.(runtime.HasDependencies).DependenciesResolved() {
+	if !s.mpq.(servicemesh.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
-	if !s.wav.(runtime.HasDependencies).DependenciesResolved() {
+	if !s.wav.(servicemesh.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
-	if !s.tsv.(runtime.HasDependencies).DependenciesResolved() {
+	if !s.tsv.(servicemesh.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
 	return true
 }
 
-func (s *audioFileTestService) ResolveDependencies(rt runtime.R) {
-	for _, service := range rt.Services() {
+func (s *audioFileTestService) ResolveDependencies(mesh servicemesh.Mesh) {
+	for _, service := range mesh.Services() {
 		switch candidate := service.(type) {
 		case tsvLoader.Dependency:
 			s.tsv = candidate
@@ -79,17 +79,18 @@ func (s *audioFileTestService) ResolveDependencies(rt runtime.R) {
 	}
 }
 
-func (s *audioFileTestService) Init(rt runtime.R) {
+func (s *audioFileTestService) Init(mesh servicemesh.Mesh) {
 	// set a random seed
 	rand.Seed(time.Now().UnixNano())
 
 	// load the tsv file into our array of record models
-	err := s.tsv.Load(recordManager.PathSoundSettings, &s.Sounds)
+	err := s.tsv.Unmarshal(recordManager.PathSoundSettings, &s.Sounds)
 	if err != nil {
-		s.logger.Fatal().Msgf("loading sound records: %v", err)
+		s.logger.Error("loading sound records", "error", err)
+		panic(err)
 	}
 
-	s.logger.Info().Msgf("%d sound records loaded", len(s.Sounds))
+	s.logger.Info("sound records loaded", "count", len(s.Sounds))
 
 	//target := "button.wav"
 	//for _, record := range s.Sounds {
@@ -97,7 +98,7 @@ func (s *audioFileTestService) Init(rt runtime.R) {
 	//		s.logger.Info().Msgf("playing %s", record.FileName)
 	//
 	//		if err = s.playAudioFromRecord(record); err != nil {
-	//			s.logger.Debug().Msgf("couldn't play sound file: %v", err)
+	//			s.logger.Debug().Msgf("couldn't play sound file", "error", err)
 	//		}
 	//	}
 	//}
@@ -106,21 +107,21 @@ func (s *audioFileTestService) Init(rt runtime.R) {
 		idx := rand.Intn(len(s.Sounds)) // random index
 		record := s.Sounds[idx]         // random record
 
-		s.logger.Info().Msgf("[%d] %s", idx, record.FileName)
+		s.logger.Info("playing sound", "index", idx, "filename", record.FileName)
 
 		if err = s.playAudioFromRecord(record); err != nil {
-			s.logger.Debug().Msgf("couldn't play sound file: %v", err)
+			s.logger.Error("couldn't play sound file", "error", err)
 		}
 
 		time.Sleep(time.Second)
 	}
 }
 
-func (s *audioFileTestService) BindLogger(logger *zerolog.Logger) {
+func (s *audioFileTestService) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *audioFileTestService) Logger() *zerolog.Logger {
+func (s *audioFileTestService) Logger() *slog.Logger {
 	return s.logger
 }
 

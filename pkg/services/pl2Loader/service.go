@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log/slog"
 
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -14,13 +14,13 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 	mpq    mpqLoader.Dependency
 	config configFile.Dependency
 	cache  *cache.Cache
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 
 }
 
@@ -28,18 +28,18 @@ func (s *Service) Name() string {
 	return "PL2 Loader"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
 func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteStream, err := s.mpq.Load(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("loading pl2: %v", err)
+		return nil, fmt.Errorf("loading pl2", "error", err)
 	}
 
 	const (
@@ -51,7 +51,7 @@ func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteData := make([]byte, numBytesRGBA)
 	numRead, err := paletteStream.Read(paletteData)
 	if err != nil {
-		return nil, fmt.Errorf("reading from PL2 stream: %v", err)
+		return nil, fmt.Errorf("reading from PL2 stream", "error", err)
 	} else if numRead != numBytesRGBA {
 		return nil, fmt.Errorf("couldn't read all palette bytes")
 	}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
@@ -16,7 +16,7 @@ const (
 )
 
 func main() {
-	rt := runtime.New(projectName)
+	rt := servicemesh.New(projectName)
 
 	// utility services
 	rt.Add(&lua.Service{})

@@ -16,6 +16,7 @@ func (s *Service) NewRenderable() Renderable {
 		enabled:  true,
 		local:    rl.MatrixIdentity(),
 		world:    rl.MatrixIdentity(),
+		origin:   rl.Vector2{X: 0.5, Y: 0.5},
 	}
 
 	n.SetParent(s.rootNode)
@@ -30,6 +31,7 @@ type node struct {
 	blendMode rl.BlendMode
 	image     image.Image
 	enabled   bool
+	origin    rl.Vector2
 
 	onUpdate func()
 
@@ -37,6 +39,27 @@ type node struct {
 	local    rl.Matrix
 	parent   Renderable
 	children []Renderable
+
+	isDirty bool
+}
+
+func (n *node) dirty() bool {
+	if !n.isDirty {
+		return false
+	}
+
+	n.isDirty = false
+
+	return true
+}
+
+func (n *node) Origin() rl.Vector2 {
+	return n.origin
+}
+
+func (n *node) SetOrigin(x, y float64) {
+	n.origin.X = float32(x)
+	n.origin.Y = float32(y)
 }
 
 func (n *node) update() {
@@ -185,19 +208,20 @@ func (n *node) SetTexture(tx rl.Texture2D) {
 	numBytes := bounds.Dx() * bounds.Dy() * 4
 
 	if err := n.renderer.cache.Insert(key, tx, numBytes); err != nil {
-		n.renderer.logger.Error().Msgf("[%s] caching texture: %v", key, err)
+		n.renderer.logger.Error("caching texture", "key", key, "error", err)
 	}
 }
 
 func (n *node) Image() image.Image {
 	if n.image == nil {
-		n.image = defaultImage(60, 60)
+		n.SetImage(defaultImage(60, 60))
 	}
 
 	return n.image
 }
 
 func (n *node) SetImage(image image.Image) {
+	n.isDirty = true
 	n.image = image
 }
 

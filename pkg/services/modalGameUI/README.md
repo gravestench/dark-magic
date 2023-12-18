@@ -1,5 +1,5 @@
 # Template service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is to provide
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide
 a modal user interface, meaning that only one UI (mode) is rendering at any given time.
 
 
@@ -14,12 +14,12 @@ This service has dependencies on the following services:
 This service integrates with the following services:
 * [lua](../lua)
 
-Lua integration is optional, meaning that the lua service can be omitted at runtime.
+Lua integration is optional, meaning that the lua service can be omitted at servicemesh.
 
 _______
 This service exports an integration interface `IsFoo` with an alias 
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which 
+resolution (see servicemesh.HasDependencies), and expose just the methods which 
 other services should use.
 ```golang
 type Dependency = Foo

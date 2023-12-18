@@ -1,9 +1,9 @@
 # Web Router Service
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a locally hosted web server that integrates with the web router 
 service. 
 
-The web router service integrates with other runtime services to expose 
+The web router service integrates with other servicemesh services to expose 
 routes which are used for retrieving data from the MPQ's, or marshalled 
 record models.
 
@@ -15,7 +15,7 @@ This service has dependencies on the the following services:
 ## Integration with other services
 This service exports an integration interface `IsWebServer` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 ```golang
 type Dependency = IsWebServer

@@ -1,6 +1,6 @@
 # MPQ Archive Loader & Decompression Service
 
-The purpose of this [runtime](https://github.com/gravestench/runtime) service is
+The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service which loads and is able to decompress
 files from the collection of MPQ archive files used by diablo.
 
@@ -35,7 +35,7 @@ at the top of the list so that it is checked for the presence of files first.
 
 This service exports an integration interface `ReadsMpqArchives` with an alias
 `Dependencncy` which are intended to be used by other services for dependency
-resolution (see runtime.HasDependencies), and expose just the methods which
+resolution (see servicemesh.HasDependencies), and expose just the methods which
 other services should use.
 
 ```golang

@@ -8,7 +8,8 @@ import (
 func (s *Service) initHttpServer() {
 	cfg, err := s.Config()
 	if err != nil {
-		s.log.Fatal().Msgf("getting config: %v", err)
+		s.log.Error("getting config", "error", err)
+		panic(err)
 	}
 
 	g := cfg.Group("Web Server")
@@ -19,6 +20,6 @@ func (s *Service) initHttpServer() {
 	}
 
 	if err := s.server.ListenAndServe(); err != nil {
-		s.log.Warn().Msgf("http server not running: %v", err)
+		s.log.Warn("http server not running", "error", err)
 	}
 }

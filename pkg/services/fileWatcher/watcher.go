@@ -41,23 +41,23 @@ func (s *Service) initWatcher() error {
 				prevPath = event.Name
 				prevTime = now
 
-				s.logger.Debug().Msgf("file watcher event: %#v", event)
+				s.logger.Debug("file watcher event", "event", event)
 
 				f, ok := s.activeWatchers[event.Name]
 				if !ok {
-					s.logger.Warn().Msgf("unable to locate registered watcher for path %q", event.Name)
+					s.logger.Warn("unable to locate registered watcher for path %q", event.Name)
 					continue
 				}
 				go func() {
 					if err := f(event.Name); err != nil {
-						s.logger.Warn().Msgf("%+v", err)
+						s.logger.Warn("%+v", err)
 					}
 				}()
 			case err, ok := <-s.watcher.Errors:
 				if !ok {
 					return
 				}
-				s.logger.Warn().Msgf("error from file watcher; %+v", err)
+				s.logger.Warn("error from file watcher; %+v", err)
 			}
 		}
 	}()
@@ -67,10 +67,10 @@ func (s *Service) initWatcher() error {
 // AddWatcher watches the given file for changes and invokes f with the file
 // path when a change is detected.
 func (s *Service) AddWatcher(path string, f func(path string) error) {
-	s.logger.Debug().Msgf("adding watcher for %q", path)
+	s.logger.Debug("adding watcher for %q", path)
 
 	if err := s.watcher.Add(path); err != nil {
-		s.logger.Warn().Msgf("unable to add watcher for %q; %+v", path, err)
+		s.logger.Warn("unable to add watcher", "path", path, "error", err)
 		return
 	}
 
@@ -86,16 +86,16 @@ func (s *Service) WatchAndLoad(path string, f func(path string) error) {
 
 	// Load file.
 	if err := f(path); err != nil {
-		s.logger.Warn().Msgf("unable to process file %q; %+v", path, err)
+		s.logger.Warn("unable to process", "path", path, "error", err)
 		return
 	}
 }
 
 // CloseWatcher closes the watcher for file changes.
 func (s *Service) CloseWatcher() {
-	s.logger.Debug().Msg("closing watcher")
+	s.logger.Debug("closing watcher")
 
 	if err := s.watcher.Close(); err != nil {
-		s.logger.Warn().Msgf("unable to close file watcher; %+v", err)
+		s.logger.Warn("unable to close file watcher; %+v", err)
 	}
 }

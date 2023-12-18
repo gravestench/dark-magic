@@ -2,17 +2,17 @@ package assetLoader
 
 import (
 	"io"
+	"log/slog"
 
-	"github.com/gravestench/dc6"
+	dc6 "github.com/gravestench/dc6/pkg"
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"
 	"github.com/gravestench/dt1"
 	"github.com/gravestench/font_table"
 	"github.com/gravestench/mpq"
 	"github.com/gravestench/pl2"
-	"github.com/gravestench/runtime"
+	"github.com/gravestench/servicemesh"
 	tbl "github.com/gravestench/tbl_text"
-	"github.com/rs/zerolog"
 
 	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
@@ -28,7 +28,7 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	mpq  mpqLoader.Dependency
 	dc6  dc6Loader.Dependency
@@ -52,19 +52,19 @@ func (s *Service) AddArchive(filepath string) error {
 }
 
 func (s *Service) Load(filepath string) (io.Reader, error) {
-	s.logger.Info().Msgf("loading file: %v", filepath)
+	s.logger.Info("loading file", "path", filepath)
 	return s.mpq.Load(filepath)
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
-func (s *Service) Init(rt runtime.R) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 }
 
 func (s *Service) Name() string {

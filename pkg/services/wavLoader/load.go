@@ -15,7 +15,7 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 		}
 	}
 
-	s.logger.Info().Msgf("loading %v", filepath)
+	s.logger.Info("loading", "path", filepath)
 
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
@@ -24,17 +24,17 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data", "error", err)
 	}
 
 	audioData, err := wav.WavDecompress(data, 1)
 	if err != nil {
-		return nil, fmt.Errorf("parsing wav: %v", err)
+		return nil, fmt.Errorf("parsing wav", "error", err)
 	}
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, audioData, len(audioData)); err != nil {
-			s.logger.Error().Msgf("caching file %q: %v", err)
+			s.logger.Error("caching file", "error", err)
 		}
 	}
 

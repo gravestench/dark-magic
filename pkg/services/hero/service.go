@@ -1,8 +1,9 @@
 package hero
 
 import (
-	"github.com/gravestench/runtime"
-	"github.com/rs/zerolog"
+	"log/slog"
+
+	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -10,7 +11,7 @@ import (
 )
 
 type Service struct {
-	logger *zerolog.Logger
+	logger *slog.Logger
 
 	config  configFile.Dependency
 	records recordManager.Dependency
@@ -19,12 +20,12 @@ type Service struct {
 	heroStates     []State
 }
 
-func (s *Service) Init(rt runtime.Runtime) {
+func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.expBreakpoints = make(map[models.Hero][]experienceBreakpoint)
 	s.heroStates = make([]State, 0)
 
 	if err := s.LoadHeroes(); err != nil {
-		s.logger.Error().Msgf("loading heroes from config: %v", err)
+		s.logger.Error("loading heroes from config", "error", err)
 	}
 
 	s.loadExperienceBreakpoints()
@@ -34,11 +35,11 @@ func (s *Service) Name() string {
 	return "Hero Manager"
 }
 
-func (s *Service) BindLogger(logger *zerolog.Logger) {
+func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
-func (s *Service) Logger() *zerolog.Logger {
+func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }
 
