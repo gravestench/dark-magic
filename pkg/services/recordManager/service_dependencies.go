@@ -23,8 +23,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(servicemesh servicemesh.Mesh) {
-	for _, service := range servicemesh.Services() {
+func (s *Service) ResolveDependencies(services []servicemesh.Service) {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case configFile.Dependency:
 			s.cfg = candidate

@@ -39,6 +39,18 @@ func (s *Service) Name() string {
 	return "MPQ Archive Loader"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.cfgManager,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }

@@ -33,3 +33,15 @@ func (s *Service) Logger() *slog.Logger {
 func (s *Service) Name() string {
 	return "Web Server"
 }
+
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.cfgManager,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}

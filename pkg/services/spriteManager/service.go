@@ -37,6 +37,24 @@ func (s *Service) Name() string {
 	return "Sprite Manager"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.config,
+		s.mpq,
+		s.pl2,
+		s.dc6,
+		s.dcc,
+		s.dt1,
+		s.ds1,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 // the following methods are boilerplate, but they are used
 // by the servicemesh to enforce a standard logging format.
 

@@ -22,8 +22,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
-	for _, service := range mesh.Services() {
+func (s *Service) ResolveDependencies(services []servicemesh.Service) {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case raylibRenderer.Dependency:
 			s.renderer = candidate

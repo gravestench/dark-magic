@@ -161,7 +161,7 @@ function randomLoot(monsterID, lvlMon, lvlChar, lvlArea)
     return picks
 end
 
-for _ = 1, 100 do
+for _ = 1, 3 do
     randomMonsterRecord = records.MonsterStats[randomIntn(#records.MonsterStats)]
     randomLoot(randomMonsterRecord.BaseId, 50, 50, 50)
 end

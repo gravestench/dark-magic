@@ -1,30 +1,33 @@
 package lua
 
 import (
+	"time"
+
 	"github.com/gravestench/servicemesh"
 )
 
-func (s *Service) tryToExportToLuaEnvironment(args ...any) {
+func (s *Service) OnServiceAdded(service servicemesh.Service) {
+	s.tryToExportToLuaEnvironment(service)
+}
+
+func (s *Service) tryToExportToLuaEnvironment(service servicemesh.Service) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	if len(args) < 1 {
-		return
-	}
-
-	service, ok := args[0].(servicemesh.Service)
+	luaUser, ok := service.(UsesLuaEnvironment)
 	if !ok {
 		return
 	}
 
-	luaUser, ok := args[0].(UsesLuaEnvironment)
-	if !ok {
-		return
+	for !service.Ready() {
+		s.logger.Warn("waiting for service to become ready", "target", service.Name())
+		time.Sleep(time.Second)
 	}
 
 	if candidate, ok := service.(servicemesh.HasDependencies); ok {
-		if !candidate.DependenciesResolved() {
-			return
+		for !candidate.DependenciesResolved() {
+			s.logger.Warn("waiting for service to resolve dependencies", "target", service.Name())
+			time.Sleep(time.Second)
 		}
 	}
 
@@ -33,6 +36,11 @@ func (s *Service) tryToExportToLuaEnvironment(args ...any) {
 	}
 
 	go luaUser.ExportToLua(s.state)
+	s.logger.Info("exporting to lua", "exported", service.Name())
+
+	if s.boundServices == nil {
+		s.boundServices = make(map[string]any)
+	}
+
 	s.boundServices[service.Name()] = service
-	s.logger.Info("successfully exported to lua", "exported", service.Name())
 }

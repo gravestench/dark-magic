@@ -25,6 +25,19 @@ func (s *Service) Name() string {
 	return "TSV Loader"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.mpq,
+		s.config,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }

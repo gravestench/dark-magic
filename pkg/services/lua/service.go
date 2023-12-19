@@ -3,6 +3,7 @@ package lua
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	ee "github.com/gravestench/eventemitter"
 	"github.com/gravestench/servicemesh"
@@ -21,22 +22,15 @@ type Service struct {
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	s.boundServices = make(map[string]any)
+	if s.boundServices == nil {
+		s.boundServices = make(map[string]any)
+	}
+
 	s.state = lua.NewState()
 	s.bindLoggerToLuaEnvironment()
 
-	mesh.Events().On(servicemesh.EventServiceAdded, s.tryToExportToLuaEnvironment)
-
 	for _, service := range mesh.Services() {
-		if candidate, ok := service.(servicemesh.HasDependencies); ok {
-			if !candidate.DependenciesResolved() {
-				continue
-			}
-		}
-
-		if candidate, ok := service.(UsesLuaEnvironment); ok {
-			s.tryToExportToLuaEnvironment(candidate)
-		}
+		s.tryToExportToLuaEnvironment(service)
 	}
 
 	// wait for all siblings to be ready before we launch scripts
@@ -56,17 +50,35 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		panic(err)
 	}
 
-	// TODO :: race condition where this script inits before other services
-	//   have a chance to export their stuff to the lua state machine
-	initScriptPath := cfg.Group(s.Name()).GetString("init script")
+	for {
+		// TODO :: race condition where this script inits before other services
+		//   have a chance to export their stuff to the lua state machine
+		initScriptPath := cfg.Group(s.Name()).GetString("init script")
 
-	if err = s.runScript(initScriptPath); err != nil {
-		s.logger.Error("running script", "error", err)
+		if err = s.runScript(initScriptPath); err != nil {
+			s.logger.Error("running script", "error", err)
+			time.Sleep(time.Second * 1)
+			continue
+		}
+
+		break
 	}
 }
 
 func (s *Service) Name() string {
 	return "Lua Environment"
+}
+
+func (s *Service) Ready() bool {
+	if s.cfg == nil {
+		return false
+	}
+
+	if s.state == nil {
+		return false
+	}
+
+	return true
 }
 
 func (s *Service) SetLogger(logger *slog.Logger) {

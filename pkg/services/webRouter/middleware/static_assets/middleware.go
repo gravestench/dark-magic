@@ -24,6 +24,10 @@ func (m *Middleware) Name() string {
 	return "Static Assets Middleware"
 }
 
+func (s *Middleware) Ready() bool {
+	return true
+}
+
 func (m *Middleware) Init(mesh servicemesh.Mesh) {
 	m.initMiddleware()
 

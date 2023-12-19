@@ -122,6 +122,21 @@ func (s *Service) Name() string {
 	return "Modal Game UI"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.dc6,
+		s.pl2,
+		s.renderer,
+		s.input,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 // the following methods are boilerplate, but they are used
 // by the servicemesh to enforce a standard logging format.
 

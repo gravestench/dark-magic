@@ -129,6 +129,22 @@ func (s *Screen) Name() string {
 	return "Loading Screen"
 }
 
+func (s *Screen) Ready() bool {
+	for _, dependency := range []any{
+		s.renderer,
+		s.mpq,
+		s.dc6,
+		s.dcc,
+		s.pl2,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Screen) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
@@ -169,8 +185,8 @@ func (s *Screen) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Screen) ResolveDependencies(mesh servicemesh.Mesh) {
-	for _, service := range mesh.Services() {
+func (s *Screen) ResolveDependencies(services []servicemesh.Service) {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case mpqLoader.Dependency:
 			s.mpq = candidate

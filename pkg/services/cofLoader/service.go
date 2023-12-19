@@ -25,8 +25,8 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
-	for _, service := range mesh.Services() {
+func (s *Service) ResolveDependencies(services []servicemesh.Service) {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case mpqLoader.Dependency:
 			s.mpq = candidate
@@ -40,6 +40,18 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 
 func (s *Service) Name() string {
 	return "COF Loader"
+}
+
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.mpq,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *Service) SetLogger(logger *slog.Logger) {

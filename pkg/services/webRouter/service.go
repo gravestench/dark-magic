@@ -44,3 +44,15 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 func (s *Service) Name() string {
 	return "Web Router"
 }
+
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.config,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}

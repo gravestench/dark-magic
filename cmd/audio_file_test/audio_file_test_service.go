@@ -66,8 +66,8 @@ func (s *audioFileTestService) DependenciesResolved() bool {
 	return true
 }
 
-func (s *audioFileTestService) ResolveDependencies(mesh servicemesh.Mesh) {
-	for _, service := range mesh.Services() {
+func (s *audioFileTestService) ResolveDependencies(services []servicemesh.Service) {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case tsvLoader.Dependency:
 			s.tsv = candidate

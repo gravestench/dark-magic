@@ -35,6 +35,19 @@ func (s *Service) Name() string {
 	return "Hero Manager"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.records,
+		s.config,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }

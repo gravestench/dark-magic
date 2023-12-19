@@ -3,6 +3,7 @@ module github.com/gravestench/dark-magic
 go 1.21.3
 
 replace github.com/gravestench/dc6 => /Users/dylanknuth/src/od2_codecs/dc6
+replace github.com/gravestench/servicemesh => /Users/dylanknuth/src/servicemesh
 
 require (
 	github.com/charmbracelet/bubbletea v0.24.2

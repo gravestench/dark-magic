@@ -37,6 +37,10 @@ func (s *Service) Name() string {
 	return "Config File Manager"
 }
 
+func (s *Service) Ready() bool {
+	return true
+}
+
 // Init satisfies the servicemesh.IsRuntimeService interface
 func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.mesh = mesh

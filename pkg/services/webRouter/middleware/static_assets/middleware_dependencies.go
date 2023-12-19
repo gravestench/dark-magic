@@ -12,8 +12,8 @@ func (m *Middleware) DependenciesResolved() bool {
 	return true
 }
 
-func (m *Middleware) ResolveDependencies(mesh servicemesh.Mesh) {
-	for _, candidate := range mesh.Services() {
+func (m *Middleware) ResolveDependencies(services []servicemesh.Service) {
+	for _, candidate := range services {
 		if router, ok := candidate.(IsWebRouter); ok {
 			if router.RouteRoot() == nil {
 				return

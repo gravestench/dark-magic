@@ -30,11 +30,22 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		go s.setupServiceToWatchFiles(service)
 		// there is a servicemesh event handler that does this in servicemesh_events.go
 	}
-
 }
 
 func (s *Service) Name() string {
 	return "File Watcher"
+}
+
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.cfg,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 // the following methods are boilerplate, but they are used

@@ -38,6 +38,20 @@ func (s *Service) Name() string {
 	return "WorldMap Generator"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.dt1,
+		s.ds1,
+		s.records,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Service) Seed() uint64 {
 	return s.seed
 }

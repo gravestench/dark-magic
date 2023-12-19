@@ -112,6 +112,18 @@ func (s *Service) Name() string {
 	return "Record Manager"
 }
 
+func (s *Service) Ready() bool {
+	for _, dependency := range []any{
+		s.cfg,
+	} {
+		if dependency == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *Service) IsLoaded() bool {
 	return s.loaded
 }
