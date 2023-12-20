@@ -72,48 +72,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-
 	if s.mpq == nil {
-		return false
-	}
-
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.dcc == nil {
-		return false
-	}
-
-	if s.ds1 == nil {
-		return false
-	}
-
-	if s.dt1 == nil {
-		return false
-	}
-
-	if s.cof == nil {
-		return false
-	}
-
-	if s.font == nil {
-		return false
-	}
-
-	if s.pl2 == nil {
-		return false
-	}
-
-	if s.tbl == nil {
-		return false
-	}
-
-	if s.tsv == nil {
-		return false
-	}
-
-	if s.wav == nil {
 		return false
 	}
 

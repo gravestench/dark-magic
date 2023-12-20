@@ -39,14 +39,16 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.dt1,
-		s.ds1,
-		s.records,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.dt1 == nil {
+		return false
+	}
+
+	if s.ds1 == nil {
+		return false
+	}
+
+	if s.records == nil {
+		return false
 	}
 
 	return true
@@ -127,6 +129,7 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 			}
 		}
 
+		s.logger.Info("loaded level type", "record", r.Name)
 		m.Levels[r.Act] = append(m.Levels[r.Act], lvl)
 	}
 
@@ -165,6 +168,8 @@ func (s *Service) loadLevelPresetRecordsToWorldMap(m *WorldMap) error {
 
 				level.TileStamps = append(level.TileStamps, *stamp)
 			}
+
+			s.logger.Info("loaded level presets", "level", level.Name)
 		}
 	}
 

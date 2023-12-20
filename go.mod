@@ -2,9 +2,6 @@ module github.com/gravestench/dark-magic
 
 go 1.21.3
 
-replace github.com/gravestench/dc6 => /Users/dylanknuth/src/od2_codecs/dc6
-replace github.com/gravestench/servicemesh => /Users/dylanknuth/src/servicemesh
-
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
@@ -17,7 +14,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8
-	github.com/gravestench/dc6 v0.0.0-20230725183724-77d2c18902d5
+	github.com/gravestench/dc6 v0.0.0-20231220231028-04262d8f42c9
 	github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12
 	github.com/gravestench/ds1 v0.0.0-20230725082814-64624a7ebc5c
 	github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f
@@ -25,7 +22,7 @@ require (
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/servicemesh v0.0.0-20231217235950-624027da9951
+	github.com/gravestench/servicemesh v0.0.0-20231220222440-92910d5e643c
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
@@ -51,7 +48,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
 	github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87 // indirect
-	github.com/OpenDiablo2/bitstream v0.0.0-20210818234514-9fca7e40e2b3 // indirect
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.1.0 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.976 // indirect
 	github.com/aws/aws-sdk-go v1.37.27 // indirect

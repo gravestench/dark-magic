@@ -46,16 +46,12 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 }
 
 func (s *Service) Name() string {
-	return "Template"
+	return "Input"
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.renderer,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.renderer == nil {
+		return false
 	}
 
 	return true

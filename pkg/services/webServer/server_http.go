@@ -6,13 +6,7 @@ import (
 )
 
 func (s *Service) initHttpServer() {
-	cfg, err := s.Config()
-	if err != nil {
-		s.log.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	g := cfg.Group("Web Server")
+	g := s.config.Group("Web Server")
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf(":%v", g.GetInt(keyPort)),

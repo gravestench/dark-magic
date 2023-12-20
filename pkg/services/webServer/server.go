@@ -5,12 +5,7 @@ import (
 )
 
 func (s *Service) StartServer() {
-	cfg, err := s.Config()
-	if err != nil {
-		s.log.Error("getting config", "error", err)
-	}
-
-	g := cfg.Group("Web Server")
+	g := s.config.Group("Web Server")
 
 	autocertEnabled := g.GetBool(keyAutocert)
 	tlsEnabled := g.GetBool(keyTls)

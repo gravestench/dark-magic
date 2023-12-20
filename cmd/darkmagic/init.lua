@@ -1,5 +1,5 @@
 print("testing asset loader...")
-data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
+--data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
 
 --for i, sound in ipairs(records.Sounds) do
 --    print("Sound " .. i .. ": Sound=" .. sound.Sound .. " FileName=" .. sound.FileName)

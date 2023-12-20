@@ -1,5 +1,5 @@
 # Template service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide
 a modal user interface, meaning that only one UI (mode) is rendering at any given time.
 
 

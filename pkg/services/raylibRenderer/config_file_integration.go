@@ -4,6 +4,8 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
+var _ configFile.HasConfig = &Service{}
+
 func (s *Service) ConfigFileName() string {
 	return "raylib_renderer.json"
 }
@@ -47,4 +49,8 @@ func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	}
 
 	return cfg
+}
+
+func (s *Service) LoadConfig(config *configFile.Config) {
+	s.config = config
 }

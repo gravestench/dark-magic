@@ -51,10 +51,6 @@ func (s *Service) attemptBindService(service servicemesh.Service) {
 }
 
 func (s *Service) initCursor() {
-	s.cursorNode = s.renderer.NewRenderable()
-
-	time.Sleep(time.Millisecond * 100)
-
 	dc6Cursor, err := s.dc6.Load(paths.CursorDefault)
 	for err != nil {
 		// TODO :: fix a race condition with the mpq loader
@@ -73,9 +69,14 @@ func (s *Service) initCursor() {
 
 	d1 := dc6Cursor.Directions[0]
 	frames := d1.Frames
-	frame := 0
+	frameIdx := 0
 	forward := true
-	s.cursorNode.SetImage(frames[frame].ToImageRGBA())
+	frame := frames[frameIdx]
+
+	s.cursorNode = s.renderer.NewRenderable()
+	s.cursorNode.SetZIndex(99999)
+	s.cursorNode.SetOrigin(0, 0)
+	s.cursorNode.SetImage(frame.ToImageRGBA())
 
 	t := time.Now()
 
@@ -84,23 +85,24 @@ func (s *Service) initCursor() {
 			return
 		}
 
-		t = time.Now()
+		x, y := s.input.MouseCursorState()
+		s.cursorNode.SetPosition(float32(x), float32(y))
 
-		if frame == len(frames)-1 {
+		if frameIdx == len(frames)-1 {
 			forward = false
-		} else if frame == 0 {
+		} else if frameIdx == 0 {
 			forward = true
 		}
 
 		if forward {
-			frame++
+			frameIdx++
 		} else {
-			frame--
+			frameIdx--
 		}
 
-		x, y := s.input.MouseCursorState()
-		s.cursorNode.SetPosition(float32(x), float32(y))
-		s.cursorNode.SetImage(frames[frame%len(frames)].ToImageRGBA())
+		s.cursorNode.SetImage(frames[frameIdx%len(frames)].ToImageRGBA())
+
+		t = time.Now()
 	})
 }
 
@@ -108,11 +110,9 @@ func (s *Service) initUpdateLoop() {
 	ticker := time.NewTicker(time.Second / 24)
 	go func() {
 		for {
-			select {
-			case <-ticker.C:
-				for _, modal := range s.modals {
-					go modal.Update()
-				}
+			<-ticker.C
+			for _, modal := range s.modals {
+				go modal.Update()
 			}
 		}
 	}()
@@ -123,15 +123,20 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.dc6,
-		s.pl2,
-		s.renderer,
-		s.input,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.dc6 == nil {
+		return false
+	}
+
+	if s.pl2 == nil {
+		return false
+	}
+
+	if s.renderer == nil {
+		return false
+	}
+
+	if s.input == nil {
+		return false
 	}
 
 	return true

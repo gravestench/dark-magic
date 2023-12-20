@@ -3,7 +3,6 @@ package webServer
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
@@ -12,7 +11,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if s.cfgManager == nil {
+	if s.config == nil {
 		return false
 	}
 
@@ -25,10 +24,6 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 			if router.RouteRoot() != nil {
 				s.router = router
 			}
-		}
-
-		if cfg, ok := other.(configFile.Manager); ok && s.cfgManager == nil {
-			s.cfgManager = cfg
 		}
 	}
 }

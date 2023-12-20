@@ -6,15 +6,11 @@ import (
 
 // Ensure that Service implements the required interfaces.
 var (
-	_ servicemesh.Service   = &Service{}
-	_ servicemesh.HasLogger = &Service{}
-	_ Manager               = &Service{}
+	_ servicemesh.Service         = &Service{}
+	_ servicemesh.HasLogger       = &Service{}
+	_ servicemesh.HasDependencies = &Service{}
+	_ Manager                     = &Service{}
 )
-
-// The following interfaces are to be used much like the service interfaces
-// found inside of servicemesh/pkg. These can be used by other services to
-// declare and resolve their dependencies to the service defined in this
-// package.
 
 // HasConfig represents a something with a configuration file path and retrieval methods.
 type HasConfig interface {
@@ -24,7 +20,8 @@ type HasConfig interface {
 // HasDefaultConfig represents something with a default configuration.
 type HasDefaultConfig interface {
 	HasConfig
-	DefaultConfig() Config // DefaultConfig returns the default configuration.
+	DefaultConfig() (cfg Config) // DefaultConfig returns the default configuration.
+	LoadConfig(*Config)          // the config, or default config, after it's been loaded
 }
 
 type Dependency = Manager

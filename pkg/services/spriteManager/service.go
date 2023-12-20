@@ -17,7 +17,7 @@ import (
 
 type Service struct {
 	logger *slog.Logger
-	config configFile.Dependency
+	config *configFile.Config
 
 	mpq mpqLoader.Dependency
 	pl2 pl2Loader.Dependency
@@ -38,18 +38,36 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.config,
-		s.mpq,
-		s.pl2,
-		s.dc6,
-		s.dcc,
-		s.dt1,
-		s.ds1,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.mpq == nil {
+		return false
+	}
+
+	if s.pl2 == nil {
+		return false
+	}
+
+	if s.dc6 == nil {
+		return false
+	}
+
+	if s.dcc == nil {
+		return false
+	}
+
+	if s.dt1 == nil {
+		return false
+	}
+
+	if s.ds1 == nil {
+		return false
+	}
+
+	if s.config == nil {
+		return false
+	}
+
+	if !s.mpq.RequiredArchivesLoaded() {
+		return false
 	}
 
 	return true

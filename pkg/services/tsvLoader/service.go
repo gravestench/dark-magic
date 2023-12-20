@@ -13,7 +13,7 @@ import (
 type Service struct {
 	logger *slog.Logger
 	mpq    mpqLoader.Dependency
-	config configFile.Dependency
+	config *configFile.Config
 	cache  *cache.Cache
 }
 
@@ -26,13 +26,12 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.mpq,
-		s.config,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.mpq == nil {
+		return false
+	}
+
+	if s.config == nil {
+		return false
 	}
 
 	return true

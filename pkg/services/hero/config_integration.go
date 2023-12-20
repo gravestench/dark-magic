@@ -2,31 +2,24 @@ package hero
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/gravestench/dark-magic/pkg/models"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
+var _ configFile.HasConfig = &Service{}
+
 func (s *Service) ConfigFileName() string {
 	return "heroes.json"
 }
 
+func (s *Service) LoadConfig(config *configFile.Config) {
+	s.config = config
+}
+
 func (s *Service) LoadHeroes() error {
-	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
-	if err != nil {
-		return fmt.Errorf("loading config", "error", err)
-	}
-
-	if cfg == nil {
-		cfg, err = s.config.CreateConfigWithFileName(s.ConfigFileName())
-		if err != nil {
-			return fmt.Errorf("creating config", "error", err)
-		}
-	}
-
-	for _, group := range cfg.GroupKeys() {
-		state := s.loadHeroStateFromConfigGroup(cfg.Group(group))
+	for _, group := range s.config.GroupKeys() {
+		state := s.loadHeroStateFromConfigGroup(s.config.Group(group))
 		existing := s.GetHeroByName(state.Name)
 
 		if existing == nil {
@@ -58,13 +51,8 @@ func (s *Service) loadHeroStateFromConfigGroup(cfg configFile.Object) State {
 }
 
 func (s *Service) SaveHeroes() error {
-	cfg, err := s.config.LoadConfigWithFileName(s.ConfigFileName())
-	if err != nil {
-		return fmt.Errorf("loading config", "error", err)
-	}
-
 	for _, heroState := range s.heroStates {
-		g := cfg.Group(heroState.Name)
+		g := s.config.Group(heroState.Name)
 
 		g.Set("Name", heroState.Name)
 		g.Set("Experience", heroState.Experience)
@@ -74,7 +62,5 @@ func (s *Service) SaveHeroes() error {
 		g.Set("Attributes", heroState.Attributes)
 	}
 
-	s.config.SaveConfigWithFileName(s.ConfigFileName())
-
-	return nil
+	return s.config.Save()
 }

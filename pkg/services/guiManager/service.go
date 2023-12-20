@@ -35,16 +35,24 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.mpq,
-		s.dc6,
-		s.sprite,
-		s.renderer,
-		s.input,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.mpq == nil {
+		return false
+	}
+
+	if s.dc6 == nil {
+		return false
+	}
+
+	if s.sprite == nil {
+		return false
+	}
+
+	if s.renderer == nil {
+		return false
+	}
+
+	if s.input == nil {
+		return false
 	}
 
 	return true

@@ -21,11 +21,12 @@ import (
 )
 
 type Service struct {
-	logger     *slog.Logger
-	cfgManager configFile.Dependency
-	archives   map[string]*mpq.MPQ
-	ordering   []string
-	mux        sync.Mutex
+	logger        *slog.Logger
+	configManager configFile.Dependency
+	config        *configFile.Config
+	archives      map[string]*mpq.MPQ
+	ordering      []string
+	mux           sync.Mutex
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
@@ -40,12 +41,8 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfgManager,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.config == nil {
+		return false
 	}
 
 	return true

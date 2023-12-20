@@ -13,7 +13,7 @@ import (
 )
 
 type Service struct {
-	cfg           configFile.Dependency
+	config        *configFile.Config
 	logger        *slog.Logger
 	state         *lua.LState
 	events        *ee.EventEmitter
@@ -44,19 +44,13 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		break // all deps resolved for all siblings
 	}
 
-	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		s.logger.Error("getting config", "error", err)
-		panic(err)
-	}
-
 	for {
 		// TODO :: race condition where this script inits before other services
 		//   have a chance to export their stuff to the lua state machine
-		initScriptPath := cfg.Group(s.Name()).GetString("init script")
+		initScriptPath := s.config.Group(s.Name()).GetString("init script")
 
-		if err = s.runScript(initScriptPath); err != nil {
-			s.logger.Error("running script", "error", err)
+		if err := s.runScript(initScriptPath); err != nil {
+			s.logger.With("script", initScriptPath).Error("running script", "error", err)
 			time.Sleep(time.Second * 1)
 			continue
 		}
@@ -70,7 +64,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.cfg == nil {
+	if s.config == nil {
 		return false
 	}
 

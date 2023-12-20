@@ -3,7 +3,6 @@ package hero
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
@@ -12,10 +11,6 @@ import (
 // dependencies are resolved, the Init method is called.
 
 func (s *Service) DependenciesResolved() bool {
-	if s.config == nil {
-		return false
-	}
-
 	if s.records == nil {
 		return false
 	}
@@ -30,8 +25,7 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case configFile.Dependency:
-			s.config = candidate
+
 		case recordManager.Dependency:
 			s.records = candidate
 		}

@@ -3,6 +3,8 @@ package cacheManager
 import (
 	"log/slog"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/gravestench/servicemesh"
 
@@ -15,6 +17,7 @@ type Service struct {
 	mesh   servicemesh.Mesh
 	logger *slog.Logger
 	caches cacheLookup
+	mux    sync.Mutex
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
@@ -40,7 +43,9 @@ func (s *Service) Logger() *slog.Logger {
 }
 
 func (s *Service) FlushAllCaches() {
+	s.mux.Lock()
 	s.caches = make(cacheLookup)
+	s.mux.Unlock()
 
 	for _, service := range s.mesh.Services() {
 		s.tryToFlushCacheForService(service)
@@ -54,6 +59,9 @@ func (s *Service) tryToFlushAllCaches(mesh servicemesh.Mesh) {
 }
 
 func (s *Service) tryToFlushCacheForService(service servicemesh.Service) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	if _, exists := s.caches[service.Name()]; exists {
 		return
 	}
@@ -64,6 +72,10 @@ func (s *Service) tryToFlushCacheForService(service servicemesh.Service) {
 	}
 
 	s.logger.Info("flushing cache", "for", service.Name())
+
+	for !service.Ready() {
+		time.Sleep(time.Millisecond * 10)
+	}
 
 	newCache := cache.New(candidate.CacheBudget())
 	candidate.FlushCache(newCache)

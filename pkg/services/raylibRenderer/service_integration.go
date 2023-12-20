@@ -17,7 +17,6 @@ import (
 var (
 	_ servicemesh.Service         = &Service{} // implement in`service.go`
 	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
-	_ servicemesh.HasDependencies = &Service{} // implement in`dependencies.go`
 	_ configFile.HasDefaultConfig = &Service{} // implement in`lua_integration.go`
 	_ cacheManager.HasCache       = &Service{} // implement in`lua_integration.go`
 	_ IsRenderer                  = &Service{} // implement in`service.go`

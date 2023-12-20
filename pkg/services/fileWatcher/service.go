@@ -6,13 +6,10 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gravestench/servicemesh"
-
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
 	logger         *slog.Logger
-	cfg            configFile.Dependency
 	watcher        *fsnotify.Watcher
 	activeWatchers map[string]FileHandlerFunc
 }
@@ -37,14 +34,6 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfg,
-	} {
-		if dependency == nil {
-			return false
-		}
-	}
-
 	return true
 }
 
@@ -63,6 +52,10 @@ func (s *Service) setupServiceToWatchFiles(service servicemesh.Service) {
 	candidate, ok := service.(NeedsFileWatcher)
 	if !ok {
 		return
+	}
+
+	for !service.Ready() {
+		time.Sleep(time.Millisecond * 10)
 	}
 
 	dependent, ok := service.(servicemesh.HasDependencies)

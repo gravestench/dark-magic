@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"github.com/gravestench/servicemesh"
+
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 )
 
 const (
@@ -20,28 +22,33 @@ type Service struct {
 	configs                    map[string]*Config
 	servicesWithDefaultConfigs map[string]HasDefaultConfig
 	RootDirectory              string
+	fileWatcher                fileWatcher.Dependency
 }
 
-// SetLogger satisfies the servicemesh.HasLogger interface
+// BindLogger satisfies the runtime.HasLogger interface
 func (s *Service) SetLogger(l *slog.Logger) {
 	s.log = l
 }
 
-// Logger satisfies the servicemesh.HasLogger interface
+// Logger satisfies the runtime.HasLogger interface
 func (s *Service) Logger() *slog.Logger {
 	return s.log
 }
 
-// Name satisfies the servicemesh.IsRuntimeService interface
+// Name satisfies the runtime.IsRuntimeService interface
 func (s *Service) Name() string {
 	return "Config File Manager"
 }
 
 func (s *Service) Ready() bool {
+	if s.fileWatcher == nil {
+		return false
+	}
+
 	return true
 }
 
-// Init satisfies the servicemesh.IsRuntimeService interface
+// Init satisfies the runtime.IsRuntimeService interface
 func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.mesh = mesh
 	s.configs = make(map[string]*Config)
@@ -50,20 +57,14 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	for _, candidate := range mesh.Services() {
 		err := s.initConfigForServiceCandidate(candidate)
 		if err != nil {
-			s.log.Error("applying default config for %q: %v", candidate.Name(), err)
+			s.log.Error("applying default config", "for", candidate.Name(), "error", err)
 		}
 	}
+}
 
-	mesh.Events().On(servicemesh.EventServiceAdded, func(args ...any) {
-		if len(args) < 1 {
-			return
-		}
-
-		if candidate, ok := args[0].(servicemesh.Service); ok {
-			err := s.initConfigForServiceCandidate(candidate)
-			if err != nil {
-				s.log.Error("applying default config for %q: %v", candidate.Name(), err)
-			}
-		}
-	})
+func (s *Service) OnServiceAdded(service servicemesh.Service) {
+	err := s.initConfigForServiceCandidate(service)
+	if err != nil {
+		s.log.Error("applying default config", "for", service.Name(), "error", err)
+	}
 }

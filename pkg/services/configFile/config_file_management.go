@@ -11,6 +11,7 @@ import (
 // GetFilePath returns the absolute path for a given incoming file
 func (s *Service) GetFilePath(name string) string {
 	p, _ := filepath.Abs(expandHomeDirectory(filepath.Join(s.ConfigDirectory(), name)))
+
 	return p
 }
 
@@ -69,6 +70,8 @@ func (s *Service) SetConfigDirectory(dir string) error {
 		return fmt.Errorf("bad config RootDirectory: %v", dir)
 	}
 
+	s.log.Info("Setting config root directory", "path", dir)
+
 	s.RootDirectory = dir
 
 	return nil
@@ -98,6 +101,8 @@ func (s *Service) createConfigUnsafe(path string) (*Config, error) {
 
 	path = expandHomeDirectory(prefixIfPathRelative(s.ConfigDirectory(), path))
 
+	s.log.Info("Creating config", "path", path)
+
 	// check if RootDirectory exists
 	if exists, err := directoryExistsForFile(path); !exists || err != nil {
 		base := filepath.Dir(path)
@@ -119,13 +124,13 @@ func (s *Service) createConfigUnsafe(path string) (*Config, error) {
 	defer file.Close()
 
 	// write a new config to the file
-	config := newConfig()
+	config := s.newConfig(filepath.Base(path))
 	data, err := json.Marshal(config)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling new config", "error", err)
+		return nil, fmt.Errorf("unmarshalling new config: %v", err)
 	}
 	if _, err = file.Write(data); err != nil {
-		return nil, fmt.Errorf("writing to new config file", "error", err)
+		return nil, fmt.Errorf("writing to new config file: %v", err)
 	}
 
 	// keep track of the config
@@ -153,6 +158,8 @@ func (s *Service) loadConfigUnsafe(path string) (*Config, error) {
 
 	path = prefixIfPathRelative(s.ConfigDirectory(), path)
 
+	s.log.Info("Loading config", "path", path)
+
 	if exists, err := pathExists(path); !exists || err != nil {
 		return nil, err
 	}
@@ -162,7 +169,7 @@ func (s *Service) loadConfigUnsafe(path string) (*Config, error) {
 		return nil, err
 	}
 
-	cfg := newConfig()
+	cfg := s.newConfig(filepath.Base(path))
 	if err = cfg.Unmarshal(fileData); err != nil {
 		return nil, err
 	}
@@ -186,6 +193,8 @@ func (s *Service) SaveConfigWithFileName(path string) error {
 // It returns any error that occurred during the saving process.
 func (s *Service) saveConfigUnsafe(path string) error {
 	path = prefixIfPathRelative(s.ConfigDirectory(), path)
+
+	s.log.Info("Saving config", "path", path)
 
 	cfg, err := s.getConfigUnsafe(path)
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 type Service struct {
 	log        *slog.Logger
 	router     webRouter.Dependency
-	cfgManager configFile.Dependency
+	config     *configFile.Config
 	server     *http.Server
 	lastConfig string
 }
@@ -35,12 +35,12 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfgManager,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.config == nil {
+		return false
+	}
+
+	if s.router == nil {
+		return false
 	}
 
 	return true

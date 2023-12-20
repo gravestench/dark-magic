@@ -6,13 +6,7 @@ import (
 )
 
 func (s *Service) loadArchivesFromFiles() {
-	cfg, err := s.Config()
-	if err != nil {
-		s.logger.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	g := cfg.Group(s.Name())
+	g := s.config.Group(s.Name())
 
 	rootDir, err := expandHomeDirAlias(g.GetString("directory"))
 	if err != nil {
@@ -34,7 +28,7 @@ func (s *Service) loadArchivesFromFiles() {
 	if len(s.archives) == 0 {
 		time.Sleep(time.Second * 3)
 		s.logger.Error("no MPQ files found")
-		s.logger.Error("edit your config file: %s", filepath.Join(s.cfgManager.ConfigDirectory(), s.ConfigFileName()))
+		s.logger.Error("edit your config file: %s", filepath.Join(s.configManager.ConfigDirectory(), s.ConfigFileName()))
 		panic(err)
 	}
 }

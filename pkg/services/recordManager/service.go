@@ -113,12 +113,12 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfg,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.cfg == nil {
+		return false
+	}
+
+	if s.tsv == nil {
+		return false
 	}
 
 	return true

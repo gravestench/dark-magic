@@ -1,5 +1,5 @@
 # Web Router Service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a way for other services to expose web routes on a locally hosted 
 web server. 
 

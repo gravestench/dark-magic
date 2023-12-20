@@ -1,21 +1,13 @@
 package mpqLoader
 
 import (
-	"fmt"
-
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
+var _ configFile.HasConfig = &Service{}
+
 func (s *Service) ConfigFileName() string {
 	return "loaders.json"
-}
-
-func (s *Service) Config() (*configFile.Config, error) {
-	if s.cfgManager == nil {
-		return nil, fmt.Errorf("config manager is nil")
-	}
-
-	return s.cfgManager.GetConfigByFileName(s.ConfigFileName())
 }
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {
@@ -38,4 +30,8 @@ func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	g.SetDefault("directory", "~/mpq/")
 
 	return
+}
+
+func (s *Service) LoadConfig(config *configFile.Config) {
+	s.config = config
 }

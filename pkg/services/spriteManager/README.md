@@ -1,6 +1,6 @@
 # Sprite Manager Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to use the DC6, DCC,
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to use the DC6, DCC,
 DS1, and DT1 files to generate graphical sprites in PNG and GIF format.
 
 ## Dependencies

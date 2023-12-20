@@ -43,12 +43,8 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.mpq,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.mpq == nil {
+		return false
 	}
 
 	return true

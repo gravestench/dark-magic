@@ -25,6 +25,10 @@ func (m *Middleware) Name() string {
 }
 
 func (s *Middleware) Ready() bool {
+	if s.router == nil {
+		return false
+	}
+
 	return true
 }
 

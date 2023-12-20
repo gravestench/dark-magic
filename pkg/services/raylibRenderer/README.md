@@ -1,5 +1,5 @@
 # Template service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is ...
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is ...
 
 
 ## Dependencies

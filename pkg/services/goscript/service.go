@@ -9,18 +9,12 @@ import (
 )
 
 type Service struct {
-	cfg    configFile.Dependency
+	config *configFile.Config
 	logger *slog.Logger
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		s.logger.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	initScriptPath := cfg.Group(s.Name()).GetString("init script")
+	initScriptPath := s.config.Group(s.Name()).GetString("init script")
 
 	s.runScript(initScriptPath)
 
@@ -32,12 +26,8 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfg,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.config == nil {
+		return false
 	}
 
 	return true

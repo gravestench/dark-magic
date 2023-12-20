@@ -1,6 +1,6 @@
 # MPQ Archive Loader & Decompression Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service which loads and is able to decompress
 files from the collection of MPQ archive files used by diablo.
 

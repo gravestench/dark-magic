@@ -1,5 +1,5 @@
 # Hero Manager Service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a means of managing heroes (player characters) for the game. This
 service uses the record manager to load up various records for character
 starting attributes items, graphois, etc.

@@ -1,21 +1,13 @@
 package webRouter
 
 import (
-	"fmt"
-
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
+var _ configFile.HasConfig = &Service{}
+
 func (s *Service) ConfigFileName() string {
 	return "web_router.json"
-}
-
-func (s *Service) Config() (*configFile.Config, error) {
-	if s.cfgManager == nil {
-		return nil, fmt.Errorf("no config manager service bound")
-	}
-
-	return s.cfgManager.GetConfigByFileName(s.ConfigFileName())
 }
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {
@@ -24,4 +16,8 @@ func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	g.SetDefault("debug", true)
 
 	return
+}
+
+func (s *Service) LoadConfig(config *configFile.Config) {
+	s.config = config
 }

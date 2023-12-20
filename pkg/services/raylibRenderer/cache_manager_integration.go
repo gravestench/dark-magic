@@ -11,12 +11,7 @@ func (s *Service) CacheBudget() int {
 		defaultBudget = 500 * mb
 	)
 
-	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		return defaultBudget
-	}
-
-	budget := cfg.Group(groupKeyCache).GetInt(keyCacheBudget)
+	budget := s.config.Group(groupKeyCache).GetInt(keyCacheBudget)
 	if budget <= 0 {
 		return defaultBudget
 	}

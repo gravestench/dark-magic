@@ -1,5 +1,5 @@
 # GUI Manager
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a GUI which
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a GUI which
 integrates with the raylib renderer and exposes itself as a renderable layer.
 
 The GUI manager maintains a "node tree", where each node can (optionally) do 

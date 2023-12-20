@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/faiface/mainthread"
 	"github.com/gravestench/servicemesh"
 
@@ -76,12 +74,8 @@ func main() {
 	rt.Add(&hero.Service{})
 	rt.Add(&mapGenerator.Service{})
 	rt.Add(&guiManager.Service{})
-
-	go func() {
-		time.Sleep(time.Second * 5)
-		rt.Add(&modalGameUI.Service{})
-		rt.Add(&loading.Screen{})
-	}()
+	rt.Add(&modalGameUI.Service{})
+	rt.Add(&loading.Screen{})
 
 	mainthread.Run(rt.Run)
 }

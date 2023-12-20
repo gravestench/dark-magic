@@ -1,5 +1,5 @@
 # File Watcher Service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a single service
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a single service
 responsible watching for filesystem changes to files and calling handler
 functions when those files change.
 

@@ -29,7 +29,7 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data: %v", err)
 	}
 
 	dc6Image, err := dc6.FromBytes(data)

@@ -1,5 +1,5 @@
 # Modal Text User Interface
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a modal text 
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a modal text 
 user interface. This means that a text-based user interface will be
 shown on standard output. The normal servicemesh logging output will be 
 redirected to a file, while `stdout` will be used to display the TUI.

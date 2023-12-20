@@ -21,7 +21,7 @@ Together, we can bring back the magic of this iconic game and shape its future.
 * `pkg/services` - contains all the high-level application services like file loaders, lua environment, config file manager, etc.
 
 ## Services
-This project uses the [Runtime](https://github.com/gravestench/servicemesh) framework, 
+This project uses the [Service Mesh](https://github.com/gravestench/servicemesh) framework, 
 which necessitates the high-level organization of an application be broken into
 a collection of services. Each service will have a README.md declared in
 their corresponding directories.
@@ -78,11 +78,10 @@ This project is licensed under the MIT License - see the
 [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-* [Zerolog](https://github.com/rs/zerolog)
+* [Open Diablo 2](https://github.com/opendiablo2/opendiablo2)
 * [Gin](https://github.com/gin-gonic/gin)
 * [Gopher LUA](https://github.com/yuin/gopher-lua)
-* [Open Diablo 2](https://github.com/opendiablo2/opendiablo2)
-* [Runtime](https://github.com/gravestench/servicemesh)
+* [Service Mesh](https://github.com/gravestench/servicemesh)
 
 ---
 *Dark Magic is not affiliated with or endorsed by Blizzard Entertainment, Inc. Diablo is a registered trademark of Blizzard Entertainment, Inc. All in-game content, imagery, and lore are the property of Blizzard Entertainment, Inc.*

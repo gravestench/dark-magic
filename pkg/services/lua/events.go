@@ -14,6 +14,10 @@ func (s *Service) tryToExportToLuaEnvironment(service servicemesh.Service) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	for s.state == nil {
+		time.Sleep(time.Millisecond * 10)
+	}
+
 	luaUser, ok := service.(UsesLuaEnvironment)
 	if !ok {
 		return
@@ -35,7 +39,7 @@ func (s *Service) tryToExportToLuaEnvironment(service servicemesh.Service) {
 		return
 	}
 
-	go luaUser.ExportToLua(s.state)
+	luaUser.ExportToLua(s.state)
 	s.logger.Info("exporting to lua", "exported", service.Name())
 
 	if s.boundServices == nil {

@@ -1,6 +1,6 @@
 # Record Manager Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a single point of
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a single point of
 access for all records, which are instances of models that are marshalled from
 the diablo2 excel files (which are tab-separated value format).
 

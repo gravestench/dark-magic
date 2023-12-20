@@ -23,16 +23,10 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 }
 
 func (s *Service) Name() string {
-	return "Template"
+	return "Game Events"
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{} {
-		if dependency == nil {
-			return false
-		}
-	}
-
 	return true
 }
 

@@ -1,6 +1,6 @@
 # Global Lua Environment Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to manage the state of a single lua state machine. Other services are intended to implement an exported 
 integration interface in order to populate the state machine with anything
 they want. Any type of lua API for a given service should be exposed through

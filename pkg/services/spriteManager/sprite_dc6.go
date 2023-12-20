@@ -191,7 +191,7 @@ func generateDc6SpriteAtlasPng(frames []*dc6.Frame) ([]byte, error) {
 		// Copy the image to the sprite atlas.
 		for x := 0; x < frame.Bounds().Dx(); x++ {
 			for y := 0; y < frame.Bounds().Dy(); y++ {
-				atlas.Set(x+int(frame.OffsetX), frameY+y+int(frame.OffsetY), frame.At(drawRect.Min.X+x, drawRect.Min.Y+y))
+				atlas.Set(x, frameY+y, frame.At(drawRect.Min.X+x, drawRect.Min.Y+y))
 			}
 		}
 

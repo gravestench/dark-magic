@@ -1,5 +1,5 @@
 # Cache Manager
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a generic caching
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a generic caching
 implementation, and an integration interface for cache initialization.
 
 

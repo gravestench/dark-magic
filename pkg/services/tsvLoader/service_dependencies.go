@@ -3,20 +3,11 @@ package tsvLoader
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.config == nil {
-		return false
-	}
-
 	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
 		return false
 	}
 
@@ -28,8 +19,7 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 		switch candidate := service.(type) {
 		case mpqLoader.Dependency:
 			s.mpq = candidate
-		case configFile.Dependency:
-			s.config = candidate
+
 		}
 	}
 }

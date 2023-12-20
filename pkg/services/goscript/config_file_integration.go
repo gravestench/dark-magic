@@ -6,6 +6,8 @@ import (
 
 var _ configFile.HasDefaultConfig = &Service{}
 
+var _ configFile.HasConfig = &Service{}
+
 func (s *Service) ConfigFileName() string {
 	return "goscript_environment.json"
 }
@@ -16,4 +18,8 @@ func (s *Service) DefaultConfig() (cfg configFile.Config) {
 	g.SetDefault("init script", "init.go")
 
 	return
+}
+
+func (s *Service) LoadConfig(config *configFile.Config) {
+	s.config = config
 }

@@ -10,7 +10,7 @@ import (
 
 func (s *Service) DependenciesResolved() bool {
 	// NOTE: not everything here needs to be
-	// servicemesh services. We can check here if
+	// services. We can check here if
 	// files are loaded, if other service "ready"
 	// methods yield true, etc.
 

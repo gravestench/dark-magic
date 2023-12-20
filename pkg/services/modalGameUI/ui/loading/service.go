@@ -36,25 +36,10 @@ type Screen struct {
 
 	root   raylibRenderer.Renderable
 	update func()
-
-	progress []bool
 }
 
 func (s *Screen) Init(mesh servicemesh.Mesh) {
 	s.root = s.renderer.NewRenderable()
-
-	s.progress = make([]bool, 100)
-
-	go func() {
-		for {
-			s.progress = make([]bool, 100)
-
-			for idx := 0; idx < len(s.progress); idx++ {
-				time.Sleep(time.Second / 10)
-				s.progress[idx] = true
-			}
-		}
-	}()
 
 	s.initBackground()
 	s.initLoadingImage()
@@ -65,9 +50,10 @@ func (s *Screen) initBackground() {
 	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
 
 	// Fill the image with red color
-	red := color.RGBA{0, 0, 0, 255}
-	draw.Draw(img, img.Bounds(), &image.Uniform{red}, image.Point{}, draw.Src)
+	bgColor := color.RGBA{0, 0, 0, 255}
+	draw.Draw(img, img.Bounds(), &image.Uniform{bgColor}, image.Point{}, draw.Src)
 
+	s.root.SetOrigin(0, 0)
 	s.root.SetImage(img)
 }
 
@@ -98,6 +84,10 @@ func (s *Screen) initLoadingImage() {
 
 	t := time.Now()
 
+	w, h := s.renderer.WindowSize()
+	centerX := float32(w / 2)
+	centerY := float32(h / 2)
+
 	// example update callback for the renderable
 	r.OnUpdate(func() {
 		if time.Since(t) < time.Second/24 {
@@ -106,22 +96,10 @@ func (s *Screen) initLoadingImage() {
 
 		t = time.Now()
 
-		var total float64
-		var current float64
-
-		total = float64((len(s.progress)))
-		for _, b := range s.progress {
-			if b {
-				current += 1
-			}
-		}
-
-		currentFrame = int(float64(current/total) * float64(len(frames)))
-		centerX := float32(400 - (frames[currentFrame].Width / 2))
-		centerY := float32(300 - (frames[currentFrame].Height / 2))
+		currentFrame = (currentFrame + 1) % len(frames)
 
 		r.SetPosition(centerX, centerY)
-		r.SetImage(frames[currentFrame%len(frames)].ToImageRGBA())
+		r.SetImage(frames[currentFrame].ToImageRGBA())
 	})
 }
 
@@ -130,16 +108,24 @@ func (s *Screen) Name() string {
 }
 
 func (s *Screen) Ready() bool {
-	for _, dependency := range []any{
-		s.renderer,
-		s.mpq,
-		s.dc6,
-		s.dcc,
-		s.pl2,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.renderer == nil {
+		return false
+	}
+
+	if s.mpq == nil {
+		return false
+	}
+
+	if s.dc6 == nil {
+		return false
+	}
+
+	if s.dcc == nil {
+		return false
+	}
+
+	if s.pl2 == nil {
+		return false
 	}
 
 	return true

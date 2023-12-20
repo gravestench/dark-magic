@@ -1,6 +1,6 @@
 # Diablo 2 Locale Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for retrieving locale-specific
 data from the MPQ files. This includes string translation, character sets, etc.
 

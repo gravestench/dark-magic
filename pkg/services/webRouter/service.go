@@ -12,16 +12,12 @@ import (
 )
 
 type Service struct {
-	log        *slog.Logger
-	cfgManager configFile.Dependency
+	log    *slog.Logger
+	config *configFile.Config
 
 	root *gin.Engine
 
 	boundServices map[string]*struct{} // holds 0-size entries
-
-	config struct {
-		debug bool
-	}
 
 	reloadDebounce time.Time
 }
@@ -46,12 +42,8 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.config,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.config == nil {
+		return false
 	}
 
 	return true

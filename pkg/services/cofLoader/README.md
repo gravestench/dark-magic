@@ -1,5 +1,5 @@
 # COF Loader Service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for loading COF animation files.
 COF likely stands for "Composite Object File", which is coherent considering that
 all of the character animations are composed of many separate dcc images.

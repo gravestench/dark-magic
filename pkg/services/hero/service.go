@@ -13,7 +13,7 @@ import (
 type Service struct {
 	logger *slog.Logger
 
-	config  configFile.Dependency
+	config  *configFile.Config
 	records recordManager.Dependency
 
 	expBreakpoints map[models.Hero][]experienceBreakpoint
@@ -36,13 +36,12 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.records,
-		s.config,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.records == nil {
+		return false
+	}
+
+	if s.config == nil {
+		return false
 	}
 
 	return true

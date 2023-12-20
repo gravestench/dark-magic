@@ -15,8 +15,8 @@ type Service struct {
 	mesh   servicemesh.Mesh
 	logger *slog.Logger
 
-	cfg   configFile.Dependency
-	cache *cache.Cache
+	config *configFile.Config
+	cache  *cache.Cache
 
 	cameras map[string]*rl.Camera2D
 
@@ -43,12 +43,8 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	for _, dependency := range []any{
-		s.cfg,
-	} {
-		if dependency == nil {
-			return false
-		}
+	if s.config == nil {
+		return false
 	}
 
 	return true
@@ -66,15 +62,9 @@ func (s *Service) Logger() *slog.Logger {
 }
 
 func (s *Service) initRenderer() {
-	cfg, err := s.cfg.GetConfigByFileName(s.ConfigFileName())
-	if err != nil {
-		s.logger.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	title := cfg.Group(groupKeyWindow).GetString(keyWindowTitle)
-	width := cfg.Group(groupKeyWindow).GetInt(keyWindowWidth)
-	height := cfg.Group(groupKeyWindow).GetInt(keyWindowHeight)
+	title := s.config.Group(groupKeyWindow).GetString(keyWindowTitle)
+	width := s.config.Group(groupKeyWindow).GetInt(keyWindowWidth)
+	height := s.config.Group(groupKeyWindow).GetInt(keyWindowHeight)
 
 	s.isInit = true
 

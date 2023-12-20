@@ -4,16 +4,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 )
 
-func newConfig() *Config {
-	c := &Config{}
+func (s *Service) newConfig(name string) *Config {
+	c := &Config{
+		service: s,
+		name:    name,
+	}
 	c.groups = make(map[string]Object)
 	return c
 }
 
 type Config struct {
-	groups map[string]Object
+	service *Service
+	name    string
+	groups  map[string]Object
+}
+
+func (c *Config) RootDirectory() string {
+	return c.service.RootDirectory
+}
+
+func (c *Config) Save() error {
+	return c.service.SaveConfigWithFileName(c.name)
+}
+
+func (c *Config) Load() error {
+	loaded, err := c.service.LoadConfigWithFileName(c.name)
+	if err != nil {
+		return err
+	}
+
+	c.groups = loaded.groups
+
+	return nil
 }
 
 func (c *Config) GroupKeys() []string {
@@ -69,15 +94,27 @@ func (n Object) Set(key string, value interface{}) {
 }
 
 func (n Object) Get(key string) interface{} {
+	if n == nil {
+		return nil
+	}
+
 	return n[key]
 }
 
 func (n Object) GetString(key string) string {
+	if n == nil {
+		return ""
+	}
+
 	value, _ := n[key].(string)
 	return value
 }
 
 func (n Object) GetStrings(key string) []string {
+	if n == nil {
+		return nil
+	}
+
 	res := make([]string, 0)
 
 	data, _ := json.Marshal(n[key])
@@ -87,6 +124,10 @@ func (n Object) GetStrings(key string) []string {
 }
 
 func (n Object) GetInt(key string) int {
+	if n == nil {
+		return 0
+	}
+
 	if value, ok := n[key].(int); ok {
 		return value
 	}
@@ -100,8 +141,34 @@ func (n Object) GetInt(key string) int {
 }
 
 func (n Object) GetBool(key string) bool {
+	if n == nil {
+		return false
+	}
+
 	value, _ := n[key].(bool)
 	return value
+}
+
+func (n Object) GetDuration(key string) time.Duration {
+	if n == nil {
+		return 0
+	}
+
+	if d, err := time.ParseDuration(n.GetString(key)); err == nil {
+		return d
+	}
+
+	return time.Second
+}
+
+func (n Object) GetJson(key string) []byte {
+	if n == nil {
+		return nil
+	}
+
+	data, _ := json.Marshal(n[key])
+
+	return data
 }
 
 func (n Object) IsSet(key string) bool {

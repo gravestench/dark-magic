@@ -11,13 +11,7 @@ import (
 )
 
 func (s *Service) initAutocertTlsDebugServer() {
-	cfg, err := s.Config()
-	if err != nil {
-		s.log.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	g := cfg.Group("Web Server")
+	g := s.config.Group("Web Server")
 
 	certConfig := simplecert.Default
 	certConfig.UpdateHosts = false
@@ -53,13 +47,7 @@ func (s *Service) initAutocertTlsDebugServer() {
 }
 
 func (s *Service) initAutocertTlsProductionServer() {
-	cfg, err := s.Config()
-	if err != nil {
-		s.log.Error("getting config", "error", err)
-		panic(err)
-	}
-
-	g := cfg.Group("Web Server")
+	g := s.config.Group("Web Server")
 
 	var (
 		// the structure that handles reloading the certificate
@@ -148,7 +136,7 @@ func (s *Service) initAutocertTlsProductionServer() {
 	// init simplecert configuration
 	// this will block initially until the certificate has been obtained for the first time.
 	// on subsequent runs, simplecert will load the certificate from the cache directory on disk.
-	certReloader, err = simplecert.Init(certConfig, func() {})
+	certReloader, err := simplecert.Init(certConfig, func() {})
 	if err != nil {
 		s.log.Error("simplecert init failed", "error", err)
 		panic(err)

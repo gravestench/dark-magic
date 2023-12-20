@@ -1,5 +1,5 @@
 # DC6 Loader Service
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is
 to provide a single service that is responsible for loading DC6 image files.
 
 ## Dependencies

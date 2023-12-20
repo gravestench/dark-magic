@@ -1,8 +1,8 @@
 # Unified Asset Loader
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to provide a single dependency
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to provide a single dependency
 which has all file loading methods available for use by other high-level
-D2 servicemesh services.
+D2 services.
 
 ## Dependencies
 

@@ -35,7 +35,7 @@ func (s *Service) Reload() {
 	s.boundServices = make(map[string]*struct{})
 
 	mode := gin.ReleaseMode
-	if s.config.debug {
+	if s.config.Group("Gin Router Handler").GetBool("debug") {
 		mode = gin.DebugMode
 	}
 
@@ -108,14 +108,14 @@ func (s *Service) bindNewRoutes(mesh servicemesh.Mesh) {
 			continue
 		}
 
+		if _, alreadyBound := s.boundServices[svcToInit.Name()]; alreadyBound {
+			continue
+		}
+
 		if svc, ok := candidate.(servicemesh.HasDependencies); ok {
 			if !svc.DependenciesResolved() {
 				continue
 			}
-		}
-
-		if _, alreadyBound := s.boundServices[svcToInit.Name()]; alreadyBound {
-			continue
 		}
 
 		groupPrefix := ""

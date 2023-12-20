@@ -1,13 +1,13 @@
-package goscript
+package configFile
 
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.cfg == nil {
+	if s.fileWatcher == nil {
 		return false
 	}
 
@@ -16,8 +16,9 @@ func (s *Service) DependenciesResolved() bool {
 
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
-		if candidate, ok := service.(configFile.Manager); ok {
-			s.cfg = candidate
+		switch candidate := service.(type) {
+		case fileWatcher.Dependency:
+			s.fileWatcher = candidate
 		}
 	}
 }

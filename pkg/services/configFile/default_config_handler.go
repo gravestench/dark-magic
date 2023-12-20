@@ -23,6 +23,9 @@ func (s *Service) initConfigForServiceCandidate(candidate servicemesh.Service) e
 	}
 
 	// add it to our list
+	if s.servicesWithDefaultConfigs == nil {
+		s.servicesWithDefaultConfigs = make(map[string]HasDefaultConfig)
+	}
 	s.servicesWithDefaultConfigs[name] = target
 
 	// get the current and default configs
@@ -44,7 +47,15 @@ func (s *Service) initConfigForServiceCandidate(candidate servicemesh.Service) e
 		}
 	}
 
-	s.log.Info("default config applied", "for", name, "path", s.GetFilePath(target.ConfigFileName()))
+	target.LoadConfig(cfgCurrent)
+
+	s.fileWatcher.AddWatcher(cfgPath, func(path string) error {
+		s.log.Info("file watcher triggered", "path", cfgPath)
+		_, errLoad := s.LoadConfigWithFileName(path)
+		return errLoad
+	})
+
+	s.log.Info("config file created", "for", name, "path", s.GetFilePath(target.ConfigFileName()))
 
 	return s.saveConfigUnsafe(cfgPath)
 }

@@ -1,6 +1,6 @@
 # Go Script Service
 
-The purpose of this [servicemesh](https://github.com/gravestench/servicemesh) service is to run Go scripts within the execution context of Dark Magic.
+The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is to run Go scripts within the execution context of Dark Magic.
 
 
 ## Dependencies

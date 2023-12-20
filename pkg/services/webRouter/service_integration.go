@@ -11,7 +11,6 @@ import (
 var (
 	_ servicemesh.Service         = &Service{}
 	_ servicemesh.HasLogger       = &Service{}
-	_ servicemesh.HasDependencies = &Service{}
 	_ configFile.HasDefaultConfig = &Service{}
 	_ IsWebRouter                 = &Service{}
 )
