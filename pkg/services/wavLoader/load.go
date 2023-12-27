@@ -22,14 +22,9 @@ func (s *Service) Load(filepath string) ([]byte, error) {
 
 	audioData, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data %q: %v", filepath, err)
 	}
-
-	//wavData, err := wav.WavDecompress(audioData, 1)
-	//if err != nil {
-	//	return nil, fmt.Errorf("parsing wav", "error", err)
-	//}
-
+	
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, audioData, len(audioData)); err != nil {
 			s.logger.Error("caching file", "error", err)

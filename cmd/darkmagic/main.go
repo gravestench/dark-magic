@@ -4,6 +4,7 @@ import (
 	"github.com/faiface/mainthread"
 	"github.com/gravestench/servicemesh"
 
+	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/backgroundMusic"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
@@ -43,6 +44,8 @@ const (
 
 func main() {
 	rt := servicemesh.New(projectName)
+
+	rt.SetLogHandler(prettylog.NewHandler(nil))
 
 	// utility services
 	//rt.Add(&modalTui.Service{})
