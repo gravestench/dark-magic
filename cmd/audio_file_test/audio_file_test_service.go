@@ -35,7 +35,35 @@ type audioFileTestService struct {
 }
 
 func (s *audioFileTestService) Name() string {
-	return "music loader test"
+	return "audio test"
+}
+
+func (s *audioFileTestService) Ready() bool {
+	if s.tsv == nil {
+		return false
+	}
+
+	if s.wav == nil {
+		return false
+	}
+
+	if s.mpq == nil {
+		return false
+	}
+
+	if !s.tsv.Ready() {
+		return false
+	}
+
+	if !s.wav.Ready() {
+		return false
+	}
+
+	if !s.mpq.Ready() {
+		return false
+	}
+
+	return true
 }
 
 func (s *audioFileTestService) DependenciesResolved() bool {
