@@ -93,8 +93,8 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		return err
 	}
 
-	service := fmt.Sprintf("%s", attrs["service"])
-	if service == "" {
+	service := attrs["service"]
+	if service == nil {
 		service = "Dark Magic"
 	} else {
 		delete(attrs, "service")
