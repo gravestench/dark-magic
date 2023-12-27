@@ -10,6 +10,8 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 )
 
+var _ LoadsWavFiles = &Service{}
+
 type Service struct {
 	logger *slog.Logger
 	mpq    mpqLoader.Dependency

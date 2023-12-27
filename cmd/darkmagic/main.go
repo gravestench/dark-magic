@@ -5,6 +5,7 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/backgroundMusic"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -75,6 +76,9 @@ func main() {
 	rt.Add(&mapGenerator.Service{})
 	rt.Add(&guiManager.Service{})
 	rt.Add(&modalGameUI.Service{})
+	rt.Add(&backgroundMusic.Service{})
+
+	// game ui screens
 	rt.Add(&loading.Screen{})
 
 	mainthread.Run(rt.Run)

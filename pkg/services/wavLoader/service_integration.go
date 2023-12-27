@@ -7,17 +7,13 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
-var (
-	_ servicemesh.Service         = &Service{}
-	_ servicemesh.HasLogger       = &Service{}
-	_ servicemesh.HasDependencies = &Service{}
-	_ configFile.HasDefaultConfig = &Service{}
-	_ cacheManager.HasCache       = &Service{}
-	_ LoadsWavFiles               = &Service{}
-)
-
 type Dependency = LoadsWavFiles
 
-type LoadsWavFiles = interface {
+type LoadsWavFiles interface {
+	servicemesh.Service
+	servicemesh.HasLogger
+	servicemesh.HasDependencies
+	configFile.HasDefaultConfig
+	cacheManager.HasCache
 	Load(filepath string) ([]byte, error)
 }

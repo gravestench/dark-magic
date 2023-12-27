@@ -66,8 +66,6 @@ func (s *Service) initRenderer() {
 	width := s.config.Group(groupKeyWindow).GetInt(keyWindowWidth)
 	height := s.config.Group(groupKeyWindow).GetInt(keyWindowHeight)
 
-	s.isInit = true
-
 	rl.SetTraceLogCallback(func(level int, msg string) {
 		switch level {
 		case 0, 1:
@@ -90,8 +88,10 @@ func (s *Service) initRenderer() {
 
 	mainthread.Call(func() {
 		rl.InitWindow(int32(width), int32(height), title)
+		rl.InitAudioDevice()
 		rl.SetTargetFPS(60)
 		rl.HideCursor()
+		s.isInit = true
 
 		for !rl.WindowShouldClose() && !serviceMeshShuttingDown {
 			rl.BeginDrawing()

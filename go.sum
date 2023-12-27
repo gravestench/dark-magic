@@ -326,8 +326,6 @@ github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f h1:n47zmhKTd
 github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f/go.mod h1:n9EqYA4ZZM9S8wdwSSVVHXzSVFtlxg2OIWRvbEqTxpM=
 github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8 h1:9VrkZ0VOLlcWYmaMB7xVyZM6sScBC4nIE7KxA1mV000=
 github.com/gravestench/cof v0.0.0-20230728184748-54ae1177d6e8/go.mod h1:ABI03DtRmA7YFUn0LqnPy/MRuknT1ELY/MvTDfBfD0M=
-github.com/gravestench/dc6 v0.0.0-20231220222247-eccbf6d7c208 h1:IbuikL6T5D8ow03eO0qzzwlV64EiXJUGbwWQSKyRaXk=
-github.com/gravestench/dc6 v0.0.0-20231220222247-eccbf6d7c208/go.mod h1:FSBaEhaZUrnjdUMDWkDrXyTzxZYl0KlJRZc1h4OpOfI=
 github.com/gravestench/dc6 v0.0.0-20231220231028-04262d8f42c9 h1:jORMPq3PoHiQT/IXfzTZ75xpGgfGNQozMxqQHRvOzPo=
 github.com/gravestench/dc6 v0.0.0-20231220231028-04262d8f42c9/go.mod h1:FSBaEhaZUrnjdUMDWkDrXyTzxZYl0KlJRZc1h4OpOfI=
 github.com/gravestench/dcc v0.0.0-20230725074716-ae9b9d202b12 h1:VzQwWtANwsl/QyQrKaHzLRoH2M6P+7UwUKD5fEX8q3Y=

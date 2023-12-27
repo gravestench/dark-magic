@@ -25,7 +25,6 @@ require (
 	github.com/gravestench/servicemesh v0.0.0-20231220222440-92910d5e643c
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
-	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff
 	github.com/hajimehoshi/oto v0.7.1
 	github.com/pkg/errors v0.9.1
 	github.com/traefik/yaegi v0.15.1
@@ -86,6 +85,7 @@ require (
 	github.com/gophercloud/utils v0.0.0-20210216074907-f6de111f2eae // indirect
 	github.com/gravestench/bitstream v0.0.0-20230929165245-6ff3168b856f // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e // indirect
+	github.com/gravestench/wav v0.0.0-20230801222856-baef9562cbff // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/iij/doapi v0.0.0-20190504054126-0bbf12d6d7df // indirect
