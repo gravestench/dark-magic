@@ -69,6 +69,10 @@ func (s *Service) Ready() bool {
 		return false
 	}
 
+	if s.renderer == nil {
+		return false
+	}
+
 	if !s.renderer.IsInit() {
 		return false
 	}

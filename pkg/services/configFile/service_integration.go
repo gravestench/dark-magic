@@ -20,14 +20,15 @@ type HasConfig interface {
 // HasDefaultConfig represents something with a default configuration.
 type HasDefaultConfig interface {
 	HasConfig
-	DefaultConfig() (cfg Config) // DefaultConfig returns the default configuration.
 	LoadConfig(*Config)          // the config, or default config, after it's been loaded
+	DefaultConfig() (cfg Config) // DefaultConfig returns the default configuration.
 }
 
 type Dependency = Manager
 
 // Manager represents something that manages configurations.
 type Manager interface {
+	servicemesh.Service
 	GetFilePath(path string) string
 	ConfigDirectory() string                               // ConfigDirectory returns the directory path where configurations are stored.
 	SetConfigDirectory(string) error                       // SetConfigDirectory sets the directory path for configurations.

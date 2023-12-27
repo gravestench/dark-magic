@@ -15,8 +15,6 @@ func (s *Service) Load(filepath string) (*dcc.DCC, error) {
 		}
 	}
 
-	s.logger.Info("loading", "path", filepath)
-
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
@@ -24,12 +22,12 @@ func (s *Service) Load(filepath string) (*dcc.DCC, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data %q: %v", filepath, err)
 	}
 
 	dccImage, err := dcc.FromBytes(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing dcc", "error", err)
+		return nil, fmt.Errorf("parsing dcc %q: %v", filepath, err)
 	}
 
 	if s.cache != nil {
@@ -37,6 +35,8 @@ func (s *Service) Load(filepath string) (*dcc.DCC, error) {
 			s.logger.Error("caching file", "error", err)
 		}
 	}
+
+	s.logger.Info("loaded DCC file", "path", filepath)
 
 	return dccImage, nil
 }

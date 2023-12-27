@@ -56,8 +56,6 @@ func main() {
 	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	rt.Add(&webServer.Service{})
 	rt.Add(&webRouter.Service{})
-	rt.Add(&raylibRenderer.Service{})
-	rt.Add(&input.Service{})
 	rt.Add(&fontTableLoader.Service{})
 	rt.Add(&dc6Loader.Service{})
 	rt.Add(&dccLoader.Service{})
@@ -70,16 +68,20 @@ func main() {
 	rt.Add(&cofLoader.Service{})
 	rt.Add(&mpqLoader.Service{})
 
+	// rendering-dependant services
+	rt.Add(&raylibRenderer.Service{})
+	rt.Add(&guiManager.Service{})
+	rt.Add(&modalGameUI.Service{})
+	rt.Add(&input.Service{})           // rendering backend also handles input
+	rt.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
+
 	// high level services
 	rt.Add(&assetLoader.Service{})
 	rt.Add(&recordManager.Service{})
 	rt.Add(&spriteManager.Service{})
 	rt.Add(&locale.Service{})
-	rt.Add(&hero.Service{})
 	rt.Add(&mapGenerator.Service{})
-	rt.Add(&guiManager.Service{})
-	rt.Add(&modalGameUI.Service{})
-	rt.Add(&backgroundMusic.Service{})
+	rt.Add(&hero.Service{})
 
 	// game ui screens
 	rt.Add(&loading.Screen{})

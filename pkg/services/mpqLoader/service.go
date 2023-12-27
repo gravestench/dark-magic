@@ -21,6 +21,7 @@ import (
 )
 
 type Service struct {
+	mesh          servicemesh.Mesh
 	logger        *slog.Logger
 	configManager configFile.Dependency
 	config        *configFile.Config
@@ -30,6 +31,7 @@ type Service struct {
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
+	s.mesh = mesh
 	s.archives = make(map[string]*mpq.MPQ)
 	s.ordering = make([]string, 0)
 

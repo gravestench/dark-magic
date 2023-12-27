@@ -14,6 +14,7 @@ var (
 type Dependency = LoadsTsvFiles
 
 type LoadsTsvFiles = interface {
+	servicemesh.Service
 	Load(filepath string) ([]byte, error)
 	Unmarshal(filepath string, destination any) error
 }

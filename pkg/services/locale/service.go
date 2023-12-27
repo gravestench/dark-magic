@@ -56,6 +56,10 @@ func (s *Service) Ready() bool {
 		return false
 	}
 
+	if !s.mpq.RequiredArchivesLoaded() {
+		return false
+	}
+
 	if s.tbl == nil {
 		return false
 	}

@@ -85,7 +85,7 @@ func (s *Service) initRenderer() {
 	s.mesh.Events().On(servicemesh.EventServiceMeshShutdownInitiated, func(_ ...any) {
 		serviceMeshShuttingDown = true
 	})
-
+	
 	mainthread.Call(func() {
 		rl.InitWindow(int32(width), int32(height), title)
 		rl.InitAudioDevice()

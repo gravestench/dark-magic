@@ -117,7 +117,15 @@ func (s *Service) Ready() bool {
 		return false
 	}
 
+	if !s.cfg.Ready() {
+		return false
+	}
+
 	if s.tsv == nil {
+		return false
+	}
+
+	if !s.tsv.Ready() {
 		return false
 	}
 
@@ -212,7 +220,7 @@ func (s *Service) LoadRecords() error {
 		}
 
 		if err := s.tsv.Unmarshal(path, destination); err != nil {
-			s.logger.Error("parsing records for %q: %v", path, err)
+			s.logger.Error("parsing records", "path", path, "error", err)
 		}
 	}
 

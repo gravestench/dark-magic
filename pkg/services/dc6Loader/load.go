@@ -20,8 +20,6 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 		}
 	}
 
-	s.logger.Info("loading", "path", filepath)
-
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
@@ -29,12 +27,12 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %v", err)
+		return nil, fmt.Errorf("reading data %q: %v", filepath, err)
 	}
 
 	dc6Image, err := dc6.FromBytes(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing dc6", "error", err)
+		return nil, fmt.Errorf("parsing dc6 %q: %v", filepath, err)
 	}
 
 	if s.cache != nil {
@@ -42,6 +40,8 @@ func (s *Service) Load(filepath string) (*dc6.DC6, error) {
 			s.logger.Error("caching file", "error", err)
 		}
 	}
+
+	s.logger.Info("loaded DC6 file", "path", filepath)
 
 	return dc6Image, nil
 }

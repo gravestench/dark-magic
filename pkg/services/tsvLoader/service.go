@@ -30,6 +30,10 @@ func (s *Service) Ready() bool {
 		return false
 	}
 
+	if !s.mpq.RequiredArchivesLoaded() {
+		return false
+	}
+
 	if s.config == nil {
 		return false
 	}

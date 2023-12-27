@@ -7,7 +7,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
-var _ configFile.HasConfig = &Service{}
+var _ configFile.HasDefaultConfig = &Service{}
 
 func (s *Service) ConfigFileName() string {
 	return "heroes.json"
@@ -15,6 +15,10 @@ func (s *Service) ConfigFileName() string {
 
 func (s *Service) LoadConfig(config *configFile.Config) {
 	s.config = config
+}
+
+func (s *Service) DefaultConfig() (cfg configFile.Config) {
+	return
 }
 
 func (s *Service) LoadHeroes() error {

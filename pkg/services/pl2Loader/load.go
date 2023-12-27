@@ -15,21 +15,19 @@ func (s *Service) Load(filepath string) (*pl2.PL2, error) {
 		}
 	}
 
-	s.logger.Info("loading", "path", filepath)
-
 	stream, err := s.mpq.Load(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("loading file", "error", err)
+		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
 	}
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data %q: %v", filepath, err)
 	}
 
 	paletteTransform, err := pl2.FromBytes(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing dt1", "error", err)
+		return nil, fmt.Errorf("parsing pl2 %q: %v", filepath, err)
 	}
 
 	if s.cache != nil {
@@ -37,6 +35,8 @@ func (s *Service) Load(filepath string) (*pl2.PL2, error) {
 			s.logger.Error("caching file", "error", err)
 		}
 	}
+
+	s.logger.Info("loaded PL2 file", "path", filepath)
 
 	return paletteTransform, nil
 }

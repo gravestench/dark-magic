@@ -30,18 +30,25 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.bindLoggerToLuaEnvironment()
 
 	for _, service := range mesh.Services() {
-		s.tryToExportToLuaEnvironment(service)
+		go s.tryToExportToLuaEnvironment(service)
 	}
 
 	// wait for all siblings to be ready before we launch scripts
-	for _, service := range mesh.Services() {
-		if candidate, ok := service.(servicemesh.HasDependencies); ok {
-			if !candidate.DependenciesResolved() {
-				continue
+waitForReady:
+	for {
+		for _, service := range mesh.Services() {
+			if !service.Ready() {
+				continue waitForReady
 			}
-		}
 
-		break // all deps resolved for all siblings
+			if candidate, ok := service.(servicemesh.HasDependencies); ok {
+				if !candidate.DependenciesResolved() {
+					continue waitForReady
+				}
+			}
+
+			break waitForReady // all deps resolved for all siblings
+		}
 	}
 
 	for {
@@ -50,7 +57,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		initScriptPath := s.config.Group(s.Name()).GetString("init script")
 
 		if err := s.runScript(initScriptPath); err != nil {
-			s.logger.With("script", initScriptPath).Error("running script", "error", err)
+			s.logger.Error("running script", "error", err)
 			time.Sleep(time.Second * 1)
 			continue
 		}
@@ -65,10 +72,6 @@ func (s *Service) Name() string {
 
 func (s *Service) Ready() bool {
 	if s.config == nil {
-		return false
-	}
-
-	if s.state == nil {
 		return false
 	}
 
