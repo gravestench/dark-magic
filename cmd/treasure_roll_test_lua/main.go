@@ -11,23 +11,23 @@ import (
 )
 
 const (
-	projectName      = "Dark Magic Runtime"
+	projectName      = "Dark Magic"
 	projectConfigDir = "~/.config/dark-magic"
 )
 
 func main() {
-	rt := servicemesh.New(projectName)
+	app := servicemesh.New(projectName)
 
 	// utility services
-	rt.Add(&lua.Service{})
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
+	app.Add(&lua.Service{})
+	app.Add(&configFile.Service{RootDirectory: projectConfigDir})
 
 	// d2 file loaders
-	rt.Add(&tsvLoader.Service{})
-	rt.Add(&mpqLoader.Service{})
+	app.Add(&tsvLoader.Service{})
+	app.Add(&mpqLoader.Service{})
 
 	// high level d2 services
-	rt.Add(&recordManager.Service{})
+	app.Add(&recordManager.Service{})
 
-	rt.Run()
+	app.Run()
 }

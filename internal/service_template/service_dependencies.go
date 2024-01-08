@@ -25,14 +25,14 @@ func (s *Service) DependenciesResolved() bool {
 	return true
 }
 
-func (s *Service) ResolveDependencies(mesh servicemesh.Mesh) {
+func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	type barDependency any // example
 	type bazDependency any // example
 
 	// it is up to us to iterate over our sibling services
 	// and resolve our own dependencies.
 
-	for _, service := range mesh.Services() {
+	for _, service := range services {
 		switch candidate := service.(type) {
 		case barDependency:
 			s.bar = candidate

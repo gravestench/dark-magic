@@ -51,18 +51,11 @@ waitForReady:
 		}
 	}
 
-	for {
-		// TODO :: race condition where this script inits before other services
-		//   have a chance to export their stuff to the lua state machine
-		initScriptPath := s.config.Group(s.Name()).GetString("init script")
+	initScriptPath := s.config.Group(s.Name()).GetString("init script")
 
-		if err := s.runScript(initScriptPath); err != nil {
-			s.logger.Error("running script", "error", err)
-			time.Sleep(time.Second * 1)
-			continue
-		}
-
-		break
+	if err := s.runScript(initScriptPath); err != nil {
+		s.logger.Error("running script", "error", err)
+		time.Sleep(time.Second * 1)
 	}
 }
 

@@ -16,7 +16,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
-	"github.com/gravestench/dark-magic/pkg/services/goscript"
 	"github.com/gravestench/dark-magic/pkg/services/guiManager"
 	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/input"
@@ -43,48 +42,51 @@ const (
 )
 
 func main() {
-	rt := servicemesh.New(projectName)
+	app := servicemesh.New(projectName)
 
-	rt.SetLogHandler(prettylog.NewHandler(nil))
+	app.SetLogHandler(prettylog.NewHandler(nil))
 
 	// utility services
 	//rt.Add(&modalTui.Service{})
-	rt.Add(&lua.Service{})
-	rt.Add(&goscript.Service{})
-	rt.Add(&cacheManager.Service{})
-	rt.Add(&fileWatcher.Service{})
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
-	rt.Add(&webServer.Service{})
-	rt.Add(&webRouter.Service{})
-	rt.Add(&fontTableLoader.Service{})
-	rt.Add(&dc6Loader.Service{})
-	rt.Add(&dccLoader.Service{})
-	rt.Add(&ds1Loader.Service{})
-	rt.Add(&dt1Loader.Service{})
-	rt.Add(&pl2Loader.Service{})
-	rt.Add(&tblLoader.Service{})
-	rt.Add(&tsvLoader.Service{})
-	rt.Add(&wavLoader.Service{})
-	rt.Add(&cofLoader.Service{})
-	rt.Add(&mpqLoader.Service{})
+	//app.Add(&goscript.Service{}) // WIP
+	app.Add(&lua.Service{})
+	app.Add(&cacheManager.Service{})
+	app.Add(&fileWatcher.Service{})
+	app.Add(&configFile.Service{RootDirectory: projectConfigDir})
+	app.Add(&webServer.Service{})
+	app.Add(&webRouter.Service{})
+
+	// file/record loaders
+	app.Add(&fontTableLoader.Service{})
+	app.Add(&dc6Loader.Service{})
+	app.Add(&dccLoader.Service{})
+	app.Add(&ds1Loader.Service{})
+	app.Add(&dt1Loader.Service{})
+	app.Add(&pl2Loader.Service{})
+	app.Add(&tblLoader.Service{})
+	app.Add(&tsvLoader.Service{})
+	app.Add(&wavLoader.Service{})
+	app.Add(&cofLoader.Service{})
+	app.Add(&mpqLoader.Service{})
+
+	// these all use the loaders and records
+	app.Add(&assetLoader.Service{})
+	app.Add(&recordManager.Service{})
+	app.Add(&spriteManager.Service{})
+	app.Add(&locale.Service{})
+	app.Add(&mapGenerator.Service{})
+	app.Add(&hero.Service{})
 
 	// rendering-dependant services
-	rt.Add(&raylibRenderer.Service{})
-	rt.Add(&guiManager.Service{})
-	rt.Add(&modalGameUI.Service{})
-	rt.Add(&input.Service{})           // rendering backend also handles input
-	rt.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
+	app.Add(&raylibRenderer.Service{})
+	app.Add(&input.Service{})           // rendering backend also handles input
+	app.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
 
-	// high level services
-	rt.Add(&assetLoader.Service{})
-	rt.Add(&recordManager.Service{})
-	rt.Add(&spriteManager.Service{})
-	rt.Add(&locale.Service{})
-	rt.Add(&mapGenerator.Service{})
-	rt.Add(&hero.Service{})
+	app.Add(&guiManager.Service{})
+	app.Add(&modalGameUI.Service{})
+	app.Add(&loading.Screen{})
+	//app.Add(&trademark.Screen{})
 
-	// game ui screens
-	rt.Add(&loading.Screen{})
-
-	mainthread.Run(rt.Run)
+	// renderer requires use of mainthread
+	mainthread.Run(app.Run)
 }

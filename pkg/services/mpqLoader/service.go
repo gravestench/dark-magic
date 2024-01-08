@@ -1,7 +1,6 @@
 package mpqLoader
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -96,8 +95,8 @@ func (s *Service) RemoveArchive(filepath string) error {
 }
 
 func (s *Service) Load(filepath string) (io.Reader, error) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	//s.mux.Lock()
+	//defer s.mux.Unlock()
 
 	allErrors := make([]error, 0)
 
@@ -107,8 +106,8 @@ func (s *Service) Load(filepath string) (io.Reader, error) {
 	for _, key := range s.ordering {
 		archive := s.archives[key]
 
-		if data, err := archive.ReadFile(filepath); err == nil {
-			return bytes.NewReader(data), nil
+		if data, err := archive.ReadFileStream(filepath); err == nil {
+			return data, nil
 		}
 
 		allErrors = append(allErrors, fmt.Errorf("not found in %v", key))

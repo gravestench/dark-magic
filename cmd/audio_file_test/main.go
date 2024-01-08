@@ -17,17 +17,17 @@ const (
 )
 
 func main() {
-	rt := servicemesh.New(projectName)
-	rt.SetLogHandler(prettylog.NewHandler(nil))
+	app := servicemesh.New(projectName)
+	app.SetLogHandler(prettylog.NewHandler(nil))
 
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
-	rt.Add(&fileWatcher.Service{})
+	app.Add(&configFile.Service{RootDirectory: projectConfigDir})
+	app.Add(&fileWatcher.Service{})
 
-	rt.Add(&tsvLoader.Service{})
-	rt.Add(&wavLoader.Service{})
-	rt.Add(&mpqLoader.Service{})
+	app.Add(&tsvLoader.Service{})
+	app.Add(&wavLoader.Service{})
+	app.Add(&mpqLoader.Service{})
 
-	rt.Add(&audioFileTestService{})
+	app.Add(&audioFileTestService{})
 
-	rt.Run()
+	app.Run()
 }
