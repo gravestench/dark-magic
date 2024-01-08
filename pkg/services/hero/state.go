@@ -10,12 +10,12 @@ type State struct {
 	Class                 models.Hero `json:"Class,string"`
 	Level                 int
 	record                models.CharStats
-	experienceProgression []experienceBreakpoint // comes from character class records
+	experienceProgression []ExperienceBreakpoint // comes from character class records
 	Attributes            map[string]int
 	Skills                []string
 }
 
-type experienceBreakpoint struct {
+type ExperienceBreakpoint struct {
 	Experience int
 	Ratio      float32
 }

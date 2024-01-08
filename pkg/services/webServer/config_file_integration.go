@@ -1,48 +1,49 @@
 package webServer
 
 import (
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"encoding/json"
+	"fmt"
+
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
-const (
-	keyPort     = "port"
-	defaultPort = 8080
+type Config struct {
+	Port         int
+	Tls          bool
+	AutoCert     bool
+	CertFilepath string
+	KeyFilepath  string
+}
 
-	keyTls     = "tls"
-	defaultTls = false
-
-	keyAutocert     = "autocert"
-	defaultAutocert = false
-
-	keyCertFilepath     = "tls.CertFilepath"
-	defaultCertFilepath = "cert.pem"
-
-	keyKeyFilepath     = "tls.KeyFilepath"
-	defaultKeyFilepath = "cert.key"
-)
-
-var _ configFile.HasConfig = &Service{}
+var _ configManager.HasConfiguration = &Service{}
 
 func (s *Service) ConfigFileName() string {
 	return "web_server.json"
 }
 
-func (s *Service) DefaultConfig() (cfg configFile.Config) {
-	g := cfg.Group("Web Server")
+func (s *Service) DefaultConfigData() []byte {
+	var cfg Config
 
-	for key, val := range map[string]any{
-		keyPort:         defaultPort,
-		keyTls:          defaultTls,
-		keyAutocert:     defaultAutocert,
-		keyCertFilepath: defaultCertFilepath,
-		keyKeyFilepath:  defaultKeyFilepath,
-	} {
-		g.Set(key, val)
-	}
+	cfg.Port = 8080
+	cfg.Tls = false
+	cfg.AutoCert = false
+	cfg.CertFilepath = "cert.pem"
+	cfg.KeyFilepath = "cert.key"
 
-	return
+	data, _ := json.MarshalIndent(&cfg, "", "\t")
+
+	return data
 }
 
-func (s *Service) LoadConfig(config *configFile.Config) {
-	s.config = config
+func (s *Service) IngestConfig(handle *configManager.ConfigHandle) error {
+	data, err := handle.Data()
+	if err != nil {
+		return fmt.Errorf("getting config data: %v", err)
+	}
+
+	if err = json.Unmarshal(data, &s.config); err != nil {
+		return fmt.Errorf("unmarshalling config data: %v", err)
+	}
+
+	return nil
 }

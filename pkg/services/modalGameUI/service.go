@@ -1,23 +1,21 @@
 package modalGameUI
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/common"
 	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 type Service struct {
-	logger *slog.Logger
+	common.Service
 
-	dc6      dc6Loader.Dependency
-	pl2      pl2Loader.Dependency
+	assets   assetLoader.Dependency
 	renderer raylibRenderer.Dependency
 	input    input.Dependency
 
@@ -28,6 +26,7 @@ type Service struct {
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
+	time.Sleep(time.Second * 5)
 	s.modals = make([]ModalGameUI, 0)
 	s.rootNode = s.renderer.NewRenderable()
 	s.rootNode.Disable()
@@ -51,18 +50,18 @@ func (s *Service) attemptBindService(service servicemesh.Service) {
 }
 
 func (s *Service) initCursor() {
-	dc6Cursor, err := s.dc6.Load(paths.CursorDefault)
+	dc6Cursor, err := s.assets.LoadDc6(paths.CursorDefault)
 	for err != nil {
 		// TODO :: fix a race condition with the mpq loader
 		time.Sleep(time.Millisecond * 100)
-		dc6Cursor, err = s.dc6.Load(paths.CursorDefault)
+		dc6Cursor, err = s.assets.LoadDc6(paths.CursorDefault)
 	}
 
-	act1, err := s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
+	act1, err := s.assets.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
 	for err != nil {
 		// TODO :: fix a race condition with the mpq loader
 		time.Sleep(time.Millisecond * 100)
-		act1, err = s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
+		act1, err = s.assets.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
 	}
 
 	dc6Cursor.SetPalette(act1)
@@ -123,11 +122,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.pl2 == nil {
+	if s.assets == nil {
 		return false
 	}
 
@@ -140,15 +135,4 @@ func (s *Service) Ready() bool {
 	}
 
 	return true
-}
-
-// the following methods are boilerplate, but they are used
-// by the servicemesh to enforce a standard logging format.
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
 }

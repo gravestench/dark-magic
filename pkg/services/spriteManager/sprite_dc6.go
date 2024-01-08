@@ -35,7 +35,7 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
 	}
 
-	dc6Image, err := s.dc6.Load(pathDC6)
+	dc6Image, err := s.assets.LoadDc6(pathDC6)
 	if err != nil {
 		return nil, fmt.Errorf("loading dc6", "error", err)
 	}
@@ -99,7 +99,7 @@ func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 		}
 	}
 
-	paletteStream, err := s.mpq.Load(pathPL2)
+	paletteStream, err := s.assets.Load(pathPL2)
 	if err != nil {
 		return nil, fmt.Errorf("loading pl2", "error", err)
 	}

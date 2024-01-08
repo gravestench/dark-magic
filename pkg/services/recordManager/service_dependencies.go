@@ -3,20 +3,15 @@ package recordManager
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.cfg == nil {
+	if s.assets == nil {
 		return false
 	}
 
-	if s.tsv == nil {
-		return false
-	}
-
-	if !s.tsv.(servicemesh.HasDependencies).DependenciesResolved() {
+	if !s.assets.(servicemesh.HasDependencies).DependenciesResolved() {
 		return false
 	}
 
@@ -26,10 +21,8 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case configFile.Dependency:
-			s.cfg = candidate
-		case tsvLoader.Dependency:
-			s.tsv = candidate
+		case assetLoader.Dependency:
+			s.assets = candidate
 		}
 	}
 }

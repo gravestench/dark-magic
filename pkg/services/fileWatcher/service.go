@@ -1,6 +1,7 @@
 package fileWatcher
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -54,10 +55,6 @@ func (s *Service) setupServiceToWatchFiles(service servicemesh.Service) {
 		return
 	}
 
-	for !service.Ready() {
-		time.Sleep(time.Millisecond * 10)
-	}
-
 	dependent, ok := service.(servicemesh.HasDependencies)
 	if ok {
 		// we want to wait for the other service to resolve its dependencies,
@@ -72,7 +69,8 @@ func (s *Service) setupServiceToWatchFiles(service servicemesh.Service) {
 	}
 
 	for path, handler := range candidate.FileHandlers() {
-		s.logger.Info("setting up file watchers", "for", service.Name(), "path", path)
+		msg := fmt.Sprintf("setting up file watchers for %q", service.Name())
+		s.logger.Info(msg, "path", path)
 		s.AddWatcher(path, handler)
 	}
 }

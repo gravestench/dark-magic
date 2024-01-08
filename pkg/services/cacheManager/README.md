@@ -9,7 +9,7 @@ There are no servicemesh dependencies on other services.
 
 ## Integration with other services
 This service integrates with the following services:
-* [lua](../lua)
+* [lua](../luaManager)
 * [modal TUI](../modalTui)
 * [web router](../webRouter)
 

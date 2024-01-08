@@ -20,6 +20,9 @@ func (s *Service) Reload() {
 		return
 	}
 
+	s.mtx.Lock()
+	defer s.mtx.Lock()
+
 	s.reloadDebounce = time.Now()
 
 	s.log.Warn("reloading")
@@ -35,7 +38,7 @@ func (s *Service) Reload() {
 	s.boundServices = make(map[string]*struct{})
 
 	mode := gin.ReleaseMode
-	if s.config.Group("Gin Router Handler").GetBool("debug") {
+	if s.config.Gin.Debug {
 		mode = gin.DebugMode
 	}
 
@@ -55,16 +58,16 @@ func (s *Service) Reload() {
 	})
 }
 
-func (s *Service) beginDynamicRouteBinding(mesh servicemesh.Mesh) {
-	for {
-		if s.shouldInit(mesh) {
-			s.Reload()
-		}
-
-		s.bindNewRoutes(mesh)
-		time.Sleep(time.Second)
-	}
-}
+//func (s *Service) beginDynamicRouteBinding(mesh servicemesh.Mesh) {
+//	for {
+//		if s.shouldInit(mesh) {
+//			s.Reload()
+//		}
+//
+//		s.bindNewRoutes(mesh)
+//		time.Sleep(time.Second)
+//	}
+//}
 
 func (s *Service) shouldInit(mesh servicemesh.Mesh) bool {
 	if s.boundServices == nil {
@@ -91,7 +94,7 @@ func (s *Service) shouldInit(mesh servicemesh.Mesh) bool {
 	}
 
 	// iterate over each bound service, check if its name
-	// exists as a substring inside of our lookup string
+	// exists as a substring inside our lookup string
 	for key, _ := range s.boundServices {
 		if !slices.Contains(allExistingServiceNames, key) {
 			return true
@@ -108,9 +111,12 @@ func (s *Service) bindNewRoutes(mesh servicemesh.Mesh) {
 			continue
 		}
 
+		s.mtx.Lock()
 		if _, alreadyBound := s.boundServices[svcToInit.Name()]; alreadyBound {
+			s.mtx.Unlock()
 			continue
 		}
+		s.mtx.Unlock()
 
 		if svc, ok := candidate.(servicemesh.HasDependencies); ok {
 			if !svc.DependenciesResolved() {
@@ -123,15 +129,13 @@ func (s *Service) bindNewRoutes(mesh servicemesh.Mesh) {
 			groupPrefix = svc.Slug()
 		}
 
-		defer func() {
-			_ = recover() // dont worry about this lol
-		}()
-
 		// handle route init
 		if r, ok := candidate.(IsRouteInitializer); ok {
 			r.InitRoutes(s.root.Group(groupPrefix))
+			s.mtx.Lock()
 			s.boundServices[svcToInit.Name()] = nil // make 0-size entry
-			s.log.Info("binding routes", "for", svcToInit.Name())
+			s.mtx.Unlock()
+			s.log.Info("binding routes", "service", svcToInit.Name())
 
 			continue
 		}

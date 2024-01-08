@@ -237,6 +237,14 @@ func (n *node) IsEnabled() bool {
 	return n.enabled
 }
 
+func (n *node) Parent() Renderable {
+	if n.parent == nil {
+		return n.renderer.rootNode
+	}
+
+	return n.parent
+}
+
 // SetParent sets the parent of this scene graph node
 func (n *node) SetParent(p Renderable) {
 	if n == p {

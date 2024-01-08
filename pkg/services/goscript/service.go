@@ -1,22 +1,18 @@
 package goscript
 
 import (
-	"log/slog"
-
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/common"
 )
 
 type Service struct {
-	config *configFile.Config
-	logger *slog.Logger
+	common.Service
+	*Config
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	initScriptPath := s.config.Group(s.Name()).GetString("init script")
-
-	s.runScript(initScriptPath)
+	s.runScript(s.Config.InitScriptPath)
 
 	// TODO: add file watcher for re-running init script.
 }
@@ -26,17 +22,9 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.config == nil {
+	if s.Config == nil {
 		return false
 	}
 
 	return true
-}
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
 }

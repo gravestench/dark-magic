@@ -24,7 +24,7 @@ func (s *Service) InitRoutes(group *gin.RouterGroup) {
 func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 	path := c.Param("path")
 
-	stream, err := s.mpq.Load(path)
+	stream, err := s.assets.Load(path)
 	if err != nil {
 		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)

@@ -5,9 +5,8 @@ import (
 
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 )
@@ -15,8 +14,7 @@ import (
 type Service struct {
 	logger *slog.Logger
 
-	dc6      dc6Loader.Dependency
-	mpq      mpqLoader.Dependency
+	assets   assetLoader.Dependency
 	sprite   spriteManager.Dependency
 	renderer raylibRenderer.Dependency
 	input    input.Dependency
@@ -35,11 +33,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.mpq == nil {
-		return false
-	}
-
-	if s.dc6 == nil {
+	if s.assets == nil {
 		return false
 	}
 

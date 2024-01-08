@@ -7,16 +7,14 @@ import (
 
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
 type Service struct {
 	logger *slog.Logger
 
-	dt1     dt1Loader.Dependency
-	ds1     ds1Loader.Dependency
+	assets  assetLoader.Dependency
 	records recordManager.Dependency
 
 	seed uint64
@@ -39,11 +37,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.dt1 == nil {
-		return false
-	}
-
-	if s.ds1 == nil {
+	if s.assets == nil {
 		return false
 	}
 
@@ -107,7 +101,7 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 			if strings.HasSuffix(strings.ToLower(filePath), ".dt1") {
 				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
 
-				tileset, err := s.dt1.Load(filePath)
+				tileset, err := s.assets.LoadDt1(filePath)
 				if err != nil {
 					continue
 					//return fmt.Errorf("loading dt1 specified in level type record", "error", err)
@@ -119,7 +113,7 @@ func (s *Service) loadLevelTypeRecordsToWorldMap(act uint, m *WorldMap) error {
 			if strings.HasSuffix(strings.ToLower(filePath), ".ds1") {
 				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
 
-				tileStamp, err := s.ds1.Load(filePath)
+				tileStamp, err := s.assets.LoadDs1(filePath)
 				if err != nil {
 					continue
 					//return fmt.Errorf("loading dt1 specified in level type record", "error", err)
@@ -160,7 +154,7 @@ func (s *Service) loadLevelPresetRecordsToWorldMap(m *WorldMap) error {
 
 				filePath = fmt.Sprintf("data/global/tiles/%s", filePath)
 
-				stamp, err := s.ds1.Load(filePath)
+				stamp, err := s.assets.LoadDs1(filePath)
 				if err != nil {
 					s.logger.Error("loading ds1 %q for level %q: %v", filePath, level.Name, err)
 					continue

@@ -1,34 +1,34 @@
 package hero
 
 import (
-	"log/slog"
+	"sort"
 
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/common"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 )
 
 type Service struct {
-	logger *slog.Logger
-
-	config  *configFile.Config
-	records recordManager.Dependency
-
-	expBreakpoints map[models.Hero][]experienceBreakpoint
-	heroStates     []State
+	common.Service
+	Config
+	cfgHandle      *configManager.ConfigHandle
+	records        recordManager.Dependency
+	expBreakpoints map[models.Hero][]ExperienceBreakpoint
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	s.expBreakpoints = make(map[models.Hero][]experienceBreakpoint)
-	s.heroStates = make([]State, 0)
-
-	if err := s.LoadHeroes(); err != nil {
-		s.logger.Error("loading heroes from config", "error", err)
-	}
-
+	s.expBreakpoints = make(map[models.Hero][]ExperienceBreakpoint)
 	s.loadExperienceBreakpoints()
+}
+
+func (s *Service) OnServiceMeshShutdownInitiated() {
+	// we want to save the heroes when the app shuts down
+	if err := s.SaveHeroes(); err != nil {
+		s.Logger().Error("saving heroes", "error", err)
+	}
 }
 
 func (s *Service) Name() string {
@@ -40,19 +40,11 @@ func (s *Service) Ready() bool {
 		return false
 	}
 
-	if s.config == nil {
+	if s.Config == nil {
 		return false
 	}
 
 	return true
-}
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
 }
 
 func (s *Service) CreateHero(name string, hero models.Hero) State {
@@ -93,19 +85,25 @@ func (s *Service) CreateHero(name string, hero models.Hero) State {
 		state.Skills = append(state.Skills, skillID)
 	}
 
-	s.heroStates = append(s.heroStates, state)
-
 	return state
 }
 
-func (s *Service) GetHeroes() []State {
-	return s.heroStates
+func (s *Service) GetHeroes() (heroes []State) {
+	for _, state := range s.Config {
+		heroes = append(heroes, *state)
+	}
+
+	sort.Slice(heroes, func(i, j int) bool {
+		return heroes[i].Name < heroes[j].Name
+	})
+
+	return
 }
 
 func (s *Service) GetHeroByName(name string) *State {
-	for _, state := range s.heroStates {
+	for _, state := range s.Config {
 		if state.Name == name {
-			return &state
+			return state
 		}
 	}
 

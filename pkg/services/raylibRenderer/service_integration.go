@@ -8,18 +8,18 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
 // these are static declarations that force a
 // compile-time error if the service does not
 // implement them.
 var (
-	_ servicemesh.Service         = &Service{} // implement in`service.go`
-	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
-	_ configFile.HasDefaultConfig = &Service{} // implement in`lua_integration.go`
-	_ cacheManager.HasCache       = &Service{} // implement in`lua_integration.go`
-	_ IsRenderer                  = &Service{} // implement in`service.go`
+	_ servicemesh.Service            = &Service{} // implement in`service.go`
+	_ servicemesh.HasLogger          = &Service{} // implement in`service.go`
+	_ configManager.HasConfiguration = &Service{} // implement in`lua_integration.go`
+	_ cacheManager.HasCache          = &Service{} // implement in`lua_integration.go`
+	_ IsRenderer                     = &Service{} // implement in`service.go`
 )
 
 // this is an alias which can be used to make
@@ -112,6 +112,7 @@ type hasOrigin interface {
 }
 
 type hasChildren interface {
+	Parent() Renderable
 	SetParent(Renderable)
 	addChild(Renderable)
 	removeChild(Renderable)

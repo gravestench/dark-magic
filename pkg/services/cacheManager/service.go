@@ -1,6 +1,7 @@
 package cacheManager
 
 import (
+	"fmt"
 	"log/slog"
 	"sort"
 	"sync"
@@ -55,6 +56,14 @@ func (s *Service) FlushAllCaches() {
 func (s *Service) tryToFlushAllCaches(mesh servicemesh.Mesh) {
 	for _, service := range mesh.Services() {
 		s.tryToFlushCacheForService(service)
+		if candidate, ok := service.(HasCaches); ok {
+			for idx, destination := range candidate.Caches() {
+				newCache := cache.New(destination.CacheBudget())
+				destination.FlushCache(newCache)
+
+				s.caches[fmt.Sprintf("%s:%d", service.Name(), idx)] = newCache
+			}
+		}
 	}
 }
 
@@ -71,10 +80,12 @@ func (s *Service) tryToFlushCacheForService(service servicemesh.Service) {
 		return
 	}
 
-	s.logger.Info("flushing cache", "for", service.Name())
+	s.logger.Info("flushing cache", "service", service.Name())
 
-	for !service.Ready() {
-		time.Sleep(time.Millisecond * 10)
+	if d, hasDeps := candidate.(servicemesh.HasDependencies); hasDeps {
+		for !d.DependenciesResolved() {
+			time.Sleep(time.Millisecond * 10)
+		}
 	}
 
 	newCache := cache.New(candidate.CacheBudget())

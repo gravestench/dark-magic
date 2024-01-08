@@ -1,56 +1,59 @@
 package raylibRenderer
 
 import (
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"encoding/json"
+	"fmt"
+
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
-var _ configFile.HasConfig = &Service{}
+var _ configManager.HasConfiguration = &Service{}
 
 func (s *Service) ConfigFileName() string {
 	return "raylib_renderer.json"
 }
 
-const (
-	groupKeyWindow      = "Window"
-	keyWindowTitle      = "title"
-	keyWindowWidth      = "width"
-	keyWindowHeight     = "height"
-	keyWindowFullscreen = "fullscreen"
-
-	groupKeyResolution  = "Resolution"
-	keyResolutionWidth  = "width"
-	keyResolutionHeight = "height"
-
-	groupKeyCache  = "Cache"
-	keyCacheBudget = "budget (B)"
-)
-
-func (s *Service) DefaultConfig() (cfg configFile.Config) {
-	for key, val := range map[string]any{
-		keyWindowTitle:      "MTG",
-		keyWindowWidth:      800,
-		keyWindowHeight:     600,
-		keyWindowFullscreen: false,
-	} {
-		cfg.Group(groupKeyWindow).Set(key, val)
+type Config struct {
+	Window struct {
+		Title         string
+		Width, Height int
+		Fullscreen    bool
+		Borderless    bool
 	}
-
-	for key, val := range map[string]any{
-		keyResolutionWidth:  800,
-		keyResolutionHeight: 600,
-	} {
-		cfg.Group(groupKeyResolution).Set(key, val)
+	Resolution struct {
+		Width, Height int
 	}
-
-	for key, val := range map[string]any{
-		keyCacheBudget: 100,
-	} {
-		cfg.Group(groupKeyCache).Set(key, val)
+	Cache struct {
+		BudgetMB int
 	}
-
-	return cfg
 }
 
-func (s *Service) LoadConfig(config *configFile.Config) {
-	s.config = config
+func (s *Service) DefaultConfigData() []byte {
+	var cfg Config
+
+	cfg.Window.Title = "Dark Magic"
+	cfg.Window.Width = 800
+	cfg.Window.Height = 600
+
+	cfg.Resolution.Width = 800
+	cfg.Resolution.Height = 600
+
+	cfg.Cache.BudgetMB = 100
+
+	data, _ := json.MarshalIndent(&cfg, "", "\t")
+
+	return data
+}
+
+func (s *Service) IngestConfig(config *configManager.ConfigHandle) error {
+	data, err := config.Data()
+	if err != nil {
+		return fmt.Errorf("getting config data: %v", err)
+	}
+
+	if err = json.Unmarshal(data, &s.config); err != nil {
+		return fmt.Errorf("unmarshalling config: %v", err)
+	}
+
+	return nil
 }

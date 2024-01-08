@@ -3,20 +3,11 @@ package locale
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.tbl == nil {
-		return false
-	}
-
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
+	if s.assets == nil {
 		return false
 	}
 
@@ -26,10 +17,8 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case tblLoader.Dependency:
-			s.tbl = candidate
-		case mpqLoader.Dependency:
-			s.mpq = candidate
+		case assetLoader.Dependency:
+			s.assets = candidate
 		}
 	}
 }

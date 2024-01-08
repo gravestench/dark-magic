@@ -11,8 +11,6 @@ import (
 )
 
 func (s *Service) initAutocertTlsDebugServer() {
-	g := s.config.Group("Web Server")
-
 	certConfig := simplecert.Default
 	certConfig.UpdateHosts = false
 	certConfig.Domains = []string{"foobar.com"}
@@ -36,7 +34,7 @@ func (s *Service) initAutocertTlsDebugServer() {
 
 	// init server
 	s.server = &http.Server{
-		Addr:      fmt.Sprintf(":%d", g.GetInt(keyPort)),
+		Addr:      fmt.Sprintf(":%d", s.config.Port),
 		TLSConfig: tlsconf,
 		Handler:   s.router.RouteRoot(),
 	}
@@ -47,8 +45,6 @@ func (s *Service) initAutocertTlsDebugServer() {
 }
 
 func (s *Service) initAutocertTlsProductionServer() {
-	g := s.config.Group("Web Server")
-
 	var (
 		// the structure that handles reloading the certificate
 		certReloader *simplecert.CertReloader
@@ -62,7 +58,7 @@ func (s *Service) initAutocertTlsProductionServer() {
 		// a simple constructor for a http.Server with our Handler
 		makeServer = func() *http.Server {
 			return &http.Server{
-				Addr:      fmt.Sprintf(":%v", g.GetString(keyPort)),
+				Addr:      fmt.Sprintf(":%v", s.config.Port),
 				Handler:   s.router.RouteRoot(),
 				TLSConfig: tlsConf,
 			}

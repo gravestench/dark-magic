@@ -2,6 +2,10 @@ module github.com/gravestench/dark-magic
 
 go 1.21.3
 
+replace (
+	github.com/gravestench/servicemesh => /Users/dylanknuth/src/servicemesh
+)
+
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
@@ -20,12 +24,13 @@ require (
 	github.com/gravestench/dt1 v0.0.0-20230929200150-517fdcf2176f
 	github.com/gravestench/eventemitter v0.0.0-20230922020814-8ccd81f6aaf9
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
-	github.com/gravestench/mpq v0.0.0-20230801223147-5997e1467bdd
+	github.com/gravestench/mpq v0.0.0-20240422203048-fb87f9ab3d86
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
 	github.com/gravestench/servicemesh v0.0.0-20231220222440-92910d5e643c
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/hajimehoshi/oto v0.7.1
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/traefik/yaegi v0.15.1
 	github.com/yuin/gopher-lua v1.1.0
@@ -49,6 +54,7 @@ require (
 	github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87 // indirect
 	github.com/akamai/AkamaiOPEN-edgegrid-golang v1.1.0 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.976 // indirect
+	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.37.27 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
@@ -62,6 +68,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.4.2 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/dnsimple/dnsimple-go v0.63.0 // indirect
+	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/exoscale/egoscale v0.46.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -78,6 +85,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/golang/snappy v0.0.2 // indirect
 	github.com/goodhosts/hostsfile v0.0.7 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
@@ -93,7 +101,9 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213 // indirect
+	github.com/klauspost/compress v1.11.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b // indirect
 	github.com/labbsr0x/bindman-dns-webhook v1.0.2 // indirect
 	github.com/labbsr0x/goh v1.0.1 // indirect
@@ -121,10 +131,12 @@ require (
 	github.com/nrdcg/dnspod-go v0.4.0 // indirect
 	github.com/nrdcg/goinwx v0.8.1 // indirect
 	github.com/nrdcg/namesilo v0.2.1 // indirect
+	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible // indirect
 	github.com/ovh/go-ovh v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
+	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/otp v1.3.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
@@ -136,7 +148,9 @@ require (
 	github.com/transip/gotransip/v6 v6.6.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
+	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/vultr/govultr/v2 v2.4.0 // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/ratelimit v0.1.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect

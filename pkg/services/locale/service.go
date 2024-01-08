@@ -7,8 +7,7 @@ import (
 	"github.com/gravestench/servicemesh"
 	tbl "github.com/gravestench/tbl_text"
 
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
@@ -23,8 +22,7 @@ type recipe interface {
 
 type Service struct {
 	logger       *slog.Logger
-	mpq          mpqLoader.Dependency
-	tbl          tblLoader.Dependency
+	assets       assetLoader.Dependency
 	language     string
 	stringTables struct {
 		Vanilla   tbl.TextTable
@@ -44,7 +42,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	}
 
 	s.language = languages[0]
-	s.loadTextTables()
+	//s.loadTextTables()
 }
 
 func (s *Service) Name() string {
@@ -52,15 +50,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
-		return false
-	}
-
-	if s.tbl == nil {
+	if s.assets == nil {
 		return false
 	}
 
@@ -83,7 +73,7 @@ func (s *Service) GetSupportedLanguages() []string {
 }
 
 func (s *Service) GetSupportedCharsets() []string {
-	//TODO implement me
+	//TODO implement locale service GetSupportedCharsets
 	panic("implement me")
 }
 
@@ -105,20 +95,20 @@ func (s *Service) loadTextTables() {
 	localePathStringTable := fmt.Sprintf(StringTable, s.language)
 	localePathPatchStringTable := fmt.Sprintf(PatchStringTable, s.language)
 
-	if tbl, err := s.tbl.Load(localePathStringTable); err != nil {
-		s.logger.Error("loading Vanilla string table")
+	if tbl, err := s.assets.LoadTbl(localePathStringTable); err != nil {
+		s.logger.Error("loading Vanilla string table", "error", err)
 	} else {
 		s.stringTables.Vanilla = tbl
 	}
 
-	if tbl, err := s.tbl.Load(localePathExpansionStringTable); err != nil {
-		s.logger.Error("loading Expansion string table")
+	if tbl, err := s.assets.LoadTbl(localePathExpansionStringTable); err != nil {
+		s.logger.Error("loading Expansion string table", "error", err)
 	} else {
 		s.stringTables.Expansion = tbl
 	}
 
-	if tbl, err := s.tbl.Load(localePathPatchStringTable); err != nil {
-		s.logger.Error("loading Patch string table")
+	if tbl, err := s.assets.LoadTbl(localePathPatchStringTable); err != nil {
+		s.logger.Error("loading Patch string table", "error", err)
 	} else {
 		s.stringTables.Patch = tbl
 	}

@@ -8,10 +8,10 @@ import (
 // by the lua service to export stuff into the
 // lua environment for use in scripts.
 
-func (s *Service) ExportToLua(state *lua.LState) {
+func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	// add stuff here to the global lua state machine
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState) {
+func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
 	// remove stuff you added in your export method above
 }

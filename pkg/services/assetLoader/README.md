@@ -25,7 +25,7 @@ This service has dependencies on all other Diablo2 file-loader services:
 This service integrates with the following services:
 
 * [config file service](../configFile)
-* [lua service](../lua)
+* [lua service](../luaManager)
 * [web router service](../webRouter)
 
 The integration is optional; if neither are added to the servicemesh then the

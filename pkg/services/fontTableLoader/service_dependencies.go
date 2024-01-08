@@ -3,19 +3,15 @@ package fontTableLoader
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 )
 
 func (s *Service) DependenciesResolved() bool {
-	if s.mpq == nil {
+	if s.assets == nil {
 		return false
 	}
 
-	if !s.mpq.RequiredArchivesLoaded() {
-		return false
-	}
-
-	if s.config == nil {
+	if s.Config == nil {
 		return false
 	}
 
@@ -25,9 +21,8 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case mpqLoader.Dependency:
-			s.mpq = candidate
-
+		case assetLoader.Dependency:
+			s.assets = candidate
 		}
 	}
 }

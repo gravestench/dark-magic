@@ -5,16 +5,16 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
 var (
-	_ servicemesh.Service         = &Service{}
-	_ servicemesh.HasLogger       = &Service{}
-	_ servicemesh.HasDependencies = &Service{}
-	_ configFile.HasDefaultConfig = &Service{}
-	_ cacheManager.HasCache       = &Service{}
-	_ LoadsFontTableFiles         = &Service{}
+	_ servicemesh.Service            = &Service{}
+	_ servicemesh.HasLogger          = &Service{}
+	_ servicemesh.HasDependencies    = &Service{}
+	_ configManager.HasConfiguration = &Service{}
+	_ cacheManager.HasCache          = &Service{}
+	_ LoadsFontTableFiles            = &Service{}
 )
 
 type Dependency = LoadsFontTableFiles

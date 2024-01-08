@@ -18,7 +18,7 @@ This service has dependencies on MPQ and TSV file loaders:
 
 This service integrates with the following services:
 
-* [lua service](../lua)
+* [lua service](../luaManager)
 * [web router service](../webRouter)
 
 The integration is optional; if either of the lua or web router services are

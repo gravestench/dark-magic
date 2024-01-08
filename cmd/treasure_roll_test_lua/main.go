@@ -3,31 +3,35 @@ package main
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/prettylog"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 const (
-	projectName      = "Dark Magic Runtime"
+	projectName      = "Dark Magic"
 	projectConfigDir = "~/.config/dark-magic"
 )
 
 func main() {
-	rt := servicemesh.New(projectName)
+	app := servicemesh.New(projectName)
+	app.SetLogHandler(prettylog.NewHandler(nil))
 
 	// utility services
-	rt.Add(&lua.Service{})
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
+	app.Add(&configManager.Service{RootDirectory: projectConfigDir})
+	app.Add(&fileWatcher.Service{})
 
 	// d2 file loaders
-	rt.Add(&tsvLoader.Service{})
-	rt.Add(&mpqLoader.Service{})
+	app.Add(&tsvLoader.Service{})
+	app.Add(&mpqLoader.Service{})
 
 	// high level d2 services
-	rt.Add(&recordManager.Service{})
+	app.Add(&recordManager.Service{})
+	app.Add(&luaManager.Service{})
 
-	rt.Run()
+	app.Run()
 }

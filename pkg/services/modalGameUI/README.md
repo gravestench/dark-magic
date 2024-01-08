@@ -12,7 +12,7 @@ This service has dependencies on the following services:
 
 ## Integration with other services
 This service integrates with the following services:
-* [lua](../lua)
+* [lua](../luaManager)
 
 Lua integration is optional, meaning that the lua service can be omitted at servicemesh.
 

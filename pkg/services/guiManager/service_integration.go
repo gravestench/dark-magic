@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -17,7 +17,7 @@ var (
 	_ servicemesh.Service         = &Service{} // implement in`service.go`
 	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
 	_ servicemesh.HasDependencies = &Service{} // implement in`dependencies.go`
-	_ lua.UsesLuaEnvironment      = &Service{} // implement in`lua_integration.go`
+	_ luaManager.LuaPlugin        = &Service{} // implement in`lua_integration.go`
 	_ ManagesGui                  = &Service{} // implement in`service.go`
 )
 

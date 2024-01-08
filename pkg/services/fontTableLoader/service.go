@@ -1,19 +1,17 @@
 package fontTableLoader
 
 import (
-	"log/slog"
-
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+	"github.com/gravestench/dark-magic/pkg/services/common"
 )
 
 type Service struct {
-	logger *slog.Logger
-	mpq    mpqLoader.Dependency
-	config *configFile.Config
+	common.Service
+	*Config
+	assets assetLoader.Dependency
 	cache  *cache.Cache
 }
 
@@ -26,25 +24,13 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.mpq == nil {
+	if s.Config == nil {
 		return false
 	}
 
-	if s.config == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
+	if s.assets == nil {
 		return false
 	}
 
 	return true
-}
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
 }

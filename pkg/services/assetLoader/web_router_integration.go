@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//go:embed d2_uber_file_list.txt.gz
+//go:embed internal/d2_uber_file_list.txt.gz
 var uberFileList []byte
 
 func (s *Service) Slug() string {
@@ -32,9 +32,7 @@ func (s *Service) handleGetUberFileList(c *gin.Context) {
 func (s *Service) extractAndDownloadFromMpq(c *gin.Context) {
 	path := c.Param("path")
 
-	s.logger.Info(path)
-
-	stream, err := s.mpq.Load(path)
+	stream, err := s.file.Load(path)
 	if err != nil {
 		s.logger.Error("loading file", "error", err)
 		c.JSON(http.StatusBadRequest, err)

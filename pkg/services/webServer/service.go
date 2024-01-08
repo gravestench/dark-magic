@@ -6,14 +6,13 @@ import (
 
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 )
 
 type Service struct {
 	log        *slog.Logger
 	router     webRouter.Dependency
-	config     *configFile.Config
+	config     *Config
 	server     *http.Server
 	lastConfig string
 }

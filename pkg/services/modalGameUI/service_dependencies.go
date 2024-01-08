@@ -3,9 +3,8 @@ package modalGameUI
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -26,11 +25,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.pl2 == nil {
+	if s.assets == nil {
 		return false
 	}
 
@@ -44,10 +39,8 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 			s.renderer = candidate
 		case input.Dependency:
 			s.input = candidate
-		case dc6Loader.Dependency:
-			s.dc6 = candidate
-		case pl2Loader.Dependency:
-			s.pl2 = candidate
+		case assetLoader.Dependency:
+			s.assets = candidate
 		}
 	}
 }

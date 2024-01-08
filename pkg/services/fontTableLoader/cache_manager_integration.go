@@ -11,7 +11,7 @@ func (s *Service) CacheBudget() int {
 		mb = 1024 * kb
 	)
 
-	budget := s.config.Group(s.Name()).GetInt(configKeyCacheBudgetMB)
+	budget := s.Config.CacheSizeMB
 	if budget == 0 {
 		budget = 500
 	}

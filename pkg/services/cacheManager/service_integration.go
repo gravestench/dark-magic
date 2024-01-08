@@ -4,7 +4,7 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 )
 
@@ -14,7 +14,7 @@ import (
 var (
 	_ servicemesh.Service                = &Service{} // implement in`service.go`
 	_ servicemesh.HasLogger              = &Service{} // implement in`service.go`
-	_ lua.UsesLuaEnvironment             = &Service{} // implement in`lua_integration.go`
+	_ luaManager.LuaPlugin               = &Service{} // implement in`lua_integration.go`
 	_ modalTui.HasModalTextUserInterface = &Service{} // implement in`service.go`
 	_ IsCacheManager                     = &Service{} // implement in`service.go`
 )
@@ -39,4 +39,8 @@ type IsCacheManager interface {
 type HasCache interface {
 	CacheBudget() int
 	FlushCache(newCache *cache.Cache)
+}
+
+type HasCaches interface {
+	Caches() []HasCache
 }

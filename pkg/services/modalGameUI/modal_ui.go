@@ -22,10 +22,10 @@ func (s *Service) SetMode(mode string) {
 	}
 
 	for _, child := range s.rootNode.Children() {
-		child.SetParent(nil)
+		child.Disable()
 	}
 
-	modal.Renderable().SetParent(s.rootNode)
+	modal.Renderable().Enable()
 }
 
 func (s *Service) getMode(mode string) ModalGameUI {

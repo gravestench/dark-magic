@@ -26,7 +26,7 @@ func (s *Service) LoadDccToPngSpriteAtlas(pathDCC string, pathPL2 string) ([]byt
 		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
 	}
 
-	dccImage, err := s.dcc.Load(pathDCC)
+	dccImage, err := s.assets.LoadDcc(pathDCC)
 	if err != nil {
 		return nil, fmt.Errorf("loading dc6", "error", err)
 	}

@@ -19,7 +19,7 @@ This service has dependencies on all other Diablo2 file-loader services:
 
 ## Integration with other services
 This service integrates with the following services:
-* [lua service](../lua)
+* [lua service](../luaManager)
 * [raylib renderer](../raylibRenderer) - implements the RenderableLayer interface
 
 The raylib renderer integration is mandatory considering that the renderer

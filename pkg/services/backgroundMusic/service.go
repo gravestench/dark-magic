@@ -9,20 +9,20 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
-	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
 
 var _ BackgroundMusicManager = &Service{}
 
 type Service struct {
-	logger     *slog.Logger
-	mpqWavLoad wavLoader.Dependency
-	renderer   raylibRenderer.Dependency
+	logger   *slog.Logger
+	assets   assetLoader.Dependency
+	renderer raylibRenderer.Dependency
 }
 
 func (s *Service) DependenciesResolved() bool {
-	if s.mpqWavLoad == nil {
+	if s.assets == nil {
 		return false
 	}
 
@@ -32,8 +32,8 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case wavLoader.Dependency:
-			s.mpqWavLoad = candidate
+		case assetLoader.Dependency:
+			s.assets = candidate
 		case raylibRenderer.Dependency:
 			s.renderer = candidate
 		}
@@ -61,11 +61,7 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if !s.DependenciesResolved() {
-		return false
-	}
-
-	if !s.mpqWavLoad.Ready() {
+	if s.assets == nil {
 		return false
 	}
 
@@ -85,7 +81,7 @@ func (s *Service) SetBackgroundMusic(path string) error {
 }
 
 func (s *Service) playAudio(path string) error {
-	wavBytes, err := s.mpqWavLoad.Load(path)
+	wavBytes, err := s.assets.LoadWav(path)
 	if err != nil {
 		return err
 	}

@@ -4,9 +4,13 @@ import (
 	"io"
 
 	lua "github.com/yuin/gopher-lua"
+
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
-func (s *Service) ExportToLua(state *lua.LState) {
+var _ luaManager.LuaPlugin = &Service{}
+
+func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	fn := state.NewFunction(func(L *lua.LState) int {
 		// check argument count
 		if L.GetTop() != 1 {
@@ -34,10 +38,11 @@ func (s *Service) ExportToLua(state *lua.LState) {
 	})
 
 	table := state.NewTable()
-	state.SetField(table, "load", fn)
-	state.SetGlobal("assets", table)
+	state.SetField(table, "Open", fn)
+
+	rootTable.RawSetString("assets", table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState) {
-	state.SetGlobal("assets", lua.LNil)
+func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+	rootTable.RawSetString("assets", lua.LNil)
 }

@@ -26,6 +26,10 @@ func (s *Service) Name() string {
 	return "Template"
 }
 
+func (s *Service) Ready() bool {
+	return true
+}
+
 // the following methods are boilerplate, but they are used
 // by the servicemesh to enforce a standard logging format.
 

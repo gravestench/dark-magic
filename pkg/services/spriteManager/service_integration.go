@@ -3,17 +3,18 @@ package spriteManager
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
+
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
 var (
-	_ servicemesh.Service         = &Service{}
-	_ servicemesh.HasLogger       = &Service{}
-	_ servicemesh.HasDependencies = &Service{}
-	_ configFile.HasDefaultConfig = &Service{}
-	_ lua.UsesLuaEnvironment      = &Service{}
-	_ IsSpriteLoader              = &Service{}
+	_ servicemesh.Service            = &Service{}
+	_ servicemesh.HasLogger          = &Service{}
+	_ servicemesh.HasDependencies    = &Service{}
+	_ configManager.HasConfiguration = &Service{}
+	_ luaManager.LuaPlugin           = &Service{}
+	_ IsSpriteLoader                 = &Service{}
 )
 
 // this is an alias which can be used to make

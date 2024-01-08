@@ -161,6 +161,9 @@ function randomLoot(monsterID, lvlMon, lvlChar, lvlArea)
     return picks
 end
 
+print("treasure roll test lua")
+print(records)
+
 for _ = 1, 3 do
     randomMonsterRecord = records.MonsterStats[randomIntn(#records.MonsterStats)]
     randomLoot(randomMonsterRecord.BaseId, 50, 50, 50)

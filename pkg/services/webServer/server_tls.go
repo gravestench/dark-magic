@@ -1,6 +1,7 @@
 package webServer
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/foomo/tlsconfig"
@@ -9,11 +10,9 @@ import (
 func (s *Service) initTlsServer() {
 	tlsconf := tlsconfig.NewServerTLSConfig(tlsconfig.TLSModeServerStrict)
 
-	g := s.config.Group("Web Server")
-
 	// init server
 	s.server = &http.Server{
-		Addr:      ":" + g.GetString(keyPort),
+		Addr:      fmt.Sprintf(":%d", s.config.Port),
 		TLSConfig: tlsconf,
 		Handler:   s.router.RouteRoot(),
 	}
@@ -21,7 +20,7 @@ func (s *Service) initTlsServer() {
 	// we throw away this error because it may just be that the
 	// server is restarting for some normal reason, not that
 	// anything crashed
-	if err := s.server.ListenAndServeTLS(g.GetString(keyCertFilepath), g.GetString(keyKeyFilepath)); err != nil {
+	if err := s.server.ListenAndServeTLS(s.config.CertFilepath, s.config.KeyFilepath); err != nil {
 		s.log.Warn("TLS server not running", "error", err)
 	}
 }

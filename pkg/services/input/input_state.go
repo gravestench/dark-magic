@@ -42,6 +42,8 @@ func (s *Service) updateKeyboardState() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	var shouldEmitEvent bool
+
 	for _, key := range s.normalKeyCodes() {
 		s.keyStates[key] = StateUp
 
@@ -53,14 +55,20 @@ func (s *Service) updateKeyboardState() {
 			s.keyStates[key] = StateDown
 		}
 	}
+
+	if shouldEmitEvent {
+		s.mesh.Events().Emit("KeyboardKeyStateChange", s.keyStates)
+	}
 }
 
 func (s *Service) updateKeyboardModifierState() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	var shouldEmitEvent bool
+
 	for _, key := range s.modifierKeyCodes() {
-		s.keyModStates[key] = StateUp
+		beforeChange := s.keyModStates[key]
 
 		if rl.IsKeyPressed(key) {
 			s.keyModStates[key] = StatePressed
@@ -68,20 +76,39 @@ func (s *Service) updateKeyboardModifierState() {
 			s.keyModStates[key] = StateReleased
 		} else if rl.IsKeyDown(key) {
 			s.keyModStates[key] = StateDown
+		} else {
+			s.keyModStates[key] = StateUp
 		}
+
+		if beforeChange != s.keyModStates[key] {
+			shouldEmitEvent = true
+		}
+	}
+
+	if shouldEmitEvent {
+		s.mesh.Events().Emit("KeyboardModKeyStateChange", s.keyModStates)
 	}
 }
 
 func (s *Service) updateMouseCursorState() {
+	beforeX, beforeY := s.cursor.X, s.cursor.Y
+
 	p := rl.GetMousePosition()
 	s.cursor.X, s.cursor.Y = int(p.X), int(p.Y)
+
+	if beforeX != s.cursor.X || beforeY != s.cursor.Y {
+		s.mesh.Events().Emit("MouseCursorStateChange", s.cursor)
+	}
 }
 
 func (s *Service) updateMouseButtonState() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
+	var shouldEmitEvent bool
+
 	for _, key := range s.mouseButtonKeyCodess() {
+		beforeChange := s.mouseButtonStates[key]
 		s.mouseButtonStates[key] = StateUp
 
 		if rl.IsMouseButtonPressed(key) {
@@ -91,6 +118,14 @@ func (s *Service) updateMouseButtonState() {
 		} else if rl.IsMouseButtonDown(key) {
 			s.mouseButtonStates[key] = StateDown
 		}
+
+		if beforeChange != s.mouseButtonStates[key] {
+			shouldEmitEvent = true
+		}
+	}
+
+	if shouldEmitEvent {
+		s.mesh.Events().Emit("MouseButtonStateChange", s.mouseButtonStates)
 	}
 }
 

@@ -8,14 +8,13 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/cache"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
 )
 
 type Service struct {
 	mesh   servicemesh.Mesh
 	logger *slog.Logger
 
-	config *configFile.Config
+	config *Config
 	cache  *cache.Cache
 
 	cameras map[string]*rl.Camera2D
@@ -23,6 +22,14 @@ type Service struct {
 	rootNode Renderable
 
 	isInit bool
+}
+
+func (s *Service) DependenciesResolved() bool {
+	return s.config != nil
+}
+
+func (s *Service) ResolveDependencies(services []servicemesh.Service) {
+	// noop
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
@@ -62,18 +69,14 @@ func (s *Service) Logger() *slog.Logger {
 }
 
 func (s *Service) initRenderer() {
-	title := s.config.Group(groupKeyWindow).GetString(keyWindowTitle)
-	width := s.config.Group(groupKeyWindow).GetInt(keyWindowWidth)
-	height := s.config.Group(groupKeyWindow).GetInt(keyWindowHeight)
+	title := s.config.Window.Title
+	width := s.config.Window.Width
+	height := s.config.Window.Height
 
 	rl.SetTraceLogCallback(func(level int, msg string) {
 		switch level {
-		case 0, 1:
+		case 0, 1, 2, 3:
 			s.logger.Debug(msg)
-		case 2:
-			s.logger.Info(msg)
-		case 3:
-			s.logger.Warn(msg)
 		case 4:
 			s.logger.Error(msg)
 			panic(msg)
@@ -85,26 +88,36 @@ func (s *Service) initRenderer() {
 	s.mesh.Events().On(servicemesh.EventServiceMeshShutdownInitiated, func(_ ...any) {
 		serviceMeshShuttingDown = true
 	})
-	
-	mainthread.Call(func() {
-		rl.InitWindow(int32(width), int32(height), title)
-		rl.InitAudioDevice()
-		rl.SetTargetFPS(60)
-		rl.HideCursor()
-		s.isInit = true
 
-		for !rl.WindowShouldClose() && !serviceMeshShuttingDown {
-			rl.BeginDrawing()
-			rl.ClearBackground(rl.Black)
-			rl.BeginMode2D(*s.GetDefaultCamera())
-			s.update()
-			s.render()
-			rl.EndMode2D()
+	for {
+		defer func() {
+			if err := recover(); err != nil {
+				//s.logger.Error("init renderer", "error", err)
+			}
+		}()
 
-			rl.EndDrawing()
-		}
+		mainthread.Call(func() {
+			rl.InitWindow(int32(width), int32(height), title)
+			rl.InitAudioDevice()
+			rl.SetTargetFPS(60)
+			rl.HideCursor()
+			s.isInit = true
 
-		rl.CloseWindow()
-		s.mesh.Shutdown()
-	})
+			for !rl.WindowShouldClose() && !serviceMeshShuttingDown {
+				rl.BeginDrawing()
+				rl.ClearBackground(rl.Black)
+				rl.BeginMode2D(*s.GetDefaultCamera())
+				s.update()
+				s.render()
+				rl.EndMode2D()
+
+				rl.EndDrawing()
+			}
+
+			rl.CloseWindow()
+			s.mesh.Shutdown()
+		})
+
+		break
+	}
 }

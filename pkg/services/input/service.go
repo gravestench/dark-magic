@@ -1,17 +1,18 @@
 package input
 
 import (
-	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/gravestench/servicemesh"
 
+	"github.com/gravestench/dark-magic/pkg/services/common"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 type Service struct {
-	logger            *slog.Logger
+	common.Service
+	mesh              servicemesh.Mesh
 	renderer          raylibRenderer.Dependency
 	keyStates         map[int32]InputState
 	keyModStates      map[int32]InputState
@@ -21,16 +22,24 @@ type Service struct {
 	}
 
 	mux sync.Mutex
+
+	debug bool
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
+	s.debug = true
+
+	s.mesh = mesh
 	s.keyStates = make(map[int32]InputState)
 	s.keyModStates = make(map[int32]InputState)
 	s.mouseButtonStates = make(map[int32]InputState)
 
+	go s.updateNonBlocking()
+}
+
+func (s *Service) updateNonBlocking() {
 	ticker := time.NewTicker(time.Second / 24)
 
-	// Create a Goroutine to handle the ticker
 	go func() {
 		for {
 			select {
@@ -55,17 +64,6 @@ func (s *Service) Ready() bool {
 	}
 
 	return true
-}
-
-// the following methods are boilerplate, but they are used
-// by the servicemesh to enforce a standard logging format.
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
 }
 
 func (s *Service) Foo() {

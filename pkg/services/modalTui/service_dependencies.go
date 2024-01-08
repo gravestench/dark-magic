@@ -3,7 +3,7 @@ package modalTui
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
 func (s *Service) DependenciesResolved() bool {
@@ -17,7 +17,7 @@ func (s *Service) DependenciesResolved() bool {
 func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case configFile.Dependency:
+		case configManager.Dependency:
 			s.cfg = candidate
 		}
 	}

@@ -15,7 +15,7 @@ func (s *Service) Load(filepath string) (*font_table.Font, error) {
 		}
 	}
 
-	stream, err := s.mpq.Load(filepath)
+	stream, err := s.assets.Load(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("loading file %q: %v", filepath, err)
 	}
@@ -32,11 +32,11 @@ func (s *Service) Load(filepath string) (*font_table.Font, error) {
 
 	if s.cache != nil {
 		if err = s.cache.Insert(filepath, font, len(data)); err != nil {
-			s.logger.Error("caching file", "error", err)
+			s.Logger().Error("caching file", "error", err)
 		}
 	}
 
-	s.logger.Info("loaded font table", "path", filepath)
+	s.Logger().Info("loaded font table", "path", filepath)
 
 	return font, nil
 }

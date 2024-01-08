@@ -4,15 +4,15 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
 var (
 	_ servicemesh.Service         = &Service{}
 	_ servicemesh.HasDependencies = &Service{}
-	_ lua.UsesLuaEnvironment      = &Service{}
+	_ luaManager.LuaPlugin        = &Service{}
 	//_ configFile.HasDefaultConfig = &Service{}
-	_ LoadsDiablo2Records = &Service{}
+	//_ LoadsDiablo2Records = &Service{}
 )
 
 type Dependency = LoadsDiablo2Records

@@ -12,13 +12,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
 type Service struct {
 	mesh   servicemesh.Mesh
 	logger *slog.Logger
-	cfg    configFile.Dependency
+	cfg    configManager.Dependency
 	isInit bool
 	mux    sync.Mutex
 	modalUiModel
@@ -28,7 +28,13 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.mesh = mesh
 	s.modalUiModel.modals = make(map[string]tea.Model)
 
-	dir := s.cfg.ConfigDirectory()
+	dir, err := s.cfg.ConfigDirectory()
+	if err != nil {
+		s.Logger().Error("getting config directory", "error", err)
+		panic(err)
+		return
+	}
+
 	logPath := expandHomeDirectory(filepath.Join(dir, "output.log"))
 
 	redirect, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
@@ -53,7 +59,13 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 func (s *Service) OnShutdown() {
 	s.mesh.SetLogDestination(os.Stdout)
 
-	dir := s.cfg.ConfigDirectory()
+	dir, err := s.cfg.ConfigDirectory()
+	if err != nil {
+		s.Logger().Error("getting config directory", "error", err)
+		panic(err)
+		return
+	}
+
 	logPath := filepath.Join(dir, "output.log")
 
 	s.logger.Info(fmt.Sprintf("see %q for log output", logPath))

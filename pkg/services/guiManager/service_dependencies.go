@@ -3,9 +3,9 @@ package guiManager
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
+
 	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 )
@@ -31,15 +31,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
+	if s.assets == nil {
 		return false
 	}
 
@@ -55,10 +47,8 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 			s.renderer = candidate
 		case input.Dependency:
 			s.input = candidate
-		case dc6Loader.Dependency:
-			s.dc6 = candidate
-		case mpqLoader.Dependency:
-			s.mpq = candidate
+		case assetLoader.Dependency:
+			s.assets = candidate
 		}
 	}
 }

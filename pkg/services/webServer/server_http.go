@@ -6,10 +6,8 @@ import (
 )
 
 func (s *Service) initHttpServer() {
-	g := s.config.Group("Web Server")
-
 	s.server = &http.Server{
-		Addr:    fmt.Sprintf(":%v", g.GetInt(keyPort)),
+		Addr:    fmt.Sprintf(":%v", s.config.Port),
 		Handler: s.router.RouteRoot(),
 	}
 

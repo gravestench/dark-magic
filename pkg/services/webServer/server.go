@@ -4,22 +4,19 @@ import (
 	"time"
 )
 
+const defaultPort = 8080
+
 func (s *Service) StartServer() {
-	g := s.config.Group("Web Server")
-
-	autocertEnabled := g.GetBool(keyAutocert)
-	tlsEnabled := g.GetBool(keyTls)
-	port := g.GetInt(keyPort)
-
+	port := s.config.Port
 	if port <= 1 {
 		port = defaultPort
 	}
 
-	if tlsEnabled && autocertEnabled {
+	if s.config.Tls && s.config.AutoCert {
 		s.log.Info("starting autocert HTTPS server", "port", port)
 		go s.initAutocertTlsDebugServer()
 		return
-	} else if tlsEnabled && !autocertEnabled {
+	} else if s.config.Tls && !s.config.AutoCert {
 		s.log.Info("starting HTTPS server", "port", port)
 		go s.initTlsServer()
 		return

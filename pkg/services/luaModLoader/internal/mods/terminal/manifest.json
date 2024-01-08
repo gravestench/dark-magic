@@ -1,0 +1,8 @@
+{
+  "Name": "Dark Magic Terminal",
+  "Version": "1.0",
+  "RepoURL": "github.com/gravestench/terminal.dark-magic",
+  "InitScript": "init.lua",
+  "Requires": ["api.ui", "api.tweens", "api.renderer"],
+  "Enabled": true
+}

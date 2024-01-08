@@ -3,7 +3,7 @@ package input
 import (
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/lua"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
 // these are static declarations that force a
@@ -13,7 +13,7 @@ var (
 	_ servicemesh.Service         = &Service{} // implement in`service.go`
 	_ servicemesh.HasLogger       = &Service{} // implement in`service.go`
 	_ servicemesh.HasDependencies = &Service{} // implement in`dependencies.go`
-	_ lua.UsesLuaEnvironment      = &Service{} // implement in`lua_integration.go`
+	_ luaManager.LuaPlugin        = &Service{} // implement in`lua_integration.go`
 	_ GetsInputState              = &Service{} // implement in`service.go`
 )
 

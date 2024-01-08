@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
+	"math"
 )
 
 func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byte, error) {
@@ -24,7 +25,7 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
 	}
 
-	dt1, err := s.dt1.Load(pathDT1)
+	dt1, err := s.assets.LoadDt1(pathDT1)
 	if err != nil {
 		return nil, fmt.Errorf("loading DT1 tileset", "error", err)
 	}
@@ -35,14 +36,40 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 	wallImages := make([]image.Image, 0)
 
 	for _, tile := range dt1.Tiles {
-		floorImages = append(floorImages, tile.FloorImage())
-		wallImages = append(wallImages, tile.WallImage())
+		if img := tile.FloorImage(); img != nil {
+			floorImages = append(floorImages, img)
+		}
+
+		if img := tile.WallImage(); img != nil {
+			wallImages = append(wallImages, img)
+		}
 	}
 
-	floorAtlas, _ := generateVerticalComposite(floorImages)
-	wallAtlas, _ := generateVerticalComposite(wallImages)
+	combined := append(floorImages, wallImages...)
+	size := int(math.Sqrt(float64(len(combined)))) + 1
 
-	atlas := generateHorizontalComposite([]image.Image{floorAtlas, wallAtlas})
+	rows := make([][]image.Image, 0)
+
+	for idx, img := range combined {
+		row := idx / size
+		if len(rows) >= row {
+			rows = append(rows, make([]image.Image, 0))
+		}
+
+		rows[row] = append(rows[row], img)
+	}
+
+	rowComposites := make([]image.Image, 0)
+	for _, row := range rows {
+		rowComposites = append(rowComposites, generateHorizontalComposite(row))
+	}
+
+	atlas, _ := generateVerticalComposite(rowComposites)
+
+	//floorAtlas, _ := generateVerticalComposite(floorImages)
+	//wallAtlas, _ := generateVerticalComposite(wallImages)
+	//
+	//atlas := generateHorizontalComposite([]image.Image{floorAtlas, wallAtlas})
 
 	// Encode the sprite atlas as a PNG.
 	pngData := bytes.NewBuffer([]byte{})

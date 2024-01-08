@@ -1,38 +1,26 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/faiface/mainthread"
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
-	"github.com/gravestench/dark-magic/pkg/services/backgroundMusic"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
-	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
-	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
-	"github.com/gravestench/dark-magic/pkg/services/ds1Loader"
-	"github.com/gravestench/dark-magic/pkg/services/dt1Loader"
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
+	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
-	"github.com/gravestench/dark-magic/pkg/services/fontTableLoader"
-	"github.com/gravestench/dark-magic/pkg/services/goscript"
-	"github.com/gravestench/dark-magic/pkg/services/guiManager"
-	"github.com/gravestench/dark-magic/pkg/services/hero"
 	"github.com/gravestench/dark-magic/pkg/services/input"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
-	"github.com/gravestench/dark-magic/pkg/services/lua"
-	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
-	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
-	"github.com/gravestench/dark-magic/pkg/services/modalGameUI/ui/loading"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
+	"github.com/gravestench/dark-magic/pkg/services/luaModLoader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
 	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
-	"github.com/gravestench/dark-magic/pkg/services/tblLoader"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
+	"github.com/gravestench/dark-magic/pkg/services/tweens"
+	"github.com/gravestench/dark-magic/pkg/services/ui"
 	"github.com/gravestench/dark-magic/pkg/services/webRouter"
 	"github.com/gravestench/dark-magic/pkg/services/webServer"
 )
@@ -43,48 +31,41 @@ const (
 )
 
 func main() {
-	rt := servicemesh.New(projectName)
+	app := servicemesh.New(projectName)
 
-	rt.SetLogHandler(prettylog.NewHandler(nil))
+	app.SetLogHandler(prettylog.NewHandler(nil))
+	app.SetLogLevel(slog.LevelDebug)
 
 	// utility services
 	//rt.Add(&modalTui.Service{})
-	rt.Add(&lua.Service{})
-	rt.Add(&goscript.Service{})
-	rt.Add(&cacheManager.Service{})
-	rt.Add(&fileWatcher.Service{})
-	rt.Add(&configFile.Service{RootDirectory: projectConfigDir})
-	rt.Add(&webServer.Service{})
-	rt.Add(&webRouter.Service{})
-	rt.Add(&fontTableLoader.Service{})
-	rt.Add(&dc6Loader.Service{})
-	rt.Add(&dccLoader.Service{})
-	rt.Add(&ds1Loader.Service{})
-	rt.Add(&dt1Loader.Service{})
-	rt.Add(&pl2Loader.Service{})
-	rt.Add(&tblLoader.Service{})
-	rt.Add(&tsvLoader.Service{})
-	rt.Add(&wavLoader.Service{})
-	rt.Add(&cofLoader.Service{})
-	rt.Add(&mpqLoader.Service{})
+	//app.Add(&goscript.Service{}) // WIP
+	app.Add(&luaManager.Service{})
+	app.Add(&cacheManager.Service{})
+	app.Add(&fileLoader.Service{})
+	app.Add(&fileWatcher.Service{})
+	app.Add(&configManager.Service{RootDirectory: projectConfigDir})
+	app.Add(&webServer.Service{})
+	app.Add(&webRouter.Service{})
+	app.Add(&tweens.Service{})
+
+	// these all use the loaders and records
+	app.Add(&assetLoader.Service{})
+	app.Add(&recordManager.Service{})
+	app.Add(&spriteManager.Service{})
+	app.Add(&locale.Service{})
+	//app.Add(&mapGenerator.Service{})
+	//app.Add(&hero.Service{})
 
 	// rendering-dependant services
-	rt.Add(&raylibRenderer.Service{})
-	rt.Add(&guiManager.Service{})
-	rt.Add(&modalGameUI.Service{})
-	rt.Add(&input.Service{})           // rendering backend also handles input
-	rt.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
+	app.Add(&raylibRenderer.Service{})
+	app.Add(&ui.Service{})
+	app.Add(&input.Service{}) // rendering backend also handles input
+	//app.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
+	//app.Add(&guiManager.Service{})
+	//app.Add(&modalGameUI.Service{})
+	//app.Add(&loading.Screen{})
+	app.Add(&luaModLoader.Service{})
 
-	// high level services
-	rt.Add(&assetLoader.Service{})
-	rt.Add(&recordManager.Service{})
-	rt.Add(&spriteManager.Service{})
-	rt.Add(&locale.Service{})
-	rt.Add(&mapGenerator.Service{})
-	rt.Add(&hero.Service{})
-
-	// game ui screens
-	rt.Add(&loading.Screen{})
-
-	mainthread.Run(rt.Run)
+	// renderer requires use of mainthread
+	mainthread.Run(app.Run)
 }

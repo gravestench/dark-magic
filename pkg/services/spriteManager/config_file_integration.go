@@ -1,27 +1,43 @@
 package spriteManager
 
 import (
-	"github.com/gravestench/dark-magic/pkg/services/configFile"
+	"encoding/json"
+	"fmt"
+
+	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
-const (
-	configKeySpriteCacheBudgetMB = "sprite cache size (MB)"
-)
+type Config struct {
+	Cache struct {
+		BudgetMB int
+	}
+}
 
-var _ configFile.HasConfig = &Service{}
+var _ configManager.HasConfiguration = &Service{}
 
 func (s *Service) ConfigFileName() string {
 	return "sprite_manager.json"
 }
 
-func (s *Service) DefaultConfig() (cfg configFile.Config) {
-	g := cfg.Group(s.Name())
+func (s *Service) DefaultConfigData() []byte {
+	var cfg Config
 
-	g.Set(configKeySpriteCacheBudgetMB, 500)
+	cfg.Cache.BudgetMB = 500
 
-	return
+	data, _ := json.MarshalIndent(&cfg, "", "\t")
+
+	return data
 }
 
-func (s *Service) LoadConfig(config *configFile.Config) {
-	s.config = config
+func (s *Service) IngestConfig(handle *configManager.ConfigHandle) error {
+	data, err := handle.Data()
+	if err != nil {
+		return fmt.Errorf("getting config data: %v", err)
+	}
+
+	if err = json.Unmarshal(data, &s.config); err != nil {
+		return fmt.Errorf("unmarshalling config data: %v", err)
+	}
+
+	return nil
 }

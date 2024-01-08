@@ -1,0 +1,21 @@
+{
+  "Name": "Diablo II: Lord of Destruction Expansion",
+  "Version": "Patch v1.14D",
+  "RepoURL": "github.com/gravestench/d2exp_v1.14d",
+  "Sources": {
+    "d2": [
+      "{{MPQ_DIRECTORY}}/patch_d2.mpq",
+      "{{MPQ_DIRECTORY}}/d2exp.mpq",
+      "{{MPQ_DIRECTORY}}/d2xmusic.mpq",
+      "{{MPQ_DIRECTORY}}/d2xtalk.mpq",
+      "{{MPQ_DIRECTORY}}/d2xvideo.mpq",
+      "{{MPQ_DIRECTORY}}/d2data.mpq",
+      "{{MPQ_DIRECTORY}}/d2char.mpq",
+      "{{MPQ_DIRECTORY}}/d2music.mpq",
+      "{{MPQ_DIRECTORY}}/d2sfx.mpq",
+      "{{MPQ_DIRECTORY}}/d2video.mpq",
+      "{{MPQ_DIRECTORY}}/d2speech.mpq"
+    ]
+  },
+  "InitScript": "mod.lua"
+}
