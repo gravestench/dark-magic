@@ -112,6 +112,37 @@ func (c *Cache) Retrieve(key string) (interface{}, bool) {
 	return node.value, true
 }
 
+// Delete removes an object from the cache by key
+func (c *Cache) Delete(key string) bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	node, found := c.lookup[key]
+	if !found {
+		return false
+	}
+
+	if node == c.head {
+		c.head = node.next
+		if c.head != nil {
+			c.head.prev = nil
+		}
+	} else {
+		if node.prev != nil {
+			node.prev.next = node.next
+		}
+
+		if node.next != nil {
+			node.next.prev = node.prev
+		}
+	}
+
+	delete(c.lookup, key)
+	c.weight -= node.weight
+
+	return true
+}
+
 // Clear removes all cache entries
 func (c *Cache) Clear() {
 	c.mutex.Lock()
