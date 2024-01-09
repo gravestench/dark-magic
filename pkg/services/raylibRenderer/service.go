@@ -85,9 +85,19 @@ func (s *Service) initRenderer() {
 	s.mesh.Events().On(servicemesh.EventServiceMeshShutdownInitiated, func(_ ...any) {
 		serviceMeshShuttingDown = true
 	})
-	
-	mainthread.Call(func() {
+
+	mainthread.CallNonBlock(func() {
 		rl.InitWindow(int32(width), int32(height), title)
+		rl.SetWindowState(rl.FlagWindowUndecorated | rl.FlagWindowTopmost | rl.FlagWindowMaximized)
+
+		//TODO: make this not fuck up display settings
+		//monitor := s.config.Group(groupKeyWindow).GetInt(keyMonitor)
+		//if monitor < 0 {
+		//	monitor = 0
+		//}
+		//rl.SetWindowMonitor(monitor)
+
+		rl.SetWindowSize(width, height)
 		rl.InitAudioDevice()
 		rl.SetTargetFPS(60)
 		rl.HideCursor()

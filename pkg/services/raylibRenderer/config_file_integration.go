@@ -7,7 +7,7 @@ import (
 var _ configFile.HasConfig = &Service{}
 
 func (s *Service) ConfigFileName() string {
-	return "raylib_renderer.json"
+	return "renderer.json"
 }
 
 const (
@@ -16,6 +16,7 @@ const (
 	keyWindowWidth      = "width"
 	keyWindowHeight     = "height"
 	keyWindowFullscreen = "fullscreen"
+	keyMonitor          = "monitor index"
 
 	groupKeyResolution  = "Resolution"
 	keyResolutionWidth  = "width"
@@ -26,26 +27,25 @@ const (
 )
 
 func (s *Service) DefaultConfig() (cfg configFile.Config) {
-	for key, val := range map[string]any{
-		keyWindowTitle:      "MTG",
-		keyWindowWidth:      800,
-		keyWindowHeight:     600,
-		keyWindowFullscreen: false,
+	for group, kv := range map[string]map[string]any{
+		groupKeyWindow: {
+			keyWindowTitle:      "Dark Magic",
+			keyWindowWidth:      1024,
+			keyWindowHeight:     768,
+			keyWindowFullscreen: false,
+			keyMonitor:          0,
+		},
+		groupKeyResolution: {
+			keyResolutionWidth:  1024,
+			keyResolutionHeight: 768,
+		},
+		groupKeyCache: {
+			keyCacheBudget: 100,
+		},
 	} {
-		cfg.Group(groupKeyWindow).Set(key, val)
-	}
-
-	for key, val := range map[string]any{
-		keyResolutionWidth:  800,
-		keyResolutionHeight: 600,
-	} {
-		cfg.Group(groupKeyResolution).Set(key, val)
-	}
-
-	for key, val := range map[string]any{
-		keyCacheBudget: 100,
-	} {
-		cfg.Group(groupKeyCache).Set(key, val)
+		for key, val := range kv {
+			cfg.Group(group).Set(key, val)
+		}
 	}
 
 	return cfg
