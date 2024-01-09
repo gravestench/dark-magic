@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
+	"github.com/gravestench/dark-magic/pkg/services/configFile"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
@@ -19,6 +20,7 @@ type Service struct {
 	logger     *slog.Logger
 	mpqWavLoad wavLoader.Dependency
 	renderer   raylibRenderer.Dependency
+	config     *configFile.Config
 }
 
 func (s *Service) DependenciesResolved() bool {
@@ -98,16 +100,15 @@ func (s *Service) playAudio(path string) error {
 
 	numBytes := len(wavBytes)
 	sampleCount := uint32(numBytes / numChannels)
-
 	wavStream := rl.NewWave(sampleCount, sampleRate, sampleSize, numChannels, wavBytes)
 	rlSound := rl.LoadSoundFromWave(wavStream)
 
+	volume := s.config.Group(groupBGM).GetFloat(keyBGMVolume)
+
 	rl.SetMasterVolume(0.0)
-	go func() {
-		rl.PlaySound(rlSound)
-		time.Sleep(time.Millisecond * 100)
-		rl.SetMasterVolume(1.0)
-	}()
+	rl.PlaySound(rlSound)
+	time.Sleep(time.Millisecond * 100)
+	rl.SetMasterVolume(float32(volume))
 
 	return nil
 }
