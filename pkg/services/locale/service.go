@@ -3,7 +3,6 @@ package locale
 import (
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/gravestench/servicemesh"
 	tbl "github.com/gravestench/tbl_text"
@@ -106,17 +105,6 @@ func (s *Service) loadTextTables() {
 	localePathStringTable := fmt.Sprintf(StringTable, s.language)
 	localePathPatchStringTable := fmt.Sprintf(PatchStringTable, s.language)
 
-	var loaded bool
-
-	go func() {
-		time.Sleep(time.Second * 5)
-		if loaded {
-			return
-		}
-
-		panic("could not load string tables")
-	}()
-
 	for stringTable, err := s.tbl.Load(localePathStringTable); err == nil; {
 		s.stringTables.Vanilla = stringTable
 		break
@@ -132,7 +120,6 @@ func (s *Service) loadTextTables() {
 		break
 	}
 
-	loaded = true
 	s.logger.Info("string tables loaded", "tables", []string{"patch", "expansion", "vanilla"})
 
 	for key, value := range s.stringTables.Vanilla {
