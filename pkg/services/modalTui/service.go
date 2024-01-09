@@ -64,10 +64,6 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.cfg == nil {
-		return false
-	}
-
 	return true
 }
 
