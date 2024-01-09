@@ -64,6 +64,6 @@ func logSwitch(data *ginHands) {
 	case data.StatusCode >= http.StatusBadRequest && data.StatusCode <= http.StatusInternalServerError:
 		data.Warn(data.Method, "status", data.StatusCode, "path", data.Path, "latency", data.Latency)
 	default:
-		data.Error(data.Method, "status", data.StatusCode, "path", data.Path, "latency", data.Latency)
+		data.Info(data.Method, "status", data.StatusCode, "path", data.Path, "latency", data.Latency)
 	}
 }
