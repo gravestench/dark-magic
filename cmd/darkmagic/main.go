@@ -6,7 +6,6 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
-	"github.com/gravestench/dark-magic/pkg/services/backgroundMusic"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/cofLoader"
 	"github.com/gravestench/dark-magic/pkg/services/configFile"
@@ -23,7 +22,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
 	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
-	"github.com/gravestench/dark-magic/pkg/services/modalGameUI/ui/loading"
+	"github.com/gravestench/dark-magic/pkg/services/modalGameUI/ui/tests/tilesprite_test"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
@@ -47,7 +46,7 @@ func main() {
 	app.SetLogHandler(prettylog.NewHandler(nil))
 
 	// utility services
-	//rt.Add(&modalTui.Service{})
+	//app.Add(&modalTui.Service{})
 	//app.Add(&goscript.Service{}) // WIP
 	app.Add(&lua.Service{})
 	app.Add(&cacheManager.Service{})
@@ -79,13 +78,14 @@ func main() {
 
 	// rendering-dependant services
 	app.Add(&raylibRenderer.Service{})
-	app.Add(&input.Service{})           // rendering backend also handles input
-	app.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
+	app.Add(&input.Service{}) // rendering backend also handles input
+	//app.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
 
 	app.Add(&guiManager.Service{})
 	app.Add(&modalGameUI.Service{})
-	app.Add(&loading.Screen{})
+	//app.Add(&loading.Screen{})
 	//app.Add(&trademark.Screen{})
+	app.Add(&tilesprite_test.Screen{})
 
 	// renderer requires use of mainthread
 	mainthread.Run(app.Run)
