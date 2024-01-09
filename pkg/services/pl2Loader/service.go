@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"io"
 	"log/slog"
 
 	"github.com/gravestench/servicemesh"
@@ -55,19 +56,20 @@ func (s *Service) Logger() *slog.Logger {
 func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteStream, err := s.mpq.Load(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("loading pl2", "error", err)
+		return nil, fmt.Errorf("loading pl2: %v", err)
 	}
 
 	const (
-		numColors    = 256
-		numBytesRGBA = numColors * 4
-		opaque       = 255
+		numColors          = 256
+		numColorComponents = 4
+		numBytesRGBA       = numColors * numColorComponents
+		opaque             = 255
 	)
 
 	paletteData := make([]byte, numBytesRGBA)
 	numRead, err := paletteStream.Read(paletteData)
-	if err != nil {
-		return nil, fmt.Errorf("reading from PL2 stream", "error", err)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("reading from PL2 stream: %v", err)
 	} else if numRead != numBytesRGBA {
 		return nil, fmt.Errorf("couldn't read all palette bytes")
 	}
@@ -81,9 +83,9 @@ func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 		}
 
 		p[idx] = color.RGBA{
-			R: paletteData[(idx*4)+0],
-			G: paletteData[(idx*4)+1],
-			B: paletteData[(idx*4)+2],
+			R: paletteData[(idx*numColorComponents)+0],
+			G: paletteData[(idx*numColorComponents)+1],
+			B: paletteData[(idx*numColorComponents)+2],
 			A: opaque,
 		}
 	}
