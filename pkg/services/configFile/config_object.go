@@ -140,6 +140,23 @@ func (n Object) GetInt(key string) int {
 	return int(val)
 }
 
+func (n Object) GetFloat(key string) float64 {
+	if n == nil {
+		return 0
+	}
+
+	if value, ok := n[key].(float64); ok {
+		return value
+	}
+
+	val, err := strconv.ParseFloat(fmt.Sprintf("%v", n[key]), 64)
+	if err != nil {
+		return 0
+	}
+
+	return val
+}
+
 func (n Object) GetBool(key string) bool {
 	if n == nil {
 		return false
