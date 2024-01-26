@@ -65,6 +65,7 @@ type ProvidesRenderables interface {
 // encapsulates the necessary behavior of something that can be rendered
 type Renderable interface {
 	UUID() uuid.UUID
+	Destory()
 	dirty() bool
 
 	hasChildren
@@ -112,6 +113,7 @@ type hasOrigin interface {
 }
 
 type hasChildren interface {
+	Parent() Renderable
 	SetParent(Renderable)
 	addChild(Renderable)
 	removeChild(Renderable)

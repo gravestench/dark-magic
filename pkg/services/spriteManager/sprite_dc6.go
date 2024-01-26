@@ -19,6 +19,23 @@ type frameInfo struct {
 	Width, Height int
 }
 
+func (s *Service) loadDc6WithPalette(pathDC6 string, pathPL2 string) (*dc6.DC6, error) {
+	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
+	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
+	if err != nil {
+		return nil, fmt.Errorf("extracting palette from pl2: %v", err)
+	}
+
+	dc6Image, err := s.dc6.Load(pathDC6)
+	if err != nil {
+		return nil, fmt.Errorf("loading dc6: %v", err)
+	}
+
+	dc6Image.SetPalette(pl2Palette)
+
+	return dc6Image, nil
+}
+
 func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byte, error) {
 	cacheKey := fmt.Sprintf("png: %s %s", pathDC6, pathPL2)
 
@@ -29,18 +46,10 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 		}
 	}
 
-	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
-	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
+	dc6Image, err := s.loadDc6WithPalette(pathDC6, pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
+		return nil, fmt.Errorf("loading DC6 with palette: %v", err)
 	}
-
-	dc6Image, err := s.dc6.Load(pathDC6)
-	if err != nil {
-		return nil, fmt.Errorf("loading dc6", "error", err)
-	}
-
-	dc6Image.SetPalette(pl2Palette)
 
 	frames := make([]*dc6.Frame, 0)
 	for _, dir := range dc6Image.Directions {
@@ -66,7 +75,7 @@ func (s *Service) LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byt
 func (s *Service) LoadDc6ToAnimatedGif(pathDC6 string, pathPL2 string) ([]byte, error) {
 	data, err := s.LoadDc6ToPngSpriteAtlas(pathDC6, pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("loading file", "error", err)
+		return nil, fmt.Errorf("loading file: %v", err)
 	}
 
 	var gifImage []byte
@@ -79,7 +88,7 @@ func (s *Service) LoadDc6ToAnimatedGif(pathDC6 string, pathPL2 string) ([]byte, 
 
 	gifImage, err = generateAnimatedGifFromPngSpriteAtlasData(data)
 	if err != nil {
-		return nil, fmt.Errorf("creating animated GIF from png sprite atlas", "error", err)
+		return nil, fmt.Errorf("creating animated GIF from png sprite atlas: %v", err)
 	}
 
 	if err = s.spriteCache.Insert(cacheKey, gifImage, len(gifImage)); err != nil {
@@ -101,7 +110,7 @@ func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 
 	paletteStream, err := s.mpq.Load(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("loading pl2", "error", err)
+		return nil, fmt.Errorf("loading pl2: %v", err)
 	}
 
 	const (
@@ -113,7 +122,7 @@ func (s *Service) extractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteData := make([]byte, numBytesRGBA)
 	numRead, err := paletteStream.Read(paletteData)
 	if err != nil {
-		return nil, fmt.Errorf("reading from PL2 stream", "error", err)
+		return nil, fmt.Errorf("reading from PL2 stream: %v", err)
 	} else if numRead != numBytesRGBA {
 		return nil, fmt.Errorf("couldn't read all palette bytes")
 	}
@@ -153,8 +162,8 @@ func generateDc6SpriteAtlasPng(frames []*dc6.Frame) ([]byte, error) {
 	maxFrameHeight := 0
 
 	for _, frame := range frames {
-		frameRight := int(frame.OffsetX) + frame.Bounds().Dx()
-		frameBottom := int(frame.OffsetY) + frame.Bounds().Dy()
+		frameRight := frame.Bounds().Dx()
+		frameBottom := frame.Bounds().Dy()
 
 		if frameRight > atlasWidth {
 			atlasWidth = frameRight
@@ -206,7 +215,7 @@ func generateDc6SpriteAtlasPng(frames []*dc6.Frame) ([]byte, error) {
 
 	atlasInfoData, err := json.Marshal(atlasInfo)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling atlas frame info", "error", err)
+		return nil, fmt.Errorf("marshalling atlas frame info: %v", err)
 	}
 
 	pngDataWithExtras := append(pngData.Bytes(), atlasInfoData...)
@@ -217,7 +226,7 @@ func generateDc6SpriteAtlasPng(frames []*dc6.Frame) ([]byte, error) {
 func generateAnimatedGifFromPngSpriteAtlasData(atlas []byte) ([]byte, error) {
 	atlasImg, _, err := image.Decode(bytes.NewReader(atlas))
 	if err != nil {
-		return nil, fmt.Errorf("decoding sprite atlas", "error", err)
+		return nil, fmt.Errorf("decoding sprite atlas: %v", err)
 	}
 
 	// Create an array of frame information.
@@ -226,7 +235,7 @@ func generateAnimatedGifFromPngSpriteAtlasData(atlas []byte) ([]byte, error) {
 
 	var frameInfos []frameInfo
 	if err = json.Unmarshal(frameInfodata, &frameInfos); err != nil {
-		return nil, fmt.Errorf("getting frame info from sprite atlas", "error", err)
+		return nil, fmt.Errorf("getting frame info from sprite atlas: %v", err)
 	}
 
 	// Create a GIF writer.
@@ -256,7 +265,7 @@ func generateAnimatedGifFromPngSpriteAtlasData(atlas []byte) ([]byte, error) {
 	gifData := bytes.NewBuffer([]byte{})
 	err = gif.EncodeAll(gifData, &g)
 	if err != nil {
-		return nil, fmt.Errorf("encoding GIF", "error", err)
+		return nil, fmt.Errorf("encoding GIF: %v", err)
 	}
 
 	return gifData.Bytes(), nil

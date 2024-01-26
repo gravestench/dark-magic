@@ -38,6 +38,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	}
 
 	mesh.SetLogDestination(redirect)
+	mesh.SetLogHandler(slog.NewJSONHandler(redirect, nil))
 
 	clearScreen()
 

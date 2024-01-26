@@ -67,7 +67,7 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 }
 
 // generateVerticalComposite creates a sprite atlas and returns the atlas image
-// along with a slice of Sprite structs for each image.
+// along with a slice of LayeredAnimation structs for each image.
 func generateVerticalComposite(images []image.Image) (*image.RGBA, []frameInfo) {
 	// Step 1: Calculate total height and maximum width of the atlas
 	maxWidth, totalHeight := 0, 0

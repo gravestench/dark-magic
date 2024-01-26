@@ -1,4 +1,4 @@
-package modalGameUI
+package gui
 
 import (
 	lua "github.com/yuin/gopher-lua"

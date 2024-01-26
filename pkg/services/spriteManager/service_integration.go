@@ -27,6 +27,7 @@ type Dependency = IsSpriteLoader
 // should know about this service.
 
 type IsSpriteLoader interface {
+	LoadDc6ToLayeredAnimation(pathDC6 string, pathPL2 string) (*LayeredAnimation, error)
 	LoadDc6ToPngSpriteAtlas(pathDC6 string, pathPL2 string) ([]byte, error)
 	LoadDc6ToAnimatedGif(pathDC6 string, pathPL2 string) ([]byte, error)
 

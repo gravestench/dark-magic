@@ -1,4 +1,4 @@
-package modalGameUI
+package screenManager
 
 // Modes returns a list of strings which are the mode ID's for each modal
 func (s *Service) Modes() (modes []string) {

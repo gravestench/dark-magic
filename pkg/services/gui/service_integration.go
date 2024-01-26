@@ -1,4 +1,4 @@
-package guiManager
+package gui
 
 import (
 	"image"
@@ -32,7 +32,9 @@ type Dependency = ManagesGui
 // should know about this service.
 
 type ManagesGui interface {
+	servicemesh.Service
 	managesTileSprites
+	managesAnimations
 }
 
 type Key int
@@ -67,5 +69,9 @@ type element interface {
 }
 
 type managesTileSprites interface {
-	NewTileSprite(config TileSpriteConfig) (*TileSprite, error)
+	NewTileSprite(dc6Path, palettePath string, gridWidth, gridHeight int) (ts *TileSprite, err error)
+}
+
+type managesAnimations interface {
+	NewAnimationDC6(dc6Path, pl2Path string) (*AnimationDC6, error)
 }

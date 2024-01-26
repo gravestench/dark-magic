@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"sort"
 	"time"
 
@@ -38,12 +39,22 @@ func (s *Service) renderNode(node Renderable) {
 	tx := node.Texture()
 
 	if node.dirty() {
-		px := getAllPixelData(node.Image())
-		if len(px) < 4 {
-			return
-		}
+		size := node.Image().Bounds().Size()
+		if size.X != int(tx.Width) || size.Y != int(tx.Height) {
+			px := getAllPixelData(getSubImage(node.Image(), int(tx.Width), int(tx.Height)))
+			if len(px) < 4 {
+				return
+			}
 
-		rl.UpdateTexture(tx, px)
+			rl.UpdateTexture(tx, px)
+		} else {
+			px := getAllPixelData(node.Image())
+			if len(px) < 4 {
+				return
+			}
+
+			rl.UpdateTexture(tx, px)
+		}
 	}
 
 	//rl.DrawTextureEx(
@@ -57,12 +68,12 @@ func (s *Service) renderNode(node Renderable) {
 	scale := node.Scale()
 
 	// src rect is at 0,0 and dimension of src texture
-	srcWidth, srcHeight := float32(tx.Width), float32(tx.Height)
+	srcWidth, srcHeight := float32(node.Image().Bounds().Dx()), float32(node.Image().Bounds().Dy())
 	srcRect := rl.NewRectangle(0, 0, srcWidth, srcHeight)
 
 	// dst rect is at position of node, with scaled dimension of texture
-	dstWidth, dstHeight := float32(tx.Width)*scale, float32(tx.Height)*scale
-	dstRect := rl.NewRectangle(float32(x), float32(y), dstWidth, dstHeight)
+	dstWidth, dstHeight := srcWidth*scale, srcHeight*scale
+	dstRect := rl.NewRectangle(x, y, dstWidth, dstHeight)
 
 	// node origin uses normalized value, applied to scaled dimension of texture
 	// to provide relative offset, regardless of texture dimensions
@@ -71,6 +82,7 @@ func (s *Service) renderNode(node Renderable) {
 
 	tint := rl.NewColor(255, 255, 255, uint8(node.Opacity()*255))
 
+	rl.SetBlendMode(int32(node.BlendMode()))
 	rl.DrawTexturePro(tx, srcRect, dstRect, dstOrigin, node.Rotation(), tint)
 }
 
@@ -93,4 +105,17 @@ func getAllPixelData(img image.Image) []color.RGBA {
 	}
 
 	return pixels
+}
+
+func getSubImage(src image.Image, width, height int) image.Image {
+	// Create a new rectangle based on the specified width and height
+	subRect := image.Rect(0, 0, width, height)
+
+	// Create a new RGBA image for the sub-image
+	subImage := image.NewRGBA(subRect)
+
+	// Copy the sub-image from the source image using the specified rectangle
+	draw.Draw(subImage, subRect, src, image.Point{X: 0, Y: 0}, draw.Src)
+
+	return subImage
 }

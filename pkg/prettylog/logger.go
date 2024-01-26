@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"strconv"
 	"sync"
@@ -31,7 +32,7 @@ const (
 	white        = 97
 )
 
-func NewHandler(opts *slog.HandlerOptions) *Handler {
+func NewHandler(opts *slog.HandlerOptions, w io.Writer) *Handler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}
@@ -44,6 +45,7 @@ func NewHandler(opts *slog.HandlerOptions) *Handler {
 			ReplaceAttr: suppressDefaults(opts.ReplaceAttr),
 		}),
 		m: &sync.Mutex{},
+		w: w, // Initialize the target io.Writer
 	}
 }
 
@@ -55,6 +57,7 @@ type Handler struct {
 	h slog.Handler
 	b *bytes.Buffer
 	m *sync.Mutex
+	w io.Writer
 }
 
 func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -74,7 +77,6 @@ const (
 )
 
 func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
-
 	level := r.Level.String() + ":"
 
 	switch r.Level {
@@ -110,13 +112,24 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		bytes = []byte{}
 	}
 
-	fmt.Println(
+	logMessage := fmt.Sprintf(
+		"%s %s %s %s %s\n",
 		colorize(lightGray, r.Time.Format(timeFormat)),
 		level,
 		colorize(white, fmt.Sprintf("%s:", service)),
 		colorize(white, r.Message),
 		colorize(darkGray, string(bytes)),
 	)
+
+	if h.w != nil {
+		// Write logMessage to the target io.Writer
+		_, err = h.w.Write([]byte(logMessage))
+		if err != nil {
+			return fmt.Errorf("error writing to the target io.Writer: %w", err)
+		}
+	} else {
+		return fmt.Errorf("target io.Writer is nil")
+	}
 
 	return nil
 }

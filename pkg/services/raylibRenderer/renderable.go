@@ -43,6 +43,10 @@ type node struct {
 	isDirty bool
 }
 
+func (n *node) Destory() {
+	n.SetParent(nil)
+}
+
 func (n *node) dirty() bool {
 	if !n.isDirty {
 		return false
@@ -235,6 +239,10 @@ func (n *node) Disable() {
 
 func (n *node) IsEnabled() bool {
 	return n.enabled
+}
+
+func (n *node) Parent() Renderable {
+	return n.parent
 }
 
 // SetParent sets the parent of this scene graph node

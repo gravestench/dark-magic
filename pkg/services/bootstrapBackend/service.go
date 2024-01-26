@@ -19,6 +19,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/lua"
 	"github.com/gravestench/dark-magic/pkg/services/mapGenerator"
+	"github.com/gravestench/dark-magic/pkg/services/modalTui"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
@@ -33,7 +34,7 @@ import (
 type Service struct {
 	logger *slog.Logger
 
-	//modalTui        modalTui.Service
+	modalTui modalTui.Service
 	//goscript        goscript.Service
 	lua             lua.Service
 	cacheManager    cacheManager.Service
@@ -69,7 +70,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 
 	// utility services
 	//mesh.Add(&s.modalTui)
-	//mesh.Add(goscript.&s.ServicP
+	//mesh.Add(&s.goscript)
 	mesh.Add(&s.lua)
 	mesh.Add(&s.cacheManager)
 	mesh.Add(&s.fileWatcher)
@@ -108,10 +109,10 @@ func (s *Service) Ready() bool {
 }
 
 func (s *Service) BackendReady() bool {
-	//if !s.modalTui.Ready() {
-	//	return false
-	//}
-	//
+	if !s.modalTui.Ready() {
+		return false
+	}
+
 	//if !s.goscript.Ready() {
 	//	return false
 	//}

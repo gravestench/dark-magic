@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/prettylog"
@@ -18,7 +20,7 @@ const (
 
 func main() {
 	app := servicemesh.New(projectName)
-	app.SetLogHandler(prettylog.NewHandler(nil))
+	app.SetLogHandler(prettylog.NewHandler(nil, os.Stdout))
 
 	app.Add(&configFile.Service{RootDirectory: projectConfigDir})
 	app.Add(&fileWatcher.Service{})

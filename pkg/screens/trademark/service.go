@@ -1,28 +1,30 @@
-package loading
+package trademark
 
 import (
 	"image"
 	"image/color"
-	"image/draw"
 	"log/slog"
 	"time"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
 	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
-	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
+	"github.com/gravestench/dark-magic/pkg/services/gui"
 	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
+	"github.com/gravestench/dark-magic/pkg/services/screenManager"
+	"github.com/gravestench/dark-magic/pkg/services/spriteManager"
 )
 
 type recipe interface {
 	servicemesh.Service
 	servicemesh.HasLogger
 	servicemesh.HasDependencies
-	modalGameUI.ModalGameUI
+	screenManager.ModalGameUI
 }
 
 type Screen struct {
@@ -33,78 +35,67 @@ type Screen struct {
 	dc6      dc6Loader.Dependency
 	dcc      dccLoader.Dependency
 	pl2      pl2Loader.Dependency
+	gui      gui.Dependency
+	sprite   spriteManager.Dependency
 
 	root   raylibRenderer.Renderable
 	update func()
+
+	objects struct {
+		logo                raylibRenderer.Renderable
+		trademarkBackground *gui.TileSprite
+	}
 }
 
 func (s *Screen) Init(mesh servicemesh.Mesh) {
 	s.root = s.renderer.NewRenderable()
+	time.Sleep(time.Second)
 
 	s.initBackground()
-	s.initLoadingImage()
+	s.initLogo()
+}
+
+func (s *Screen) initLogo() {
+	const (
+		logoLeftFG = paths.Diablo2LogoFireLeft
+		logoLeftBG = paths.Diablo2LogoBlackLeft
+
+		logoRightFG = paths.Diablo2LogoFireRight
+		logoRightBG = paths.Diablo2LogoBlackRight
+
+		paletteAct1 = paths.PaletteTransformAct1
+	)
+
+	s.objects.logo = s.renderer.NewRenderable()
+	s.objects.logo.SetParent(s.root)
+	s.objects.logo.Disable()
+
+	// load the graphic, keep trying until it is loaded.
+	anim, err := s.gui.NewAnimationDC6(logoLeftFG, paletteAct1)
+	for err != nil {
+		anim, err = s.gui.NewAnimationDC6(logoLeftFG, paletteAct1)
+	}
+
+	node := anim.Renderable()
+	node.SetParent(s.objects.logo)
+	node.SetPosition(400, 20)
+	node.SetOrigin(1, 0)
+	node.SetBlendMode(rl.BlendAdditive)
 }
 
 func (s *Screen) initBackground() {
-	// Create a new 10x10 image with RGBA color model
-	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
-
-	// Fill the image with red color
-	bgColor := color.RGBA{0, 0, 0, 255}
-	draw.Draw(img, img.Bounds(), &image.Uniform{bgColor}, image.Point{}, draw.Src)
-
-	s.root.SetOrigin(0, 0)
-	s.root.SetImage(img)
-}
-
-func (s *Screen) initLoadingImage() {
-	// load the dc6 image
-	dc6Image, err := s.dc6.Load(paths.LoadingScreen)
+	ts, err := s.gui.NewTileSprite(paths.TrademarkScreen, paths.PaletteTransformSky, 4, 4)
 	for err != nil {
-		time.Sleep(time.Second)
-		dc6Image, err = s.dc6.Load(paths.LoadingScreen)
+		ts, err = s.gui.NewTileSprite(paths.TrademarkScreen, paths.PaletteTransformSky, 4, 4)
 	}
 
-	// load a palette
-	palette, err := s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformLoading)
-	if err != nil {
-		s.logger.Error("couldn't load the palette transform for the loading screen", "error", err)
-		panic(err)
-	}
+	ts.Renderable().SetParent(s.root)
 
-	// apply the palette
-	dc6Image.SetPalette(palette)
-
-	frames := dc6Image.Directions[0].Frames
-	currentFrame := 0
-
-	// get a renderable
-	r := s.renderer.NewRenderable()
-	r.SetImage(frames[currentFrame].ToImageRGBA())
-
-	t := time.Now()
-
-	w, h := s.renderer.WindowSize()
-	centerX := float32(w / 2)
-	centerY := float32(h / 2)
-
-	// example update callback for the renderable
-	r.OnUpdate(func() {
-		if time.Since(t) < time.Second/24 {
-			return
-		}
-
-		t = time.Now()
-
-		currentFrame = (currentFrame + 1) % len(frames)
-
-		r.SetPosition(centerX, centerY)
-		r.SetImage(frames[currentFrame].ToImageRGBA())
-	})
+	s.root.SetScale(1024.0 / 800.0)
 }
 
 func (s *Screen) Name() string {
-	return "Loading Screen"
+	return "Trademark Screen"
 }
 
 func (s *Screen) Ready() bool {
@@ -125,6 +116,10 @@ func (s *Screen) Ready() bool {
 	}
 
 	if s.pl2 == nil {
+		return false
+	}
+
+	if s.sprite == nil {
 		return false
 	}
 
@@ -168,6 +163,14 @@ func (s *Screen) DependenciesResolved() bool {
 		return false
 	}
 
+	if s.gui == nil {
+		return false
+	}
+
+	if s.sprite == nil {
+		return false
+	}
+
 	return true
 }
 
@@ -184,12 +187,16 @@ func (s *Screen) ResolveDependencies(services []servicemesh.Service) {
 			s.pl2 = candidate
 		case raylibRenderer.Dependency:
 			s.renderer = candidate
+		case gui.Dependency:
+			s.gui = candidate
+		case spriteManager.Dependency:
+			s.sprite = candidate
 		}
 	}
 }
 
 func (s *Screen) Mode() string {
-	return "loading"
+	return "trademark"
 }
 
 func (s *Screen) Renderable() raylibRenderer.Renderable {
@@ -207,4 +214,18 @@ func (s *Screen) Update() {
 
 func (s *Screen) OnUpdate(f func()) {
 
+}
+
+func fillRect(w, h int, rgba color.RGBA) image.Image {
+	// Create a new RGBA image with the specified width and height.
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+
+	// Fill the entire rectangle with the specified color.
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, rgba)
+		}
+	}
+
+	return img
 }

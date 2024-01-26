@@ -1,4 +1,4 @@
-package guiManager
+package screenManager
 
 import (
 	lua "github.com/yuin/gopher-lua"

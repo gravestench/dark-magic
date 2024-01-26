@@ -1,4 +1,4 @@
-package modalGameUI
+package screenManager
 
 import (
 	"log/slog"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
+	"github.com/gravestench/dark-magic/pkg/services/gui"
 	"github.com/gravestench/dark-magic/pkg/services/input"
 	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
@@ -20,6 +21,7 @@ type Service struct {
 	pl2      pl2Loader.Dependency
 	renderer raylibRenderer.Dependency
 	input    input.Dependency
+	gui      gui.Dependency
 
 	currentMode string
 	modals      []ModalGameUI
@@ -32,7 +34,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.rootNode = s.renderer.NewRenderable()
 	s.rootNode.Disable()
 
-	s.initCursor()
+	s.initCursorAnimation()
 
 	for _, service := range mesh.Services() {
 		s.attemptBindService(service)
@@ -51,58 +53,25 @@ func (s *Service) attemptBindService(service servicemesh.Service) {
 }
 
 func (s *Service) initCursor() {
-	dc6Cursor, err := s.dc6.Load(paths.CursorDefault)
+	const (
+		cursor      = paths.CursorDefault
+		paletteAct1 = paths.PaletteTransformAct1
+	)
+
+	anim, err := s.gui.NewAnimationDC6(cursor, paletteAct1)
 	for err != nil {
-		// TODO :: fix a race condition with the mpq loader
-		time.Sleep(time.Millisecond * 100)
-		dc6Cursor, err = s.dc6.Load(paths.CursorDefault)
+		anim, err = s.gui.NewAnimationDC6(cursor, paletteAct1)
 	}
 
-	act1, err := s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
-	for err != nil {
-		// TODO :: fix a race condition with the mpq loader
-		time.Sleep(time.Millisecond * 100)
-		act1, err = s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformAct1)
-	}
-
-	dc6Cursor.SetPalette(act1)
-
-	d1 := dc6Cursor.Directions[0]
-	frames := d1.Frames
-	frameIdx := 0
-	forward := true
-	frame := frames[frameIdx]
-
-	s.cursorNode = s.renderer.NewRenderable()
+	s.cursorNode = anim.Renderable()
 	s.cursorNode.SetZIndex(99999)
 	s.cursorNode.SetOrigin(0, 0)
-	s.cursorNode.SetImage(frame.ToImageRGBA())
-
-	t := time.Now()
 
 	s.cursorNode.OnUpdate(func() {
-		if time.Since(t) < time.Second/24 {
-			return
-		}
-
-		x, y := s.input.MouseCursorState()
-		s.cursorNode.SetPosition(float32(x), float32(y))
-
-		if frameIdx == len(frames)-1 {
-			forward = false
-		} else if frameIdx == 0 {
-			forward = true
-		}
-
-		if forward {
-			frameIdx++
-		} else {
-			frameIdx--
-		}
-
-		s.cursorNode.SetImage(frames[frameIdx%len(frames)].ToImageRGBA())
-
-		t = time.Now()
+		s.cursorNode.SetPosition(func() (x, y float32) {
+			xInt, yInt := s.input.MouseCursorState()
+			return float32(xInt), float32(yInt)
+		}())
 	})
 }
 
@@ -136,6 +105,14 @@ func (s *Service) Ready() bool {
 	}
 
 	if s.input == nil {
+		return false
+	}
+
+	if s.gui == nil {
+		return false
+	}
+
+	if !s.gui.Ready() {
 		return false
 	}
 

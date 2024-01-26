@@ -1,38 +1,31 @@
-package trademark
+package loading
 
 import (
 	"image"
 	"image/color"
 	"image/draw"
 	"log/slog"
-	"time"
 
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/paths"
-	"github.com/gravestench/dark-magic/pkg/services/dc6Loader"
-	"github.com/gravestench/dark-magic/pkg/services/dccLoader"
-	"github.com/gravestench/dark-magic/pkg/services/modalGameUI"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/pl2Loader"
+	"github.com/gravestench/dark-magic/pkg/services/gui"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
+	"github.com/gravestench/dark-magic/pkg/services/screenManager"
 )
 
 type recipe interface {
 	servicemesh.Service
 	servicemesh.HasLogger
 	servicemesh.HasDependencies
-	modalGameUI.ModalGameUI
+	screenManager.ModalGameUI
 }
 
 type Screen struct {
 	logger *slog.Logger
 
 	renderer raylibRenderer.Dependency
-	mpq      mpqLoader.Dependency
-	dc6      dc6Loader.Dependency
-	dcc      dccLoader.Dependency
-	pl2      pl2Loader.Dependency
+	gui      gui.Dependency
 
 	root   raylibRenderer.Renderable
 	update func()
@@ -42,7 +35,7 @@ func (s *Screen) Init(mesh servicemesh.Mesh) {
 	s.root = s.renderer.NewRenderable()
 
 	s.initBackground()
-	s.initLoadingImage()
+	s.initLoadingAnimation()
 }
 
 func (s *Screen) initBackground() {
@@ -57,59 +50,30 @@ func (s *Screen) initBackground() {
 	s.root.SetImage(img)
 }
 
-func (s *Screen) initLoadingImage() {
-	// load the dc6 image
-	dc6Image, err := s.dc6.Load(paths.TrademarkScreen)
+func (s *Screen) initLoadingAnimation() {
+	anim, err := s.gui.NewAnimationDC6(paths.LoadingScreen, paths.PaletteTransformLoading)
 	for err != nil {
-		time.Sleep(time.Second)
-		dc6Image, err = s.dc6.Load(paths.TrademarkScreen)
+		anim, err = s.gui.NewAnimationDC6(paths.LoadingScreen, paths.PaletteTransformLoading)
 	}
-
-	// load a palette
-	palette, err := s.pl2.ExtractPaletteFromPl2(paths.PaletteTransformAct5)
-	if err != nil {
-		s.logger.Error("couldn't load the palette transform for the trademark screen", "error", err)
-		panic(err)
-	}
-
-	// apply the palette
-	dc6Image.SetPalette(palette)
-
-	frames := dc6Image.Directions[0].Frames
-
-	// get a renderable
-	r := s.renderer.NewRenderable()
-	r.SetImage(frames[0].ToImageRGBA())
 
 	w, h := s.renderer.WindowSize()
 	centerX := float32(w / 2)
 	centerY := float32(h / 2)
 
-	r.SetPosition(centerX, centerY)
+	anim.SetPlayMode(gui.PlayYoYo)
+	anim.Renderable().SetPosition(centerX, centerY)
 }
 
 func (s *Screen) Name() string {
-	return "Trademark Screen"
+	return "Loading Screen"
 }
 
 func (s *Screen) Ready() bool {
-	if s.renderer == nil {
+	if s.gui == nil {
 		return false
 	}
 
-	if s.mpq == nil {
-		return false
-	}
-
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.dcc == nil {
-		return false
-	}
-
-	if s.pl2 == nil {
+	if !s.gui.Ready() {
 		return false
 	}
 
@@ -125,31 +89,19 @@ func (s *Screen) Logger() *slog.Logger {
 }
 
 func (s *Screen) DependenciesResolved() bool {
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.RequiredArchivesLoaded() {
-		return false
-	}
-
-	if s.dc6 == nil {
-		return false
-	}
-
-	if s.dcc == nil {
-		return false
-	}
-
-	if s.pl2 == nil {
-		return false
-	}
-
 	if s.renderer == nil {
 		return false
 	}
 
 	if !s.renderer.IsInit() {
+		return false
+	}
+
+	if s.gui == nil {
+		return false
+	}
+
+	if !s.gui.Ready() {
 		return false
 	}
 
@@ -159,22 +111,16 @@ func (s *Screen) DependenciesResolved() bool {
 func (s *Screen) ResolveDependencies(services []servicemesh.Service) {
 	for _, service := range services {
 		switch candidate := service.(type) {
-		case mpqLoader.Dependency:
-			s.mpq = candidate
-		case dc6Loader.Dependency:
-			s.dc6 = candidate
-		case dccLoader.Dependency:
-			s.dcc = candidate
-		case pl2Loader.Dependency:
-			s.pl2 = candidate
 		case raylibRenderer.Dependency:
 			s.renderer = candidate
+		case gui.Dependency:
+			s.gui = candidate
 		}
 	}
 }
 
 func (s *Screen) Mode() string {
-	return "trademark"
+	return "loading"
 }
 
 func (s *Screen) Renderable() raylibRenderer.Renderable {

@@ -1,4 +1,4 @@
-package modalGameUI
+package screenManager
 
 import (
 	"github.com/gravestench/servicemesh"
