@@ -4,6 +4,7 @@ import (
 	"embed"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gravestench/servicemesh"
 	lua "github.com/yuin/gopher-lua"
 
@@ -56,8 +57,10 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		setupPackagePath(state, s.Config.ModDirectory)
 
 		go func() {
+			eb := backoff.NewExponentialBackOff()
+
 			for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens") {
-				time.Sleep(time.Second)
+				time.Sleep(eb.NextBackOff())
 			}
 
 			// 3) load each enabled mod

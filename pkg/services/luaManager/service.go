@@ -3,6 +3,8 @@ package luaManager
 import (
 	"fmt"
 	"log/slog"
+	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +30,7 @@ type Service struct {
 	boundServices map[string]any
 	wg            sync.WaitGroup
 	tasks         chan task
+	isInit        bool
 }
 
 func (s *Service) Name() string {
@@ -38,15 +41,41 @@ func (s *Service) Ready() bool {
 	return true
 }
 
-func (s *Service) Init(fromMesh servicemesh.Mesh) {
-	s.mesh = fromMesh
+func (s *Service) Init(mesh servicemesh.Mesh) {
+	s.mesh = mesh
 	s.tasks = make(chan task)
+
 	s.wg.Add(1)
-	go s.luaStateAccessSingletonWorker()
 	s.RebuildState()
+
+	s.isInit = true
+
+	for _, service := range s.mesh.Services() {
+		go s.loadPlugin(service)
+	}
+
+	s.Logger().Info("setting up worker thread")
+
+	go s.luaStateAccessSingletonWorker()
+
+	mesh.Events().On(servicemesh.EventServiceAdded, func(args ...any) {
+		if len(args) < 1 {
+			return
+		}
+
+		service, ok := args[0].(servicemesh.Service)
+		if !ok {
+			return
+		}
+
+		s.loadPlugin(service)
+	})
+
+	s.Logger().Info("initialized")
 }
 
 func (s *Service) RebuildState() {
+	s.Logger().Info("rebuilding state")
 	s.state = s.newState()
 }
 
@@ -56,17 +85,19 @@ func (s *Service) newState() *lua.LState {
 
 	s.boundServices = make(map[string]any)
 
+	s.Logger().Info("setting new state")
 	s.state = lua.NewState()
+
+	s.Logger().Info("importing OpenLibs")
 	s.state.OpenLibs()
 
 	bindLoggerToLuaEnvironment(s.Logger(), s.state)
 
 	apiTable := s.state.NewTable()
-	s.state.SetGlobal(globalApiTableKey, apiTable)
 
-	for _, service := range s.mesh.Services() {
-		s.exportToLuaEnvironment(service)
-	}
+	s.state.SetField(apiTable, "lua", createLuaTableFromStruct(s.state, s))
+	s.state.SetGlobal(globalApiTableKey, apiTable)
+	s.state.SetGlobal("sleep", s.state.NewFunction(s.luaSleep))
 
 	return s.state
 }
@@ -96,68 +127,116 @@ func bindLoggerToLuaEnvironment(logger *slog.Logger, state *lua.LState) {
 // WithState execs the given function with the singleton lua state
 func (s *Service) WithState(fn func(state *lua.LState) error) (err error) {
 	done := make(chan error)
-	s.tasks <- task{fn: fn, done: done}
+
+	eb := backoff.NewExponentialBackOff()
+
+	for !s.isInit {
+		time.Sleep(eb.NextBackOff())
+	}
+
+	go func() {
+		s.tasks <- task{fn: fn, done: done}
+	}()
+
 	return <-done
 }
 
-func (s *Service) exportToLuaEnvironment(service servicemesh.Service) {
-	plugin, ok := service.(LuaPlugin)
-	if !ok {
-		return
+func (s *Service) loadPlugin(service servicemesh.Service) {
+	eb := backoff.NewExponentialBackOff()
+
+	for !s.isInit {
+		time.Sleep(eb.NextBackOff())
 	}
 
 	if candidate, ok := service.(servicemesh.HasDependencies); ok {
 		for !candidate.DependenciesResolved() {
-			s.Logger().Warn("waiting for service to resolve dependencies", "target", service.Name())
+			s.Logger().Debug("waiting for candidate service to resolve dependencies", "target service", service.Name())
 			time.Sleep(time.Second)
 		}
+
+		s.Logger().Debug("candidate service dependencies resolved", "target service", service.Name())
 	}
 
-	if err := s.WithState(func(L *lua.LState) error {
+	s.Logger().Info("loading plugin", "name", service.Name())
+	go func() {
+		s.mux.Lock()
 		if _, exists := s.boundServices[service.Name()]; exists {
-			return nil
+			return
 		}
 
-		apiTable := L.GetGlobal(globalApiTableKey)
-
-		switch apiTable.(type) {
-		case *lua.LNilType:
-			apiTable = L.NewTable()
-		}
-
-		L.SetGlobal(globalApiTableKey, apiTable)
+		apiTable := s.state.GetGlobal(globalApiTableKey)
 
 		if s.boundServices == nil {
 			s.boundServices = make(map[string]any)
 		}
 
 		s.boundServices[service.Name()] = service
+		s.mux.Unlock()
 
-		// this needs to be done in a goroutine!
-		go plugin.ExportToLua(L, apiTable.(*lua.LTable))
+		key := strings.ToLower(strings.ReplaceAll(service.Name(), " ", ""))
 
-		return nil
-	}); err != nil {
-		s.Logger().Error("exporting to lua", "target service", service.Name(), "error", err)
-	}
+		s.Logger().Info("import successful", "target service", service.Name(), "table", fmt.Sprintf("api.%s", key))
+		//go plugin.LuaPluginLoadIntoTable(L, apiTable.(*lua.LTable))
+		s.state.SetField(apiTable, key, createLuaTableFromStruct(s.state, service))
+
+		go s.WithState(func(L *lua.LState) error {
+			if err := s.state.DoString(`
+			function tree(obj, prefix)
+				if not prefix then
+					prefix = ""
+				end
+			
+				for k,v in pairs(obj) do
+					local valueType = type(v)
+			
+					if valueType == "table" then
+						--print(prefix .. "." .. k)
+						tree(v, prefix .. "." .. k)
+					elseif valueType == "function" then
+						print(prefix .. "." .. k .."()")
+					end
+				end
+			end
+			
+			tree(api.` + key + ")"); err != nil {
+				s.Logger().Error("foo", "error", err)
+			}
+
+			return nil
+		})
+
+		return
+	}()
 }
 
 // WaitForGlobals blocks until all supplied globals exist
 func (s *Service) WaitForGlobals(globals ...string) {
-	eb := backoff.NewExponentialBackOff()
-	for {
-		err := s.WithState(func(L *lua.LState) error {
-			if !s.globalsExist(L, globals...) {
-				return fmt.Errorf("not found: %v", globals)
-			}
-			return nil
-		})
+	eb := backoff.ExponentialBackOff{
+		InitialInterval: time.Millisecond,
+		Multiplier:      1.05,
+		MaxInterval:     time.Second,
+		MaxElapsedTime:  time.Second * 6,
+	}
 
-		if err != nil {
-			s.Logger().Warn("backoff", "errMsg", err)
-			time.Sleep(eb.NextBackOff())
-			continue
-		}
+	for {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := s.WithState(func(L *lua.LState) error {
+				if !s.globalsExist(L, globals...) {
+					return fmt.Errorf("not found: %v", globals)
+				}
+				return nil
+			})
+
+			if err != nil {
+				s.Logger().Warn("backoff", "errMsg", err)
+				time.Sleep(eb.NextBackOff())
+			}
+		}()
+
+		wg.Wait()
 
 		break
 	}
@@ -200,4 +279,38 @@ func luaExists(L *lua.LState, path string) bool {
 	}
 
 	return true
+}
+
+// sleep function that GopherLua can call using os.execute
+func (s *Service) luaSleep(L *lua.LState) int {
+	n := L.ToInt(1) // Get the number of seconds from the Lua script
+
+	var cmd string
+	switch runtime.GOOS {
+	case "windows":
+		cmd = fmt.Sprintf("timeout /T %d /NOBREAK", n)
+	default: // Unix-like systems
+		cmd = fmt.Sprintf("sleep %d", n)
+	}
+
+	result, err := runCommand(cmd)
+	if err != nil {
+		L.Push(lua.LString(result))
+		return 1
+	}
+
+	return 0
+}
+
+func runCommand(cmd string) (string, error) {
+	// Split the command into name and args
+	command := exec.Command("sh", "-c", cmd)
+
+	// Get the output of the command
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
 }

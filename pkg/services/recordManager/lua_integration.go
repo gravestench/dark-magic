@@ -8,7 +8,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginLoadIntoTable(state *lua.LState, rootTable *lua.LTable) {
 	for !s.IsLoaded() {
 		time.Sleep(time.Second)
 	}
@@ -91,7 +91,7 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	state.SetGlobal("records", table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginUnloadFromTable(state *lua.LState, rootTable *lua.LTable) {
 	state.SetGlobal("records", lua.LNil)
 }
 
@@ -111,17 +111,17 @@ func genericExportArrayToLua(arr interface{}, state *lua.LState) *lua.LTable {
 		}
 
 		// Export the struct to a Lua table and insert it into the array.
-		table.RawSetInt(i+1, genericExportToLua(elem.Interface(), state))
+		table.RawSetInt(i+1, genericLuaPluginLoadIntoTable(elem.Interface(), state))
 	}
 
 	return table
 }
 
-// genericExportToLua exports a given object to a Lua table using "lua" struct tags.
-func genericExportToLua(obj interface{}, state *lua.LState) *lua.LTable {
+// genericLuaPluginLoadIntoTable exports a given object to a Lua table using "lua" struct tags.
+func genericLuaPluginLoadIntoTable(obj interface{}, state *lua.LState) *lua.LTable {
 	value := reflect.ValueOf(obj)
 	if value.Kind() != reflect.Struct {
-		panic("ExportToLua: obj is not a struct")
+		panic("LuaPluginLoadIntoTable: obj is not a struct")
 	}
 
 	table := state.NewTable()

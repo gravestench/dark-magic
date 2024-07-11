@@ -43,8 +43,8 @@ type SoundEntry struct {
 	Delay          int    `csv:"Delay"`          // Delay to the starting tick of the sound when it starts playing
 }
 
-// ExportToLua exports the SoundEntry object to a Lua table.
-func (s SoundEntry) ExportToLua(state *lua.LState) *lua.LTable {
+// LuaPluginLoadIntoTable exports the SoundEntry object to a Lua table.
+func (s SoundEntry) LuaPluginLoadIntoTable(state *lua.LState) *lua.LTable {
 	table := state.NewTable()
 
 	// Set the fields of the table using the struct's values.

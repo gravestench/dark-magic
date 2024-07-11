@@ -86,8 +86,10 @@ func (t *Tween) Update(dt time.Duration) *Tween {
 		return t
 	}
 
+	progress := t.Progress()
+
 	if t.elapsed < total && t.onUpdate != nil {
-		t.onUpdate(t.ease(t.Progress()))
+		t.onUpdate(t.ease(progress))
 	}
 
 	return t
@@ -164,8 +166,6 @@ func getEaseFn(ease interface{}, params []float64) (func(float64) float64, strin
 		if found {
 			return provider.New(params), e
 		}
-	case func(float64) float64:
-		return e, "custom"
 	}
 
 	return easing.EaseMap[easing.Default].New(params), easing.Default

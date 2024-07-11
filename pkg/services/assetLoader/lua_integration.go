@@ -10,7 +10,11 @@ import (
 
 var _ luaManager.LuaPlugin = &Service{}
 
-func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginPreload(state *lua.LState) {
+
+}
+
+func (s *Service) LuaPluginLoadIntoTable(state *lua.LState, rootTable *lua.LTable) {
 	fn := state.NewFunction(func(L *lua.LState) int {
 		// check argument count
 		if L.GetTop() != 1 {
@@ -43,6 +47,6 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	rootTable.RawSetString("assets", table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginUnloadFromTable(state *lua.LState, rootTable *lua.LTable) {
 	rootTable.RawSetString("assets", lua.LNil)
 }

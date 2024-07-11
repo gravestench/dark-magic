@@ -4,6 +4,7 @@ go 1.21.3
 
 replace (
 	github.com/gravestench/servicemesh => /Users/dylanknuth/src/servicemesh
+	github.com/yuin/gopher-lua => /Users/dylanknuth/src/gopher-lua
 )
 
 require (

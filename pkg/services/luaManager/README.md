@@ -38,7 +38,7 @@ However, implementors of the following interface methods are invoked by the lua
 service indirectly whenever the service is added or removed from the servicemesh.
 ```golang
 type UsesLuaEnvironment interface {
-    ExportToLua(state *lua.LState)
-    UnexportFromLua(state *lua.LState)
+    LuaPluginLoadIntoTable(state *lua.LState)
+    LuaPluginUnloadFromTable(state *lua.LState)
 }
 ```

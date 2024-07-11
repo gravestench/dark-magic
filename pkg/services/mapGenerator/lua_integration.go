@@ -6,7 +6,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginLoadIntoTable(state *lua.LState, rootTable *lua.LTable) {
 	table := state.NewTable()
 
 	state.SetField(table, "seed", state.NewFunction(func(L *lua.LState) int {
@@ -55,6 +55,6 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	state.SetGlobal("map_generator", table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginUnloadFromTable(state *lua.LState, rootTable *lua.LTable) {
 	state.SetGlobal("map_generator", lua.LNil)
 }

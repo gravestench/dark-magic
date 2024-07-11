@@ -11,11 +11,10 @@ local Terminal = {
 
 function Terminal:Init()
     self.root = api.renderer.NewRenderable()
-    self.root.Opacity(0.0) -- during init we hide everything
 
     self.log("root node", "uuid", self.root.UUID())
 
-    self:InitWindow()
+    self:initGraphics()
     --self.InitInput()
     --
     --api.events.On("Toggle Terminal", self.Toggle)
@@ -23,72 +22,98 @@ function Terminal:Init()
     --self.root.SetOpacity(1) -- when we are done, we show everything
 end
 
-function Terminal:InitWindow()
-    self.log("creating Terminal window")
-    w, h = api.renderer.window.Size()
+function Terminal:initGraphics()
+    self.log("setting up terminal graphics")
+    w, windowHeight = api.renderer.window.Size()
 
     self.root.Position(0, 0)
     self.root.Enable(false)
 
-    self.box = api.ui.FillRect(0, 0, w, h, 1, "0x333333", "0xefefef")
+    self.box = api.ui.FillRect(0, 0, w, windowHeight, 1, "0x343434", "0x787878")
+    self.box.Position(0, -windowHeight)
+    self.box.Origin(0, 0)
     self.box.Parent(self.root)
-
     self.box.ZIndex(-1)
 
+    self:initTweens()
+end
+
+function Terminal:initTweens()
     self.log("setting up tweens")
+
     self.tweenIn = api.tweens.New()
-    self.tweenIn.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
-    self.tweenIn.OnUpdate(self.onTweenIn)
-    self.tweenIn.Time(5*1e9)
+    self.tweenOut = api.tweens.New()
+
+    second = 1e9
+    tweenTime = 10 * second
+    tweenEase = "Linear"
+
+    self.log("setting tween times", "seconds", tweenTime/second)
+    self.tweenIn.Time(tweenTime)
+    self.tweenOut.Time(tweenTime)
+
+    self.log("setting tween ease", "ease", tweenEase)
+    self.tweenIn.Ease("Linear")
+    self.tweenOut.Ease("Linear")
+
     self.currentTween = self.tweenOut
 
-    self.tweenOut = api.tweens.New()
-    self.tweenOut.OnUpdate(self.onTweenOut)
+    self.log("setting tween callbacks")
+    self.tweenIn.OnUpdate(function (progress) self:onTweenIn(progress) end)
+    self.tweenOut.OnUpdate(function (progress) self:onTweenOut(progress) end)
 
+    self.log("stopping tweens")
+    self.tweenIn.Stop()
+    self.tweenOut.Stop()
+
+    self.log("adding tweens to tween manager")
+    api.tweens.Add(self.tweenIn)
+    api.tweens.Add(self.tweenOut)
+
+    self.log("debug test toggling to animate terminal in")
     self:Toggle()
 end
 
 function Terminal:onTweenIn(progress)
-    _, currentY = self.root.Position()
-    _, h = api.renderer.window.Size()
-    y = -h + (progress * (h - currentY))
+    windowWidth, windowHeight = api.renderer.window.Size()
+
+    startX, startY = self.root.Position()
+    targetX, targetY = startX, 0
+
+    offset = progress * (windowHeight - startY)
+    y = windowHeight - offset
+
     x, _ = self.box.Position()
+
     self.root.Opacity(progress)
     self.box.Position(x, y)
-    self.log("tweening in", "progress", progress, "x", x, "y", y)
 end
 
-function Terminal:onTweenOut (progress)
-    _, h = api.renderer.window.Size()
-    y = -h * progress
+function Terminal:onTweenOut(progress)
+    _, windowHeight = api.renderer.window.Size()
+    offset = windowHeight * progress
+    y = windowHeight - offset
     x, _ = self.box.Position()
-    self.log("tweening out", "progress", progress, "x", x, "y", y)
-    self.box.SetTranslation(x, y)
+    self.root.Opacity(1-progress)
+    self.box.Position(x, y)
 end
 
 function Terminal:Toggle()
-    self.log("toggling")
-
     self.enabled = not self.enabled
     self.gateInput = not self.enabled
 
-    if self.currentTween ~= nil then
-        self.currentTween.Stop()
-    end
-
     if self.enabled then
-        self.log("enabling")
+        self.log("toggling", "enabled", self.enabled, "gate input", self.gateInput, "tween", "tween in")
         self.gateInput = false
-        self.currentTween = self.tweenIn
+        self.tweenOut.Stop()
+        self.tweenIn.Start()
     else
-        self.log("disabling")
+        self.log("toggling", "enabled", self.enabled, "gate input", self.gateInput, "tween", "tween out")
         self.gateInput = true
-        self.currentTween = self.tweenOut
+        self.tweenIn.Stop()
+        self.tweenOut.Start()
     end
 
-    self.currentTween.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
-    self.currentTween.Time(1e15*5)
-    self.currentTween.Play()
 end
 
 function Terminal:InitInput()

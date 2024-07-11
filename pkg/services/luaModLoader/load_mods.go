@@ -260,7 +260,12 @@ func bindLoggerToLuaEnvironment(logger *slog.Logger, state *lua.LState, table *l
 		}
 
 		arg0 := fmt.Sprintf("%s", args[0])
-		logger.Info(arg0, args[1:]...)
+
+		if len(args) > 1 {
+			logger.Info(arg0, args[1:]...)
+		} else {
+			logger.Info(arg0)
+		}
 
 		return 0
 	})

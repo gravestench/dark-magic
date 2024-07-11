@@ -2,6 +2,7 @@ package tweens
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -18,11 +19,17 @@ var _ luaService.LuaPlugin = &Service{}
 // by the lua service to export stuff into the
 // lua environment for use in scripts.
 
-func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginPreload(state *lua.LState) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *Service) LuaPluginLoadIntoTable(state *lua.LState, rootTable *lua.LTable) {
 	table := state.NewTable()
 
 	fnMap := map[string]lua.LGFunction{
 		"New": s.luaNewTween,
+		"Add": s.luaAddTween,
 	}
 
 	for key, fn := range fnMap {
@@ -32,7 +39,7 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	state.SetField(rootTable, LuaApiKey, table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginUnloadFromTable(state *lua.LState, rootTable *lua.LTable) {
 	state.SetField(rootTable, LuaApiKey, lua.LNil)
 }
 
@@ -47,6 +54,21 @@ func (s *Service) luaNewTween(L *lua.LState) int {
 	L.Push(tweenTable)
 
 	return 1
+}
+
+func (s *Service) luaAddTween(L *lua.LState) int {
+	if L.GetTop() != 1 {
+		return 0
+	}
+
+	tbl := L.CheckTable(1)
+	if ud, ok := L.GetField(tbl, "UserData").(*lua.LUserData); ok {
+		if tween, ok := ud.Value.(*Tween); ok {
+			s.Add(tween)
+		}
+	}
+
+	return 0
 }
 
 func (s *Service) LuaMakeTween(L *lua.LState, t *Tween) *lua.LTable {
@@ -70,6 +92,8 @@ func (s *Service) LuaMakeTween(L *lua.LState, t *Tween) *lua.LTable {
 	} {
 		L.SetField(table, key, L.NewFunction(fn))
 	}
+
+	L.SetField(table, "UserData", s.luaTweenClosureUserData(L, t))
 
 	return table
 }
@@ -174,18 +198,27 @@ func (s *Service) luaTweenClosureEase(t *Tween) lua.LGFunction {
 			return 1
 		}
 
-		var args []any
-		for i := 1; i < numArgs; i++ {
-			args = append(args, L.CheckAny(i))
+		ease := L.CheckString(1)
+
+		var args []lua.LValue
+		for i := 2; i < numArgs; i++ {
+			args = append(args, L.CheckNumber(i))
 		}
 
-		ease, ok := args[0].(string)
-		if !ok {
-			return 0
+		var params []float64
+
+		for _, arg := range args {
+			if n, ok := arg.(lua.LNumber); ok {
+				if v, err := strconv.ParseFloat(n.String(), 32); err == nil {
+					params = append(params, v)
+				}
+			}
 		}
 
 		if _, found := easing.EaseMap[ease]; found {
-			t.Ease(args...)
+			t.Ease(ease, params)
+		} else if !found {
+
 		}
 
 		return 0
@@ -228,7 +261,7 @@ func (s *Service) luaTweenClosureOnUpdate(t *Tween) lua.LGFunction {
 			L.Push(lua.LNumber(input))
 
 			// Call the Lua function with 1 argument and 1 return value
-			err := L.PCall(1, 1, nil)
+			err := L.PCall(1, 0, nil)
 			if err != nil {
 				fmt.Println("Error calling Lua function:", err)
 				return
@@ -270,4 +303,11 @@ func (s *Service) luaTweenClosureRepeat(t *Tween) lua.LGFunction {
 
 		return 0
 	}
+}
+
+func (s *Service) luaTweenClosureUserData(L *lua.LState, t *Tween) *lua.LUserData {
+	obj := L.NewUserData()
+	obj.Value = t
+
+	return obj
 }

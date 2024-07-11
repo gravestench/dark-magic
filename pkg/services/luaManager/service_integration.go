@@ -18,10 +18,10 @@ type ManagesLuaEnvironment interface {
 	GlobalsExist(globals ...string) bool
 	WaitForGlobals(globals ...string)
 	WithState(fn func(state *lua.LState) error) error
-	RebuildState()
 }
 
 type LuaPlugin interface {
-	ExportToLua(state *lua.LState, apiRootTable *lua.LTable)
-	UnexportFromLua(state *lua.LState, apiRootTable *lua.LTable)
+	LuaPluginPreload(state *lua.LState)
+	LuaPluginLoadIntoTable(state *lua.LState, table *lua.LTable)
+	LuaPluginUnloadFromTable(state *lua.LState, table *lua.LTable)
 }

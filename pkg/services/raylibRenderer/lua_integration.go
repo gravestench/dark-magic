@@ -17,7 +17,7 @@ var _ luaService.LuaPlugin = &Service{}
 // by the lua service to export stuff into the
 // lua environment for use in scripts.
 
-func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginLoadIntoTable(state *lua.LState, rootTable *lua.LTable) {
 	table := state.NewTable()
 
 	s.bindMethods(state, table)
@@ -25,7 +25,7 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 	rootTable.RawSetString(LuaApiKey, table)
 }
 
-func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
+func (s *Service) LuaPluginUnloadFromTable(state *lua.LState, rootTable *lua.LTable) {
 	state.SetField(rootTable, LuaApiKey, lua.LNil)
 }
 
