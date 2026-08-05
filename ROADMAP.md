@@ -77,7 +77,8 @@ their own legally obtained game data.
 - [x] Apply unique/set availability fallback and item-type quality restrictions.
 - [x] Select concrete UniqueItems/SetItems records by eligibility and rarity weight.
 - [x] Parse and deterministically select eligible magic/rare prefixes and suffixes.
-- [ ] Roll affix property values and materialize complete item instances.
+- [x] Roll affix property values and materialize portable item instances.
+- [ ] Interpret property codes into runtime item statistics.
 - [ ] Add ladder-season eligibility to special-item selection.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 

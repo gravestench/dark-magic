@@ -32,6 +32,7 @@ type Affix struct {
 	Rare      bool            `json:"rare"`
 	Level     int             `json:"level"`
 	MaxLevel  int             `json:"maxLevel,omitempty"`
+	LevelReq  int             `json:"levelRequirement,omitempty"`
 	Frequency int             `json:"frequency"`
 	Group     int             `json:"group,omitempty"`
 	Includes  []string        `json:"includes"`
@@ -51,11 +52,25 @@ type AffixOptions struct {
 
 // GeneratedItem is the portable output of base, quality, special, and affix selection.
 type GeneratedItem struct {
-	Base     BaseItem     `json:"base"`
-	Quality  Quality      `json:"quality"`
-	Special  *SpecialItem `json:"special,omitempty"`
-	Prefixes []Affix      `json:"prefixes,omitempty"`
-	Suffixes []Affix      `json:"suffixes,omitempty"`
+	Base             BaseItem      `json:"base"`
+	Quality          Quality       `json:"quality"`
+	LevelRequirement int           `json:"levelRequirement"`
+	Special          *SpecialItem  `json:"special,omitempty"`
+	Prefixes         []RolledAffix `json:"prefixes,omitempty"`
+	Suffixes         []RolledAffix `json:"suffixes,omitempty"`
+}
+
+type RolledModifier struct {
+	Code      string `json:"code"`
+	Parameter int    `json:"parameter,omitempty"`
+	Value     int    `json:"value"`
+}
+
+type RolledAffix struct {
+	Name      string           `json:"name"`
+	Kind      AffixKind        `json:"kind"`
+	Group     int              `json:"group,omitempty"`
+	Modifiers []RolledModifier `json:"modifiers,omitempty"`
 }
 
 // ParseAffixesTSV parses either MagicPrefix.txt or MagicSuffix.txt.
@@ -96,7 +111,7 @@ func ParseAffixesTSV(input io.Reader, kind AffixKind) ([]Affix, error) {
 		integerTargets := []struct {
 			name string
 			to   *int
-		}{{"version", &affix.Version}, {"level", &affix.Level}, {"maxlevel", &affix.MaxLevel}, {"frequency", &affix.Frequency}, {"group", &affix.Group}}
+		}{{"version", &affix.Version}, {"level", &affix.Level}, {"maxlevel", &affix.MaxLevel}, {"levelreq", &affix.LevelReq}, {"frequency", &affix.Frequency}, {"group", &affix.Group}}
 		for _, target := range integerTargets {
 			*target.to, err = integerField(row, columns, target.name, rowNumber)
 			if err != nil {

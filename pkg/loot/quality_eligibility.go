@@ -14,6 +14,7 @@ type SpecialItem struct {
 	Name     string `json:"name"`
 	BaseCode string `json:"baseCode"`
 	Level    int    `json:"level"`
+	LevelReq int    `json:"levelRequirement,omitempty"`
 	Version  int    `json:"version"`
 	Rarity   int    `json:"rarity"`
 	Enabled  bool   `json:"enabled"`
@@ -154,6 +155,10 @@ func parseSpecialItemsTSV(input io.Reader, label, codeColumn string, hasEnabled 
 		if err != nil {
 			return nil, err
 		}
+		levelReq, err := integerField(row, columns, "lvl req", rowNumber)
+		if err != nil {
+			return nil, err
+		}
 		enabled := true
 		if hasEnabled {
 			enabled = booleanField(row, columns, "enabled")
@@ -167,7 +172,7 @@ func parseSpecialItemsTSV(input io.Reader, label, codeColumn string, hasEnabled 
 			return nil, fmt.Errorf("loot: %s items row %d column %q: must not be negative", label, rowNumber, "rarity")
 		}
 		items[code] = append(items[code], SpecialItem{
-			Name: field(row, columns, "index"), BaseCode: code, Level: level,
+			Name: field(row, columns, "index"), BaseCode: code, Level: level, LevelReq: levelReq,
 			Version: version, Rarity: rarity, Enabled: enabled,
 		})
 	}
