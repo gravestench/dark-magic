@@ -42,7 +42,7 @@ their own legally obtained game data.
 - [x] Materialize embedded example mods without overwriting user files.
 - [x] Load and initialize an external example mod end to end.
 - [x] Install and initialize an embedded smoke mod end to end.
-- [ ] Run the embedded terminal UI mod end to end against the renderer API.
+- [x] Run the embedded terminal UI mod end to end against renderer/UI/tween APIs.
 - [ ] Demonstrate logging, record access, rendering, input, and reload behavior.
 - [x] Serialize Lua tween callbacks and implement start/update/repeat/complete bindings.
 

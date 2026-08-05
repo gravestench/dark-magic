@@ -1,6 +1,8 @@
 package luaModLoader
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,6 +31,17 @@ func TestInstallBuiltinModsDoesNotOverwriteUserFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(modDirectory, "terminal", "manifest.json")); err != nil {
 		t.Fatalf("expected missing built-in file to be installed: %v", err)
+	}
+}
+
+func TestMatchesBuiltinHash(t *testing.T) {
+	data := []byte("known built-in")
+	sum := sha256.Sum256(data)
+	if !matchesBuiltinHash(data, []string{hex.EncodeToString(sum[:])}) {
+		t.Fatal("expected known built-in hash to match")
+	}
+	if matchesBuiltinHash([]byte("user edit"), []string{hex.EncodeToString(sum[:])}) {
+		t.Fatal("user-edited file matched built-in hash")
 	}
 }
 

@@ -1,7 +1,9 @@
 package luaModLoader
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,6 +21,10 @@ import (
 
 //go:embed internal/mods
 var internalMods embed.FS
+
+var upgradeableBuiltinHashes = map[string][]string{
+	"terminal/init.lua": {"8e6dc3dc2b04e62bf7b3e99301a727ccaa3cb6943c717f8f9df5fc44e6f1bcb7"},
+}
 
 type recipe interface {
 	servicemesh.Service
@@ -99,7 +105,18 @@ func (s *Service) installBuiltinMods() error {
 			return os.MkdirAll(target, 0o755)
 		}
 		if _, err := os.Stat(target); err == nil {
-			return nil
+			existing, readErr := os.ReadFile(target)
+			if readErr != nil {
+				return readErr
+			}
+			if !matchesBuiltinHash(existing, upgradeableBuiltinHashes[filepath.ToSlash(relative)]) {
+				return nil
+			}
+			data, readErr := internalMods.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			return os.WriteFile(target, data, 0o644)
 		} else if !os.IsNotExist(err) {
 			return err
 		}
@@ -109,6 +126,17 @@ func (s *Service) installBuiltinMods() error {
 		}
 		return os.WriteFile(target, data, 0o644)
 	})
+}
+
+func matchesBuiltinHash(data []byte, hashes []string) bool {
+	sum := sha256.Sum256(data)
+	encoded := hex.EncodeToString(sum[:])
+	for _, candidate := range hashes {
+		if encoded == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) Name() string {

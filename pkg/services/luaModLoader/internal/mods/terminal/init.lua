@@ -28,7 +28,7 @@ function Terminal:InitWindow()
     w, h = api.renderer.window.Size()
 
     self.root.Position(0, 0)
-    self.root.Enable(false)
+    self.root.Enable(true)
 
     self.box = api.ui.FillRect(0, -h/2, w, h, 1, "0x333333", "0xefefef")
     self.box.Parent(self.root)
@@ -47,13 +47,14 @@ function Terminal:initTweens()
 
     self.tweenIn = api.tweens.New()
     --self.tweenIn.Ease("Elastic.easeInOut", 0.5, 0.5)
-    self.tweenIn.OnUpdate(function(progress) self.onTweenIn(progress) end )
-    self.tweenIn.OnStart(function() self.onTweenStart() end )
+    self.tweenIn.OnUpdate(function(progress) self:onTweenIn(progress) end )
+    self.tweenIn.OnStart(function() self:onTweenStart() end )
     self.tweenIn.Time(3*second)
     self.currentTween = self.tweenOut
 
     self.tweenOut = api.tweens.New()
-    self.tweenOut.OnUpdate(self.onTweenOut)
+    self.tweenOut.OnUpdate(function(progress) self:onTweenOut(progress) end)
+    self.tweenOut.Time(3*second)
     self.tweenOut.Stop()
 
     api.tweens.Add(self.tweenIn)
@@ -76,8 +77,9 @@ end
 function Terminal:onTweenOut (progress)
     _, h = api.renderer.window.Size()
     y = -h * progress
-    x, _ = self.box.Position()
-    self.box.SetTranslation(x, y)
+    x, _ = self.root.Position()
+    self.root.Position(x, y)
+    self.root.Opacity(1-progress)
 end
 
 function Terminal:Toggle()
@@ -99,6 +101,8 @@ function Terminal:Toggle()
         self.gateInput = true
         self.currentTween = self.tweenOut
     end
+
+    self.root.Enable(true)
 
     --self.currentTween.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
     --self.currentTween.Time(1e15*5)

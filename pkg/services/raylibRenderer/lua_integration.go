@@ -360,10 +360,10 @@ func (s *Service) luaRenderableClosureParentSetGet(L *lua.LState, r Renderable) 
 		case *lua.LNilType:
 			return 0
 		case *lua.LUserData:
-			childAny := v.Value
+			parentAny := v.Value
 
-			if child, ok := childAny.(Renderable); ok {
-				child.SetParent(r)
+			if parent, ok := parentAny.(Renderable); ok {
+				r.SetParent(parent)
 			}
 		}
 
