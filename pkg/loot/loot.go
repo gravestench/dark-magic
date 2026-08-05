@@ -17,10 +17,20 @@ type Entry struct {
 
 // Class is the subset of a Diablo II TreasureClass record needed to choose drops.
 type Class struct {
-	Name    string  `json:"name"`
-	Picks   int     `json:"picks"`
-	NoDrop  int     `json:"noDrop,omitempty"`
-	Entries []Entry `json:"entries"`
+	Name    string           `json:"name"`
+	Picks   int              `json:"picks"`
+	NoDrop  int              `json:"noDrop,omitempty"`
+	Quality QualityModifiers `json:"quality,omitempty"`
+	Entries []Entry          `json:"entries"`
+}
+
+// QualityModifiers are TreasureClassEx's 0..1024 adjustments to the later
+// ItemRatio quality calculation. They are intentionally not probability weights.
+type QualityModifiers struct {
+	Unique int `json:"unique,omitempty"`
+	Set    int `json:"set,omitempty"`
+	Rare   int `json:"rare,omitempty"`
+	Magic  int `json:"magic,omitempty"`
 }
 
 // Catalog resolves treasure-class names. Codes absent from the catalog are items.
@@ -28,8 +38,9 @@ type Catalog map[string]Class
 
 // Drop describes a terminal item and the treasure classes traversed to reach it.
 type Drop struct {
-	Code string   `json:"code"`
-	Path []string `json:"path"`
+	Code    string             `json:"code"`
+	Path    []string           `json:"path"`
+	Quality []QualityModifiers `json:"quality,omitempty"`
 }
 
 // Roller owns deterministic random state. A Roller should not be shared between
@@ -114,7 +125,14 @@ func (r *Roller) rollClass(name string, path []string, active map[string]bool) (
 			drops = append(drops, resolved...)
 			continue
 		}
-		drops = append(drops, Drop{Code: entry.Code, Path: clonePath(path)})
+		var quality []QualityModifiers
+		for _, className := range path {
+			modifier := r.catalog[className].Quality
+			if modifier != (QualityModifiers{}) {
+				quality = append(quality, modifier)
+			}
+		}
+		drops = append(drops, Drop{Code: entry.Code, Path: clonePath(path), Quality: quality})
 	}
 
 	return drops, nil
@@ -126,6 +144,9 @@ func validate(class Class) error {
 	}
 	if class.NoDrop < 0 {
 		return errors.New("NoDrop must not be negative")
+	}
+	if class.Quality.Unique < 0 || class.Quality.Set < 0 || class.Quality.Rare < 0 || class.Quality.Magic < 0 {
+		return errors.New("quality modifiers must not be negative")
 	}
 	total := class.NoDrop
 	for index, entry := range class.Entries {

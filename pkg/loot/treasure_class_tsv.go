@@ -56,7 +56,23 @@ func ParseTreasureClassTSV(input io.Reader) (Catalog, error) {
 		if err != nil {
 			return nil, err
 		}
-		class := Class{Name: name, Picks: picks, NoDrop: noDrop}
+		quality := QualityModifiers{}
+		qualityFields := []struct {
+			name   string
+			target *int
+		}{
+			{name: "Unique", target: &quality.Unique},
+			{name: "Set", target: &quality.Set},
+			{name: "Rare", target: &quality.Rare},
+			{name: "Magic", target: &quality.Magic},
+		}
+		for _, qualityField := range qualityFields {
+			*qualityField.target, err = integerField(row, columns, qualityField.name, rowNumber)
+			if err != nil {
+				return nil, err
+			}
+		}
+		class := Class{Name: name, Picks: picks, NoDrop: noDrop, Quality: quality}
 		for index := 1; index <= treasureEntryCount; index++ {
 			code := field(row, columns, fmt.Sprintf("Item%d", index))
 			if code == "" {

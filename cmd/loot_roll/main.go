@@ -16,6 +16,9 @@ func main() {
 	file := flag.String("file", "", "TreasureClass TSV or JSON class file")
 	class := flag.String("class", "", "treasure class to roll")
 	seed := flag.Uint64("seed", 1, "deterministic random seed")
+	weapons := flag.String("weapons", "", "optional weapons.txt path for item resolution")
+	armor := flag.String("armor", "", "optional armor.txt path for item resolution")
+	misc := flag.String("misc", "", "optional misc.txt path for item resolution")
 	flag.Parse()
 	if *file == "" || *class == "" {
 		fmt.Fprintln(os.Stderr, "usage: loot_roll -file classes.json -class CLASS [-seed N]")
@@ -53,9 +56,36 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	var output any = drops
+	itemFiles := []struct {
+		path string
+		kind loot.ItemKind
+	}{{*weapons, loot.ItemWeapon}, {*armor, loot.ItemArmor}, {*misc, loot.ItemMisc}}
+	var itemCatalogs []loot.ItemCatalog
+	for _, itemFile := range itemFiles {
+		if itemFile.path == "" {
+			continue
+		}
+		contents, err := os.ReadFile(itemFile.path)
+		if err != nil {
+			fatal(err)
+		}
+		items, err := loot.ParseBaseItemsTSV(bytes.NewReader(contents), itemFile.kind)
+		if err != nil {
+			fatal(err)
+		}
+		itemCatalogs = append(itemCatalogs, items)
+	}
+	if len(itemCatalogs) > 0 {
+		items, err := loot.MergeItemCatalogs(itemCatalogs...)
+		if err != nil {
+			fatal(err)
+		}
+		output = loot.ResolveBaseItems(drops, items)
+	}
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(drops); err != nil {
+	if err := encoder.Encode(output); err != nil {
 		fatal(err)
 	}
 }

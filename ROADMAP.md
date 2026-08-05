@@ -70,7 +70,9 @@ their own legally obtained game data.
 - [x] Detect malformed classes, recursive cycles, and runaway nesting.
 - [x] Add a headless loot-roll test application with redistributable example data.
 - [x] Parse supplied TreasureClass/TreasureClassEx records into the loot catalog.
-- [ ] Resolve terminal codes into base item records and quality modifiers.
+- [x] Resolve direct terminal codes into base item records and retain quality modifiers.
+- [ ] Expand dynamic item-type codes such as `weap3` and `armo33` by level.
+- [ ] Apply ItemRatio, magic-find, and TreasureClass modifiers to item quality.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
 ## Later gameplay milestones
