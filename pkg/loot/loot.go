@@ -114,7 +114,7 @@ func (r *Roller) rollClass(name string, path []string, active map[string]bool) (
 			drops = append(drops, resolved...)
 			continue
 		}
-		drops = append(drops, Drop{Code: entry.Code, Path: appendPath(path, "")[:len(path)]})
+		drops = append(drops, Drop{Code: entry.Code, Path: clonePath(path)})
 	}
 
 	return drops, nil
@@ -150,6 +150,12 @@ func appendPath(path []string, value string) []string {
 	if value != "" {
 		result = append(result, value)
 	}
+	return result
+}
+
+func clonePath(path []string) []string {
+	result := make([]string, len(path))
+	copy(result, path)
 	return result
 }
 

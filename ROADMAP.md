@@ -69,7 +69,7 @@ their own legally obtained game data.
 - [x] Make rolls reproducible from an explicit seed.
 - [x] Detect malformed classes, recursive cycles, and runaway nesting.
 - [x] Add a headless loot-roll test application with redistributable example data.
-- [ ] Parse supplied TreasureClassEx records into the loot catalog.
+- [x] Parse supplied TreasureClass/TreasureClassEx records into the loot catalog.
 - [ ] Resolve terminal codes into base item records and quality modifiers.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 

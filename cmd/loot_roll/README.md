@@ -1,7 +1,9 @@
 # Deterministic loot roller
 
 `loot_roll` is a headless test application for treasure-class selection. Its
-input is JSON so it can be used without proprietary game data.
+input can be the game's tab-delimited `TreasureClass.txt` or
+`TreasureClassEx.txt`. JSON is also supported so the command can be exercised
+without proprietary game data.
 
 ```sh
 go run ./cmd/loot_roll \

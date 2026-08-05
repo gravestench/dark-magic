@@ -2,16 +2,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/gravestench/dark-magic/pkg/loot"
 )
 
 func main() {
-	file := flag.String("file", "", "JSON file containing an array of treasure classes")
+	file := flag.String("file", "", "TreasureClass TSV or JSON class file")
 	class := flag.String("class", "", "treasure class to roll")
 	seed := flag.Uint64("seed", 1, "deterministic random seed")
 	flag.Parse()
@@ -24,19 +26,27 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	var classes []loot.Class
-	if err := json.Unmarshal(contents, &classes); err != nil {
-		fatal(fmt.Errorf("decode %s: %w", *file, err))
-	}
-	catalog := make(loot.Catalog, len(classes))
-	for _, treasureClass := range classes {
-		if treasureClass.Name == "" {
-			fatal(fmt.Errorf("class has an empty name"))
+	var catalog loot.Catalog
+	if filepath.Ext(*file) == ".json" {
+		var classes []loot.Class
+		if err := json.Unmarshal(contents, &classes); err != nil {
+			fatal(fmt.Errorf("decode %s: %w", *file, err))
 		}
-		if _, duplicate := catalog[treasureClass.Name]; duplicate {
-			fatal(fmt.Errorf("duplicate class %q", treasureClass.Name))
+		catalog = make(loot.Catalog, len(classes))
+		for _, treasureClass := range classes {
+			if treasureClass.Name == "" {
+				fatal(fmt.Errorf("class has an empty name"))
+			}
+			if _, duplicate := catalog[treasureClass.Name]; duplicate {
+				fatal(fmt.Errorf("duplicate class %q", treasureClass.Name))
+			}
+			catalog[treasureClass.Name] = treasureClass
 		}
-		catalog[treasureClass.Name] = treasureClass
+	} else {
+		catalog, err = loot.ParseTreasureClassTSV(bytes.NewReader(contents))
+		if err != nil {
+			fatal(err)
+		}
 	}
 
 	drops, err := loot.New(catalog, *seed).Roll(*class)
