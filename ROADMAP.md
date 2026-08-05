@@ -74,7 +74,9 @@ their own legally obtained game data.
 - [x] Expand generic and dynamic item-type codes such as `weap3` and `armo33` by level.
 - [x] Parse and select Classic/Expansion ItemRatio rule sets.
 - [x] Apply level, magic-find, minimum, and TreasureClass modifiers to item quality.
-- [ ] Apply unique/set availability fallback and item-type quality restrictions.
+- [x] Apply unique/set availability fallback and item-type quality restrictions.
+- [ ] Select a concrete weighted unique/set record and generate item affixes.
+- [ ] Add ladder-season eligibility to special-item selection.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
 ## Later gameplay milestones

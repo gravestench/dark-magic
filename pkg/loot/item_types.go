@@ -19,6 +19,9 @@ type ItemType struct {
 	Code   string `json:"code"`
 	Equiv1 string `json:"equiv1,omitempty"`
 	Equiv2 string `json:"equiv2,omitempty"`
+	Magic  bool   `json:"magic,omitempty"`
+	Rare   bool   `json:"rare,omitempty"`
+	Normal bool   `json:"normal,omitempty"`
 }
 
 type ItemTypes map[string]ItemType
@@ -55,7 +58,11 @@ func ParseItemTypesTSV(input io.Reader) (ItemTypes, error) {
 		if _, duplicate := types[code]; duplicate {
 			return nil, fmt.Errorf("loot: duplicate item type %q at row %d", code, rowNumber)
 		}
-		types[code] = ItemType{Code: code, Equiv1: field(row, columns, "Equiv1"), Equiv2: field(row, columns, "Equiv2")}
+		types[code] = ItemType{
+			Code: code, Equiv1: field(row, columns, "Equiv1"), Equiv2: field(row, columns, "Equiv2"),
+			Magic: booleanField(row, columns, "Magic"), Rare: booleanField(row, columns, "Rare"),
+			Normal: booleanField(row, columns, "Normal"),
+		}
 	}
 	return types, nil
 }
@@ -169,4 +176,9 @@ func splitDynamicCode(code string) (string, int, bool) {
 func copyItem(item BaseItem) *BaseItem {
 	result := item
 	return &result
+}
+
+func booleanField(row []string, columns map[string]int, name string) bool {
+	value := strings.ToLower(field(row, columns, name))
+	return value == "1" || value == "true" || value == "yes"
 }
