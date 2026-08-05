@@ -19,6 +19,7 @@ func main() {
 	weapons := flag.String("weapons", "", "optional weapons.txt path for item resolution")
 	armor := flag.String("armor", "", "optional armor.txt path for item resolution")
 	misc := flag.String("misc", "", "optional misc.txt path for item resolution")
+	itemTypes := flag.String("item-types", "", "optional ItemTypes.txt path for dynamic-code resolution")
 	flag.Parse()
 	if *file == "" || *class == "" {
 		fmt.Fprintln(os.Stderr, "usage: loot_roll -file classes.json -class CLASS [-seed N]")
@@ -81,7 +82,22 @@ func main() {
 		if err != nil {
 			fatal(err)
 		}
-		output = loot.ResolveBaseItems(drops, items)
+		if *itemTypes == "" {
+			output = loot.ResolveBaseItems(drops, items)
+		} else {
+			contents, err := os.ReadFile(*itemTypes)
+			if err != nil {
+				fatal(err)
+			}
+			types, err := loot.ParseItemTypesTSV(bytes.NewReader(contents))
+			if err != nil {
+				fatal(err)
+			}
+			output, err = loot.ResolveItems(drops, items, types, *seed)
+			if err != nil {
+				fatal(err)
+			}
+		}
 	}
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")

@@ -23,7 +23,11 @@ terminal codes into their base item name key, kind, level, type, and artwork:
 ```sh
 go run ./cmd/loot_roll \
   -file /path/to/TreasureClassEx.txt -class "Act 1 Good" -seed 42 \
-  -weapons /path/to/weapons.txt -armor /path/to/armor.txt -misc /path/to/misc.txt
+  -weapons /path/to/weapons.txt -armor /path/to/armor.txt -misc /path/to/misc.txt \
+  -item-types /path/to/ItemTypes.txt
 ```
 
-Dynamic type codes remain marked unresolved until the item-type expansion stage.
+With `-item-types`, generic and level-qualified codes are expanded through the
+`Equiv1`/`Equiv2` hierarchy. A code such as `armo33` selects an equivalent item
+whose base level is 33, 34, or 35. Candidates are sorted before seeded selection
+so results do not depend on Go map iteration order.

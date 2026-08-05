@@ -24,6 +24,7 @@ type BaseItem struct {
 	Kind       ItemKind `json:"kind"`
 	NameKey    string   `json:"nameKey,omitempty"`
 	Type       string   `json:"type,omitempty"`
+	Type2      string   `json:"type2,omitempty"`
 	Level      int      `json:"level,omitempty"`
 	LevelReq   int      `json:"levelRequirement,omitempty"`
 	InvFile    string   `json:"inventoryFile,omitempty"`
@@ -88,7 +89,7 @@ func ParseBaseItemsTSV(input io.Reader, kind ItemKind) (ItemCatalog, error) {
 		}
 		items[code] = BaseItem{
 			Code: code, Kind: kind, NameKey: field(row, columns, "namestr"),
-			Type: field(row, columns, "type"), Level: level, LevelReq: levelReq,
+			Type: field(row, columns, "type"), Type2: field(row, columns, "type2"), Level: level, LevelReq: levelReq,
 			InvFile: field(row, columns, "invfile"), FlippyFile: field(row, columns, "flippyfile"),
 		}
 	}
