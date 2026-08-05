@@ -38,7 +38,7 @@ their own legally obtained game data.
 
 - [x] Validate required manifest fields, API keys, and requirements.
 - [x] Validate dependency ordering.
-- [ ] Load one embedded and one external example mod.
+- [x] Load one embedded and one external example mod.
 - [x] Materialize embedded example mods without overwriting user files.
 - [x] Load and initialize an external example mod end to end.
 - [x] Install and initialize an embedded smoke mod end to end.
@@ -62,13 +62,23 @@ their own legally obtained game data.
 - [ ] Replace diagnostic HUD strings with localized table keys and game UI art.
 - [x] Connect deterministic scene movement and camera tracking to Raylib input/rendering.
 
+## M6: Deterministic item and loot foundation
+
+- [x] Extract renderer-independent treasure-class selection.
+- [x] Preserve positive-pick, NoDrop, negative-pick, and nested-class behavior.
+- [x] Make rolls reproducible from an explicit seed.
+- [x] Detect malformed classes, recursive cycles, and runaway nesting.
+- [x] Add a headless loot-roll test application with redistributable example data.
+- [ ] Parse supplied TreasureClassEx records into the loot catalog.
+- [ ] Resolve terminal codes into base item records and quality modifiers.
+- [ ] Connect monster/chest events to deterministic loot seeds.
+
 ## Later gameplay milestones
 
-1. Item and loot generation.
-2. Monster generation and AI.
-3. Combat and progression.
-4. Audio and music integration.
-5. Expanded map generation and developer/mod packaging tools.
+1. Monster generation and AI.
+2. Combat and progression.
+3. Audio and music integration.
+4. Expanded map generation and developer/mod packaging tools.
 
 ## Parallel codec maintenance
 
@@ -83,8 +93,9 @@ remain independent rather than being copied into this engine.
 
 ## Current handoff
 
-The repository builds and tests cleanly with portable dependencies. Continue by
-binding `pkg/scene.State` to the existing renderer service, replacing the demo
-grid with DS1/DT1 output, and providing the terminal mod's Lua callbacks through
-the serialized Lua-state API. Do not apply or drop historical stashes until
-their Lua experiments have been compared with the current implementation.
+The repository builds and tests cleanly with portable dependencies. The engine
+now runs a real DS1/DT1 scene, polls input on the renderer thread, safely reloads
+Lua mods, and exposes records on demand. The current gameplay seam is M6: adapt
+supplied TreasureClassEx records to `pkg/loot`, then resolve rolled item codes
+and quality. Do not apply or drop historical stashes until their Lua experiments
+have been compared with the current implementation.

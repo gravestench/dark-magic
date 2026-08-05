@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Act 1 Demo",
+    "picks": 3,
+    "noDrop": 1,
+    "entries": [
+      { "code": "Gold Demo", "weight": 2 },
+      { "code": "rin", "weight": 1 }
+    ]
+  },
+  {
+    "name": "Gold Demo",
+    "picks": -2,
+    "entries": [
+      { "code": "gld", "weight": 2 }
+    ]
+  }
+]
