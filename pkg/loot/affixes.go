@@ -52,12 +52,14 @@ type AffixOptions struct {
 
 // GeneratedItem is the portable output of base, quality, special, and affix selection.
 type GeneratedItem struct {
-	Base             BaseItem      `json:"base"`
-	Quality          Quality       `json:"quality"`
-	LevelRequirement int           `json:"levelRequirement"`
-	Special          *SpecialItem  `json:"special,omitempty"`
-	Prefixes         []RolledAffix `json:"prefixes,omitempty"`
-	Suffixes         []RolledAffix `json:"suffixes,omitempty"`
+	Base             BaseItem              `json:"base"`
+	Quality          Quality               `json:"quality"`
+	LevelRequirement int                   `json:"levelRequirement"`
+	Special          *SpecialItem          `json:"special,omitempty"`
+	Prefixes         []RolledAffix         `json:"prefixes,omitempty"`
+	Suffixes         []RolledAffix         `json:"suffixes,omitempty"`
+	Stats            []ItemStat            `json:"stats,omitempty"`
+	Unsupported      []PropertyApplication `json:"unsupportedProperties,omitempty"`
 }
 
 type RolledModifier struct {
