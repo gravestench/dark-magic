@@ -75,7 +75,7 @@ func (s *Service) initAutocertTlsProductionServer() {
 			// lets go
 			go func() {
 				if err := srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-					s.log.Error("listen: %+s\n", err)
+					s.log.Error("TLS server failed", "error", err)
 					panic(err)
 				}
 			}()

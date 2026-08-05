@@ -6,9 +6,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
 
 const (
@@ -23,9 +20,9 @@ func main() {
 	app.Add(&configManager.Service{RootDirectory: projectConfigDir})
 	app.Add(&fileWatcher.Service{})
 
-	app.Add(&tsvLoader.Service{})
-	app.Add(&wavLoader.Service{})
-	app.Add(&mpqLoader.Service{})
+	//app.Add(&tsvLoader.Service{})
+	//app.Add(&wavLoader.Service{})
+	//app.Add(&mpqLoader.Service{})
 
 	app.Add(&audioFileTestService{})
 

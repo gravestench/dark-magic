@@ -3,6 +3,8 @@ package tweens
 import (
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/gravestench/dark-magic/pkg/easing"
 )
 
@@ -15,7 +17,8 @@ const (
 )
 
 type Tween struct {
-	*tweenConfig
+	id uuid.UUID
+	tweenConfig
 	mode
 	elapsed time.Duration
 }
@@ -47,7 +50,10 @@ func (t *Tween) Pause() *Tween {
 }
 
 func (t *Tween) Progress() float64 {
-	return float64((t.elapsed - t.delay).Milliseconds()) / float64(t.duration.Milliseconds())
+	if t.duration <= 0 {
+		return 1
+	}
+	return float64(t.elapsed-t.delay) / float64(t.duration)
 }
 
 func (t *Tween) Update(dt time.Duration) *Tween {
@@ -67,10 +73,18 @@ func (t *Tween) Update(dt time.Duration) *Tween {
 
 	total := (t.delay + t.duration)
 
-	if t.elapsed > total {
+	if t.elapsed >= total {
+		if t.onUpdate != nil {
+			t.onUpdate(t.ease(1))
+		}
 		t.elapsed %= total
-		if t.repeatCount > 0 {
-			t.repeatCount--
+		if t.repeatCount == RepeatForever || t.repeatCount > 0 {
+			if t.repeatCount > 0 {
+				t.repeatCount--
+			}
+			if t.onRepeat != nil {
+				t.onRepeat()
+			}
 			t.justStarted = true
 		} else {
 			if t.onComplete != nil {

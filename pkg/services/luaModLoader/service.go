@@ -2,10 +2,14 @@ package luaModLoader
 
 import (
 	"embed"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gravestench/servicemesh"
 	lua "github.com/yuin/gopher-lua"
+	luar "layeh.com/gopher-luar"
 
 	"github.com/gravestench/dark-magic/pkg/services/common"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
@@ -34,37 +38,76 @@ type Service struct {
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	s.lua.WithState(func(state *lua.LState) error {
+	if err := s.lua.WithState(func(state *lua.LState) error {
 		apiTable := state.GetGlobal("api").(*lua.LTable)
 		state.SetField(apiTable, "mods", state.NewTable())
-
-		if err := s.ensureModDirectoryExists(); err != nil {
-			s.Logger().Error("resolving mods directory", "error", err)
-			mesh.Shutdown()
-		}
-		s.Logger().Info("init", "mod directory", s.Config.ModDirectory)
-
-		// 2) look for mods in mod folder
-		mods, err := s.getModManifestPaths(s.Config.ModDirectory)
-		if err != nil {
-			s.Logger().Error("discovering mods", "error", err)
-			mesh.Shutdown()
-		}
-
-		s.Logger().Info("init", "mods found", len(mods))
-
+		state.SetField(apiTable, "services", luar.New(state, map[string]any{
+			"modloader": luar.New(state, s),
+		}))
 		setupPackagePath(state, s.Config.ModDirectory)
-
-		go func() {
-			for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens") {
-				time.Sleep(time.Second)
-			}
-
-			// 3) load each enabled mod
-			s.loadMods(mods)
-		}()
-
 		return nil
+	}); err != nil {
+		s.Logger().Error("initializing Lua mod API", "error", err)
+		mesh.Shutdown()
+		return
+	}
+
+	if err := s.ensureModDirectoryExists(); err != nil {
+		s.Logger().Error("resolving mods directory", "error", err)
+		mesh.Shutdown()
+	}
+	if err := s.installBuiltinMods(); err != nil {
+		s.Logger().Error("installing built-in mods", "error", err)
+		mesh.Shutdown()
+		return
+	}
+
+	// 2) look for mods in mod folder
+	mods, err := s.getModManifestPaths(s.Config.ModDirectory)
+	if err != nil {
+		s.Logger().Error("discovering mods", "error", err)
+		mesh.Shutdown()
+	}
+
+	s.Logger().Info("init", "mod directory", s.Config.ModDirectory, "mods found", len(mods))
+
+	go func() {
+		for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens") {
+			s.Logger().Info("waiting for api to become populated")
+			time.Sleep(time.Second * 2)
+		}
+
+		// 3) load each enabled mod
+		s.loadMods(mods)
+	}()
+}
+
+// installBuiltinMods materializes embedded examples so Lua's standard require
+// loader can execute them. Existing user files are never overwritten.
+func (s *Service) installBuiltinMods() error {
+	const root = "internal/mods"
+	return fs.WalkDir(internalMods, root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil || relative == "." {
+			return err
+		}
+		target := filepath.Join(s.Config.ModDirectory, relative)
+		if entry.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		if _, err := os.Stat(target); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+		data, err := internalMods.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, 0o644)
 	})
 }
 

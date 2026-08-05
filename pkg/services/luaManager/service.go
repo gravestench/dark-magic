@@ -1,7 +1,7 @@
 package luaManager
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"strings"
 	"sync"
@@ -19,15 +19,34 @@ const (
 	globalApiTableKey = "api"
 )
 
+var ErrStateClosed = errors.New("Lua state is closed")
+
 type Service struct {
 	common.Service
 	mesh          servicemesh.Mesh
 	state         *lua.LState
+	closed        bool
 	events        *ee.EventEmitter
 	mux           sync.Mutex
+	stateMux      sync.Mutex
 	boundServices map[string]any
 	wg            sync.WaitGroup
-	tasks         chan task
+}
+
+// WithState serializes access to the shared Lua state. Callers must not retain
+// the state after fn returns.
+func (s *Service) WithState(fn func(state *lua.LState) error) error {
+	s.stateMux.Lock()
+	defer s.stateMux.Unlock()
+
+	if s.closed {
+		return ErrStateClosed
+	}
+	if s.state == nil {
+		s.state = s.newState()
+	}
+
+	return fn(s.state)
 }
 
 func (s *Service) Name() string {
@@ -38,37 +57,51 @@ func (s *Service) Ready() bool {
 	return true
 }
 
+func (s *Service) OnShutdown() {
+	s.stateMux.Lock()
+	defer s.stateMux.Unlock()
+	if s.state != nil {
+		s.state.Close()
+		s.state = nil
+	}
+	s.closed = true
+}
+
 func (s *Service) Init(fromMesh servicemesh.Mesh) {
 	s.mesh = fromMesh
-	s.tasks = make(chan task)
-	s.wg.Add(1)
-	go s.luaStateAccessSingletonWorker()
 	s.RebuildState()
 }
 
 func (s *Service) RebuildState() {
+	s.stateMux.Lock()
+	if s.state != nil {
+		s.state.Close()
+	}
 	s.state = s.newState()
+	s.closed = false
+	s.stateMux.Unlock()
+
+	s.mux.Lock()
+	s.boundServices = make(map[string]any)
+	s.mux.Unlock()
+
+	if s.mesh != nil {
+		for _, service := range s.mesh.Services() {
+			s.exportToLuaEnvironment(service)
+		}
+	}
 }
 
 func (s *Service) newState() *lua.LState {
-	s.mux.Lock()
-	defer s.mux.Lock()
+	state := lua.NewState()
+	state.OpenLibs()
 
-	s.boundServices = make(map[string]any)
+	bindLoggerToLuaEnvironment(s.Logger(), state)
 
-	s.state = lua.NewState()
-	s.state.OpenLibs()
+	apiTable := state.NewTable()
+	state.SetGlobal(globalApiTableKey, apiTable)
 
-	bindLoggerToLuaEnvironment(s.Logger(), s.state)
-
-	apiTable := s.state.NewTable()
-	s.state.SetGlobal(globalApiTableKey, apiTable)
-
-	for _, service := range s.mesh.Services() {
-		s.exportToLuaEnvironment(service)
-	}
-
-	return s.state
+	return state
 }
 
 func bindLoggerToLuaEnvironment(logger *slog.Logger, state *lua.LState) {
@@ -80,24 +113,17 @@ func bindLoggerToLuaEnvironment(logger *slog.Logger, state *lua.LState) {
 		}
 
 		arg0 := L.CheckString(1)
-		args := make([]any, numArgs)
+		args := make([]any, 0, numArgs-1)
 		for idx := 1; idx < numArgs; idx++ {
-			args = append(args, L.CheckAny(idx))
+			args = append(args, L.CheckAny(idx+1))
 		}
 
-		logger.Info(arg0, args[1:]...)
+		logger.Info(arg0, args...)
 
 		return 0
 	})
 
 	state.SetGlobal("print", fnPrint)
-}
-
-// WithState execs the given function with the singleton lua state
-func (s *Service) WithState(fn func(state *lua.LState) error) (err error) {
-	done := make(chan error)
-	s.tasks <- task{fn: fn, done: done}
-	return <-done
 }
 
 func (s *Service) exportToLuaEnvironment(service servicemesh.Service) {
@@ -108,37 +134,29 @@ func (s *Service) exportToLuaEnvironment(service servicemesh.Service) {
 
 	if candidate, ok := service.(servicemesh.HasDependencies); ok {
 		for !candidate.DependenciesResolved() {
-			s.Logger().Warn("waiting for service to resolve dependencies", "target", service.Name())
+			s.Logger().Info("waiting for service to resolve dependencies", "target", service.Name())
 			time.Sleep(time.Second)
 		}
 	}
 
-	if err := s.WithState(func(L *lua.LState) error {
-		if _, exists := s.boundServices[service.Name()]; exists {
-			return nil
+	s.mux.Lock()
+	if _, exists := s.boundServices[service.Name()]; exists {
+		s.mux.Unlock()
+		return
+	}
+	s.boundServices[service.Name()] = service
+	s.mux.Unlock()
+
+	if err := s.WithState(func(state *lua.LState) error {
+		apiTable := state.GetGlobal(globalApiTableKey)
+		if apiTable == lua.LNil {
+			apiTable = state.NewTable()
 		}
-
-		apiTable := L.GetGlobal(globalApiTableKey)
-
-		switch apiTable.(type) {
-		case *lua.LNilType:
-			apiTable = L.NewTable()
-		}
-
-		L.SetGlobal(globalApiTableKey, apiTable)
-
-		if s.boundServices == nil {
-			s.boundServices = make(map[string]any)
-		}
-
-		s.boundServices[service.Name()] = service
-
-		// this needs to be done in a goroutine!
-		go plugin.ExportToLua(L, apiTable.(*lua.LTable))
-
+		state.SetGlobal(globalApiTableKey, apiTable)
+		plugin.ExportToLua(state, apiTable.(*lua.LTable))
 		return nil
 	}); err != nil {
-		s.Logger().Error("exporting to lua", "target service", service.Name(), "error", err)
+		s.Logger().Error("exporting service to Lua", "service", service.Name(), "error", err)
 	}
 }
 
@@ -146,15 +164,8 @@ func (s *Service) exportToLuaEnvironment(service servicemesh.Service) {
 func (s *Service) WaitForGlobals(globals ...string) {
 	eb := backoff.NewExponentialBackOff()
 	for {
-		err := s.WithState(func(L *lua.LState) error {
-			if !s.globalsExist(L, globals...) {
-				return fmt.Errorf("not found: %v", globals)
-			}
-			return nil
-		})
-
-		if err != nil {
-			s.Logger().Warn("backoff", "errMsg", err)
+		if !s.GlobalsExist(globals...) {
+			s.Logger().Warn("waiting for Lua globals", "globals", globals)
 			time.Sleep(eb.NextBackOff())
 			continue
 		}
@@ -164,12 +175,12 @@ func (s *Service) WaitForGlobals(globals ...string) {
 }
 
 func (s *Service) GlobalsExist(globals ...string) bool {
-	for _, globalKey := range globals {
-		if !luaExists(s.state, globalKey) {
-			return false
-		}
-	}
-	return true
+	exists := false
+	_ = s.WithState(func(state *lua.LState) error {
+		exists = s.globalsExist(state, globals...)
+		return nil
+	})
+	return exists
 }
 
 func (s *Service) globalsExist(L *lua.LState, globals ...string) bool {

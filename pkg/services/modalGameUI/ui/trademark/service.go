@@ -147,7 +147,6 @@ func (s *Screen) Update() {
 	}
 
 	s.update()
-
 }
 
 func (s *Screen) OnUpdate(f func()) {

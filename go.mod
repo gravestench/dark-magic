@@ -1,10 +1,6 @@
 module github.com/gravestench/dark-magic
 
-go 1.21.3
-
-replace (
-	github.com/gravestench/servicemesh => /Users/dylanknuth/src/servicemesh
-)
+go 1.22.0
 
 require (
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -35,6 +31,7 @@ require (
 	github.com/traefik/yaegi v0.15.1
 	github.com/yuin/gopher-lua v1.1.0
 	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
+	layeh.com/gopher-luar v1.0.11
 )
 
 require (

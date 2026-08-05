@@ -30,39 +30,53 @@ function Terminal:InitWindow()
     self.root.Position(0, 0)
     self.root.Enable(false)
 
-    self.box = api.ui.FillRect(0, 0, w, h, 1, "0x333333", "0xefefef")
+    self.box = api.ui.FillRect(0, -h/2, w, h, 1, "0x333333", "0xefefef")
     self.box.Parent(self.root)
 
     self.box.ZIndex(-1)
 
+    self:initTweens()
+
+    self:Toggle()
+end
+
+function Terminal:initTweens()
     self.log("setting up tweens")
+
+    local second = 1e9
+
     self.tweenIn = api.tweens.New()
-    self.tweenIn.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
-    self.tweenIn.OnUpdate(self.onTweenIn)
-    self.tweenIn.Time(5*1e9)
+    --self.tweenIn.Ease("Elastic.easeInOut", 0.5, 0.5)
+    self.tweenIn.OnUpdate(function(progress) self.onTweenIn(progress) end )
+    self.tweenIn.OnStart(function() self.onTweenStart() end )
+    self.tweenIn.Time(3*second)
     self.currentTween = self.tweenOut
 
     self.tweenOut = api.tweens.New()
     self.tweenOut.OnUpdate(self.onTweenOut)
+    self.tweenOut.Stop()
 
-    self:Toggle()
+    api.tweens.Add(self.tweenIn)
+    api.tweens.Add(self.tweenOut)
+end
+
+function Terminal:onTweenStart()
+    self.log("starting tween in")
 end
 
 function Terminal:onTweenIn(progress)
     _, currentY = self.root.Position()
     _, h = api.renderer.window.Size()
-    y = -h + (progress * (h - currentY))
+    y = (-h/2) + (progress * currentY)
     x, _ = self.box.Position()
     self.root.Opacity(progress)
-    self.box.Position(x, y)
-    self.log("tweening in", "progress", progress, "x", x, "y", y)
+    self.box.Origin(0.5, 1-progress)
 end
 
 function Terminal:onTweenOut (progress)
     _, h = api.renderer.window.Size()
     y = -h * progress
     x, _ = self.box.Position()
-    self.log("tweening out", "progress", progress, "x", x, "y", y)
     self.box.SetTranslation(x, y)
 end
 
@@ -86,9 +100,10 @@ function Terminal:Toggle()
         self.currentTween = self.tweenOut
     end
 
-    self.currentTween.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
-    self.currentTween.Time(1e15*5)
+    --self.currentTween.Ease("Elastic.easeInOut", 0.5, 0.5, 0.5)
+    --self.currentTween.Time(1e15*5)
     self.currentTween.Play()
+    self.currentTween.Start()
 end
 
 function Terminal:InitInput()

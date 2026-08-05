@@ -4,6 +4,9 @@
   <img align="center" src="pkg/dark-magic-logo.png" alt="Dark Magic Logo">
 </div>
 
+The maintenance policy for the standalone OpenDiablo2-derived format
+libraries is documented in [CODECS.md](CODECS.md).
+
 ### About
 
 Dark Magic is a community-driven open-source project that aims to recreate the 
@@ -71,6 +74,51 @@ check out our [CONTRIBUTING.md](https://github.com/gravestench/dark-magic/blob/m
 
 Also, you can copy/paste the [Service Template](./internal/service_template) 
 into `pkg/services` for a head start on creating a new service. 
+
+## Development
+
+Run the complete test suite with:
+
+```shell
+make test
+make test-race
+```
+
+Inspect a legally obtained Diablo II asset without starting the renderer:
+
+```shell
+go run ./cmd/asset_inspect \
+  -source /path/to/d2data.mpq \
+  -asset data/global/ui/Loading/loadingscreen.dc6 \
+  -preview /tmp/loading.png
+```
+
+When the debug web server is running, the same metadata and selected DC6/DCC
+frames are available through the asset routes:
+
+```text
+GET /asset/inspect/data/global/ui/Loading/loadingscreen.dc6
+GET /asset/preview/data/global/ui/Loading/loadingscreen.dc6?direction=0&frame=0
+```
+
+Run the standalone interactive scene slice:
+
+```shell
+go run ./cmd/scene_demo
+```
+
+To explore a real DS1 layout from an MPQ:
+
+```shell
+go run ./cmd/scene_demo \
+  -source /path/to/d2data.mpq \
+  -map data/global/tiles/Act1/BARRACKS/barE.ds1 \
+  -dt1 data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \
+  -palette data/global/palette/ACT1/pal.pl2
+```
+
+Use WASD or the arrow keys to move, F5 to save, and F9 to load. See
+[ROADMAP.md](ROADMAP.md) for restart progress and the next integration work.
 
 ## License
 

@@ -2,32 +2,25 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log/slog"
 	"math/rand"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gravestench/servicemesh"
 	"github.com/hajimehoshi/oto"
 
 	"github.com/gravestench/dark-magic/pkg/models"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
-	"github.com/gravestench/dark-magic/pkg/services/recordManager"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
-	"github.com/gravestench/dark-magic/pkg/services/wavLoader"
 )
 
 type audioFileTestService struct {
 	logger *slog.Logger
 
-	mpq mpqLoader.Dependency
-	tsv tsvLoader.Dependency
-	wav wavLoader.Dependency
+	//mpq mpqLoader.Dependency
+	//tsv tsvLoader.Dependency
+	//wav wavLoader.Dependency
 
 	ctx *oto.Context
 
@@ -39,84 +32,84 @@ func (s *audioFileTestService) Name() string {
 }
 
 func (s *audioFileTestService) Ready() bool {
-	if s.tsv == nil {
-		return false
-	}
-
-	if s.wav == nil {
-		return false
-	}
-
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.tsv.Ready() {
-		return false
-	}
-
-	if !s.wav.Ready() {
-		return false
-	}
-
-	if !s.mpq.Ready() {
-		return false
-	}
+	//if s.tsv == nil {
+	//	return false
+	//}
+	//
+	//if s.wav == nil {
+	//	return false
+	//}
+	//
+	//if s.mpq == nil {
+	//	return false
+	//}
+	//
+	//if !s.tsv.Ready() {
+	//	return false
+	//}
+	//
+	//if !s.wav.Ready() {
+	//	return false
+	//}
+	//
+	//if !s.mpq.Ready() {
+	//	return false
+	//}
 
 	return true
 }
 
 func (s *audioFileTestService) DependenciesResolved() bool {
-	if s.tsv == nil {
-		return false
-	}
-
-	if s.wav == nil {
-		return false
-	}
-
-	if s.mpq == nil {
-		return false
-	}
-
-	if !s.mpq.(servicemesh.HasDependencies).DependenciesResolved() {
-		return false
-	}
-
-	if !s.wav.(servicemesh.HasDependencies).DependenciesResolved() {
-		return false
-	}
-
-	if !s.tsv.(servicemesh.HasDependencies).DependenciesResolved() {
-		return false
-	}
+	//if s.tsv == nil {
+	//	return false
+	//}
+	//
+	//if s.wav == nil {
+	//	return false
+	//}
+	//
+	//if s.mpq == nil {
+	//	return false
+	//}
+	//
+	//if !s.mpq.(servicemesh.HasDependencies).DependenciesResolved() {
+	//	return false
+	//}
+	//
+	//if !s.wav.(servicemesh.HasDependencies).DependenciesResolved() {
+	//	return false
+	//}
+	//
+	//if !s.tsv.(servicemesh.HasDependencies).DependenciesResolved() {
+	//	return false
+	//}
 
 	return true
 }
 
 func (s *audioFileTestService) ResolveDependencies(services []servicemesh.Service) {
-	for _, service := range services {
-		switch candidate := service.(type) {
-		case tsvLoader.Dependency:
-			s.tsv = candidate
-		case wavLoader.Dependency:
-			s.wav = candidate
-		case mpqLoader.Dependency:
-			s.mpq = candidate
-		}
-	}
+	//for _, service := range services {
+	//	switch candidate := service.(type) {
+	//	case tsvLoader.Dependency:
+	//		s.tsv = candidate
+	//	case wavLoader.Dependency:
+	//		s.wav = candidate
+	//	case mpqLoader.Dependency:
+	//		s.mpq = candidate
+	//	}
+	//}
 }
 
 func (s *audioFileTestService) Init(mesh servicemesh.Mesh) {
 	// set a random seed
 	rand.Seed(time.Now().UnixNano())
 
-	// load the tsv file into our array of record models
-	err := s.tsv.Unmarshal(recordManager.PathSoundSettings, &s.Sounds)
-	if err != nil {
-		s.logger.Error("loading sound records", "error", err)
-		panic(err)
-	}
+	//// load the tsv file into our array of record models
+	//err := s.tsv.Unmarshal(recordManager.PathSoundSettings, &s.Sounds)
+	//if err != nil {
+	//	s.logger.Error("loading sound records", "error", err)
+	//	panic(err)
+	//}
 
 	s.logger.Info("sound records loaded", "count", len(s.Sounds))
 
@@ -131,18 +124,18 @@ func (s *audioFileTestService) Init(mesh servicemesh.Mesh) {
 	//	}
 	//}
 
-	for { // forever play random sound files
-		idx := rand.Intn(len(s.Sounds)) // random index
-		record := s.Sounds[idx]         // random record
-
-		s.logger.Info("playing sound", "index", idx, "filename", record.FileName)
-
-		if err = s.playAudioFromRecord(record); err != nil {
-			s.logger.Error("couldn't play sound file", "error", err)
-		}
-
-		time.Sleep(time.Second)
-	}
+	//for { // forever play random sound files
+	//	idx := rand.Intn(len(s.Sounds)) // random index
+	//	record := s.Sounds[idx]         // random record
+	//
+	//	s.logger.Info("playing sound", "index", idx, "filename", record.FileName)
+	//
+	//	if err = s.playAudioFromRecord(record); err != nil {
+	//		s.logger.Error("couldn't play sound file", "error", err)
+	//	}
+	//
+	//	time.Sleep(time.Second)
+	//}
 }
 
 func (s *audioFileTestService) SetLogger(logger *slog.Logger) {
@@ -159,29 +152,30 @@ func (s *audioFileTestService) playAudioFromRecord(record models.SoundEntry) err
 		music = "data/global/music/"
 	)
 
-	pathSfx := fmt.Sprintf("%s%s", sfx, record.FileName)
-	pathMusic := fmt.Sprintf("%s%s", music, record.FileName)
-
-	pathSfx = filepath.Clean(pathSfx)
-	pathSfx = strings.ReplaceAll(pathSfx, "\\", "/")
-
-	pathMusic = filepath.Clean(pathMusic)
-	pathMusic = strings.ReplaceAll(pathMusic, "\\", "/")
-
-	actualPath := pathSfx
-
-	data, err := s.mpq.Load(pathSfx) // try loading as sfx
-	if err != nil {
-		actualPath = pathMusic
-		data, err = s.mpq.Load(pathMusic) // try loading as music
-		if err != nil {
-			return err
-		}
-	}
-
-	dataBytes, _ := io.ReadAll(data)
-
-	return playWavWithMPlayer(filepath.Base(actualPath), dataBytes)
+	//pathSfx := fmt.Sprintf("%s%s", sfx, record.FileName)
+	//pathMusic := fmt.Sprintf("%s%s", music, record.FileName)
+	//
+	//pathSfx = filepath.Clean(pathSfx)
+	//pathSfx = strings.ReplaceAll(pathSfx, "\\", "/")
+	//
+	//pathMusic = filepath.Clean(pathMusic)
+	//pathMusic = strings.ReplaceAll(pathMusic, "\\", "/")
+	//
+	//actualPath := pathSfx
+	//
+	//data, err := s.mpq.Load(pathSfx) // try loading as sfx
+	//if err != nil {
+	//	actualPath = pathMusic
+	//	data, err = s.mpq.Load(pathMusic) // try loading as music
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
+	//
+	//dataBytes, _ := io.ReadAll(data)
+	//
+	//return playWavWithMPlayer(filepath.Base(actualPath), dataBytes)
+	return nil
 }
 
 func playWavWithMPlayer(filename string, data []byte) error {

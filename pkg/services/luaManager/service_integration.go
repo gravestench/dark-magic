@@ -6,18 +6,18 @@ import (
 )
 
 var (
-	_ servicemesh.Service   = &Service{}
-	_ servicemesh.HasLogger = &Service{}
-	_ ManagesLuaEnvironment = &Service{}
+	_ servicemesh.Service             = &Service{}
+	_ servicemesh.HasLogger           = &Service{}
+	_ servicemesh.HasGracefulShutdown = &Service{}
+	_ ManagesLuaEnvironment           = &Service{}
 )
 
 type Dependency = ManagesLuaEnvironment
 
 type ManagesLuaEnvironment interface {
 	Ready() bool
-	GlobalsExist(globals ...string) bool
-	WaitForGlobals(globals ...string)
 	WithState(fn func(state *lua.LState) error) error
+	GlobalsExist(globals ...string) bool
 	RebuildState()
 }
 

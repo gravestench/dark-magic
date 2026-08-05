@@ -60,11 +60,11 @@ func (s *Service) GenerateMap(act, difficulty uint) (*WorldMap, error) {
 	m := NewWorldMap()
 
 	if err := s.loadLevelTypeRecordsToWorldMap(act, m); err != nil {
-		return nil, fmt.Errorf("loading level type records into map", "error", err)
+		return nil, fmt.Errorf("loading level type records into map: %w", err)
 	}
 
 	if err := s.loadLevelPresetRecordsToWorldMap(m); err != nil {
-		return nil, fmt.Errorf("loading level type records into map", "error", err)
+		return nil, fmt.Errorf("loading level preset records into map: %w", err)
 	}
 
 	return m, nil
@@ -156,7 +156,7 @@ func (s *Service) loadLevelPresetRecordsToWorldMap(m *WorldMap) error {
 
 				stamp, err := s.assets.LoadDs1(filePath)
 				if err != nil {
-					s.logger.Error("loading ds1 %q for level %q: %v", filePath, level.Name, err)
+					s.logger.Error("loading ds1 for level", "path", filePath, "level", level.Name, "error", err)
 					continue
 				}
 

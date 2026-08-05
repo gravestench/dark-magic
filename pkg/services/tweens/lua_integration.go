@@ -1,7 +1,6 @@
 package tweens
 
 import (
-	"fmt"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -23,6 +22,7 @@ func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
 
 	fnMap := map[string]lua.LGFunction{
 		"New": s.luaNewTween,
+		"Add": s.luaAddTween,
 	}
 
 	for key, fn := range fnMap {
@@ -49,8 +49,31 @@ func (s *Service) luaNewTween(L *lua.LState) int {
 	return 1
 }
 
+func (s *Service) luaAddTween(L *lua.LState) int {
+	if L.GetTop() != 1 {
+		return 0
+	}
+
+	table := L.CheckTable(1)
+	field := L.GetField(table, "_userdata")
+
+	if userData, ok := field.(*lua.LUserData); ok {
+		if tween, isTween := userData.Value.(*Tween); isTween {
+			s.Add(tween)
+		}
+	}
+
+	return 0
+}
+
 func (s *Service) LuaMakeTween(L *lua.LState, t *Tween) *lua.LTable {
 	table := L.NewTable()
+
+	ud := L.NewUserData()
+	ud.Value = t
+
+	// this is how we can create and add new tweens inside of lua code
+	L.SetField(table, "_userdata", ud)
 
 	for key, fn := range map[string]lua.LGFunction{
 		"Start":      s.luaTweenClosureStart(t),
@@ -58,7 +81,6 @@ func (s *Service) LuaMakeTween(L *lua.LState, t *Tween) *lua.LTable {
 		"Play":       s.luaTweenClosurePlay(t),
 		"Pause":      s.luaTweenClosurePause(t),
 		"Progress":   s.luaTweenClosureProgress(t),
-		"Update":     s.luaTweenClosureUpdate(t),
 		"Time":       s.luaTweenClosureTime(t),
 		"Ease":       s.luaTweenClosureEase(t),
 		"OnStart":    s.luaTweenClosureOnStart(t),
@@ -136,20 +158,6 @@ func (s *Service) luaTweenClosureProgress(t *Tween) lua.LGFunction {
 	}
 }
 
-func (s *Service) luaTweenClosureUpdate(t *Tween) lua.LGFunction {
-	return func(L *lua.LState) int {
-		numArgs := L.GetTop()
-		if numArgs < 1 {
-			return 0
-		}
-
-		delta := L.CheckNumber(1)
-		t.Update(time.Duration(delta))
-
-		return 0
-	}
-}
-
 func (s *Service) luaTweenClosureTime(t *Tween) lua.LGFunction {
 	return func(L *lua.LState) int {
 		numArgs := L.GetTop()
@@ -194,18 +202,33 @@ func (s *Service) luaTweenClosureEase(t *Tween) lua.LGFunction {
 
 func (s *Service) luaTweenClosureOnStart(t *Tween) lua.LGFunction {
 	return func(L *lua.LState) int {
+		if L.GetTop() < 1 {
+			return 0
+		}
+		fn := L.CheckFunction(1)
+		t.OnStart(func() { callLua(L, fn) })
 		return 0
 	}
 }
 
 func (s *Service) luaTweenClosureOnComplete(t *Tween) lua.LGFunction {
 	return func(L *lua.LState) int {
+		if L.GetTop() < 1 {
+			return 0
+		}
+		fn := L.CheckFunction(1)
+		t.OnComplete(func() { callLua(L, fn) })
 		return 0
 	}
 }
 
 func (s *Service) luaTweenClosureOnRepeat(t *Tween) lua.LGFunction {
 	return func(L *lua.LState) int {
+		if L.GetTop() < 1 {
+			return 0
+		}
+		fn := L.CheckFunction(1)
+		t.OnRepeat(func() { callLua(L, fn) })
 		return 0
 	}
 }
@@ -222,20 +245,7 @@ func (s *Service) luaTweenClosureOnUpdate(t *Tween) lua.LGFunction {
 
 		// Create a Go wrapper function
 		t.onUpdate = func(input float64) {
-			// Push the Lua function onto the stack
-			L.Push(fn)
-			// Push the argument onto the stack
-			L.Push(lua.LNumber(input))
-
-			// Call the Lua function with 1 argument and 1 return value
-			err := L.PCall(1, 1, nil)
-			if err != nil {
-				fmt.Println("Error calling Lua function:", err)
-				return
-			}
-
-			// Return 0 if the return value is not a number
-			return
+			callLua(L, fn, lua.LNumber(input))
 		}
 
 		return 0
@@ -245,6 +255,7 @@ func (s *Service) luaTweenClosureOnUpdate(t *Tween) lua.LGFunction {
 func (s *Service) luaTweenClosureDelay(t *Tween) lua.LGFunction {
 	return func(L *lua.LState) int {
 		numArgs := L.GetTop()
+
 		if numArgs < 1 {
 			L.Push(lua.LNumber(t.delay))
 			return 1
@@ -266,8 +277,12 @@ func (s *Service) luaTweenClosureRepeat(t *Tween) lua.LGFunction {
 		}
 
 		repeat := L.CheckNumber(1)
-		t.Delay(time.Duration(repeat))
+		t.Repeat(int(repeat))
 
 		return 0
 	}
+}
+
+func callLua(state *lua.LState, fn *lua.LFunction, args ...lua.LValue) {
+	_ = state.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, args...)
 }

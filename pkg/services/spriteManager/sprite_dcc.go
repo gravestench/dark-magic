@@ -23,12 +23,12 @@ func (s *Service) LoadDccToPngSpriteAtlas(pathDCC string, pathPL2 string) ([]byt
 	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
 	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
+		return nil, fmt.Errorf("extracting palette from pl2: %w", err)
 	}
 
 	dccImage, err := s.assets.LoadDcc(pathDCC)
 	if err != nil {
-		return nil, fmt.Errorf("loading dc6", "error", err)
+		return nil, fmt.Errorf("loading dcc: %w", err)
 	}
 
 	dccImage.SetPalette(pl2Palette)
@@ -122,7 +122,7 @@ func generateDccSpriteAtlasPng(frames []*dcc.Frame) ([]byte, error) {
 
 	atlasInfoData, err := json.Marshal(atlasInfo)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling atlas frame info", "error", err)
+		return nil, fmt.Errorf("marshalling atlas frame info: %w", err)
 	}
 
 	pngDataWithExtras := append(pngData.Bytes(), atlasInfoData...)

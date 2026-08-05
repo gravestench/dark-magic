@@ -33,7 +33,7 @@ func (m *Middleware) Open(name string) (fs.File, error) {
 
 	f, err := embedded.Open(name)
 	if err != nil {
-		err = fmt.Errorf("opening file in embedded filesystem", "error", err)
+		err = fmt.Errorf("opening file in embedded filesystem: %w", err)
 	}
 
 	return f, err
@@ -44,7 +44,7 @@ func (m *Middleware) ReadDir(name string) ([]fs.DirEntry, error) {
 
 	list, err := embedded.ReadDir(name)
 	if err != nil {
-		err = fmt.Errorf("reading directory in embedded filesystem", "error", err)
+		err = fmt.Errorf("reading directory in embedded filesystem: %w", err)
 	}
 
 	return list, err
@@ -55,7 +55,7 @@ func (m *Middleware) ReadFile(name string) ([]byte, error) {
 
 	data, err := embedded.ReadFile(name)
 	if err != nil {
-		err = fmt.Errorf("reading file from embedded filesystem", "error", err)
+		err = fmt.Errorf("reading file from embedded filesystem: %w", err)
 	}
 
 	return data, err

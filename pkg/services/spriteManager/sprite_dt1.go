@@ -22,12 +22,12 @@ func (s *Service) LoadDt1ToPngSpriteAtlas(pathDT1 string, pathPL2 string) ([]byt
 	// the palette RGBA data is the first 256 x 4 bytes of the PL2 file
 	pl2Palette, err := s.extractPaletteFromPl2(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("extracting palette from pl2", "error", err)
+		return nil, fmt.Errorf("extracting palette from pl2: %w", err)
 	}
 
 	dt1, err := s.assets.LoadDt1(pathDT1)
 	if err != nil {
-		return nil, fmt.Errorf("loading DT1 tileset", "error", err)
+		return nil, fmt.Errorf("loading DT1 tileset: %w", err)
 	}
 
 	dt1.SetPalette(pl2Palette)

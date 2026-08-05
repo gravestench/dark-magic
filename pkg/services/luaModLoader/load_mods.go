@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,11 +42,81 @@ func (s *Service) ensureModDirectoryExists() error {
 }
 
 func (s *Service) loadMods(mods map[string]fs.FS) {
-	for rootDir, mod := range mods {
-		if err := s.loadMod(rootDir, mod); err != nil {
-			s.Logger().Error("loading mod", "error", err, "mod", rootDir)
+	discovered := make([]discoveredMod, 0, len(mods))
+	for rootDir, filesystem := range mods {
+		manifest, err := s.loadModManifest(rootDir, filesystem)
+		if err != nil {
+			s.Logger().Error("loading mod manifest", "error", err, "mod", rootDir)
+			continue
+		}
+		discovered = append(discovered, discoveredMod{filesystem: filesystem, manifest: manifest})
+	}
+	ordered, err := orderMods(discovered)
+	if err != nil {
+		s.Logger().Error("ordering mods", "error", err)
+		return
+	}
+	for _, mod := range ordered {
+		if err := s.loadModManifestScripts(mod.manifest, mod.filesystem); err != nil {
+			s.Logger().Error("loading mod", "error", err, "mod", mod.manifest.rootDir)
 		}
 	}
+}
+
+type discoveredMod struct {
+	filesystem fs.FS
+	manifest   *Manifest
+}
+
+func orderMods(mods []discoveredMod) ([]discoveredMod, error) {
+	sort.Slice(mods, func(i, j int) bool { return mods[i].manifest.ID() < mods[j].manifest.ID() })
+	byGlobal := make(map[string]int, len(mods))
+	for idx, mod := range mods {
+		if !mod.manifest.Enabled {
+			continue
+		}
+		global := "api.mods." + mod.manifest.ApiKey()
+		if _, exists := byGlobal[global]; exists {
+			return nil, fmt.Errorf("duplicate enabled mod API global %q", global)
+		}
+		byGlobal[global] = idx
+	}
+
+	state := make([]uint8, len(mods))
+	ordered := make([]discoveredMod, 0, len(mods))
+	var visit func(int) error
+	visit = func(idx int) error {
+		if state[idx] == 2 {
+			return nil
+		}
+		if !mods[idx].manifest.Enabled {
+			state[idx] = 2
+			ordered = append(ordered, mods[idx])
+			return nil
+		}
+		if state[idx] == 1 {
+			return fmt.Errorf("mod dependency cycle includes %s", mods[idx].manifest.ID())
+		}
+		state[idx] = 1
+		for _, requirement := range mods[idx].manifest.Requires {
+			if dependency, exists := byGlobal[requirement]; exists {
+				if err := visit(dependency); err != nil {
+					return err
+				}
+			} else if strings.HasPrefix(requirement, "api.mods.") {
+				return fmt.Errorf("%s requires missing or disabled mod global %q", mods[idx].manifest.ID(), requirement)
+			}
+		}
+		state[idx] = 2
+		ordered = append(ordered, mods[idx])
+		return nil
+	}
+	for idx := range mods {
+		if err := visit(idx); err != nil {
+			return nil, err
+		}
+	}
+	return ordered, nil
 }
 
 func (s *Service) getModManifestPaths(modDirPath string) (map[string]fs.FS, error) {
@@ -96,7 +167,10 @@ func (s *Service) loadMod(rootDir string, mod fs.FS) (err error) {
 	if err != nil {
 		return fmt.Errorf("loading manifest: %v", err)
 	}
+	return s.loadModManifestScripts(manifest, mod)
+}
 
+func (s *Service) loadModManifestScripts(manifest *Manifest, mod fs.FS) (err error) {
 	s.Logger().Info("loading mod", "mod", manifest.ID(), "enabled", manifest.Enabled)
 
 	if !manifest.Enabled {
@@ -145,6 +219,12 @@ func (s *Service) loadModManifest(rootDir string, mod fs.FS) (*Manifest, error) 
 	if err = json.Unmarshal(data, &manifest); err != nil {
 		return nil, fmt.Errorf("unmarshalling data: %v", err)
 	}
+	if err = manifest.Validate(); err != nil {
+		return nil, fmt.Errorf("validating manifest: %w", err)
+	}
+	if enabled, configured := s.Config.EnabledMods[manifest.ID()]; configured {
+		manifest.Enabled = enabled
+	}
 
 	return &manifest, nil
 }
@@ -154,6 +234,7 @@ func (s *Service) loadModSources(manifest *Manifest) error {
 
 	for srcGroupKey, sources := range manifest.Sources {
 		for _, srcPath := range sources {
+			srcPath = expandSourcePath(srcPath, manifest.rootDir)
 			src := fileLoader.NewSource(srcPath)
 			if err := s.loader.AddSourceToGroup(src, srcGroupKey); err != nil {
 				return fmt.Errorf("")
@@ -170,71 +251,75 @@ func (s *Service) loadModSources(manifest *Manifest) error {
 	return nil
 }
 
+func expandSourcePath(path, modRoot string) string {
+	path = os.ExpandEnv(path)
+	if mpqDirectory := os.Getenv("MPQ_DIRECTORY"); mpqDirectory != "" {
+		path = strings.ReplaceAll(path, "{{MPQ_DIRECTORY}}", mpqDirectory)
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(modRoot, path)
+	}
+	return filepath.Clean(path)
+}
+
 func (s *Service) runModScripts(manifest Manifest, mod fs.FS) error {
-	// exec a command in lua to import our mod as a table inside 'api.mods'
-	// eg. 'api.mods.darkmagicterminal10'
-	dirName := filepath.Base(manifest.rootDir)
-
-	cmdRequire := fmt.Sprintf("api.mods[\"%s\"] = require(%q)", manifest.ApiKey(), dirName)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
-	requirementsMet := make(chan bool)
-	defer close(requirementsMet)
+	requirementsMet := make(chan struct{}, 1)
 
 	go func() {
-		s.lua.WaitForGlobals(manifest.Requires...)
+		for !s.lua.GlobalsExist(manifest.Requires...) {
+			time.Sleep(time.Second)
+		}
 
-		requirementsMet <- true
+		requirementsMet <- struct{}{}
 	}()
 
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("timed out waiting for required dependencies")
 	case <-requirementsMet:
-		s.Logger().Info("requirements met")
+		if len(manifest.Requires) < 1 {
+			s.Logger().Info("", "requirements met", true, "dir", manifest.rootDir)
+		} else {
+			s.Logger().Info("", "requirements met", true, "dir", manifest.rootDir, "requires", manifest.Requires)
+		}
 	}
 
-	go func() {
-		if err := s.lua.WithState(func(state *lua.LState) error {
-			err := state.DoString(cmdRequire)
-			if err != nil {
-				return fmt.Errorf("importing mode: %+v", err)
+	// exec a command in lua to import our mod as a table inside 'api.mods'
+	// eg. 'api.mods.darkmagicterminal10'
+	dirName := filepath.Base(manifest.rootDir)
+	cmdRequire := fmt.Sprintf("api.mods[\"%s\"] = require(%q)", manifest.ApiKey(), dirName)
+	// make a logger for the mod itself, assign to field "log" inside the
+	// mod table (eg api.mods.darkmagicterminal10.log)
+	logger := slog.New(prettylog.NewHandler(nil))
+	logger = s.Logger().With("service", fmt.Sprintf("Lua Mod Loader->%s", manifest.Name))
+	logger.Info("running mod scripts")
+	cmdInit := fmt.Sprintf("api.mods[\"%s\"]:Init()", manifest.ApiKey())
+	for {
+		err := s.lua.WithState(func(state *lua.LState) error {
+			if err := state.DoString(cmdRequire); err != nil {
+				return fmt.Errorf("importing mod: %w", err)
 			}
 
-			// get the target table
 			candidate := state.GetGlobal("api")
 			candidate = state.GetField(candidate, "mods")
 			candidate = state.GetField(candidate, manifest.ApiKey())
-
 			table, ok := candidate.(*lua.LTable)
 			if !ok {
-				s.Logger().Warn("got non-table entry", "global", fmt.Sprintf("api.mods.%s", manifest.ApiKey()))
-				return fmt.Errorf("not a table: %v", candidate)
+				return fmt.Errorf("api.mods.%s is not a table", manifest.ApiKey())
 			}
 
-			// make a logger for the mod itself, assign to field "log" inside the
-			// mod table (eg api.mods.darkmagicterminal10.log)
-			logger := slog.New(prettylog.NewHandler(nil))
-			logger = s.Logger().With("service", fmt.Sprintf("[Lua Mod] %s", manifest.Name))
-			logger.Info("running mod scripts")
 			bindLoggerToLuaEnvironment(logger, state, table)
-
-			logger.Info("initializing")
-
-			cmdInit := fmt.Sprintf("api.mods[\"%s\"]:Init()", manifest.ApiKey())
-
-			for err = state.DoString(cmdInit); err != nil; {
-				logger.Error("initializing", "error", err)
-				time.Sleep(time.Second)
-			}
-
-			return nil
-		}); err != nil {
-			s.Logger().Error("running mod scripts", "error", err)
+			return state.DoString(cmdInit)
+		})
+		if err == nil {
+			break
 		}
-	}()
+		logger.Error("initializing mod", "error", err)
+		time.Sleep(time.Second)
+	}
 
 	return nil
 }

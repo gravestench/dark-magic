@@ -12,7 +12,25 @@ type Manifest struct {
 	Sources  map[string][]string // group names -> path/url
 	rootDir  string              // assigned at runtime
 	Enabled  bool
-	Requires []string
+	Requires []string // lua globals that must exist before init is called
+}
+
+func (m *Manifest) Validate() error {
+	if strings.TrimSpace(m.Name) == "" {
+		return fmt.Errorf("manifest name is required")
+	}
+	if strings.TrimSpace(m.Version) == "" {
+		return fmt.Errorf("manifest version is required")
+	}
+	if !regexp.MustCompile(`^[a-z][a-z0-9_]+$`).MatchString(m.apiKey()) {
+		return fmt.Errorf("manifest name and version do not produce a valid API key")
+	}
+	for _, requirement := range m.Requires {
+		if strings.TrimSpace(requirement) == "" {
+			return fmt.Errorf("manifest contains an empty requirement")
+		}
+	}
+	return nil
 }
 
 func (m *Manifest) ID() string {
@@ -24,21 +42,22 @@ func (m *Manifest) String() string {
 }
 
 func (m *Manifest) ApiKey() string {
-	const (
-		regexBadCharacters   = "[^a-zA-Z0-9]"
-		regexApiKeyValidator = "^[a-zA-Z][a-zA-Z0-9]+$"
-	)
+	apiKey := m.apiKey()
+	if err := m.Validate(); err != nil {
+		panic(err)
+	}
+	return apiKey
+}
+
+func (m *Manifest) apiKey() string {
+	const regexBadCharacters = "[^a-zA-Z0-9]"
 
 	replacer := regexp.MustCompile(regexBadCharacters)
-	validator := regexp.MustCompile(regexApiKeyValidator)
 
 	apiKey := strings.ToLower(m.ID())
 	apiKey = strings.ReplaceAll(apiKey, " ", "_")
 
 	apiKey = string(replacer.ReplaceAll([]byte(apiKey), []byte("")))
-	if !validator.Match([]byte(apiKey)) {
-		panic("manifest has invalid api key")
-	}
 
 	return apiKey
 }

@@ -7,9 +7,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/luaManager"
-	"github.com/gravestench/dark-magic/pkg/services/mpqLoader"
 	"github.com/gravestench/dark-magic/pkg/services/recordManager"
-	"github.com/gravestench/dark-magic/pkg/services/tsvLoader"
 )
 
 const (
@@ -26,8 +24,8 @@ func main() {
 	app.Add(&fileWatcher.Service{})
 
 	// d2 file loaders
-	app.Add(&tsvLoader.Service{})
-	app.Add(&mpqLoader.Service{})
+	//app.Add(&tsvLoader.Service{})
+	//app.Add(&mpqLoader.Service{})
 
 	// high level d2 services
 	app.Add(&recordManager.Service{})

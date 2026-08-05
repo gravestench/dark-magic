@@ -33,8 +33,9 @@ const (
 func main() {
 	app := servicemesh.New(projectName)
 
-	app.SetLogHandler(prettylog.NewHandler(nil))
-	app.SetLogLevel(slog.LevelDebug)
+	app.SetLogHandler(prettylog.NewHandler(&slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
 
 	// utility services
 	//rt.Add(&modalTui.Service{})

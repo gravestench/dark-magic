@@ -23,7 +23,7 @@ type Source struct {
 	Path string
 }
 
-func (s *Source) Filesystem() (fs.FS, error) {
+func (s Source) Filesystem() (fs.FS, error) {
 	switch s.Type() {
 	case SourceDirectory:
 		return s.getDirectoryFilesystem()
@@ -32,7 +32,7 @@ func (s *Source) Filesystem() (fs.FS, error) {
 	case SourceRepo:
 		return s.getRepoFilesystem()
 	default:
-		return nil, fmt.Errorf("getting reader for %q: bad path or incompatible file")
+		return nil, fmt.Errorf("getting reader for %q: bad path or incompatible file", s.Path)
 	}
 }
 
@@ -41,7 +41,7 @@ func (s *Source) getDirectoryFilesystem() (fs.FS, error) {
 }
 
 func (s *Source) getArchiveFilesystem() (fs.FS, error) {
-	switch ext := strings.ToLower(filepath.Ext(s.Path)); ext {
+	switch ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(s.Path)), "."); ext {
 	case "mpq":
 		return mpq.New(s.Path)
 	case "zip": // TODO: getArchiveFilesystem zip
@@ -61,7 +61,7 @@ func (s *Source) getRepoFilesystem() (fs.FS, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *Source) Type() (t SourceType) {
+func (s Source) Type() (t SourceType) {
 	info, err := os.Stat(s.Path)
 	if err != nil && os.IsNotExist(err) {
 		return
@@ -72,7 +72,7 @@ func (s *Source) Type() (t SourceType) {
 		return
 	}
 
-	switch ext := strings.ToLower(filepath.Ext(s.Path)); ext {
+	switch ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(s.Path)), "."); ext {
 	case "mpq", "zip", "7z", "gz":
 		t = SourceArchive
 	}

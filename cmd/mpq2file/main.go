@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 
 	"github.com/gravestench/mpq"
@@ -14,14 +13,9 @@ func main() {
 		log.Fatalf("opening mpq archive: %v", err)
 	}
 
-	fileHandle, err := mpqHandle.ReadFileStream("data/global/excel/ItemStatCost.txt")
+	data, err := mpqHandle.ReadFile("data/global/excel/ItemStatCost.txt")
 	if err != nil {
 		log.Fatalf("opening file: %v", err)
-	}
-
-	data, err := io.ReadAll(fileHandle)
-	if err != nil {
-		log.Fatalf("reading file data: %v", err)
 	}
 
 	fmt.Printf("length of file: %v bytes", len(data))

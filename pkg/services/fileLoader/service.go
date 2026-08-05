@@ -25,6 +25,10 @@ type Service struct {
 	mux      sync.Mutex
 }
 
+func New() *Service {
+	return &Service{fsGroups: make(map[string][]Source)}
+}
+
 func (s *Service) GetSources(group string) (sources []fs.FS) {
 	for _, source := range s.fsGroups[group] {
 		f, err := source.Filesystem()
@@ -48,7 +52,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.mux.Unlock()
 
 	if err := s.AddSource(NewSource(".")); err != nil {
-		s.Logger().Error("adding source: %v", err)
+		s.Logger().Error("adding source", "error", err)
 		mesh.Shutdown()
 		return
 	}
@@ -86,6 +90,9 @@ func (s *Service) AddSourceToGroup(src Source, group string) error {
 
 	s.mux.Lock()
 	defer s.mux.Unlock()
+	if s.fsGroups == nil {
+		s.fsGroups = make(map[string][]Source)
+	}
 
 	s.fsGroups[group] = append(s.fsGroups[group], src)
 
@@ -105,7 +112,7 @@ func (s *Service) RemoveSourceFromGroup(src Source, group string) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	s.fsGroups[group] = append(s.fsGroups[group][:idx], s.fsGroups[group][:idx+1]...)
+	s.fsGroups[group] = append(s.fsGroups[group][:idx], s.fsGroups[group][idx+1:]...)
 
 	return nil
 }
@@ -137,15 +144,19 @@ func (s *Service) RemoveGroup(group string) error {
 }
 
 func (s *Service) Open(path string, groups ...string) (fs.File, error) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
 	if len(groups) < 1 {
 		groups = s.Groups()
 	}
 
+	s.mux.Lock()
+	groupSources := make(map[string][]Source, len(groups))
+	for _, group := range groups {
+		groupSources[group] = append([]Source(nil), s.fsGroups[group]...)
+	}
+	s.mux.Unlock()
+
 	for _, groupKey := range groups {
-		if group, found := s.fsGroups[groupKey]; found {
+		if group, found := groupSources[groupKey]; found {
 			for _, src := range group {
 				srcFS, err := src.Filesystem()
 				if err != nil {

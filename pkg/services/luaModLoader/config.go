@@ -34,7 +34,7 @@ func (s *Service) DefaultConfigData() (data []byte) {
 	defaults := &Config{
 		ModDirectory: filepath.Join(usrConfigDir, defaultModDirectory),
 		EnabledMods: map[string]bool{
-			"Dark Magic Terminal (0.0.1)": true,
+			"Dark Magic Terminal (1.0)": true,
 		},
 	}
 

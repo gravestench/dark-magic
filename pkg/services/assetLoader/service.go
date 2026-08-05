@@ -331,7 +331,7 @@ func (s *Service) UnmarshalTsv(filepath string, destination any) error {
 }
 
 func (s *Service) LoadTsv(filepath string) ([]byte, error) {
-	cacheKey := fmt.Sprintf("tsv: %s %s", filepath)
+	cacheKey := fmt.Sprintf("tsv: %s", filepath)
 
 	cacheData, isCached := s.cache.tsv.Retrieve(cacheKey)
 	if isCached {
@@ -424,12 +424,12 @@ func (s *Service) LoadCOF(filepath string) (*cof.COF, error) {
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data: %w", err)
 	}
 
 	cofInstance, err := cof.Unmarshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing cof", "error", err)
+		return nil, fmt.Errorf("parsing cof: %w", err)
 	}
 
 	s.logger.Info("loaded COF", "path", filepath)
@@ -445,12 +445,12 @@ func (s *Service) LoadAnimationData(filepath string) (*cof.AnimationData, error)
 
 	data, err := io.ReadAll(stream)
 	if err != nil {
-		return nil, fmt.Errorf("reading data", "error", err)
+		return nil, fmt.Errorf("reading data: %w", err)
 	}
 
 	animData, err := cof.Load(data)
 	if err != nil {
-		return nil, fmt.Errorf("parsing anim data", "error", err)
+		return nil, fmt.Errorf("parsing anim data: %w", err)
 	}
 
 	s.logger.Info("loaded Animation Data", "path", filepath)
@@ -461,7 +461,7 @@ func (s *Service) LoadAnimationData(filepath string) (*cof.AnimationData, error)
 func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteStream, err := s.file.Load(pathPL2)
 	if err != nil {
-		return nil, fmt.Errorf("loading pl2", "error", err)
+		return nil, fmt.Errorf("loading pl2: %w", err)
 	}
 
 	const (
@@ -473,7 +473,7 @@ func (s *Service) ExtractPaletteFromPl2(pathPL2 string) (color.Palette, error) {
 	paletteData := make([]byte, numBytesRGBA)
 	numRead, err := paletteStream.Read(paletteData)
 	if err != nil {
-		return nil, fmt.Errorf("reading from PL2 stream", "error", err)
+		return nil, fmt.Errorf("reading from PL2 stream: %w", err)
 	} else if numRead != numBytesRGBA {
 		return nil, fmt.Errorf("couldn't read all palette bytes")
 	}
