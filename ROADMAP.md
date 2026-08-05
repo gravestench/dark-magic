@@ -43,7 +43,8 @@ their own legally obtained game data.
 - [x] Load and initialize an external example mod end to end.
 - [x] Install and initialize an embedded smoke mod end to end.
 - [x] Run the embedded terminal UI mod end to end against renderer/UI/tween APIs.
-- [ ] Demonstrate logging, record access, and reload behavior.
+- [x] Demonstrate logging and on-demand record access through the terminal mod.
+- [x] Add cache-safe per-table record reload behavior for Lua mods.
 - [x] Demonstrate renderer, tween, and serialized input APIs through the terminal mod.
 - [x] Serialize Lua tween callbacks and implement start/update/repeat/complete bindings.
 

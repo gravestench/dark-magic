@@ -1,18 +1,24 @@
 package recordManager
 
 import (
+	"encoding/csv"
+	"fmt"
+	"io"
+	"strings"
+	"sync"
+
 	"github.com/gravestench/servicemesh"
 
-	"github.com/gravestench/dark-magic/pkg/services/assetLoader"
 	"github.com/gravestench/dark-magic/pkg/services/common"
 )
 
 type Service struct {
 	common.Service
 
-	assets assetLoader.Dependency
+	assets tsvLoader
 
 	recordRegistry map[string]any
+	recordMux      sync.RWMutex
 
 	//belts                  []models.BeltData
 	//charStartingAttributes []models.CharStats
@@ -93,8 +99,80 @@ type Service struct {
 	loaded bool
 }
 
+type tsvLoader interface {
+	LoadTsv(filepath string) ([]byte, error)
+}
+
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	//s.LoadRecords()
+	s.recordRegistry = make(map[string]any)
+}
+
+func (s *Service) loadGenericRecords(path string) ([]map[string]string, error) {
+	s.recordMux.RLock()
+	if cached, ok := s.recordRegistry[path].([]map[string]string); ok {
+		s.recordMux.RUnlock()
+		return cached, nil
+	}
+	s.recordMux.RUnlock()
+	data, err := s.assets.LoadTsv(path)
+	if err != nil {
+		return nil, fmt.Errorf("loading records %q: %w", path, err)
+	}
+	records, err := parseTSV(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing records %q: %w", path, err)
+	}
+	s.recordMux.Lock()
+	if s.recordRegistry == nil {
+		s.recordRegistry = make(map[string]any)
+	}
+	s.recordRegistry[path] = records
+	s.loaded = true
+	s.recordMux.Unlock()
+	return records, nil
+}
+
+func (s *Service) reloadGenericRecords(path string) ([]map[string]string, error) {
+	s.recordMux.Lock()
+	delete(s.recordRegistry, path)
+	s.recordMux.Unlock()
+	return s.loadGenericRecords(path)
+}
+
+func parseTSV(data []byte) ([]map[string]string, error) {
+	reader := csv.NewReader(strings.NewReader(string(data)))
+	reader.Comma = '\t'
+	reader.FieldsPerRecord = -1
+	reader.LazyQuotes = true
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, err
+	}
+	for idx := range headers {
+		headers[idx] = strings.TrimSpace(headers[idx])
+	}
+	var result []map[string]string
+	for {
+		values, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(values) == 1 && strings.TrimSpace(values[0]) == "" {
+			continue
+		}
+		record := make(map[string]string, len(headers))
+		for idx, header := range headers {
+			if header == "" || idx >= len(values) {
+				continue
+			}
+			record[header] = values[idx]
+		}
+		result = append(result, record)
+	}
+	return result, nil
 }
 
 func (s *Service) Name() string {
@@ -111,6 +189,8 @@ func (s *Service) Ready() bool {
 }
 
 func (s *Service) IsLoaded() bool {
+	s.recordMux.RLock()
+	defer s.recordMux.RUnlock()
 	return s.loaded
 }
 

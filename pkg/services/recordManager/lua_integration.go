@@ -1,166 +1,73 @@
 package recordManager
 
 import (
-	"fmt"
-	"reflect"
-	"time"
+	"sort"
 
 	lua "github.com/yuin/gopher-lua"
 )
 
+const LuaAPIKey = "records"
+
 func (s *Service) ExportToLua(state *lua.LState, rootTable *lua.LTable) {
-	for !s.IsLoaded() {
-		time.Sleep(time.Second)
-	}
-
 	table := state.NewTable()
-
-	// for each set of records, create an array. Each element is
-	// a lua table for the record, with all fields exported and available.
-	for key, records := range map[string]any{
-		//"Belts":                  s.belts,
-		//"CharStartingAttributes": s.charStartingAttributes,
-		//"Inventory":              s.inventory,
-		//"Overlays":               s.overlays,
-		//"PetTypes":               s.petTypes,
-		//"AutoMapEntries":         s.autoMapEntries,
-		//"States":                 s.states,
-		//"Hirelings":              s.hirelings,
-		//"HirelingDescriptions":   s.hirelingDescriptions,
-		//"Missiles":               s.missiles,
-		//"DifficultyLevels":       s.difficultyLevels,
-		//"Shrines":                s.shrines,
-		//"GambleRecords":          s.gambleRecords,
-		//"NpcTradeRecords":        s.npcTradeRecords,
-		//"ExperienceBreakpoints":  s.experienceBreakpoints,
-		//"ItemArmor":              s.itemArmor,
-		//"ItemWeapon":             s.itemWeapon,
-		//"ItemWeaponClass":        s.itemWeaponClass,
-		//"ItemMisc":               s.itemMisc,
-		//"ItemTypes":              s.itemTypes,
-		//"ItemAutoMagic":          s.itemAutoMagic,
-		//"ItemStatCost":           s.itemStatCost,
-		//"ItemRatio":              s.itemRatio,
-		//"ItemUnique":             s.itemUnique,
-		//"ItemHiQualityMods":      s.itemHiQualityMods,
-		//"ItemProperties":         s.itemProperties,
-		//"CubeRecipes":            s.cubeRecipes,
-		//"Books":                  s.books,
-		//"Gems":                   s.gems,
-		//"Runes":                  s.runes,
-		//"SetItems":               s.setItems,
-		//"SetBonuses":             s.setBonuses,
-		//"Skills":                 s.skills,
-		//"SkillDesc":              s.skillDesc,
-		//"Treasures":              s.treasures,
-		//"TreasuresEx":            s.treasuresExpansion,
-		//"MagicPrefixes":          s.magicPrefixes,
-		//"MagicSuffixes":          s.magicSuffixes,
-		//"RarePrefixes":           s.rarePrefixes,
-		//"RareSuffixes":           s.rareSuffixes,
-		//"UniquePrefixes":         s.uniquePrefixes,
-		//"UniqueSuffixes":         s.uniqueSuffixes,
-		//"Objects":                s.objects,
-		//"ObjectTypes":            s.objectTypes,
-		//"ObjectGroups":           s.objectGroups,
-		//"ObjectModes":            s.objectModes,
-		//"Sounds":                 s.sounds,
-		//"SoundEnvironments":      s.soundEnvironments,
-		//"LevelPresets":           s.levelPresets,
-		//"LevelType":              s.levelType,
-		//"LevelWarp":              s.levelWarp,
-		//"LevelDetails":           s.levelDetails,
-		//"LevelMaze":              s.levelMaze,
-		//"LevelSubstitutions":     s.levelSubstitutions,
-		////"LevelGroups":            s.levelGroups, // d2r?
-		//"MonsterUniqueModifiers": s.monsterUniqueModifiers,
-		//"MonsterEquipment":       s.monsterEquipment,
-		//"MonsterLevelStats":      s.monsterLevelStats,
-		//"MonsterPresets":         s.monsterPresets,
-		//"MonsterProperties":      s.monsterProperties,
-		//"MonsterSequences":       s.monsterSequences,
-		//"MonsterStats":           s.monsterStats,
-		//"MonsterStats2":          s.monsterStats2,
-		//"MonsterSounds":          s.monsterSounds,
-		//"MonsterUniqueNames":     s.monsterUniqueNames,
-	} {
-		s.Logger().Info("exporting to lua", "table", fmt.Sprintf("records.%s", key))
-		table.RawSetString(key, genericExportArrayToLua(records, state))
-	}
-
-	state.SetGlobal("records", table)
+	state.SetField(table, "Load", state.NewFunction(s.luaLoadRecords))
+	state.SetField(table, "Reload", state.NewFunction(s.luaReloadRecords))
+	state.SetField(table, "Loaded", state.NewFunction(s.luaLoadedRecords))
+	state.SetField(rootTable, LuaAPIKey, table)
 }
 
 func (s *Service) UnexportFromLua(state *lua.LState, rootTable *lua.LTable) {
-	state.SetGlobal("records", lua.LNil)
+	state.SetField(rootTable, LuaAPIKey, lua.LNil)
 }
 
-// genericExportArrayToLua exports an array of structs to a Lua table using "lua" struct tags.
-func genericExportArrayToLua(arr interface{}, state *lua.LState) *lua.LTable {
-	value := reflect.ValueOf(arr)
-	if value.Kind() != reflect.Slice {
-		panic("ExportArrayToLua: arr is not a slice")
-	}
-
-	table := state.NewTable()
-
-	for i := 0; i < value.Len(); i++ {
-		elem := value.Index(i)
-		if elem.Kind() != reflect.Struct {
-			panic("ExportArrayToLua: arr contains non-struct elements")
-		}
-
-		// Export the struct to a Lua table and insert it into the array.
-		table.RawSetInt(i+1, genericExportToLua(elem.Interface(), state))
-	}
-
-	return table
+func (s *Service) luaLoadRecords(L *lua.LState) int {
+	path := L.CheckString(1)
+	records, err := s.loadGenericRecords(path)
+	return pushRecords(L, records, err)
 }
 
-// genericExportToLua exports a given object to a Lua table using "lua" struct tags.
-func genericExportToLua(obj interface{}, state *lua.LState) *lua.LTable {
-	value := reflect.ValueOf(obj)
-	if value.Kind() != reflect.Struct {
-		panic("ExportToLua: obj is not a struct")
-	}
-
-	table := state.NewTable()
-	typ := value.Type()
-
-	for i := 0; i < value.NumField(); i++ {
-		field := value.Field(i)
-		fieldType := typ.Field(i)
-
-		luaFieldName := fieldType.Tag.Get("lua")
-		if luaFieldName == "" {
-			luaFieldName = fieldType.Name
-		}
-
-		// Set the fields of the table using the struct's values.
-		table.RawSetString(luaFieldName, toLuaValue(field.Interface(), state))
-	}
-
-	return table
+func (s *Service) luaReloadRecords(L *lua.LState) int {
+	path := L.CheckString(1)
+	records, err := s.reloadGenericRecords(path)
+	return pushRecords(L, records, err)
 }
 
-// Helper function to convert Go values to Lua values.
-func toLuaValue(value interface{}, state *lua.LState) lua.LValue {
-	switch v := value.(type) {
-	case bool:
-		return lua.LBool(v)
-	case int:
-		return lua.LNumber(v)
-	case fmt.Stringer:
-		return lua.LString(v.String())
-	case string:
-		return lua.LString(v)
-	case []string:
-		luaTable := state.NewTable()
-		for i, str := range v {
-			luaTable.RawSetInt(i+1, lua.LString(str))
-		}
-		return luaTable
-	default:
-		return lua.LString(fmt.Sprintf("%+v", v))
+func pushRecords(L *lua.LState, records []map[string]string, err error) int {
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
 	}
+	result := L.NewTable()
+	for idx, record := range records {
+		row := L.NewTable()
+		keys := make([]string, 0, len(record))
+		for key := range record {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			row.RawSetString(key, lua.LString(record[key]))
+		}
+		result.RawSetInt(idx+1, row)
+	}
+	L.Push(result)
+	L.Push(lua.LNil)
+	return 2
+}
+
+func (s *Service) luaLoadedRecords(L *lua.LState) int {
+	s.recordMux.RLock()
+	paths := make([]string, 0, len(s.recordRegistry))
+	for path := range s.recordRegistry {
+		paths = append(paths, path)
+	}
+	s.recordMux.RUnlock()
+	sort.Strings(paths)
+	result := L.NewTable()
+	for idx, path := range paths {
+		result.RawSetInt(idx+1, lua.LString(path))
+	}
+	L.Push(result)
+	return 1
 }

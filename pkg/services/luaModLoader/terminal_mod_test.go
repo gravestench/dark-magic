@@ -40,6 +40,10 @@ api = {
 		Key = { Grave = 96 },
 		OnKeyPressed = function(_, callback) terminalKeyCallback = callback end,
 	},
+	records = {
+		Load = function() return {{ID = "1"}}, nil end,
+		Reload = function() return {{ID = "1"}}, nil end,
+	},
 }
 `
 

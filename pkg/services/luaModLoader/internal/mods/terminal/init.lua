@@ -17,10 +17,20 @@ function Terminal:Init()
 
     self:InitWindow()
 	self:InitInput()
+	self:InspectRecords()
     --
     --api.events.On("Toggle Terminal", self.Toggle)
     --
     --self.root.SetOpacity(1) -- when we are done, we show everything
+end
+
+function Terminal:InspectRecords()
+	local records, err = api.records.Load("data/global/excel/ItemStatCost.txt")
+	if err ~= nil then
+		self.log("records unavailable", "error", err)
+		return
+	end
+	self.log("records available", "ItemStatCost", #records)
 end
 
 function Terminal:InitWindow()

@@ -11,7 +11,7 @@ func (s *Service) DependenciesResolved() bool {
 		return false
 	}
 
-	if !s.assets.(servicemesh.HasDependencies).DependenciesResolved() {
+	if dependent, ok := s.assets.(servicemesh.HasDependencies); ok && !dependent.DependenciesResolved() {
 		return false
 	}
 

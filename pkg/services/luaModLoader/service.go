@@ -23,7 +23,10 @@ import (
 var internalMods embed.FS
 
 var upgradeableBuiltinHashes = map[string][]string{
-	"terminal/init.lua": {"8e6dc3dc2b04e62bf7b3e99301a727ccaa3cb6943c717f8f9df5fc44e6f1bcb7"},
+	"terminal/init.lua": {
+		"8e6dc3dc2b04e62bf7b3e99301a727ccaa3cb6943c717f8f9df5fc44e6f1bcb7",
+		"8b61623fc668f82c48e9ca0d87607c792ea53198b423b40c97d00ac9de72a0e2",
+	},
 }
 
 type recipe interface {
@@ -78,7 +81,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.Logger().Info("init", "mod directory", s.Config.ModDirectory, "mods found", len(mods))
 
 	go func() {
-		for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens", "api.input") {
+		for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens", "api.input", "api.records") {
 			s.Logger().Info("waiting for api to become populated")
 			time.Sleep(time.Second * 2)
 		}
