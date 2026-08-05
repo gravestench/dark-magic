@@ -12,6 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
+	"github.com/gravestench/dark-magic/pkg/services/gameScene"
 	"github.com/gravestench/dark-magic/pkg/services/input"
 	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/luaManager"
@@ -61,6 +62,7 @@ func main() {
 	app.Add(&raylibRenderer.Service{})
 	app.Add(&ui.Service{})
 	app.Add(&input.Service{}) // rendering backend also handles input
+	app.Add(&gameScene.Service{})
 	//app.Add(&backgroundMusic.Service{}) // rendering backend also handles audio
 	//app.Add(&guiManager.Service{})
 	//app.Add(&modalGameUI.Service{})

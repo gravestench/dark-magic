@@ -107,6 +107,14 @@ Run the standalone interactive scene slice:
 go run ./cmd/scene_demo
 ```
 
+The main engine also starts the integrated scene service. Set `MPQ_DIRECTORY`
+to the directory containing `d2data.mpq` to render its configured DS1/DT1 map;
+without it, the service uses a diagnostic grid:
+
+```shell
+MPQ_DIRECTORY=/path/to/mpqs go run ./cmd/darkmagic
+```
+
 To explore a real DS1 layout from an MPQ:
 
 ```shell

@@ -54,7 +54,9 @@ their own legally obtained game data.
 - [x] Load a real DS1 stamp from an MPQ into the interactive scene.
 - [x] Compose matching DT1 floor/wall graphics with an act-specific PL2 palette.
 - [x] Add deterministic headless hero movement, camera tracking, bounds, and save/load.
-- [ ] Connect scene state to map tiles, Raylib input/rendering, and localized UI.
+- [x] Render a configured DS1/DT1 map in the engine scene with a safe fallback.
+- [ ] Connect localized UI to the interactive scene.
+- [x] Connect deterministic scene movement and camera tracking to Raylib input/rendering.
 
 ## Later gameplay milestones
 

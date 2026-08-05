@@ -17,14 +17,14 @@ func (s *Service) KeyboardState() map[int32]InputState {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	return s.keyStates
+	return cloneStates(s.keyStates)
 }
 
 func (s *Service) KeyboardModifierState() map[int32]InputState {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	return s.keyModStates
+	return cloneStates(s.keyModStates)
 }
 
 func (s *Service) MouseCursorState() (x, y int) {
@@ -35,7 +35,15 @@ func (s *Service) MouseButtonState() map[int32]InputState {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	return s.mouseButtonStates
+	return cloneStates(s.mouseButtonStates)
+}
+
+func cloneStates(states map[int32]InputState) map[int32]InputState {
+	result := make(map[int32]InputState, len(states))
+	for key, state := range states {
+		result[key] = state
+	}
+	return result
 }
 
 func (s *Service) updateKeyboardState() {

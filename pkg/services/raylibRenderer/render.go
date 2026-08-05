@@ -86,7 +86,7 @@ func getAllPixelData(img image.Image) []color.RGBA {
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			pixel := img.At(x, y).(color.RGBA)
+			pixel := color.RGBAModel.Convert(img.At(bounds.Min.X+x, bounds.Min.Y+y)).(color.RGBA)
 			pixels[index] = pixel
 			index++
 		}
