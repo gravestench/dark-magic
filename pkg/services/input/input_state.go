@@ -28,6 +28,8 @@ func (s *Service) KeyboardModifierState() map[int32]InputState {
 }
 
 func (s *Service) MouseCursorState() (x, y int) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
 	return s.cursor.X, s.cursor.Y
 }
 
@@ -48,71 +50,66 @@ func cloneStates(states map[int32]InputState) map[int32]InputState {
 
 func (s *Service) updateKeyboardState() {
 	s.mux.Lock()
-	defer s.mux.Unlock()
-
 	var shouldEmitEvent bool
+	var pressed []int32
 
 	for _, key := range s.normalKeyCodes() {
-		s.keyStates[key] = StateUp
+		beforeChange := s.keyStates[key]
+		s.keyStates[key] = currentKeyState(key)
 
-		if rl.IsKeyPressed(key) {
-			s.keyStates[key] = StatePressed
-		} else if rl.IsKeyReleased(key) {
-			s.keyStates[key] = StateReleased
-		} else if rl.IsKeyDown(key) {
-			s.keyStates[key] = StateDown
+		if beforeChange != s.keyStates[key] {
+			shouldEmitEvent = true
+		}
+		if s.keyStates[key] == StatePressed {
+			pressed = append(pressed, key)
 		}
 	}
-
+	snapshot := cloneStates(s.keyStates)
+	s.mux.Unlock()
 	if shouldEmitEvent {
-		s.mesh.Events().Emit("KeyboardKeyStateChange", s.keyStates)
+		s.mesh.Events().Emit("KeyboardKeyStateChange", snapshot)
+	}
+	for _, key := range pressed {
+		s.dispatchKeyPressed(key)
 	}
 }
 
 func (s *Service) updateKeyboardModifierState() {
 	s.mux.Lock()
-	defer s.mux.Unlock()
-
 	var shouldEmitEvent bool
 
 	for _, key := range s.modifierKeyCodes() {
 		beforeChange := s.keyModStates[key]
 
-		if rl.IsKeyPressed(key) {
-			s.keyModStates[key] = StatePressed
-		} else if rl.IsKeyReleased(key) {
-			s.keyModStates[key] = StateReleased
-		} else if rl.IsKeyDown(key) {
-			s.keyModStates[key] = StateDown
-		} else {
-			s.keyModStates[key] = StateUp
-		}
+		s.keyModStates[key] = currentKeyState(key)
 
 		if beforeChange != s.keyModStates[key] {
 			shouldEmitEvent = true
 		}
 	}
-
+	snapshot := cloneStates(s.keyModStates)
+	s.mux.Unlock()
 	if shouldEmitEvent {
-		s.mesh.Events().Emit("KeyboardModKeyStateChange", s.keyModStates)
+		s.mesh.Events().Emit("KeyboardModKeyStateChange", snapshot)
 	}
 }
 
 func (s *Service) updateMouseCursorState() {
+	s.mux.Lock()
 	beforeX, beforeY := s.cursor.X, s.cursor.Y
 
 	p := rl.GetMousePosition()
 	s.cursor.X, s.cursor.Y = int(p.X), int(p.Y)
+	cursor := s.cursor
+	s.mux.Unlock()
 
-	if beforeX != s.cursor.X || beforeY != s.cursor.Y {
-		s.mesh.Events().Emit("MouseCursorStateChange", s.cursor)
+	if beforeX != cursor.X || beforeY != cursor.Y {
+		s.mesh.Events().Emit("MouseCursorStateChange", cursor)
 	}
 }
 
 func (s *Service) updateMouseButtonState() {
 	s.mux.Lock()
-	defer s.mux.Unlock()
-
 	var shouldEmitEvent bool
 
 	for _, key := range s.mouseButtonKeyCodess() {
@@ -131,10 +128,24 @@ func (s *Service) updateMouseButtonState() {
 			shouldEmitEvent = true
 		}
 	}
-
+	snapshot := cloneStates(s.mouseButtonStates)
+	s.mux.Unlock()
 	if shouldEmitEvent {
-		s.mesh.Events().Emit("MouseButtonStateChange", s.mouseButtonStates)
+		s.mesh.Events().Emit("MouseButtonStateChange", snapshot)
 	}
+}
+
+func currentKeyState(key int32) InputState {
+	if rl.IsKeyPressed(key) {
+		return StatePressed
+	}
+	if rl.IsKeyReleased(key) {
+		return StateReleased
+	}
+	if rl.IsKeyDown(key) {
+		return StateDown
+	}
+	return StateUp
 }
 
 func (*Service) normalKeyCodes() []int32 {

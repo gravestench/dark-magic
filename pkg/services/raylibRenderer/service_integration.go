@@ -34,6 +34,7 @@ type Dependency = IsRenderer
 
 type IsRenderer interface {
 	IsInit() bool
+	OnFrame(func())
 	ManagesWindow
 	ManagesCameras
 	ProvidesTextures

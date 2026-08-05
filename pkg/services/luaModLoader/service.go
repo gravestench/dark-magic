@@ -78,7 +78,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	s.Logger().Info("init", "mod directory", s.Config.ModDirectory, "mods found", len(mods))
 
 	go func() {
-		for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens") {
+		for !s.lua.GlobalsExist("api.ui", "api.renderer", "api.tweens", "api.input") {
 			s.Logger().Info("waiting for api to become populated")
 			time.Sleep(time.Second * 2)
 		}

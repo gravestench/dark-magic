@@ -16,7 +16,7 @@ function Terminal:Init()
     self.log("root node", "uuid", self.root.UUID())
 
     self:InitWindow()
-    --self.InitInput()
+	self:InitInput()
     --
     --api.events.On("Toggle Terminal", self.Toggle)
     --
@@ -111,13 +111,11 @@ function Terminal:Toggle()
 end
 
 function Terminal:InitInput()
-    api.events.On("keypress", self.OnKeyPress)
+    api.input.OnKeyPressed(api.input.Key.Grave, function(keyCode) self:OnKeyPress(keyCode) end)
 end
 
 function Terminal:OnKeyPress(keyCode, state)
-    if self.gateInput then return end -- ignore if we're gating input
-
-    -- TODO: handle keypress here
+	self:Toggle()
 end
 
 return Terminal

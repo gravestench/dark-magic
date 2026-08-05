@@ -3,6 +3,7 @@ package input
 import (
 	"github.com/gravestench/servicemesh"
 
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -27,6 +28,8 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 		switch candidate := service.(type) {
 		case raylibRenderer.Dependency:
 			s.renderer = candidate
+		case luaManager.Dependency:
+			s.lua = candidate
 		}
 	}
 }

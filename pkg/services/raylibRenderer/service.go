@@ -2,6 +2,7 @@ package raylibRenderer
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/faiface/mainthread"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -21,7 +22,20 @@ type Service struct {
 
 	rootNode Renderable
 
-	isInit bool
+	isInit         bool
+	frameMux       sync.RWMutex
+	frameCallbacks []func()
+}
+
+// OnFrame registers work that must run on the renderer thread, immediately
+// before scene graph updates. Raylib window and input calls belong here.
+func (s *Service) OnFrame(callback func()) {
+	if callback == nil {
+		return
+	}
+	s.frameMux.Lock()
+	s.frameCallbacks = append(s.frameCallbacks, callback)
+	s.frameMux.Unlock()
 }
 
 func (s *Service) DependenciesResolved() bool {

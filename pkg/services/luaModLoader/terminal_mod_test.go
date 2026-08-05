@@ -36,6 +36,10 @@ api = {
   renderer = { NewRenderable = renderable, window = { Size = function() return 800, 600 end } },
   ui = { FillRect = function() return renderable() end },
   tweens = { New = tween, Add = function() end },
+	input = {
+		Key = { Grave = 96 },
+		OnKeyPressed = function(_, callback) terminalKeyCallback = callback end,
+	},
 }
 `
 
@@ -69,5 +73,15 @@ func TestTerminalModInitializesAndRunsTweenCallbacks(t *testing.T) {
 	root := state.GetField(table, "root").(*lua.LTable)
 	if state.GetField(root, "enabled") != lua.LTrue {
 		t.Fatal("terminal root was not enabled")
+	}
+	callback := state.GetGlobal("terminalKeyCallback")
+	if callback == lua.LNil {
+		t.Fatal("terminal did not subscribe to input")
+	}
+	if err := state.CallByParam(lua.P{Fn: callback, NRet: 0, Protect: true}, lua.LNumber(96)); err != nil {
+		t.Fatal(err)
+	}
+	if state.GetField(table, "enabled") != lua.LFalse {
+		t.Fatal("terminal did not toggle from input callback")
 	}
 }

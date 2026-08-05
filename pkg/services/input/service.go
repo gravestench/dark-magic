@@ -2,11 +2,12 @@ package input
 
 import (
 	"sync"
-	"time"
 
 	"github.com/gravestench/servicemesh"
+	lua "github.com/yuin/gopher-lua"
 
 	"github.com/gravestench/dark-magic/pkg/services/common"
+	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -14,6 +15,7 @@ type Service struct {
 	common.Service
 	mesh              servicemesh.Mesh
 	renderer          raylibRenderer.Dependency
+	lua               luaManager.Dependency
 	keyStates         map[int32]InputState
 	keyModStates      map[int32]InputState
 	mouseButtonStates map[int32]InputState
@@ -21,37 +23,26 @@ type Service struct {
 		X, Y int
 	}
 
-	mux sync.Mutex
-
-	debug bool
+	mux                 sync.Mutex
+	callbackMux         sync.Mutex
+	keyPressedCallbacks map[int32][]*lua.LFunction
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
-	s.debug = true
-
 	s.mesh = mesh
 	s.keyStates = make(map[int32]InputState)
 	s.keyModStates = make(map[int32]InputState)
 	s.mouseButtonStates = make(map[int32]InputState)
+	s.keyPressedCallbacks = make(map[int32][]*lua.LFunction)
 
-	go s.updateNonBlocking()
+	s.renderer.OnFrame(s.update)
 }
 
-func (s *Service) updateNonBlocking() {
-	ticker := time.NewTicker(time.Second / 24)
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				// Call your function here
-				s.updateKeyboardState()
-				s.updateKeyboardModifierState()
-				s.updateMouseCursorState()
-				s.updateMouseButtonState()
-			}
-		}
-	}()
+func (s *Service) update() {
+	s.updateKeyboardState()
+	s.updateKeyboardModifierState()
+	s.updateMouseCursorState()
+	s.updateMouseButtonState()
 }
 
 func (s *Service) Name() string {
@@ -59,13 +50,9 @@ func (s *Service) Name() string {
 }
 
 func (s *Service) Ready() bool {
-	if s.renderer == nil {
+	if s.renderer == nil || s.lua == nil {
 		return false
 	}
 
 	return true
-}
-
-func (s *Service) Foo() {
-	// do stuff here
 }
