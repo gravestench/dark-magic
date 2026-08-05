@@ -6,11 +6,11 @@ import (
 )
 
 func TestParseSpecialItemAvailability(t *testing.T) {
-	uniques, err := ParseUniqueItemsTSV(strings.NewReader("index\tversion\tenabled\tlvl\tcode\nNormal Unique\t0\t1\t10\tssd\nExpansion Unique\t100\t1\t20\tssd\nDisabled\t0\t0\t1\taxe\n"))
+	uniques, err := ParseUniqueItemsTSV(strings.NewReader("index\tversion\tenabled\trarity\tlvl\tcode\nNormal Unique\t0\t1\t2\t10\tssd\nExpansion Unique\t100\t1\t1\t20\tssd\nDisabled\t0\t0\t5\t1\taxe\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sets, err := ParseSetItemsTSV(strings.NewReader("index\titem\tlvl\nSet Sword\tssd\t12\n"))
+	sets, err := ParseSetItemsTSV(strings.NewReader("index\titem\trarity\tlvl\nSet Sword\tssd\t1\t12\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,8 +26,8 @@ func TestApplyQualityEligibilityFallbacks(t *testing.T) {
 		"magic":  {Code: "magic", Magic: true, Rare: true},
 		"normal": {Code: "normal", Normal: true, Magic: true, Rare: true},
 	}
-	unique := SpecialItems{"ssd": {{BaseCode: "ssd", Level: 20, Enabled: true}}}
-	sets := SpecialItems{"ssd": {{BaseCode: "ssd", Level: 10, Enabled: true}}}
+	unique := SpecialItems{"ssd": {{Name: "Unique Sword", BaseCode: "ssd", Level: 20, Rarity: 1, Enabled: true}}}
+	sets := SpecialItems{"ssd": {{Name: "Set Sword", BaseCode: "ssd", Level: 10, Rarity: 1, Enabled: true}}}
 
 	tests := []struct {
 		name     string
@@ -56,9 +56,44 @@ func TestApplyQualityEligibilityFallbacks(t *testing.T) {
 
 func TestClassicCannotUseExpansionUnique(t *testing.T) {
 	types := ItemTypes{"rare": {Code: "rare", Rare: true}}
-	uniques := SpecialItems{"ssd": {{BaseCode: "ssd", Level: 1, Version: 100, Enabled: true}}}
+	uniques := SpecialItems{"ssd": {{Name: "Expansion Sword", BaseCode: "ssd", Level: 1, Version: 100, Rarity: 1, Enabled: true}}}
 	quality, err := ApplyQualityEligibility(QualityUnique, BaseItem{Code: "ssd", Type: "rare"}, types, uniques, nil, EligibilityContext{Version: 0, DropLevel: 99})
 	if err != nil || quality != QualityRare {
 		t.Fatalf("quality = %q, error = %v", quality, err)
+	}
+}
+
+func TestSelectSpecialItemIsWeightedAndDeterministic(t *testing.T) {
+	items := []SpecialItem{
+		{Name: "Zulu", BaseCode: "ssd", Level: 1, Rarity: 1, Enabled: true},
+		{Name: "Alpha", BaseCode: "ssd", Level: 1, Rarity: 3, Enabled: true},
+		{Name: "Disabled", BaseCode: "ssd", Level: 1, Rarity: 100, Enabled: false},
+		{Name: "Too High", BaseCode: "ssd", Level: 99, Rarity: 100, Enabled: true},
+	}
+	context := EligibilityContext{Version: 100, DropLevel: 20}
+	want, err := SelectSpecialItem(items, context, 77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := SelectSpecialItem([]SpecialItem{items[3], items[1], items[0], items[2]}, context, 77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("selection depends on input order: %#v != %#v", got, want)
+	}
+}
+
+func TestSelectSpecialItemRequiresPositiveEligibleWeight(t *testing.T) {
+	_, err := SelectSpecialItem([]SpecialItem{{Name: "Zero", Enabled: true}}, EligibilityContext{}, 1)
+	if err == nil || !strings.Contains(err.Error(), "no eligible") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestParseSpecialItemRejectsNegativeRarity(t *testing.T) {
+	_, err := ParseSetItemsTSV(strings.NewReader("index\titem\trarity\tlvl\nBad\tssd\t-1\t1\n"))
+	if err == nil || !strings.Contains(err.Error(), "must not be negative") {
+		t.Fatalf("error = %v", err)
 	}
 }

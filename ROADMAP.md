@@ -75,7 +75,8 @@ their own legally obtained game data.
 - [x] Parse and select Classic/Expansion ItemRatio rule sets.
 - [x] Apply level, magic-find, minimum, and TreasureClass modifiers to item quality.
 - [x] Apply unique/set availability fallback and item-type quality restrictions.
-- [ ] Select a concrete weighted unique/set record and generate item affixes.
+- [x] Select concrete UniqueItems/SetItems records by eligibility and rarity weight.
+- [ ] Generate magic/rare affixes and materialize complete item instances.
 - [ ] Add ladder-season eligibility to special-item selection.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
