@@ -27,6 +27,7 @@ type BaseItem struct {
 	Type2      string   `json:"type2,omitempty"`
 	Level      int      `json:"level,omitempty"`
 	LevelReq   int      `json:"levelRequirement,omitempty"`
+	MagicLevel int      `json:"magicLevel,omitempty"`
 	InvFile    string   `json:"inventoryFile,omitempty"`
 	FlippyFile string   `json:"flippyFile,omitempty"`
 }
@@ -87,9 +88,13 @@ func ParseBaseItemsTSV(input io.Reader, kind ItemKind) (ItemCatalog, error) {
 		if err != nil {
 			return nil, err
 		}
+		magicLevel, err := optionalItemInteger(row, columns, "magic lvl", rowNumber, kind)
+		if err != nil {
+			return nil, err
+		}
 		items[code] = BaseItem{
 			Code: code, Kind: kind, NameKey: field(row, columns, "namestr"),
-			Type: field(row, columns, "type"), Type2: field(row, columns, "type2"), Level: level, LevelReq: levelReq,
+			Type: field(row, columns, "type"), Type2: field(row, columns, "type2"), Level: level, LevelReq: levelReq, MagicLevel: magicLevel,
 			InvFile: field(row, columns, "invfile"), FlippyFile: field(row, columns, "flippyfile"),
 		}
 	}
