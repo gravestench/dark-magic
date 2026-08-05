@@ -8,9 +8,10 @@ import (
 // compile-time error if the service does not
 // implement them.
 var (
-	_ servicemesh.Service   = &Service{} // implement in`service.go`
-	_ servicemesh.HasLogger = &Service{} // implement in`service.go`
-	_ IsFileWatcher         = &Service{} // implement in`service.go`
+	_ servicemesh.Service             = &Service{} // implement in`service.go`
+	_ servicemesh.HasLogger           = &Service{} // implement in`service.go`
+	_ servicemesh.HasGracefulShutdown = &Service{}
+	_ IsFileWatcher                   = &Service{} // implement in`service.go`
 )
 
 // this is an alias which can be used to make

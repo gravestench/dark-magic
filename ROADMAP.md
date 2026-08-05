@@ -45,6 +45,7 @@ their own legally obtained game data.
 - [x] Run the embedded terminal UI mod end to end against renderer/UI/tween APIs.
 - [x] Demonstrate logging and on-demand record access through the terminal mod.
 - [x] Add cache-safe per-table record reload behavior for Lua mods.
+- [x] Reload edited mod scripts with optional shutdown and serialized Lua access.
 - [x] Demonstrate renderer, tween, and serialized input APIs through the terminal mod.
 - [x] Serialize Lua tween callbacks and implement start/update/repeat/complete bindings.
 

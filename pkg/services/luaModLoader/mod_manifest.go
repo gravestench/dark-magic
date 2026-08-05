@@ -2,17 +2,26 @@ package luaModLoader
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 type Manifest struct {
-	Name     string
-	Version  string
-	Sources  map[string][]string // group names -> path/url
-	rootDir  string              // assigned at runtime
-	Enabled  bool
-	Requires []string // lua globals that must exist before init is called
+	Name       string
+	Version    string
+	Sources    map[string][]string // group names -> path/url
+	rootDir    string              // assigned at runtime
+	Enabled    bool
+	Requires   []string // lua globals that must exist before init is called
+	InitScript string
+}
+
+func (m *Manifest) initScript() string {
+	if strings.TrimSpace(m.InitScript) == "" {
+		return "init.lua"
+	}
+	return filepath.Clean(m.InitScript)
 }
 
 func (m *Manifest) Validate() error {
@@ -29,6 +38,10 @@ func (m *Manifest) Validate() error {
 		if strings.TrimSpace(requirement) == "" {
 			return fmt.Errorf("manifest contains an empty requirement")
 		}
+	}
+	script := m.initScript()
+	if filepath.IsAbs(script) || script == ".." || strings.HasPrefix(script, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("manifest init script must stay within the mod directory")
 	}
 	return nil
 }

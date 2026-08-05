@@ -192,9 +192,42 @@ func (s *Service) loadModManifestScripts(manifest *Manifest, mod fs.FS) (err err
 	if err = s.runModScripts(*manifest, mod); err != nil {
 		return fmt.Errorf("running mod scripts: %v", err)
 	}
+	if s.watcher != nil {
+		scriptPath := filepath.Join(manifest.rootDir, manifest.initScript())
+		s.watcher.AddWatcher(scriptPath, func(string) error {
+			return s.reloadMod(*manifest, mod)
+		})
+	}
 
 	s.Logger().Info("loaded mod", "name", manifest.String())
 
+	return nil
+}
+
+func (s *Service) reloadMod(manifest Manifest, mod fs.FS) error {
+	dirName := filepath.Base(manifest.rootDir)
+	if err := s.lua.WithState(func(state *lua.LState) error {
+		api := state.GetGlobal("api")
+		mods := state.GetField(api, "mods")
+		current := state.GetField(mods, manifest.ApiKey())
+		if table, ok := current.(*lua.LTable); ok {
+			if shutdown, ok := state.GetField(table, "Shutdown").(*lua.LFunction); ok {
+				if err := state.CallByParam(lua.P{Fn: shutdown, NRet: 0, Protect: true}, table); err != nil {
+					return fmt.Errorf("shutting down previous mod: %w", err)
+				}
+			}
+		}
+		state.SetField(mods, manifest.ApiKey(), lua.LNil)
+		loaded := state.GetField(state.GetGlobal("package"), "loaded")
+		state.SetField(loaded, dirName, lua.LNil)
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := s.runModScripts(manifest, mod); err != nil {
+		return fmt.Errorf("reloading %s: %w", manifest.ID(), err)
+	}
+	s.Logger().Info("reloaded mod", "mod", manifest.ID())
 	return nil
 }
 
@@ -297,28 +330,23 @@ func (s *Service) runModScripts(manifest Manifest, mod fs.FS) error {
 	logger = s.Logger().With("service", fmt.Sprintf("Lua Mod Loader->%s", manifest.Name))
 	logger.Info("running mod scripts")
 	cmdInit := fmt.Sprintf("api.mods[\"%s\"]:Init()", manifest.ApiKey())
-	for {
-		err := s.lua.WithState(func(state *lua.LState) error {
-			if err := state.DoString(cmdRequire); err != nil {
-				return fmt.Errorf("importing mod: %w", err)
-			}
-
-			candidate := state.GetGlobal("api")
-			candidate = state.GetField(candidate, "mods")
-			candidate = state.GetField(candidate, manifest.ApiKey())
-			table, ok := candidate.(*lua.LTable)
-			if !ok {
-				return fmt.Errorf("api.mods.%s is not a table", manifest.ApiKey())
-			}
-
-			bindLoggerToLuaEnvironment(logger, state, table)
-			return state.DoString(cmdInit)
-		})
-		if err == nil {
-			break
+	if err := s.lua.WithState(func(state *lua.LState) error {
+		if err := state.DoString(cmdRequire); err != nil {
+			return fmt.Errorf("importing mod: %w", err)
 		}
-		logger.Error("initializing mod", "error", err)
-		time.Sleep(time.Second)
+
+		candidate := state.GetGlobal("api")
+		candidate = state.GetField(candidate, "mods")
+		candidate = state.GetField(candidate, manifest.ApiKey())
+		table, ok := candidate.(*lua.LTable)
+		if !ok {
+			return fmt.Errorf("api.mods.%s is not a table", manifest.ApiKey())
+		}
+
+		bindLoggerToLuaEnvironment(logger, state, table)
+		return state.DoString(cmdInit)
+	}); err != nil {
+		return fmt.Errorf("initializing mod: %w", err)
 	}
 
 	return nil

@@ -22,8 +22,7 @@ func (s *Service) initWatcher() error {
 	s.watcher = w
 
 	go func() {
-		prevPath := ""
-		prevTime := time.Now()
+		lastEvent := make(map[string]time.Time)
 		for {
 			select {
 			case event, ok := <-s.watcher.Events:
@@ -33,26 +32,14 @@ func (s *Service) initWatcher() error {
 				// ignore duplicate events (a few editors trigger more than one file
 				// event on save, e.g. Sublime).
 				now := time.Now()
-				if len(prevPath) != 0 && prevPath == event.Name {
-					if now.Sub(prevTime) < debounceDuration {
-						continue // skip duplicate event.
-					}
+				if previous := lastEvent[event.Name]; !previous.IsZero() && now.Sub(previous) < debounceDuration {
+					continue
 				}
-				prevPath = event.Name
-				prevTime = now
+				lastEvent[event.Name] = now
 
 				s.logger.Debug("file watcher event", "event", event)
 
-				f, ok := s.activeWatchers[event.Name]
-				if !ok {
-					s.logger.Warn("unable to locate registered watcher", "path", event.Name)
-					continue
-				}
-				go func() {
-					if err := f(event.Name); err != nil {
-						s.logger.Warn("file watcher callback failed", "error", err)
-					}
-				}()
+				s.handleEvent(event)
 			case err, ok := <-s.watcher.Errors:
 				if !ok {
 					return
@@ -64,17 +51,45 @@ func (s *Service) initWatcher() error {
 	return nil
 }
 
+func (s *Service) handleEvent(event fsnotify.Event) {
+	if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
+		return
+	}
+	s.mux.RLock()
+	callback, ok := s.activeWatchers[event.Name]
+	s.mux.RUnlock()
+	if !ok {
+		s.logger.Warn("unable to locate registered watcher", "path", event.Name)
+		return
+	}
+	if err := callback(event.Name); err != nil {
+		s.logger.Warn("file watcher callback failed", "path", event.Name, "error", err)
+	}
+	if event.Op&fsnotify.Rename != 0 {
+		if err := s.watcher.Add(event.Name); err != nil {
+			s.logger.Debug("waiting for renamed watch target to reappear", "path", event.Name, "error", err)
+		}
+	}
+}
+
 // AddWatcher watches the given file for changes and invokes f with the file
 // path when a change is detected.
 func (s *Service) AddWatcher(path string, f func(path string) error) {
 	s.logger.Debug("adding watcher", "path", path)
 
+	s.mux.Lock()
+	if s.activeWatchers == nil {
+		s.activeWatchers = make(map[string]FileHandlerFunc)
+	}
+	s.activeWatchers[path] = f
+	s.mux.Unlock()
 	if err := s.watcher.Add(path); err != nil {
+		s.mux.Lock()
+		delete(s.activeWatchers, path)
+		s.mux.Unlock()
 		s.logger.Warn("unable to add watcher", "path", path, "error", err)
 		return
 	}
-
-	s.activeWatchers[path] = f
 }
 
 // WatchAndLoad watches the given file for changes and invokes f with the file
@@ -93,9 +108,12 @@ func (s *Service) WatchAndLoad(path string, f func(path string) error) {
 
 // CloseWatcher closes the watcher for file changes.
 func (s *Service) CloseWatcher() {
-	s.logger.Debug("closing watcher")
-
-	if err := s.watcher.Close(); err != nil {
-		s.logger.Warn("unable to close file watcher", "error", err)
-	}
+	s.closeOnce.Do(func() {
+		s.logger.Debug("closing watcher")
+		if s.watcher != nil {
+			if err := s.watcher.Close(); err != nil {
+				s.logger.Warn("unable to close file watcher", "error", err)
+			}
+		}
+	})
 }

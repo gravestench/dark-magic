@@ -3,6 +3,7 @@ package fileWatcher
 import (
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -13,6 +14,8 @@ type Service struct {
 	logger         *slog.Logger
 	watcher        *fsnotify.Watcher
 	activeWatchers map[string]FileHandlerFunc
+	mux            sync.RWMutex
+	closeOnce      sync.Once
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {
@@ -37,6 +40,8 @@ func (s *Service) Name() string {
 func (s *Service) Ready() bool {
 	return true
 }
+
+func (s *Service) OnShutdown() { s.CloseWatcher() }
 
 // the following methods are boilerplate, but they are used
 // by the servicemesh to enforce a standard logging format.

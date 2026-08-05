@@ -19,7 +19,17 @@ func TestExternalModLoadsEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	manifestJSON := `{"Name":"Example Mod","Version":"1.0","Enabled":true}`
-	initLua := `local Mod = {}; function Mod:Init() self.initialized = true end; return Mod`
+	initLua := `
+local Mod = {}
+function Mod:Init()
+  reloadGeneration = (reloadGeneration or 0) + 1
+  self.initialized = true
+  self.generation = reloadGeneration
+end
+function Mod:Shutdown()
+  shutdownCalls = (shutdownCalls or 0) + 1
+end
+return Mod`
 	if err := os.WriteFile(filepath.Join(root, "manifest.json"), []byte(manifestJSON), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +67,26 @@ func TestExternalModLoadsEndToEnd(t *testing.T) {
 		mod := state.GetField(mods, "examplemod10")
 		if got := state.GetField(mod, "initialized"); got != lua.LTrue {
 			t.Fatalf("initialized = %v, want true", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	manifest, err := service.loadModManifest(root, os.DirFS(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.reloadMod(*manifest, os.DirFS(root)); err != nil {
+		t.Fatal(err)
+	}
+	if err := luaService.WithState(func(state *lua.LState) error {
+		mod := state.GetField(state.GetField(state.GetGlobal("api"), "mods"), "examplemod10")
+		if got := state.GetField(mod, "generation"); got != lua.LNumber(2) {
+			t.Fatalf("generation = %v, want 2", got)
+		}
+		if got := state.GetGlobal("shutdownCalls"); got != lua.LNumber(1) {
+			t.Fatalf("shutdown calls = %v, want 1", got)
 		}
 		return nil
 	}); err != nil {
@@ -101,5 +131,34 @@ func TestEmbeddedModLoadsEndToEnd(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestModSyntaxErrorReturnsWithoutRetryLoop(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "broken")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), []byte(`{"Name":"Broken Mod","Version":"1.0","Enabled":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "init.lua"), []byte(`this is not lua !!!`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	luaService := &luaManager.Service{}
+	luaService.SetLogger(logger)
+	luaService.RebuildState()
+	defer luaService.OnShutdown()
+	_ = luaService.WithState(func(state *lua.LState) error {
+		api := state.GetGlobal("api").(*lua.LTable)
+		state.SetField(api, "mods", state.NewTable())
+		setupPackagePath(state, filepath.Dir(root))
+		return nil
+	})
+	service := &Service{Config: &Config{EnabledMods: map[string]bool{}}, lua: luaService, loader: fileLoader.New()}
+	service.SetLogger(logger)
+	if err := service.loadMod(root, os.DirFS(root)); err == nil {
+		t.Fatal("expected syntax error")
 	}
 }

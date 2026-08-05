@@ -16,6 +16,7 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/common"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
@@ -42,8 +43,9 @@ var _ recipe = &Service{}
 type Service struct {
 	common.Service
 	*Config
-	lua    luaManager.Dependency
-	loader fileLoader.Dependency
+	lua     luaManager.Dependency
+	loader  fileLoader.Dependency
+	watcher fileWatcher.Dependency
 }
 
 func (s *Service) Init(mesh servicemesh.Mesh) {

@@ -12,6 +12,13 @@ func TestManifestValidationAndAPIKey(t *testing.T) {
 	}
 }
 
+func TestManifestRejectsInitScriptOutsideMod(t *testing.T) {
+	manifest := Manifest{Name: "Example", Version: "1.0", InitScript: "../init.lua"}
+	if err := manifest.Validate(); err == nil {
+		t.Fatal("expected invalid init script error")
+	}
+}
+
 func TestManifestValidationRejectsMissingFields(t *testing.T) {
 	for _, manifest := range []Manifest{{Version: "1.0"}, {Name: "Example"}} {
 		if err := manifest.Validate(); err == nil {

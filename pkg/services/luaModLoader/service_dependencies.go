@@ -4,6 +4,7 @@ import (
 	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
+	"github.com/gravestench/dark-magic/pkg/services/fileWatcher"
 	"github.com/gravestench/dark-magic/pkg/services/luaManager"
 )
 
@@ -17,6 +18,9 @@ func (s *Service) DependenciesResolved() bool {
 	}
 
 	if s.lua == nil {
+		return false
+	}
+	if s.watcher == nil {
 		return false
 	}
 
@@ -34,6 +38,8 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 			s.lua = candidate
 		case fileLoader.Dependency:
 			s.loader = candidate
+		case fileWatcher.Dependency:
+			s.watcher = candidate
 		}
 	}
 }
