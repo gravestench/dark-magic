@@ -72,7 +72,9 @@ their own legally obtained game data.
 - [x] Parse supplied TreasureClass/TreasureClassEx records into the loot catalog.
 - [x] Resolve direct terminal codes into base item records and retain quality modifiers.
 - [x] Expand generic and dynamic item-type codes such as `weap3` and `armo33` by level.
-- [ ] Apply ItemRatio, magic-find, and TreasureClass modifiers to item quality.
+- [x] Parse and select Classic/Expansion ItemRatio rule sets.
+- [x] Apply level, magic-find, minimum, and TreasureClass modifiers to item quality.
+- [ ] Apply unique/set availability fallback and item-type quality restrictions.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
 ## Later gameplay milestones

@@ -145,8 +145,11 @@ func validate(class Class) error {
 	if class.NoDrop < 0 {
 		return errors.New("NoDrop must not be negative")
 	}
-	if class.Quality.Unique < 0 || class.Quality.Set < 0 || class.Quality.Rare < 0 || class.Quality.Magic < 0 {
-		return errors.New("quality modifiers must not be negative")
+	if class.Quality.Unique < 0 || class.Quality.Unique > 1024 ||
+		class.Quality.Set < 0 || class.Quality.Set > 1024 ||
+		class.Quality.Rare < 0 || class.Quality.Rare > 1024 ||
+		class.Quality.Magic < 0 || class.Quality.Magic > 1024 {
+		return errors.New("quality modifiers must be between 0 and 1024")
 	}
 	total := class.NoDrop
 	for index, entry := range class.Entries {
