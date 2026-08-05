@@ -8,17 +8,22 @@ import (
 	"image/png"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/servicemesh"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
 	"github.com/gravestench/dark-magic/pkg/scene"
 	"github.com/gravestench/dark-magic/pkg/services/common"
 	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 	"github.com/gravestench/dark-magic/pkg/services/input"
+	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -29,16 +34,22 @@ type Service struct {
 	renderer raylibRenderer.Dependency
 	input    input.Dependency
 	files    fileLoader.Dependency
+	locale   locale.Dependency
 	Config   Config
 	state    *scene.State
 	mapNode  raylibRenderer.Renderable
 	heroNode raylibRenderer.Renderable
+	hudNode  raylibRenderer.Renderable
+	hudText  string
+	mapLabel string
 	lastTick time.Time
 }
 
 func (s *Service) Name() string { return "Game Scene" }
 
-func (s *Service) Ready() bool { return s.renderer != nil && s.input != nil && s.files != nil }
+func (s *Service) Ready() bool {
+	return s.renderer != nil && s.input != nil && s.files != nil && s.locale != nil
+}
 
 func (s *Service) DependenciesResolved() bool { return s.Ready() && s.renderer.IsInit() }
 
@@ -51,6 +62,8 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 			s.input = candidate
 		case fileLoader.Dependency:
 			s.files = candidate
+		case locale.Dependency:
+			s.locale = candidate
 		}
 	}
 }
@@ -61,6 +74,9 @@ func (s *Service) Init(servicemesh.Mesh) {
 	if err != nil {
 		s.Logger().Warn("using diagnostic scene grid", "error", err)
 		mapImage = gridImage(fallbackWidth, fallbackHeight, 80)
+		s.mapLabel = "Diagnostic grid"
+	} else {
+		s.mapLabel = filepath.Base(s.Config.Map)
 	}
 	worldWidth, worldHeight := mapImage.Bounds().Dx(), mapImage.Bounds().Dy()
 	s.state = scene.New(1, float64(worldWidth), float64(worldHeight))
@@ -72,6 +88,9 @@ func (s *Service) Init(servicemesh.Mesh) {
 	s.heroNode = s.renderer.NewRenderable()
 	s.heroNode.SetZIndex(10)
 	s.heroNode.SetImage(heroImage(28))
+	s.hudNode = s.renderer.NewRenderable()
+	s.hudNode.SetOrigin(0, 0)
+	s.hudNode.SetZIndex(100)
 	s.lastTick = time.Now()
 	s.heroNode.OnUpdate(s.update)
 	s.syncRenderState()
@@ -126,6 +145,21 @@ func (s *Service) syncRenderState() {
 	width, height := s.renderer.WindowSize()
 	camera.Target = rl.Vector2{X: float32(s.state.Camera.X), Y: float32(s.state.Camera.Y)}
 	camera.Offset = rl.Vector2{X: float32(width) / 2, Y: float32(height) / 2}
+	s.syncHUD(camera, width, height)
+}
+
+func (s *Service) syncHUD(camera *rl.Camera2D, width, height int) {
+	language := "Unknown"
+	if languages := s.locale.GetSupportedLanguages(); len(languages) != 0 {
+		language = languages[0]
+	}
+	text := fmt.Sprintf("Dark Magic | %s | %s\nHero: %.0f, %.0f | WASD / arrows to move",
+		s.mapLabel, language, s.state.Hero.X, s.state.Hero.Y)
+	if text != s.hudText {
+		s.hudText = text
+		s.hudNode.SetImage(hudImage(text, 470, 44))
+	}
+	s.hudNode.SetPosition(camera.Target.X-float32(width)/2+12, camera.Target.Y-float32(height)/2+12)
 }
 
 func movementVector(states map[int32]input.InputState) (float64, float64) {
@@ -183,6 +217,26 @@ func heroImage(size int) *image.RGBA {
 				img.SetRGBA(x, y, color.RGBA{R: 195, G: 52, B: 46, A: 255})
 			}
 		}
+	}
+	return img
+}
+
+func hudImage(text string, width, height int) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	background := color.RGBA{R: 6, G: 8, B: 10, A: 215}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.SetRGBA(x, y, background)
+		}
+	}
+	drawer := font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.RGBA{R: 224, G: 218, B: 198, A: 255}),
+		Face: basicfont.Face7x13,
+	}
+	for idx, line := range strings.Split(text, "\n") {
+		drawer.Dot = fixed.P(10, 16+idx*17)
+		drawer.DrawString(line)
 	}
 	return img
 }

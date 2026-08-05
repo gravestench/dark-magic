@@ -3,6 +3,8 @@ package fileLoader
 import (
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -56,8 +58,44 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 		mesh.Shutdown()
 		return
 	}
+	if err := s.addMPQDirectorySources(os.Getenv("MPQ_DIRECTORY")); err != nil {
+		s.Logger().Warn("loading MPQ directory", "error", err)
+	}
 
 	mesh.Events().Emit(EventServiceInitialized)
+}
+
+func (s *Service) addMPQDirectorySources(directory string) error {
+	if directory == "" {
+		return nil
+	}
+	info, err := os.Stat(directory)
+	if err != nil {
+		return fmt.Errorf("checking MPQ directory: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("MPQ_DIRECTORY %q is not a directory", directory)
+	}
+	// Earlier sources win. Expansion patches override expansion data, which
+	// override classic patches and base archives.
+	priority := []string{
+		"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
+		"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
+		"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
+	}
+	for _, name := range priority {
+		path := filepath.Join(directory, name)
+		if _, err := os.Stat(path); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("checking MPQ %q: %w", path, err)
+		}
+		if err := s.AddSource(NewSource(path)); err != nil {
+			return fmt.Errorf("adding MPQ %q: %w", path, err)
+		}
+	}
+	return nil
 }
 
 func (s *Service) Name() string {

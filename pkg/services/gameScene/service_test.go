@@ -49,3 +49,11 @@ func TestOpposingMovementCancels(t *testing.T) {
 		t.Fatalf("movement = (%f,%f), want zero", x, y)
 	}
 }
+
+func TestHUDImageIsOpaqueWhereBackgroundIsDrawn(t *testing.T) {
+	img := hudImage("Dark Magic", 120, 30)
+	_, _, _, alpha := img.At(0, 0).RGBA()
+	if alpha == 0 {
+		t.Fatal("HUD background is transparent")
+	}
+}

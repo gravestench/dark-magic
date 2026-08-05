@@ -42,7 +42,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 	}
 
 	s.language = languages[0]
-	//s.loadTextTables()
+	s.loadTextTables()
 }
 
 func (s *Service) Name() string {

@@ -55,7 +55,8 @@ their own legally obtained game data.
 - [x] Compose matching DT1 floor/wall graphics with an act-specific PL2 palette.
 - [x] Add deterministic headless hero movement, camera tracking, bounds, and save/load.
 - [x] Render a configured DS1/DT1 map in the engine scene with a safe fallback.
-- [ ] Connect localized UI to the interactive scene.
+- [x] Add a camera-anchored scene HUD with locale and map status.
+- [ ] Replace diagnostic HUD strings with localized table keys and game UI art.
 - [x] Connect deterministic scene movement and camera tracking to Raylib input/rendering.
 
 ## Later gameplay milestones
