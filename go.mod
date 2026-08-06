@@ -16,6 +16,8 @@ require (
 	github.com/yuin/gopher-lua v1.1.0
 )
 
+require github.com/gravestench/cof v0.1.0 // indirect
+
 require (
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
 	github.com/gravestench/bitstream v0.2.0 // indirect

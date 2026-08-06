@@ -13,9 +13,11 @@ import (
 	"sync"
 	"time"
 
+	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
+	dcc "github.com/gravestench/dcc/pkg"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -35,6 +37,37 @@ type ownedRenderNode struct {
 type renderAssetCache struct {
 	mu  sync.Mutex
 	dc6 map[string]*dc6.DC6
+	dcc map[string]*dcc.DCC
+	cof map[string]*cof.COF
+}
+
+func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if asset := c.cof[name]; asset != nil {
+		return asset, nil
+	}
+	asset, err := assetdecode.COF(assets, name)
+	if err != nil {
+		return nil, err
+	}
+	c.cof[name] = asset
+	return asset, nil
+}
+
+func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC, error) {
+	key := name + "\x00" + palette
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if asset := c.dcc[key]; asset != nil {
+		return asset, nil
+	}
+	asset, err := assetdecode.DCC(assets, name, palette)
+	if err != nil {
+		return nil, err
+	}
+	c.dcc[key] = asset
+	return asset, nil
 }
 
 func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6, error) {
@@ -114,7 +147,12 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 		return err
 	}
 	previous, previousOwned := n.resource, n.owned
-	if err := n.composer.Update(n.id, func(current *rendercore.Node) { current.Resource = animation }); err != nil {
+	if err := n.composer.Update(n.id, func(current *rendercore.Node) {
+		current.Resource = animation
+		current.AnimationPaused = false
+		current.AnimationSeek = 0
+		current.AnimationSeekRevision++
+	}); err != nil {
 		_ = n.composer.DestroyResource(animation)
 		cleanup()
 		return err
@@ -129,6 +167,20 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 	return err
 }
 
+func (n *ownedRenderNode) requireAnimation() error {
+	if n.resource == (rendercore.ResourceID{}) {
+		return errors.New("render node has no animation")
+	}
+	resource, err := n.composer.ResourceSnapshot(n.resource)
+	if err != nil {
+		return err
+	}
+	if resource.Kind != rendercore.ResourceAnimation {
+		return errors.New("render node resource is not an animation")
+	}
+	return nil
+}
+
 // RenderModule exposes backend-neutral retained composition to scoped Lua
 // components. Nodes are automatically destroyed with their component scope.
 func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
@@ -139,12 +191,61 @@ func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
-	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6)}
+	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6), dcc: make(map[string]*dcc.DCC), cof: make(map[string]*cof.COF)}
 	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"assets_available": func(state *lua.LState) int {
 				state.Push(lua.LBool(assets != nil))
+				return 1
+			},
+			"cof_info": func(state *lua.LState) int {
+				if assets == nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString("render asset filesystem is unavailable"))
+					return 2
+				}
+				asset, err := cache.loadCOF(assets, state.CheckString(1))
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				result := state.NewTable()
+				result.RawSetString("directions", lua.LNumber(asset.NumberOfDirections))
+				result.RawSetString("frames", lua.LNumber(asset.FramesPerDirection))
+				result.RawSetString("speed", lua.LNumber(asset.Speed))
+				layers := state.NewTable()
+				for _, layer := range asset.CofLayers {
+					entry := state.NewTable()
+					entry.RawSetString("type", lua.LString(layer.Type.String()))
+					entry.RawSetString("shadow", lua.LNumber(layer.Shadow))
+					entry.RawSetString("selectable", lua.LBool(layer.Selectable))
+					entry.RawSetString("transparent", lua.LBool(layer.Transparent))
+					entry.RawSetString("draw_effect", lua.LNumber(layer.DrawEffect))
+					entry.RawSetString("weapon_class", lua.LString(layer.WeaponClass.String()))
+					layers.Append(entry)
+				}
+				result.RawSetString("layers", layers)
+				events := state.NewTable()
+				for _, event := range asset.AnimationFrames {
+					events.Append(lua.LNumber(event))
+				}
+				result.RawSetString("events", events)
+				priority := state.NewTable()
+				for _, direction := range asset.Priority {
+					directionTable := state.NewTable()
+					for _, frame := range direction {
+						frameTable := state.NewTable()
+						for _, layer := range frame {
+							frameTable.Append(lua.LString(layer.String()))
+						}
+						directionTable.Append(frameTable)
+					}
+					priority.Append(directionTable)
+				}
+				result.RawSetString("priority", priority)
+				state.Push(result)
 				return 1
 			},
 			"create": func(state *lua.LState) int {
@@ -334,6 +435,115 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			state.Push(lua.LNumber(len(frames)))
 			return 1
+		},
+		"set_dcc": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName, paletteName := state.CheckString(2), state.OptString(3, "")
+			direction, frameIndex := state.OptInt(4, 0), state.OptInt(5, 0)
+			asset, err := node.cache.loadDCC(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			frames, err := assetdecode.DCCFrames(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if frameIndex < 0 || frameIndex >= len(frames) {
+				state.ArgError(5, "frame is out of range")
+				return 0
+			}
+			if err := node.setImage(frames[frameIndex]); err != nil {
+				state.RaiseError("updating DCC render node: %v", err)
+			}
+			bounds := asset.Direction(direction).Frames()[frameIndex].Bounds()
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(bounds.Min.Y))
+			return 4
+		},
+		"set_dcc_animation": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName, paletteName := state.CheckString(2), state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			framesPerSecond := float64(state.OptNumber(5, 25))
+			loop := state.OptString(6, "loop")
+			if framesPerSecond <= 0 {
+				state.ArgError(5, "frames per second must be positive")
+				return 0
+			}
+			if loop != "loop" && loop != "once" && loop != "ping-pong" {
+				state.ArgError(6, "loop mode must be loop, once, or ping-pong")
+				return 0
+			}
+			asset, err := node.cache.loadDCC(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			frames, err := assetdecode.DCCFrames(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
+				state.RaiseError("updating DCC animation: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(len(frames)))
+			return 1
+		},
+		"animation_pause": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if err := node.requireAnimation(); err != nil {
+				state.RaiseError("pausing animation: %v", err)
+				return 0
+			}
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.AnimationPaused = true }); err != nil {
+				state.RaiseError("pausing animation: %v", err)
+			}
+			return 0
+		},
+		"animation_resume": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if err := node.requireAnimation(); err != nil {
+				state.RaiseError("resuming animation: %v", err)
+				return 0
+			}
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.AnimationPaused = false }); err != nil {
+				state.RaiseError("resuming animation: %v", err)
+			}
+			return 0
+		},
+		"animation_seek": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			seconds := float64(state.CheckNumber(2))
+			if seconds < 0 {
+				state.ArgError(2, "seek position cannot be negative")
+				return 0
+			}
+			if err := node.requireAnimation(); err != nil {
+				state.RaiseError("seeking animation: %v", err)
+				return 0
+			}
+			position := time.Duration(seconds * float64(time.Second))
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) {
+				current.AnimationSeek = position
+				current.AnimationSeekRevision++
+			}); err != nil {
+				state.RaiseError("seeking animation: %v", err)
+			}
+			return 0
 		},
 		"fill_rect": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

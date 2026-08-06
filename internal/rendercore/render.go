@@ -73,19 +73,22 @@ type RenderTargetData struct{ Width, Height int }
 
 // Node is the backend-neutral retained state of one renderable.
 type Node struct {
-	ID       NodeID
-	Parent   NodeID
-	Layer    Layer
-	Z        int
-	X        float64
-	Y        float64
-	ScaleX   float64
-	ScaleY   float64
-	Rotation float64
-	Visible  bool
-	Clip     *Rect
-	Blend    string
-	Resource ResourceID
+	ID                    NodeID
+	Parent                NodeID
+	Layer                 Layer
+	Z                     int
+	X                     float64
+	Y                     float64
+	ScaleX                float64
+	ScaleY                float64
+	Rotation              float64
+	Visible               bool
+	Clip                  *Rect
+	Blend                 string
+	Resource              ResourceID
+	AnimationPaused       bool
+	AnimationSeek         time.Duration
+	AnimationSeekRevision uint64
 }
 
 // Rect is a clipping rectangle.

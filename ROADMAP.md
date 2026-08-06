@@ -265,7 +265,7 @@ implementations. The remaining work is tracked explicitly below.
 
 - [x] Decode DC6 assets with an explicit palette through managed render
   resources exposed to Lua by checked handles.
-- [ ] Decode DCC assets with an explicit palette through the same managed path.
+- [x] Decode DCC assets with an explicit palette through the same managed path.
 - [x] Support DC6 frame/direction selection, placement offsets, anchoring,
   front-end tiling, deterministic layer order, and alpha/additive/multiply blend
   modes.
@@ -283,12 +283,13 @@ implementations. The remaining work is tracked explicitly below.
 
 ### M16 execution checkpoints
 
-- [ ] M16.1: Make animation a renderer-owned resource with per-frame durations,
+- [x] M16.1: Make animation a renderer-owned resource with per-frame durations,
   loop/once/ping-pong modes, pause/resume/seek, and deterministic clocks.
-  Renderer-owned frame sets, durations, and loop/once/ping-pong playback are
-  implemented; explicit clocks and playback controls remain.
 - [ ] M16.2: Add palette-aware DCC decoding and COF-driven component direction,
   mode, weapon-class, layer, transform, shadow, and event composition.
+  Palette-aware DCC frame/animation handles and checked COF metadata for layer
+  priority, weapon class, draw effects, transparency, selection, speed, and
+  frame events are implemented; assembled multi-component rendering remains.
 - [ ] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
   layout with color, alignment, wrapping, clipping, and fallback behavior.
 - [ ] M16.4: Implement reusable Lua controls with pointer/controller focus,

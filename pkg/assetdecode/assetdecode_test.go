@@ -5,6 +5,8 @@ import (
 	"image/color"
 	"testing"
 	"testing/fstest"
+
+	cof "github.com/gravestench/cof"
 )
 
 func TestPaletteAndDC6Frame(t *testing.T) {
@@ -35,6 +37,31 @@ func TestPaletteRejectsTruncatedData(t *testing.T) {
 	_, err := Palette(fstest.MapFS{"bad.dat": &fstest.MapFile{Data: make([]byte, 12)}}, "bad.dat")
 	if err == nil {
 		t.Fatal("expected truncated palette error")
+	}
+}
+
+func TestDCCRejectsTruncatedData(t *testing.T) {
+	_, err := DCC(fstest.MapFS{"bad.dcc": &fstest.MapFile{Data: []byte{0x74}}}, "bad.dcc", "")
+	if err == nil {
+		t.Fatal("expected truncated DCC error")
+	}
+}
+
+func TestCOFReadsCompositionMetadata(t *testing.T) {
+	input := cof.New()
+	input.NumberOfDirections = 1
+	input.FramesPerDirection = 1
+	input.NumberOfLayers = 1
+	input.Speed = 128
+	input.CofLayers = []cof.CofLayer{{Type: 0, Selectable: true, WeaponClass: cof.WeaponClassFromString("hth")}}
+	input.AnimationFrames = []cof.FrameEvent{1}
+	input.Priority = [][][]cof.CompositeType{{{0}}}
+	decoded, err := COF(fstest.MapFS{"unit.cof": &fstest.MapFile{Data: cof.Marshal(input)}}, "unit.cof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.NumberOfLayers != 1 || decoded.FramesPerDirection != 1 || decoded.Priority[0][0][0] != 0 {
+		t.Fatalf("COF = %#v", decoded)
 	}
 }
 

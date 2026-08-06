@@ -89,6 +89,8 @@ type Renderable interface {
 
 	Image() image.Image
 	SetImage(image.Image)
+	SetAnimationFrame(image.Image, int)
+	ClearTextures()
 
 	Enable()
 	Disable()

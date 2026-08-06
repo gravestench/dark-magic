@@ -8,7 +8,10 @@ import (
 )
 
 func (s *Service) GetTexture(uuid uuid.UUID, img image.Image) (texture rl.Texture2D, isNew bool) {
-	key := uuid.String()
+	return s.getTexture(uuid.String(), img)
+}
+
+func (s *Service) getTexture(key string, img image.Image) (texture rl.Texture2D, isNew bool) {
 
 	bounds := img.Bounds()
 	numBytes := bounds.Dx() * bounds.Dy() * 4 // RGBA

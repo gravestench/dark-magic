@@ -5,10 +5,14 @@ package assetdecode
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	"image/draw"
 	"io/fs"
 
+	cof "github.com/gravestench/cof"
 	dc6 "github.com/gravestench/dc6/pkg"
+	dcc "github.com/gravestench/dcc/pkg"
 )
 
 const (
@@ -34,6 +38,60 @@ func Palette(source fs.FS, name string) (color.Palette, error) {
 	}
 	palette[0] = color.RGBA{}
 	return palette, nil
+}
+
+// COF reads composite ordering, layer, timing, and event metadata.
+func COF(source fs.FS, name string) (*cof.COF, error) {
+	data, err := fs.ReadFile(source, name)
+	if err != nil {
+		return nil, fmt.Errorf("cof %q: %w", name, err)
+	}
+	asset, err := cof.Unmarshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("cof %q: %w", name, err)
+	}
+	return asset, nil
+}
+
+// DCC reads and decodes a palette-aware character or monster animation.
+func DCC(source fs.FS, name, paletteName string) (*dcc.DCC, error) {
+	data, err := fs.ReadFile(source, name)
+	if err != nil {
+		return nil, fmt.Errorf("dcc %q: %w", name, err)
+	}
+	asset, err := dcc.FromBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("dcc %q: %w", name, err)
+	}
+	if paletteName != "" {
+		palette, err := Palette(source, paletteName)
+		if err != nil {
+			return nil, err
+		}
+		asset.SetPalette(palette)
+	}
+	return asset, nil
+}
+
+// DCCFrames returns normalized images for one direction. Normalization keeps
+// frame placement metadata separate from zero-based texture pixels.
+func DCCFrames(asset *dcc.DCC, direction int) ([]image.Image, error) {
+	if asset == nil {
+		return nil, fmt.Errorf("dcc: nil asset")
+	}
+	directions := asset.Directions()
+	if direction < 0 || direction >= len(directions) {
+		return nil, fmt.Errorf("dcc: direction %d out of range [0,%d)", direction, len(directions))
+	}
+	frames := directions[direction].Frames()
+	result := make([]image.Image, len(frames))
+	for index, frame := range frames {
+		bounds := frame.Bounds()
+		normalized := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+		draw.Draw(normalized, normalized.Bounds(), frame, bounds.Min, draw.Src)
+		result[index] = normalized
+	}
+	return result, nil
 }
 
 // DC6 reads and decodes a DC6, optionally applying a palette from the same

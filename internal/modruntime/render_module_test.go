@@ -7,7 +7,9 @@ import (
 	"image/color"
 	"testing"
 	"testing/fstest"
+	"time"
 
+	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
@@ -68,6 +70,31 @@ return {
 	}
 }
 
+func TestRenderCapabilityExposesCOFCompositionMetadata(t *testing.T) {
+	input := cof.New()
+	input.NumberOfDirections = 1
+	input.FramesPerDirection = 1
+	input.NumberOfLayers = 1
+	input.Speed = 128
+	input.CofLayers = []cof.CofLayer{{Type: 0, Selectable: true, WeaponClass: cof.WeaponClassFromString("hth")}}
+	input.AnimationFrames = []cof.FrameEvent{1}
+	input.Priority = [][][]cof.CompositeType{{{0}}}
+	assets := fstest.MapFS{"unit.cof": &fstest.MapFile{Data: cof.Marshal(input)}}
+	var composer rendercore.Composer
+	runtime := New()
+	if err := runtime.RegisterModule(RenderModuleWithAssets(runtime, &composer, assets)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	script := `local r=require("dm.render/v1"); local c=assert(r.cof_info("unit.cof")); assert(c.directions==1 and c.frames==1 and c.layers[1].type=="HD" and c.priority[1][1][1]=="HD" and c.events[1]==1)`
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(script)}}, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	t.Parallel()
 
@@ -101,9 +128,14 @@ func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 local render = require("dm.render/v1")
 return { id = "screen.dc6", start = function(self)
   self.root = render.create("hud")
-  local w, h, ox, oy = self.root:set_dc6("one.dc6", "pal.dat", 0, 0)
-  assert(w == 1 and h == 1 and ox == 0 and oy == 0)
-end }
+	  local w, h, ox, oy = self.root:set_dc6("one.dc6", "pal.dat", 0, 0)
+	  assert(w == 1 and h == 1 and ox == 0 and oy == 0)
+	  self.animation = render.create("hud")
+	  assert(self.animation:set_dc6_animation("one.dc6", "pal.dat", 0, 12, "loop") == 1)
+	  self.animation:animation_pause()
+	  self.animation:animation_seek(0.25)
+	  self.animation:animation_resume()
+	end }
 `)}}
 	definition, err := LoadDefinition(context.Background(), runtime, source, "screen.lua")
 	if err != nil {
@@ -125,6 +157,20 @@ end }
 	got := color.RGBAModel.Convert(decoded.At(0, 0)).(color.RGBA)
 	if got != (color.RGBA{R: 10, G: 20, B: 30, A: 0xff}) {
 		t.Fatalf("pixel = %#v", got)
+	}
+	animationNode := nodes[1]
+	animation, err := composer.ResourceSnapshot(animationNode.Resource)
+	if err != nil || animation.Kind != rendercore.ResourceAnimation {
+		t.Fatalf("animation = %#v, %v", animation, err)
+	}
+	if animationNode.AnimationPaused || animationNode.AnimationSeekRevision != 2 || animationNode.AnimationSeek != 250*time.Millisecond {
+		t.Fatalf("animation playback state = %#v", animationNode)
+	}
+	if err := manager.Disable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if nodes := composer.Snapshot(); len(nodes) != 0 {
+		t.Fatalf("animation nodes leaked: %#v", nodes)
 	}
 }
 

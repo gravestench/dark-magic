@@ -21,7 +21,7 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 	if s.composition != nil {
 		return fmt.Errorf("renderer: composition core is already attached")
 	}
-	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]rendercore.Resource), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID)}
+	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]rendercore.Resource), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID), playbacks: make(map[rendercore.NodeID]*animationPlayback)}
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
@@ -38,6 +38,13 @@ type compositionBackend struct {
 	nodes         map[rendercore.NodeID]Renderable
 	resources     map[rendercore.ResourceID]rendercore.Resource
 	nodeResources map[rendercore.NodeID]rendercore.ResourceID
+	playbacks     map[rendercore.NodeID]*animationPlayback
+}
+
+type animationPlayback struct {
+	player       *rendercore.AnimationPlayer
+	frames       []image.Image
+	seekRevision uint64
 }
 
 func (b *compositionBackend) Apply(change rendercore.Change) error {
@@ -51,6 +58,9 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 	}
 	if b.nodeResources == nil {
 		b.nodeResources = make(map[rendercore.NodeID]rendercore.ResourceID)
+	}
+	if b.playbacks == nil {
+		b.playbacks = make(map[rendercore.NodeID]*animationPlayback)
 	}
 	switch change.Kind {
 	case "resource-create":
@@ -82,11 +92,10 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 		}
 		node.Disable()
 		node.SetParent(nil)
-		if b.renderer.cache != nil {
-			b.renderer.cache.Remove(node.UUID().String())
-		}
+		node.ClearTextures()
 		delete(b.nodes, change.ID)
 		delete(b.nodeResources, change.ID)
+		delete(b.playbacks, change.ID)
 		return nil
 	default:
 		return fmt.Errorf("unknown composition change %q", change.Kind)
@@ -134,24 +143,33 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 			return err
 		}
 		if b.nodeResources[state.ID] != state.Resource {
-			if b.renderer.cache != nil {
-				b.renderer.cache.Remove(node.UUID().String())
-			}
-			node.SetImage(decoded)
+			node.ClearTextures()
 			if resource.Kind == rendercore.ResourceAnimation {
-				if err := b.attachAnimation(node, resource); err != nil {
+				if err := b.attachAnimation(state.ID, node, resource); err != nil {
 					return err
 				}
 			} else {
+				node.SetImage(decoded)
 				node.OnUpdate(nil)
+				delete(b.playbacks, state.ID)
 			}
 			b.nodeResources[state.ID] = state.Resource
+		}
+	}
+	if playback := b.playbacks[state.ID]; playback != nil {
+		playback.player.SetPaused(state.AnimationPaused)
+		if playback.seekRevision != state.AnimationSeekRevision {
+			frame, changed := playback.player.Seek(state.AnimationSeek)
+			playback.seekRevision = state.AnimationSeekRevision
+			if changed {
+				b.setAnimationFrame(node, playback.frames[frame], frame)
+			}
 		}
 	}
 	return nil
 }
 
-func (b *compositionBackend) attachAnimation(node Renderable, resource rendercore.Resource) error {
+func (b *compositionBackend) attachAnimation(id rendercore.NodeID, node Renderable, resource rendercore.Resource) error {
 	animation := resource.Payload.(rendercore.AnimationData)
 	frames := make([]image.Image, len(animation.Frames))
 	for index, id := range animation.Frames {
@@ -161,44 +179,20 @@ func (b *compositionBackend) attachAnimation(node Renderable, resource rendercor
 		}
 		frames[index] = frame.Payload.(image.Image)
 	}
-	index, direction := 0, 1
-	var elapsed time.Duration
+	player := rendercore.NewAnimationPlayer(animation.Durations, animation.Loop)
+	b.playbacks[id] = &animationPlayback{player: player, frames: frames}
+	node.SetAnimationFrame(frames[0], 0)
 	node.OnUpdate(func() {
-		elapsed += time.Duration(float64(time.Second) * float64(rl.GetFrameTime()))
-		changed := false
-		for elapsed >= animation.Durations[index] {
-			elapsed -= animation.Durations[index]
-			switch animation.Loop {
-			case "once":
-				if index == len(frames)-1 {
-					elapsed = 0
-					return
-				}
-				index++
-				changed = true
-			case "ping-pong":
-				if len(frames) == 1 {
-					elapsed = 0
-					return
-				}
-				index += direction
-				if index == len(frames)-1 || index == 0 {
-					direction = -direction
-				}
-				changed = true
-			default:
-				index = (index + 1) % len(frames)
-				changed = true
-			}
-		}
+		index, changed := player.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
 		if changed {
-			if b.renderer.cache != nil {
-				b.renderer.cache.Remove(node.UUID().String())
-			}
-			node.SetImage(frames[index])
+			b.setAnimationFrame(node, frames[index], index)
 		}
 	})
 	return nil
+}
+
+func (b *compositionBackend) setAnimationFrame(node Renderable, frame image.Image, index int) {
+	node.SetAnimationFrame(frame, index)
 }
 
 func (b *compositionBackend) drawableImage(resource rendercore.Resource) (image.Image, error) {

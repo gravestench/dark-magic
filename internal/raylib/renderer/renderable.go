@@ -1,6 +1,7 @@
 package raylibRenderer
 
 import (
+	"fmt"
 	"image"
 	"math"
 	"sort"
@@ -26,13 +27,15 @@ func (s *Service) NewRenderable() Renderable {
 }
 
 type node struct {
-	renderer  *Service
-	uuid      uuid.UUID
-	opacity   float32
-	blendMode rl.BlendMode
-	image     image.Image
-	enabled   bool
-	origin    rl.Vector2
+	renderer       *Service
+	uuid           uuid.UUID
+	opacity        float32
+	blendMode      rl.BlendMode
+	image          image.Image
+	enabled        bool
+	origin         rl.Vector2
+	textureVariant string
+	textureKeys    map[string]struct{}
 
 	onUpdate func()
 
@@ -199,7 +202,8 @@ func (n *node) SetBlendMode(mode rl.BlendMode) {
 }
 
 func (n *node) Texture() rl.Texture2D {
-	tx, isNew := n.renderer.GetTexture(n.uuid, n.Image())
+	key := n.uuid.String() + n.textureVariant
+	tx, isNew := n.renderer.getTexture(key, n.Image())
 
 	if isNew {
 		// LoadTextureFromImage already uploaded the complete image. Consume the
@@ -233,6 +237,29 @@ func (n *node) Image() image.Image {
 func (n *node) SetImage(image image.Image) {
 	n.isDirty = true
 	n.image = image
+	n.textureVariant = ""
+}
+
+func (n *node) SetAnimationFrame(frame image.Image, index int) {
+	n.image = frame
+	n.isDirty = false
+	n.textureVariant = fmt.Sprintf("/animation/%d", index)
+	if n.textureKeys == nil {
+		n.textureKeys = make(map[string]struct{})
+	}
+	n.textureKeys[n.uuid.String()+n.textureVariant] = struct{}{}
+}
+
+func (n *node) ClearTextures() {
+	if n.renderer.cache == nil {
+		return
+	}
+	n.renderer.cache.Remove(n.uuid.String())
+	for key := range n.textureKeys {
+		n.renderer.cache.Remove(key)
+	}
+	n.textureKeys = nil
+	n.textureVariant = ""
 }
 
 func (n *node) Enable() {
