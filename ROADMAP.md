@@ -127,7 +127,7 @@ their own legally obtained game data.
   asset or script.
 - [x] Add enumeration, existence, and invalidation behavior suitable for script
   loading and development-time reload.
-- [ ] Package a redistributable `darkmagic` shim archive containing engine-owned
+- [x] Package a redistributable `darkmagic` shim archive containing engine-owned
   scripts and assets, while continuing to require users to supply Diablo II data.
 - [x] Load a minimal `boot.lua` from the layered VFS and verify the complete boot
   path headlessly.
