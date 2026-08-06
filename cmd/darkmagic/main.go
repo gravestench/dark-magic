@@ -21,6 +21,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/capture"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/filewatch"
+	"github.com/gravestench/dark-magic/internal/gamedata"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/hotreload"
 	"github.com/gravestench/dark-magic/internal/inputcore"
@@ -148,6 +149,12 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
 	records.SetLogger(slog.Default().With("component", "records"))
+	gameData := gamedata.New(records)
+	typedRecords, err := gameData.Snapshot()
+	if err != nil {
+		return fmt.Errorf("load typed game data: %w", err)
+	}
+	slog.Info("loaded typed game-data catalog", "issues", len(typedRecords.Issues))
 	fixtureEntries := developmentCharacters(fixtureCharacters)
 	saves := savecore.New(fixtureEntries...)
 	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {
@@ -300,7 +307,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		modDirectory, err = darkpaths.ExpandHost(modDirectory)
 	}
 	if err == nil && modDirectory != "" {
-		coordinator := hotreload.New(contentFS, scripts, components, records, definitions)
+		coordinator := hotreload.New(contentFS, scripts, components, gameData, definitions)
 		err = components.Register(host.ManagedDefinition{
 			ID: "engine.hot-reload",
 			New: func(context.Context) (host.Component, error) {

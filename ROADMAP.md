@@ -732,7 +732,10 @@ implementations. The remaining work is tracked explicitly below.
   foundation with immutable ID indexes and ordered scaling/equipment records.
   Missiles, States, Overlay, and PetType now cover combat presentation/state data;
   fixed-size grouped legacy fields are rebound element-by-element so PetType's
-  `mclass` and `micon` arrays retain their authored values.
+  `mclass` and `micon` arrays retain their authored values. The client composition
+  root now owns and eagerly validates the complete admitted catalog generation;
+  hot reload invalidates through that owner so generic and typed records cannot
+  drift into different generations.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
