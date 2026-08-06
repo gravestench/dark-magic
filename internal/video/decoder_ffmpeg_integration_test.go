@@ -1,6 +1,6 @@
 //go:build ffmpeg
 
-package videocore_test
+package video_test
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 )
 
 func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
@@ -38,7 +38,7 @@ func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 		{"d2xvideo.mpq", "data/local/video/ENG/D2x_Intro_640x292.bik"},
 		{"d2xvideo.mpq", "data/local/video/ENG/D2x_Out_640x292.bik"},
 	}
-	decoder := videocore.FFmpegDecoder{}
+	decoder := video.FFmpegDecoder{}
 	stop := errors.New("verified first decoded unit")
 	for _, test := range tests {
 		t.Run(filepath.Base(test.asset), func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = decoder.Decode(context.Background(), bytes.NewReader(data), func(frame videocore.Frame) error {
+			err = decoder.Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
 				if frame.Image.Bounds().Dx() != 640 || frame.Image.Bounds().Dy() <= 0 || frame.PTS < 0 {
 					t.Fatalf("invalid frame: bounds=%v PTS=%s", frame.Image.Bounds(), frame.PTS)
 				}
@@ -59,7 +59,7 @@ func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 			if !errors.Is(err, stop) {
 				t.Fatalf("video decode = %v", err)
 			}
-			err = decoder.DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk videocore.AudioChunk) error {
+			err = decoder.DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk video.AudioChunk) error {
 				if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 || chunk.PTS < 0 {
 					t.Fatalf("invalid audio chunk: %#v", chunk)
 				}
@@ -88,7 +88,7 @@ func TestFFmpegDecoderReadsRealBIK(t *testing.T) {
 	stop := errors.New("enough frames decoded")
 	frames := 0
 	var previousPTS time.Duration
-	err = (videocore.FFmpegDecoder{}).Decode(context.Background(), bytes.NewReader(data), func(frame videocore.Frame) error {
+	err = (video.FFmpegDecoder{}).Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
 		frames++
 		if frame.PTS < 0 {
 			t.Fatalf("negative frame PTS %s", frame.PTS)
@@ -121,8 +121,8 @@ func TestEmbeddedBackendPresentsRealBIKFrame(t *testing.T) {
 	}
 	var composer render.Composer
 	var mixer audio.Mixer
-	decoder := videocore.FFmpegDecoder{}
-	backend := &videocore.Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
+	decoder := video.FFmpegDecoder{}
+	backend := &video.Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
 	playback, err := backend.Play(archive, "data/local/video/New_Bliz640x480.bik")
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +166,7 @@ func TestFFmpegDecoderReadsRealBIKAudio(t *testing.T) {
 	stop := errors.New("enough audio decoded")
 	chunks := 0
 	var previousPTS time.Duration
-	err = (videocore.FFmpegDecoder{}).DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk videocore.AudioChunk) error {
+	err = (video.FFmpegDecoder{}).DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk video.AudioChunk) error {
 		chunks++
 		if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 {
 			t.Fatalf("invalid PCM chunk: bytes=%d rate=%d channels=%d", len(chunk.PCM), chunk.SampleRate, chunk.Channels)

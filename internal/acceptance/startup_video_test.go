@@ -17,7 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 )
 
 const (
@@ -32,37 +32,37 @@ type startupVideoBackend struct {
 
 func (*startupVideoBackend) Available() bool { return true }
 
-func (b *startupVideoBackend) Play(_ fs.FS, path string) (videocore.Playback, error) {
-	playback := &startupPlayback{snapshot: videocore.Snapshot{State: videocore.Playing}}
+func (b *startupVideoBackend) Play(_ fs.FS, path string) (video.Playback, error) {
+	playback := &startupPlayback{snapshot: video.Snapshot{State: video.Playing}}
 	b.paths = append(b.paths, path)
 	b.playbacks = append(b.playbacks, playback)
 	return playback, nil
 }
 
 type startupPlayback struct {
-	snapshot videocore.Snapshot
+	snapshot video.Snapshot
 	stops    int
 }
 
-func (p *startupPlayback) Snapshot() videocore.Snapshot { return p.snapshot }
+func (p *startupPlayback) Snapshot() video.Snapshot { return p.snapshot }
 
 func (p *startupPlayback) Stop() error {
 	p.stops++
-	p.snapshot.State = videocore.Stopped
+	p.snapshot.State = video.Stopped
 	return nil
 }
 
 func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 	t.Run("failed movie follows skip policy and sequence continues", func(t *testing.T) {
 		harness := newStartupHarness(t)
-		harness.backend.playbacks[0].snapshot = videocore.Snapshot{State: videocore.Failed, Error: "decode failed"}
+		harness.backend.playbacks[0].snapshot = video.Snapshot{State: video.Failed, Error: "decode failed"}
 		harness.update(t)
 		harness.assertPaths(t, blizzardMovie, blizzardNorthMovie)
 		if harness.backend.playbacks[0].stops != 1 {
 			t.Fatalf("failed playback stop calls = %d", harness.backend.playbacks[0].stops)
 		}
 
-		harness.backend.playbacks[1].snapshot = videocore.Snapshot{State: videocore.Complete}
+		harness.backend.playbacks[1].snapshot = video.Snapshot{State: video.Complete}
 		harness.update(t)
 		assertStack(t, harness.navigator, "title")
 		if harness.backend.playbacks[1].stops != 1 {

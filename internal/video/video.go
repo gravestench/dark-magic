@@ -1,5 +1,5 @@
-// Package videocore defines the backend-neutral contract for cinematic playback.
-package videocore
+// Package video defines the backend-neutral contract for cinematic playback.
+package video
 
 import (
 	"errors"

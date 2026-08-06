@@ -433,7 +433,7 @@ implementations. The remaining work is tracked explicitly below.
 
 ### M17.6: Embedded, single-window Bink playback
 
-- [x] Decode Bink video and audio in-process behind `videocore.Backend`; keep
+- [x] Decode Bink video and audio in-process behind `video.Backend`; keep
   codec and FFmpeg details out of Lua and scene definitions. The build-tagged
   libav decoder now demuxes seekable VFS input, decodes video packets, converts
   native frames to RGBA, and emits timestamped frames. The same decoder now
@@ -736,7 +736,10 @@ implementations. The remaining work is tracked explicitly below.
   adapter and the previous `audiocore` path is rejected. Backend-neutral retained
   nodes, resources, handles, animations, and composition commands now live under
   `internal/presentation/render`; Lua and video produce that contract while the
-  Raylib backend consumes it, and the old `rendercore` path is guarded.
+  Raylib backend consumes it, and the old `rendercore` path is guarded. Cinematic
+  contracts, in-process decode coordination, synchronized playback, presentation,
+  and the fallback player now live in `internal/video`; FFmpeg stays optional,
+  and the retired `videocore` import path is rejected.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

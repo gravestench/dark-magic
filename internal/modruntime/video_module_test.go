@@ -6,27 +6,27 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 	lua "github.com/yuin/gopher-lua"
 )
 
 type testVideoBackend struct{ playback *testPlayback }
 
 func (b *testVideoBackend) Available() bool { return true }
-func (b *testVideoBackend) Play(_ fs.FS, path string) (videocore.Playback, error) {
-	b.playback = &testPlayback{snapshot: videocore.Snapshot{State: videocore.Playing}}
+func (b *testVideoBackend) Play(_ fs.FS, path string) (video.Playback, error) {
+	b.playback = &testPlayback{snapshot: video.Snapshot{State: video.Playing}}
 	return b.playback, nil
 }
 
 type testPlayback struct {
-	snapshot videocore.Snapshot
+	snapshot video.Snapshot
 	stops    int
 }
 
-func (p *testPlayback) Snapshot() videocore.Snapshot { return p.snapshot }
+func (p *testPlayback) Snapshot() video.Snapshot { return p.snapshot }
 func (p *testPlayback) Stop() error {
 	p.stops++
-	p.snapshot.State = videocore.Stopped
+	p.snapshot.State = video.Stopped
 	return nil
 }
 

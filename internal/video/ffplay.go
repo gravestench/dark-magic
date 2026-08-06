@@ -1,4 +1,4 @@
-package videocore
+package video
 
 import (
 	"fmt"

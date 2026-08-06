@@ -1,6 +1,6 @@
 //go:build !ffmpeg
 
-package videocore
+package video
 
 import (
 	"image"

@@ -4,14 +4,14 @@ import (
 	"io/fs"
 	"sync"
 
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 	lua "github.com/yuin/gopher-lua"
 )
 
 const videoPlaybackType = "dm.video.playback/v1"
 
 type ownedPlayback struct {
-	playback videocore.Playback
+	playback video.Playback
 	once     sync.Once
 	err      error
 }
@@ -23,9 +23,9 @@ func (p *ownedPlayback) release() error {
 
 // VideoModule exposes scoped, backend-independent cinematic playback. The
 // backend receives the VFS directly so MPQ-sized videos never cross into Lua.
-func VideoModule(runtime *Runtime, backend videocore.Backend, source fs.FS) Module {
+func VideoModule(runtime *Runtime, backend video.Backend, source fs.FS) Module {
 	if backend == nil {
-		backend = videocore.Unavailable{}
+		backend = video.Unavailable{}
 	}
 	return Module{Name: "dm.video/v1", Loader: func(state *lua.LState) int {
 		registerPlaybackType(state)

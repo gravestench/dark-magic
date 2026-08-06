@@ -39,7 +39,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 )
 
 func main() {
@@ -203,9 +203,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
 		return err
 	}
-	videoBackend := videocore.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))
+	videoBackend := video.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))
 	if !videoBackend.Available() {
-		videoBackend = videocore.FFplay{}
+		videoBackend = video.FFplay{}
 	}
 	if resizable, ok := videoBackend.(interface{ Resize(image.Point) error }); ok {
 		renderer.SubscribeViewport(func(width, height int) {

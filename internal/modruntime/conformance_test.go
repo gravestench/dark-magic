@@ -14,7 +14,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -32,7 +32,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	modules := []Module{
 		AppModule("test", func() {}),
 		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source),
-		VideoModule(runtime, videocore.Unavailable{}, source),
+		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
 		LootModule(source), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),

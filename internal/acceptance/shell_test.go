@@ -16,7 +16,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/videocore"
+	"github.com/gravestench/dark-magic/internal/video"
 )
 
 func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
@@ -47,7 +47,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.DataModule(contentFS),
 		modruntime.InputModule(&input),
 		modruntime.AudioModule(runtime, &mixer, contentFS),
-		modruntime.VideoModule(runtime, videocore.Unavailable{}, contentFS),
+		modruntime.VideoModule(runtime, video.Unavailable{}, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
