@@ -195,7 +195,7 @@ type LevelData struct {
 
 	// mon1 (to mon25) define which monsters can spawn on the area level for Normal Difficulty.
 	// Uses the monster "Id" field from the monstats.txt file.
-	Mon1, Mon2, Mon3, Mon4, Mon5, Mon6, Mon7, Mon8, Mon9, Mon10, Mon11, Mon12, Mon13, Mon14, Mon15, Mon16, Mon17, Mon18, Mon19, Mon20, Mon21, Mon22, Mon23, Mon24, Mon25 int `csv:"mon1,mon2,mon3,mon4,mon5,mon6,mon7,mon8,mon9,mon10,mon11,mon12,mon13,mon14,mon15,mon16,mon17,mon18,mon19,mon20,mon21,mon22,mon23,mon24,mon25"`
+	Mon1, Mon2, Mon3, Mon4, Mon5, Mon6, Mon7, Mon8, Mon9, Mon10, Mon11, Mon12, Mon13, Mon14, Mon15, Mon16, Mon17, Mon18, Mon19, Mon20, Mon21, Mon22, Mon23, Mon24, Mon25 string `csv:"mon1,mon2,mon3,mon4,mon5,mon6,mon7,mon8,mon9,mon10,mon11,mon12,mon13,mon14,mon15,mon16,mon17,mon18,mon19,mon20,mon21,mon22,mon23,mon24,mon25"`
 
 	// rangedspawn is a Boolean Field. If equals 1, then for the first monster, try to pick a ranged type.
 	// If equals 0, then ignore this.
@@ -203,16 +203,16 @@ type LevelData struct {
 
 	// nmon1 (to nmon25) define which monsters can spawn on the area level for Nightmare Difficulty and Hell Difficulty.
 	// Uses the monster "Id" field from the monstats.txt file.
-	Nmon1, Nmon2, Nmon3, Nmon4, Nmon5, Nmon6, Nmon7, Nmon8, Nmon9, Nmon10, Nmon11, Nmon12, Nmon13, Nmon14, Nmon15, Nmon16, Nmon17, Nmon18, Nmon19, Nmon20, Nmon21, Nmon22, Nmon23, Nmon24, Nmon25 int `csv:"nmon1,nmon2,nmon3,nmon4,nmon5,nmon6,nmon7,nmon8,nmon9,nmon10,nmon11,nmon12,nmon13,nmon14,nmon15,nmon16,nmon17,nmon18,nmon19,nmon20,nmon21,nmon22,nmon23,nmon24,nmon25"`
+	Nmon1, Nmon2, Nmon3, Nmon4, Nmon5, Nmon6, Nmon7, Nmon8, Nmon9, Nmon10, Nmon11, Nmon12, Nmon13, Nmon14, Nmon15, Nmon16, Nmon17, Nmon18, Nmon19, Nmon20, Nmon21, Nmon22, Nmon23, Nmon24, Nmon25 string `csv:"nmon1,nmon2,nmon3,nmon4,nmon5,nmon6,nmon7,nmon8,nmon9,nmon10,nmon11,nmon12,nmon13,nmon14,nmon15,nmon16,nmon17,nmon18,nmon19,nmon20,nmon21,nmon22,nmon23,nmon24,nmon25"`
 
 	// umon1 (to umon25) define which monsters can spawn as Unique monsters on this area level for Normal Difficulty.
 	// Uses the monster "Id" field from the monstats.txt file.
-	Umon1, Umon2, Umon3, Umon4, Umon5, Umon6, Umon7, Umon8, Umon9, Umon10, Umon11, Umon12, Umon13, Umon14, Umon15, Umon16, Umon17, Umon18, Umon19, Umon20, Umon21, Umon22, Umon23, Umon24, Umon25 int `csv:"umon1,umon2,umon3,umon4,umon5,umon6,umon7,umon8,umon9,umon10,umon11,umon12,umon13,umon14,umon15,umon16,umon17,umon18,umon19,umon20,umon21,umon22,umon23,umon24,umon25"`
+	Umon1, Umon2, Umon3, Umon4, Umon5, Umon6, Umon7, Umon8, Umon9, Umon10, Umon11, Umon12, Umon13, Umon14, Umon15, Umon16, Umon17, Umon18, Umon19, Umon20, Umon21, Umon22, Umon23, Umon24, Umon25 string `csv:"umon1,umon2,umon3,umon4,umon5,umon6,umon7,umon8,umon9,umon10,umon11,umon12,umon13,umon14,umon15,umon16,umon17,umon18,umon19,umon20,umon21,umon22,umon23,umon24,umon25"`
 
 	// cmon1 (to cmon4) define which Critter monsters can spawn on the area level.
 	// Uses the monster "Id" field from the monstats.txt file.
 	// Critter monsters are determined by the "critter" field from the monstats2.txt file.
-	Cmon1, Cmon2, Cmon3, Cmon4 int `csv:"cmon1,cmon2,cmon3,cmon4"`
+	Cmon1, Cmon2, Cmon3, Cmon4 string `csv:"cmon1,cmon2,cmon3,cmon4"`
 
 	// cpct1 (to cpct4) control the percent chance (out of 100) to spawn a Critter monster on the area level.
 	Cpct1, Cpct2, Cpct3, Cpct4 int `csv:"cpct1,cpct2,cpct3,cpct4"`

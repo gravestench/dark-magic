@@ -42,6 +42,22 @@ func TestLoadSupportsAliasesPointersAndDiabloBooleans(t *testing.T) {
 	}
 }
 
+func TestLoadRecoversHistoricalGroupedCSVTags(t *testing.T) {
+	t.Parallel()
+
+	type record struct {
+		Normal, Nightmare, Hell int `csv:"Value,Value(N),Value(H)"`
+	}
+	source := fstest.MapFS{"grouped.txt": &fstest.MapFile{Data: []byte("Value\tValue(N)\tValue(H)\n1\t2\t3\n")}}
+	records, err := Load[record](recordstore.New(source), "grouped.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 || records[0].Normal != 1 || records[0].Nightmare != 2 || records[0].Hell != 3 {
+		t.Fatalf("decoded grouped record = %#v", records)
+	}
+}
+
 func TestLoadReportsSourceRowColumnAndField(t *testing.T) {
 	t.Parallel()
 
@@ -60,5 +76,18 @@ func TestIndexRejectsDuplicatePrimaryKeys(t *testing.T) {
 	_, err := Index([]models.CharStats{{Class: "ama"}, {Class: "ama"}}, func(record models.CharStats) string { return record.Class })
 	if err == nil || !strings.Contains(err.Error(), "duplicate key ama") {
 		t.Fatalf("duplicate index error = %v", err)
+	}
+}
+
+func TestObservedIndexPreservesRowsAndReportsDuplicate(t *testing.T) {
+	t.Parallel()
+
+	records := []models.CharStats{{Class: "unused", Strength: 1}, {Class: "unused", Strength: 2}}
+	index, issues, err := ObservedIndex("charstats", records, func(record models.CharStats) string { return record.Class })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index["unused"].Strength != 1 || len(issues) != 1 || issues[0].Row != 3 || issues[0].Kind != "duplicate-key" {
+		t.Fatalf("observed index = %#v, issues = %#v", index, issues)
 	}
 }

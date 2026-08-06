@@ -708,7 +708,9 @@ implementations. The remaining work is tracked explicitly below.
   typed records that drive simulation, rendering, audio, world generation, and UI.
   The internal reflection decoder, deterministic primary-key indexing, atomic
   snapshot/invalidation contract, and real-archive verification are complete for
-  the initial CharStats and Sounds slice; the remaining schemas and consumers
+  CharStats, Levels, Objects, Skills, Sounds, and TreasureClassEx. Admission also
+  recovered the legacy grouped-column tag convention and corrected monster-code
+  fields that real records prove are strings; remaining schemas and consumers
   still need admission and migration.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of

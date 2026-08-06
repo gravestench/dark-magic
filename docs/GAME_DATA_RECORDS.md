@@ -37,3 +37,18 @@ Gameplay systems should depend on focused catalog interfaces or immutable typed
 snapshots, not parse TSV independently. Generic record access remains valuable
 for data exploration, mod-defined tables, and columns the engine does not yet
 model.
+
+## Authentic-data policy
+
+The shipped tables are known to contain unused rows and columns, sentinel
+values, dangling references, contradictory fields, patch-era leftovers, and
+values that do not match their apparent documentation. The catalog must preserve
+those facts. It must not silently "fix" source data or treat every inconsistency
+as a fatal engine error.
+
+Structural failures that make a table uninterpretable remain fatal. Recoverable
+conversion and relationship problems should produce source-located diagnostics,
+retain the original generic row, and allow policy at the consuming system to
+decide whether the affected record matters. Validation distinguishes verified
+invariants from observations and heuristics, and records may explicitly be
+classified as active, unused, sentinel, malformed-but-tolerated, or unknown.

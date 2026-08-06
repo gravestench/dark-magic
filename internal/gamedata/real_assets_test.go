@@ -41,4 +41,40 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(sounds) == 0 {
 		t.Fatal("typed sounds table is empty")
 	}
+	catalog := New(store)
+	snapshot, err := catalog.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.LevelsByID) == 0 || len(snapshot.ObjectsByClass) == 0 || len(snapshot.SkillsByID) == 0 || len(snapshot.TreasureByName) == 0 {
+		t.Fatal("typed core catalog indexes are incomplete")
+	}
+	if len(snapshot.Issues) == 0 {
+		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
+	}
+	for name, load := range map[string]func() (int, error){
+		"levels": func() (int, error) {
+			records, err := Load[models.LevelData](store, LevelsTable)
+			return len(records), err
+		},
+		"objects": func() (int, error) {
+			records, err := Load[models.Object](store, ObjectsTable)
+			return len(records), err
+		},
+		"skills": func() (int, error) {
+			records, err := Load[models.SkillData](store, SkillsTable)
+			return len(records), err
+		},
+		"treasure classes": func() (int, error) {
+			records, err := Load[models.TreasureClassEx](store, TreasureClassExTable)
+			return len(records), err
+		},
+	} {
+		count, err := load()
+		if err != nil {
+			t.Errorf("decode typed %s: %v", name, err)
+		} else if count == 0 {
+			t.Errorf("typed %s table is empty", name)
+		}
+	}
 }

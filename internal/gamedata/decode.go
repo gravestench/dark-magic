@@ -56,20 +56,41 @@ func recordFields[T any]() ([]fieldBinding, error) {
 	}
 	bindings := make([]fieldBinding, 0, typeOf.NumField())
 	seen := make(map[string]string)
-	for index := 0; index < typeOf.NumField(); index++ {
+	for index := 0; index < typeOf.NumField(); {
 		field := typeOf.Field(index)
 		if !field.IsExported() {
+			index++
 			continue
 		}
-		column := strings.Split(field.Tag.Get("csv"), ",")[0]
-		if column == "" || column == "-" {
+		tag := field.Tag.Get("csv")
+		if tag == "" || tag == "-" {
+			index++
 			continue
 		}
-		if previous, exists := seen[column]; exists {
-			return nil, fmt.Errorf("duplicate csv column %q on fields %s and %s", column, previous, field.Name)
+		// The historical schemas use grouped Go field declarations with one
+		// comma-separated tag, for example `SizeX, SizeXN, SizeXH int
+		// csv:"SizeX,SizeX(N),SizeX(H)"`. Reflection exposes three fields with
+		// the same tag, so recover that convention by pairing the consecutive
+		// fields and columns. This is distinct from unsupported csv options.
+		groupEnd := index + 1
+		for groupEnd < typeOf.NumField() && typeOf.Field(groupEnd).Tag.Get("csv") == tag {
+			groupEnd++
 		}
-		seen[column] = field.Name
-		bindings = append(bindings, fieldBinding{index: index, name: field.Name, column: column})
+		columns := strings.Split(tag, ",")
+		if groupEnd-index == 1 {
+			columns = columns[:1]
+		} else if len(columns) != groupEnd-index {
+			return nil, fmt.Errorf("grouped csv tag %q has %d columns for %d fields", tag, len(columns), groupEnd-index)
+		}
+		for offset, column := range columns {
+			groupField := typeOf.Field(index + offset)
+			if previous, exists := seen[column]; exists {
+				return nil, fmt.Errorf("duplicate csv column %q on fields %s and %s", column, previous, groupField.Name)
+			}
+			seen[column] = groupField.Name
+			bindings = append(bindings, fieldBinding{index: index + offset, name: groupField.Name, column: column})
+		}
+		index = groupEnd
 	}
 	if len(bindings) == 0 {
 		return nil, fmt.Errorf("record type %s has no csv-tagged fields", typeOf)
@@ -153,4 +174,33 @@ func Index[T any, K comparable](records []T, key func(T) K) (map[K]T, error) {
 		result[value] = record
 	}
 	return result, nil
+}
+
+// Issue describes a tolerated source-data problem. The complete row remains in
+// its typed slice; lookup indexes use a documented deterministic winner.
+type Issue struct {
+	Table   string
+	Row     int
+	Kind    string
+	Message string
+}
+
+// ObservedIndex builds a first-record-wins index while reporting duplicates.
+// This matches the realities of shipped Diablo data without hiding ambiguity or
+// making unused/sentinel duplicates fatal to otherwise usable tables.
+func ObservedIndex[T any, K comparable](table string, records []T, key func(T) K) (map[K]T, []Issue, error) {
+	if key == nil {
+		return nil, nil, fmt.Errorf("gamedata: nil index key")
+	}
+	result := make(map[K]T, len(records))
+	var issues []Issue
+	for row, record := range records {
+		value := key(record)
+		if _, exists := result[value]; exists {
+			issues = append(issues, Issue{Table: table, Row: row + 2, Kind: "duplicate-key", Message: fmt.Sprintf("duplicate key %v; lookup retains first occurrence", value)})
+			continue
+		}
+		result[value] = record
+	}
+	return result, issues, nil
 }
