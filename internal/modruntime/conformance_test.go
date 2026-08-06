@@ -37,7 +37,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	expected := map[string][]string{
 		"dm.vfs/v1": {"read", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor", "text"},
 		"dm.data/v1":  {"load", "load_manifest"},
-		"dm.audio/v1": {"exists", "play"}, "dm.records/v1": {"load", "reload", "loaded"},
+		"dm.audio/v1": {"exists", "play", "set_bus_volume"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"}, "dm.save/v1": {"create"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create"},
 		"dm.scene/v1": {"register", "replace", "push", "pop"},

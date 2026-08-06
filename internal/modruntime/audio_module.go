@@ -47,7 +47,22 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 					return 0
 				}
 				format := strings.ToLower(filepath.Ext(fileName))
-				id, err := mixer.Play(format, data)
+				options := audiocore.PlayOptions{Bus: "sfx", Volume: 1}
+				if table := state.OptTable(2, nil); table != nil {
+					if value := table.RawGetString("bus"); value != lua.LNil {
+						options.Bus = lua.LVAsString(value)
+					}
+					if value := table.RawGetString("volume"); value != lua.LNil {
+						options.Volume = float32(lua.LVAsNumber(value))
+					}
+					if value := table.RawGetString("pan"); value != lua.LNil {
+						options.Pan = float32(lua.LVAsNumber(value))
+					}
+					if value := table.RawGetString("loop"); value != lua.LNil {
+						options.Loop = lua.LVAsBool(value)
+					}
+				}
+				id, err := mixer.PlayWithOptions(format, data, options)
 				if err != nil {
 					state.RaiseError("playing sound %q: %v", fileName, err)
 					return 0
@@ -64,6 +79,12 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 				state.Push(userData)
 				return 1
 			},
+			"set_bus_volume": func(state *lua.LState) int {
+				if err := mixer.SetBusVolume(state.CheckString(1), float32(state.CheckNumber(2))); err != nil {
+					state.RaiseError("setting bus volume: %v", err)
+				}
+				return 0
+			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
 		state.Push(module)
@@ -78,6 +99,13 @@ func registerSoundType(state *lua.LState) {
 			sound := checkSound(state, 1)
 			if err := sound.mixer.SetVolume(sound.id, float32(state.CheckNumber(2))); err != nil {
 				state.RaiseError("setting sound volume: %v", err)
+			}
+			return 0
+		},
+		"set_pan": func(state *lua.LState) int {
+			sound := checkSound(state, 1)
+			if err := sound.mixer.SetPan(sound.id, float32(state.CheckNumber(2))); err != nil {
+				state.RaiseError("setting sound pan: %v", err)
 			}
 			return 0
 		},

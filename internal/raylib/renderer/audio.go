@@ -19,12 +19,13 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	if s.audioBackend != nil {
 		return fmt.Errorf("renderer: audio mixer is already attached")
 	}
-	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound)}
+	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
 		if err := mixer.Drain(backend); err != nil && s.logger != nil {
 			s.logger.Error("draining audio commands", "error", err)
 		}
+		backend.Update()
 	})
 	return nil
 }
@@ -32,6 +33,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 type raylibAudioBackend struct {
 	mu     sync.Mutex
 	sounds map[audiocore.SoundID]rl.Sound
+	loops  map[audiocore.SoundID]bool
 }
 
 func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
@@ -46,8 +48,17 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		sound := rl.LoadSoundFromWave(wave)
 		rl.UnloadWave(wave)
 		rl.SetSoundVolume(sound, command.Volume)
+		rl.SetSoundPan(sound, (command.Pan+1)/2)
 		rl.PlaySound(sound)
 		b.sounds[command.ID] = sound
+		b.loops[command.ID] = command.Loop
+		return nil
+	case "pan":
+		sound, exists := b.sounds[command.ID]
+		if !exists {
+			return fmt.Errorf("sound %v does not exist", command.ID)
+		}
+		rl.SetSoundPan(sound, (command.Pan+1)/2)
 		return nil
 	case "volume":
 		sound, exists := b.sounds[command.ID]
@@ -64,9 +75,20 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		rl.StopSound(sound)
 		rl.UnloadSound(sound)
 		delete(b.sounds, command.ID)
+		delete(b.loops, command.ID)
 		return nil
 	default:
 		return fmt.Errorf("unknown audio command %q", command.Kind)
+	}
+}
+
+func (b *raylibAudioBackend) Update() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for id, loop := range b.loops {
+		if loop && !rl.IsSoundPlaying(b.sounds[id]) {
+			rl.PlaySound(b.sounds[id])
+		}
 	}
 }
 

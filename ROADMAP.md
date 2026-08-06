@@ -299,6 +299,9 @@ implementations. The remaining work is tracked explicitly below.
   change/sound and visual-state callbacks, and accessibility snapshots.
 - [ ] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
   streaming, looping, fades, pan, grouping, and record-driven lookup.
+  Generation-checked sounds now route through independently adjustable named
+  buses with per-sound volume/pan and owner-thread looping; fades, streaming,
+  grouping, and record-driven lookup remain.
 - [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
   leak/race/rapid-scene-transition acceptance tests.
 

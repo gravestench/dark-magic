@@ -17,7 +17,7 @@ func TestAudioHandlesBelongToLuaComponentScope(t *testing.T) {
 		"sound.wav": &fstest.MapFile{Data: []byte("wave")},
 		"system.lua": &fstest.MapFile{Data: []byte(`
 local audio = require("dm.audio/v1")
-return { id = "sound", start = function(self) self.sound = audio.play("sound.wav"); self.sound:set_volume(.5) end }
+return { id = "sound", start = function(self) audio.set_bus_volume("ui", .8); self.sound = audio.play("sound.wav", {bus="ui", volume=.5, pan=-.25, loop=true}); self.sound:set_pan(.25); self.sound:set_volume(.4) end }
 `)},
 	}
 	runtime := New()
@@ -49,7 +49,7 @@ return { id = "sound", start = function(self) self.sound = audio.play("sound.wav
 	if err := mixer.Drain(backend); err != nil {
 		t.Fatal(err)
 	}
-	if len(backend.commands) != 3 || backend.commands[2].Kind != "stop" {
+	if len(backend.commands) != 4 || backend.commands[0].Kind != "play" || backend.commands[0].Volume != .4 || !backend.commands[0].Loop || backend.commands[1].Kind != "pan" || backend.commands[3].Kind != "stop" {
 		t.Fatalf("commands = %#v", backend.commands)
 	}
 }

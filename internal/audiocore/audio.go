@@ -20,6 +20,8 @@ type Command struct {
 	Format string
 	Data   []byte
 	Volume float32
+	Pan    float32
+	Loop   bool
 }
 
 // Backend consumes audio commands on the native audio owner thread.
@@ -28,6 +30,16 @@ type Backend interface{ Apply(Command) error }
 type slot struct {
 	generation uint32
 	active     bool
+	bus        string
+	volume     float32
+}
+
+// PlayOptions selects routing and playback behavior for one sound.
+type PlayOptions struct {
+	Bus    string
+	Volume float32
+	Pan    float32
+	Loop   bool
 }
 
 // Mixer accepts concurrent sound requests and queues backend commands.
@@ -36,15 +48,36 @@ type Mixer struct {
 	slots   []slot
 	free    []uint32
 	pending []Command
+	buses   map[string]float32
 }
 
 // Play queues a decoded-by-backend sound asset.
 func (m *Mixer) Play(format string, data []byte) (SoundID, error) {
+	return m.PlayWithOptions(format, data, PlayOptions{Bus: "sfx", Volume: 1})
+}
+
+// PlayWithOptions queues a sound routed through a named bus.
+func (m *Mixer) PlayWithOptions(format string, data []byte, options PlayOptions) (SoundID, error) {
 	if format == "" || len(data) == 0 {
 		return SoundID{}, errors.New("audiocore: format and sound data are required")
 	}
+	if options.Bus == "" {
+		options.Bus = "sfx"
+	}
+	if !validBus(options.Bus) {
+		return SoundID{}, fmt.Errorf("audiocore: unknown bus %q", options.Bus)
+	}
+	if options.Volume < 0 || options.Volume > 1 {
+		return SoundID{}, errors.New("audiocore: volume must be between 0 and 1")
+	}
+	if options.Pan < -1 || options.Pan > 1 {
+		return SoundID{}, errors.New("audiocore: pan must be between -1 and 1")
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.buses == nil {
+		m.buses = make(map[string]float32)
+	}
 	var index uint32
 	if len(m.free) != 0 {
 		index = m.free[len(m.free)-1]
@@ -55,8 +88,10 @@ func (m *Mixer) Play(format string, data []byte) (SoundID, error) {
 	}
 	entry := &m.slots[index]
 	entry.active = true
+	entry.bus = options.Bus
+	entry.volume = options.Volume
 	id := SoundID{Slot: index, Generation: entry.generation}
-	m.pending = append(m.pending, Command{Kind: "play", ID: id, Format: format, Data: append([]byte(nil), data...), Volume: 1})
+	m.pending = append(m.pending, Command{Kind: "play", ID: id, Format: format, Data: append([]byte(nil), data...), Volume: options.Volume * m.busVolume(options.Bus), Pan: options.Pan, Loop: options.Loop})
 	return id, nil
 }
 
@@ -70,7 +105,44 @@ func (m *Mixer) SetVolume(id SoundID, volume float32) error {
 	if err := m.valid(id); err != nil {
 		return err
 	}
-	m.pending = append(m.pending, Command{Kind: "volume", ID: id, Volume: volume})
+	m.slots[id.Slot].volume = volume
+	m.pending = append(m.pending, Command{Kind: "volume", ID: id, Volume: volume * m.busVolume(m.slots[id.Slot].bus)})
+	return nil
+}
+
+// SetPan queues stereo pan in the range -1 (left) through 1 (right).
+func (m *Mixer) SetPan(id SoundID, pan float32) error {
+	if pan < -1 || pan > 1 {
+		return errors.New("audiocore: pan must be between -1 and 1")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.valid(id); err != nil {
+		return err
+	}
+	m.pending = append(m.pending, Command{Kind: "pan", ID: id, Pan: pan})
+	return nil
+}
+
+// SetBusVolume changes a bus and updates every active sound routed through it.
+func (m *Mixer) SetBusVolume(bus string, volume float32) error {
+	if !validBus(bus) {
+		return fmt.Errorf("audiocore: unknown bus %q", bus)
+	}
+	if volume < 0 || volume > 1 {
+		return errors.New("audiocore: volume must be between 0 and 1")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.buses == nil {
+		m.buses = make(map[string]float32)
+	}
+	m.buses[bus] = volume
+	for index, entry := range m.slots {
+		if entry.active && entry.bus == bus {
+			m.pending = append(m.pending, Command{Kind: "volume", ID: SoundID{Slot: uint32(index), Generation: entry.generation}, Volume: entry.volume * volume})
+		}
+	}
 	return nil
 }
 
@@ -90,6 +162,21 @@ func (m *Mixer) Stop(id SoundID) error {
 	m.free = append(m.free, id.Slot)
 	m.pending = append(m.pending, Command{Kind: "stop", ID: id})
 	return nil
+}
+
+func validBus(bus string) bool {
+	switch bus {
+	case "music", "ui", "sfx", "ambience", "speech":
+		return true
+	}
+	return false
+}
+
+func (m *Mixer) busVolume(bus string) float32 {
+	if volume, ok := m.buses[bus]; ok {
+		return volume
+	}
+	return 1
 }
 
 // Drain applies pending commands in order, retaining failed and later commands.
