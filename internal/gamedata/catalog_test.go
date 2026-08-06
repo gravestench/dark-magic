@@ -65,6 +65,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		ObjectTypesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nShrine\tSH\n")},
 		ObjectGroupsTable:    &fstest.MapFile{Data: []byte("GroupName\tID0\tDENSITY0\tPROB0\nCaves\t1\t10\t100\n")},
 		ObjectModesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nNeutral\tNU\n")},
+		QualityItemsTable:    &fstest.MapFile{Data: []byte("mod1code\tmod1min\tarmor\nac\t5\t1\n")},
+		WeaponClassTable:     &fstest.MapFile{Data: []byte("Weapon Class\tCode\nOne Hand Swing\t1hs\n")},
+		BooksTable:           &fstest.MapFile{Data: []byte("Name\tScrollSpellCode\tBaseCost\nTown Portal\ttsc\t100\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -106,6 +109,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.ObjectTypesByName["Shrine"].Token != "SH" || first.ObjectGroupsByName["Caves"].ObjectID0 != 1 || first.ObjectModesByName["Neutral"].Token != "NU" {
 		t.Fatalf("typed object metadata tables = %#v", first)
+	}
+	if len(first.QualityModifiers) != 1 || first.WeaponClassByCode["1hs"].Name != "One Hand Swing" || first.BooksByName["Town Portal"].BaseCost != 100 {
+		t.Fatalf("typed item support tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -176,6 +182,9 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		ObjectTypesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nShrine\tSH\n")},
 		ObjectGroupsTable:    &fstest.MapFile{Data: []byte("GroupName\tID0\tDENSITY0\tPROB0\nCaves\t1\t10\t100\n")},
 		ObjectModesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nNeutral\tNU\n")},
+		QualityItemsTable:    &fstest.MapFile{Data: []byte("mod1code\tmod1min\tarmor\nac\t5\t1\n")},
+		WeaponClassTable:     &fstest.MapFile{Data: []byte("Weapon Class\tCode\nOne Hand Swing\t1hs\n")},
+		BooksTable:           &fstest.MapFile{Data: []byte("Name\tScrollSpellCode\tBaseCost\nTown Portal\ttsc\t100\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

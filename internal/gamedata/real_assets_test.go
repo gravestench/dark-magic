@@ -93,6 +93,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.ObjectTypesByName) == 0 || len(snapshot.ObjectGroupsByName) == 0 || len(snapshot.ObjectModesByName) == 0 {
 		t.Fatal("typed object metadata tables are incomplete")
 	}
+	if len(snapshot.QualityModifiers) == 0 || len(snapshot.WeaponClassByCode) == 0 || len(snapshot.BooksByName) == 0 {
+		t.Fatal("typed item support tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

@@ -103,6 +103,11 @@ type Snapshot struct {
 	ObjectGroupsByName map[string]models.ObjectGroup
 	ObjectModes        []models.ObjectMode
 	ObjectModesByName  map[string]models.ObjectMode
+	QualityModifiers   []models.ItemHighQualityModifiers
+	WeaponClasses      []models.WeaponClass
+	WeaponClassByCode  map[models.WeaponClassID]models.WeaponClass
+	Books              []models.Book
+	BooksByName        map[string]models.Book
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -555,6 +560,28 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	issues = append(issues, found...)
+	qualityModifiers, err := Load[models.ItemHighQualityModifiers](c.store, QualityItemsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	weaponClasses, err := Load[models.WeaponClass](c.store, WeaponClassTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	weaponClassByCode, found, err := ObservedIndex(WeaponClassTable, weaponClasses, func(record models.WeaponClass) models.WeaponClassID { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	books, err := Load[models.Book](c.store, BooksTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	booksByName, found, err := ObservedIndex(BooksTable, books, func(record models.Book) string { return record.Name })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -592,6 +619,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		ObjectTypes: objectTypes, ObjectTypesByName: objectTypesByName,
 		ObjectGroups: objectGroups, ObjectGroupsByName: objectGroupsByName,
 		ObjectModes: objectModes, ObjectModesByName: objectModesByName,
+		QualityModifiers: qualityModifiers, WeaponClasses: weaponClasses, WeaponClassByCode: weaponClassByCode,
+		Books: books, BooksByName: booksByName,
 	}, nil
 }
 
@@ -688,6 +717,11 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		ObjectGroupsByName: make(map[string]models.ObjectGroup, len(source.ObjectGroupsByName)),
 		ObjectModes:        append([]models.ObjectMode(nil), source.ObjectModes...),
 		ObjectModesByName:  make(map[string]models.ObjectMode, len(source.ObjectModesByName)),
+		QualityModifiers:   append([]models.ItemHighQualityModifiers(nil), source.QualityModifiers...),
+		WeaponClasses:      append([]models.WeaponClass(nil), source.WeaponClasses...),
+		WeaponClassByCode:  make(map[models.WeaponClassID]models.WeaponClass, len(source.WeaponClassByCode)),
+		Books:              append([]models.Book(nil), source.Books...),
+		BooksByName:        make(map[string]models.Book, len(source.BooksByName)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -796,6 +830,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.ObjectModesByName {
 		result.ObjectModesByName[key] = value
+	}
+	for key, value := range source.WeaponClassByCode {
+		result.WeaponClassByCode[key] = value
+	}
+	for key, value := range source.BooksByName {
+		result.BooksByName[key] = value
 	}
 	return result
 }
