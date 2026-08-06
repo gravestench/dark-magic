@@ -649,7 +649,9 @@ implementations. The remaining work is tracked explicitly below.
   share the same state and sound contract. Text-entry and confirmation dialogs
   now use visible shared label buttons and semantic text styles.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
-  per-run colors, and optional glyph-sized background highlights.
+  per-run colors, and optional glyph-sized background highlights. Named inline
+  color tokens and per-run palette modulation are complete; background
+  highlights remain.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
   the authentic translucent-black backing box, then connect item, skill, HUD,
   and panel-control tooltip content.

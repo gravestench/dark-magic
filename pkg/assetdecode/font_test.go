@@ -121,3 +121,30 @@ func TestBitmapFontPreservesPaletteShadingWhenTinted(t *testing.T) {
 		t.Fatalf("tint was not multiplicative: %#v", bright)
 	}
 }
+
+func TestBitmapFontRendersInlineColorRunsWithoutMeasuringTokens(t *testing.T) {
+	t.Parallel()
+
+	frame := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	frame.SetRGBA(0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+	font := &BitmapFont{
+		Glyphs:     map[rune]Glyph{'A': {Width: 1, Height: 1, Frame: 0}},
+		Frames:     []image.Image{frame},
+		LineHeight: 1,
+	}
+	rendered, err := font.Render("[red]A[blue]A", color.White, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rendered.Bounds().Dx() != 2 {
+		t.Fatalf("tokenized text width = %d, want 2", rendered.Bounds().Dx())
+	}
+	red := color.RGBAModel.Convert(rendered.At(0, 0)).(color.RGBA)
+	blue := color.RGBAModel.Convert(rendered.At(1, 0)).(color.RGBA)
+	if red != (color.RGBA{R: 0xff, G: 0x77, B: 0x77, A: 0xff}) {
+		t.Fatalf("red run = %#v", red)
+	}
+	if blue != (color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff}) {
+		t.Fatalf("blue run = %#v", blue)
+	}
+}

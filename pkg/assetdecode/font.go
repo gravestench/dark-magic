@@ -8,6 +8,7 @@ import (
 	"image/draw"
 	"io/fs"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -92,6 +93,7 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 	if align != "left" && align != "center" && align != "right" {
 		return nil, fmt.Errorf("bitmap font: invalid alignment %q", align)
 	}
+	text, runColors := parseColorTokens(text)
 	lines := f.wrap(text, maxWidth)
 	width := 1
 	for _, line := range lines {
@@ -103,6 +105,8 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 		width = maxWidth
 	}
 	output := image.NewRGBA(image.Rect(0, 0, width, maxInt(1, len(lines)*f.LineHeight)))
+	runIndex := 0
+	currentTint := tint
 	for lineIndex, line := range lines {
 		lineWidth := f.measure(line)
 		x := 0
@@ -112,6 +116,10 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 			x = width - lineWidth
 		}
 		for _, code := range line {
+			if nextTint, ok := runColors[runIndex]; ok {
+				currentTint = nextTint
+			}
+			runIndex++
 			glyph, ok := f.glyph(code)
 			if !ok {
 				continue
@@ -125,11 +133,50 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 			top := lineIndex*f.LineHeight + offset.Y
 			left := x + offset.X
 			destination := image.Rect(left, top, left+bounds.Dx(), top+bounds.Dy())
-			draw.Draw(output, destination, modulatedImage{Image: frame, Tint: tint}, bounds.Min, draw.Over)
+			draw.Draw(output, destination, modulatedImage{Image: frame, Tint: currentTint}, bounds.Min, draw.Over)
 			x += glyph.Width
 		}
 	}
 	return output, nil
+}
+
+var namedTextColors = map[string]color.Color{
+	"grey":   color.RGBA{R: 0x69, G: 0x69, B: 0x69, A: 0xff},
+	"red":    color.RGBA{R: 0xff, G: 0x77, B: 0x77, A: 0xff},
+	"white":  color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+	"blue":   color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff},
+	"yellow": color.RGBA{R: 0xff, G: 0xff, B: 0x64, A: 0xff},
+	"green":  color.RGBA{R: 0x00, G: 0xff, B: 0x00, A: 0xff},
+	"gold":   color.RGBA{R: 0xc7, G: 0xb3, B: 0x77, A: 0xff},
+	"orange": color.RGBA{R: 0xff, G: 0xa8, B: 0x00, A: 0xff},
+	"black":  color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff},
+}
+
+// parseColorTokens removes the label tokens used by Diablo UI strings and
+// records the visible-rune position where each color run begins. Unknown
+// bracketed tokens are removed just like the established UI behavior.
+func parseColorTokens(text string) (string, map[int]color.Color) {
+	var clean strings.Builder
+	colors := make(map[int]color.Color)
+	visible := 0
+	for len(text) > 0 {
+		if text[0] == '[' {
+			if end := strings.IndexByte(text, ']'); end >= 0 {
+				if next, ok := namedTextColors[strings.ToLower(text[1:end])]; ok {
+					colors[visible] = next
+				}
+				text = text[end+1:]
+				continue
+			}
+		}
+		code, size := utf8.DecodeRuneInString(text)
+		clean.WriteRune(code)
+		if code != '\n' {
+			visible++
+		}
+		text = text[size:]
+	}
+	return clean.String(), colors
 }
 
 func (f *BitmapFont) wrap(text string, maxWidth int) []string {
