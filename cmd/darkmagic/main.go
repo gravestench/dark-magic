@@ -80,6 +80,10 @@ func main() {
 		slog.Error("constructing content filesystem", "error", err)
 		return
 	}
+	if err := validateClientContent(contentFS); err != nil {
+		slog.Error("validating client content", "error", err)
+		return
+	}
 	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
 	if err != nil {
 		slog.Error("expanding capture directory", "error", err)
@@ -118,6 +122,14 @@ func parseLogLevel(value string) (slog.Level, error) {
 func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
+	sceneErrors := make(chan error, 1)
+	reportSceneError := func(err error) {
+		select {
+		case sceneErrors <- err:
+			stopSignals()
+		default:
+		}
+	}
 	renderer := &raylibRenderer.Service{}
 	renderer.SetLogger(slog.Default().With("component", "renderer"))
 	rendererConfig := raylibRenderer.DefaultConfig()
@@ -256,14 +268,15 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
 		if err := scenes.Update(frameContext, elapsed); err != nil {
-			slog.Error("updating Lua scenes", "error", err)
+			reportSceneError(fmt.Errorf("updating Lua scenes: %w", err))
+			return
 		}
 		// Updating can replace the focused scene. Refresh the persistent label so
 		// composer draining and native frame work are charged to the new owner.
 		frameContext = scenes.FrameContext(context.Background())
 		pprof.SetGoroutineLabels(frameContext)
 		if err := scenes.Render(frameContext); err != nil {
-			slog.Error("rendering Lua scenes", "error", err)
+			reportSceneError(fmt.Errorf("rendering Lua scenes: %w", err))
 		}
 	})
 	if err := renderer.AttachAudio(mixer); err != nil {
@@ -329,6 +342,11 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 
 	err = renderer.Run(runContext)
+	select {
+	case sceneErr := <-sceneErrors:
+		err = errors.Join(err, sceneErr)
+	default:
+	}
 	stopCaptureFrames()
 	if captureSession != nil {
 		err = errors.Join(err, captureSession.Close())
@@ -342,6 +360,14 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true
 	return err
+}
+
+func validateClientContent(contentFS fs.FS) error {
+	const required = "data/global/ui/FrontEnd/trademarkscreenEXP.dc6"
+	if _, err := fs.Stat(contentFS, required); err != nil {
+		return fmt.Errorf("required Diablo II asset %q is unavailable; set MPQ_DIRECTORY to the directory containing the game MPQs: %w", required, err)
+	}
+	return nil
 }
 
 func developmentCharacters(count int) []savecore.Character {

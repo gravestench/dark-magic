@@ -2,7 +2,9 @@ package main
 
 import (
 	"log/slog"
+	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 func TestParseLogLevel(t *testing.T) {
@@ -24,6 +26,22 @@ func TestParseLogLevel(t *testing.T) {
 	}
 	if _, err := parseLogLevel("verbose"); err == nil {
 		t.Fatal("parseLogLevel accepted an unsupported level")
+	}
+}
+
+func TestValidateClientContent(t *testing.T) {
+	t.Parallel()
+
+	const required = "data/global/ui/FrontEnd/trademarkscreenEXP.dc6"
+	if err := validateClientContent(fstest.MapFS{required: &fstest.MapFile{Data: []byte("fixture")}}); err != nil {
+		t.Fatalf("validateClientContent() = %v", err)
+	}
+	err := validateClientContent(fstest.MapFS{})
+	if err == nil {
+		t.Fatal("validateClientContent accepted missing game assets")
+	}
+	if !strings.Contains(err.Error(), "MPQ_DIRECTORY") {
+		t.Fatalf("validateClientContent error = %q, want MPQ_DIRECTORY guidance", err)
 	}
 }
 
