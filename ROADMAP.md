@@ -650,7 +650,8 @@ implementations. The remaining work is tracked explicitly below.
   now use visible shared label buttons and semantic text styles.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
   per-run colors, and optional glyph-sized background highlights. Named inline
-  color tokens and per-run palette modulation are complete; background
+  color tokens now select the authentic PL2 text-color index transforms, with
+  RGB modulation retained only for transform-less mod content; background
   highlights remain.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
   the authentic translucent-black backing box, then connect item, skill, HUD,

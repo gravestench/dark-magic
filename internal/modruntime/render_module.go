@@ -187,8 +187,8 @@ func dccDecodedWeight(asset *dcc.DCC) int {
 	return max(weight, 1)
 }
 
-func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) (*assetdecode.BitmapFont, error) {
-	key := table + "\x00" + sheet + "\x00" + palette
+func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette, transform string) (*assetdecode.BitmapFont, error) {
+	key := table + "\x00" + sheet + "\x00" + palette + "\x00" + transform
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.refresh(assets)
@@ -196,7 +196,7 @@ func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) 
 		return cached.(*assetdecode.BitmapFont), nil
 	}
 	started := time.Now()
-	font, err := assetdecode.LoadBitmapFont(assets, table, sheet, palette)
+	font, err := assetdecode.LoadBitmapFontWithTransform(assets, table, sheet, palette, transform)
 	c.decodeCalls++
 	c.decodeTime += time.Since(started)
 	if err != nil {
@@ -1027,6 +1027,7 @@ func registerRenderNodeType(state *lua.LState) {
 			tableName, sheetName := state.CheckString(2), state.CheckString(3)
 			paletteName, text := state.OptString(4, ""), state.CheckString(5)
 			red, green, blue, alpha := 255, 255, 255, 255
+			transform := ""
 			maxWidth, align := 0, "left"
 			if state.GetTop() >= 6 && state.Get(6) != lua.LNil {
 				options := state.CheckTable(6)
@@ -1038,6 +1039,9 @@ func registerRenderNodeType(state *lua.LState) {
 					return int(lua.LVAsNumber(value))
 				}
 				red, green, blue, alpha = integer("red", red), integer("green", green), integer("blue", blue), integer("alpha", alpha)
+				if value := options.RawGetString("transform"); value != lua.LNil {
+					transform = lua.LVAsString(value)
+				}
 				maxWidth = integer("max_width", 0)
 				if value := options.RawGetString("align"); value != lua.LNil {
 					align = lua.LVAsString(value)
@@ -1053,7 +1057,7 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(6, "max_width cannot be negative")
 				return 0
 			}
-			font, err := node.cache.loadFont(node.assets, tableName, sheetName, paletteName)
+			font, err := node.cache.loadFont(node.assets, tableName, sheetName, paletteName, transform)
 			if err != nil {
 				state.RaiseError("loading bitmap font: %v", err)
 				return 0

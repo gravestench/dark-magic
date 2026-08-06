@@ -21,6 +21,12 @@
     "fechar": "data/global/Palette/fechar/pal.dat",
     "static": "data/global/Palette/static/pal.dat"
   },
+  "palette_transforms": {
+    "act1": "data/global/Palette/Act1/Pal.pl2",
+    "fechar": "data/global/Palette/fechar/Pal.pl2",
+    "loading": "data/global/Palette/loading/Pal.pl2",
+    "sky": "data/global/Palette/Sky/Pal.pl2"
+  },
   "layouts": {
     "frontend_tiles": {
       "columns": [256, 256, 256, 32],
@@ -72,19 +78,19 @@
     }
   },
   "text_styles": {
-    "panel_heading": {"font":"font16","color":{"red":255,"green":255,"blue":255}},
-    "panel_label": {"font":"font6","color":{"red":255,"green":255,"blue":255}},
-    "panel_value": {"font":"font16","color":{"red":255,"green":255,"blue":255}},
-    "formal_small": {"font":"formal10_static","color":{"red":255,"green":255,"blue":255}},
-    "formal_body": {"font":"formal11_units","color":{"red":255,"green":255,"blue":255}},
-    "formal_large": {"font":"formal12_static","color":{"red":255,"green":255,"blue":255}},
-    "frontend_metadata": {"font":"exocet10","color":{"red":150,"green":135,"blue":105}},
-    "button_normal": {"font":"exocet10","color":{"red":210,"green":180,"blue":110}},
-    "button_hover": {"font":"exocet10","color":{"red":255,"green":255,"blue":255}},
-    "label_button_normal": {"font":"exocet10","color":{"red":165,"green":145,"blue":90}},
-    "label_button_hover": {"font":"exocet10","color":{"red":235,"green":205,"blue":125}},
-    "dialog_text": {"font":"exocet10","color":{"red":210,"green":180,"blue":110}},
-    "disabled": {"font":"font16","color":{"red":95,"green":95,"blue":95}}
+    "panel_heading": {"font":"font16","transform":"act1","text_color":"white"},
+    "panel_label": {"font":"font6","transform":"act1","text_color":"white"},
+    "panel_value": {"font":"font16","transform":"act1","text_color":"white"},
+    "formal_small": {"font":"formal10_static","text_color":"white"},
+    "formal_body": {"font":"formal11_units","text_color":"white"},
+    "formal_large": {"font":"formal12_static","text_color":"white"},
+    "frontend_metadata": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
+    "label_button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "label_button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
+    "dialog_text": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "disabled": {"font":"font16","transform":"fechar","text_color":"grey"}
   },
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",

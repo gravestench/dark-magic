@@ -9,6 +9,9 @@ import (
 	"io/fs"
 	"strings"
 	"unicode/utf8"
+
+	dc6 "github.com/gravestench/dc6/pkg"
+	pl2 "github.com/gravestench/pl2"
 )
 
 const (
@@ -25,6 +28,7 @@ type BitmapFont struct {
 	Glyphs       map[rune]Glyph
 	Frames       []image.Image
 	FrameOffsets []image.Point
+	TextFrames   map[int][]image.Image
 	LineHeight   int
 }
 
@@ -51,6 +55,10 @@ func FontTable(data []byte) (map[rune]Glyph, error) {
 }
 
 func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*BitmapFont, error) {
+	return LoadBitmapFontWithTransform(source, tableName, sheetName, paletteName, "")
+}
+
+func LoadBitmapFontWithTransform(source fs.FS, tableName, sheetName, paletteName, transformName string) (*BitmapFont, error) {
 	table, err := fs.ReadFile(source, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("font table %q: %w", tableName, err)
@@ -74,6 +82,7 @@ func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*Bi
 			font.FrameOffsets = append(font.FrameOffsets, image.Pt(int(frame.OffsetX), int(frame.OffsetY)))
 		}
 	}
+	font.TextFrames = loadTextTransformFrames(source, transformName, sheet)
 	for code, glyph := range glyphs {
 		if glyph.Frame < 0 || glyph.Frame >= len(font.Frames) {
 			return nil, fmt.Errorf("font table %q: glyph %U frame %d out of range", tableName, code, glyph.Frame)
@@ -93,7 +102,7 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 	if align != "left" && align != "center" && align != "right" {
 		return nil, fmt.Errorf("bitmap font: invalid alignment %q", align)
 	}
-	text, runColors := parseColorTokens(text)
+	text, runs := parseColorTokens(text)
 	lines := f.wrap(text, maxWidth)
 	width := 1
 	for _, line := range lines {
@@ -107,6 +116,7 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 	output := image.NewRGBA(image.Rect(0, 0, width, maxInt(1, len(lines)*f.LineHeight)))
 	runIndex := 0
 	currentTint := tint
+	currentTransform := -1
 	for lineIndex, line := range lines {
 		lineWidth := f.measure(line)
 		x := 0
@@ -116,8 +126,9 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 			x = width - lineWidth
 		}
 		for _, code := range line {
-			if nextTint, ok := runColors[runIndex]; ok {
-				currentTint = nextTint
+			if next, ok := runs[runIndex]; ok {
+				currentTint = next.fallback
+				currentTransform = next.transform
 			}
 			runIndex++
 			glyph, ok := f.glyph(code)
@@ -125,6 +136,10 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 				continue
 			}
 			frame := f.Frames[glyph.Frame]
+			if transformed := f.TextFrames[currentTransform]; glyph.Frame < len(transformed) {
+				frame = transformed[glyph.Frame]
+				currentTint = color.White
+			}
 			bounds := frame.Bounds()
 			offset := image.Point{}
 			if glyph.Frame < len(f.FrameOffsets) {
@@ -140,24 +155,29 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 	return output, nil
 }
 
-var namedTextColors = map[string]color.Color{
-	"grey":   color.RGBA{R: 0x69, G: 0x69, B: 0x69, A: 0xff},
-	"red":    color.RGBA{R: 0xff, G: 0x77, B: 0x77, A: 0xff},
-	"white":  color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-	"blue":   color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff},
-	"yellow": color.RGBA{R: 0xff, G: 0xff, B: 0x64, A: 0xff},
-	"green":  color.RGBA{R: 0x00, G: 0xff, B: 0x00, A: 0xff},
-	"gold":   color.RGBA{R: 0xc7, G: 0xb3, B: 0x77, A: 0xff},
-	"orange": color.RGBA{R: 0xff, G: 0xa8, B: 0x00, A: 0xff},
-	"black":  color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff},
+type textColorRun struct {
+	transform int
+	fallback  color.Color
+}
+
+var namedTextColors = map[string]textColorRun{
+	"white":  {transform: 0, fallback: color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}},
+	"red":    {transform: 1, fallback: color.RGBA{R: 0xff, G: 0x4d, B: 0x4d, A: 0xff}},
+	"green":  {transform: 2, fallback: color.RGBA{R: 0x00, G: 0xff, B: 0x00, A: 0xff}},
+	"blue":   {transform: 3, fallback: color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff}},
+	"gold":   {transform: 4, fallback: color.RGBA{R: 0xc7, G: 0xb3, B: 0x77, A: 0xff}},
+	"grey":   {transform: 5, fallback: color.RGBA{R: 0x69, G: 0x69, B: 0x69, A: 0xff}},
+	"black":  {transform: 6, fallback: color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff}},
+	"orange": {transform: 8, fallback: color.RGBA{R: 0xff, G: 0xa8, B: 0x00, A: 0xff}},
+	"yellow": {transform: 9, fallback: color.RGBA{R: 0xff, G: 0xff, B: 0x64, A: 0xff}},
 }
 
 // parseColorTokens removes the label tokens used by Diablo UI strings and
 // records the visible-rune position where each color run begins. Unknown
 // bracketed tokens are removed just like the established UI behavior.
-func parseColorTokens(text string) (string, map[int]color.Color) {
+func parseColorTokens(text string) (string, map[int]textColorRun) {
 	var clean strings.Builder
-	colors := make(map[int]color.Color)
+	colors := make(map[int]textColorRun)
 	visible := 0
 	for len(text) > 0 {
 		if text[0] == '[' {
@@ -177,6 +197,41 @@ func parseColorTokens(text string) (string, map[int]color.Color) {
 		text = text[size:]
 	}
 	return clean.String(), colors
+}
+
+func loadTextTransformFrames(source fs.FS, transformName string, sheet *dc6.DC6) map[int][]image.Image {
+	if transformName == "" || sheet == nil {
+		return nil
+	}
+	data, err := fs.ReadFile(source, transformName)
+	if err != nil {
+		return nil
+	}
+	transforms, err := pl2.FromBytes(data)
+	if err != nil || len(transforms.TextColorShifts) == 0 {
+		return nil
+	}
+	result := make(map[int][]image.Image, len(transforms.TextColorShifts))
+	palette := transforms.BasePalette
+	for transformIndex, transform := range transforms.TextColorShifts {
+		frames := make([]image.Image, 0)
+		for _, direction := range sheet.Directions {
+			for _, frame := range direction.Frames {
+				decoded := image.NewRGBA(image.Rect(0, 0, int(frame.Width), int(frame.Height)))
+				pixels := min(len(frame.IndexData), int(frame.Width)*int(frame.Height))
+				for pixel, paletteIndex := range frame.IndexData[:pixels] {
+					if paletteIndex == 0 {
+						continue
+					}
+					x, y := pixel%int(frame.Width), pixel/int(frame.Width)
+					decoded.Set(x, y, palette[transform[paletteIndex]])
+				}
+				frames = append(frames, decoded)
+			}
+		}
+		result[transformIndex] = frames
+	}
+	return result
 }
 
 func (f *BitmapFont) wrap(text string, maxWidth int) []string {

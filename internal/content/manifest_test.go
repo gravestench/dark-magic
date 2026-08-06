@@ -21,12 +21,14 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	var manifest struct {
-		Schema   string                     `json:"schema"`
-		Version  int                        `json:"version"`
-		Palettes map[string]string          `json:"palettes"`
-		Fonts    map[string]json.RawMessage `json:"fonts"`
-		Styles   map[string]struct {
-			Font string `json:"font"`
+		Schema     string                     `json:"schema"`
+		Version    int                        `json:"version"`
+		Palettes   map[string]string          `json:"palettes"`
+		Transforms map[string]string          `json:"palette_transforms"`
+		Fonts      map[string]json.RawMessage `json:"fonts"`
+		Styles     map[string]struct {
+			Font      string `json:"font"`
+			Transform string `json:"transform"`
 		} `json:"text_styles"`
 		Sounds   map[string]string          `json:"sounds"`
 		Cursor   json.RawMessage            `json:"cursor"`
@@ -74,6 +76,11 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		}
 		if _, ok := manifest.Fonts[style.Font]; !ok {
 			t.Errorf("text style %q references unknown font %q", name, style.Font)
+		}
+		if style.Transform != "" {
+			if _, ok := manifest.Transforms[style.Transform]; !ok {
+				t.Errorf("text style %q references unknown palette transform %q", name, style.Transform)
+			}
 		}
 	}
 	if len(manifest.Cursor) == 0 || len(manifest.Startup) == 0 {

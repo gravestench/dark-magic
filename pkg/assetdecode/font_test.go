@@ -141,10 +141,33 @@ func TestBitmapFontRendersInlineColorRunsWithoutMeasuringTokens(t *testing.T) {
 	}
 	red := color.RGBAModel.Convert(rendered.At(0, 0)).(color.RGBA)
 	blue := color.RGBAModel.Convert(rendered.At(1, 0)).(color.RGBA)
-	if red != (color.RGBA{R: 0xff, G: 0x77, B: 0x77, A: 0xff}) {
+	if red != (color.RGBA{R: 0xff, G: 0x4d, B: 0x4d, A: 0xff}) {
 		t.Fatalf("red run = %#v", red)
 	}
 	if blue != (color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff}) {
 		t.Fatalf("blue run = %#v", blue)
+	}
+}
+
+func TestBitmapFontPrefersPL2TextTransformOverRGBFallback(t *testing.T) {
+	t.Parallel()
+
+	base := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	base.SetRGBA(0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+	transformed := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	transformed.SetRGBA(0, 0, color.RGBA{R: 31, G: 7, B: 63, A: 255})
+	font := &BitmapFont{
+		Glyphs:     map[rune]Glyph{'A': {Width: 1, Height: 1, Frame: 0}},
+		Frames:     []image.Image{base},
+		TextFrames: map[int][]image.Image{1: {transformed}},
+		LineHeight: 1,
+	}
+	rendered, err := font.Render("[red]A", color.White, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := color.RGBAModel.Convert(rendered.At(0, 0)).(color.RGBA)
+	if got != (color.RGBA{R: 31, G: 7, B: 63, A: 255}) {
+		t.Fatalf("PL2-transformed glyph = %#v", got)
 	}
 }

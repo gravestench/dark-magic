@@ -25,16 +25,24 @@ end
 function text.set(node, style_name, value, width, alignment)
     local style, font = resolve(style_name)
     local color = style.color or {}
+    value = tostring(value or "")
+    if style.text_color then
+        value = "[" .. style.text_color .. "]" .. value
+    end
     local rendered_width, rendered_height = node:set_text(
         font.table,
         font.sheet,
         assert(manifest.palettes[font.palette], "unknown palette for text style: " .. style_name),
-        tostring(value or ""),
+        value,
         {
             red = color.red or 255,
             green = color.green or 255,
             blue = color.blue or 255,
             alpha = color.alpha or 255,
+            transform = style.transform and assert(
+                manifest.palette_transforms[style.transform],
+                "unknown palette transform for text style: " .. style_name
+            ) or "",
             max_width = width or 0,
             align = alignment or style.align or "center",
         }
