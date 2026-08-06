@@ -54,7 +54,8 @@ func run(contentFS *content.FS) error {
 	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
 	renderer.SetLogger(slog.Default().With("component", "renderer"))
-	renderer.Configure(raylibRenderer.DefaultConfig())
+	rendererConfig := raylibRenderer.DefaultConfig()
+	renderer.Configure(rendererConfig)
 	inputService := input.New(renderer)
 	inputService.SetLogger(slog.Default().With("component", "input"))
 	locale := localecore.New(contentFS, "English")
@@ -90,7 +91,7 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
 		return err
 	}
-	videoBackend := videocore.NewEmbeddedBackend(composer, mixer, image.Pt(640, 480))
+	videoBackend := videocore.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))
 	if !videoBackend.Available() {
 		videoBackend = videocore.FFplay{}
 	}

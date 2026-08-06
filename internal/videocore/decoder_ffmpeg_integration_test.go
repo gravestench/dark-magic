@@ -9,6 +9,7 @@ import (
 	"image"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,6 +18,59 @@ import (
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
+
+func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
+	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
+	if directory == "" {
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the Diablo II MPQ directory")
+	}
+	tests := []struct {
+		archive string
+		asset   string
+	}{
+		{"d2video.mpq", "data/local/video/New_Bliz640x480.bik"},
+		{"d2video.mpq", "data/local/video/BlizNorth640x480.bik"},
+		{"d2video.mpq", "data/local/video/ENG/d2intro640x292.bik"},
+		{"d2video.mpq", "data/local/video/ENG/Act02start640x292.bik"},
+		{"d2video.mpq", "data/local/video/ENG/Act03start640x292.bik"},
+		{"d2video.mpq", "data/local/video/ENG/Act04start640x292.bik"},
+		{"d2video.mpq", "data/local/video/ENG/Act04end640x292.bik"},
+		{"d2xvideo.mpq", "data/local/video/ENG/D2x_Intro_640x292.bik"},
+		{"d2xvideo.mpq", "data/local/video/ENG/D2x_Out_640x292.bik"},
+	}
+	decoder := videocore.FFmpegDecoder{}
+	stop := errors.New("verified first decoded unit")
+	for _, test := range tests {
+		t.Run(filepath.Base(test.asset), func(t *testing.T) {
+			archive, err := content.MPQ(filepath.Join(directory, test.archive))
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := fs.ReadFile(archive, test.asset)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = decoder.Decode(context.Background(), bytes.NewReader(data), func(frame videocore.Frame) error {
+				if frame.Image.Bounds().Dx() != 640 || frame.Image.Bounds().Dy() <= 0 || frame.PTS < 0 {
+					t.Fatalf("invalid frame: bounds=%v PTS=%s", frame.Image.Bounds(), frame.PTS)
+				}
+				return stop
+			})
+			if !errors.Is(err, stop) {
+				t.Fatalf("video decode = %v", err)
+			}
+			err = decoder.DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk videocore.AudioChunk) error {
+				if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 || chunk.PTS < 0 {
+					t.Fatalf("invalid audio chunk: %#v", chunk)
+				}
+				return stop
+			})
+			if !errors.Is(err, stop) {
+				t.Fatalf("audio decode = %v", err)
+			}
+		})
+	}
+}
 
 func TestFFmpegDecoderReadsRealBIK(t *testing.T) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
