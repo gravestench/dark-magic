@@ -18,6 +18,7 @@ type SpecialItem struct {
 	Version  int    `json:"version"`
 	Rarity   int    `json:"rarity"`
 	Enabled  bool   `json:"enabled"`
+	Ladder   bool   `json:"ladder,omitempty"`
 }
 
 // SpecialItems indexes possible unique or set variants by their base item code.
@@ -25,8 +26,9 @@ type SpecialItems map[string][]SpecialItem
 
 // EligibilityContext controls special-item availability for a quality fallback.
 type EligibilityContext struct {
-	Version   int `json:"version"`
-	DropLevel int `json:"dropLevel"`
+	Version      int  `json:"version"`
+	DropLevel    int  `json:"dropLevel"`
+	LadderSeason bool `json:"ladderSeason,omitempty"`
 }
 
 // ParseUniqueItemsTSV reads availability from UniqueItems.txt.
@@ -107,7 +109,7 @@ func hasAvailableSpecial(items []SpecialItem, context EligibilityContext) bool {
 }
 
 func specialAvailable(item SpecialItem, context EligibilityContext) bool {
-	return item.Enabled && item.Level <= context.DropLevel && !(context.Version < 100 && item.Version >= 100)
+	return item.Enabled && (!item.Ladder || context.LadderSeason) && item.Level <= context.DropLevel && !(context.Version < 100 && item.Version >= 100)
 }
 
 func parseSpecialItemsTSV(input io.Reader, label, codeColumn string, hasEnabled bool) (SpecialItems, error) {
@@ -173,7 +175,7 @@ func parseSpecialItemsTSV(input io.Reader, label, codeColumn string, hasEnabled 
 		}
 		items[code] = append(items[code], SpecialItem{
 			Name: field(row, columns, "index"), BaseCode: code, Level: level, LevelReq: levelReq,
-			Version: version, Rarity: rarity, Enabled: enabled,
+			Version: version, Rarity: rarity, Enabled: enabled, Ladder: booleanField(row, columns, "ladder"),
 		})
 	}
 	return items, nil

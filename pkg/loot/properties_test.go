@@ -73,6 +73,23 @@ func TestInterpretSpecializedPropertyFunctions(t *testing.T) {
 	}
 }
 
+func TestFunction36SelectsDeterministicClassSkill(t *testing.T) {
+	properties := PropertyCatalog{"class-skill": {Code: "class-skill", Steps: []PropertyStep{{Function: 36}}}}
+	item := GeneratedItem{Prefixes: []RolledAffix{{Name: "Skillful", Modifiers: []RolledModifier{{Code: "class-skill", Parameter: 1, Value: 3}}}}}
+	skills := Skills{{ID: 10, Code: "Amazon Skill", Class: 0}, {ID: 20, Code: "Fire Bolt", Class: 1}, {ID: 21, Code: "Ice Bolt", Class: 1}}
+	want, err := InterpretItemPropertiesWithSkills(item, properties, nil, skills, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := InterpretItemPropertiesWithSkills(item, properties, nil, skills, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Effects) != 1 || got.Effects[0] != want.Effects[0] || got.Effects[0].Class != 1 || got.Effects[0].SkillLevel != 3 {
+		t.Fatalf("effects = %#v", got.Effects)
+	}
+}
+
 func TestInterpretItemPropertiesRejectsUnknownReferences(t *testing.T) {
 	item := GeneratedItem{Prefixes: []RolledAffix{{Name: "Bad", Modifiers: []RolledModifier{{Code: "missing", Value: 1}}}}}
 	if _, err := InterpretItemProperties(item, nil, nil); err == nil || !strings.Contains(err.Error(), "unknown property") {

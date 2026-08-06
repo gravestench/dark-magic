@@ -160,6 +160,13 @@ func ParseItemStatCostTSV(input io.Reader) (StatCatalog, error) {
 
 // InterpretItemProperties resolves rolled affix property codes into runtime stats.
 func InterpretItemProperties(item GeneratedItem, properties PropertyCatalog, stats StatCatalog) (GeneratedItem, error) {
+	return InterpretItemPropertiesWithSkills(item, properties, stats, nil, 0)
+}
+
+// InterpretItemPropertiesWithSkills additionally resolves Properties function
+// 36 deterministically against class-owned Skills.txt records.
+func InterpretItemPropertiesWithSkills(item GeneratedItem, properties PropertyCatalog, stats StatCatalog, skills Skills, seed uint64) (GeneratedItem, error) {
+	rng := splitMix64(seed)
 	item.Stats = nil
 	item.Effects = nil
 	item.Ethereal = false
@@ -186,7 +193,7 @@ func InterpretItemProperties(item GeneratedItem, properties PropertyCatalog, sta
 					item.Stats = append(item.Stats, ItemStat{Code: step.Stat, Parameter: modifier.Parameter, Value: modifier.Value, Set: step.Set, Function: function})
 					continue
 				}
-				handled, err := interpretSpecialProperty(&item, modifier, step, function, stats)
+				handled, err := interpretSpecialProperty(&item, modifier, step, function, stats, skills, &rng)
 				if err != nil {
 					return GeneratedItem{}, err
 				}
@@ -206,7 +213,7 @@ func InterpretItemProperties(item GeneratedItem, properties PropertyCatalog, sta
 	return item, nil
 }
 
-func interpretSpecialProperty(item *GeneratedItem, modifier RolledModifier, step PropertyStep, function int, stats StatCatalog) (bool, error) {
+func interpretSpecialProperty(item *GeneratedItem, modifier RolledModifier, step PropertyStep, function int, stats StatCatalog, skills Skills, rng *splitMix64) (bool, error) {
 	requireStat := func() error {
 		if _, ok := stats[step.Stat]; !ok {
 			return fmt.Errorf("loot: property %q references unknown item stat %q", modifier.Code, step.Stat)
@@ -261,6 +268,21 @@ func interpretSpecialProperty(item *GeneratedItem, modifier RolledModifier, step
 		item.Ethereal = item.Ethereal || modifier.Value > 0
 	case 24:
 		addEffect(ItemEffect{Kind: "state", Value: modifier.Value})
+	case 36:
+		if len(skills) == 0 {
+			return false, nil
+		}
+		var candidates []Skill
+		for _, skill := range skills {
+			if skill.Class == modifier.Parameter {
+				candidates = append(candidates, skill)
+			}
+		}
+		if len(candidates) == 0 {
+			return false, fmt.Errorf("loot: property %q has no skills for class %d", modifier.Code, modifier.Parameter)
+		}
+		selected := candidates[int(rng.next()%uint64(len(candidates)))]
+		addEffect(ItemEffect{Kind: "random_class_skill", SkillID: selected.ID, SkillLevel: modifier.Value, Class: selected.Class})
 	default:
 		return false, nil
 	}

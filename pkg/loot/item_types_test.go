@@ -30,6 +30,14 @@ func TestResolveDynamicItemCodes(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("same seed differs: %#v != %#v", got, want)
 	}
+	index, err := NewItemIndex(items, types)
+	if err != nil {
+		t.Fatal(err)
+	}
+	indexed, err := index.Resolve(drops, 44)
+	if err != nil || !reflect.DeepEqual(indexed, want) {
+		t.Fatalf("indexed=%#v err=%v", indexed, err)
+	}
 	if !got[0].Resolved || got[0].Item.Level < 3 || got[0].Item.Level >= 6 {
 		t.Fatalf("dynamic level result = %#v", got[0])
 	}

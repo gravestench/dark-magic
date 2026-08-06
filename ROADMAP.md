@@ -80,9 +80,9 @@ their own legally obtained game data.
 - [x] Roll affix property values and materialize portable item instances.
 - [x] Parse Properties/ItemStatCost and interpret common property functions.
 - [x] Interpret damage, proc, skill, state, charged-skill, and boolean functions.
-- [ ] Resolve random class-skill function 36 against Skills records.
-- [ ] Add ladder-season eligibility to special-item selection.
-- [ ] Connect monster/chest events to deterministic loot seeds.
+- [x] Resolve random class-skill function 36 against Skills records.
+- [x] Add ladder-season eligibility to special-item selection.
+- [x] Connect monster/chest events to deterministic loot seeds.
 
 ## M7: Explicit application host
 
@@ -245,7 +245,7 @@ their own legally obtained game data.
 - [x] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
 - [x] Cache scene child ordering until topology or Z-index changes.
 - [x] Avoid unconditional per-frame callback and input-map allocations.
-- [ ] Pre-index dynamic loot candidates by item type and level.
+- [x] Pre-index dynamic loot candidates by item type and level.
 - [ ] Replace coarse startup sleeps with lifecycle events or bounded waits.
 
 ## Parallel codec maintenance

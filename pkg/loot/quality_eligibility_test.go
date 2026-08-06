@@ -63,6 +63,17 @@ func TestClassicCannotUseExpansionUnique(t *testing.T) {
 	}
 }
 
+func TestLadderSpecialRequiresActiveSeason(t *testing.T) {
+	items := []SpecialItem{{Name: "Ladder Sword", BaseCode: "ssd", Level: 1, Rarity: 1, Enabled: true, Ladder: true}}
+	if _, err := SelectSpecialItem(items, EligibilityContext{Version: 100, DropLevel: 99}, 1); err == nil {
+		t.Fatal("ladder item selected outside season")
+	}
+	selected, err := SelectSpecialItem(items, EligibilityContext{Version: 100, DropLevel: 99, LadderSeason: true}, 1)
+	if err != nil || selected.Name != "Ladder Sword" {
+		t.Fatalf("selected=%#v err=%v", selected, err)
+	}
+}
+
 func TestSelectSpecialItemIsWeightedAndDeterministic(t *testing.T) {
 	items := []SpecialItem{
 		{Name: "Zulu", BaseCode: "ssd", Level: 1, Rarity: 1, Enabled: true},

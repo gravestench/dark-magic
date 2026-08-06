@@ -26,6 +26,42 @@ type ItemType struct {
 
 type ItemTypes map[string]ItemType
 
+// ItemIndex precomputes type-hierarchy membership once for repeated gameplay
+// event rolls.
+type ItemIndex struct {
+	catalog    ItemCatalog
+	types      ItemTypes
+	candidates map[string][]BaseItem
+	levels     map[string]map[int][]BaseItem
+}
+
+func NewItemIndex(catalog ItemCatalog, types ItemTypes) (*ItemIndex, error) {
+	index := &ItemIndex{catalog: catalog, types: types, candidates: make(map[string][]BaseItem, len(types)), levels: make(map[string]map[int][]BaseItem, len(types))}
+	for requested := range types {
+		matches, err := matchingItems(catalog, types, requested, 0, false)
+		if err != nil {
+			return nil, fmt.Errorf("loot: index item type %q: %w", requested, err)
+		}
+		index.candidates[requested] = matches
+		byLevel := make(map[int][]BaseItem)
+		maximum := 0
+		for _, item := range matches {
+			if item.Level > maximum {
+				maximum = item.Level
+			}
+		}
+		for minimum := 0; minimum <= maximum; minimum++ {
+			for _, item := range matches {
+				if item.Level >= minimum && item.Level < minimum+dynamicLevelRange {
+					byLevel[minimum] = append(byLevel[minimum], item)
+				}
+			}
+		}
+		index.levels[requested] = byLevel
+	}
+	return index, nil
+}
+
 // ParseItemTypesTSV reads the ItemTypes.txt hierarchy needed for dynamic codes.
 func ParseItemTypesTSV(input io.Reader) (ItemTypes, error) {
 	reader := csv.NewReader(input)
@@ -70,11 +106,20 @@ func ParseItemTypesTSV(input io.Reader) (ItemTypes, error) {
 // ResolveItems resolves direct, generic type, and level-suffixed dynamic codes.
 // Selection is reproducible for a given input, item catalog, hierarchy, and seed.
 func ResolveItems(drops []Drop, catalog ItemCatalog, types ItemTypes, seed uint64) ([]ResolvedDrop, error) {
+	index, err := NewItemIndex(catalog, types)
+	if err != nil {
+		return nil, err
+	}
+	return index.Resolve(drops, seed)
+}
+
+// Resolve selects direct and dynamic items using pre-indexed type candidates.
+func (i *ItemIndex) Resolve(drops []Drop, seed uint64) ([]ResolvedDrop, error) {
 	rng := splitMix64(seed)
 	result := make([]ResolvedDrop, len(drops))
 	for index, drop := range drops {
 		result[index].Drop = drop
-		if item, ok := catalog[drop.Code]; ok {
+		if item, ok := i.catalog[drop.Code]; ok {
 			result[index].Item = copyItem(item)
 			result[index].Resolved = true
 			continue
@@ -82,7 +127,7 @@ func ResolveItems(drops []Drop, catalog ItemCatalog, types ItemTypes, seed uint6
 
 		typeCode, minLevel, dynamic := splitDynamicCode(drop.Code)
 		levelQualified := dynamic
-		if _, exactType := types[drop.Code]; exactType {
+		if _, exactType := i.types[drop.Code]; exactType {
 			typeCode, dynamic = drop.Code, true
 			minLevel = 0
 			levelQualified = false
@@ -90,12 +135,12 @@ func ResolveItems(drops []Drop, catalog ItemCatalog, types ItemTypes, seed uint6
 		if !dynamic {
 			continue
 		}
-		if _, knownType := types[typeCode]; !knownType {
+		if _, knownType := i.types[typeCode]; !knownType {
 			continue
 		}
-		candidates, err := matchingItems(catalog, types, typeCode, minLevel, levelQualified)
-		if err != nil {
-			return nil, fmt.Errorf("loot: resolve %q: %w", drop.Code, err)
+		candidates := i.candidates[typeCode]
+		if levelQualified {
+			candidates = i.levels[typeCode][minLevel]
 		}
 		if len(candidates) == 0 {
 			continue

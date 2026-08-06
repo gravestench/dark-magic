@@ -12,6 +12,16 @@ import (
 func LootModule(source fs.FS) Module {
 	return Module{Name: "dm.loot/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"event_seed": func(state *lua.LState) int {
+				seed, err := loot.EventSeed(uint64(state.CheckNumber(1)), loot.Event{Kind: loot.EventKind(state.CheckString(2)), EntityID: uint64(state.CheckNumber(3)), Sequence: uint64(state.CheckNumber(4))})
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				state.Push(lua.LNumber(seed))
+				return 1
+			},
 			"roll_tsv": func(state *lua.LState) int {
 				fileName := state.CheckString(1)
 				className := state.CheckString(2)

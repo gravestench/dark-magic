@@ -13,7 +13,7 @@ func TestLootModuleRollsLayeredTSVDeterministically(t *testing.T) {
 
 	source := fstest.MapFS{
 		"treasure.txt": &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tNoDrop\tItem1\tProb1\nRoot\t1\t0\tr01\t1\n")},
-		"test.lua":     &fstest.MapFile{Data: []byte(`drops = assert(require("dm.loot/v1").roll_tsv("treasure.txt", "Root", 7))`)},
+		"test.lua":     &fstest.MapFile{Data: []byte(`local loot=require("dm.loot/v1"); event_seed=assert(loot.event_seed(9,"monster",17,2)); drops=assert(loot.roll_tsv("treasure.txt", "Root", event_seed))`)},
 	}
 	runtime := New()
 	if err := runtime.RegisterModule(LootModule(source)); err != nil {
@@ -27,6 +27,9 @@ func TestLootModuleRollsLayeredTSVDeterministically(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if state.GetGlobal("event_seed") == lua.LNil {
+			t.Fatal("event seed was not exposed")
+		}
 		drops := state.GetGlobal("drops").(*lua.LTable)
 		if drops.Len() != 1 || drops.RawGetInt(1).(*lua.LTable).RawGetString("code").String() != "r01" {
 			t.Fatalf("drops = %s", drops)
