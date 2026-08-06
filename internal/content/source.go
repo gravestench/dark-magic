@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/mpq"
 )
 

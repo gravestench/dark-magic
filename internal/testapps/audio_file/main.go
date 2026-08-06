@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
 func main() {

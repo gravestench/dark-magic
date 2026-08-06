@@ -694,7 +694,9 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Move accidental public packages from `pkg` into their final `internal`
   homes incrementally, updating imports and tests without compatibility aliases
   unless a real external consumer is identified. Keep independently versioned
-  codec modules outside this repository.
+  codec modules outside this repository. Host-path expansion is now owned by
+  `internal/paths`; all callers migrated atomically and an architecture test
+  rejects resurrection of the retired public import path.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

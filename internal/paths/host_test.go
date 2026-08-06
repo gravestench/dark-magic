@@ -16,8 +16,7 @@ func TestExpandHostHomeAliases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := filepath.Join(home, "games", "diablo")
-		if got != want {
+		if want := filepath.Join(home, "games", "diablo"); got != want {
 			t.Fatalf("ExpandHost(%q) = %q, want %q", input, got, want)
 		}
 	}
@@ -31,8 +30,7 @@ func TestExpandHostEnvironmentFormsOnEveryPlatform(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := filepath.Join(root, "data")
-		if filepath.Clean(got) != want {
+		if want := filepath.Join(root, "data"); filepath.Clean(got) != want {
 			t.Fatalf("ExpandHost(%q) = %q, want %q", input, got, want)
 		}
 	}

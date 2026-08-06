@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/pkg/assetcatalog"
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {

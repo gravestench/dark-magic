@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/pkg/assetdecode"
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 var mpqPriority = []string{

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
 // FromEnvironment constructs the production content stack. User content wins,

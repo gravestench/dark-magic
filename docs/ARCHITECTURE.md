@@ -80,7 +80,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `pkg/easing` | Tween easing functions | no current importer | Stateless | Audit, then internal/remove |
 | `pkg/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Move to `internal/game/loot` |
 | `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |
-| `pkg/paths` | Cross-platform host-path expansion | command and tools | Stateless | Move to `internal/paths` |
+| `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `pkg/prettylog` | Process log formatting | command | Application | Move to `internal/logging` |
 | `pkg/scene` | Legacy scene data structures | command, Lua, world | Scene | Merge with navigation/render |
 | `pkg/services` | Empty retired service-era directory | none | None | Remove |

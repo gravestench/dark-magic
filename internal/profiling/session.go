@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
 // Session owns one CPU capture and writes a heap snapshot when stopped.
