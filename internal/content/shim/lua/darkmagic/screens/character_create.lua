@@ -80,33 +80,44 @@ return {
             -- headless tests where renderer assets are intentionally unavailable.
             class.show = function(state)
                 class.state = state
-                local frames_per_second = definition.frames_per_second or 15
+                local frames_per_second = definition.frames_per_second or screen.class_frames_per_second
                 local frames = definition[state .. "_frames"] or 0
                 local loop = (state == "forward" or state == "back") and "once" or "loop"
                 if class.node then
-                    frames = dc6.anchored_animation(
-                        class.node,
-                        definition[state],
-                        manifest.palettes[screen.class_palette],
-                        placement.anchor.x,
-                        placement.anchor.y,
-                        frames_per_second,
-                        loop
-                    )
-                    class.node:set_visible(true)
                     local overlay_path = definition[state .. "_overlay"]
-                    class.overlay:set_visible(overlay_path ~= nil)
+                    local palette = manifest.palettes[screen.class_palette]
                     if overlay_path then
-                        dc6.anchored_animation(
-                            class.overlay,
-                            overlay_path,
-                            manifest.palettes[screen.class_palette],
+                        class.animation_nodes = { class.node, class.overlay }
+                        frames = dc6.anchored_composite(
+                            class.animation_nodes,
+                            { definition[state], overlay_path },
+                            palette,
+                            placement.anchor.x,
+                            placement.anchor.y,
+                            frames_per_second,
+                            loop
+                        )
+                    else
+                        class.animation_nodes = { class.node }
+                        frames = dc6.anchored_animation(
+                            class.node,
+                            definition[state],
+                            palette,
                             placement.anchor.x,
                             placement.anchor.y,
                             frames_per_second,
                             loop
                         )
                     end
+                    class.node:set_visible(true)
+                    class.overlay:set_visible(overlay_path ~= nil)
+
+                    -- Renderer clocks are paused and driven from one scene
+                    -- clock so separately cropped base/effect files cannot
+                    -- drift by a frame after being uploaded sequentially.
+                    class.animation_elapsed = 0
+                    dc6.pause_animations(class.animation_nodes)
+                    dc6.synchronize_animations(class.animation_nodes, 0)
                 end
                 return frames / frames_per_second
             end
@@ -310,6 +321,13 @@ return {
     end,
     update = function(self, elapsed)
         self.cursor:update()
+
+        for _, class in ipairs(self.classes) do
+            if class.animation_nodes then
+                class.animation_elapsed = class.animation_elapsed + elapsed
+                dc6.synchronize_animations(class.animation_nodes, class.animation_elapsed)
+            end
+        end
 
         for index = #self.transitions, 1, -1 do
             local transition = self.transitions[index]

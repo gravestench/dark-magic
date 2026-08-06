@@ -260,6 +260,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 			CharacterCreate struct {
 				Palette      string `json:"palette"`
 				ClassPalette string `json:"class_palette"`
+				ClassFPS     int    `json:"class_frames_per_second"`
 				Campfire     struct {
 					Sheet string `json:"sheet"`
 				} `json:"campfire"`
@@ -268,11 +269,13 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 					Hit    struct{ X, Y, Width, Height int } `json:"hit"`
 				} `json:"stage"`
 				Classes []struct {
-					Class         string `json:"class"`
-					Forward       string `json:"forward"`
-					ForwardFrames int    `json:"forward_frames"`
-					Back          string `json:"back"`
-					BackFrames    int    `json:"back_frames"`
+					Class          string `json:"class"`
+					Forward        string `json:"forward"`
+					ForwardOverlay string `json:"forward_overlay"`
+					ForwardFrames  int    `json:"forward_frames"`
+					Back           string `json:"back"`
+					BackOverlay    string `json:"back_overlay"`
+					BackFrames     int    `json:"back_frames"`
 				} `json:"classes"`
 			} `json:"character_create"`
 		} `json:"screens"`
@@ -282,7 +285,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	}
 	classes := manifest.Screens.CharacterCreate.Classes
 	creation := manifest.Screens.CharacterCreate
-	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.Campfire.Sheet == "" {
+	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.ClassFPS != 25 || creation.Campfire.Sheet == "" {
 		t.Fatalf("character creation palette/campfire facts = %#v", creation)
 	}
 	if len(classes) != 7 {
@@ -291,6 +294,11 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	for _, class := range classes {
 		if class.Class == "" || class.Forward == "" || class.Back == "" || class.ForwardFrames <= 0 || class.BackFrames <= 0 {
 			t.Errorf("incomplete walk transition for %#v", class)
+		}
+		wantForwardOverlay := map[string]bool{"Amazon": true, "Sorceress": true, "Necromancer": true, "Paladin": true, "Barbarian": true}[class.Class]
+		wantBackOverlay := map[string]bool{"Sorceress": true, "Necromancer": true}[class.Class]
+		if (class.ForwardOverlay != "") != wantForwardOverlay || (class.BackOverlay != "") != wantBackOverlay {
+			t.Errorf("unexpected shipped overlay pairing for %q: forward=%q back=%q", class.Class, class.ForwardOverlay, class.BackOverlay)
 		}
 		placement, ok := creation.Stage[class.Class]
 		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {

@@ -81,7 +81,7 @@ function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_
     end
     local count = 0
     for index, node in ipairs(nodes) do
-        count = node:set_dc6_animation(
+        local layer_count = node:set_dc6_animation(
             paths[index],
             palette,
             0,
@@ -97,6 +97,7 @@ function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_
             anchor_x + min_x + (max_x - min_x) / 2,
             anchor_y + min_y + (max_y - min_y) / 2
         )
+        count = math.max(count, layer_count)
     end
     return count
 end

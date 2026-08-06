@@ -393,7 +393,9 @@ implementations. The remaining work is tracked explicitly below.
   paths and verified frame counts. Activating a class now plays its one-shot
   forward walk before entering the selected idle and opening name entry;
   switching classes concurrently returns the previous class with its back walk.
-  Input is gated during those transitions, and successful creation proceeds to
+  Shipped base/effect pairs share composite bounds and one manually synchronized
+  clock, while the verified 25 Hz frontend rate keeps motion aligned with its
+  selection/deselection cue. Input is gated during those transitions, and successful creation proceeds to
   loading only after selection presentation has completed. Headless acceptance
   verifies the walk-before-dialog order and a cross-class switch.
   Native comparison against established reference captures calibrated the

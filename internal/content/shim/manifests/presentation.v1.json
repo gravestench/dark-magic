@@ -235,6 +235,7 @@
       "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
       "palette": "fechar",
       "class_palette": "fechar",
+      "class_frames_per_second": 25,
       "campfire": {
         "sheet": "data/global/ui/FrontEnd/fire.DC6",
         "palette": "fechar",
