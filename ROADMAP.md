@@ -696,7 +696,8 @@ implementations. The remaining work is tracked explicitly below.
   unless a real external consumer is identified. Keep independently versioned
   codec modules outside this repository. Host-path expansion is now owned by
   `internal/paths`; all callers migrated atomically and an architecture test
-  rejects resurrection of the retired public import path.
+  rejects resurrection of the retired public import path. Process log formatting
+  is likewise owned by `internal/logging`, with its public import path retired.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

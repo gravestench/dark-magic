@@ -18,7 +18,8 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
 	forbidden := map[string]struct{}{
-		"github.com/gravestench/dark-magic/pkg/paths": {},
+		"github.com/gravestench/dark-magic/pkg/paths":     {},
+		"github.com/gravestench/dark-magic/pkg/prettylog": {},
 	}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {

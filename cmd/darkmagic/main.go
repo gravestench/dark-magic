@@ -27,6 +27,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputcore"
 	"github.com/gravestench/dark-magic/internal/loadcore"
 	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/logging"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
@@ -38,7 +39,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
-	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
@@ -60,7 +60,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		return
 	}
-	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: logLevel})))
+	slog.SetDefault(slog.New(logging.NewHandler(&slog.HandlerOptions{Level: logLevel})))
 	var profile *profiling.Session
 	if *profileDirectory != "" {
 		var err error

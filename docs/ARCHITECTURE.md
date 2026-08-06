@@ -81,7 +81,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `pkg/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Move to `internal/game/loot` |
 | `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
-| `pkg/prettylog` | Process log formatting | command | Application | Move to `internal/logging` |
+| `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
 | `pkg/scene` | Legacy scene data structures | command, Lua, world | Scene | Merge with navigation/render |
 | `pkg/services` | Empty retired service-era directory | none | None | Remove |
 

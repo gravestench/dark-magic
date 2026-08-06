@@ -1,4 +1,4 @@
-package prettylog
+package logging
 
 import (
 	"bytes"
