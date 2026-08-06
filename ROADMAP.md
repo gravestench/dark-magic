@@ -716,7 +716,10 @@ implementations. The remaining work is tracked explicitly below.
   rows, compatibility overlays, diagnostics, and immutable catalog policy. The
   base-item spine now admits Armor, Weapons, Misc, and ItemTypes with deterministic
   code indexes. Generic rows preserve shipped duplicate and unnamed columns under
-  stable synthetic keys instead of rejecting the affected tables.
+  stable synthetic keys instead of rejecting the affected tables. The dependent
+  item-rule layer now also admits ItemRatio, ItemStatCost, Properties, UniqueItems,
+  and SetItems, with immutable name/code/index lookups where the authored schema
+  provides a stable key.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

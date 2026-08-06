@@ -21,6 +21,11 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		WeaponsTable:         &fstest.MapFile{Data: []byte("name\tcode\nHand Axe\thax\n")},
 		MiscTable:            &fstest.MapFile{Data: []byte("name\tcode\nHealing Potion\thp1\n")},
 		ItemTypesTable:       &fstest.MapFile{Data: []byte("ItemType\tCode\nArmor\tarmo\n")},
+		ItemRatioTable:       &fstest.MapFile{Data: []byte("Function\tVersion\nUnique\t100\n")},
+		ItemStatCostTable:    &fstest.MapFile{Data: []byte("Stat\tSave Bits\nstrength\t10\n")},
+		PropertiesTable:      &fstest.MapFile{Data: []byte("code\tfunc1\tstat1\nstr\t1\tstrength\n")},
+		UniqueItemsTable:     &fstest.MapFile{Data: []byte("index\tcode\nThe Gnasher\thax\n")},
+		SetItemsTable:        &fstest.MapFile{Data: []byte("index\tset\titem\nCiverb's Ward\tCiverb's Vestments\tsml\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -35,6 +40,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.ArmorByCode["cap"].Name != "Cap" || first.WeaponsByCode["hax"].Name != "Hand Axe" || first.MiscByCode["hp1"].Name != "Healing Potion" || first.ItemTypesByCode["armo"].ItemType != "Armor" {
 		t.Fatalf("typed item indexes = %#v", first)
+	}
+	if len(first.ItemRatios) != 1 || first.ItemStatsByName["strength"].SaveBits != 10 || first.PropertiesByCode["str"].Stat1 != "strength" || first.UniqueByIndex["The Gnasher"].Code != "hax" || first.SetItemsByIndex["Civerb's Ward"].Item != "sml" {
+		t.Fatalf("typed item-rule indexes = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -61,6 +69,11 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		WeaponsTable:         &fstest.MapFile{Data: []byte("name\tcode\nHand Axe\thax\n")},
 		MiscTable:            &fstest.MapFile{Data: []byte("name\tcode\nHealing Potion\thp1\n")},
 		ItemTypesTable:       &fstest.MapFile{Data: []byte("ItemType\tCode\nArmor\tarmo\n")},
+		ItemRatioTable:       &fstest.MapFile{Data: []byte("Function\tVersion\nUnique\t100\n")},
+		ItemStatCostTable:    &fstest.MapFile{Data: []byte("Stat\tSave Bits\nstrength\t10\n")},
+		PropertiesTable:      &fstest.MapFile{Data: []byte("code\tfunc1\tstat1\nstr\t1\tstrength\n")},
+		UniqueItemsTable:     &fstest.MapFile{Data: []byte("index\tcode\nThe Gnasher\thax\n")},
+		SetItemsTable:        &fstest.MapFile{Data: []byte("index\tset\titem\nCiverb's Ward\tCiverb's Vestments\tsml\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

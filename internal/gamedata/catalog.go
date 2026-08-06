@@ -33,6 +33,15 @@ type Snapshot struct {
 	MiscByCode       map[string]models.MiscItem
 	ItemTypes        []models.ItemType
 	ItemTypesByCode  map[string]models.ItemType
+	ItemRatios       []models.ItemRatio
+	ItemStats        []models.ItemStatCost
+	ItemStatsByName  map[string]models.ItemStatCost
+	Properties       []models.ItemProperty
+	PropertiesByCode map[string]models.ItemProperty
+	UniqueItems      []models.ItemUnique
+	UniqueByIndex    map[string]models.ItemUnique
+	SetItems         []models.SetItemData
+	SetItemsByIndex  map[string]models.SetItemData
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -79,7 +88,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable {
 		return
 	}
 	c.mu.Lock()
@@ -179,6 +188,46 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("gamedata: index item types: %w", err)
 	}
 	issues = append(issues, found...)
+	itemRatios, err := Load[models.ItemRatio](c.store, ItemRatioTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	itemStats, err := Load[models.ItemStatCost](c.store, ItemStatCostTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	itemStatsByName, found, err := ObservedIndex(ItemStatCostTable, itemStats, func(record models.ItemStatCost) string { return record.Name })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index item stats: %w", err)
+	}
+	issues = append(issues, found...)
+	properties, err := Load[models.ItemProperty](c.store, PropertiesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	propertiesByCode, found, err := ObservedIndex(PropertiesTable, properties, func(record models.ItemProperty) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index properties: %w", err)
+	}
+	issues = append(issues, found...)
+	uniqueItems, err := Load[models.ItemUnique](c.store, UniqueItemsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	uniqueByIndex, found, err := ObservedIndex(UniqueItemsTable, uniqueItems, func(record models.ItemUnique) string { return record.Index })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index unique items: %w", err)
+	}
+	issues = append(issues, found...)
+	setItems, err := Load[models.SetItemData](c.store, SetItemsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	setItemsByIndex, found, err := ObservedIndex(SetItemsTable, setItems, func(record models.SetItemData) string { return record.Index })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index set items: %w", err)
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -191,6 +240,11 @@ func (c *Catalog) load() (Snapshot, error) {
 		Weapons: weapons, WeaponsByCode: weaponsByCode,
 		Misc: misc, MiscByCode: miscByCode,
 		ItemTypes: itemTypes, ItemTypesByCode: itemTypesByCode,
+		ItemRatios: itemRatios,
+		ItemStats:  itemStats, ItemStatsByName: itemStatsByName,
+		Properties: properties, PropertiesByCode: propertiesByCode,
+		UniqueItems: uniqueItems, UniqueByIndex: uniqueByIndex,
+		SetItems: setItems, SetItemsByIndex: setItemsByIndex,
 	}, nil
 }
 
@@ -217,6 +271,15 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		MiscByCode:       make(map[string]models.MiscItem, len(source.MiscByCode)),
 		ItemTypes:        append([]models.ItemType(nil), source.ItemTypes...),
 		ItemTypesByCode:  make(map[string]models.ItemType, len(source.ItemTypesByCode)),
+		ItemRatios:       append([]models.ItemRatio(nil), source.ItemRatios...),
+		ItemStats:        append([]models.ItemStatCost(nil), source.ItemStats...),
+		ItemStatsByName:  make(map[string]models.ItemStatCost, len(source.ItemStatsByName)),
+		Properties:       append([]models.ItemProperty(nil), source.Properties...),
+		PropertiesByCode: make(map[string]models.ItemProperty, len(source.PropertiesByCode)),
+		UniqueItems:      append([]models.ItemUnique(nil), source.UniqueItems...),
+		UniqueByIndex:    make(map[string]models.ItemUnique, len(source.UniqueByIndex)),
+		SetItems:         append([]models.SetItemData(nil), source.SetItems...),
+		SetItemsByIndex:  make(map[string]models.SetItemData, len(source.SetItemsByIndex)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -247,6 +310,18 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.ItemTypesByCode {
 		result.ItemTypesByCode[key] = value
+	}
+	for key, value := range source.ItemStatsByName {
+		result.ItemStatsByName[key] = value
+	}
+	for key, value := range source.PropertiesByCode {
+		result.PropertiesByCode[key] = value
+	}
+	for key, value := range source.UniqueByIndex {
+		result.UniqueByIndex[key] = value
+	}
+	for key, value := range source.SetItemsByIndex {
+		result.SetItemsByIndex[key] = value
 	}
 	return result
 }

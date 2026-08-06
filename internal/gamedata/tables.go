@@ -13,4 +13,9 @@ const (
 	WeaponsTable         = "data/global/excel/weapons.txt"
 	MiscTable            = "data/global/excel/misc.txt"
 	ItemTypesTable       = "data/global/excel/ItemTypes.txt"
+	ItemRatioTable       = "data/global/excel/ItemRatio.txt"
+	ItemStatCostTable    = "data/global/excel/ItemStatCost.txt"
+	PropertiesTable      = "data/global/excel/Properties.txt"
+	UniqueItemsTable     = "data/global/excel/UniqueItems.txt"
+	SetItemsTable        = "data/global/excel/SetItems.txt"
 )

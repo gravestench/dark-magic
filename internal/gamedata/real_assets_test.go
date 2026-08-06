@@ -52,6 +52,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.ArmorByCode) == 0 || len(snapshot.WeaponsByCode) == 0 || len(snapshot.MiscByCode) == 0 || len(snapshot.ItemTypesByCode) == 0 {
 		t.Fatal("typed base-item catalog indexes are incomplete")
 	}
+	if len(snapshot.ItemRatios) == 0 || len(snapshot.ItemStatsByName) == 0 || len(snapshot.PropertiesByCode) == 0 || len(snapshot.UniqueByIndex) == 0 || len(snapshot.SetItemsByIndex) == 0 {
+		t.Fatal("typed item-rule catalog indexes are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -86,6 +89,26 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"item types": func() (int, error) {
 			records, err := Load[models.ItemType](store, ItemTypesTable)
+			return len(records), err
+		},
+		"item ratios": func() (int, error) {
+			records, err := Load[models.ItemRatio](store, ItemRatioTable)
+			return len(records), err
+		},
+		"item stat costs": func() (int, error) {
+			records, err := Load[models.ItemStatCost](store, ItemStatCostTable)
+			return len(records), err
+		},
+		"properties": func() (int, error) {
+			records, err := Load[models.ItemProperty](store, PropertiesTable)
+			return len(records), err
+		},
+		"unique items": func() (int, error) {
+			records, err := Load[models.ItemUnique](store, UniqueItemsTable)
+			return len(records), err
+		},
+		"set items": func() (int, error) {
+			records, err := Load[models.SetItemData](store, SetItemsTable)
 			return len(records), err
 		},
 	} {
