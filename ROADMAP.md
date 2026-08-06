@@ -844,7 +844,10 @@ implementations. The remaining work is tracked explicitly below.
   typed records, generic Lua rows, and audio through the same source generation.
   The Lua records capability now uses the typed catalog as its generic-row
   gateway, so script-requested reloads also drop the typed snapshot rather than
-  bypassing catalog invalidation through the raw store.
+  bypassing catalog invalidation through the raw store. The versioned
+  `dm.game_data/v1` capability now supplies copied, typed character starting
+  attributes and ordered unique-title fragments without exposing Go records or
+  coupling authored scripts to arbitrary TSV columns.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
