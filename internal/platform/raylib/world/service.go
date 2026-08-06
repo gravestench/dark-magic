@@ -21,10 +21,10 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/assets/inspect"
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/platform/raylib/common"
+	input "github.com/gravestench/dark-magic/internal/platform/raylib/input"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/raylib/common"
-	input "github.com/gravestench/dark-magic/internal/raylib/input"
-	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 )
 
 const (

@@ -739,7 +739,10 @@ implementations. The remaining work is tracked explicitly below.
   Raylib backend consumes it, and the old `rendercore` path is guarded. Cinematic
   contracts, in-process decode coordination, synchronized playback, presentation,
   and the fallback player now live in `internal/video`; FFmpeg stays optional,
-  and the retired `videocore` import path is rejected.
+  and the retired `videocore` import path is rejected. All native Raylib adapters
+  now live under `internal/platform/raylib`, keeping window, input, renderer,
+  audio-device, and transitional world presentation code visibly outside the
+  engine contracts; previous adapter paths are guarded.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

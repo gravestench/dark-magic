@@ -33,11 +33,11 @@ import (
 	"github.com/gravestench/dark-magic/internal/navigation"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/internal/persistence"
+	"github.com/gravestench/dark-magic/internal/platform/raylib/input"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/profiling"
-	"github.com/gravestench/dark-magic/internal/raylib/input"
-	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/video"
 )

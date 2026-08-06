@@ -11,7 +11,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
-	input "github.com/gravestench/dark-magic/internal/raylib/input"
+	input "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 )
 
 func TestMovementVector(t *testing.T) {

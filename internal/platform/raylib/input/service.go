@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/gravestench/dark-magic/internal/raylib/common"
-	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/platform/raylib/common"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 )
 
 type Service struct {

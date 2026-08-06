@@ -66,10 +66,10 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
 | `internal/profiling` | CPU/heap/scene profile capture | command | Application/run | Keep |
 | `internal/capture` | Screenshot fixture writing | command | Run | Keep |
-| `internal/raylib/common` | Native adapter logging | raylib adapters | Application | Fold into platform |
-| `internal/raylib/input` | Raylib input adapter | command, world | Application | Keep under platform |
-| `internal/raylib/renderer` | Raylib renderer/audio owner thread | command, world | Application | Keep under platform |
-| `internal/raylib/world` | Legacy native world presentation | command/tests | Scene | Transitional; replace |
+| `internal/platform/raylib/common` | Native adapter logging | raylib adapters | Application | Keep under platform |
+| `internal/platform/raylib/input` | Raylib input adapter | command, world | Application | Keep under platform |
+| `internal/platform/raylib/renderer` | Raylib renderer/audio owner thread | command, world | Application | Keep under platform |
+| `internal/platform/raylib/world` | Legacy native world presentation | command/tests | Scene | Transitional; replace |
 | `internal/acceptance` | Cross-system acceptance fixtures | tests | Test | Keep |
 | `internal/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
 | `internal/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
@@ -118,9 +118,9 @@ startup and shutdown. Keep this file as wiring: capability behavior belongs in
 the package that owns it.
 
 Each frame begins at the Raylib renderer owner thread. Native input is translated
-through `internal/raylib/input`, Lua scene updates run through
+through `internal/platform/raylib/input`, Lua scene updates run through
 `internal/modruntime`, and retained presentation commands cross
-`internal/presentation/render` before `internal/raylib/renderer` executes them. Game rules
+`internal/presentation/render` before `internal/platform/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
 
 Scene navigation belongs to `internal/navigation`; renderer-independent scene
