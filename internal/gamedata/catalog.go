@@ -108,6 +108,12 @@ type Snapshot struct {
 	WeaponClassByCode  map[models.WeaponClassID]models.WeaponClass
 	Books              []models.Book
 	BooksByName        map[string]models.Book
+	MonsterSequences   []models.MonsterSequence
+	MonsterUniqueMods  []models.MonsterUniqueModifier
+	MonsterUniqueByID  map[int]models.MonsterUniqueModifier
+	UniqueAppellations []models.MonsterUniqueAppellation
+	UniquePrefixes     []models.UniquePrefix
+	UniqueSuffixes     []models.UniqueSuffix
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -582,6 +588,31 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	issues = append(issues, found...)
+	monsterSequences, err := Load[models.MonsterSequence](c.store, MonsterSequencesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterUniqueMods, err := Load[models.MonsterUniqueModifier](c.store, MonsterUniqueModsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterUniqueByID, found, err := ObservedIndex(MonsterUniqueModsTable, monsterUniqueMods, func(record models.MonsterUniqueModifier) int { return record.ID })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	uniqueAppellations, err := Load[models.MonsterUniqueAppellation](c.store, UniqueAppellationsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	uniquePrefixes, err := Load[models.UniquePrefix](c.store, UniquePrefixesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	uniqueSuffixes, err := Load[models.UniqueSuffix](c.store, UniqueSuffixesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -621,6 +652,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		ObjectModes: objectModes, ObjectModesByName: objectModesByName,
 		QualityModifiers: qualityModifiers, WeaponClasses: weaponClasses, WeaponClassByCode: weaponClassByCode,
 		Books: books, BooksByName: booksByName,
+		MonsterSequences: monsterSequences, MonsterUniqueMods: monsterUniqueMods, MonsterUniqueByID: monsterUniqueByID,
+		UniqueAppellations: uniqueAppellations, UniquePrefixes: uniquePrefixes, UniqueSuffixes: uniqueSuffixes,
 	}, nil
 }
 
@@ -722,6 +755,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		WeaponClassByCode:  make(map[models.WeaponClassID]models.WeaponClass, len(source.WeaponClassByCode)),
 		Books:              append([]models.Book(nil), source.Books...),
 		BooksByName:        make(map[string]models.Book, len(source.BooksByName)),
+		MonsterSequences:   append([]models.MonsterSequence(nil), source.MonsterSequences...),
+		MonsterUniqueMods:  append([]models.MonsterUniqueModifier(nil), source.MonsterUniqueMods...),
+		MonsterUniqueByID:  make(map[int]models.MonsterUniqueModifier, len(source.MonsterUniqueByID)),
+		UniqueAppellations: append([]models.MonsterUniqueAppellation(nil), source.UniqueAppellations...),
+		UniquePrefixes:     append([]models.UniquePrefix(nil), source.UniquePrefixes...),
+		UniqueSuffixes:     append([]models.UniqueSuffix(nil), source.UniqueSuffixes...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -836,6 +875,9 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.BooksByName {
 		result.BooksByName[key] = value
+	}
+	for key, value := range source.MonsterUniqueByID {
+		result.MonsterUniqueByID[key] = value
 	}
 	return result
 }

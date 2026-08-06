@@ -745,7 +745,9 @@ implementations. The remaining work is tracked explicitly below.
   ObjGroup, and ObjMode now admit object tokens, population distributions, and
   animation-mode metadata. QualityItems, WeaponClass, and Books now preserve
   superior-item modifier rules, animation weapon classes, and scroll/book
-  casting economics.
+  casting economics. MonSeq, MonUMod, UniqueAppellation, UniquePrefix, and
+  UniqueSuffix now preserve ordered animation events, special-monster modifier
+  rules, and the authored name-part pools.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

@@ -96,6 +96,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.QualityModifiers) == 0 || len(snapshot.WeaponClassByCode) == 0 || len(snapshot.BooksByName) == 0 {
 		t.Fatal("typed item support tables are incomplete")
 	}
+	if len(snapshot.MonsterSequences) == 0 || len(snapshot.MonsterUniqueByID) == 0 || len(snapshot.UniqueAppellations) == 0 || len(snapshot.UniquePrefixes) == 0 || len(snapshot.UniqueSuffixes) == 0 {
+		t.Fatal("typed monster identity tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
