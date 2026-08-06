@@ -173,12 +173,12 @@ their own legally obtained game data.
   render capability and a thread-safe command boundary.
 - [x] Define retained render nodes with explicit parentage, transform, Z order,
   visibility, clipping, blend mode, and lifetime.
-- [ ] Make textures, palettes, fonts, animations, and render targets managed
+- [x] Make textures, palettes, fonts, animations, and render targets managed
   resources referenced by checked handles.
 - [x] Separate asset decoding from GPU upload and make upload/destruction occur on
   the renderer thread.
 - [x] Support deterministic world, HUD, modal, cursor, debug, and transition layers.
-- [ ] Preserve chunking, culling, child-order caching, and allocation-free hot paths
+- [x] Preserve chunking, culling, child-order caching, and allocation-free hot paths
   from the current renderer while replacing its ownership model.
 - [x] Add a headless render-command backend for scene tests and golden composition
   fixtures where practical.

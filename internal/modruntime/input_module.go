@@ -11,24 +11,24 @@ func InputModule(input *inputcore.Store) Module {
 	return Module{Name: "dm.input/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"down": func(state *lua.LState) int {
-				action := input.Snapshot().Actions[state.CheckString(1)]
+				action := input.Action(state.CheckString(1))
 				state.Push(lua.LBool(action.Down || action.Pressed))
 				return 1
 			},
 			"pressed": func(state *lua.LState) int {
-				action := input.Snapshot().Actions[state.CheckString(1)]
+				action := input.Action(state.CheckString(1))
 				state.Push(lua.LBool(action.Pressed))
 				return 1
 			},
 			"released": func(state *lua.LState) int {
-				action := input.Snapshot().Actions[state.CheckString(1)]
+				action := input.Action(state.CheckString(1))
 				state.Push(lua.LBool(action.Released))
 				return 1
 			},
 			"cursor": func(state *lua.LState) int {
-				frame := input.Snapshot()
-				state.Push(lua.LNumber(frame.CursorX))
-				state.Push(lua.LNumber(frame.CursorY))
+				x, y := input.Cursor()
+				state.Push(lua.LNumber(x))
+				state.Push(lua.LNumber(y))
 				return 2
 			},
 		})

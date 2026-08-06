@@ -1,11 +1,36 @@
 package raylibRenderer
 
 import (
+	"image"
+	"image/color"
 	"testing"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
+
+func TestCompositionBackendOwnsEveryManagedResourceKind(t *testing.T) {
+	backend := &compositionBackend{resources: make(map[rendercore.ResourceID]rendercore.Resource)}
+	texture := rendercore.Resource{ID: rendercore.ResourceID{Slot: 1, Generation: 1}, Kind: rendercore.ResourceTexture, Payload: image.NewRGBA(image.Rect(0, 0, 1, 1))}
+	resources := []rendercore.Resource{
+		texture,
+		{ID: rendercore.ResourceID{Slot: 2, Generation: 1}, Kind: rendercore.ResourcePalette, Payload: color.Palette{color.Black}},
+		{ID: rendercore.ResourceID{Slot: 3, Generation: 1}, Kind: rendercore.ResourceFont, Payload: rendercore.FontData{Bytes: []byte("font"), Size: 12}},
+		{ID: rendercore.ResourceID{Slot: 4, Generation: 1}, Kind: rendercore.ResourceAnimation, Payload: rendercore.AnimationData{Frames: []rendercore.ResourceID{texture.ID}, Durations: []time.Duration{time.Second}}},
+		{ID: rendercore.ResourceID{Slot: 5, Generation: 1}, Kind: rendercore.ResourceRenderTarget, Payload: rendercore.RenderTargetData{Width: 2, Height: 2}},
+	}
+	for _, resource := range resources {
+		if err := backend.Apply(rendercore.Change{Kind: "resource-create", Resource: resource, ResourceID: resource.ID}); err != nil {
+			t.Fatalf("create %s: %v", resource.Kind, err)
+		}
+	}
+	for index := len(resources) - 1; index >= 0; index-- {
+		if err := backend.Apply(rendercore.Change{Kind: "resource-destroy", ResourceID: resources[index].ID}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 	t.Parallel()

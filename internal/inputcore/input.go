@@ -37,6 +37,25 @@ func (s *Store) Snapshot() Frame {
 	return frame
 }
 
+// Action reads one immutable logical action without cloning the frame map.
+func (s *Store) Action(name string) ActionState {
+	value := s.current.Load()
+	if value == nil {
+		return ActionState{}
+	}
+	return value.(Frame).Actions[name]
+}
+
+// Cursor reads the immutable current cursor coordinates without allocation.
+func (s *Store) Cursor() (float64, float64) {
+	value := s.current.Load()
+	if value == nil {
+		return 0, 0
+	}
+	frame := value.(Frame)
+	return frame.CursorX, frame.CursorY
+}
+
 func cloneActions(actions map[string]ActionState) map[string]ActionState {
 	result := make(map[string]ActionState, len(actions))
 	for name, state := range actions {

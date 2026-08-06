@@ -4,8 +4,11 @@ package rendercore
 import (
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
 	"sort"
 	"sync"
+	"time"
 )
 
 // Layer is a deterministic top-level composition layer.
@@ -50,6 +53,22 @@ type Resource struct {
 	Kind    ResourceKind
 	Payload any
 }
+
+// FontData is decoded font input; native font creation remains a backend task.
+type FontData struct {
+	Bytes  []byte
+	Format string
+	Size   int
+}
+
+// AnimationData references managed texture frames with per-frame durations.
+type AnimationData struct {
+	Frames    []ResourceID
+	Durations []time.Duration
+}
+
+// RenderTargetData describes a renderer-owned offscreen target.
+type RenderTargetData struct{ Width, Height int }
 
 // Node is the backend-neutral retained state of one renderable.
 type Node struct {
@@ -113,6 +132,9 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if err := c.validateResource(kind, payload); err != nil {
+		return ResourceID{}, err
+	}
 	var index uint32
 	if len(c.freeResources) > 0 {
 		index = c.freeResources[len(c.freeResources)-1]
@@ -128,6 +150,44 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	return id, nil
 }
 
+func (c *Composer) validateResource(kind ResourceKind, payload any) error {
+	switch kind {
+	case ResourceTexture:
+		if _, ok := payload.(image.Image); !ok {
+			return fmt.Errorf("rendercore: texture payload is %T, want image.Image", payload)
+		}
+	case ResourcePalette:
+		palette, ok := payload.(color.Palette)
+		if !ok || len(palette) == 0 {
+			return fmt.Errorf("rendercore: palette payload is %T or empty", payload)
+		}
+	case ResourceFont:
+		font, ok := payload.(FontData)
+		if !ok || len(font.Bytes) == 0 || font.Size <= 0 {
+			return fmt.Errorf("rendercore: invalid font payload %T", payload)
+		}
+	case ResourceAnimation:
+		animation, ok := payload.(AnimationData)
+		if !ok || len(animation.Frames) == 0 || len(animation.Frames) != len(animation.Durations) {
+			return fmt.Errorf("rendercore: invalid animation payload %T", payload)
+		}
+		for index, frame := range animation.Frames {
+			resource, err := c.resource(frame)
+			if err != nil || resource.Kind != ResourceTexture || animation.Durations[index] <= 0 {
+				return fmt.Errorf("rendercore: invalid animation frame %d", index)
+			}
+		}
+	case ResourceRenderTarget:
+		target, ok := payload.(RenderTargetData)
+		if !ok || target.Width <= 0 || target.Height <= 0 {
+			return fmt.Errorf("rendercore: invalid render-target payload %T", payload)
+		}
+	default:
+		return fmt.Errorf("rendercore: unknown resource kind %q", kind)
+	}
+	return nil
+}
+
 // DestroyResource invalidates a managed resource and queues native destruction.
 func (c *Composer) DestroyResource(id ResourceID) error {
 	c.mu.Lock()
@@ -139,6 +199,17 @@ func (c *Composer) DestroyResource(id ResourceID) error {
 	for _, node := range c.slots {
 		if node.node != nil && node.node.Resource == id {
 			return fmt.Errorf("rendercore: resource %v is still attached to node %v", id, node.node.ID)
+		}
+	}
+	for _, candidate := range c.resources {
+		if candidate.resource == nil || candidate.resource.Kind != ResourceAnimation {
+			continue
+		}
+		animation := candidate.resource.Payload.(AnimationData)
+		for _, frame := range animation.Frames {
+			if frame == id {
+				return fmt.Errorf("rendercore: resource %v is used by animation %v", id, candidate.resource.ID)
+			}
 		}
 	}
 	_ = entry
@@ -191,8 +262,12 @@ func (c *Composer) Update(id NodeID, update func(*Node)) error {
 	candidate := *node
 	update(&candidate)
 	if candidate.Resource != (ResourceID{}) {
-		if _, err := c.resource(candidate.Resource); err != nil {
+		resource, err := c.resource(candidate.Resource)
+		if err != nil {
 			return fmt.Errorf("rendercore: node resource: %w", err)
+		}
+		if resource.Kind != ResourceTexture && resource.Kind != ResourceAnimation && resource.Kind != ResourceRenderTarget {
+			return fmt.Errorf("rendercore: resource kind %q is not drawable", resource.Kind)
 		}
 	}
 	*node = candidate

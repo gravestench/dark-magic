@@ -19,7 +19,7 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 	if s.composition != nil {
 		return fmt.Errorf("renderer: composition core is already attached")
 	}
-	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]image.Image), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID)}
+	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]rendercore.Resource), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID)}
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
@@ -34,7 +34,7 @@ type compositionBackend struct {
 	renderer      *Service
 	mu            sync.Mutex
 	nodes         map[rendercore.NodeID]Renderable
-	resources     map[rendercore.ResourceID]image.Image
+	resources     map[rendercore.ResourceID]rendercore.Resource
 	nodeResources map[rendercore.NodeID]rendercore.ResourceID
 }
 
@@ -45,21 +45,14 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 		b.nodes = make(map[rendercore.NodeID]Renderable)
 	}
 	if b.resources == nil {
-		b.resources = make(map[rendercore.ResourceID]image.Image)
+		b.resources = make(map[rendercore.ResourceID]rendercore.Resource)
 	}
 	if b.nodeResources == nil {
 		b.nodeResources = make(map[rendercore.NodeID]rendercore.ResourceID)
 	}
 	switch change.Kind {
 	case "resource-create":
-		if change.Resource.Kind != rendercore.ResourceTexture {
-			return fmt.Errorf("unsupported resource kind %q", change.Resource.Kind)
-		}
-		decoded, ok := change.Resource.Payload.(image.Image)
-		if !ok {
-			return fmt.Errorf("texture resource %v has payload %T", change.ResourceID, change.Resource.Payload)
-		}
-		b.resources[change.ResourceID] = decoded
+		b.resources[change.ResourceID] = change.Resource
 		return nil
 	case "resource-destroy":
 		if _, exists := b.resources[change.ResourceID]; !exists {
@@ -116,9 +109,13 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		node.Disable()
 	}
 	if state.Resource != (rendercore.ResourceID{}) {
-		decoded, exists := b.resources[state.Resource]
+		resource, exists := b.resources[state.Resource]
 		if !exists {
 			return fmt.Errorf("resource %v does not exist", state.Resource)
+		}
+		decoded, err := b.drawableImage(resource)
+		if err != nil {
+			return err
 		}
 		if b.nodeResources[state.ID] != state.Resource {
 			if b.renderer.cache != nil {
@@ -129,4 +126,23 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		}
 	}
 	return nil
+}
+
+func (b *compositionBackend) drawableImage(resource rendercore.Resource) (image.Image, error) {
+	switch resource.Kind {
+	case rendercore.ResourceTexture:
+		return resource.Payload.(image.Image), nil
+	case rendercore.ResourceAnimation:
+		animation := resource.Payload.(rendercore.AnimationData)
+		frame, exists := b.resources[animation.Frames[0]]
+		if !exists {
+			return nil, fmt.Errorf("animation %v frame is unavailable", resource.ID)
+		}
+		return frame.Payload.(image.Image), nil
+	case rendercore.ResourceRenderTarget:
+		target := resource.Payload.(rendercore.RenderTargetData)
+		return image.NewRGBA(image.Rect(0, 0, target.Width, target.Height)), nil
+	default:
+		return nil, fmt.Errorf("resource kind %q is not drawable", resource.Kind)
+	}
 }

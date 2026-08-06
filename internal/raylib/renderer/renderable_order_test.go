@@ -1,6 +1,10 @@
 package raylibRenderer
 
-import "testing"
+import (
+	"testing"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 func TestSortedChildrenCachesAndInvalidatesZOrder(t *testing.T) {
 	parent := &node{}
@@ -39,3 +43,16 @@ func TestAddingAndRemovingChildrenInvalidatesOrdering(t *testing.T) {
 		t.Fatal("removing a child did not invalidate ordering")
 	}
 }
+
+func TestCachedChildOrderingDoesNotAllocate(t *testing.T) {
+	parent := &node{}
+	for index := 0; index < 16; index++ {
+		parent.addChild(&node{local: matrixWithZ(float32(index))})
+	}
+	parent.sortedChildren()
+	if allocations := testing.AllocsPerRun(1000, func() { _ = parent.sortedChildren() }); allocations != 0 {
+		t.Fatalf("cached ordering allocations = %v", allocations)
+	}
+}
+
+func matrixWithZ(z float32) (matrix rl.Matrix) { matrix.M14 = z; return matrix }

@@ -3,10 +3,69 @@ package rendercore
 import (
 	"errors"
 	"image"
+	"image/color"
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 )
+
+func TestAllManagedResourceKindsUseCheckedHandles(t *testing.T) {
+	var composer Composer
+	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 2, 2)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resources := []ResourceID{texture}
+	for _, input := range []struct {
+		kind    ResourceKind
+		payload any
+	}{
+		{ResourcePalette, color.Palette{color.Black, color.White}},
+		{ResourceFont, FontData{Bytes: []byte("font"), Format: "ttf", Size: 16}},
+		{ResourceAnimation, AnimationData{Frames: []ResourceID{texture}, Durations: []time.Duration{time.Second / 10}}},
+		{ResourceRenderTarget, RenderTargetData{Width: 320, Height: 200}},
+	} {
+		id, err := composer.CreateResource(input.kind, input.payload)
+		if err != nil {
+			t.Fatalf("create %s: %v", input.kind, err)
+		}
+		resources = append(resources, id)
+		got, err := composer.ResourceSnapshot(id)
+		if err != nil || got.Kind != input.kind {
+			t.Fatalf("snapshot %s: %#v, %v", input.kind, got, err)
+		}
+	}
+	if err := composer.DestroyResource(texture); err == nil {
+		t.Fatal("texture used by animation was destroyed")
+	}
+	if err := composer.DestroyResource(resources[3]); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.DestroyResource(texture); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []ResourceID{resources[1], resources[2], resources[4]} {
+		if err := composer.DestroyResource(id); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestManagedResourcePayloadValidation(t *testing.T) {
+	var composer Composer
+	for _, input := range []struct {
+		kind    ResourceKind
+		payload any
+	}{
+		{ResourceTexture, "not an image"}, {ResourcePalette, color.Palette{}},
+		{ResourceFont, FontData{}}, {ResourceAnimation, AnimationData{}}, {ResourceRenderTarget, RenderTargetData{}},
+	} {
+		if _, err := composer.CreateResource(input.kind, input.payload); err == nil {
+			t.Errorf("accepted invalid %s", input.kind)
+		}
+	}
+}
 
 type recordingBackend struct {
 	changes []Change
@@ -155,5 +214,18 @@ func TestComposerAcceptsConcurrentSubmission(t *testing.T) {
 	wait.Wait()
 	if got := len(composer.Snapshot()); got != 32 {
 		t.Fatalf("node count = %d", got)
+	}
+}
+
+func TestEmptyDrainHotPathDoesNotAllocate(t *testing.T) {
+	var composer Composer
+	backend := &recordingBackend{}
+	allocations := testing.AllocsPerRun(1000, func() {
+		if err := composer.Drain(backend); err != nil {
+			panic(err)
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("empty drain allocations = %v", allocations)
 	}
 }
