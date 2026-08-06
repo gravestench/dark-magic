@@ -1,0 +1,17 @@
+local render = require("dm.render/v1")
+local input = require("dm.input/v1")
+local scenes = require("dm.scene/v1")
+
+return {
+    blocks_update_below = true,
+
+    enter = function(self)
+        self.root = render.create("modal")
+    end,
+
+    update = function(self, elapsed)
+        if input.pressed("inventory") or input.pressed("cancel") then
+            scenes.pop()
+        end
+    end,
+}

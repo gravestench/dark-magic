@@ -1,0 +1,46 @@
+// Package inputcore defines backend-neutral, frame-stable input snapshots.
+package inputcore
+
+import "sync/atomic"
+
+// ActionState is the state of one logical game action for a frame.
+type ActionState struct {
+	Down     bool
+	Pressed  bool
+	Released bool
+}
+
+// Frame is an immutable input snapshot published by a native backend.
+type Frame struct {
+	Actions map[string]ActionState
+	CursorX float64
+	CursorY float64
+}
+
+// Store publishes and reads cloned immutable frame snapshots.
+type Store struct{ current atomic.Value }
+
+// Publish replaces the current frame.
+func (s *Store) Publish(frame Frame) {
+	frame.Actions = cloneActions(frame.Actions)
+	s.current.Store(frame)
+}
+
+// Snapshot returns a defensive copy of the latest frame.
+func (s *Store) Snapshot() Frame {
+	value := s.current.Load()
+	if value == nil {
+		return Frame{Actions: make(map[string]ActionState)}
+	}
+	frame := value.(Frame)
+	frame.Actions = cloneActions(frame.Actions)
+	return frame
+}
+
+func cloneActions(actions map[string]ActionState) map[string]ActionState {
+	result := make(map[string]ActionState, len(actions))
+	for name, state := range actions {
+		result[name] = state
+	}
+	return result
+}

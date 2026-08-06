@@ -1,0 +1,106 @@
+package navigation
+
+import (
+	"context"
+	"errors"
+	"reflect"
+	"testing"
+	"time"
+)
+
+type testScene struct {
+	id       string
+	blocks   bool
+	enterErr error
+	calls    *[]string
+}
+
+func (s *testScene) Enter(context.Context) error {
+	*s.calls = append(*s.calls, "enter "+s.id)
+	return s.enterErr
+}
+func (s *testScene) Update(context.Context, time.Duration) error {
+	*s.calls = append(*s.calls, "update "+s.id)
+	return nil
+}
+func (s *testScene) Render(context.Context) error {
+	*s.calls = append(*s.calls, "render "+s.id)
+	return nil
+}
+func (s *testScene) Exit(context.Context) error {
+	*s.calls = append(*s.calls, "exit "+s.id)
+	return nil
+}
+func (s *testScene) Destroy(context.Context) error {
+	*s.calls = append(*s.calls, "destroy "+s.id)
+	return nil
+}
+func (s *testScene) BlocksUpdateBelow() bool { return s.blocks }
+
+func TestNavigationStackUpdateRenderAndCleanup(t *testing.T) {
+	t.Parallel()
+
+	var calls []string
+	manager := New()
+	registerScene(t, manager, "world", false, nil, &calls)
+	registerScene(t, manager, "inventory", true, nil, &calls)
+	registerScene(t, manager, "tooltip", false, nil, &calls)
+	if err := manager.Replace(context.Background(), "world"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Push(context.Background(), "inventory"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Push(context.Background(), "tooltip"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Update(context.Background(), time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Render(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"enter world", "enter inventory", "enter tooltip",
+		"update inventory", "update tooltip",
+		"render world", "render inventory", "render tooltip",
+		"exit tooltip", "destroy tooltip", "exit inventory", "destroy inventory", "exit world", "destroy world",
+	}
+	if !reflect.DeepEqual(calls, want) {
+		t.Fatalf("calls = %#v, want %#v", calls, want)
+	}
+}
+
+func TestReplacePreservesStackWhenNewSceneCannotEnter(t *testing.T) {
+	t.Parallel()
+
+	var calls []string
+	manager := New()
+	registerScene(t, manager, "menu", false, nil, &calls)
+	registerScene(t, manager, "broken", false, errors.New("broken"), &calls)
+	if err := manager.Replace(context.Background(), "menu"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Replace(context.Background(), "broken"); err == nil {
+		t.Fatal("expected replacement to fail")
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"menu"}) {
+		t.Fatalf("stack = %v", got)
+	}
+	want := []string{"enter menu", "enter broken", "destroy broken"}
+	if !reflect.DeepEqual(calls, want) {
+		t.Fatalf("calls = %v, want %v", calls, want)
+	}
+}
+
+func registerScene(t *testing.T, manager *Manager, id string, blocks bool, enterErr error, calls *[]string) {
+	t.Helper()
+	if err := manager.Register(id, func(context.Context) (Scene, error) {
+		return &testScene{id: id, blocks: blocks, enterErr: enterErr, calls: calls}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -84,12 +84,159 @@ their own legally obtained game data.
 - [ ] Add ladder-season eligibility to special-item selection.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
+## M7: Explicit application host
+
+- [ ] Add an internal application host with explicit `Start(context.Context)` and
+  `Stop(context.Context)` lifecycle contracts.
+- [ ] Construct native engine dependencies explicitly instead of discovering them
+  by scanning a service registry.
+- [ ] Start dependencies before dependents and stop them in reverse order with
+  bounded shutdown contexts.
+- [ ] Propagate startup, runtime, and shutdown errors to the process entry point.
+- [ ] Give the renderer/main-thread loop and background workers distinct,
+  documented ownership.
+- [ ] Add lifecycle tests covering order, failure rollback, cancellation, timeout,
+  and idempotent shutdown.
+- [ ] Keep the new host under `internal` until its contracts have survived the
+  engine migration.
+
+## M8: Runtime component management
+
+- [ ] Register definitions for every available native and scripted component
+  without necessarily starting each one.
+- [ ] Track desired and actual state through `disabled`, `enabling`, `enabled`,
+  `disabling`, and `failed` transitions.
+- [ ] Serialize enable, disable, restart, and reload transitions through one
+  reconciler.
+- [ ] Validate dependencies and reject dependency cycles at registration time.
+- [ ] Reject disabling a dependency that still has active dependents, with an
+  explicit opt-in cascading operation.
+- [ ] Drive desired state from startup configuration and a runtime management API.
+- [ ] Publish typed observational lifecycle events without using events for
+  dependency injection or startup coordination.
+- [ ] Add deterministic tests for concurrent requests, partial failures, retries,
+  and dependency cascades.
+
+## M9: Layered game-content filesystem
+
+- [ ] Define one normalized VFS contract for directories, MPQs, zip archives, and
+  embedded content.
+- [ ] Mount sources in deterministic override order: user mods, the Dark Magic
+  shim archive, Diablo II patches/expansion data, then base game data.
+- [ ] Preserve source provenance so diagnostics can report which layer supplied an
+  asset or script.
+- [ ] Add enumeration, existence, and invalidation behavior suitable for script
+  loading and development-time reload.
+- [ ] Package a redistributable `darkmagic` shim archive containing engine-owned
+  scripts and assets, while continuing to require users to supply Diablo II data.
+- [ ] Load a minimal `boot.lua` from the layered VFS and verify the complete boot
+  path headlessly.
+
+## M10: Capability-based Lua runtime
+
+- [ ] Replace the mutable global export table with versioned modules such as
+  `dm.vfs/v1`, `dm.render/v1`, `dm.input/v1`, and `dm.audio/v1`.
+- [ ] Expose narrow engine capabilities rather than the application host or
+  component registry itself.
+- [ ] Make one goroutine own each Lua state and route every invocation, callback,
+  timer, and reload through its serialized inbox.
+- [ ] Represent native objects as stable checked handles with type and generation
+  validation instead of leaking Go object ownership into Lua.
+- [ ] Give every script component a resource scope that owns its subscriptions,
+  timers, callbacks, render nodes, routes, and native handles.
+- [ ] Release the entire resource scope automatically on disable, failure, reload,
+  or shutdown.
+- [ ] Keep persistent game/mod state outside disposable Lua states and define a
+  versioned serialization boundary.
+- [ ] Add API conformance tests, stack/error diagnostics, and source-aware Lua
+  tracebacks.
+
+## M11: Script-defined components and hot reload
+
+- [ ] Let trusted Lua modules declare stable IDs, dependencies, configuration,
+  and lifecycle callbacks using the same runtime definition model as Go code.
+- [ ] Load all available script definitions at startup, then enable only those
+  selected by configuration or runtime state.
+- [ ] Adapt Lua lifecycle callbacks to the host without pretending screens and
+  short-lived UI objects are application services.
+- [ ] Reload transactionally: build and validate a replacement, transfer approved
+  persistent state, switch ownership, then tear down the old scope.
+- [ ] Preserve the working instance when replacement compilation or startup fails.
+- [ ] Begin with one trusted first-party Lua state and isolated module
+  environments; evaluate per-mod states for untrusted third-party content later.
+- [ ] Add execution budgets or an isolatable runtime boundary before claiming
+  support for untrusted scripts.
+
+## M12: Rendering and composition core
+
+- [ ] Replace renderer access spread across services with one main-thread-owned
+  render capability and a thread-safe command boundary.
+- [ ] Define retained render nodes with explicit parentage, transform, Z order,
+  visibility, clipping, blend mode, and lifetime.
+- [ ] Make textures, palettes, fonts, animations, and render targets managed
+  resources referenced by checked handles.
+- [ ] Separate asset decoding from GPU upload and make upload/destruction occur on
+  the renderer thread.
+- [ ] Support deterministic world, HUD, modal, cursor, debug, and transition layers.
+- [ ] Preserve chunking, culling, child-order caching, and allocation-free hot paths
+  from the current renderer while replacing its ownership model.
+- [ ] Add a headless render-command backend for scene tests and golden composition
+  fixtures where practical.
+- [ ] Prove the boundary by rendering one complete Lua-authored screen using only
+  versioned capabilities.
+
+## M13: Lua-authored Diablo shell
+
+- [ ] Add a scene/navigation manager distinct from long-lived engine components.
+- [ ] Define scene lifecycle callbacks for `create`, `enter`, `update`, `render`,
+  `exit`, and `destroy`.
+- [ ] Implement the loading screen from the shim archive.
+- [ ] Implement the title and main game menus from the shim archive.
+- [ ] Implement character selection/creation as Lua scenes backed by native save
+  and record capabilities.
+- [ ] Implement the interactive game-world scene as Lua orchestration over native
+  rendering, input, assets, simulation, and audio.
+- [ ] Implement inventory, character, skill, automap, options, and pause UI as
+  layered overlays rather than independent application services.
+- [ ] Add deterministic navigation tests for screen transitions, overlay stacking,
+  input focus, cancellation, and cleanup.
+
+## M14: Service Mesh retirement
+
+- [ ] Migrate one simple native service to explicit construction and host lifecycle
+  as a contract test for the new architecture.
+- [ ] Migrate the renderer, Lua runtime, VFS/assets, input, audio, records, locale,
+  configuration, file watching, debug web, and gameplay systems incrementally.
+- [ ] Replace `ResolveDependencies` polling, readiness flags, and coarse startup
+  sleeps with constructors, lifecycle results, or bounded waits at real async
+  boundaries.
+- [ ] Replace `LuaPlugin` discovery with explicit capability registration.
+- [ ] Update commands, tests, documentation, and the service template as each
+  subsystem moves.
+- [ ] Remove the `servicemesh` dependency only after the main engine and utility
+  commands run entirely on the internal host.
+- [ ] Rename or reorganize `pkg/services` around stable engine capabilities,
+  gameplay systems, and internal adapters instead of the old framework shape.
+
+## Architectural acceptance milestone
+
+- [ ] Boot the executable through the internal host.
+- [ ] Mount legally supplied Diablo II archives plus the Dark Magic shim archive.
+- [ ] Execute `boot.lua`, enter the Lua-authored main menu, select a character, and
+  enter an interactive world.
+- [ ] Open and close inventory as an overlay without disrupting the world scene.
+- [ ] Enable, disable, restart, and transactionally reload a scripted component at
+  runtime without leaking callbacks, renderer resources, or native handles.
+- [ ] Shut down cleanly with race detection enabled and without Service Mesh.
+
 ## Later gameplay milestones
 
 1. Monster generation and AI.
 2. Combat and progression.
 3. Audio and music integration.
 4. Expanded map generation and developer/mod packaging tools.
+5. Save compatibility, multiplayer synchronization, and replayable deterministic
+   simulation.
 
 ## Performance priorities
 

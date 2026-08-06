@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gravestench/servicemesh"
 
+	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
@@ -39,6 +40,7 @@ type IsRenderer interface {
 	ManagesCameras
 	ProvidesTextures
 	ProvidesRenderables
+	AttachComposer(*rendercore.Composer) error
 }
 
 type ManagesWindow interface {

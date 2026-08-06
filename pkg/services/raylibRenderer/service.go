@@ -9,6 +9,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/servicemesh"
 
+	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/cache"
 )
 
@@ -27,6 +28,10 @@ type Service struct {
 	frameMux       sync.Mutex
 	frameCallbacks []func()
 	frameSnapshot  atomic.Value
+
+	compositionMu      sync.Mutex
+	composition        *rendercore.Composer
+	compositionBackend *compositionBackend
 }
 
 // OnFrame registers work that must run on the renderer thread, immediately

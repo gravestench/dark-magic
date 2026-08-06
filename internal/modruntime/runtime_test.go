@@ -1,0 +1,133 @@
+package modruntime
+
+import (
+	"context"
+	"errors"
+	"reflect"
+	"strings"
+	"sync"
+	"testing"
+	"testing/fstest"
+
+	lua "github.com/yuin/gopher-lua"
+)
+
+func TestRuntimeExecutesVersionedModuleOnOneOwner(t *testing.T) {
+	t.Parallel()
+
+	runtime := New()
+	if err := runtime.RegisterModule(Module{Name: "dm.test/v1", Loader: func(state *lua.LState) int {
+		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"answer": func(state *lua.LState) int { state.Push(lua.LNumber(42)); return 1 },
+		})
+		state.Push(module)
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`local test = require("dm.test/v1"); result = test.answer()`)}}
+	if err := runtime.Execute(context.Background(), source, "boot.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if got := state.GetGlobal("result"); got.String() != "42" {
+			t.Fatalf("result = %s", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRuntimeSerializesConcurrentCalls(t *testing.T) {
+	t.Parallel()
+
+	runtime := New()
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	const workers = 32
+	var wait sync.WaitGroup
+	wait.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wait.Done()
+			if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+				value := state.GetGlobal("count")
+				count, _ := value.(lua.LNumber)
+				state.SetGlobal("count", count+1)
+				return nil
+			}); err != nil {
+				t.Errorf("Run: %v", err)
+			}
+		}()
+	}
+	wait.Wait()
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if got := state.GetGlobal("count"); got.String() != "32" {
+			t.Fatalf("count = %s", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestScopeClosesInReverseAndJoinsErrors(t *testing.T) {
+	t.Parallel()
+
+	first := errors.New("first")
+	second := errors.New("second")
+	var calls []int
+	scope := &Scope{}
+	for index, failure := range []error{first, nil, second} {
+		index, failure := index, failure
+		if err := scope.Add(func() error { calls = append(calls, index); return failure }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	err := scope.Close()
+	if !errors.Is(err, first) || !errors.Is(err, second) {
+		t.Fatalf("Close error = %v", err)
+	}
+	if !reflect.DeepEqual(calls, []int{2, 1, 0}) {
+		t.Fatalf("calls = %v", calls)
+	}
+	if err := scope.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := scope.Add(func() error { return nil }); err == nil {
+		t.Fatal("expected closed scope to reject resource")
+	}
+}
+
+func TestHandlesRejectStaleAndMistypedReferences(t *testing.T) {
+	t.Parallel()
+
+	var handles Handles
+	texture, err := handles.Add("texture", "first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handles.Get(Handle{Type: "sound", Slot: texture.Slot, Generation: texture.Generation}); err == nil {
+		t.Fatal("expected mistyped handle to fail")
+	}
+	if err := handles.Release(texture); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := handles.Get(texture); err == nil || !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("stale Get error = %v", err)
+	}
+	replacement, err := handles.Add("texture", "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replacement.Slot != texture.Slot || replacement.Generation == texture.Generation {
+		t.Fatalf("replacement = %#v, original = %#v", replacement, texture)
+	}
+}

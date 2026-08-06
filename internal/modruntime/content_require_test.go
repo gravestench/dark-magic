@@ -1,0 +1,37 @@
+package modruntime
+
+import (
+	"context"
+	"testing"
+	"testing/fstest"
+
+	lua "github.com/yuin/gopher-lua"
+)
+
+func TestContentRequireLoadsModuleFromVFS(t *testing.T) {
+	t.Parallel()
+
+	source := fstest.MapFS{
+		"lua/darkmagic/screens/loading.lua": &fstest.MapFile{Data: []byte(`return { id = "loading" }`)},
+		"boot.lua":                          &fstest.MapFile{Data: []byte(`screen_id = require("darkmagic.screens.loading").id`)},
+	}
+	runtime := New()
+	if err := runtime.RegisterInstaller(ContentRequire(source, "lua")); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	if err := runtime.Execute(context.Background(), source, "boot.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if got := state.GetGlobal("screen_id").String(); got != "loading" {
+			t.Fatalf("screen_id = %q", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
