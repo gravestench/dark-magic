@@ -38,6 +38,7 @@ func ContentRequire(source fs.FS, root string) Installer {
 				state.RaiseError("compiling content module %q: %v", fileName, err)
 				return 0
 			}
+			state.SetFEnv(function, isolatedEnvironment(state))
 			state.Push(function)
 			return 1
 		}))

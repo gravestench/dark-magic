@@ -65,3 +65,30 @@ func TestInvalidateContentModuleReloadsNextRequire(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestContentModulesHaveIsolatedEnvironments(t *testing.T) {
+	source := fstest.MapFS{
+		"lua/first.lua":  &fstest.MapFile{Data: []byte(`private_value = 42; return { value = private_value }`)},
+		"lua/second.lua": &fstest.MapFile{Data: []byte(`return { leaked = private_value ~= nil }`)},
+		"boot.lua":       &fstest.MapFile{Data: []byte(`first_value = require("first").value; leaked = require("second").leaked`)},
+	}
+	runtime := New()
+	if err := runtime.RegisterInstaller(ContentRequire(source, "lua")); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	if err := runtime.Execute(context.Background(), source, "boot.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if state.GetGlobal("first_value") != lua.LNumber(42) || state.GetGlobal("leaked") != lua.LFalse || state.GetGlobal("private_value") != lua.LNil {
+			t.Fatalf("module environment leaked: first=%s leaked=%s global=%s", state.GetGlobal("first_value"), state.GetGlobal("leaked"), state.GetGlobal("private_value"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

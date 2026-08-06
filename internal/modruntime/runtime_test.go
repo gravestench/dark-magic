@@ -8,9 +8,40 @@ import (
 	"sync"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
+
+func TestRuntimeExecutionBudgetInterruptsLuaAndRecovers(t *testing.T) {
+	runtime := New()
+	if err := runtime.SetExecutionBudget(25 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	err := runtime.Execute(context.Background(), fstest.MapFS{"loop.lua": &fstest.MapFile{Data: []byte(`while true do end`)}}, "loop.lua")
+	if err == nil || !strings.Contains(err.Error(), "deadline exceeded") {
+		t.Fatalf("budget error = %v", err)
+	}
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"ok.lua": &fstest.MapFile{Data: []byte(`recovered = true`)}}, "ok.lua"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRuntimeReturnsSourceAwareTraceback(t *testing.T) {
+	runtime := New()
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	err := runtime.Execute(context.Background(), fstest.MapFS{"broken.lua": &fstest.MapFile{Data: []byte("local function inner() error('boom') end\ninner()")}}, "broken.lua")
+	if err == nil || !strings.Contains(err.Error(), "broken.lua") || !strings.Contains(err.Error(), "stack traceback") {
+		t.Fatalf("diagnostic = %v", err)
+	}
+}
 
 func TestRuntimeExecutesVersionedModuleOnOneOwner(t *testing.T) {
 	t.Parallel()

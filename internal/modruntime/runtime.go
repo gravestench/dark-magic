@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"sync"
+	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -27,6 +28,7 @@ type Installer struct {
 
 type request struct {
 	run  func(*lua.LState) error
+	ctx  context.Context
 	stop bool
 	done chan error
 }
@@ -34,12 +36,13 @@ type request struct {
 // Runtime owns one Lua state on one goroutine. All access is serialized through
 // Run; the state is never exposed outside the duration of a Run callback.
 type Runtime struct {
-	mu         sync.RWMutex
-	started    bool
-	modules    []Module
-	installers []Installer
-	requests   chan request
-	done       chan struct{}
+	mu              sync.RWMutex
+	started         bool
+	modules         []Module
+	installers      []Installer
+	requests        chan request
+	done            chan struct{}
+	executionBudget time.Duration
 
 	// activeScope is only read or written by the Lua owner goroutine.
 	activeScope *Scope
@@ -81,7 +84,22 @@ func (r *Runtime) requireActiveScope() (*Scope, error) {
 }
 
 // New constructs a stopped runtime.
-func New() *Runtime { return &Runtime{} }
+func New() *Runtime { return &Runtime{executionBudget: time.Second} }
+
+// SetExecutionBudget bounds each Lua VM invocation. A zero duration disables
+// the runtime deadline but caller cancellation still interrupts Lua execution.
+func (r *Runtime) SetExecutionBudget(budget time.Duration) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.started {
+		return errors.New("modruntime: cannot change execution budget while running")
+	}
+	if budget < 0 {
+		return errors.New("modruntime: execution budget cannot be negative")
+	}
+	r.executionBudget = budget
+	return nil
+}
 
 // RegisterModule registers a capability before the runtime starts.
 func (r *Runtime) RegisterModule(module Module) error {
@@ -164,9 +182,15 @@ func (r *Runtime) Run(ctx context.Context, fn func(*lua.LState) error) error {
 	if !r.started {
 		return errors.New("modruntime: runtime is not started")
 	}
+	requestContext := ctx
+	cancel := func() {}
+	if r.executionBudget > 0 {
+		requestContext, cancel = context.WithTimeout(ctx, r.executionBudget)
+	}
+	defer cancel()
 	response := make(chan error, 1)
 	select {
-	case r.requests <- request{run: fn, done: response}:
+	case r.requests <- request{run: fn, ctx: requestContext, done: response}:
 	case <-ctx.Done():
 		return fmt.Errorf("modruntime: invoke: %w", ctx.Err())
 	}
@@ -187,11 +211,11 @@ func (r *Runtime) Execute(ctx context.Context, source fs.FS, name string) error 
 	return r.Run(ctx, func(state *lua.LState) error {
 		function, err := state.Load(bytes.NewReader(data), "@"+name)
 		if err != nil {
-			return fmt.Errorf("compile %q: %w", name, err)
+			return scriptError(name, "compile", err)
 		}
 		state.Push(function)
 		if err := state.PCall(0, 0, nil); err != nil {
-			return fmt.Errorf("execute %q: %w", name, err)
+			return scriptError(name, "execute", err)
 		}
 		return nil
 	})
@@ -240,6 +264,9 @@ func runLoop(requests <-chan request, done chan<- struct{}, ready chan<- error, 
 			current.done <- nil
 			return
 		}
-		current.done <- current.run(state)
+		state.SetContext(current.ctx)
+		err := current.run(state)
+		state.RemoveContext()
+		current.done <- err
 	}
 }

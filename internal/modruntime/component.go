@@ -37,9 +37,10 @@ func LoadDefinition(ctx context.Context, runtime *Runtime, source fs.FS, name st
 		if err != nil {
 			return fmt.Errorf("compile: %w", err)
 		}
+		state.SetFEnv(function, isolatedEnvironment(state))
 		state.Push(function)
 		if err := state.PCall(0, 1, nil); err != nil {
-			return fmt.Errorf("execute: %w", err)
+			return scriptError(name, "execute component", err)
 		}
 		value := state.Get(-1)
 		state.Pop(1)
@@ -144,7 +145,7 @@ func (c *scriptComponent) Start(ctx context.Context) error {
 	}
 	return c.definition.runtime.runScoped(ctx, c.scope, func(state *lua.LState) error {
 		if err := state.CallByParam(lua.P{Fn: c.definition.start, NRet: 0, Protect: true}, c.definition.table); err != nil {
-			return fmt.Errorf("start Lua component %q: %w", c.definition.ID, err)
+			return scriptError(c.definition.Source, "start component "+c.definition.ID, err)
 		}
 		return nil
 	})
@@ -155,7 +156,7 @@ func (c *scriptComponent) Stop(ctx context.Context) error {
 	if c.definition.stop != nil {
 		lifecycleErr = c.definition.runtime.runScoped(ctx, c.scope, func(state *lua.LState) error {
 			if err := state.CallByParam(lua.P{Fn: c.definition.stop, NRet: 0, Protect: true}, c.definition.table); err != nil {
-				return fmt.Errorf("stop Lua component %q: %w", c.definition.ID, err)
+				return scriptError(c.definition.Source, "stop component "+c.definition.ID, err)
 			}
 			return nil
 		})
@@ -170,7 +171,7 @@ func (c *scriptComponent) ExportState(ctx context.Context) (any, error) {
 	var result any
 	err := c.definition.runtime.runScoped(ctx, c.scope, func(state *lua.LState) error {
 		if err := state.CallByParam(lua.P{Fn: c.definition.export, NRet: 1, Protect: true}, c.definition.table); err != nil {
-			return fmt.Errorf("export Lua component %q state: %w", c.definition.ID, err)
+			return scriptError(c.definition.Source, "export component "+c.definition.ID, err)
 		}
 		value := state.Get(-1)
 		state.Pop(1)
@@ -194,7 +195,7 @@ func (c *scriptComponent) ImportState(ctx context.Context, value any) error {
 			return fmt.Errorf("import Lua component %q state: %w", c.definition.ID, err)
 		}
 		if err := state.CallByParam(lua.P{Fn: c.definition.import_, NRet: 0, Protect: true}, c.definition.table, converted); err != nil {
-			return fmt.Errorf("import Lua component %q state: %w", c.definition.ID, err)
+			return scriptError(c.definition.Source, "import component "+c.definition.ID, err)
 		}
 		return nil
 	})

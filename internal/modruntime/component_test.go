@@ -14,16 +14,24 @@ func TestLuaDefinitionUsesSharedManagerLifecycle(t *testing.T) {
 	t.Parallel()
 
 	runtime := New()
+	calls := ""
+	if err := runtime.RegisterModule(Module{Name: "test.sink/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"add": func(state *lua.LState) int { calls += state.CheckString(1); return 0 }}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
 	source := fstest.MapFS{"system.lua": &fstest.MapFile{Data: []byte(`
+local sink = require("test.sink/v1")
 return {
     id = "game.inventory",
     depends_on = { "engine.render" },
-    start = function(self) calls = (calls or "") .. "start " .. self.id .. ";" end,
-    stop = function(self) calls = calls .. "stop " .. self.id .. ";" end,
+    start = function(self) sink.add("start " .. self.id .. ";") end,
+    stop = function(self) sink.add("stop " .. self.id .. ";") end,
 }`)}}
 	definition, err := LoadDefinition(context.Background(), runtime, source, "system.lua")
 	if err != nil {
@@ -44,13 +52,8 @@ return {
 	if err := manager.DisableCascade(context.Background(), "engine.render"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if got := state.GetGlobal("calls").String(); got != "start game.inventory;stop game.inventory;" {
-			t.Fatalf("calls = %q", got)
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	if calls != "start game.inventory;stop game.inventory;" {
+		t.Fatalf("calls = %q", calls)
 	}
 }
 
@@ -90,6 +93,16 @@ func TestReloadDefinitionTransfersSerializableState(t *testing.T) {
 	t.Parallel()
 
 	runtime := New()
+	var importedCount, importedSecond string
+	if err := runtime.RegisterModule(Module{Name: "test.sink/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"imported": func(state *lua.LState) int {
+			importedCount, importedSecond = state.CheckString(1), state.CheckString(2)
+			return 0
+		}}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -112,21 +125,17 @@ return {
 		t.Fatal(err)
 	}
 	newSource := fstest.MapFS{"system.lua": &fstest.MapFile{Data: []byte(`
+local sink = require("test.sink/v1")
 return {
     id = "game.counter",
     import_state = function(self, state) self.count = state.count; self.second = state.names[2] end,
-    start = function(self) imported_count = self.count; imported_second = self.second end,
+    start = function(self) sink.imported(tostring(self.count), self.second) end,
 }`)}}
 	if err := ReloadDefinition(context.Background(), manager, runtime, newSource, "system.lua"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if state.GetGlobal("imported_count").String() != "7" || state.GetGlobal("imported_second").String() != "b" {
-			t.Fatalf("imported state = %s/%s", state.GetGlobal("imported_count"), state.GetGlobal("imported_second"))
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	if importedCount != "7" || importedSecond != "b" {
+		t.Fatalf("imported state = %s/%s", importedCount, importedSecond)
 	}
 }
 

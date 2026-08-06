@@ -17,6 +17,13 @@ func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	t.Parallel()
 
 	runtime := New()
+	calls := ""
+	if err := runtime.RegisterModule(Module{Name: "test.sink/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"add": func(state *lua.LState) int { calls += state.CheckString(1); return 0 }}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
 	var composer rendercore.Composer
@@ -32,16 +39,17 @@ func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
 local render = require("dm.render/v1")
 local scenes = require("dm.scene/v1")
+local sink = require("test.sink/v1")
 return {
   id = "boot",
   start = function(self)
     scenes.register("world", {
-	  create = function(self) calls = (calls or "") .. "create;" end,
-	  enter = function(self) calls = calls .. "enter;"; self.root = render.create("world") end,
-      update = function(self, dt) calls = calls .. "update;" end,
-      render = function(self) calls = calls .. "render;" end,
-      exit = function(self) calls = calls .. "exit;" end,
-      destroy = function(self) calls = calls .. "destroy;" end,
+	  create = function(self) sink.add("create;") end,
+	  enter = function(self) sink.add("enter;"); self.root = render.create("world") end,
+      update = function(self, dt) sink.add("update;") end,
+      render = function(self) sink.add("render;") end,
+      exit = function(self) sink.add("exit;") end,
+      destroy = function(self) sink.add("destroy;") end,
     })
     scenes.replace("world")
   end,
@@ -78,12 +86,7 @@ return {
 	if len(composer.Snapshot()) != 0 {
 		t.Fatalf("render nodes leaked: %#v", composer.Snapshot())
 	}
-	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if got := state.GetGlobal("calls").String(); got != "create;enter;update;render;exit;destroy;" {
-			t.Fatalf("calls = %q", got)
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	if calls != "create;enter;update;render;exit;destroy;" {
+		t.Fatalf("calls = %q", calls)
 	}
 }

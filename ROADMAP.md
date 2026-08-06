@@ -148,7 +148,7 @@ their own legally obtained game data.
   or shutdown.
 - [x] Keep persistent game/mod state outside disposable Lua states and define a
   versioned serialization boundary.
-- [ ] Add API conformance tests, stack/error diagnostics, and source-aware Lua
+- [x] Add API conformance tests, stack/error diagnostics, and source-aware Lua
   tracebacks.
 
 ## M11: Script-defined components and hot reload
@@ -162,9 +162,9 @@ their own legally obtained game data.
 - [x] Reload transactionally: build and validate a replacement, transfer approved
   persistent state, switch ownership, then tear down the old scope.
 - [x] Preserve the working instance when replacement compilation or startup fails.
-- [ ] Begin with one trusted first-party Lua state and isolated module
+- [x] Begin with one trusted first-party Lua state and isolated module
   environments; evaluate per-mod states for untrusted third-party content later.
-- [ ] Add execution budgets or an isolatable runtime boundary before claiming
+- [x] Add execution budgets or an isolatable runtime boundary before claiming
   support for untrusted scripts.
 
 ## M12: Rendering and composition core
