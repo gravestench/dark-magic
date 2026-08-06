@@ -719,7 +719,7 @@ implementations. The remaining work is tracked explicitly below.
   tests now consume that internal authority, and the old public path is guarded.
   No Go packages remain under `pkg`, and CI rejects new public Go source unless
   the architecture policy is deliberately revised.
-- [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
+- [x] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical
   work have been audited. Generic table storage and the typed catalog have been
@@ -761,7 +761,10 @@ implementations. The remaining work is tracked explicitly below.
   and the former top-level paths are rejected. The typed TSV model layer no longer
   imports the Lua VM: an unused legacy `SoundEntry` table-export method was
   removed, current data exposure remains in `internal/runtime/lua`, and an
-  architecture test prevents this dependency inversion from returning.
+  architecture test prevents this dependency inversion from returning. The
+  repository audit now finds one authority for each named concept, no surviving
+  service-era implementation, and no duplicate developer command roots; future
+  changes should be feature work rather than compatibility consolidation.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

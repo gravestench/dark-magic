@@ -75,8 +75,8 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 				t.Errorf("%s imports retired service-mesh package %s", path, name)
 			}
 			modelRoot := filepath.Join(root, "internal", "game", "data", "model")
-			if name == "github.com/yuin/gopher-lua" && pathWithin(path, modelRoot) {
-				t.Errorf("%s couples typed game data to the Lua VM", path)
+			if pathWithin(path, modelRoot) && (name == "github.com/yuin/gopher-lua" || strings.HasPrefix(name, "github.com/gravestench/dark-magic/internal/")) {
+				t.Errorf("%s couples typed game data to engine/runtime package %s", path, name)
 			}
 		}
 		return nil
