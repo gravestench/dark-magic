@@ -123,6 +123,19 @@ each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use
 `-manifest custom.json` to verify additional hypotheses or `-no-sheets` for a
 metadata-only pass. The command is read-only with respect to the MPQs.
 
+The optional community discovery index can be audited independently:
+
+```shell
+go run ./internal/tools/asset_catalog \
+  -mpq-dir /path/to/diablo-ii \
+  -listfile ./docs/Diablo2UberListfile.txt \
+  -no-sheets \
+  -out ./asset-catalog
+```
+
+Its `listfile-report.json` deliberately distinguishes paths merely listed by
+community research from paths actually resolvable in the selected MPQ set.
+
 Host filesystem paths accepted by Dark Magic consistently expand `~`, `~/`,
 `~\`, `$NAME`, `${NAME}`, and `%NAME%` forms on every supported platform.
 This applies to environment configuration and command input/output paths. MPQ

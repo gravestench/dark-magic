@@ -17,6 +17,7 @@ import (
 func main() {
 	mpqDirectory := flag.String("mpq-dir", os.Getenv("MPQ_DIRECTORY"), "directory containing Diablo II MPQ files")
 	manifestPath := flag.String("manifest", "", "optional JSON manifest; defaults to the curated screen catalog")
+	listfilePath := flag.String("listfile", "", "optional community MPQ listfile to audit against this installation")
 	outputDirectory := flag.String("out", "asset-catalog", "output directory for report.json and contact sheets")
 	noSheets := flag.Bool("no-sheets", false, "skip DC6 contact sheet generation")
 	flag.Parse()
@@ -33,6 +34,10 @@ func main() {
 		fatal(err.Error())
 	}
 	expandedOutputDirectory, err := darkpaths.ExpandHost(*outputDirectory)
+	if err != nil {
+		fatal(err.Error())
+	}
+	expandedListfilePath, err := darkpaths.ExpandHost(*listfilePath)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -94,6 +99,36 @@ func main() {
 		}
 	}
 	fmt.Printf("verified %d/%d hypotheses; report: %s\n", found, len(report.Results), reportPath)
+	if expandedListfilePath != "" {
+		listfile, err := os.Open(expandedListfilePath)
+		if err != nil {
+			fatal(err.Error())
+		}
+		entries, parseErr := assetcatalog.ParseListfile(listfile)
+		closeErr := listfile.Close()
+		if parseErr != nil {
+			fatal(parseErr.Error())
+		}
+		if closeErr != nil {
+			fatal(closeErr.Error())
+		}
+		audit := assetcatalog.AuditListfile(contentFS, entries)
+		auditPath := filepath.Join(expandedOutputDirectory, "listfile-report.json")
+		output, err := os.Create(auditPath)
+		if err != nil {
+			fatal(err.Error())
+		}
+		encoder := json.NewEncoder(output)
+		encoder.SetIndent("", "  ")
+		encodeErr, closeErr := encoder.Encode(audit), output.Close()
+		if encodeErr != nil {
+			fatal(encodeErr.Error())
+		}
+		if closeErr != nil {
+			fatal(closeErr.Error())
+		}
+		fmt.Printf("resolved %d/%d listed paths; report: %s\n", audit.Found, audit.Listed, auditPath)
+	}
 }
 
 func loadManifest(name string) (assetcatalog.Manifest, error) {

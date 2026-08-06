@@ -248,6 +248,12 @@ Confirmed startup/video paths include:
 
 ## Verification work before use
 
+`Diablo2UberListfile.txt` is retained as a broad community discovery index. It
+spans releases, locales, and possibly mod or invalid entries, so inclusion is
+not evidence that a path exists in a particular installation. Use
+`internal/tools/asset_catalog -listfile` to record local resolution separately;
+only decoded/hash-checked assets should become verified presentation facts.
+
 Reference projects disagree in places and sometimes contain project-specific
 choices. Before declaring a fact authoritative:
 
