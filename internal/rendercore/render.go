@@ -216,6 +216,27 @@ func (c *Composer) validateResource(kind ResourceKind, payload any) error {
 	return nil
 }
 
+// UpdateTexture replaces the CPU-side pixels for a managed texture and queues
+// their upload on the renderer owner thread. Video decoders and other streaming
+// producers can call this safely without touching a native graphics API.
+func (c *Composer) UpdateTexture(id ResourceID, pixels image.Image) error {
+	if pixels == nil {
+		return errors.New("rendercore: nil texture update")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	resource, err := c.resource(id)
+	if err != nil {
+		return err
+	}
+	if resource.Kind != ResourceTexture {
+		return fmt.Errorf("rendercore: resource %v is %q, want texture", id, resource.Kind)
+	}
+	resource.Payload = pixels
+	c.pending = append(c.pending, Change{Kind: "resource-update", Resource: *resource, ResourceID: id})
+	return nil
+}
+
 // DestroyResource invalidates a managed resource and queues native destruction.
 func (c *Composer) DestroyResource(id ResourceID) error {
 	c.mu.Lock()

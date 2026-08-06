@@ -66,6 +66,24 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 	case "resource-create":
 		b.resources[change.ResourceID] = change.Resource
 		return nil
+	case "resource-update":
+		resource, exists := b.resources[change.ResourceID]
+		if !exists {
+			return fmt.Errorf("resource %v does not exist", change.ResourceID)
+		}
+		if resource.Kind != rendercore.ResourceTexture || change.Resource.Kind != rendercore.ResourceTexture {
+			return fmt.Errorf("resource %v is not an updateable texture", change.ResourceID)
+		}
+		b.resources[change.ResourceID] = change.Resource
+		for nodeID, resourceID := range b.nodeResources {
+			if resourceID != change.ResourceID {
+				continue
+			}
+			node := b.nodes[nodeID]
+			node.ClearTextures()
+			node.SetImage(change.Resource.Payload.(image.Image))
+		}
+		return nil
 	case "resource-destroy":
 		if _, exists := b.resources[change.ResourceID]; !exists {
 			return fmt.Errorf("resource %v does not exist", change.ResourceID)

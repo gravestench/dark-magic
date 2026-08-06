@@ -67,6 +67,39 @@ func TestManagedResourcePayloadValidation(t *testing.T) {
 	}
 }
 
+func TestTextureUpdatesRemainCheckedAndOrdered(t *testing.T) {
+	var composer Composer
+	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 2, 2)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := image.NewRGBA(image.Rect(0, 0, 4, 3))
+	if err := composer.UpdateTexture(texture, replacement); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := composer.ResourceSnapshot(texture)
+	if err != nil || snapshot.Payload != replacement {
+		t.Fatalf("updated resource = %#v, %v", snapshot, err)
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if got := []string{backend.changes[0].Kind, backend.changes[1].Kind}; !reflect.DeepEqual(got, []string{"resource-create", "resource-update"}) {
+		t.Fatalf("changes = %v", got)
+	}
+	if err := composer.UpdateTexture(ResourceID{Slot: texture.Slot, Generation: texture.Generation + 1}, replacement); err == nil {
+		t.Fatal("updated a stale texture handle")
+	}
+	font, err := composer.CreateResource(ResourceFont, FontData{Bytes: []byte("font"), Format: "ttf", Size: 12})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.UpdateTexture(font, replacement); err == nil {
+		t.Fatal("updated a non-texture resource")
+	}
+}
+
 func TestAnimationLoopModeValidation(t *testing.T) {
 	var composer Composer
 	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 1, 1)))

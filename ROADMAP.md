@@ -373,6 +373,23 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants.
 
+### M17.6: Embedded, single-window Bink playback
+
+- [ ] Decode Bink video and audio in-process behind `videocore.Backend`; keep
+  codec and FFmpeg details out of Lua and scene definitions.
+- [x] Add checked streaming texture updates that transfer decoded frames onto
+  the renderer owner thread without replacing the cinematic scene node.
+- [x] Present decoded frames on `LayerTransition` with aspect-preserving
+  letterboxing inside the existing Dark Magic window.
+- [ ] Stream decoded PCM through the cinematic audio bus and use audio timestamps
+  as the synchronization clock, with bounded frame dropping when rendering lags.
+- [ ] Implement stop, skip, completion, decode failure, device loss, resize, and
+  shutdown cleanup through the existing `dm.video/v1` lifecycle contract.
+- [ ] Prefer the embedded backend in the client and retain FFplay only as an
+  explicit developer/diagnostic fallback.
+- [ ] Verify every discovered BIK variant and capture startup-to-title
+  composition screenshots without committing Blizzard-owned media.
+
 ## M18: Authentic in-game shell
 
 - [ ] Replace the compatibility HUD and placeholder hero with Lua orchestration
