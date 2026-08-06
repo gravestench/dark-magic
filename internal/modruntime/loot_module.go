@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io/fs"
 
-	"github.com/gravestench/dark-magic/pkg/loot"
+	"github.com/gravestench/dark-magic/internal/game/loot"
 	lua "github.com/yuin/gopher-lua"
 )
 

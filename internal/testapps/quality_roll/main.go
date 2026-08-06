@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gravestench/dark-magic/internal/game/loot"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/pkg/loot"
 )
 
 func main() {
