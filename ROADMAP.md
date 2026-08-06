@@ -354,7 +354,11 @@ implementations. The remaining work is tracked explicitly below.
   English 640x292 BIK entries as VFS-aware localized controls; playback and
   startup sequencing proceed under M17.2.
 - [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
-  behavior.
+  behavior. A scoped backend-neutral `dm.video/v1` capability now keeps large
+  MPQ payloads outside Lua and exposes deterministic playing/complete/failed/
+  stopped lifecycle state. The verified Blizzard and Blizzard North startup
+  BIKs sequence with explicit skip/failure policy, and the Cinematics selector
+  drives the same contract. A native Bink 1 decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.

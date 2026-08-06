@@ -39,6 +39,14 @@
     "frame": 0,
     "hotspot": { "x": 0, "y": 0 }
   },
+  "startup": {
+    "sequence": [
+      "data/local/video/New_Bliz640x480.bik",
+      "data/local/video/BlizNorth640x480.bik"
+    ],
+    "failure": "skip",
+    "skippable": true
+  },
   "screens": {
     "title": {
       "background": "data/global/ui/FrontEnd/TitleScreen.dc6",

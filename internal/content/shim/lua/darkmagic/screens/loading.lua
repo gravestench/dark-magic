@@ -1,6 +1,11 @@
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
+local video = require("dm.video/v1")
+local data = require("dm.data/v1")
+
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local startup = manifest.startup
 
 return {
     enter = function(self)
@@ -8,11 +13,31 @@ return {
         self.root:set_z(1)
         self.root:set_position(400, 300)
         self.root:fill_rect(800, 600, 8, 8, 12, 255)
+        self.index = 0
+        self:advance()
     end,
 
-    update = function(self, elapsed)
-        if input.pressed("confirm") then
-            scenes.replace("title")
+    advance = function(self)
+        if self.playback then self.playback:stop(); self.playback = nil end
+        while self.index < #startup.sequence do
+            self.index = self.index + 1
+            if video.available() then
+                local ok, playback = pcall(video.play, startup.sequence[self.index])
+                if ok then self.playback = playback; return end
+                if startup.failure ~= "skip" then error(playback) end
+            end
+        end
+        if not self.finished then self.finished = true; scenes.replace("title") end
+    end,
+
+    update = function(self)
+        if self.finished then return end
+        if startup.skippable and (input.pressed("confirm") or input.pressed("cancel")) then self:advance(); return end
+        if not self.playback then self:advance(); return end
+        local status = self.playback:status()
+        if status.state == "complete" or status.state == "stopped" then self:advance() end
+        if status.state == "failed" then
+            if startup.failure == "skip" then self:advance() else error(status.error or "video playback failed") end
         end
     end,
 }

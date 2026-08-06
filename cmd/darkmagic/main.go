@@ -28,6 +28,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
+	"github.com/gravestench/dark-magic/internal/videocore"
 	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/scene"
@@ -86,6 +87,9 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videocore.Unavailable{}, contentFS)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RecordsModule(records)); err != nil {

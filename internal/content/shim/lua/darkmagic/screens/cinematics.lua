@@ -4,6 +4,7 @@ local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
 local vfs = require("dm.vfs/v1")
+local video = require("dm.video/v1")
 local controls = require("darkmagic.ui.controls")
 local cursor = require("darkmagic.ui.cursor")
 local dc6 = require("darkmagic.ui.dc6")
@@ -29,7 +30,11 @@ return {
                 width = screen.list.width,
                 height = screen.list.row_height,
                 enabled = vfs.source(definition.path) ~= nil,
-                on_activate = function() self.selection = definition.path end,
+                on_activate = function()
+                    if not video.available() then return end
+                    local ok, playback = pcall(video.play, definition.path)
+                    if ok then self.playback = playback end
+                end,
             }
             if render.assets_available() then
                 local label = render.create("hud", self.root)
@@ -52,6 +57,16 @@ return {
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
     update = function(self)
+        if self.playback then
+            if input.pressed("confirm") or input.pressed("cancel") then
+                self.playback:stop()
+                self.playback = nil
+                return
+            end
+            local status = self.playback:status()
+            if status.state ~= "playing" then self.playback = nil end
+            return
+        end
         self.controls:update()
         self.cursor:update()
         if input.pressed("cancel") then scenes.replace("main_menu") end
