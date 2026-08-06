@@ -10,9 +10,14 @@ import (
 // This adapter disappears when input is constructed directly by the new host.
 func (s *Service) Snapshot() inputcore.Frame {
 	x, y := s.MouseCursorState()
+	var text []rune
+	for character := rl.GetCharPressed(); character > 0; character = rl.GetCharPressed() {
+		text = append(text, rune(character))
+	}
 	return inputcore.Frame{
 		CursorX: float64(x),
 		CursorY: float64(y),
+		Text:    string(text),
 		Actions: map[string]inputcore.ActionState{
 			"pointer_primary": actionState(s.MouseButtonState()[rl.MouseLeftButton]),
 			"confirm":         actionState(s.KeyState(rl.KeyEnter)),
@@ -27,6 +32,7 @@ func (s *Service) Snapshot() inputcore.Frame {
 			"down":            actionState(s.KeyState(rl.KeyDown)),
 			"left":            actionState(s.KeyState(rl.KeyLeft)),
 			"right":           actionState(s.KeyState(rl.KeyRight)),
+			"backspace":       actionState(s.KeyState(rl.KeyBackspace)),
 		},
 	}
 }

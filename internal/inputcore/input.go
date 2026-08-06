@@ -13,8 +13,18 @@ type ActionState struct {
 // Frame is an immutable input snapshot published by a native backend.
 type Frame struct {
 	Actions map[string]ActionState
+	Text    string
 	CursorX float64
 	CursorY float64
+}
+
+// Text returns the UTF-8 text entered during the current frame.
+func (s *Store) Text() string {
+	value := s.current.Load()
+	if value == nil {
+		return ""
+	}
+	return value.(Frame).Text
 }
 
 // Store publishes and reads cloned immutable frame snapshots.

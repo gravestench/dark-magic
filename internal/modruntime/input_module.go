@@ -10,6 +10,10 @@ import (
 func InputModule(input *inputcore.Store) Module {
 	return Module{Name: "dm.input/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"text": func(state *lua.LState) int {
+				state.Push(lua.LString(input.Text()))
+				return 1
+			},
 			"down": func(state *lua.LState) int {
 				action := input.Action(state.CheckString(1))
 				state.Push(lua.LBool(action.Down || action.Pressed))

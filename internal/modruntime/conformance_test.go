@@ -35,7 +35,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
-		"dm.vfs/v1": {"read", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor"},
+		"dm.vfs/v1": {"read", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor", "text"},
 		"dm.data/v1":  {"load", "load_manifest"},
 		"dm.audio/v1": {"exists", "play"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"}, "dm.save/v1": {"create"},

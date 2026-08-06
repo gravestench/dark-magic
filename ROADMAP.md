@@ -292,11 +292,11 @@ implementations. The remaining work is tracked explicitly below.
   frame events are implemented; assembled multi-component rendering remains.
 - [x] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
   layout with color, alignment, wrapping, clipping, and fallback behavior.
-- [ ] M16.4: Implement reusable Lua controls with pointer/controller focus,
+- [x] M16.4: Implement reusable Lua controls with pointer/controller focus,
   hit-testing, state visuals, activation sounds, and accessibility metadata.
-  Buttons now provide pointer hit-testing, directional focus, disabled/hidden
-  states, activation and visual-state callbacks, and accessibility snapshots;
-  text fields, checkboxes, scrollbars, and focus scopes remain.
+  Buttons, UTF-8 text fields, checkboxes, and scrollbars provide pointer
+  hit-testing, scoped directional focus, disabled/hidden states, activation,
+  change/sound and visual-state callbacks, and accessibility snapshots.
 - [ ] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
   streaming, looping, fades, pan, grouping, and record-driven lookup.
 - [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
