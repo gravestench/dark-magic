@@ -3,6 +3,7 @@ local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
+local audio = require("dm.audio/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
 local cursor = require("darkmagic.ui.cursor")
@@ -37,7 +38,14 @@ return {
                     if class.show then class.show((state == "hover" or state == "focused") and "hover" or "unselected") end
                 end,
                 on_activate=function()
+                    if self.selected and self.selected ~= class then
+                        local deselect = self.selected.definition.deselect_sound
+                        if deselect and audio.exists(deselect) then audio.play(deselect, {bus="ui"}) end
+                    end
                     self.selected = class
+                    if definition.select_sound and audio.exists(definition.select_sound) then
+                        audio.play(definition.select_sound, {bus="ui"})
+                    end
                     if class.show then class.show("selected") end
                     self.dialog = dialog.text_entry(self.root, screen.dialog, manifest.fonts.exocet10,
                         manifest.palettes[screen.dialog.palette], manifest.palettes[manifest.fonts.exocet10.palette],

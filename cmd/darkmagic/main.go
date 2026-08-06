@@ -64,7 +64,7 @@ func run(contentFS *content.FS) error {
 	scenes := modruntime.NewScenes(scripts, navigation.New())
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
-	saves := savecore.New(savecore.Character{ID: "default-amazon", Name: "Dark Wanderer", Class: "Amazon", Level: 1})
+	saves := savecore.New()
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
