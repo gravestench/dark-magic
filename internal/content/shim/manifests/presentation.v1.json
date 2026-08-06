@@ -84,7 +84,10 @@
     "formal_small": {"font":"formal10_static","text_color":"white"},
     "formal_body": {"font":"formal11_units","text_color":"white"},
     "formal_large": {"font":"formal12_static","text_color":"white"},
-    "frontend_metadata": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "frontend_version": {"font":"formal12_static","transform":"sky","text_color":"white"},
+    "frontend_legal": {"font":"formal12_static","transform":"sky","text_color":"gold"},
+    "character_select_title": {"font":"font42","transform":"sky","text_color":"gold"},
+    "character_select_metadata": {"font":"font16","transform":"sky","text_color":"white"},
     "button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
     "button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
     "label_button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
@@ -133,8 +136,8 @@
       "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
       "palette": "sky",
       "labels": {
-        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "key": "darkmagic.frontend.version" },
-        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "key": "darkmagic.frontend.legal" }
+        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "style": "frontend_version", "key": "darkmagic.frontend.version" },
+        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "style": "frontend_legal", "key": "darkmagic.frontend.legal" }
       },
       "controls": {
         "single_player": {
@@ -247,8 +250,8 @@
       "selection": "data/global/ui/CharSelect/charselectbox.dc6",
       "selection_palette": "sky",
       "preview_palette": "fechar",
-      "metadata_font": "font16",
-      "title": {"x":400,"y":45,"width":760,"font":"font42"},
+      "metadata_style": "character_select_metadata",
+      "title": {"x":400,"y":45,"width":760,"style":"character_select_title"},
       "grid": {
         "x": 37, "y": 86, "columns": 2, "rows": 4,
         "cell_width": 272, "cell_height": 92,

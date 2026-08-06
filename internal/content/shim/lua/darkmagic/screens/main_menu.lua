@@ -58,7 +58,7 @@ return {
             if id == "version" then
                 text_value = string.format(text_value, app.version())
             end
-            text.set(label, "frontend_metadata", text_value, definition.width, definition.align)
+            text.set(label, definition.style, text_value, definition.width, definition.align)
             label:set_position(definition.x, definition.y)
         end
     end,

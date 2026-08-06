@@ -638,7 +638,9 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Replace screen-local font paths and approximate colors with semantic text
   styles pairing the verified bitmap fonts with units, static, sky, and other
   context-specific palettes. The shared style vocabulary and character panel
-  migration are complete; remaining screens still need migration.
+  migration are complete. Frontend footer and character-select title/metadata
+  now use their verified Formal12/Static, Font42/Units, and Font16 pairings with
+  separate gold, white, and green PL2 runs; remaining screens still need migration.
 - [ ] Implement reusable authored button families with their correct DC6 assets,
   segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
   keyboard focus, activation sounds, and hit bounds. The shared segmented-button

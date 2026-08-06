@@ -68,7 +68,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
 	}
-	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text", "tooltip", "disabled"} {
+	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text", "tooltip", "disabled"} {
 		style, ok := manifest.Styles[name]
 		if !ok {
 			t.Errorf("presentation manifest is missing text style %q", name)

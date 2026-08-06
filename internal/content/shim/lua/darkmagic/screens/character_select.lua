@@ -13,6 +13,7 @@ local ui_button = require("darkmagic.ui.button")
 local cursor = require("darkmagic.ui.cursor")
 local dc6 = require("darkmagic.ui.dc6")
 local dialog = require("darkmagic.ui.dialog")
+local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.character_select
@@ -58,14 +59,7 @@ return {
                 return
             end
             local definition = screen.title
-            local title_font = manifest.fonts[definition.font]
-            self.title:set_text(
-                title_font.table,
-                title_font.sheet,
-                manifest.palettes[title_font.palette],
-                character.name,
-                { red = 210, green = 180, blue = 110, max_width = definition.width, align = "center" }
-            )
+            text.set(self.title, definition.style, character.name, definition.width, "center")
             self.title:set_position(definition.x, definition.y)
         end
 
@@ -173,19 +167,18 @@ return {
                         if character.hardcore then
                             flags[#flags + 1] = "Hardcore"
                         end
-                        local metadata_font = manifest.fonts[screen.metadata_font]
-                        local label_width, label_height = slot.label:set_text(
-                            metadata_font.table,
-                            metadata_font.sheet,
-                            manifest.palettes[metadata_font.palette],
+                        local label_width, label_height = text.set(
+                            slot.label,
+                            screen.metadata_style,
                             string.format(
-                                "%s\nLevel %d %s\n%s",
+                                "[gold]%s\n[white]Level %d %s\n[green]%s",
                                 character.name,
                                 character.level,
                                 character.class,
                                 table.concat(flags, " ")
                             ),
-                            { red = 210, green = 180, blue = 110, max_width = 185, align = "left" }
+                            185,
+                            "left"
                         )
                         local column = (slot_index - 1) % screen.grid.columns
                         local row = math.floor((slot_index - 1) / screen.grid.columns)
