@@ -640,7 +640,10 @@ implementations. The remaining work is tracked explicitly below.
   context-specific palettes. The shared style vocabulary and character panel
   migration are complete. Frontend footer and character-select title/metadata
   now use their verified Formal12/Static, Font42/Units, and Font16 pairings with
-  separate gold, white, and green PL2 runs; remaining screens still need migration.
+  separate gold, white, and green PL2 runs. Character creation now uses the
+  verified Font30/Units heading and class name, Font16/Units description and
+  gold option labels through the shared style path; remaining screens still need
+  migration.
 - [ ] Implement reusable authored button families with their correct DC6 assets,
   segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
   keyboard focus, activation sounds, and hit bounds. The shared segmented-button

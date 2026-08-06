@@ -88,6 +88,10 @@
     "frontend_legal": {"font":"formal12_static","transform":"sky","text_color":"gold"},
     "character_select_title": {"font":"font42","transform":"sky","text_color":"gold"},
     "character_select_metadata": {"font":"font16","transform":"sky","text_color":"white"},
+    "character_create_heading": {"font":"font30","transform":"fechar","text_color":"white"},
+    "character_create_class": {"font":"font30","transform":"fechar","text_color":"white"},
+    "character_create_description": {"font":"font16","transform":"fechar","text_color":"white"},
+    "character_create_option": {"font":"font16","transform":"fechar","text_color":"gold"},
     "button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
     "button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
     "label_button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
@@ -210,10 +214,11 @@
         "frames_per_second": 15
       },
       "labels": {
-        "heading": {"x":400,"y":35,"width":760,"font":"font30","key":"darkmagic.character_create.heading"},
-        "class": {"x":400,"y":78,"width":760,"font":"font30"},
-        "description": {"x":400,"y":118,"width":600,"font":"font16"}
+        "heading": {"x":400,"y":35,"width":760,"style":"character_create_heading","key":"darkmagic.character_create.heading"},
+        "class": {"x":400,"y":78,"width":760,"style":"character_create_class"},
+        "description": {"x":400,"y":118,"width":600,"style":"character_create_description"}
       },
+      "option_style": "character_create_option",
       "stage": {
         "Amazon": {"anchor":{"x":100,"y":339},"hit":{"x":70,"y":220,"width":55,"height":200}},
         "Assassin": {"anchor":{"x":231,"y":365},"hit":{"x":175,"y":235,"width":50,"height":180}},

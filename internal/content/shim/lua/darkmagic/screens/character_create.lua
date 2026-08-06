@@ -15,6 +15,7 @@ local controls = require("darkmagic.ui.controls")
 local ui_button = require("darkmagic.ui.button")
 local cursor = require("darkmagic.ui.cursor")
 local dialog = require("darkmagic.ui.dialog")
+local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.character_create
@@ -55,14 +56,7 @@ return {
             self.class_name:set_z(100)
             self.class_description:set_z(100)
             local heading = screen.labels.heading
-            local heading_font = manifest.fonts[heading.font]
-            self.heading:set_text(
-                heading_font.table,
-                heading_font.sheet,
-                manifest.palettes[heading_font.palette],
-                assert(locale.text(heading.key)),
-                { red = 210, green = 180, blue = 110, max_width = heading.width, align = "center" }
-            )
+            text.set(self.heading, heading.style, assert(locale.text(heading.key)), heading.width, "center")
             self.heading:set_position(heading.x, heading.y)
         end
         self.controls = controls.new()
@@ -128,24 +122,22 @@ return {
                     if self.class_name and (state == "hover" or state == "focused") then
                         local class_id = string.lower(definition.class)
                         local name_label = screen.labels.class
-                        local name_font = manifest.fonts[name_label.font]
-                        self.class_name:set_text(
-                            name_font.table,
-                            name_font.sheet,
-                            manifest.palettes[name_font.palette],
+                        text.set(
+                            self.class_name,
+                            name_label.style,
                             assert(locale.text("darkmagic.character_class." .. class_id .. ".name")),
-                            { red = 210, green = 180, blue = 110, max_width = name_label.width, align = "center" }
+                            name_label.width,
+                            "center"
                         )
                         self.class_name:set_position(name_label.x, name_label.y)
 
                         local description = screen.labels.description
-                        local description_font = manifest.fonts[description.font]
-                        self.class_description:set_text(
-                            description_font.table,
-                            description_font.sheet,
-                            manifest.palettes[description_font.palette],
+                        text.set(
+                            self.class_description,
+                            description.style,
                             assert(locale.text("darkmagic.character_class." .. class_id .. ".description")),
-                            { max_width = description.width, align = "center" }
+                            description.width,
+                            "center"
                         )
                         self.class_description:set_position(description.x, description.y)
                     end
@@ -236,17 +228,12 @@ return {
             if render.assets_available() then
                 visual = render.create("hud", self.root)
                 label = render.create("hud", self.root)
-                local label_width = label:set_text(
-                    manifest.fonts.exocet10.table,
-                    manifest.fonts.exocet10.sheet,
-                    manifest.palettes[manifest.fonts.exocet10.palette],
+                local label_width = text.set(
+                    label,
+                    screen.option_style,
                     assert(locale.text(definition.label)),
-                    {
-                        red = 210,
-                        green = 180,
-                        blue = 110,
-                        align = "left",
-                    }
+                    0,
+                    "left"
                 )
                 label:set_position(
                     definition.x + 28 + label_width / 2,
