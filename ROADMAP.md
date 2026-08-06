@@ -645,7 +645,9 @@ implementations. The remaining work is tracked explicitly below.
   and text-only label-button components, pressed-state input, and main-menu,
   TCP/IP, cinematics, character-select, and character-creation migrations are
   complete. Both single-frame and segmented definitions are supported with
-  authored family text offsets; dialogs and panel controls still need migration.
+  authored family text offsets, and inventory/character icon-only close controls
+  share the same state and sound contract. Text-entry and confirmation dialogs
+  now use visible shared label buttons and semantic text styles.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
   per-run colors, and optional glyph-sized background highlights.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and

@@ -9,6 +9,7 @@ local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
+local button = require("darkmagic.ui.button")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.inventory
@@ -99,24 +100,12 @@ return {
         end
 
         local close = screen.close
-        local close_node = dc6_at(self.root, close.sheet, manifest.palettes[close.palette], close.up_frame, close.x, close.y)
-        self.controls:add({
-            id = "close",
-            label = assert(locale.text(close.label)),
-            x = close.x,
-            y = close.y,
-            width = close.width,
-            height = close.height,
+        button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
+            layer = "modal",
+            show_label = false,
+            sound = manifest.sounds.button,
             on_activate = function()
                 scenes.pop()
-            end,
-            on_state = function(_, state)
-                close_node:set_dc6(
-                    close.sheet,
-                    manifest.palettes[close.palette],
-                    0,
-                    state == "hover" and close.down_frame or close.up_frame
-                )
             end,
         })
     end,

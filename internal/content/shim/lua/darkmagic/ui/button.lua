@@ -43,13 +43,15 @@ function button.create(root, manager, id, definition, label, options)
             end
         end
 
-        local label_node = render.create(layer, root)
-        draw_label = function(style)
-            text.set(label_node, style, label, definition.width, "center")
-            label_node:set_position(
-                definition.x + definition.width / 2,
-                definition.y + definition.height / 2 + text_offset
-            )
+        if options.show_label ~= false then
+            local label_node = render.create(layer, root)
+            draw_label = function(style)
+                text.set(label_node, style, label, definition.width, "center")
+                label_node:set_position(
+                    definition.x + definition.width / 2,
+                    definition.y + definition.height / 2 + text_offset
+                )
+            end
         end
         draw(up_frames)
         draw_label(normal_style)
@@ -63,6 +65,7 @@ function button.create(root, manager, id, definition, label, options)
         width = definition.width,
         height = definition.height,
         enabled = options.enabled,
+        scope = options.scope or definition.scope,
         on_activate = function(current)
             local sound = options.sound or manifest.sounds.select
             if sound and audio.exists(sound) then

@@ -38,6 +38,7 @@ function label_button.create(root, manager, definition, label, options)
         width = definition.width,
         height = definition.height,
         enabled = options.enabled,
+        scope = options.scope or definition.scope,
         on_activate = function(current)
             local sound = options.sound or manifest.sounds.select
             if sound and audio.exists(sound) then
@@ -57,6 +58,7 @@ function label_button.create(root, manager, definition, label, options)
             end
         end,
     }
+    control.visual = label_node
     manager:add(control)
     return control
 end

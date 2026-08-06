@@ -4,10 +4,12 @@
 -- Its callback returns false to keep the dialog open after validation fails.
 local render = require("dm.render/v1")
 local controls = require("darkmagic.ui.controls")
+local label_button = require("darkmagic.ui.label_button")
+local text = require("darkmagic.ui.text")
 
 local M = {}
 
-function M.text_entry(parent, definition, font, popup_palette, font_palette, prompt, initial, on_accept)
+function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, on_accept)
     local dialog = {
         open = true,
         nodes = {},
@@ -34,32 +36,36 @@ function M.text_entry(parent, definition, font, popup_palette, font_palette, pro
         width = definition.width - 40,
         height = 30,
     })
-    dialog.manager:add({
+    local ok_control = label_button.create(parent, dialog.manager, {
         id = "ok",
-        scope = "dialog",
-        label = "OK",
         x = definition.x + 35,
         y = definition.y + 125,
         width = 80,
         height = 30,
+    }, "OK", {
+        layer = "modal",
+        scope = "dialog",
         on_activate = function()
             if on_accept(field.value) ~= false then
                 dialog:close()
             end
         end,
     })
-    dialog.manager:add({
+    local cancel_control = label_button.create(parent, dialog.manager, {
         id = "cancel",
-        scope = "dialog",
-        label = "Cancel",
         x = definition.x + 145,
         y = definition.y + 125,
         width = 80,
         height = 30,
+    }, "Cancel", {
+        layer = "modal",
+        scope = "dialog",
         on_activate = function()
             dialog:close()
         end,
     })
+    dialog.nodes[#dialog.nodes + 1] = ok_control.visual
+    dialog.nodes[#dialog.nodes + 1] = cancel_control.visual
     dialog.manager:set_scope("dialog")
 
     -- Text is redrawn only when the field changes, rather than every frame.
@@ -67,13 +73,7 @@ function M.text_entry(parent, definition, font, popup_palette, font_palette, pro
         dialog.text = render.create("modal", parent)
         dialog.nodes[#dialog.nodes + 1] = dialog.text
         local function redraw()
-            dialog.text:set_text(font.table, font.sheet, font_palette, prompt .. "\n" .. field.value, {
-                red = 210,
-                green = 180,
-                blue = 110,
-                max_width = definition.width - 40,
-                align = "center",
-            })
+            text.set(dialog.text, "dialog_text", prompt .. "\n" .. field.value, definition.width - 40, "center")
             dialog.text:set_position(definition.x + definition.width / 2, definition.y + 70)
         end
         field.on_change = redraw
@@ -99,7 +99,7 @@ end
 
 -- Build a focus-isolated yes/no confirmation. The callback receives true only
 -- for explicit confirmation; cancel input and the secondary button report false.
-function M.confirm(parent, definition, font, popup_palette, font_palette, message, yes_label, no_label, on_decide)
+function M.confirm(parent, definition, _, popup_palette, _, message, yes_label, no_label, on_decide)
     local dialog = {
         open = true,
         nodes = {},
@@ -125,43 +125,41 @@ function M.confirm(parent, definition, font, popup_palette, font_palette, messag
         on_decide(decision == true)
     end
 
-    dialog.manager:add({
+    local yes_control = label_button.create(parent, dialog.manager, {
         id = "yes",
-        scope = "dialog",
-        label = yes_label,
         x = definition.yes.x,
         y = definition.yes.y,
         width = definition.yes.width,
         height = definition.yes.height,
+    }, yes_label, {
+        layer = "modal",
+        scope = "dialog",
         on_activate = function()
             dialog:close(true)
         end,
     })
-    dialog.manager:add({
+    local no_control = label_button.create(parent, dialog.manager, {
         id = "no",
-        scope = "dialog",
-        label = no_label,
         x = definition.no.x,
         y = definition.no.y,
         width = definition.no.width,
         height = definition.no.height,
+    }, no_label, {
+        layer = "modal",
+        scope = "dialog",
         on_activate = function()
             dialog:close(false)
         end,
     })
+    dialog.nodes[#dialog.nodes + 1] = yes_control.visual
+    dialog.nodes[#dialog.nodes + 1] = no_control.visual
     dialog.manager:set_scope("dialog")
 
     if render.assets_available() then
-        local text = render.create("modal", parent)
-        text:set_text(font.table, font.sheet, font_palette, message, {
-            red = 210,
-            green = 180,
-            blue = 110,
-            max_width = definition.width - 40,
-            align = "center",
-        })
-        text:set_position(definition.x + definition.width / 2, definition.y + 45)
-        dialog.nodes[#dialog.nodes + 1] = text
+        local message_node = render.create("modal", parent)
+        text.set(message_node, "dialog_text", message, definition.width - 40, "center")
+        message_node:set_position(definition.x + definition.width / 2, definition.y + 45)
+        dialog.nodes[#dialog.nodes + 1] = message_node
     end
 
     function dialog:update()
