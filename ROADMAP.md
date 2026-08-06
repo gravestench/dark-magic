@@ -436,13 +436,15 @@ implementations. The remaining work is tracked explicitly below.
   lifecycle instead of leaving cinematic playback hung indefinitely.
 - [x] Prefer the embedded backend in native FFmpeg client builds and retain
   FFplay as the portable developer/diagnostic fallback.
-- [ ] Verify every discovered BIK variant and capture startup-to-title
+- [x] Verify every discovered BIK variant and capture startup-to-title
   composition screenshots without committing Blizzard-owned media. A native
   integration matrix now requires successful video and audio decoding for both
   startup movies and all seven localized act cinematics. An opt-in owner-thread
   capture session now waits for stable presented scene frames, writes numbered
-  local PNGs, and records dimensions plus hashes in `report.json`; completing a
-  native capture review remains.
+  local PNGs, and records dimensions plus hashes in `report.json`. Native review
+  verified a clean embedded startup-to-title transition and the centered title
+  composition at 800x600. The loading capture also exposed its intentionally
+  incomplete progressive sweep; completing that composition remains in M17.5.
 
 ## M18: Authentic in-game shell
 

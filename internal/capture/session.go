@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/png"
@@ -13,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+var errBlankFrame = errors.New("framebuffer contains no visible pixels")
 
 type Screenshotter interface {
 	CaptureScreenshot(string) error
@@ -86,6 +89,10 @@ func (s *Session) Observe(stack []string) {
 		return
 	}
 	result, err := inspect(path, scene, name)
+	if errors.Is(err, errBlankFrame) {
+		_ = os.Remove(path)
+		return
+	}
 	if err != nil {
 		s.err = err
 		return
@@ -116,7 +123,7 @@ func inspect(path, scene, name string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	configuration, _, decodeErr := image.DecodeConfig(file)
+	frame, _, decodeErr := image.Decode(file)
 	closeErr := file.Close()
 	if decodeErr != nil {
 		return Result{}, decodeErr
@@ -124,8 +131,30 @@ func inspect(path, scene, name string) (Result, error) {
 	if closeErr != nil {
 		return Result{}, closeErr
 	}
+	if !hasVisiblePixels(frame) {
+		return Result{}, errBlankFrame
+	}
 	digest := sha256.Sum256(data)
-	return Result{Scene: scene, File: name, SHA256: hex.EncodeToString(digest[:]), Width: configuration.Width, Height: configuration.Height}, nil
+	bounds := frame.Bounds()
+	return Result{Scene: scene, File: name, SHA256: hex.EncodeToString(digest[:]), Width: bounds.Dx(), Height: bounds.Dy()}, nil
+}
+
+func hasVisiblePixels(frame image.Image) bool {
+	bounds := frame.Bounds()
+	required := (bounds.Dx()*bounds.Dy() + 49) / 50
+	visible := 0
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			red, green, blue, alpha := frame.At(x, y).RGBA()
+			if alpha != 0 && (red > 0x0400 || green > 0x0400 || blue > 0x0400) {
+				visible++
+				if visible >= required {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func safeName(value string) string {

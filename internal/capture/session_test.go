@@ -9,7 +9,10 @@ import (
 	"testing"
 )
 
-type fakeScreenshotter struct{ calls int }
+type fakeScreenshotter struct {
+	calls      int
+	blankCalls int
+}
 
 func (f *fakeScreenshotter) CaptureScreenshot(name string) error {
 	f.calls++
@@ -18,12 +21,34 @@ func (f *fakeScreenshotter) CaptureScreenshot(name string) error {
 		return err
 	}
 	canvas := image.NewRGBA(image.Rect(0, 0, 8, 6))
-	canvas.Set(0, 0, color.White)
+	if f.calls > f.blankCalls {
+		canvas.Set(0, 0, color.White)
+	}
 	encodeErr, closeErr := png.Encode(file, canvas), file.Close()
 	if encodeErr != nil {
 		return encodeErr
 	}
 	return closeErr
+}
+
+func TestSessionRetriesBlankFramebuffer(t *testing.T) {
+	directory := t.TempDir()
+	capturer := &fakeScreenshotter{blankCalls: 1}
+	session, err := New(directory, "loading", 1, capturer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Observe([]string{"loading"})
+	if len(session.results) != 0 {
+		t.Fatalf("blank frame was captured: %#v", session.results)
+	}
+	session.Observe([]string{"loading"})
+	if err := session.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if capturer.calls != 2 || len(session.results) != 1 {
+		t.Fatalf("calls = %d; results = %#v", capturer.calls, session.results)
+	}
 }
 
 func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
