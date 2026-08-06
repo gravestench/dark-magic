@@ -12,11 +12,7 @@ import (
 )
 
 func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("locate architecture test")
-	}
-	root := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
+	root := repositoryRoot(t)
 	forbidden := map[string]struct{}{
 		"github.com/gravestench/dark-magic/pkg/paths":                 {},
 		"github.com/gravestench/dark-magic/pkg/prettylog":             {},
@@ -61,4 +57,29 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestNoAccidentalPublicGoPackages(t *testing.T) {
+	pkgRoot := filepath.Join(repositoryRoot(t), "pkg")
+	err := filepath.WalkDir(pkgRoot, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") {
+			t.Errorf("public Go source requires an explicit compatibility commitment: %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func repositoryRoot(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("locate architecture test")
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
 }

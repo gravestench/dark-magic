@@ -691,7 +691,7 @@ implementations. The remaining work is tracked explicitly below.
   not depend on presentation or game logic, Lua-facing adapters do not become
   global service locators, platform backends remain behind engine contracts, and
   commands stay thin composition roots.
-- [ ] Move accidental public packages from `pkg` into their final `internal`
+- [x] Move accidental public packages from `pkg` into their final `internal`
   homes incrementally, updating imports and tests without compatibility aliases
   unless a real external consumer is identified. Keep independently versioned
   codec modules outside this repository. Host-path expansion is now owned by
@@ -717,6 +717,8 @@ implementations. The remaining work is tracked explicitly below.
   Diablo TSV schema and legacy lookup corpus is preserved under
   `internal/game/data/model`; the game-data catalog and real-asset validation
   tests now consume that internal authority, and the old public path is guarded.
+  No Go packages remain under `pkg`, and CI rejects new public Go source unless
+  the architecture policy is deliberately revised.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical
