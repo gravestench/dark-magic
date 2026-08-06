@@ -41,7 +41,7 @@ local pages = {
         draw = function(root)
             local rows = {
                 { "frontend_legal", "Formal12 / Static / Sky PL2 / gold" },
-                { "button_normal", "Exocet10 / Units / Fechar PL2 / gold" },
+                { "button_normal", "Exocet10 / Units / neutral 0x646464 modulation" },
                 { "character_select_title", "Font42 / Units / Sky PL2 / gold" },
                 { "character_select_metadata", "Font16 / Units / Sky PL2 / white" },
                 { "panel_label", "Font6 / Units / Act I PL2 / white" },

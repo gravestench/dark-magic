@@ -29,6 +29,12 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		Styles     map[string]struct {
 			Font      string `json:"font"`
 			Transform string `json:"transform"`
+			Color     struct {
+				Red   int `json:"red"`
+				Green int `json:"green"`
+				Blue  int `json:"blue"`
+				Alpha int `json:"alpha"`
+			} `json:"color"`
 		} `json:"text_styles"`
 		Sounds   map[string]string          `json:"sounds"`
 		Cursor   json.RawMessage            `json:"cursor"`
@@ -85,6 +91,17 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	}
 	if len(manifest.Cursor) == 0 || len(manifest.Startup) == 0 {
 		t.Fatal("presentation manifest must own cursor and startup facts")
+	}
+	for _, name := range []string{"button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text"} {
+		if manifest.Styles[name].Transform != "" {
+			t.Errorf("Exocet UI style %q must use its Units palette directly, not PL2 transform %q", name, manifest.Styles[name].Transform)
+		}
+	}
+	for _, name := range []string{"button_normal", "label_button_normal", "dialog_text"} {
+		got := manifest.Styles[name].Color
+		if got.Red != 100 || got.Green != 100 || got.Blue != 100 || got.Alpha != 255 {
+			t.Errorf("Exocet UI style %q modulation = %#v, want neutral 0x646464ff", name, got)
+		}
 	}
 	for _, screen := range []string{
 		"font_lab",
