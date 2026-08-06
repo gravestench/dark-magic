@@ -657,8 +657,9 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
   per-run colors, and optional glyph-sized background highlights. Named inline
   color tokens now select the authentic PL2 text-color index transforms, with
-  RGB modulation retained only for transform-less mod content; background
-  highlights remain.
+  RGB modulation retained only for transform-less mod content. Optional
+  real-archive coverage verifies all 13 transforms and distinct non-empty
+  white/gold glyph output; background highlights remain.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
   the authentic translucent-black backing box, then connect item, skill, HUD,
   and panel-control tooltip content. The shared tooltip and inventory/character
