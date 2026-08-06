@@ -6,6 +6,8 @@ local locale = require("dm.locale/v1")
 local audio = require("dm.audio/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
+local app = require("dm.app/v1")
+local cursor = require("darkmagic.ui.cursor")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.main_menu
@@ -34,6 +36,7 @@ return {
             self:configure_logo()
         end
         self:configure_controls()
+        self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
 
     configure_logo = function(self)
@@ -57,7 +60,8 @@ return {
             width = definition.width, height = definition.height,
             on_activate = function()
                 if audio.exists(manifest.sounds.select) then audio.play(manifest.sounds.select) end
-                scenes.replace(definition.target or "character_select")
+                if definition.action == "exit" then app.request_exit()
+                else scenes.replace(definition.target or "character_select") end
             end,
         }
         if render.assets_available() then
@@ -86,11 +90,12 @@ return {
         end
           self.controls:add(control)
         end
-        for _, id in ipairs({"single_player", "multiplayer", "credits", "cinematics"}) do add_control(id, screen.controls[id]) end
+        for _, id in ipairs({"single_player", "multiplayer", "credits", "cinematics", "exit"}) do add_control(id, screen.controls[id]) end
     end,
 
     update = function(self, elapsed)
         if self.controls then self.controls:update() end
+        if self.cursor then self.cursor:update() end
         if input.pressed("cancel") then scenes.replace("title") end
     end,
 }

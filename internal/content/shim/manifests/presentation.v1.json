@@ -31,6 +31,13 @@
     "button": "data/global/sfx/cursor/button.wav",
     "select": "data/global/sfx/cursor/select.wav"
   },
+  "cursor": {
+    "sheet": "data/global/ui/CURSOR/ohand.DC6",
+    "palette": "units",
+    "direction": 0,
+    "frame": 0,
+    "hotspot": { "x": 0, "y": 0 }
+  },
   "screens": {
     "title": {
       "background": "data/global/ui/FrontEnd/TitleScreen.dc6",
@@ -68,6 +75,12 @@
           "label": "darkmagic.menu.cinematics", "target": "cinematics",
           "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
           "up_frames": [0], "down_frames": [1]
+        },
+        "exit": {
+          "x": 264, "y": 535, "width": 272, "height": 35,
+          "label": "darkmagic.menu.exit", "action": "exit",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
+          "up_frames": [0, 1], "down_frames": [2, 3]
         }
       },
       "logo": {

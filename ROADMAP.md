@@ -342,9 +342,10 @@ implementations. The remaining work is tracked explicitly below.
   The localized Single Player control now uses the verified split DC6 button,
   Exocet TBL/DC6 text, pointer/focus activation, and selection sound. Manifest-
   backed Multiplayer, Credits, and Cinematics controls now navigate to their
-  verified sibling backgrounds and return safely; title music, cursor, legal/
-  version text, dialogs, exit handling, and functional sibling-screen controls
-  remain.
+  verified sibling backgrounds and return safely. The verified hand cursor is
+  shared across front-end scenes, and Exit requests orderly client shutdown
+  through `dm.app/v1`; title music, legal/version text, dialogs, and functional
+  sibling-screen controls remain.
 - [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
   behavior.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.

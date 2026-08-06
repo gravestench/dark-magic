@@ -47,6 +47,8 @@ func main() {
 }
 
 func run(contentFS *content.FS) error {
+	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
 	renderer.SetLogger(slog.Default().With("component", "renderer"))
 	renderer.Configure(raylibRenderer.DefaultConfig())
@@ -68,6 +70,9 @@ func run(contentFS *content.FS) error {
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.AppModule("development", stopSignals)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
@@ -184,9 +189,7 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 
-	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	err = renderer.Run(runContext)
-	stopSignals()
 	stopSceneFrames()
 
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
