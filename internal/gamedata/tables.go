@@ -9,4 +9,8 @@ const (
 	SkillsTable          = "data/global/excel/skills.txt"
 	SoundsTable          = "data/global/excel/Sounds.txt"
 	TreasureClassExTable = "data/global/excel/TreasureClassEx.txt"
+	ArmorTable           = "data/global/excel/armor.txt"
+	WeaponsTable         = "data/global/excel/weapons.txt"
+	MiscTable            = "data/global/excel/misc.txt"
+	ItemTypesTable       = "data/global/excel/ItemTypes.txt"
 )

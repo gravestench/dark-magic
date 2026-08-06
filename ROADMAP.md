@@ -713,7 +713,10 @@ implementations. The remaining work is tracked explicitly below.
   fields that real records prove are strings; remaining schemas and consumers
   still need admission and migration. Typed binding now delegates to the existing
   independent TSV codec; Dark Magic retains layered source ownership, generic
-  rows, compatibility overlays, diagnostics, and immutable catalog policy.
+  rows, compatibility overlays, diagnostics, and immutable catalog policy. The
+  base-item spine now admits Armor, Weapons, Misc, and ItemTypes with deterministic
+  code indexes. Generic rows preserve shipped duplicate and unnamed columns under
+  stable synthetic keys instead of rejecting the affected tables.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

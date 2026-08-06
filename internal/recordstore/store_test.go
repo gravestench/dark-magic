@@ -30,3 +30,29 @@ func TestStoreLoadsCachesClonesAndInvalidatesTSV(t *testing.T) {
 		t.Fatal("table remains loaded after invalidation")
 	}
 }
+
+func TestStorePreservesDuplicateShippedColumns(t *testing.T) {
+	t.Parallel()
+
+	store := New(fstest.MapFS{"armor.txt": &fstest.MapFile{Data: []byte("code\tmindam\tmindam\ncap\t1\t2\n")}})
+	rows, err := store.Load("armor.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0]["mindam"] != "1" || rows[0]["mindam#2"] != "2" {
+		t.Fatalf("duplicate columns were not preserved deterministically: %#v", rows)
+	}
+}
+
+func TestStorePreservesUnnamedShippedColumns(t *testing.T) {
+	t.Parallel()
+
+	store := New(fstest.MapFS{"weapons.txt": &fstest.MapFile{Data: []byte("code\t\ncax\tunused\n")}})
+	rows, err := store.Load("weapons.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0]["code"] != "cax" || rows[0]["#unnamed-2"] != "unused" {
+		t.Fatalf("unnamed column was not preserved deterministically: %#v", rows)
+	}
+}

@@ -25,6 +25,14 @@ type Snapshot struct {
 	SoundsByName     map[string]models.SoundEntry
 	TreasureClasses  []models.TreasureClassEx
 	TreasureByName   map[string]models.TreasureClassEx
+	Armor            []models.ItemArmor
+	ArmorByCode      map[string]models.ItemArmor
+	Weapons          []models.ItemWeapon
+	WeaponsByCode    map[string]models.ItemWeapon
+	Misc             []models.MiscItem
+	MiscByCode       map[string]models.MiscItem
+	ItemTypes        []models.ItemType
+	ItemTypesByCode  map[string]models.ItemType
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -71,7 +79,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable {
 		return
 	}
 	c.mu.Lock()
@@ -135,6 +143,42 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("gamedata: index treasure classes: %w", err)
 	}
 	issues = append(issues, found...)
+	armor, err := Load[models.ItemArmor](c.store, ArmorTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	armorByCode, found, err := ObservedIndex(ArmorTable, armor, func(record models.ItemArmor) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index armor: %w", err)
+	}
+	issues = append(issues, found...)
+	weapons, err := Load[models.ItemWeapon](c.store, WeaponsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	weaponsByCode, found, err := ObservedIndex(WeaponsTable, weapons, func(record models.ItemWeapon) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index weapons: %w", err)
+	}
+	issues = append(issues, found...)
+	misc, err := Load[models.MiscItem](c.store, MiscTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	miscByCode, found, err := ObservedIndex(MiscTable, misc, func(record models.MiscItem) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index misc items: %w", err)
+	}
+	issues = append(issues, found...)
+	itemTypes, err := Load[models.ItemType](c.store, ItemTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	itemTypesByCode, found, err := ObservedIndex(ItemTypesTable, itemTypes, func(record models.ItemType) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index item types: %w", err)
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -143,6 +187,10 @@ func (c *Catalog) load() (Snapshot, error) {
 		Skills: skills, SkillsByID: skillsByID,
 		Sounds: sounds, SoundsByName: soundsByName,
 		TreasureClasses: treasure, TreasureByName: treasureByName,
+		Armor: armor, ArmorByCode: armorByCode,
+		Weapons: weapons, WeaponsByCode: weaponsByCode,
+		Misc: misc, MiscByCode: miscByCode,
+		ItemTypes: itemTypes, ItemTypesByCode: itemTypesByCode,
 	}, nil
 }
 
@@ -161,6 +209,14 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		SoundsByName:     make(map[string]models.SoundEntry, len(source.SoundsByName)),
 		TreasureClasses:  append([]models.TreasureClassEx(nil), source.TreasureClasses...),
 		TreasureByName:   make(map[string]models.TreasureClassEx, len(source.TreasureByName)),
+		Armor:            append([]models.ItemArmor(nil), source.Armor...),
+		ArmorByCode:      make(map[string]models.ItemArmor, len(source.ArmorByCode)),
+		Weapons:          append([]models.ItemWeapon(nil), source.Weapons...),
+		WeaponsByCode:    make(map[string]models.ItemWeapon, len(source.WeaponsByCode)),
+		Misc:             append([]models.MiscItem(nil), source.Misc...),
+		MiscByCode:       make(map[string]models.MiscItem, len(source.MiscByCode)),
+		ItemTypes:        append([]models.ItemType(nil), source.ItemTypes...),
+		ItemTypesByCode:  make(map[string]models.ItemType, len(source.ItemTypesByCode)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -179,6 +235,18 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.TreasureByName {
 		result.TreasureByName[key] = value
+	}
+	for key, value := range source.ArmorByCode {
+		result.ArmorByCode[key] = value
+	}
+	for key, value := range source.WeaponsByCode {
+		result.WeaponsByCode[key] = value
+	}
+	for key, value := range source.MiscByCode {
+		result.MiscByCode[key] = value
+	}
+	for key, value := range source.ItemTypesByCode {
+		result.ItemTypesByCode[key] = value
 	}
 	return result
 }

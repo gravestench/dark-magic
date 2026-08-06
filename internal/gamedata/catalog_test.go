@@ -17,6 +17,10 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		SkillsTable:          &fstest.MapFile{Data: []byte("Id\tskill\n0\tAttack\n")},
 		SoundsTable:          &fstest.MapFile{Data: []byte("Sound\tFileName\tLoop\nmenu_music\tmusic.wav\t1\n")},
 		TreasureClassExTable: &fstest.MapFile{Data: []byte("Treasure Class\tPicks\nAct 1 Good\t1\n")},
+		ArmorTable:           &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
+		WeaponsTable:         &fstest.MapFile{Data: []byte("name\tcode\nHand Axe\thax\n")},
+		MiscTable:            &fstest.MapFile{Data: []byte("name\tcode\nHealing Potion\thp1\n")},
+		ItemTypesTable:       &fstest.MapFile{Data: []byte("ItemType\tCode\nArmor\tarmo\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -28,6 +32,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.LevelsByID[1].Name != "Rogue Encampment" || first.ObjectsByClass[1].Name != "Chest" || first.SkillsByID["0"].SkillName != "Attack" || first.TreasureByName["Act 1 Good"].Picks != 1 {
 		t.Fatalf("typed core indexes = %#v", first)
+	}
+	if first.ArmorByCode["cap"].Name != "Cap" || first.WeaponsByCode["hax"].Name != "Hand Axe" || first.MiscByCode["hp1"].Name != "Healing Potion" || first.ItemTypesByCode["armo"].ItemType != "Armor" {
+		t.Fatalf("typed item indexes = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -50,6 +57,10 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		SkillsTable:          &fstest.MapFile{Data: []byte("Id\tskill\n0\tAttack\n")},
 		SoundsTable:          &fstest.MapFile{Data: []byte("Sound\tFileName\nmenu_music\tmusic.wav\n")},
 		TreasureClassExTable: &fstest.MapFile{Data: []byte("Treasure Class\tPicks\nAct 1 Good\t1\n")},
+		ArmorTable:           &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
+		WeaponsTable:         &fstest.MapFile{Data: []byte("name\tcode\nHand Axe\thax\n")},
+		MiscTable:            &fstest.MapFile{Data: []byte("name\tcode\nHealing Potion\thp1\n")},
+		ItemTypesTable:       &fstest.MapFile{Data: []byte("ItemType\tCode\nArmor\tarmo\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

@@ -49,6 +49,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.LevelsByID) == 0 || len(snapshot.ObjectsByClass) == 0 || len(snapshot.SkillsByID) == 0 || len(snapshot.TreasureByName) == 0 {
 		t.Fatal("typed core catalog indexes are incomplete")
 	}
+	if len(snapshot.ArmorByCode) == 0 || len(snapshot.WeaponsByCode) == 0 || len(snapshot.MiscByCode) == 0 || len(snapshot.ItemTypesByCode) == 0 {
+		t.Fatal("typed base-item catalog indexes are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -67,6 +70,22 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"treasure classes": func() (int, error) {
 			records, err := Load[models.TreasureClassEx](store, TreasureClassExTable)
+			return len(records), err
+		},
+		"armor": func() (int, error) {
+			records, err := Load[models.ItemArmor](store, ArmorTable)
+			return len(records), err
+		},
+		"weapons": func() (int, error) {
+			records, err := Load[models.ItemWeapon](store, WeaponsTable)
+			return len(records), err
+		},
+		"misc items": func() (int, error) {
+			records, err := Load[models.MiscItem](store, MiscTable)
+			return len(records), err
+		},
+		"item types": func() (int, error) {
+			records, err := Load[models.ItemType](store, ItemTypesTable)
 			return len(records), err
 		},
 	} {

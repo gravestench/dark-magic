@@ -91,15 +91,19 @@ func parseTSV(input io.Reader) ([]map[string]string, error) {
 		return nil, fmt.Errorf("empty header")
 	}
 	header[0] = strings.TrimPrefix(header[0], "\ufeff")
-	seen := make(map[string]bool, len(header))
-	for _, column := range header {
+	seen := make(map[string]int, len(header))
+	for index, column := range header {
 		if column == "" {
-			return nil, fmt.Errorf("empty column name")
+			header[index] = fmt.Sprintf("#unnamed-%d", index+1)
+			continue
 		}
-		if seen[column] {
-			return nil, fmt.Errorf("duplicate column %q", column)
+		seen[column]++
+		if seen[column] > 1 {
+			// Shipped Diablo II tables contain duplicate headers. Preserve every
+			// cell for generic/mod consumers while keeping the first occurrence
+			// at its authored name for typed compatibility.
+			header[index] = fmt.Sprintf("%s#%d", column, seen[column])
 		}
-		seen[column] = true
 	}
 	var result []map[string]string
 	for rowNumber := 2; ; rowNumber++ {
