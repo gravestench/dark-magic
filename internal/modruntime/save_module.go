@@ -56,6 +56,15 @@ func SaveModule(store *savecore.Store) Module {
 				state.Push(lua.LTrue)
 				return 1
 			},
+			"delete": func(state *lua.LState) int {
+				if err := store.Delete(state.CheckString(1)); err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				state.Push(lua.LTrue)
+				return 1
+			},
 			"selected": func(state *lua.LState) int {
 				character, ok := store.Selected()
 				if !ok {

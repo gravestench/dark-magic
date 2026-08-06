@@ -226,6 +226,26 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
+	// A single activation selects the row. Move through the page scrollbar and
+	// footer controls to the explicit OK button before launching.
+	for range 5 {
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		publishAction(&input, "down")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+	}
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
 	assertStack(t, navigator, "game_loading")
 	input.Publish(inputcore.Frame{})
 	if err := scenes.Update(ctx, 2*time.Second); err != nil {

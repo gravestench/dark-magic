@@ -395,7 +395,12 @@ implementations. The remaining work is tracked explicitly below.
   character's forward walk completes. Headless acceptance verifies that delay.
   Final calibrated geometry and visual composition coverage remain.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
-  previews, and activation.
+  previews, and activation. The manifest-backed two-column/four-row list now
+  provides stable focus slots, vertical paging, metadata labels, selection art,
+  explicit New/Delete/Exit/OK controls, and the observed 1.25-second pointer
+  double-activation policy. Deletion uses an isolated confirmation dialog and a
+  narrow engine-owned save operation that clears stale selection safely.
+  Equipment-aware composite character previews and real-asset calibration remain.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants.
 

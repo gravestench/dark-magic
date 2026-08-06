@@ -95,6 +95,8 @@ function Manager:add_scrollbar(control)
     control.max = control.max or 1
     assert(control.max >= control.min, "scrollbar max must be at least min")
     control.step = control.step or 1
+    control.orientation = control.orientation or "horizontal"
+    assert(control.orientation == "horizontal" or control.orientation == "vertical", "invalid scrollbar orientation")
     control.value = math.max(control.min, math.min(control.max, control.value or control.min))
     return self:add(control)
 end
@@ -243,7 +245,13 @@ function Manager:update()
     end
     if input.pressed("pointer_primary") then
         if hovered and hovered.role == "scrollbar" then
-            set_value(hovered, hovered.min + (hovered.max - hovered.min) * (x - hovered.x) / hovered.width)
+            local fraction
+            if hovered.orientation == "vertical" then
+                fraction = (y - hovered.y) / hovered.height
+            else
+                fraction = (x - hovered.x) / hovered.width
+            end
+            set_value(hovered, hovered.min + (hovered.max - hovered.min) * fraction)
         else
             self:activate(hovered)
         end

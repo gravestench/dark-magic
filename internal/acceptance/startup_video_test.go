@@ -110,6 +110,26 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		harness.updateFor(t, time.Second)
 		assertStack(t, harness.navigator, "game_loading")
 	})
+
+	t.Run("character deletion is confirmed before leaving the list", func(t *testing.T) {
+		harness := newStartupHarnessWithSaves(t, savecore.Character{
+			ID: "hero", Name: "Hero", Class: "Amazon", Level: 1,
+		})
+		harness.skip(t)
+		harness.skip(t)
+		harness.skip(t)
+		harness.action(t, "confirm")
+		assertStack(t, harness.navigator, "character_select")
+
+		// Slot -> scrollbar -> New -> Delete.
+		for range 3 {
+			harness.action(t, "down")
+		}
+		harness.action(t, "confirm")
+		assertStack(t, harness.navigator, "character_select")
+		harness.action(t, "confirm") // Confirm the focused Yes action.
+		assertStack(t, harness.navigator, "character_create")
+	})
 }
 
 type startupHarness struct {
@@ -121,6 +141,10 @@ type startupHarness struct {
 }
 
 func newStartupHarness(t *testing.T) *startupHarness {
+	return newStartupHarnessWithSaves(t)
+}
+
+func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *startupHarness {
 	t.Helper()
 	ctx := context.Background()
 	videos := fstest.MapFS{
@@ -154,7 +178,7 @@ func newStartupHarness(t *testing.T) *startupHarness {
 		modruntime.VideoModule(runtime, backend, contentFS),
 		modruntime.LocaleModule(localecore.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(savecore.New()),
+		modruntime.SaveModule(savecore.New(entries...)),
 		modruntime.SimulationModule(simulation),
 		scenes.Module(),
 	} {

@@ -67,3 +67,26 @@ func TestCreateNamedStoresCreationOptions(t *testing.T) {
 		t.Fatalf("creation options = expansion %v, hardcore %v", character.Expansion, character.Hardcore)
 	}
 }
+
+func TestDeleteClearsSelectedCharacter(t *testing.T) {
+	store := New(
+		Character{ID: "amazon-hero", Name: "Hero", Class: "Amazon", Level: 1},
+		Character{ID: "druid-wolf", Name: "Wolf", Class: "Druid", Level: 2},
+	)
+	if err := store.Select("amazon-hero"); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Delete("amazon-hero"); err != nil {
+		t.Fatal(err)
+	}
+	if _, selected := store.Selected(); selected {
+		t.Fatal("deleted character remained selected")
+	}
+	characters := store.Characters()
+	if len(characters) != 1 || characters[0].ID != "druid-wolf" {
+		t.Fatalf("characters after delete = %#v", characters)
+	}
+	if err := store.Delete("missing"); err == nil {
+		t.Fatal("expected unknown-character error")
+	}
+}

@@ -135,6 +135,26 @@ func (s *Store) Select(id string) error {
 	return errors.New("savecore: unknown character")
 }
 
+// Delete removes one character identity and clears the active selection when
+// it refers to that character. Save-file persistence remains a Store concern;
+// presentation code only requests deletion by opaque ID.
+func (s *Store) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index, character := range s.entries {
+		if character.ID != id {
+			continue
+		}
+		copy(s.entries[index:], s.entries[index+1:])
+		s.entries = s.entries[:len(s.entries)-1]
+		if s.selected == id {
+			s.selected = ""
+		}
+		return nil
+	}
+	return errors.New("savecore: unknown character")
+}
+
 func (s *Store) Selected() (Character, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

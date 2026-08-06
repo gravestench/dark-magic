@@ -45,3 +45,19 @@ func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
 		t.Fatalf("selected = %#v", selected)
 	}
 }
+
+func TestSaveModuleDeletesCharacterByOpaqueID(t *testing.T) {
+	runtime := New()
+	store := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	if err := runtime.RegisterModule(SaveModule(store)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	script := `local s=require("dm.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}

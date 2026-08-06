@@ -151,6 +151,32 @@
         {"class":"Druid", "palette":"units", "anchor":{"x":625,"y":550}, "hit":{"x":565,"y":245,"width":125,"height":305}, "select_sound":"data/global/SFX/Cursor/intro/druid select.wav", "deselect_sound":"data/global/SFX/Cursor/intro/druid deselect.wav", "unselected":"data/global/ui/FrontEnd/druid/DZNU1.DC6", "hover":"data/global/ui/FrontEnd/druid/DZNU2.DC6", "selected":"data/global/ui/FrontEnd/druid/DZNU3.DC6", "forward":"data/global/ui/FrontEnd/druid/DZFW.DC6", "forward_frames":121, "back":"data/global/ui/FrontEnd/druid/DZBW.DC6", "back_frames":40}
       ]
     },
+    "character_select": {
+      "background": "data/global/ui/CharSelect/characterselectscreenEXP.dc6",
+      "palette": "sky",
+      "selection": "data/global/ui/CharSelect/charselectbox.dc6",
+      "selection_palette": "sky",
+      "grid": {
+        "x": 37, "y": 86, "columns": 2, "rows": 4,
+        "cell_width": 272, "cell_height": 92,
+        "column_step": 270, "row_step": 95,
+        "text_offset": {"x": 78, "y": 14}
+      },
+      "scrollbar": {"x":586,"y":87,"width":20,"height":369},
+      "double_activation_seconds": 1.25,
+      "controls": {
+        "new": {"x":33,"y":468,"width":160,"height":35,"label":"darkmagic.character_select.new"},
+        "delete": {"x":433,"y":468,"width":160,"height":35,"label":"darkmagic.character_select.delete"},
+        "exit": {"x":33,"y":537,"width":160,"height":35,"label":"darkmagic.character_select.exit"},
+        "ok": {"x":625,"y":537,"width":142,"height":35,"label":"darkmagic.character_select.ok"}
+      },
+      "delete_dialog": {
+        "x":270,"y":175,"width":260,"height":180,
+        "sheet":"data/global/ui/FrontEnd/PopUpOKCancel.dc6","palette":"fechar",
+        "yes":{"x":422,"y":308,"width":80,"height":30},
+        "no":{"x":282,"y":308,"width":80,"height":30}
+      }
+    },
     "cinematics": {
       "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6",
       "palette": "sky",

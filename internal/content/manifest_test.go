@@ -52,6 +52,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		"main_menu",
 		"tcpip",
 		"character_create",
+		"character_select",
 		"cinematics",
 		"game_loading",
 		"credits",

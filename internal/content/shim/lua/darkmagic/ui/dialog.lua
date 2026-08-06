@@ -97,4 +97,79 @@ function M.text_entry(parent, definition, font, popup_palette, font_palette, pro
     return dialog
 end
 
+-- Build a focus-isolated yes/no confirmation. The callback receives true only
+-- for explicit confirmation; cancel input and the secondary button report false.
+function M.confirm(parent, definition, font, popup_palette, font_palette, message, yes_label, no_label, on_decide)
+    local dialog = {
+        open = true,
+        nodes = {},
+        manager = controls.new(),
+    }
+    dialog.root = render.create("modal", parent)
+    dialog.root:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
+    if render.assets_available() then
+        dialog.root:set_dc6(definition.sheet, popup_palette, 0, 0)
+    else
+        dialog.root:fill_rect(definition.width, definition.height, 20, 15, 10, 245)
+    end
+
+    function dialog:close(decision)
+        if not self.open then
+            return
+        end
+        self.open = false
+        self.root:set_visible(false)
+        for _, node in ipairs(self.nodes) do
+            node:set_visible(false)
+        end
+        on_decide(decision == true)
+    end
+
+    dialog.manager:add({
+        id = "yes",
+        scope = "dialog",
+        label = yes_label,
+        x = definition.yes.x,
+        y = definition.yes.y,
+        width = definition.yes.width,
+        height = definition.yes.height,
+        on_activate = function()
+            dialog:close(true)
+        end,
+    })
+    dialog.manager:add({
+        id = "no",
+        scope = "dialog",
+        label = no_label,
+        x = definition.no.x,
+        y = definition.no.y,
+        width = definition.no.width,
+        height = definition.no.height,
+        on_activate = function()
+            dialog:close(false)
+        end,
+    })
+    dialog.manager:set_scope("dialog")
+
+    if render.assets_available() then
+        local text = render.create("modal", parent)
+        text:set_text(font.table, font.sheet, font_palette, message, {
+            red = 210,
+            green = 180,
+            blue = 110,
+            max_width = definition.width - 40,
+            align = "center",
+        })
+        text:set_position(definition.x + definition.width / 2, definition.y + 45)
+        dialog.nodes[#dialog.nodes + 1] = text
+    end
+
+    function dialog:update()
+        if self.open then
+            self.manager:update()
+        end
+    end
+    return dialog
+end
+
 return M

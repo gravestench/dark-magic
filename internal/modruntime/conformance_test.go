@@ -43,7 +43,8 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.data/v1":  {"load", "load_manifest"},
 		"dm.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.video/v1":  {"available", "play"},
-		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"}, "dm.save/v1": {"create"},
+		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"},
+		"dm.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create", "diagnostics"},
 		"dm.scene/v1": {"register", "replace", "push", "pop"},
 	}
