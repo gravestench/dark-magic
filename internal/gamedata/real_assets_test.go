@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
@@ -60,6 +61,16 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	}
 	if len(snapshot.GemsByCode) == 0 || len(snapshot.RuneWords) == 0 || len(snapshot.CubeRecipes) == 0 || len(snapshot.SetsByIndex) == 0 {
 		t.Fatal("typed socketing and crafting tables are incomplete")
+	}
+	if len(snapshot.LevelTypes) == 0 || len(snapshot.LevelPresetByDef) == 0 || len(snapshot.LevelMazeByLevel) == 0 || len(snapshot.LevelWarps) == 0 || len(snapshot.LevelSubs) == 0 {
+		t.Fatal("typed world-generation tables are incomplete")
+	}
+	if !slices.ContainsFunc(snapshot.LevelTypes, func(record models.LevelType) bool { return record.Act > 0 }) ||
+		!slices.ContainsFunc(snapshot.LevelPresets, func(record models.LevelPreset) bool { return record.Def > 0 && record.Files > 0 }) ||
+		!slices.ContainsFunc(snapshot.LevelMazes, func(record models.LevelMazeData) bool { return record.Rooms > 0 && record.SizeX > 0 }) ||
+		!slices.ContainsFunc(snapshot.LevelWarps, func(record models.LevelWarp) bool { return record.Id != "" && record.Tiles > 0 }) ||
+		!slices.ContainsFunc(snapshot.LevelSubs, func(record models.LevelSubstitutionData) bool { return record.Type > 0 && record.File != "" }) {
+		t.Fatal("typed world-generation fields did not bind representative authored values")
 	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
@@ -151,6 +162,26 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"sets": func() (int, error) {
 			records, err := Load[models.SetBonusData](store, SetsTable)
+			return len(records), err
+		},
+		"level types": func() (int, error) {
+			records, err := Load[models.LevelType](store, LevelTypesTable)
+			return len(records), err
+		},
+		"level presets": func() (int, error) {
+			records, err := Load[models.LevelPreset](store, LevelPresetsTable)
+			return len(records), err
+		},
+		"level mazes": func() (int, error) {
+			records, err := Load[models.LevelMazeData](store, LevelMazeTable)
+			return len(records), err
+		},
+		"level warps": func() (int, error) {
+			records, err := Load[models.LevelWarp](store, LevelWarpTable)
+			return len(records), err
+		},
+		"level substitutions": func() (int, error) {
+			records, err := Load[models.LevelSubstitutionData](store, LevelSubTable)
 			return len(records), err
 		},
 	} {

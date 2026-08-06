@@ -9,7 +9,7 @@ type LevelSubstitutionData struct {
 	Name string `csv:"Name"`
 
 	// Type refers to the "SubType" field from the Levels.txt file. This defines a group that multiple substitutions can share.
-	Type int `csv:"ItemSuperType"`
+	Type int `csv:"Type"`
 
 	// File specifies the name of the ds1 file to use. The ds1 files contain data for building Level Presets.
 	File string `csv:"File"`

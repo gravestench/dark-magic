@@ -53,6 +53,13 @@ type Snapshot struct {
 	CubeRecipes      []models.CubeRecipe
 	Sets             []models.SetBonusData
 	SetsByIndex      map[string]models.SetBonusData
+	LevelTypes       []models.LevelType
+	LevelPresets     []models.LevelPreset
+	LevelPresetByDef map[int]models.LevelPreset
+	LevelMazes       []models.LevelMazeData
+	LevelMazeByLevel map[int]models.LevelMazeData
+	LevelWarps       []models.LevelWarp
+	LevelSubs        []models.LevelSubstitutionData
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -99,7 +106,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable {
 		return
 	}
 	c.mu.Lock()
@@ -285,6 +292,36 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("gamedata: index sets: %w", err)
 	}
 	issues = append(issues, found...)
+	levelTypes, err := Load[models.LevelType](c.store, LevelTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	levelPresets, err := Load[models.LevelPreset](c.store, LevelPresetsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	levelPresetByDef, found, err := ObservedIndex(LevelPresetsTable, levelPresets, func(record models.LevelPreset) int { return record.Def })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index level presets: %w", err)
+	}
+	issues = append(issues, found...)
+	levelMazes, err := Load[models.LevelMazeData](c.store, LevelMazeTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	levelMazeByLevel, found, err := ObservedIndex(LevelMazeTable, levelMazes, func(record models.LevelMazeData) int { return record.Level })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index level mazes: %w", err)
+	}
+	issues = append(issues, found...)
+	levelWarps, err := Load[models.LevelWarp](c.store, LevelWarpTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	levelSubs, err := Load[models.LevelSubstitutionData](c.store, LevelSubTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -306,6 +343,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		AutoMagic: autoMagic, RarePrefixes: rarePrefixes, RareSuffixes: rareSuffixes,
 		Gems: gems, GemsByCode: gemsByCode, RuneWords: runeWords, CubeRecipes: cubeRecipes,
 		Sets: sets, SetsByIndex: setsByIndex,
+		LevelTypes: levelTypes, LevelPresets: levelPresets, LevelPresetByDef: levelPresetByDef,
+		LevelMazes: levelMazes, LevelMazeByLevel: levelMazeByLevel, LevelWarps: levelWarps, LevelSubs: levelSubs,
 	}, nil
 }
 
@@ -352,6 +391,13 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		CubeRecipes:      append([]models.CubeRecipe(nil), source.CubeRecipes...),
 		Sets:             append([]models.SetBonusData(nil), source.Sets...),
 		SetsByIndex:      make(map[string]models.SetBonusData, len(source.SetsByIndex)),
+		LevelTypes:       append([]models.LevelType(nil), source.LevelTypes...),
+		LevelPresets:     append([]models.LevelPreset(nil), source.LevelPresets...),
+		LevelPresetByDef: make(map[int]models.LevelPreset, len(source.LevelPresetByDef)),
+		LevelMazes:       append([]models.LevelMazeData(nil), source.LevelMazes...),
+		LevelMazeByLevel: make(map[int]models.LevelMazeData, len(source.LevelMazeByLevel)),
+		LevelWarps:       append([]models.LevelWarp(nil), source.LevelWarps...),
+		LevelSubs:        append([]models.LevelSubstitutionData(nil), source.LevelSubs...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -400,6 +446,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.SetsByIndex {
 		result.SetsByIndex[key] = value
+	}
+	for key, value := range source.LevelPresetByDef {
+		result.LevelPresetByDef[key] = value
+	}
+	for key, value := range source.LevelMazeByLevel {
+		result.LevelMazeByLevel[key] = value
 	}
 	return result
 }

@@ -724,7 +724,10 @@ implementations. The remaining work is tracked explicitly below.
   names remain ordered records rather than being forced into lossy lookup maps.
   Gems, Runes, CubeMain, and Sets now form the next admitted typed generation,
   with stable code/index lookups for gems and set definitions and ordered recipes
-  where descriptions or display names are not authoritative identities.
+  where descriptions or display names are not authoritative identities. The world
+  dependency layer now admits LvlTypes, LvlPrest, LvlMaze, LvlWarp, and LvlSub,
+  including real-data semantic checks that corrected the legacy LvlSub `Type`
+  binding rather than accepting a silently zero-filled field.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

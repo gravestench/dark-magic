@@ -27,4 +27,9 @@ const (
 	RunesTable           = "data/global/excel/Runes.txt"
 	CubeMainTable        = "data/global/excel/CubeMain.txt"
 	SetsTable            = "data/global/excel/Sets.txt"
+	LevelTypesTable      = "data/global/excel/LvlTypes.txt"
+	LevelPresetsTable    = "data/global/excel/LvlPrest.txt"
+	LevelMazeTable       = "data/global/excel/LvlMaze.txt"
+	LevelWarpTable       = "data/global/excel/LvlWarp.txt"
+	LevelSubTable        = "data/global/excel/LvlSub.txt"
 )

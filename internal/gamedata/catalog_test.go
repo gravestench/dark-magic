@@ -35,6 +35,11 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		RunesTable:           &fstest.MapFile{Data: []byte("Name\tcomplete\nAncient's Pledge\t1\n")},
 		CubeMainTable:        &fstest.MapFile{Data: []byte("description\tenabled\nPotion Upgrade\t1\n")},
 		SetsTable:            &fstest.MapFile{Data: []byte("index\tname\nCiverb's Vestments\tCiverb's Vestments\n")},
+		LevelTypesTable:      &fstest.MapFile{Data: []byte("Name\tAct\nAct 1 Town\t1\n")},
+		LevelPresetsTable:    &fstest.MapFile{Data: []byte("Name\tDef\tLevelId\nRogue Encampment\t1\t1\n")},
+		LevelMazeTable:       &fstest.MapFile{Data: []byte("Name\tLevel\tRooms\nDen of Evil\t8\t4\n")},
+		LevelWarpTable:       &fstest.MapFile{Data: []byte("Name\tId\nCave Entrance\t1\n")},
+		LevelSubTable:        &fstest.MapFile{Data: []byte("Name\tItemSuperType\nWilderness\t1\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -58,6 +63,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.GemsByCode["gcw"].Name != "Chipped Amethyst" || len(first.RuneWords) != 1 || len(first.CubeRecipes) != 1 || first.SetsByIndex["Civerb's Vestments"].Name != "Civerb's Vestments" {
 		t.Fatalf("typed socketing and crafting tables = %#v", first)
+	}
+	if len(first.LevelTypes) != 1 || first.LevelPresetByDef[1].LevelId != 1 || first.LevelMazeByLevel[8].Rooms != 4 || len(first.LevelWarps) != 1 || len(first.LevelSubs) != 1 {
+		t.Fatalf("typed world-generation tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -98,6 +106,11 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		RunesTable:           &fstest.MapFile{Data: []byte("Name\tcomplete\nAncient's Pledge\t1\n")},
 		CubeMainTable:        &fstest.MapFile{Data: []byte("description\tenabled\nPotion Upgrade\t1\n")},
 		SetsTable:            &fstest.MapFile{Data: []byte("index\tname\nCiverb's Vestments\tCiverb's Vestments\n")},
+		LevelTypesTable:      &fstest.MapFile{Data: []byte("Name\tAct\nAct 1 Town\t1\n")},
+		LevelPresetsTable:    &fstest.MapFile{Data: []byte("Name\tDef\tLevelId\nRogue Encampment\t1\t1\n")},
+		LevelMazeTable:       &fstest.MapFile{Data: []byte("Name\tLevel\tRooms\nDen of Evil\t8\t4\n")},
+		LevelWarpTable:       &fstest.MapFile{Data: []byte("Name\tId\nCave Entrance\t1\n")},
+		LevelSubTable:        &fstest.MapFile{Data: []byte("Name\tItemSuperType\nWilderness\t1\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {
