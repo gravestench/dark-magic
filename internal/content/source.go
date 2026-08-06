@@ -75,7 +75,14 @@ func (n normalizedFS) Open(name string) (fs.File, error) {
 	if n.backslash {
 		clean = strings.ReplaceAll(clean, "/", `\`)
 	}
-	return n.FS.Open(clean)
+	file, err := n.FS.Open(clean)
+	// gravestench/mpq predates io/fs and returns an unwrapped sentinel text.
+	// Translate it at this adapter boundary so layered lookup can continue to
+	// lower-priority archives.
+	if n.backslash && err != nil && (err.Error() == "file not found" || strings.HasSuffix(err.Error(), ": file not found")) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+	return file, err
 }
 
 type closeableFS struct {

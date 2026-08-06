@@ -76,6 +76,20 @@ go run ./cmd/asset_inspect \
   -preview /tmp/loading.png
 ```
 
+Verify the curated screen-asset knowledge against a complete MPQ directory and
+generate a JSON report plus palette-applied DC6 contact sheets:
+
+```shell
+go run ./cmd/asset_catalog \
+  -mpq-dir /path/to/diablo-ii \
+  -out /tmp/dark-magic-asset-catalog
+```
+
+The report records missing and disputed paths, the archive layer that supplied
+each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use
+`-manifest custom.json` to verify additional hypotheses or `-no-sheets` for a
+metadata-only pass. The command is read-only with respect to the MPQs.
+
 When the debug web server is running, the same metadata and selected DC6/DCC
 frames are available through the asset routes:
 
