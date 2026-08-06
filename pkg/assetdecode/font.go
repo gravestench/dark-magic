@@ -161,7 +161,10 @@ type textColorRun struct {
 }
 
 var namedTextColors = map[string]textColorRun{
-	"white":  {transform: 0, fallback: color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}},
+	// PL2 text shift zero is the reserved/unshifted slot and is commonly an
+	// all-zero lookup table in the shipped files. White therefore means the
+	// palette-authored font itself, not TextColorShifts[0].
+	"white":  {transform: -1, fallback: color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}},
 	"red":    {transform: 1, fallback: color.RGBA{R: 0xff, G: 0x4d, B: 0x4d, A: 0xff}},
 	"green":  {transform: 2, fallback: color.RGBA{R: 0x00, G: 0xff, B: 0x00, A: 0xff}},
 	"blue":   {transform: 3, fallback: color.RGBA{R: 0x69, G: 0x69, B: 0xff, A: 0xff}},

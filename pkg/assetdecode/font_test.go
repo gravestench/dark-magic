@@ -171,3 +171,25 @@ func TestBitmapFontPrefersPL2TextTransformOverRGBFallback(t *testing.T) {
 		t.Fatalf("PL2-transformed glyph = %#v", got)
 	}
 }
+
+func TestBitmapFontWhiteKeepsPaletteAuthoredGlyph(t *testing.T) {
+	t.Parallel()
+
+	base := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	base.SetRGBA(0, 0, color.RGBA{R: 220, G: 210, B: 190, A: 255})
+	blackShift := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	blackShift.SetRGBA(0, 0, color.RGBA{A: 255})
+	font := &BitmapFont{
+		Glyphs:     map[rune]Glyph{'A': {Width: 1, Height: 1, Frame: 0}},
+		Frames:     []image.Image{base},
+		TextFrames: map[int][]image.Image{0: {blackShift}},
+		LineHeight: 1,
+	}
+	rendered, err := font.Render("[white]A", color.White, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(rendered.At(0, 0)).(color.RGBA); got != (color.RGBA{R: 220, G: 210, B: 190, A: 255}) {
+		t.Fatalf("white run = %#v, want palette-authored glyph", got)
+	}
+}

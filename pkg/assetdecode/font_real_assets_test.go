@@ -41,6 +41,13 @@ func TestRealFontUsesContextualPL2TextTransforms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	unshifted, err := font.Render("Hero", color.White, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(white.Pix, unshifted.Pix) {
+		t.Fatal("real PL2 white run must preserve the palette-authored glyph")
+	}
 	gold, err := font.Render("[gold]Hero", color.White, 0, "left")
 	if err != nil {
 		t.Fatal(err)

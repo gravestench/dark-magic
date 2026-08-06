@@ -14,12 +14,16 @@ local data = require("dm.data/v1")
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 
 local font_lab = {}
+local page_nodes = {}
 
 -- Position a text texture from a conventional top-left box. Retained text
 -- nodes themselves are center-positioned, so the half-box conversion belongs
 -- here rather than in every page definition.
 local function put(root, style, value, left, top, width, alignment)
     local node = render.create("hud", root)
+    if page_nodes[root] then
+        table.insert(page_nodes[root], node)
+    end
     local _, height = text.set(node, style, value, width, alignment or "left")
     node:set_position(left + width / 2, top + height / 2)
     return node, height
@@ -139,18 +143,23 @@ end
 function font_lab.show_page(self, requested)
     local next_page = ((requested - 1) % #pages) + 1
     if self.page_roots[self.page] then
-        self.page_roots[self.page]:set_visible(false)
+        for _, node in ipairs(page_nodes[self.page_roots[self.page]]) do
+            node:set_visible(false)
+        end
     end
     if not self.page_roots[next_page] then
         local root = render.create("hud", self.root)
         self.page_roots[next_page] = root
+        page_nodes[root] = {}
         local page = pages[next_page]
         heading(root, page.title, page.detail)
         page.draw(root)
         put(root, "font_lab_caption", string.format("%d / %d   Left/Up: previous   Right/Down/Enter/Click: next   Esc: menu", next_page, #pages), 40, 568, 720, "center")
     end
     self.page = next_page
-    self.page_roots[next_page]:set_visible(true)
+    for _, node in ipairs(page_nodes[self.page_roots[next_page]]) do
+        node:set_visible(true)
+    end
 end
 
 function font_lab.update(self)
