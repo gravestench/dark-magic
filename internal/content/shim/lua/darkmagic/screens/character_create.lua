@@ -28,15 +28,53 @@ return {
             manifest.palettes[screen.palette],
             manifest.layouts.frontend_tiles
         )
+        if render.assets_available() then
+            -- The campfire is independent foreground animation, not part of
+            -- the tiled background. It is drawn above idle heroes just as the
+            -- original frontend composition authored it.
+            self.campfire = render.create("hud", self.root)
+            dc6.anchored_animation(
+                self.campfire,
+                screen.campfire.sheet,
+                manifest.palettes[screen.campfire.palette],
+                screen.campfire.anchor.x,
+                screen.campfire.anchor.y,
+                screen.campfire.frames_per_second,
+                "loop"
+            )
+            self.campfire:set_z(10)
+
+            -- Heading and focused-class copy are renderer-owned bitmap text.
+            -- Locale keys are derived from stable lowercase class IDs so mods
+            -- can replace prose without changing scene behavior.
+            self.heading = render.create("hud", self.root)
+            self.class_name = render.create("hud", self.root)
+            self.class_description = render.create("hud", self.root)
+            self.heading:set_z(100)
+            self.class_name:set_z(100)
+            self.class_description:set_z(100)
+            local heading = screen.labels.heading
+            local heading_font = manifest.fonts[heading.font]
+            self.heading:set_text(
+                heading_font.table,
+                heading_font.sheet,
+                manifest.palettes[heading_font.palette],
+                assert(locale.text(heading.key)),
+                { red = 210, green = 180, blue = 110, max_width = heading.width, align = "center" }
+            )
+            self.heading:set_position(heading.x, heading.y)
+        end
         self.controls = controls.new()
         self.expansion = true
         self.hardcore = false
+        self.creation_options = {}
         self.classes = {}
         self.transitions = {}
         -- Each class definition owns its presentation paths, anchor, timing,
         -- narration, and hit rectangle. Adding a class should be a data change.
         for _, definition in ipairs(screen.classes) do
-            local class = { definition = definition }
+            local placement = assert(screen.stage[definition.class])
+            local class = { definition = definition, placement = placement }
             if render.assets_available() then
                 class.node = render.create("hud", self.root)
                 class.overlay = render.create("hud", self.root)
@@ -54,9 +92,9 @@ return {
                     frames = dc6.anchored_animation(
                         class.node,
                         definition[state],
-                        manifest.palettes[definition.palette],
-                        definition.anchor.x,
-                        definition.anchor.y,
+                        manifest.palettes[screen.class_palette],
+                        placement.anchor.x,
+                        placement.anchor.y,
                         frames_per_second,
                         loop
                     )
@@ -67,9 +105,9 @@ return {
                         dc6.anchored_animation(
                             class.overlay,
                             overlay_path,
-                            manifest.palettes[definition.palette],
-                            definition.anchor.x,
-                            definition.anchor.y,
+                            manifest.palettes[screen.class_palette],
+                            placement.anchor.x,
+                            placement.anchor.y,
                             frames_per_second,
                             loop
                         )
@@ -81,11 +119,35 @@ return {
             class.control = self.controls:add({
                 id = string.lower(definition.class),
                 label = definition.class,
-                x = definition.hit.x,
-                y = definition.hit.y,
-                width = definition.hit.width,
-                height = definition.hit.height,
+                x = placement.hit.x,
+                y = placement.hit.y,
+                width = placement.hit.width,
+                height = placement.hit.height,
                 on_state = function(_, state)
+                    if self.class_name and (state == "hover" or state == "focused") then
+                        local class_id = string.lower(definition.class)
+                        local name_label = screen.labels.class
+                        local name_font = manifest.fonts[name_label.font]
+                        self.class_name:set_text(
+                            name_font.table,
+                            name_font.sheet,
+                            manifest.palettes[name_font.palette],
+                            assert(locale.text("darkmagic.character_class." .. class_id .. ".name")),
+                            { red = 210, green = 180, blue = 110, max_width = name_label.width, align = "center" }
+                        )
+                        self.class_name:set_position(name_label.x, name_label.y)
+
+                        local description = screen.labels.description
+                        local description_font = manifest.fonts[description.font]
+                        self.class_description:set_text(
+                            description_font.table,
+                            description_font.sheet,
+                            manifest.palettes[description_font.palette],
+                            assert(locale.text("darkmagic.character_class." .. class_id .. ".description")),
+                            { max_width = description.width, align = "center" }
+                        )
+                        self.class_description:set_position(description.x, description.y)
+                    end
                     if self.selected ~= class and class.state ~= "back" then
                         class.show(
                             (state == "hover" or state == "focused") and "hover" or "unselected"
@@ -118,6 +180,13 @@ return {
                         end
                     end
                     self.selected = class
+                    for _, presentation in ipairs(self.creation_options) do
+                        presentation.control.visible = true
+                        if presentation.visual then
+                            presentation.visual:set_visible(true)
+                            presentation.label:set_visible(true)
+                        end
+                    end
                     if definition.select_sound and audio.exists(definition.select_sound) then
                         audio.play(definition.select_sound, { bus = "ui" })
                     end
@@ -166,7 +235,7 @@ return {
             if render.assets_available() then
                 visual = render.create("hud", self.root)
                 label = render.create("hud", self.root)
-                label:set_text(
+                local label_width = label:set_text(
                     manifest.fonts.exocet10.table,
                     manifest.fonts.exocet10.sheet,
                     manifest.palettes[manifest.fonts.exocet10.palette],
@@ -175,11 +244,13 @@ return {
                         red = 210,
                         green = 180,
                         blue = 110,
-                        max_width = definition.width - 28,
                         align = "left",
                     }
                 )
-                label:set_position(definition.x + 28, definition.y + definition.height / 2)
+                label:set_position(
+                    definition.x + 28 + label_width / 2,
+                    definition.y + definition.height / 2
+                )
             end
             local option = self.controls:add_checkbox({
                 id = id,
@@ -201,6 +272,7 @@ return {
                     end
                 end,
             })
+            option.visible = false
             if visual then
                 visual:set_dc6(
                     definition.sheet,
@@ -209,8 +281,70 @@ return {
                     option.checked and 1 or 0
                 )
                 visual:set_position(definition.x + 10, definition.y + definition.height / 2)
+                visual:set_visible(false)
+                label:set_visible(false)
+            end
+            self.creation_options[#self.creation_options + 1] = {
+                control = option,
+                visual = visual,
+                label = label,
+            }
+        end
+
+        -- The Exit button remains available before class selection. Its
+        -- retained art and label follow the same focus-state contract as the
+        -- main-menu controls.
+        local exit_definition = screen.controls.exit
+        local exit_control = {
+            id = "exit",
+            label = assert(locale.text(exit_definition.label)),
+            x = exit_definition.x,
+            y = exit_definition.y,
+            width = exit_definition.width,
+            height = exit_definition.height,
+            on_activate = function()
+                scenes.replace("main_menu")
+            end,
+        }
+        if render.assets_available() then
+            local button = render.create("hud", self.root)
+            local label = render.create("hud", self.root)
+            local palette = manifest.palettes[exit_definition.palette]
+            local function draw(frame)
+                button:set_dc6(exit_definition.sheet, palette, 0, frame)
+            end
+            draw(exit_definition.up_frames[1])
+            button:set_position(
+                exit_definition.x + exit_definition.width / 2,
+                exit_definition.y + exit_definition.height / 2
+            )
+            local font = manifest.fonts.exocet10
+            label:set_text(
+                font.table,
+                font.sheet,
+                manifest.palettes[font.palette],
+                exit_control.label,
+                {
+                    red = 210,
+                    green = 180,
+                    blue = 110,
+                    max_width = exit_definition.width,
+                    align = "center",
+                }
+            )
+            label:set_position(
+                exit_definition.x + exit_definition.width / 2,
+                exit_definition.y + exit_definition.height / 2
+            )
+            exit_control.on_state = function(_, state)
+                draw(
+                    (state == "focused" or state == "hover")
+                        and exit_definition.down_frames[1]
+                        or exit_definition.up_frames[1]
+                )
             end
         end
+        self.controls:add(exit_control)
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
     update = function(self, elapsed)

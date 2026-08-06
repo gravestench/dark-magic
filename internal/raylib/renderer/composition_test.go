@@ -52,6 +52,9 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 	if childNode.Parent() != backend.nodes[parent] || childNode.Scale() != 2 {
 		t.Fatalf("child was not attached: parent=%v scale=%v", childNode.Parent(), childNode.Scale())
 	}
+	if backend.nodes[parent].IsEnabled() || childNode.IsEnabled() {
+		t.Fatal("resource-less grouping nodes were enabled for default-texture drawing")
+	}
 	if err := backend.Apply(rendercore.Change{Kind: "destroy", ID: child}); err != nil {
 		t.Fatal(err)
 	}

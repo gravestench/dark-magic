@@ -50,6 +50,7 @@ func main() {
 	captureDirectoryFlag := flag.String("capture-dir", os.Getenv("DARK_MAGIC_CAPTURE_DIR"), "write local scene screenshots and report.json to this directory")
 	captureScenes := flag.String("capture-scenes", os.Getenv("DARK_MAGIC_CAPTURE_SCENES"), "comma-separated scene IDs to capture (defaults to loading,title)")
 	captureSettle := flag.Int("capture-settle-frames", 10, "stable frames to wait before capturing a scene")
+	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
 	flag.Parse()
 	var profile *profiling.Session
 	if *profileDirectory != "" {
@@ -79,12 +80,12 @@ func main() {
 	if captureDirectory != "" && *captureScenes == "" {
 		*captureScenes = "loading,title"
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
@@ -270,6 +271,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err == nil {
 		err = scenes.Flush(context.Background())
 	}
+	if err == nil && startScene != "" {
+		err = navigator.Replace(context.Background(), startScene)
+	}
 	if err != nil {
 		return err
 	}
@@ -282,6 +286,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		}
 		stopCaptureFrames = renderer.SubscribePostFrame(func() {
 			captureSession.Observe(navigator.Stack())
+			if captureSession.Complete() {
+				stopSignals()
+			}
 		})
 	}
 

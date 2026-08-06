@@ -29,6 +29,7 @@ profile-check:
 
 CAPTURE_DIR ?= ./captures/frontend
 CAPTURE_SCENES ?= loading,title
+START_SCENE ?=
 
 capture:
-	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)"
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --start-scene "$(START_SCENE)"

@@ -378,7 +378,7 @@ implementations. The remaining work is tracked explicitly below.
   in-window playback is tracked in M17.6. Engine-level acceptance now drives
   both startup entries through playing, failed, complete, and skipped states,
   verifies manifest ordering, and asserts scope-owned playback cleanup.
-- [ ] M17.3: Implement all seven character-creation presentations and rules.
+- [x] M17.3: Implement all seven character-creation presentations and rules.
   The expansion creation screen now composes the verified tiled background and
   animates all seven class unselected/hover/selected assets through manifest-owned
   hit regions and anchors. DC6 frame offsets are normalized onto a shared canvas
@@ -393,7 +393,12 @@ implementations. The remaining work is tracked explicitly below.
   paths and verified frame counts: deselection returns to idle after a one-shot
   back walk, while successful creation defers loading until the selected
   character's forward walk completes. Headless acceptance verifies that delay.
-  Final calibrated geometry and visual composition coverage remain.
+  Native comparison against established reference captures calibrated the
+  seven-character stage and hit regions, restored the foreground campfire,
+  heading, focused class copy, deferred creation options, and visible Exit
+  control, and corrected the frontend background and character palettes.
+  Resource-less grouping nodes are now never drawn, eliminating raylib's
+  default-texture artifact without sacrificing retained parent transforms.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation. The manifest-backed two-column/four-row list now
   provides stable focus slots, vertical paging, metadata labels, selection art,

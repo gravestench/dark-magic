@@ -158,11 +158,6 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		return fmt.Errorf("unsupported blend mode %q", state.Blend)
 	}
 	node.SetZIndex(float32(int(state.Layer)*1_000_000 + state.Z))
-	if state.Visible {
-		node.Enable()
-	} else {
-		node.Disable()
-	}
 	if state.Resource != (rendercore.ResourceID{}) {
 		resource, exists := b.resources[state.Resource]
 		if !exists {
@@ -185,6 +180,13 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 			}
 			b.nodeResources[state.ID] = state.Resource
 		}
+	}
+	// Resource-less retained nodes are grouping transforms, not drawable
+	// surfaces. Enabling one would make raylib render its default 1x1 texture.
+	if state.Visible && state.Resource != (rendercore.ResourceID{}) {
+		node.Enable()
+	} else {
+		node.Disable()
 	}
 	if playback := b.playbacks[state.ID]; playback != nil {
 		playback.player.SetPaused(state.AnimationPaused)

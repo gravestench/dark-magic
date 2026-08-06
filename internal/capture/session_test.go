@@ -42,12 +42,18 @@ func TestSessionRetriesBlankFramebuffer(t *testing.T) {
 	if len(session.results) != 0 {
 		t.Fatalf("blank frame was captured: %#v", session.results)
 	}
+	if session.Complete() {
+		t.Fatal("session completed after a rejected blank frame")
+	}
 	session.Observe([]string{"loading"})
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if capturer.calls != 2 || len(session.results) != 1 {
 		t.Fatalf("calls = %d; results = %#v", capturer.calls, session.results)
+	}
+	if !session.Complete() {
+		t.Fatal("session did not complete after capturing every requested scene")
 	}
 }
 

@@ -101,6 +101,11 @@ func (s *Session) Observe(stack []string) {
 	s.results = append(s.results, result)
 }
 
+// Complete reports whether every requested scene has been captured.
+func (s *Session) Complete() bool {
+	return s.err == nil && len(s.captured) == len(s.wanted)
+}
+
 func (s *Session) Close() error {
 	report := Report{Version: 1, Results: append([]Result(nil), s.results...)}
 	data, err := json.MarshalIndent(report, "", "  ")

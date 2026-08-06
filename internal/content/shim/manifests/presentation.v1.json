@@ -33,6 +33,16 @@
       "table": "data/local/FONT/latin/fontexocet10.tbl",
       "sheet": "data/local/FONT/latin/fontexocet10.dc6",
       "palette": "units"
+    },
+    "font16": {
+      "table": "data/local/FONT/latin/font16.tbl",
+      "sheet": "data/local/FONT/latin/font16.dc6",
+      "palette": "units"
+    },
+    "font30": {
+      "table": "data/local/FONT/latin/font30.tbl",
+      "sheet": "data/local/FONT/latin/font30.dc6",
+      "palette": "units"
     }
   },
   "sounds": {
@@ -140,7 +150,28 @@
     },
     "character_create": {
       "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
-      "palette": "sky",
+      "palette": "fechar",
+      "class_palette": "fechar",
+      "campfire": {
+        "sheet": "data/global/ui/FrontEnd/fire.DC6",
+        "palette": "fechar",
+        "anchor": {"x":380,"y":335},
+        "frames_per_second": 15
+      },
+      "labels": {
+        "heading": {"x":400,"y":35,"width":760,"font":"font30","key":"darkmagic.character_create.heading"},
+        "class": {"x":400,"y":78,"width":760,"font":"font30"},
+        "description": {"x":400,"y":118,"width":600,"font":"font16"}
+      },
+      "stage": {
+        "Amazon": {"anchor":{"x":100,"y":339},"hit":{"x":70,"y":220,"width":55,"height":200}},
+        "Assassin": {"anchor":{"x":231,"y":365},"hit":{"x":175,"y":235,"width":50,"height":180}},
+        "Necromancer": {"anchor":{"x":300,"y":335},"hit":{"x":265,"y":220,"width":55,"height":175}},
+        "Barbarian": {"anchor":{"x":400,"y":330},"hit":{"x":364,"y":201,"width":90,"height":170}},
+        "Paladin": {"anchor":{"x":521,"y":338},"hit":{"x":490,"y":210,"width":65,"height":180}},
+        "Sorceress": {"anchor":{"x":626,"y":352},"hit":{"x":580,"y":240,"width":65,"height":160}},
+        "Druid": {"anchor":{"x":720,"y":370},"hit":{"x":680,"y":220,"width":70,"height":195}}
+      },
       "dialog": {
         "x": 270, "y": 185, "width": 260, "height": 180, "max_length": 15,
         "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
@@ -148,6 +179,9 @@
       "options": {
         "expansion": {"x":285,"y":530,"width":230,"height":22,"label":"darkmagic.character.expansion","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"},
         "hardcore": {"x":285,"y":555,"width":230,"height":22,"label":"darkmagic.character.hardcore","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"}
+      },
+      "controls": {
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"darkmagic.character_create.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frames":[0],"down_frames":[1]}
       },
       "classes": [
         {"class":"Amazon", "palette":"units", "anchor":{"x":96,"y":520}, "hit":{"x":35,"y":190,"width":125,"height":330}, "select_sound":"data/global/SFX/cursor/intro/amazon select.wav", "deselect_sound":"data/global/SFX/cursor/intro/amazon deselect.wav", "unselected":"data/global/ui/FrontEnd/amazon/AMNU1.DC6", "hover":"data/global/ui/FrontEnd/amazon/AMNU2.DC6", "selected":"data/global/ui/FrontEnd/amazon/AMNU3.DC6", "forward":"data/global/ui/FrontEnd/amazon/AMFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/amazon/AMFWs.DC6", "forward_frames":54, "back":"data/global/ui/FrontEnd/amazon/AMBW.DC6", "back_frames":30},

@@ -216,6 +216,15 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	var manifest struct {
 		Screens struct {
 			CharacterCreate struct {
+				Palette      string `json:"palette"`
+				ClassPalette string `json:"class_palette"`
+				Campfire     struct {
+					Sheet string `json:"sheet"`
+				} `json:"campfire"`
+				Stage map[string]struct {
+					Anchor struct{ X, Y int }                `json:"anchor"`
+					Hit    struct{ X, Y, Width, Height int } `json:"hit"`
+				} `json:"stage"`
 				Classes []struct {
 					Class         string `json:"class"`
 					Forward       string `json:"forward"`
@@ -230,12 +239,20 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	classes := manifest.Screens.CharacterCreate.Classes
+	creation := manifest.Screens.CharacterCreate
+	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.Campfire.Sheet == "" {
+		t.Fatalf("character creation palette/campfire facts = %#v", creation)
+	}
 	if len(classes) != 7 {
 		t.Fatalf("character creation classes = %d, want 7", len(classes))
 	}
 	for _, class := range classes {
 		if class.Class == "" || class.Forward == "" || class.Back == "" || class.ForwardFrames <= 0 || class.BackFrames <= 0 {
 			t.Errorf("incomplete walk transition for %#v", class)
+		}
+		placement, ok := creation.Stage[class.Class]
+		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
+			t.Errorf("missing calibrated stage placement for %q: %#v", class.Class, placement)
 		}
 	}
 }

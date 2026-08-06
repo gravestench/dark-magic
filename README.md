@@ -153,7 +153,10 @@ MPQ_DIRECTORY=/path/to/diablo-ii make capture
 
 The default captures `loading` and `title`; override `CAPTURE_SCENES` with a
 comma-separated list or pass `--capture-scenes` directly. `--capture-settle-frames`
-controls stabilization. The capture directory contains numbered PNGs plus a
+controls stabilization. Use `START_SCENE=character_create make capture` or
+`--start-scene character_create` to enter a registered scene directly for local
+development review. Capture exits automatically once every requested scene has
+been recorded. The capture directory contains numbered PNGs plus a
 `report.json` recording scene names, dimensions, and SHA-256 hashes. Capture
 output under `captures/` is ignored by Git so Blizzard imagery remains local.
 
