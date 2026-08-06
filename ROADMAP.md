@@ -333,9 +333,9 @@ implementations. The remaining work is tracked explicitly below.
   and title audio.
 - [x] Implement single-player, multiplayer/TCP-IP, credits, cinematics, dialogs,
   and navigation using verified front-end assets.
-- [ ] Implement character creation with all seven class animation sets, hit
+- [x] Implement character creation with all seven class animation sets, hit
   regions, narration, name validation, expansion/hardcore flags, and cancel.
-- [ ] Implement saved-character selection with paging, scrollbar, composite
+- [x] Implement saved-character selection with paging, scrollbar, composite
   previews, metadata labels, deletion confirmation, and double activation.
 - [x] Implement progressive loading screens driven by real dependency progress.
 - [x] Add screenshot/composition tests for every state without checking Blizzard
@@ -390,9 +390,12 @@ implementations. The remaining work is tracked explicitly below.
   Verified per-class selection/deselection narration and manifest-backed
   expansion/hardcore checkboxes now feed immutable creation metadata through
   the save capability. Every class now uses manifest-owned forward/back walk
-  paths and verified frame counts: deselection returns to idle after a one-shot
-  back walk, while successful creation defers loading until the selected
-  character's forward walk completes. Headless acceptance verifies that delay.
+  paths and verified frame counts. Activating a class now plays its one-shot
+  forward walk before entering the selected idle and opening name entry;
+  switching classes concurrently returns the previous class with its back walk.
+  Input is gated during those transitions, and successful creation proceeds to
+  loading only after selection presentation has completed. Headless acceptance
+  verifies the walk-before-dialog order and a cross-class switch.
   Native comparison against established reference captures calibrated the
   seven-character stage and hit regions, restored the foreground campfire,
   heading, focused class copy, deferred creation options, and visible Exit

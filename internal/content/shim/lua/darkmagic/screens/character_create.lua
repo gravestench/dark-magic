@@ -110,6 +110,46 @@ return {
                 end
                 return frames / frames_per_second
             end
+            class.open_name_dialog = function()
+                -- The native save capability validates and canonicalizes
+                -- identities. Returning false keeps the dialog open.
+                self.dialog = dialog.text_entry(
+                    self.root,
+                    screen.dialog,
+                    manifest.fonts.exocet10,
+                    manifest.palettes[screen.dialog.palette],
+                    manifest.palettes[manifest.fonts.exocet10.palette],
+                    "Character name",
+                    "",
+                    function(name)
+                        local id, err = saves.create_named(
+                            name,
+                            definition.class,
+                            self.expansion,
+                            self.hardcore
+                        )
+                        if not id then
+                            self.error = err
+                            return false
+                        end
+                        assert(saves.select(id))
+                        scenes.replace("game_loading")
+                        return true
+                    end
+                )
+            end
+            class.finish_selection = function()
+                class.show("selected")
+                self.selection_transition = nil
+                for _, presentation in ipairs(self.creation_options) do
+                    presentation.control.visible = true
+                    if presentation.visual then
+                        presentation.visual:set_visible(true)
+                        presentation.label:set_visible(true)
+                    end
+                end
+                class.open_name_dialog()
+            end
             class.show("unselected")
             class.control = self.controls:add({
                 id = string.lower(definition.class),
@@ -148,6 +188,15 @@ return {
                     end
                 end,
                 on_activate = function()
+                    -- Do not let repeated input replace renderer resources in
+                    -- the middle of an authored walk transition.
+                    if self.selection_transition or (self.dialog and self.dialog.open) then
+                        return
+                    end
+                    if self.selected == class and class.state == "selected" then
+                        class.open_name_dialog()
+                        return
+                    end
                     if self.selected and self.selected ~= class then
                         local previous = self.selected
                         local deselect = previous.definition.deselect_sound
@@ -173,49 +222,20 @@ return {
                         end
                     end
                     self.selected = class
-                    for _, presentation in ipairs(self.creation_options) do
-                        presentation.control.visible = true
-                        if presentation.visual then
-                            presentation.visual:set_visible(true)
-                            presentation.label:set_visible(true)
-                        end
-                    end
                     if definition.select_sound and audio.exists(definition.select_sound) then
                         audio.play(definition.select_sound, { bus = "ui" })
                     end
-                    class.show("selected")
-
-                    -- The native save capability validates and canonicalizes
-                    -- identities. Returning false keeps the dialog open.
-                    self.dialog = dialog.text_entry(
-                        self.root,
-                        screen.dialog,
-                        manifest.fonts.exocet10,
-                        manifest.palettes[screen.dialog.palette],
-                        manifest.palettes[manifest.fonts.exocet10.palette],
-                        "Character name",
-                        "",
-                        function(name)
-                            local id, err = saves.create_named(
-                                name,
-                                definition.class,
-                                self.expansion,
-                                self.hardcore
-                            )
-                            if not id then
-                                self.error = err
-                                return false
-                            end
-                            assert(saves.select(id))
-                            -- The save exists before presentation begins, but
-                            -- navigation waits for the authored forward walk.
-                            self.launch_after = class.show("forward")
-                            if self.launch_after <= 0 then
-                                scenes.replace("game_loading")
-                            end
-                            return true
-                        end
-                    )
+                    local duration = class.show("forward")
+                    if duration > 0 then
+                        self.selection_transition = class
+                        self.transitions[#self.transitions + 1] = {
+                            class = class,
+                            remaining = duration,
+                            complete = class.finish_selection,
+                        }
+                    else
+                        class.finish_selection()
+                    end
                 end,
             })
             self.classes[#self.classes + 1] = class
@@ -295,17 +315,16 @@ return {
             local transition = self.transitions[index]
             transition.remaining = transition.remaining - elapsed
             if transition.remaining <= 0 then
-                transition.class.show("unselected")
                 table.remove(self.transitions, index)
+                if transition.complete then
+                    transition.complete()
+                else
+                    transition.class.show("unselected")
+                end
             end
         end
 
-        if self.launch_after then
-            self.launch_after = self.launch_after - elapsed
-            if self.launch_after <= 0 then
-                self.launch_after = nil
-                scenes.replace("game_loading")
-            end
+        if self.selection_transition then
             return
         end
         if self.dialog and self.dialog.open then

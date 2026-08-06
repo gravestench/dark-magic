@@ -87,7 +87,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		}
 	})
 
-	t.Run("created character waits for the forward walk", func(t *testing.T) {
+	t.Run("class selection walks forward before naming and switches cleanly", func(t *testing.T) {
 		harness := newStartupHarness(t)
 		harness.skip(t)
 		harness.skip(t)
@@ -99,17 +99,24 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		harness.update(t) // Empty save list redirects into character creation.
 		assertStack(t, harness.navigator, "character_create")
 
-		harness.action(t, "confirm") // Select the initially focused Amazon.
+		harness.action(t, "confirm") // Start the initially focused Amazon walking forward.
+		assertStack(t, harness.navigator, "character_create")
+		harness.updateFor(t, 3*time.Second)
+		assertStack(t, harness.navigator, "character_create")
+		harness.updateFor(t, time.Second) // Forward walk completes and opens the dialog.
+
+		harness.action(t, "cancel") // Keep the Amazon, then choose another class.
+		harness.action(t, "right")
+		harness.action(t, "confirm") // Amazon walks back while Sorceress walks forward.
+		harness.updateFor(t, 3*time.Second)
+		assertStack(t, harness.navigator, "character_create")
+		harness.updateFor(t, time.Second) // Sorceress reaches her selected pose.
+
 		harness.input.Publish(inputstate.Frame{Text: "Hero"})
 		harness.update(t)
 		harness.input.Publish(inputstate.Frame{})
 		harness.action(t, "down")    // Move dialog focus from the field to OK.
-		harness.action(t, "confirm") // Accept the name and begin forward walk.
-		assertStack(t, harness.navigator, "character_create")
-
-		harness.updateFor(t, 3*time.Second)
-		assertStack(t, harness.navigator, "character_create")
-		harness.updateFor(t, time.Second)
+		harness.action(t, "confirm") // Accept after the authored walk is complete.
 		assertStack(t, harness.navigator, "game_loading")
 	})
 
