@@ -73,6 +73,11 @@ const (
 	StorePagesTable           = "data/global/excel/StorePage.txt"
 	CompositeComponentsTable  = "data/global/excel/Composit.txt"
 	HitClassesTable           = "data/global/excel/HitClass.txt"
+	PlayerClassesTable        = "data/global/excel/PlayerClass.txt"
+	PlayerModesTable          = "data/global/excel/PlrMode.txt"
+	PlayerTypesTable          = "data/global/excel/PlrType.txt"
+	MonsterModesTable         = "data/global/excel/MonMode.txt"
+	MonsterPlacesTable        = "data/global/excel/MonPlace.txt"
 )
 
 func isAdmittedTable(path string) bool {
@@ -94,7 +99,8 @@ func isAdmittedTable(path string) bool {
 		UniqueAppellationsTable, UniquePrefixesTable, UniqueSuffixesTable,
 		TreasureClassTable, HirelingDescriptionsTable, SuperUniquesTable,
 		LowQualityItemsTable, BodyLocationsTable, StorePagesTable,
-		CompositeComponentsTable, HitClassesTable:
+		CompositeComponentsTable, HitClassesTable, PlayerClassesTable,
+		PlayerModesTable, PlayerTypesTable, MonsterModesTable, MonsterPlacesTable:
 		return true
 	default:
 		return false

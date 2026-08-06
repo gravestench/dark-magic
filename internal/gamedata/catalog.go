@@ -130,6 +130,15 @@ type Snapshot struct {
 	CompositeComponentsByToken map[string]models.CompositeComponent
 	HitClasses                 []models.HitClass
 	HitClassesByCode           map[string]models.HitClass
+	PlayerClasses              []models.PlayerClassCode
+	PlayerClassesByCode        map[string]models.PlayerClassCode
+	PlayerModes                []models.PlayerMode
+	PlayerModesByToken         map[string]models.PlayerMode
+	PlayerTypes                []models.PlayerType
+	PlayerTypesByToken         map[string]models.PlayerType
+	MonsterModes               []models.MonsterMode
+	MonsterModesByToken        map[string]models.MonsterMode
+	MonsterPlaces              []models.MonsterPlace
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -701,6 +710,46 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	issues = append(issues, found...)
+	playerClasses, err := Load[models.PlayerClassCode](c.store, PlayerClassesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	playerClassesByCode, found, err := ObservedIndex(PlayerClassesTable, playerClasses, func(record models.PlayerClassCode) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	playerModes, err := Load[models.PlayerMode](c.store, PlayerModesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	playerModesByToken, found, err := ObservedIndex(PlayerModesTable, playerModes, func(record models.PlayerMode) string { return record.Token })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	playerTypes, err := Load[models.PlayerType](c.store, PlayerTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	playerTypesByToken, found, err := ObservedIndex(PlayerTypesTable, playerTypes, func(record models.PlayerType) string { return record.Token })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	monsterModes, err := Load[models.MonsterMode](c.store, MonsterModesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterModesByToken, found, err := ObservedIndex(MonsterModesTable, monsterModes, func(record models.MonsterMode) string { return record.Token })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	monsterPlaces, err := Load[models.MonsterPlace](c.store, MonsterPlacesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -749,6 +798,10 @@ func (c *Catalog) load() (Snapshot, error) {
 		StorePages: storePages, StorePagesByCode: storePagesByCode,
 		CompositeComponents: compositeComponents, CompositeComponentsByToken: compositeComponentsByToken,
 		HitClasses: hitClasses, HitClassesByCode: hitClassesByCode,
+		PlayerClasses: playerClasses, PlayerClassesByCode: playerClassesByCode,
+		PlayerModes: playerModes, PlayerModesByToken: playerModesByToken,
+		PlayerTypes: playerTypes, PlayerTypesByToken: playerTypesByToken,
+		MonsterModes: monsterModes, MonsterModesByToken: monsterModesByToken, MonsterPlaces: monsterPlaces,
 	}, nil
 }
 
@@ -872,6 +925,15 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		CompositeComponentsByToken: make(map[string]models.CompositeComponent, len(source.CompositeComponentsByToken)),
 		HitClasses:                 append([]models.HitClass(nil), source.HitClasses...),
 		HitClassesByCode:           make(map[string]models.HitClass, len(source.HitClassesByCode)),
+		PlayerClasses:              append([]models.PlayerClassCode(nil), source.PlayerClasses...),
+		PlayerClassesByCode:        make(map[string]models.PlayerClassCode, len(source.PlayerClassesByCode)),
+		PlayerModes:                append([]models.PlayerMode(nil), source.PlayerModes...),
+		PlayerModesByToken:         make(map[string]models.PlayerMode, len(source.PlayerModesByToken)),
+		PlayerTypes:                append([]models.PlayerType(nil), source.PlayerTypes...),
+		PlayerTypesByToken:         make(map[string]models.PlayerType, len(source.PlayerTypesByToken)),
+		MonsterModes:               append([]models.MonsterMode(nil), source.MonsterModes...),
+		MonsterModesByToken:        make(map[string]models.MonsterMode, len(source.MonsterModesByToken)),
+		MonsterPlaces:              append([]models.MonsterPlace(nil), source.MonsterPlaces...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -1013,6 +1075,18 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.HitClassesByCode {
 		result.HitClassesByCode[key] = value
+	}
+	for key, value := range source.PlayerClassesByCode {
+		result.PlayerClassesByCode[key] = value
+	}
+	for key, value := range source.PlayerModesByToken {
+		result.PlayerModesByToken[key] = value
+	}
+	for key, value := range source.PlayerTypesByToken {
+		result.PlayerTypesByToken[key] = value
+	}
+	for key, value := range source.MonsterModesByToken {
+		result.MonsterModesByToken[key] = value
 	}
 	return result
 }

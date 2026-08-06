@@ -81,6 +81,11 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		StorePagesTable:           &fstest.MapFile{Data: []byte("Store Page\tCode\nArmor Page\tarmo\n")},
 		CompositeComponentsTable:  &fstest.MapFile{Data: []byte("Name\tToken\nHead\tHD\n")},
 		HitClassesTable:           &fstest.MapFile{Data: []byte("Hit Class\tCode\nHand To Hand\thth\n")},
+		PlayerClassesTable:        &fstest.MapFile{Data: []byte("Player Class\tCode\nAmazon\tama\n")},
+		PlayerModesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nWalk\tWL\n")},
+		PlayerTypesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nAmazon\tAM\n")},
+		MonsterModesTable:         &fstest.MapFile{Data: []byte("Name\tToken\nAttack1\tA1\n")},
+		MonsterPlacesTable:        &fstest.MapFile{Data: []byte("code\nplace_unique_pack\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -137,6 +142,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.LowQualityItemNames) != 1 || first.BodyLocationsByCode["head"].Name != "Head" || first.StorePagesByCode["armo"].Name != "Armor Page" || first.CompositeComponentsByToken["HD"].Name != "Head" || first.HitClassesByCode["hth"].Name != "Hand To Hand" {
 		t.Fatalf("typed item lookup tables = %#v", first)
+	}
+	if first.PlayerClassesByCode["ama"].Name != "Amazon" || first.PlayerModesByToken["WL"].Name != "Walk" || first.PlayerTypesByToken["AM"].Name != "Amazon" || first.MonsterModesByToken["A1"].Name != "Attack1" || len(first.MonsterPlaces) != 1 {
+		t.Fatalf("typed actor lookup tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -223,6 +231,11 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		StorePagesTable:           &fstest.MapFile{Data: []byte("Store Page\tCode\nArmor Page\tarmo\n")},
 		CompositeComponentsTable:  &fstest.MapFile{Data: []byte("Name\tToken\nHead\tHD\n")},
 		HitClassesTable:           &fstest.MapFile{Data: []byte("Hit Class\tCode\nHand To Hand\thth\n")},
+		PlayerClassesTable:        &fstest.MapFile{Data: []byte("Player Class\tCode\nAmazon\tama\n")},
+		PlayerModesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nWalk\tWL\n")},
+		PlayerTypesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nAmazon\tAM\n")},
+		MonsterModesTable:         &fstest.MapFile{Data: []byte("Name\tToken\nAttack1\tA1\n")},
+		MonsterPlacesTable:        &fstest.MapFile{Data: []byte("code\nplace_unique_pack\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {
