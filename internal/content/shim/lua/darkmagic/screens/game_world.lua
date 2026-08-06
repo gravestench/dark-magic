@@ -1,20 +1,41 @@
 -- Minimal interactive game-world orchestration scene.
 --
 -- Lua owns input and presentation flow while dm.simulation/v1 owns persistent,
--- deterministic gameplay state. The placeholder hero makes that separation
--- visible until the composite character renderer is connected.
+-- deterministic gameplay state. Selected-character appearance and the HUD are
+-- disposable presentation handles owned entirely by this scene.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local vfs = require("dm.vfs/v1")
 local audio = require("dm.audio/v1")
 local simulation = require("dm.simulation/v1")
+local saves = require("dm.save/v1")
+local data = require("dm.data/v1")
+local game_hud = require("darkmagic.ui.game_hud")
+
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local screen = manifest.screens.game_world
 
 return {
     create = function(self)
         self.root = render.create("world")
         self.hero = render.create("world", self.root)
-        self.hero:fill_rect(24, 32, 180, 40, 30, 255)
+        local character = saves.selected()
+        if character and character.appearance and render.assets_available() then
+            self.hero:set_cof_animation(
+                character.appearance.cof,
+                character.appearance.palette,
+                character.appearance.direction,
+                character.appearance.components,
+                "loop"
+            )
+            self.hero:set_scale(screen.hero.scale, screen.hero.scale)
+        else
+            self.hero:set_visible(false)
+        end
+        if render.assets_available() then
+            self.hud = game_hud.create(self.root, screen.hud, manifest.palettes)
+        end
 
         -- VFS provenance and optional asset checks are examples of querying
         -- capabilities without receiving direct filesystem/native ownership.
@@ -47,7 +68,10 @@ return {
         end
 
         local state = simulation.state()
-        self.hero:set_position(state.hero_x, state.hero_y)
+        self.hero:set_position(
+            screen.hero.screen_x + state.hero_x - state.camera_x,
+            screen.hero.screen_y + state.hero_y - state.camera_y
+        )
 
         -- Panels are scene overlays rather than long-lived engine services.
         if input.pressed("inventory") then

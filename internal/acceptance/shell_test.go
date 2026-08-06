@@ -264,7 +264,10 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		}
 	}
 	assertStack(t, navigator, "game_world")
-	assertNodes(t, &composer, 3)
+	// The compatibility hero rectangle is gone. Headless metadata-only saves
+	// retain the world root and cursor; native asset-backed runs add the HUD and
+	// an appearance node only when authoritative presentation data exists.
+	assertNodes(t, &composer, 2)
 	if selected, ok := saves.Selected(); !ok || selected.ID != "hero" {
 		t.Fatalf("selected character = %#v, %v", selected, ok)
 	}
@@ -279,7 +282,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertStack(t, navigator, "game_world", overlay)
-		assertNodes(t, &composer, 4)
+		assertNodes(t, &composer, 3)
 		input.Publish(inputcore.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
@@ -289,7 +292,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertStack(t, navigator, "game_world")
-		assertNodes(t, &composer, 3)
+		assertNodes(t, &composer, 2)
 	}
 	for cycle := 0; cycle < 50; cycle++ {
 		input.Publish(inputcore.Frame{})

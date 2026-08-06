@@ -473,9 +473,17 @@ implementations. The remaining work is tracked explicitly below.
 ## M18: Authentic in-game shell
 
 - [ ] Replace the compatibility HUD and placeholder hero with Lua orchestration
-  over real world and character presentation handles.
+  over real world and character presentation handles. The fake hero rectangle
+  is gone: the world scene now binds an optional selected-character COF/DCC
+  appearance snapshot and keeps metadata-only characters invisible instead of
+  fabricating world art. The real world-tile handle remains pending M20.
 - [ ] Assemble the 640x480 and 800x600 control panels, globes, stamina and
   experience bars, belt, skill buttons, minipanel, tooltips, and cursor states.
+  The supported 800x600 profile now assembles the six authored panel segments,
+  two 48px skill wells, clipped health/mana liquids and overlays, generic skill
+  icons, and value-driven stamina/experience fills from manifest-owned facts.
+  Interactive buttons, belt, minipanel, tooltips, cursor states, and the 640x480
+  profile remain.
 - [ ] Implement interactive inventory/equipment, character stats, skill trees,
   automap, quest log, waypoint, party, hireling, vendor, stash, cube, options,
   help, chat, pause, and escape panels from verified assets and records.

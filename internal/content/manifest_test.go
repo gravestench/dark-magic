@@ -73,6 +73,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		"character_select",
 		"cinematics",
 		"game_loading",
+		"game_world",
 		"credits",
 	} {
 		if len(manifest.Screens[screen]) == 0 {
@@ -253,6 +254,52 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 		placement, ok := creation.Stage[class.Class]
 		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
 			t.Errorf("missing calibrated stage placement for %q: %#v", class.Class, placement)
+		}
+	}
+}
+
+func TestGameHUDCompositionFacts(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Screens struct {
+			GameWorld struct {
+				HUD struct {
+					PanelSheet string `json:"panel_sheet"`
+					PanelParts []struct {
+						Frame  int `json:"frame"`
+						X      int `json:"x"`
+						Bottom int `json:"bottom"`
+					} `json:"panel_parts"`
+					Globes struct {
+						Sheet        string `json:"sheet"`
+						OverlapSheet string `json:"overlap_sheet"`
+					} `json:"globes"`
+					Skills struct {
+						Sheet string `json:"sheet"`
+					} `json:"skills"`
+				} `json:"hud"`
+			} `json:"game_world"`
+		} `json:"screens"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	hud := manifest.Screens.GameWorld.HUD
+	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
+		t.Fatalf("incomplete HUD asset facts: %#v", hud)
+	}
+	wantX := []int{0, 165, 293, 421, 549, 683}
+	if len(hud.PanelParts) != len(wantX) {
+		t.Fatalf("panel parts = %d, want %d", len(hud.PanelParts), len(wantX))
+	}
+	for index, part := range hud.PanelParts {
+		if part.Frame != index || part.X != wantX[index] || part.Bottom != 600 {
+			t.Errorf("panel part %d = %#v", index, part)
 		}
 	}
 }

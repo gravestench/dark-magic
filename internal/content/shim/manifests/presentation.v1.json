@@ -249,6 +249,30 @@
       "sweep_seconds": 1.5,
       "dependencies": ["selected_character", "loading_assets", "world"]
     },
+    "game_world": {
+      "hero": {"scale":1.0,"screen_x":400,"screen_y":330},
+      "hud": {
+        "palette": "sky",
+        "panel_sheet": "data/global/ui/PANEL/800ctrlpnl7.dc6",
+        "panel_parts": [
+          {"frame":0,"x":0,"bottom":600},
+          {"frame":1,"x":165,"bottom":600},
+          {"frame":2,"x":293,"bottom":600},
+          {"frame":3,"x":421,"bottom":600},
+          {"frame":4,"x":549,"bottom":600},
+          {"frame":5,"x":683,"bottom":600}
+        ],
+        "globes": {
+          "sheet": "data/global/ui/PANEL/hlthmana.DC6",
+          "overlap_sheet": "data/global/ui/PANEL/overlap.DC6",
+          "health": {"frame":0,"overlap_frame":0,"x":30,"y":507,"width":80,"height":80,"fill":0.75,"overlap_x":28,"overlap_y":507},
+          "mana": {"frame":1,"overlap_frame":1,"x":690,"y":508,"width":80,"height":80,"fill":0.6,"overlap_x":691,"overlap_y":504}
+        },
+        "stamina": {"x":273,"y":572,"width":102,"height":19,"fill":0.8,"color":{"red":175,"green":136,"blue":72,"alpha":200}},
+        "experience": {"x":256,"y":561,"width":120,"height":4,"fill":0.15,"color":{"red":92,"green":72,"blue":180,"alpha":220}},
+        "skills": {"sheet":"data/global/ui/SPELLS/Skillicon.DC6","frame":2,"left":{"x":117,"y":552},"right":{"x":635,"y":552}}
+      }
+    },
     "credits": {
       "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
       "palette": "sky",
