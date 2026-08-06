@@ -91,8 +91,9 @@ We welcome contributions from developers, artists, designers, and Diablo
 enthusiasts of all levels of expertise. If you want to be part of this journey, 
 check out our [CONTRIBUTING.md](https://github.com/gravestench/dark-magic/blob/main/CONTRIBUTING.md) guide to get started.
 
-Use the [internal component template](./internal/service_template) when adding a
-long-lived engine component.
+Follow the lifecycle and dependency rules in
+[the architecture guide](docs/ARCHITECTURE.md) when adding a long-lived engine
+component.
 
 ## Development
 

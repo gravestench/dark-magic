@@ -700,6 +700,9 @@ implementations. The remaining work is tracked explicitly below.
   is likewise owned by `internal/logging`, with its public import path retired.
   The weighted generation-aware cache is now `internal/cache`; renderer and Lua
   consumers migrated together and the old public import is guarded.
+  The unused service template and empty service-era package are removed;
+  contributor guidance now points to the authoritative architecture rules, and
+  acceptance tests reject service-mesh imports.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

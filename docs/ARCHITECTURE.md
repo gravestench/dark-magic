@@ -72,7 +72,6 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/acceptance` | Cross-system acceptance fixtures | tests | Test | Keep |
 | `internal/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
 | `internal/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
-| `internal/service_template` | Obsolete service-era example | none | None | Remove after audit |
 | `pkg/assetdecode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Move to `internal/assets/decode` |
 | `pkg/assetcatalog` | Presentation asset research/catalog output | tools | Stateless | Move to `internal/assets/catalog` |
 | `pkg/assetinspect` | Asset metadata and preview helpers | tools, world | Stateless | Move to `internal/assets/inspect` |
@@ -83,7 +82,6 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
 | `pkg/scene` | Legacy scene data structures | command, Lua, world | Scene | Merge with navigation/render |
-| `pkg/services` | Empty retired service-era directory | none | None | Remove |
 
 ## Target feature layout
 

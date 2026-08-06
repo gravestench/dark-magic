@@ -15,5 +15,6 @@ Short-lived screens and overlays belong to `internal/navigation`, not the
 application component graph. Renderer and audio mutations cross their
 thread-safe command boundaries and are drained by the native owner thread.
 
-Use [internal/service_template](internal/service_template) as the component
-starting point. Run `make test` and `make test-race` before submitting changes.
+Use the lifecycle and dependency rules in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) as the component starting point.
+Run `make test` and `make test-race` before submitting changes.

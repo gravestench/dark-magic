@@ -18,9 +18,10 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
 	forbidden := map[string]struct{}{
-		"github.com/gravestench/dark-magic/pkg/paths":     {},
-		"github.com/gravestench/dark-magic/pkg/prettylog": {},
-		"github.com/gravestench/dark-magic/pkg/cache":     {},
+		"github.com/gravestench/dark-magic/pkg/paths":                 {},
+		"github.com/gravestench/dark-magic/pkg/prettylog":             {},
+		"github.com/gravestench/dark-magic/pkg/cache":                 {},
+		"github.com/gravestench/dark-magic/internal/service_template": {},
 	}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -43,6 +44,9 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 			}
 			if _, rejected := forbidden[name]; rejected {
 				t.Errorf("%s imports retired public package %s", path, name)
+			}
+			if strings.Contains(name, "servicemesh") {
+				t.Errorf("%s imports retired service-mesh package %s", path, name)
 			}
 		}
 		return nil
