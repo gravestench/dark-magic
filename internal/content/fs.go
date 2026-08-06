@@ -67,13 +67,23 @@ type Source struct {
 
 // FS overlays content layers in deterministic priority order.
 type FS struct {
-	mu     sync.RWMutex
-	layers []Layer
+	mu          sync.RWMutex
+	layers      []Layer
+	generation  uint64
+	subscribers map[uint64]chan Change
+	nextSubID   uint64
+}
+
+// Change reports that content at Path may resolve differently. Generation is
+// monotonically increasing for the lifetime of the layered filesystem.
+type Change struct {
+	Path       string
+	Generation uint64
 }
 
 // New constructs a layered filesystem. Earlier layers override later layers.
 func New(layers ...Layer) (*FS, error) {
-	result := &FS{}
+	result := &FS{subscribers: make(map[uint64]chan Change)}
 	for i := len(layers) - 1; i >= 0; i-- {
 		if err := result.MountFirst(layers[i]); err != nil {
 			return nil, err
@@ -195,6 +205,66 @@ func (f *FS) ReadDir(name string) ([]fs.DirEntry, error) {
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].Name() < result[j].Name() })
 	return result, nil
+}
+
+// Exists reports whether a normalized content path currently resolves.
+func (f *FS) Exists(name string) bool {
+	file, err := f.Open(name)
+	if err != nil {
+		return false
+	}
+	_ = file.Close()
+	return true
+}
+
+// Walk enumerates the merged layered view in lexical order.
+func (f *FS) Walk(root string, visit fs.WalkDirFunc) error {
+	return fs.WalkDir(f, root, visit)
+}
+
+// Invalidate publishes a normalized development-time content change. The FS
+// does not cache bytes itself; consumers use this signal to invalidate decoded
+// records, required Lua modules, and other derived resources.
+func (f *FS) Invalidate(name string) (Change, error) {
+	clean, err := Normalize(name)
+	if err != nil {
+		return Change{}, err
+	}
+	f.mu.Lock()
+	f.generation++
+	change := Change{Path: clean, Generation: f.generation}
+	for _, subscriber := range f.subscribers {
+		select {
+		case subscriber <- change:
+		default:
+		}
+	}
+	f.mu.Unlock()
+	return change, nil
+}
+
+// Subscribe returns a best-effort diagnostic change stream. Consumers must
+// treat the latest generation as authoritative because slow subscribers may
+// coalesce changes.
+func (f *FS) Subscribe(buffer int) (<-chan Change, func()) {
+	if buffer < 1 {
+		buffer = 1
+	}
+	f.mu.Lock()
+	id := f.nextSubID
+	f.nextSubID++
+	changes := make(chan Change, buffer)
+	f.subscribers[id] = changes
+	f.mu.Unlock()
+	var once sync.Once
+	return changes, func() {
+		once.Do(func() {
+			f.mu.Lock()
+			delete(f.subscribers, id)
+			close(changes)
+			f.mu.Unlock()
+		})
+	}
 }
 
 // Normalize converts Diablo-style paths to valid fs.FS paths and rejects

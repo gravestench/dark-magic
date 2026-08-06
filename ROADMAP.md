@@ -125,7 +125,7 @@ their own legally obtained game data.
   shim archive, Diablo II patches/expansion data, then base game data.
 - [x] Preserve source provenance so diagnostics can report which layer supplied an
   asset or script.
-- [ ] Add enumeration, existence, and invalidation behavior suitable for script
+- [x] Add enumeration, existence, and invalidation behavior suitable for script
   loading and development-time reload.
 - [ ] Package a redistributable `darkmagic` shim archive containing engine-owned
   scripts and assets, while continuing to require users to supply Diablo II data.
@@ -188,15 +188,15 @@ their own legally obtained game data.
 ## M13: Lua-authored Diablo shell
 
 - [x] Add a scene/navigation manager distinct from long-lived engine components.
-- [ ] Define scene lifecycle callbacks for `create`, `enter`, `update`, `render`,
+- [x] Define scene lifecycle callbacks for `create`, `enter`, `update`, `render`,
   `exit`, and `destroy`.
-- [ ] Implement the loading screen from the shim archive.
-- [ ] Implement the title and main game menus from the shim archive.
-- [ ] Implement character selection/creation as Lua scenes backed by native save
+- [x] Implement the loading screen from the shim archive.
+- [x] Implement the title and main game menus from the shim archive.
+- [x] Implement character selection/creation as Lua scenes backed by native save
   and record capabilities.
 - [ ] Implement the interactive game-world scene as Lua orchestration over native
   rendering, input, assets, simulation, and audio.
-- [ ] Implement inventory, character, skill, automap, options, and pause UI as
+- [x] Implement inventory, character, skill, automap, options, and pause UI as
   layered overlays rather than independent application services.
 - [x] Add deterministic navigation tests for screen transitions, overlay stacking,
   input focus, cancellation, and cleanup.
@@ -222,10 +222,10 @@ their own legally obtained game data.
 
 - [x] Boot the executable through the internal host.
 - [x] Mount legally supplied Diablo II archives plus the Dark Magic shim archive.
-- [ ] Execute `boot.lua`, enter the Lua-authored main menu, select a character, and
+- [x] Execute `boot.lua`, enter the Lua-authored main menu, select a character, and
   enter an interactive world.
 - [x] Open and close inventory as an overlay without disrupting the world scene.
-- [ ] Enable, disable, restart, and transactionally reload a scripted component at
+- [x] Enable, disable, restart, and transactionally reload a scripted component at
   runtime without leaking callbacks, renderer resources, or native handles.
 - [ ] Shut down cleanly with race detection enabled and without Service Mesh.
 

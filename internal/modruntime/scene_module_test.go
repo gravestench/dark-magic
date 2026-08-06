@@ -36,7 +36,8 @@ return {
   id = "boot",
   start = function(self)
     scenes.register("world", {
-      enter = function(self) calls = (calls or "") .. "enter;"; self.root = render.create("world") end,
+	  create = function(self) calls = (calls or "") .. "create;" end,
+	  enter = function(self) calls = calls .. "enter;"; self.root = render.create("world") end,
       update = function(self, dt) calls = calls .. "update;" end,
       render = function(self) calls = calls .. "render;" end,
       exit = function(self) calls = calls .. "exit;" end,
@@ -78,7 +79,7 @@ return {
 		t.Fatalf("render nodes leaked: %#v", composer.Snapshot())
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if got := state.GetGlobal("calls").String(); got != "enter;update;render;exit;destroy;" {
+		if got := state.GetGlobal("calls").String(); got != "create;enter;update;render;exit;destroy;" {
 			t.Fatalf("calls = %q", got)
 		}
 		return nil

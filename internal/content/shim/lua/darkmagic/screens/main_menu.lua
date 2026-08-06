@@ -11,7 +11,7 @@ return {
 
     update = function(self, elapsed)
         if input.pressed("confirm") then
-            scenes.replace("game_world")
+            scenes.replace("character_select")
         end
     end,
 }

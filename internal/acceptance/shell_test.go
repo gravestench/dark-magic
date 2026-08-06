@@ -12,6 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/savecore"
 )
 
 func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
@@ -27,6 +28,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer rendercore.Composer
 	var input inputcore.Store
+	saves := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
@@ -34,6 +36,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.VFSModule(contentFS),
 		modruntime.InputModule(&input),
 		modruntime.RenderModule(runtime, &composer),
+		modruntime.SaveModule(saves),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -65,7 +68,29 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
+	assertStack(t, navigator, "title")
+	assertNodes(t, &composer, 2)
+
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
 	assertStack(t, navigator, "main_menu")
+	assertNodes(t, &composer, 2)
+
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "character_select")
 	assertNodes(t, &composer, 2)
 
 	input.Publish(inputcore.Frame{})
@@ -78,28 +103,32 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	assertStack(t, navigator, "game_world")
 	assertNodes(t, &composer, 2)
+	if selected, ok := saves.Selected(); !ok || selected.ID != "hero" {
+		t.Fatalf("selected character = %#v, %v", selected, ok)
+	}
 
-	input.Publish(inputcore.Frame{})
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
+	for _, overlay := range []string{"inventory", "character", "skills", "automap", "options", "pause"} {
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		publishAction(&input, overlay)
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		assertStack(t, navigator, "game_world", overlay)
+		assertNodes(t, &composer, 3)
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		publishAction(&input, "cancel")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		assertStack(t, navigator, "game_world")
+		assertNodes(t, &composer, 2)
 	}
-	publishAction(&input, "inventory")
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
-	}
-	assertStack(t, navigator, "game_world", "inventory")
-	assertNodes(t, &composer, 3)
-
-	input.Publish(inputcore.Frame{})
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
-	}
-	publishAction(&input, "cancel")
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
-	}
-	assertStack(t, navigator, "game_world")
-	assertNodes(t, &composer, 2)
 
 	if err := scenes.Close(ctx); err != nil {
 		t.Fatal(err)

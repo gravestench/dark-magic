@@ -13,7 +13,9 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/filewatch"
 	"github.com/gravestench/dark-magic/internal/host"
+	"github.com/gravestench/dark-magic/internal/hotreload"
 	"github.com/gravestench/dark-magic/internal/inputcore"
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
@@ -21,6 +23,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
+	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/gameScene"
 	"github.com/gravestench/dark-magic/pkg/services/input"
@@ -63,6 +66,7 @@ func run(contentFS *content.FS) error {
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
 	locale := localecore.New(contentFS, "English")
+	saves := savecore.New(savecore.Character{ID: "default-amazon", Name: "Dark Wanderer", Class: "Amazon", Level: 1})
 	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
@@ -80,6 +84,9 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.LocaleModule(locale)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.SaveModule(saves)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RenderModuleWithAssets(scripts, composer, contentFS)); err != nil {
@@ -142,7 +149,20 @@ func run(contentFS *content.FS) error {
 			err = components.Register(definition.Managed())
 		}
 	}
+	modDirectory := os.Getenv("DARK_MAGIC_MOD_DIRECTORY")
+	if err == nil && modDirectory != "" {
+		coordinator := hotreload.New(contentFS, scripts, components, records, definitions)
+		err = components.Register(host.ManagedDefinition{
+			ID: "engine.hot-reload",
+			New: func(context.Context) (host.Component, error) {
+				return filewatch.New(modDirectory, 250*time.Millisecond, coordinator.Reload), nil
+			},
+		})
+	}
 	desired, desiredErr := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "darkmagic.boot")
+	if modDirectory != "" && desired != nil {
+		desired["engine.hot-reload"] = true
+	}
 	if err == nil {
 		err = desiredErr
 	}

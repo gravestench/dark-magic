@@ -145,3 +145,37 @@ func TestNormalizeRejectsTraversal(t *testing.T) {
 		}
 	}
 }
+
+func TestExistsWalkAndInvalidation(t *testing.T) {
+	contentFS, err := New(Layer{Name: "base", FS: fstest.MapFS{
+		"components/a.lua": &fstest.MapFile{Data: []byte("return {}")},
+		"components/b.lua": &fstest.MapFile{Data: []byte("return {}")},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contentFS.Exists(`\components\a.lua`) || contentFS.Exists("missing") {
+		t.Fatal("unexpected existence result")
+	}
+	var names []string
+	if err := contentFS.Walk("components", func(name string, _ fs.DirEntry, err error) error {
+		if err == nil {
+			names = append(names, name)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(names, []string{"components", "components/a.lua", "components/b.lua"}) {
+		t.Fatalf("walk = %v", names)
+	}
+	changes, cancel := contentFS.Subscribe(1)
+	defer cancel()
+	change, err := contentFS.Invalidate(`\components\a.lua`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observed := <-changes; observed != change || observed.Generation != 1 || observed.Path != "components/a.lua" {
+		t.Fatalf("change = %#v observed = %#v", change, observed)
+	}
+}

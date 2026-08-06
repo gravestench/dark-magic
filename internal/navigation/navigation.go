@@ -12,6 +12,7 @@ import (
 
 // Scene is one screen or overlay instance.
 type Scene interface {
+	Create(context.Context) error
 	Enter(context.Context) error
 	Update(context.Context, time.Duration) error
 	Render(context.Context) error
@@ -22,6 +23,12 @@ type Scene interface {
 // UpdateBlocker lets an overlay pause scenes below it.
 type UpdateBlocker interface {
 	BlocksUpdateBelow() bool
+}
+
+// FocusedUpdater distinguishes simulation updates from input focus. Only the
+// top scene is focused even when transparent overlays allow updates below.
+type FocusedUpdater interface {
+	UpdateFocused(context.Context, time.Duration, bool) error
 }
 
 // Factory creates a fresh scene instance.
@@ -128,7 +135,13 @@ func (m *Manager) Update(ctx context.Context, elapsed time.Duration) error {
 		}
 	}
 	for index := start; index < len(m.stack); index++ {
-		if err := m.stack[index].scene.Update(ctx, elapsed); err != nil {
+		var err error
+		if updater, ok := m.stack[index].scene.(FocusedUpdater); ok {
+			err = updater.UpdateFocused(ctx, elapsed, index == len(m.stack)-1)
+		} else {
+			err = m.stack[index].scene.Update(ctx, elapsed)
+		}
+		if err != nil {
 			return fmt.Errorf("navigation: update %q: %w", m.stack[index].id, err)
 		}
 	}
@@ -178,6 +191,9 @@ func (m *Manager) createAndEnter(ctx context.Context, id string) (entry, error) 
 	}
 	if scene == nil {
 		return entry{}, fmt.Errorf("navigation: create %q: factory returned nil", id)
+	}
+	if err := scene.Create(ctx); err != nil {
+		return entry{}, errors.Join(fmt.Errorf("navigation: initialize %q: %w", id, err), scene.Destroy(ctx))
 	}
 	if err := scene.Enter(ctx); err != nil {
 		return entry{}, errors.Join(fmt.Errorf("navigation: enter %q: %w", id, err), scene.Destroy(ctx))

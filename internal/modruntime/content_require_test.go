@@ -35,3 +35,33 @@ func TestContentRequireLoadsModuleFromVFS(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestInvalidateContentModuleReloadsNextRequire(t *testing.T) {
+	files := fstest.MapFS{"lua/example.lua": &fstest.MapFile{Data: []byte(`return { value = 1 }`)}}
+	runtime := New()
+	if err := runtime.RegisterInstaller(ContentRequire(files, "lua")); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"first.lua": &fstest.MapFile{Data: []byte(`first = require("example").value`)}}, "first.lua"); err != nil {
+		t.Fatal(err)
+	}
+	files["lua/example.lua"] = &fstest.MapFile{Data: []byte(`return { value = 2 }`)}
+	if err := runtime.InvalidateModule(context.Background(), "example"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"second.lua": &fstest.MapFile{Data: []byte(`second = require("example").value`)}}, "second.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		if state.GetGlobal("first") != lua.LNumber(1) || state.GetGlobal("second") != lua.LNumber(2) {
+			t.Fatalf("values = %s/%s", state.GetGlobal("first"), state.GetGlobal("second"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

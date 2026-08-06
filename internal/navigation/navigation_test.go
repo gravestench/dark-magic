@@ -15,6 +15,11 @@ type testScene struct {
 	calls    *[]string
 }
 
+func (s *testScene) Create(context.Context) error {
+	*s.calls = append(*s.calls, "create "+s.id)
+	return nil
+}
+
 func (s *testScene) Enter(context.Context) error {
 	*s.calls = append(*s.calls, "enter "+s.id)
 	return s.enterErr
@@ -64,7 +69,7 @@ func TestNavigationStackUpdateRenderAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
-		"enter world", "enter inventory", "enter tooltip",
+		"create world", "enter world", "create inventory", "enter inventory", "create tooltip", "enter tooltip",
 		"update inventory", "update tooltip",
 		"render world", "render inventory", "render tooltip",
 		"exit tooltip", "destroy tooltip", "exit inventory", "destroy inventory", "exit world", "destroy world",
@@ -90,7 +95,7 @@ func TestReplacePreservesStackWhenNewSceneCannotEnter(t *testing.T) {
 	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"menu"}) {
 		t.Fatalf("stack = %v", got)
 	}
-	want := []string{"enter menu", "enter broken", "destroy broken"}
+	want := []string{"create menu", "enter menu", "create broken", "enter broken", "destroy broken"}
 	if !reflect.DeepEqual(calls, want) {
 		t.Fatalf("calls = %v, want %v", calls, want)
 	}

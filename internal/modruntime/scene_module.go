@@ -123,7 +123,8 @@ func (s *Scenes) luaRequest(kind string) lua.LGFunction {
 
 type luaSceneDefinition struct {
 	table                 *lua.LTable
-	enter, update, render *lua.LFunction
+	create, enter, update *lua.LFunction
+	render                *lua.LFunction
 	exit, destroy         *lua.LFunction
 	blocks                bool
 }
@@ -131,7 +132,7 @@ type luaSceneDefinition struct {
 func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, error) {
 	definition := luaSceneDefinition{table: table}
 	for name, target := range map[string]**lua.LFunction{
-		"enter": &definition.enter, "update": &definition.update, "render": &definition.render,
+		"create": &definition.create, "enter": &definition.enter, "update": &definition.update, "render": &definition.render,
 		"exit": &definition.exit, "destroy": &definition.destroy,
 	} {
 		value := table.RawGetString(name)
@@ -160,16 +161,21 @@ type luaScene struct {
 	scope      *Scope
 }
 
+func (s *luaScene) Create(ctx context.Context) error { return s.call(ctx, s.definition.create) }
 func (s *luaScene) Enter(ctx context.Context) error  { return s.call(ctx, s.definition.enter) }
 func (s *luaScene) Render(ctx context.Context) error { return s.call(ctx, s.definition.render) }
 func (s *luaScene) Exit(ctx context.Context) error   { return s.call(ctx, s.definition.exit) }
 func (s *luaScene) BlocksUpdateBelow() bool          { return s.definition.blocks }
 func (s *luaScene) Update(ctx context.Context, elapsed time.Duration) error {
+	return s.UpdateFocused(ctx, elapsed, true)
+}
+
+func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, focused bool) error {
 	if s.definition.update == nil {
 		return nil
 	}
 	return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-		return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()))
+		return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
 	})
 }
 func (s *luaScene) Destroy(ctx context.Context) error {

@@ -15,6 +15,7 @@ import (
 type Definition struct {
 	ID        string
 	DependsOn []string
+	Source    string
 
 	runtime *Runtime
 	table   *lua.LTable
@@ -51,7 +52,7 @@ func LoadDefinition(ctx context.Context, runtime *Runtime, source fs.FS, name st
 		if !ok || id == "" {
 			return errors.New("component id must be a non-empty string")
 		}
-		definition = Definition{ID: string(id), runtime: runtime, table: table}
+		definition = Definition{ID: string(id), Source: name, runtime: runtime, table: table}
 		if dependencies := table.RawGetString("depends_on"); dependencies != lua.LNil {
 			list, ok := dependencies.(*lua.LTable)
 			if !ok {

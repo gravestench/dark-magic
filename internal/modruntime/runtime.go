@@ -197,6 +197,28 @@ func (r *Runtime) Execute(ctx context.Context, source fs.FS, name string) error 
 	})
 }
 
+// InvalidateModule removes a content-backed module from Lua's require cache so
+// the next require observes the current layered VFS. It does not mutate an
+// already-running component; transactional replacement remains responsible for
+// switching component ownership.
+func (r *Runtime) InvalidateModule(ctx context.Context, name string) error {
+	if name == "" {
+		return errors.New("modruntime: module name is required")
+	}
+	return r.Run(ctx, func(state *lua.LState) error {
+		packageTable, ok := state.GetGlobal("package").(*lua.LTable)
+		if !ok {
+			return errors.New("modruntime: Lua package table is unavailable")
+		}
+		loaded, ok := packageTable.RawGetString("loaded").(*lua.LTable)
+		if !ok {
+			return errors.New("modruntime: Lua package.loaded table is unavailable")
+		}
+		loaded.RawSetString(name, lua.LNil)
+		return nil
+	})
+}
+
 func runLoop(requests <-chan request, done chan<- struct{}, ready chan<- error, installers []Installer, modules []Module) {
 	state := lua.NewState()
 	for _, installer := range installers {
