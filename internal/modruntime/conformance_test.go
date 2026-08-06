@@ -10,11 +10,11 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputcore"
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
-	"github.com/gravestench/dark-magic/pkg/scene"
 	lua "github.com/yuin/gopher-lua"
 )
 

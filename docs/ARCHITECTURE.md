@@ -81,7 +81,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
-| `pkg/scene` | Legacy scene data structures | command, Lua, world | Scene | Merge with navigation/render |
+| `internal/presentation/scene` | Headless scene state | command, Lua, world | Scene | Keep internal; merge with navigation when lifecycles converge |
 
 ## Target feature layout
 

@@ -31,6 +31,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/profiling"
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
@@ -39,7 +40,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
-	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
 func main() {

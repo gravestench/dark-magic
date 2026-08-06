@@ -705,7 +705,10 @@ implementations. The remaining work is tracked explicitly below.
   acceptance tests reject service-mesh imports.
   The unreferenced but useful tween curves are preserved under
   `internal/presentation/easing`; the accidental public package is retired
-  without discarding the historical implementation.
+  without discarding the historical implementation. Renderer-independent world
+  scene state is now owned by `internal/presentation/scene`; command, Lua,
+  acceptance, test-app, and Raylib callers migrated together, and the retired
+  public import path is guarded.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

@@ -20,11 +20,11 @@ import (
 	"golang.org/x/image/math/fixed"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/raylib/common"
 	input "github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
-	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
 const (

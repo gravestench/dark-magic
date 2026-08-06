@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/pkg/scene"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 )
 
 func TestSimulationModuleMovesPersistentWorld(t *testing.T) {

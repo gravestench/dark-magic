@@ -10,8 +10,8 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
-	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
 const (

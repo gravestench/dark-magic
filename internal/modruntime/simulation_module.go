@@ -3,7 +3,7 @@ package modruntime
 import (
 	"sync"
 
-	"github.com/gravestench/dark-magic/pkg/scene"
+	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	lua "github.com/yuin/gopher-lua"
 )
 
