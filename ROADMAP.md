@@ -737,7 +737,9 @@ implementations. The remaining work is tracked explicitly below.
   hot reload invalidates through that owner so generic and typed records cannot
   drift into different generations. Experience, Inventory, Belts, Hireling, and
   Difficultylevels now supply the admitted character progression, layout,
-  mercenary, and difficulty-rule configuration layer.
+  mercenary, and difficulty-rule configuration layer. SkillDesc, SoundEnviron,
+  and AutoMap now admit skill-tooltip layout, area audio environments, and
+  automap-cell presentation data with stable skill and environment indexes.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

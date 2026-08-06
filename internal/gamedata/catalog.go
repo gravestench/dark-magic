@@ -12,79 +12,84 @@ import (
 // tables. New tables are added here only after their surviving schema passes
 // synthetic and real-archive verification.
 type Snapshot struct {
-	Issues           []Issue
-	CharStats        []models.CharStats
-	CharStatsByClass map[string]models.CharStats
-	Levels           []models.LevelData
-	LevelsByID       map[int]models.LevelData
-	Objects          []models.Object
-	ObjectsByClass   map[int]models.Object
-	Skills           []models.SkillData
-	SkillsByID       map[string]models.SkillData
-	Sounds           []models.SoundEntry
-	SoundsByName     map[string]models.SoundEntry
-	TreasureClasses  []models.TreasureClassEx
-	TreasureByName   map[string]models.TreasureClassEx
-	Armor            []models.ItemArmor
-	ArmorByCode      map[string]models.ItemArmor
-	Weapons          []models.ItemWeapon
-	WeaponsByCode    map[string]models.ItemWeapon
-	Misc             []models.MiscItem
-	MiscByCode       map[string]models.MiscItem
-	ItemTypes        []models.ItemType
-	ItemTypesByCode  map[string]models.ItemType
-	ItemRatios       []models.ItemRatio
-	ItemStats        []models.ItemStatCost
-	ItemStatsByName  map[string]models.ItemStatCost
-	Properties       []models.ItemProperty
-	PropertiesByCode map[string]models.ItemProperty
-	UniqueItems      []models.ItemUnique
-	UniqueByIndex    map[string]models.ItemUnique
-	SetItems         []models.SetItemData
-	SetItemsByIndex  map[string]models.SetItemData
-	MagicPrefixes    []models.MagicPrefix
-	MagicSuffixes    []models.MagicSuffix
-	AutoMagic        []models.AutoMagicData
-	RarePrefixes     []models.RarePrefix
-	RareSuffixes     []models.RareSuffix
-	Gems             []models.GemData
-	GemsByCode       map[string]models.GemData
-	RuneWords        []models.RuneWordData
-	CubeRecipes      []models.CubeRecipe
-	Sets             []models.SetBonusData
-	SetsByIndex      map[string]models.SetBonusData
-	LevelTypes       []models.LevelType
-	LevelPresets     []models.LevelPreset
-	LevelPresetByDef map[int]models.LevelPreset
-	LevelMazes       []models.LevelMazeData
-	LevelMazeByLevel map[int]models.LevelMazeData
-	LevelWarps       []models.LevelWarp
-	LevelSubs        []models.LevelSubstitutionData
-	Monsters         []models.MonsterStats
-	MonstersByID     map[string]models.MonsterStats
-	MonsterGraphics  []models.MonsterStats2
-	MonsterGfxByID   map[string]models.MonsterStats2
-	MonsterLevels    []models.MonsterLevelStats
-	MonsterProps     []models.MonsterProp
-	MonsterPropsByID map[string]models.MonsterProp
-	MonsterSounds    []models.MonsterSounds
-	MonsterSoundByID map[string]models.MonsterSounds
-	MonsterEquipment []models.MonsterEquipment
-	Missiles         []models.Missile
-	MissilesByName   map[string]models.Missile
-	States           []models.State
-	StatesByName     map[string]models.State
-	Overlays         []models.Overlay
-	OverlaysByName   map[string]models.Overlay
-	PetTypes         []models.PetType
-	Experience       []models.ExperienceData
-	Inventories      []models.InventoryData
-	InventoryByClass map[string]models.InventoryData
-	Belts            []models.BeltData
-	BeltsByName      map[string]models.BeltData
-	Hirelings        []models.Hireling
-	Difficulties     []models.Difficultylevel
-	DifficultyByName map[string]models.Difficultylevel
+	Issues            []Issue
+	CharStats         []models.CharStats
+	CharStatsByClass  map[string]models.CharStats
+	Levels            []models.LevelData
+	LevelsByID        map[int]models.LevelData
+	Objects           []models.Object
+	ObjectsByClass    map[int]models.Object
+	Skills            []models.SkillData
+	SkillsByID        map[string]models.SkillData
+	Sounds            []models.SoundEntry
+	SoundsByName      map[string]models.SoundEntry
+	TreasureClasses   []models.TreasureClassEx
+	TreasureByName    map[string]models.TreasureClassEx
+	Armor             []models.ItemArmor
+	ArmorByCode       map[string]models.ItemArmor
+	Weapons           []models.ItemWeapon
+	WeaponsByCode     map[string]models.ItemWeapon
+	Misc              []models.MiscItem
+	MiscByCode        map[string]models.MiscItem
+	ItemTypes         []models.ItemType
+	ItemTypesByCode   map[string]models.ItemType
+	ItemRatios        []models.ItemRatio
+	ItemStats         []models.ItemStatCost
+	ItemStatsByName   map[string]models.ItemStatCost
+	Properties        []models.ItemProperty
+	PropertiesByCode  map[string]models.ItemProperty
+	UniqueItems       []models.ItemUnique
+	UniqueByIndex     map[string]models.ItemUnique
+	SetItems          []models.SetItemData
+	SetItemsByIndex   map[string]models.SetItemData
+	MagicPrefixes     []models.MagicPrefix
+	MagicSuffixes     []models.MagicSuffix
+	AutoMagic         []models.AutoMagicData
+	RarePrefixes      []models.RarePrefix
+	RareSuffixes      []models.RareSuffix
+	Gems              []models.GemData
+	GemsByCode        map[string]models.GemData
+	RuneWords         []models.RuneWordData
+	CubeRecipes       []models.CubeRecipe
+	Sets              []models.SetBonusData
+	SetsByIndex       map[string]models.SetBonusData
+	LevelTypes        []models.LevelType
+	LevelPresets      []models.LevelPreset
+	LevelPresetByDef  map[int]models.LevelPreset
+	LevelMazes        []models.LevelMazeData
+	LevelMazeByLevel  map[int]models.LevelMazeData
+	LevelWarps        []models.LevelWarp
+	LevelSubs         []models.LevelSubstitutionData
+	Monsters          []models.MonsterStats
+	MonstersByID      map[string]models.MonsterStats
+	MonsterGraphics   []models.MonsterStats2
+	MonsterGfxByID    map[string]models.MonsterStats2
+	MonsterLevels     []models.MonsterLevelStats
+	MonsterProps      []models.MonsterProp
+	MonsterPropsByID  map[string]models.MonsterProp
+	MonsterSounds     []models.MonsterSounds
+	MonsterSoundByID  map[string]models.MonsterSounds
+	MonsterEquipment  []models.MonsterEquipment
+	Missiles          []models.Missile
+	MissilesByName    map[string]models.Missile
+	States            []models.State
+	StatesByName      map[string]models.State
+	Overlays          []models.Overlay
+	OverlaysByName    map[string]models.Overlay
+	PetTypes          []models.PetType
+	Experience        []models.ExperienceData
+	Inventories       []models.InventoryData
+	InventoryByClass  map[string]models.InventoryData
+	Belts             []models.BeltData
+	BeltsByName       map[string]models.BeltData
+	Hirelings         []models.Hireling
+	Difficulties      []models.Difficultylevel
+	DifficultyByName  map[string]models.Difficultylevel
+	SkillDescriptions []models.SkillDescData
+	SkillDescByName   map[string]models.SkillDescData
+	SoundEnvironments []models.SoundEnvironment
+	SoundEnvByHandle  map[string]models.SoundEnvironment
+	AutoMapEntries    []models.AutoMapEntry
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -131,7 +136,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable && path != ExperienceTable && path != InventoryTable && path != BeltsTable && path != HirelingTable && path != DifficultyTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable && path != ExperienceTable && path != InventoryTable && path != BeltsTable && path != HirelingTable && path != DifficultyTable && path != SkillDescTable && path != SoundEnvironTable && path != AutoMapTable {
 		return
 	}
 	c.mu.Lock()
@@ -457,6 +462,28 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	issues = append(issues, found...)
+	skillDescriptions, err := Load[models.SkillDescData](c.store, SkillDescTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	skillDescByName, found, err := ObservedIndex(SkillDescTable, skillDescriptions, func(record models.SkillDescData) string { return record.SkillDesc })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	soundEnvironments, err := Load[models.SoundEnvironment](c.store, SoundEnvironTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	soundEnvByHandle, found, err := ObservedIndex(SoundEnvironTable, soundEnvironments, func(record models.SoundEnvironment) string { return record.Handle })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	autoMapEntries, err := Load[models.AutoMapEntry](c.store, AutoMapTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -487,84 +514,91 @@ func (c *Catalog) load() (Snapshot, error) {
 		Overlays: overlays, OverlaysByName: overlaysByName, PetTypes: petTypes,
 		Experience: experience, Inventories: inventories, InventoryByClass: inventoryByClass,
 		Belts: belts, BeltsByName: beltsByName, Hirelings: hirelings, Difficulties: difficulties, DifficultyByName: difficultyByName,
+		SkillDescriptions: skillDescriptions, SkillDescByName: skillDescByName,
+		SoundEnvironments: soundEnvironments, SoundEnvByHandle: soundEnvByHandle, AutoMapEntries: autoMapEntries,
 	}, nil
 }
 
 func cloneSnapshot(source Snapshot) Snapshot {
 	result := Snapshot{
-		Issues:           append([]Issue(nil), source.Issues...),
-		CharStats:        append([]models.CharStats(nil), source.CharStats...),
-		CharStatsByClass: make(map[string]models.CharStats, len(source.CharStatsByClass)),
-		Levels:           append([]models.LevelData(nil), source.Levels...),
-		LevelsByID:       make(map[int]models.LevelData, len(source.LevelsByID)),
-		Objects:          append([]models.Object(nil), source.Objects...),
-		ObjectsByClass:   make(map[int]models.Object, len(source.ObjectsByClass)),
-		Skills:           append([]models.SkillData(nil), source.Skills...),
-		SkillsByID:       make(map[string]models.SkillData, len(source.SkillsByID)),
-		Sounds:           append([]models.SoundEntry(nil), source.Sounds...),
-		SoundsByName:     make(map[string]models.SoundEntry, len(source.SoundsByName)),
-		TreasureClasses:  append([]models.TreasureClassEx(nil), source.TreasureClasses...),
-		TreasureByName:   make(map[string]models.TreasureClassEx, len(source.TreasureByName)),
-		Armor:            append([]models.ItemArmor(nil), source.Armor...),
-		ArmorByCode:      make(map[string]models.ItemArmor, len(source.ArmorByCode)),
-		Weapons:          append([]models.ItemWeapon(nil), source.Weapons...),
-		WeaponsByCode:    make(map[string]models.ItemWeapon, len(source.WeaponsByCode)),
-		Misc:             append([]models.MiscItem(nil), source.Misc...),
-		MiscByCode:       make(map[string]models.MiscItem, len(source.MiscByCode)),
-		ItemTypes:        append([]models.ItemType(nil), source.ItemTypes...),
-		ItemTypesByCode:  make(map[string]models.ItemType, len(source.ItemTypesByCode)),
-		ItemRatios:       append([]models.ItemRatio(nil), source.ItemRatios...),
-		ItemStats:        append([]models.ItemStatCost(nil), source.ItemStats...),
-		ItemStatsByName:  make(map[string]models.ItemStatCost, len(source.ItemStatsByName)),
-		Properties:       append([]models.ItemProperty(nil), source.Properties...),
-		PropertiesByCode: make(map[string]models.ItemProperty, len(source.PropertiesByCode)),
-		UniqueItems:      append([]models.ItemUnique(nil), source.UniqueItems...),
-		UniqueByIndex:    make(map[string]models.ItemUnique, len(source.UniqueByIndex)),
-		SetItems:         append([]models.SetItemData(nil), source.SetItems...),
-		SetItemsByIndex:  make(map[string]models.SetItemData, len(source.SetItemsByIndex)),
-		MagicPrefixes:    append([]models.MagicPrefix(nil), source.MagicPrefixes...),
-		MagicSuffixes:    append([]models.MagicSuffix(nil), source.MagicSuffixes...),
-		AutoMagic:        append([]models.AutoMagicData(nil), source.AutoMagic...),
-		RarePrefixes:     append([]models.RarePrefix(nil), source.RarePrefixes...),
-		RareSuffixes:     append([]models.RareSuffix(nil), source.RareSuffixes...),
-		Gems:             append([]models.GemData(nil), source.Gems...),
-		GemsByCode:       make(map[string]models.GemData, len(source.GemsByCode)),
-		RuneWords:        append([]models.RuneWordData(nil), source.RuneWords...),
-		CubeRecipes:      append([]models.CubeRecipe(nil), source.CubeRecipes...),
-		Sets:             append([]models.SetBonusData(nil), source.Sets...),
-		SetsByIndex:      make(map[string]models.SetBonusData, len(source.SetsByIndex)),
-		LevelTypes:       append([]models.LevelType(nil), source.LevelTypes...),
-		LevelPresets:     append([]models.LevelPreset(nil), source.LevelPresets...),
-		LevelPresetByDef: make(map[int]models.LevelPreset, len(source.LevelPresetByDef)),
-		LevelMazes:       append([]models.LevelMazeData(nil), source.LevelMazes...),
-		LevelMazeByLevel: make(map[int]models.LevelMazeData, len(source.LevelMazeByLevel)),
-		LevelWarps:       append([]models.LevelWarp(nil), source.LevelWarps...),
-		LevelSubs:        append([]models.LevelSubstitutionData(nil), source.LevelSubs...),
-		Monsters:         append([]models.MonsterStats(nil), source.Monsters...),
-		MonstersByID:     make(map[string]models.MonsterStats, len(source.MonstersByID)),
-		MonsterGraphics:  append([]models.MonsterStats2(nil), source.MonsterGraphics...),
-		MonsterGfxByID:   make(map[string]models.MonsterStats2, len(source.MonsterGfxByID)),
-		MonsterLevels:    append([]models.MonsterLevelStats(nil), source.MonsterLevels...),
-		MonsterProps:     append([]models.MonsterProp(nil), source.MonsterProps...),
-		MonsterPropsByID: make(map[string]models.MonsterProp, len(source.MonsterPropsByID)),
-		MonsterSounds:    append([]models.MonsterSounds(nil), source.MonsterSounds...),
-		MonsterSoundByID: make(map[string]models.MonsterSounds, len(source.MonsterSoundByID)),
-		MonsterEquipment: append([]models.MonsterEquipment(nil), source.MonsterEquipment...),
-		Missiles:         append([]models.Missile(nil), source.Missiles...),
-		MissilesByName:   make(map[string]models.Missile, len(source.MissilesByName)),
-		States:           append([]models.State(nil), source.States...),
-		StatesByName:     make(map[string]models.State, len(source.StatesByName)),
-		Overlays:         append([]models.Overlay(nil), source.Overlays...),
-		OverlaysByName:   make(map[string]models.Overlay, len(source.OverlaysByName)),
-		PetTypes:         append([]models.PetType(nil), source.PetTypes...),
-		Experience:       append([]models.ExperienceData(nil), source.Experience...),
-		Inventories:      append([]models.InventoryData(nil), source.Inventories...),
-		InventoryByClass: make(map[string]models.InventoryData, len(source.InventoryByClass)),
-		Belts:            append([]models.BeltData(nil), source.Belts...),
-		BeltsByName:      make(map[string]models.BeltData, len(source.BeltsByName)),
-		Hirelings:        append([]models.Hireling(nil), source.Hirelings...),
-		Difficulties:     append([]models.Difficultylevel(nil), source.Difficulties...),
-		DifficultyByName: make(map[string]models.Difficultylevel, len(source.DifficultyByName)),
+		Issues:            append([]Issue(nil), source.Issues...),
+		CharStats:         append([]models.CharStats(nil), source.CharStats...),
+		CharStatsByClass:  make(map[string]models.CharStats, len(source.CharStatsByClass)),
+		Levels:            append([]models.LevelData(nil), source.Levels...),
+		LevelsByID:        make(map[int]models.LevelData, len(source.LevelsByID)),
+		Objects:           append([]models.Object(nil), source.Objects...),
+		ObjectsByClass:    make(map[int]models.Object, len(source.ObjectsByClass)),
+		Skills:            append([]models.SkillData(nil), source.Skills...),
+		SkillsByID:        make(map[string]models.SkillData, len(source.SkillsByID)),
+		Sounds:            append([]models.SoundEntry(nil), source.Sounds...),
+		SoundsByName:      make(map[string]models.SoundEntry, len(source.SoundsByName)),
+		TreasureClasses:   append([]models.TreasureClassEx(nil), source.TreasureClasses...),
+		TreasureByName:    make(map[string]models.TreasureClassEx, len(source.TreasureByName)),
+		Armor:             append([]models.ItemArmor(nil), source.Armor...),
+		ArmorByCode:       make(map[string]models.ItemArmor, len(source.ArmorByCode)),
+		Weapons:           append([]models.ItemWeapon(nil), source.Weapons...),
+		WeaponsByCode:     make(map[string]models.ItemWeapon, len(source.WeaponsByCode)),
+		Misc:              append([]models.MiscItem(nil), source.Misc...),
+		MiscByCode:        make(map[string]models.MiscItem, len(source.MiscByCode)),
+		ItemTypes:         append([]models.ItemType(nil), source.ItemTypes...),
+		ItemTypesByCode:   make(map[string]models.ItemType, len(source.ItemTypesByCode)),
+		ItemRatios:        append([]models.ItemRatio(nil), source.ItemRatios...),
+		ItemStats:         append([]models.ItemStatCost(nil), source.ItemStats...),
+		ItemStatsByName:   make(map[string]models.ItemStatCost, len(source.ItemStatsByName)),
+		Properties:        append([]models.ItemProperty(nil), source.Properties...),
+		PropertiesByCode:  make(map[string]models.ItemProperty, len(source.PropertiesByCode)),
+		UniqueItems:       append([]models.ItemUnique(nil), source.UniqueItems...),
+		UniqueByIndex:     make(map[string]models.ItemUnique, len(source.UniqueByIndex)),
+		SetItems:          append([]models.SetItemData(nil), source.SetItems...),
+		SetItemsByIndex:   make(map[string]models.SetItemData, len(source.SetItemsByIndex)),
+		MagicPrefixes:     append([]models.MagicPrefix(nil), source.MagicPrefixes...),
+		MagicSuffixes:     append([]models.MagicSuffix(nil), source.MagicSuffixes...),
+		AutoMagic:         append([]models.AutoMagicData(nil), source.AutoMagic...),
+		RarePrefixes:      append([]models.RarePrefix(nil), source.RarePrefixes...),
+		RareSuffixes:      append([]models.RareSuffix(nil), source.RareSuffixes...),
+		Gems:              append([]models.GemData(nil), source.Gems...),
+		GemsByCode:        make(map[string]models.GemData, len(source.GemsByCode)),
+		RuneWords:         append([]models.RuneWordData(nil), source.RuneWords...),
+		CubeRecipes:       append([]models.CubeRecipe(nil), source.CubeRecipes...),
+		Sets:              append([]models.SetBonusData(nil), source.Sets...),
+		SetsByIndex:       make(map[string]models.SetBonusData, len(source.SetsByIndex)),
+		LevelTypes:        append([]models.LevelType(nil), source.LevelTypes...),
+		LevelPresets:      append([]models.LevelPreset(nil), source.LevelPresets...),
+		LevelPresetByDef:  make(map[int]models.LevelPreset, len(source.LevelPresetByDef)),
+		LevelMazes:        append([]models.LevelMazeData(nil), source.LevelMazes...),
+		LevelMazeByLevel:  make(map[int]models.LevelMazeData, len(source.LevelMazeByLevel)),
+		LevelWarps:        append([]models.LevelWarp(nil), source.LevelWarps...),
+		LevelSubs:         append([]models.LevelSubstitutionData(nil), source.LevelSubs...),
+		Monsters:          append([]models.MonsterStats(nil), source.Monsters...),
+		MonstersByID:      make(map[string]models.MonsterStats, len(source.MonstersByID)),
+		MonsterGraphics:   append([]models.MonsterStats2(nil), source.MonsterGraphics...),
+		MonsterGfxByID:    make(map[string]models.MonsterStats2, len(source.MonsterGfxByID)),
+		MonsterLevels:     append([]models.MonsterLevelStats(nil), source.MonsterLevels...),
+		MonsterProps:      append([]models.MonsterProp(nil), source.MonsterProps...),
+		MonsterPropsByID:  make(map[string]models.MonsterProp, len(source.MonsterPropsByID)),
+		MonsterSounds:     append([]models.MonsterSounds(nil), source.MonsterSounds...),
+		MonsterSoundByID:  make(map[string]models.MonsterSounds, len(source.MonsterSoundByID)),
+		MonsterEquipment:  append([]models.MonsterEquipment(nil), source.MonsterEquipment...),
+		Missiles:          append([]models.Missile(nil), source.Missiles...),
+		MissilesByName:    make(map[string]models.Missile, len(source.MissilesByName)),
+		States:            append([]models.State(nil), source.States...),
+		StatesByName:      make(map[string]models.State, len(source.StatesByName)),
+		Overlays:          append([]models.Overlay(nil), source.Overlays...),
+		OverlaysByName:    make(map[string]models.Overlay, len(source.OverlaysByName)),
+		PetTypes:          append([]models.PetType(nil), source.PetTypes...),
+		Experience:        append([]models.ExperienceData(nil), source.Experience...),
+		Inventories:       append([]models.InventoryData(nil), source.Inventories...),
+		InventoryByClass:  make(map[string]models.InventoryData, len(source.InventoryByClass)),
+		Belts:             append([]models.BeltData(nil), source.Belts...),
+		BeltsByName:       make(map[string]models.BeltData, len(source.BeltsByName)),
+		Hirelings:         append([]models.Hireling(nil), source.Hirelings...),
+		Difficulties:      append([]models.Difficultylevel(nil), source.Difficulties...),
+		DifficultyByName:  make(map[string]models.Difficultylevel, len(source.DifficultyByName)),
+		SkillDescriptions: append([]models.SkillDescData(nil), source.SkillDescriptions...),
+		SkillDescByName:   make(map[string]models.SkillDescData, len(source.SkillDescByName)),
+		SoundEnvironments: append([]models.SoundEnvironment(nil), source.SoundEnvironments...),
+		SoundEnvByHandle:  make(map[string]models.SoundEnvironment, len(source.SoundEnvByHandle)),
+		AutoMapEntries:    append([]models.AutoMapEntry(nil), source.AutoMapEntries...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -649,6 +683,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.DifficultyByName {
 		result.DifficultyByName[key] = value
+	}
+	for key, value := range source.SkillDescByName {
+		result.SkillDescByName[key] = value
+	}
+	for key, value := range source.SoundEnvByHandle {
+		result.SoundEnvByHandle[key] = value
 	}
 	return result
 }

@@ -84,6 +84,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.Experience) == 0 || len(snapshot.InventoryByClass) == 0 || len(snapshot.BeltsByName) == 0 || len(snapshot.Hirelings) == 0 || len(snapshot.DifficultyByName) == 0 {
 		t.Fatal("typed character configuration tables are incomplete")
 	}
+	if len(snapshot.SkillDescByName) == 0 || len(snapshot.SoundEnvByHandle) == 0 || len(snapshot.AutoMapEntries) == 0 {
+		t.Fatal("typed presentation support tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

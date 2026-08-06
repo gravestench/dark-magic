@@ -47,4 +47,7 @@ const (
 	BeltsTable           = "data/global/excel/Belts.txt"
 	HirelingTable        = "data/global/excel/Hireling.txt"
 	DifficultyTable      = "data/global/excel/Difficultylevels.txt"
+	SkillDescTable       = "data/global/excel/SkillDesc.txt"
+	SoundEnvironTable    = "data/global/excel/SoundEnviron.txt"
+	AutoMapTable         = "data/global/excel/AutoMap.txt"
 )

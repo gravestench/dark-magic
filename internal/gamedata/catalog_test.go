@@ -55,6 +55,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		BeltsTable:           &fstest.MapFile{Data: []byte("name\tnumboxes\nBelt\t8\n")},
 		HirelingTable:        &fstest.MapFile{Data: []byte("Hireling\tId\nRogue Scout\t1\n")},
 		DifficultyTable:      &fstest.MapFile{Data: []byte("Name\tResistPenalty\nNormal\t0\n")},
+		SkillDescTable:       &fstest.MapFile{Data: []byte("skilldesc\tSkillPage\tstr name\nattack\t1\tstrAttack\n")},
+		SoundEnvironTable:    &fstest.MapFile{Data: []byte("Handle\tSong\nAct1\tlevel_music\n")},
+		AutoMapTable:         &fstest.MapFile{Data: []byte("LevelName\tTileName\tStyle\tCel1\nAct 1 Town\tfl\t1\t10\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -87,6 +90,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.MissilesByName) != 1 || len(first.StatesByName) != 1 || len(first.OverlaysByName) != 1 || len(first.PetTypes) != 1 {
 		t.Fatalf("typed combat presentation tables = %#v", first)
+	}
+	if first.SkillDescByName["attack"].StrName != "strAttack" || first.SoundEnvByHandle["Act1"].Song != "level_music" || len(first.AutoMapEntries) != 1 {
+		t.Fatalf("typed presentation support tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -147,6 +153,9 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		BeltsTable:           &fstest.MapFile{Data: []byte("name\tnumboxes\nBelt\t8\n")},
 		HirelingTable:        &fstest.MapFile{Data: []byte("Hireling\tId\nRogue Scout\t1\n")},
 		DifficultyTable:      &fstest.MapFile{Data: []byte("Name\tResistPenalty\nNormal\t0\n")},
+		SkillDescTable:       &fstest.MapFile{Data: []byte("skilldesc\tSkillPage\nattack\t1\n")},
+		SoundEnvironTable:    &fstest.MapFile{Data: []byte("Handle\tSong\nAct1\tlevel_music\n")},
+		AutoMapTable:         &fstest.MapFile{Data: []byte("LevelName\tTileName\tStyle\nAct 1 Town\tfl\t1\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {
