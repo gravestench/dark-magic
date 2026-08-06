@@ -43,6 +43,33 @@ model.
 
 ## Authentic-data policy
 
+### Research sources and verification order
+
+The repository includes the community-authored Diablo II Data File Guide at
+`docs/diabloiidatafileguide.html.gz`. It is the primary semantic reference when
+implementing or reviewing a Blizzard TSV table: consult its table overview,
+field descriptions, value domains, formulas, and cross-table links before
+deciding what a column means. Keep the document compressed; it can be searched
+without producing a multi-megabyte working-tree artifact:
+
+```sh
+gzip -cd docs/diabloiidatafileguide.html.gz | rg -n -i 'treasureclass\.txt|NoDrop'
+```
+
+The guide documents accumulated reverse-engineering knowledge, not guaranteed
+invariants for every patch or mod. Use this order of authority:
+
+1. The layered game data supplies the bytes the running engine must preserve.
+2. The Data File Guide supplies intended semantics and known relationships.
+3. Existing model comments and historical code are implementation leads only.
+
+For every newly admitted typed table, review the relevant guide section, test
+representative documented fields, and run the optional real-archive test. When
+the guide and shipped data disagree, retain the shipped value and record the
+disagreement as a diagnostic or test comment; do not silently normalize it.
+The uber list file is useful for asset/table discovery, but does not define TSV
+semantics.
+
 The shipped tables are known to contain unused rows and columns, sentinel
 values, dangling references, contradictory fields, patch-era leftovers, and
 values that do not match their apparent documentation. The catalog must preserve

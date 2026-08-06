@@ -750,6 +750,9 @@ implementations. The remaining work is tracked explicitly below.
   rules, and the authored name-part pools. TreasureClass and HireDesc now
   preserve the classic drop graph and hireling voice-selection metadata
   alongside their expansion-era counterparts.
+  The bundled compressed Data File Guide is now the required semantic reference
+  for further schema and consumer work, while real layered MPQs remain the
+  compatibility authority when documentation and shipped bytes disagree.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
