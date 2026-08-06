@@ -53,5 +53,16 @@
   "darkmagic.minipanel.automap": "AUTOMAP",
   "darkmagic.minipanel.messages": "MESSAGES",
   "darkmagic.minipanel.quests": "QUEST LOG",
-  "darkmagic.minipanel.options": "OPTIONS"
+  "darkmagic.minipanel.options": "OPTIONS",
+  "darkmagic.inventory.close": "CLOSE INVENTORY",
+  "darkmagic.inventory.slot.head": "HEAD",
+  "darkmagic.inventory.slot.neck": "AMULET",
+  "darkmagic.inventory.slot.torso": "TORSO",
+  "darkmagic.inventory.slot.right_arm": "RIGHT WEAPON",
+  "darkmagic.inventory.slot.left_arm": "LEFT WEAPON",
+  "darkmagic.inventory.slot.right_hand": "RIGHT RING",
+  "darkmagic.inventory.slot.left_hand": "LEFT RING",
+  "darkmagic.inventory.slot.belt": "BELT",
+  "darkmagic.inventory.slot.feet": "BOOTS",
+  "darkmagic.inventory.slot.gloves": "GLOVES"
 }

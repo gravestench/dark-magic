@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"reflect"
 	"testing"
 
 	"github.com/gravestench/dark-magic/pkg/assetcatalog"
@@ -74,6 +75,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		"cinematics",
 		"game_loading",
 		"game_world",
+		"inventory",
 		"credits",
 	} {
 		if len(manifest.Screens[screen]) == 0 {
@@ -334,6 +336,52 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	for index, part := range hud.PanelParts {
 		if part.Frame != index || part.X != wantX[index] || part.Bottom != 600 {
 			t.Errorf("panel part %d = %#v", index, part)
+		}
+	}
+}
+
+func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Screens struct {
+			Inventory struct {
+				Records      string `json:"records"`
+				RecordSuffix string `json:"record_suffix"`
+				Panel        struct {
+					Sheet  string `json:"sheet"`
+					Frames []int  `json:"frames"`
+				} `json:"panel"`
+				Close struct {
+					Sheet string `json:"sheet"`
+				} `json:"close"`
+				Slots []struct {
+					ID     string `json:"id"`
+					Prefix string `json:"prefix"`
+				} `json:"slots"`
+			} `json:"inventory"`
+		} `json:"screens"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	inventory := manifest.Screens.Inventory
+	if inventory.Records != "data/global/excel/Inventory.txt" || inventory.RecordSuffix != "2" {
+		t.Fatalf("inventory record contract = %#v", inventory)
+	}
+	if inventory.Panel.Sheet == "" || inventory.Close.Sheet == "" || !reflect.DeepEqual(inventory.Panel.Frames, []int{4, 5, 7, 6}) {
+		t.Fatalf("inventory presentation assets = %#v", inventory)
+	}
+	if len(inventory.Slots) != 10 {
+		t.Fatalf("inventory equipment slots = %d, want 10", len(inventory.Slots))
+	}
+	for _, slot := range inventory.Slots {
+		if slot.ID == "" || slot.Prefix == "" {
+			t.Errorf("incomplete inventory slot = %#v", slot)
 		}
 	}
 }

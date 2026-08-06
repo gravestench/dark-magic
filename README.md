@@ -164,6 +164,9 @@ directory by combining `START_SCENE=character_select`,
 `CAPTURE_SCENES=character_select`, and `FIXTURE_CHARACTERS=10`. The equivalent
 development-only CLI option is `--fixture-characters 10`; its deterministic
 in-memory records exercise both columns, paging, and expansion/hardcore labels.
+When starting directly in `game_world` or `inventory`, the first fixture is
+selected automatically so asset-backed presentation can be captured in
+isolation.
 Character sources may also attach an immutable appearance snapshot containing
 the resolved COF, palette, direction, and component DCC paths. Character
 selection renders that equipment-aware composite when available and falls back

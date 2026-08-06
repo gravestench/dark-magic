@@ -489,9 +489,15 @@ implementations. The remaining work is tracked explicitly below.
   tooltips, cursor states, and the 640x480 profile remain.
 - [ ] Implement interactive inventory/equipment, character stats, skill trees,
   automap, quest log, waypoint, party, hireling, vendor, stash, cube, options,
-  help, chat, pause, and escape panels from verified assets and records.
+  help, chat, pause, and escape panels from verified assets and records. The
+  inventory placeholder is now replaced by the four authored expansion panel
+  quadrants, a real close control, ten equipment focus regions, and all 40 item
+  cells; item instances and transfers remain part of M19.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
-  related records; keep only presentation corrections in shim manifests.
+  related records; keep only presentation corrections in shim manifests. The
+  selected class's expansion Inventory.txt row now owns inventory grid and
+  equipment hit geometry. Only the verified DC6 frame order and expansion panel
+  origin correction remain in the presentation manifest.
 - [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
   transition, and debug layers coexist.
 - [ ] Add an in-game Lua console with command history, multiline editing,

@@ -106,7 +106,13 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
-	saves := savecore.New(developmentCharacters(fixtureCharacters)...)
+	fixtureEntries := developmentCharacters(fixtureCharacters)
+	saves := savecore.New(fixtureEntries...)
+	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory") {
+		if err := saves.Select(fixtureEntries[0].ID); err != nil {
+			return fmt.Errorf("select development fixture: %w", err)
+		}
+	}
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	loading := loadcore.New(map[string]loadcore.Task{
 		"selected_character": func(context.Context) error {
