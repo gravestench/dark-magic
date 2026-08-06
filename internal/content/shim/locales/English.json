@@ -1,0 +1,7 @@
+{
+  "darkmagic.hud.title": "Dark Magic",
+  "darkmagic.hud.diagnostic_grid": "Diagnostic grid",
+  "darkmagic.hud.status": "%s | %s | %s",
+  "darkmagic.hud.hero": "Hero: %.0f, %.0f",
+  "darkmagic.hud.controls": "WASD / arrows to move"
+}

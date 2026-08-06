@@ -59,7 +59,7 @@ their own legally obtained game data.
 - [x] Add deterministic headless hero movement, camera tracking, bounds, and save/load.
 - [x] Render a configured DS1/DT1 map in the engine scene with a safe fallback.
 - [x] Add a camera-anchored scene HUD with locale and map status.
-- [ ] Replace diagnostic HUD strings with localized table keys and game UI art.
+- [x] Replace diagnostic HUD strings with localized table keys and game UI art.
 - [x] Connect deterministic scene movement and camera tracking to Raylib input/rendering.
 
 ## M6: Deterministic item and loot foundation

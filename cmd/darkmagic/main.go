@@ -31,10 +31,6 @@ import (
 	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
-type englishLanguage struct{}
-
-func (englishLanguage) GetSupportedLanguages() []string { return []string{"English"} }
-
 func main() {
 	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
 	contentFS, err := content.FromEnvironment()
@@ -55,9 +51,10 @@ func run(contentFS *content.FS) error {
 	renderer.Configure(raylibRenderer.DefaultConfig())
 	inputService := input.New(renderer)
 	inputService.SetLogger(slog.Default().With("component", "input"))
+	locale := localecore.New(contentFS, "English")
 	worldConfig := gameScene.DefaultConfig()
 	worldConfig.Source = ""
-	world := gameScene.New(renderer, inputService, contentFS, englishLanguage{}, worldConfig)
+	world := gameScene.New(renderer, inputService, contentFS, locale, worldConfig)
 	world.SetLogger(slog.Default().With("component", "world"))
 
 	scripts := modruntime.New()
@@ -66,7 +63,6 @@ func run(contentFS *content.FS) error {
 	scenes := modruntime.NewScenes(scripts, navigation.New())
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
-	locale := localecore.New(contentFS, "English")
 	saves := savecore.New(savecore.Character{ID: "default-amazon", Name: "Dark Wanderer", Class: "Amazon", Level: 1})
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	components := host.NewManager()

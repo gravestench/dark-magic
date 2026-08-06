@@ -2,6 +2,7 @@
 package localecore
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -37,14 +38,27 @@ func (l *Locale) Text(key string) (string, error) {
 	return value, nil
 }
 
+// GetSupportedLanguages satisfies compatibility UI localization seams.
+func (l *Locale) GetSupportedLanguages() []string { return []string{l.language} }
+
 func (l *Locale) load() {
 	l.strings = make(map[string]string)
+	shimPath := fmt.Sprintf("locales/%s.json", l.language)
+	if data, err := fs.ReadFile(l.source, shimPath); err == nil {
+		if err := json.Unmarshal(data, &l.strings); err != nil {
+			l.err = fmt.Errorf("localecore: decode %q: %w", shimPath, err)
+			return
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		l.err = fmt.Errorf("localecore: read %q: %w", shimPath, err)
+		return
+	}
 	paths := []string{
 		fmt.Sprintf("data/local/lng/%s/string.tbl", l.language),
 		fmt.Sprintf("data/local/lng/%s/expansionstring.tbl", l.language),
 		fmt.Sprintf("data/local/lng/%s/patchstring.tbl", l.language),
 	}
-	loaded := false
+	loaded := len(l.strings) > 0
 	for _, path := range paths {
 		data, err := fs.ReadFile(l.source, path)
 		if err != nil {

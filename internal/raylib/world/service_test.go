@@ -54,7 +54,7 @@ func TestOpposingMovementCancels(t *testing.T) {
 }
 
 func TestHUDImageIsOpaqueWhereBackgroundIsDrawn(t *testing.T) {
-	img := hudImage("Dark Magic", 120, 30)
+	img := hudImage("Dark Magic", 120, 30, defaultPanelTheme())
 	_, _, _, alpha := img.At(0, 0).RGBA()
 	if alpha == 0 {
 		t.Fatal("HUD background is transparent")

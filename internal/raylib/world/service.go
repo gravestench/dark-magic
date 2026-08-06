@@ -3,6 +3,7 @@ package gameScene
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -51,6 +52,7 @@ type Service struct {
 	heroNode       raylibRenderer.Renderable
 	hudNode        raylibRenderer.Renderable
 	hudText        string
+	hudTheme       panelTheme
 	mapLabel       string
 	lastTick       time.Time
 	lastHUDRefresh time.Time
@@ -60,6 +62,7 @@ type Service struct {
 // HUD while the Lua-authored UI replaces it.
 type LanguageSource interface {
 	GetSupportedLanguages() []string
+	Text(string) (string, error)
 }
 
 // New constructs the compatibility world scene with explicit dependencies.
@@ -75,10 +78,11 @@ func (s *Service) Start(context.Context) error {
 	if err != nil {
 		s.Logger().Warn("using diagnostic scene grid", "error", err)
 		mapImage = gridImage(fallbackWidth, fallbackHeight, 80)
-		s.mapLabel = "Diagnostic grid"
+		s.mapLabel = s.localized("darkmagic.hud.diagnostic_grid", "Diagnostic grid")
 	} else {
 		s.mapLabel = filepath.Base(s.Config.Map)
 	}
+	s.hudTheme = loadPanelTheme(s.files)
 	worldWidth, worldHeight := mapImage.Bounds().Dx(), mapImage.Bounds().Dy()
 	s.state = scene.New(1, float64(worldWidth), float64(worldHeight))
 	for _, chunk := range splitMapImage(mapImage, mapChunkSize) {
@@ -237,12 +241,23 @@ func (s *Service) syncHUD(camera *rl.Camera2D, width, height int, now time.Time)
 	if languages := s.language.GetSupportedLanguages(); len(languages) != 0 {
 		language = languages[0]
 	}
-	text := fmt.Sprintf("Dark Magic | %s | %s\nHero: %.0f, %.0f | WASD / arrows to move",
-		s.mapLabel, language, s.state.Hero.X, s.state.Hero.Y)
+	text := fmt.Sprintf(s.localized("darkmagic.hud.status", "%s | %s | %s"), s.localized("darkmagic.hud.title", "Dark Magic"), s.mapLabel, language) + "\n" +
+		fmt.Sprintf(s.localized("darkmagic.hud.hero", "Hero: %.0f, %.0f"), s.state.Hero.X, s.state.Hero.Y) + " | " + s.localized("darkmagic.hud.controls", "WASD / arrows to move")
 	if text != s.hudText {
 		s.hudText = text
-		s.hudNode.SetImage(hudImage(text, 470, 44))
+		s.hudNode.SetImage(hudImage(text, 470, 44, s.hudTheme))
 	}
+}
+
+func (s *Service) localized(key, fallback string) string {
+	if s.language == nil {
+		return fallback
+	}
+	value, err := s.language.Text(key)
+	if err != nil || value == "" {
+		return fallback
+	}
+	return value
 }
 
 func hudRefreshDue(last, now time.Time, uninitialized bool) bool {
@@ -313,17 +328,50 @@ func heroImage(size int) *image.RGBA {
 	return img
 }
 
-func hudImage(text string, width, height int) *image.RGBA {
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	background := color.RGBA{R: 6, G: 8, B: 10, A: 215}
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.SetRGBA(x, y, background)
+type panelTheme struct{ Background, InnerBorder, OuterBorder, Text color.RGBA }
+
+type panelThemeFile struct{ Background, InnerBorder, OuterBorder, Text string }
+
+func defaultPanelTheme() panelTheme {
+	return panelTheme{color.RGBA{24, 18, 13, 232}, color.RGBA{111, 87, 49, 255}, color.RGBA{196, 154, 82, 255}, color.RGBA{234, 216, 166, 255}}
+}
+
+func loadPanelTheme(source fs.FS) panelTheme {
+	theme := defaultPanelTheme()
+	data, err := fs.ReadFile(source, "assets/ui/classic-panel.json")
+	if err != nil {
+		return theme
+	}
+	var encoded panelThemeFile
+	if json.Unmarshal(data, &encoded) != nil {
+		return theme
+	}
+	for source, target := range map[string]*color.RGBA{encoded.Background: &theme.Background, encoded.InnerBorder: &theme.InnerBorder, encoded.OuterBorder: &theme.OuterBorder, encoded.Text: &theme.Text} {
+		if parsed, ok := parseHexColor(source); ok {
+			*target = parsed
 		}
 	}
+	return theme
+}
+
+func parseHexColor(value string) (color.RGBA, bool) {
+	var result color.RGBA
+	if len(value) != 9 || value[0] != '#' {
+		return result, false
+	}
+	_, err := fmt.Sscanf(value[1:], "%02x%02x%02x%02x", &result.R, &result.G, &result.B, &result.A)
+	return result, err == nil
+}
+
+func hudImage(text string, width, height int, theme panelTheme) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(img, img.Bounds(), image.NewUniform(theme.Background), image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(0, 0, width, 2), image.NewUniform(theme.OuterBorder), image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(0, height-2, width, height), image.NewUniform(theme.OuterBorder), image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(2, 2, width-2, 3), image.NewUniform(theme.InnerBorder), image.Point{}, draw.Src)
 	drawer := font.Drawer{
 		Dst:  img,
-		Src:  image.NewUniform(color.RGBA{R: 224, G: 218, B: 198, A: 255}),
+		Src:  image.NewUniform(theme.Text),
 		Face: basicfont.Face7x13,
 	}
 	for idx, line := range strings.Split(text, "\n") {
