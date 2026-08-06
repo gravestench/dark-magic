@@ -286,4 +286,4 @@ Hash comparison clarified the notable path disagreements:
 
 The generated report and contact sheets are diagnostic build artifacts and are
 not committed because they reproduce original game imagery. Regenerate them
-from a user-owned installation with `cmd/asset_catalog`.
+from a user-owned installation with `internal/tools/asset_catalog`.

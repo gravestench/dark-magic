@@ -19,9 +19,12 @@ authentic and faithful journey into the dark and dangerous world of Sanctuary.
 Together, we can bring back the magic of this iconic game and shape its future.
 
 ## Directory Structure
-* `cmd` - contains product binaries and developer tools. The product targets are
-  the Dark Magic client and realm; asset inspection, cataloging, packing, and
-  diagnostic programs may move to `tools` as those boundaries settle.
+* `cmd` - contains only product binaries. The product targets are the Dark Magic
+  client and realm.
+* `internal/tools` - repository-private asset inspection, extraction, catalog,
+  and packaging utilities.
+* `internal/testapps` - repository-private interactive and headless manual test
+  harnesses; these are not shipped as Dark Magic products.
 * `pkg/models` - contains all the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
 * `internal` - application host, layered content, native adapters, runtime capabilities, navigation, and engine-owned implementations.
 
@@ -100,7 +103,7 @@ make test-race
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell
-go run ./cmd/asset_inspect \
+go run ./internal/tools/asset_inspect \
   -source /path/to/d2data.mpq \
   -asset data/global/ui/Loading/loadingscreen.dc6 \
   -preview ./loading.png
@@ -110,7 +113,7 @@ Verify the curated screen-asset knowledge against a complete MPQ directory and
 generate a JSON report plus palette-applied DC6 contact sheets:
 
 ```shell
-go run ./cmd/asset_catalog \
+go run ./internal/tools/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
   -out ./asset-catalog
 ```
@@ -136,7 +139,7 @@ GET /asset/preview/data/global/ui/Loading/loadingscreen.dc6?direction=0&frame=0
 Run the standalone interactive scene slice:
 
 ```shell
-go run ./cmd/scene_demo
+go run ./internal/testapps/scene_demo
 ```
 
 The main engine also starts the integrated scene service. Set `MPQ_DIRECTORY`
@@ -150,7 +153,7 @@ MPQ_DIRECTORY=/path/to/mpqs go run ./cmd/darkmagic
 To explore a real DS1 layout from an MPQ:
 
 ```shell
-go run ./cmd/scene_demo \
+go run ./internal/testapps/scene_demo \
   -source /path/to/d2data.mpq \
   -map data/global/tiles/Act1/BARRACKS/barE.ds1 \
   -dt1 data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \

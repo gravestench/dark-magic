@@ -6,8 +6,8 @@ input can be the game's tab-delimited `TreasureClass.txt` or
 without proprietary game data.
 
 ```sh
-go run ./cmd/loot_roll \
-  -file ./cmd/loot_roll/example.json \
+go run ./internal/testapps/loot_roll \
+  -file ./internal/testapps/loot_roll/example.json \
   -class "Act 1 Demo" \
   -seed 42
 ```
@@ -21,7 +21,7 @@ Pass any combination of `-weapons`, `-armor`, and `-misc` to resolve direct
 terminal codes into their base item name key, kind, level, type, and artwork:
 
 ```sh
-go run ./cmd/loot_roll \
+go run ./internal/testapps/loot_roll \
   -file /path/to/TreasureClassEx.txt -class "Act 1 Good" -seed 42 \
   -weapons /path/to/weapons.txt -armor /path/to/armor.txt -misc /path/to/misc.txt \
   -item-types /path/to/ItemTypes.txt
