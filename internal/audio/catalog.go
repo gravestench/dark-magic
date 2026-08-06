@@ -6,7 +6,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
@@ -26,23 +25,23 @@ type Definition struct {
 type Catalog struct {
 	source fs.FS
 	store  *recordstore.Store
-	once   sync.Once
-	rows   []map[string]string
-	err    error
 }
 
-func NewCatalog(source fs.FS) *Catalog {
-	return &Catalog{source: source, store: recordstore.New(source)}
+func NewCatalog(source fs.FS, store *recordstore.Store) *Catalog {
+	return &Catalog{source: source, store: store}
 }
 
 // Resolve deterministically selects grouped variants using seed.
 func (c *Catalog) Resolve(name string, seed uint64) (Definition, error) {
-	c.once.Do(func() { c.rows, c.err = c.store.Load(soundsTable) })
-	if c.err != nil {
-		return Definition{}, fmt.Errorf("audiocore: load sound records: %w", c.err)
+	if c == nil || c.store == nil {
+		return Definition{}, fmt.Errorf("audiocore: no shared record store")
+	}
+	rows, err := c.store.Load(soundsTable)
+	if err != nil {
+		return Definition{}, fmt.Errorf("audiocore: load sound records: %w", err)
 	}
 	index := -1
-	for candidate, row := range c.rows {
+	for candidate, row := range rows {
 		if strings.EqualFold(row["Sound"], name) {
 			index = candidate
 			break
@@ -51,17 +50,17 @@ func (c *Catalog) Resolve(name string, seed uint64) (Definition, error) {
 	if index < 0 {
 		return Definition{}, fmt.Errorf("audiocore: unknown sound record %q", name)
 	}
-	row := c.rows[index]
-	if redirect, err := strconv.Atoi(row["Redirect"]); err == nil && redirect >= 0 && redirect < len(c.rows) {
-		row = c.rows[redirect]
+	row := rows[index]
+	if redirect, err := strconv.Atoi(row["Redirect"]); err == nil && redirect >= 0 && redirect < len(rows) {
+		row = rows[redirect]
 	}
 	groupSize := integer(row, "Group Size")
 	if groupSize > 1 {
 		end := index + groupSize
-		if end > len(c.rows) {
-			end = len(c.rows)
+		if end > len(rows) {
+			end = len(rows)
 		}
-		row = weighted(c.rows[index:end], seed)
+		row = weighted(rows[index:end], seed)
 	}
 	fileName, err := c.find(row["FileName"], integer(row, "IsLocal") != 0, integer(row, "IsMusic") != 0)
 	if err != nil {

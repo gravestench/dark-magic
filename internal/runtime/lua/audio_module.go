@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -45,8 +46,8 @@ func (s *ownedSound) release() error {
 }
 
 // AudioModule exposes scoped archive-backed sound playback.
-func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
-	catalog := audio.NewCatalog(source)
+func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS, records *recordstore.Store) Module {
+	catalog := audio.NewCatalog(source, records)
 	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
