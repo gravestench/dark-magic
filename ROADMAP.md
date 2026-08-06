@@ -742,7 +742,10 @@ implementations. The remaining work is tracked explicitly below.
   and the retired `videocore` import path is rejected. All native Raylib adapters
   now live under `internal/platform/raylib`, keeping window, input, renderer,
   audio-device, and transitional world presentation code visibly outside the
-  engine contracts; previous adapter paths are guarded.
+  engine contracts; previous adapter paths are guarded. Repository-private CLIs
+  and manual diagnostic applications now live together under `internal/dev`,
+  every README, Make target, and root usage example points to the new commands,
+  and an acceptance constraint rejects recreation of the ambiguous old roots.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

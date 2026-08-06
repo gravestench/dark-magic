@@ -21,9 +21,9 @@ Together, we can bring back the magic of this iconic game and shape its future.
 ## Directory Structure
 * `cmd` - contains only product binaries. The product targets are the Dark Magic
   client and realm.
-* `internal/tools` - repository-private asset inspection, extraction, catalog,
+* `internal/dev/tools` - repository-private asset inspection, extraction, catalog,
   and packaging utilities.
-* `internal/testapps` - repository-private interactive and headless manual test
+* `internal/dev/testapps` - repository-private interactive and headless manual test
   harnesses; these are not shipped as Dark Magic products.
 * `pkg/models` - contains all the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
 * `internal` - application host, layered content, native adapters, runtime capabilities, navigation, and engine-owned implementations.
@@ -187,7 +187,7 @@ to the class presentation for legacy metadata-only records.
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell
-go run ./internal/tools/asset_inspect \
+go run ./internal/dev/tools/asset_inspect \
   -source /path/to/d2data.mpq \
   -asset data/global/ui/Loading/loadingscreen.dc6 \
   -preview ./loading.png
@@ -197,7 +197,7 @@ Verify the curated screen-asset knowledge against a complete MPQ directory and
 generate a JSON report plus palette-applied DC6 contact sheets:
 
 ```shell
-go run ./internal/tools/asset_catalog \
+go run ./internal/dev/tools/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
   -out ./asset-catalog
 ```
@@ -206,7 +206,7 @@ Validate the installation against the redistributable structural fixture
 without extracting or committing any Blizzard-owned pixels:
 
 ```shell
-go run ./internal/tools/asset_catalog \
+go run ./internal/dev/tools/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
   -no-sheets \
   -fixture internal/content/shim/manifests/asset-fixture.v1.json
@@ -216,7 +216,7 @@ View a Bink cinematic directly from an MPQ directory (FFmpeg/`ffplay` is
 required, and the temporary extracted file is removed when playback exits):
 
 ```sh
-go run ./internal/tools/bik_view \
+go run ./internal/dev/tools/bik_view \
   -source ~/d2_english_mpq \
   -asset data/local/video/New_Bliz640x480.bik
 ```
@@ -244,7 +244,7 @@ metadata-only pass. The command is read-only with respect to the MPQs.
 The optional community discovery index can be audited independently:
 
 ```shell
-go run ./internal/tools/asset_catalog \
+go run ./internal/dev/tools/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
   -listfile ./docs/Diablo2UberListfile.txt \
   -no-sheets \
@@ -270,7 +270,7 @@ GET /asset/preview/data/global/ui/Loading/loadingscreen.dc6?direction=0&frame=0
 Run the standalone interactive scene slice:
 
 ```shell
-go run ./internal/testapps/scene_demo
+go run ./internal/dev/testapps/scene_demo
 ```
 
 The main engine also starts the integrated scene service. Set `MPQ_DIRECTORY`
@@ -284,7 +284,7 @@ MPQ_DIRECTORY=/path/to/mpqs go run ./cmd/darkmagic
 To explore a real DS1 layout from an MPQ:
 
 ```shell
-go run ./internal/testapps/scene_demo \
+go run ./internal/dev/testapps/scene_demo \
   -source /path/to/d2data.mpq \
   -map data/global/tiles/Act1/BARRACKS/barE.ds1 \
   -dt1 data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \

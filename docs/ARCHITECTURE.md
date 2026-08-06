@@ -71,8 +71,8 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/platform/raylib/renderer` | Raylib renderer/audio owner thread | command, world | Application | Keep under platform |
 | `internal/platform/raylib/world` | Legacy native world presentation | command/tests | Scene | Transitional; replace |
 | `internal/acceptance` | Cross-system acceptance fixtures | tests | Test | Keep |
-| `internal/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
-| `internal/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
+| `internal/dev/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
+| `internal/dev/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
 | `internal/assets/decode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Keep internal |
 | `internal/assets/catalog` | Presentation asset research/catalog output | tools | Stateless | Keep internal |
 | `internal/assets/inspect` | Asset metadata and preview helpers | tools, world | Stateless | Keep internal |
@@ -140,8 +140,8 @@ schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and
 the bundled Data File Guide before admitting or interpreting another table, then
 verify assumptions against real layered MPQs.
 
-New developer-only executables belong under `internal/tools` or
-`internal/testapps`; production entry points belong under `cmd`. A new engine
+New developer-only executables belong under `internal/dev/tools` or
+`internal/dev/testapps`; production entry points belong under `cmd`. A new engine
 capability should expose a renderer-independent contract under the relevant
 feature directory, receive explicit ownership from the composition root, and
 gain both focused tests and a cross-system acceptance test when appropriate.

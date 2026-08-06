@@ -11,6 +11,5 @@ shipped products:
 Run one from the repository root, for example:
 
 ```shell
-go run ./internal/testapps/scene_demo
+go run ./internal/dev/testapps/scene_demo
 ```
-

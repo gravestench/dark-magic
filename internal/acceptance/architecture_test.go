@@ -1,9 +1,11 @@
 package acceptance
 
 import (
+	"errors"
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -69,6 +71,20 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, relative := range []string{"internal/tools", "internal/testapps"} {
+		_, err := os.Stat(filepath.Join(root, filepath.FromSlash(relative)))
+		if err == nil {
+			t.Errorf("retired developer directory exists: %s", relative)
+			continue
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("inspect retired developer directory %s: %v", relative, err)
+		}
 	}
 }
 

@@ -258,7 +258,7 @@ time rather than embedded as playback assumptions.
 `Diablo2UberListfile.txt` is retained as a broad community discovery index. It
 spans releases, locales, and possibly mod or invalid entries, so inclusion is
 not evidence that a path exists in a particular installation. Use
-`internal/tools/asset_catalog -listfile` to record local resolution separately;
+`internal/dev/tools/asset_catalog -listfile` to record local resolution separately;
 only decoded/hash-checked assets should become verified presentation facts.
 
 Reference projects disagree in places and sometimes contain project-specific
@@ -299,4 +299,4 @@ Hash comparison clarified the notable path disagreements:
 
 The generated report and contact sheets are diagnostic build artifacts and are
 not committed because they reproduce original game imagery. Regenerate them
-from a user-owned installation with `internal/tools/asset_catalog`.
+from a user-owned installation with `internal/dev/tools/asset_catalog`.

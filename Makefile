@@ -13,10 +13,10 @@ vet:
 	go vet ./...
 
 shim:
-	go run ./internal/tools/shim_pack -output ./dist/darkmagic.zip
+	go run ./internal/dev/tools/shim_pack -output ./dist/darkmagic.zip
 
 bik-view:
-	go run ./internal/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"
+	go run ./internal/dev/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"
 
 PROFILE_DIR ?= ./profiles/acceptance
 PROFILE_BUDGETS ?= ./docs/profile-budgets.json
@@ -25,7 +25,7 @@ profile:
 	go run -tags ffmpeg ./cmd/darkmagic --profile-dir "$(PROFILE_DIR)" --profile-scenes all
 
 profile-check:
-	go run ./internal/tools/profile_check -profile-dir "$(PROFILE_DIR)" -budgets "$(PROFILE_BUDGETS)"
+	go run ./internal/dev/tools/profile_check -profile-dir "$(PROFILE_DIR)" -budgets "$(PROFILE_BUDGETS)"
 
 CAPTURE_DIR ?= ./captures/frontend
 CAPTURE_SCENES ?= loading,title
