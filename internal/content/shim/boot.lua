@@ -16,6 +16,7 @@ local pause = require("darkmagic.overlays.pause")
 local tcpip = require("darkmagic.screens.tcpip")
 local credits = require("darkmagic.screens.credits")
 local cinematics = require("darkmagic.screens.cinematics")
+local font_lab = require("darkmagic.screens.font_lab")
 
 return {
     id = "darkmagic.boot",
@@ -36,6 +37,7 @@ return {
         scenes.register("tcpip", tcpip)
         scenes.register("credits", credits)
         scenes.register("cinematics", cinematics)
+        scenes.register("font_lab", font_lab)
         scenes.register("inventory", inventory)
         scenes.register("character", character)
         scenes.register("skills", skills)

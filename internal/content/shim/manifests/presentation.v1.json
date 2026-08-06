@@ -80,6 +80,11 @@
       "table": "data/local/FONT/latin/fontformal12.tbl",
       "sheet": "data/local/FONT/latin/fontformal12.dc6",
       "palette": "static"
+    },
+    "formal12_sky": {
+      "table": "data/local/FONT/latin/fontformal12.tbl",
+      "sheet": "data/local/FONT/latin/fontformal12.dc6",
+      "palette": "sky"
     }
   },
   "text_styles": {
@@ -104,7 +109,21 @@
     "label_button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
     "dialog_text": {"font":"exocet10","transform":"fechar","text_color":"gold"},
     "tooltip": {"font":"font16","transform":"act1","text_color":"white"},
-    "disabled": {"font":"font16","transform":"fechar","text_color":"grey"}
+    "disabled": {"font":"font16","transform":"fechar","text_color":"grey"},
+    "font_lab_heading": {"font":"font30","transform":"sky","text_color":"white"},
+    "font_lab_caption": {"font":"formal10_sky","transform":"sky","text_color":"white"},
+    "font_lab_exocet10": {"font":"exocet10","transform":"sky","text_color":"white"},
+    "font_lab_font6": {"font":"font6","transform":"sky","text_color":"white"},
+    "font_lab_font16": {"font":"font16","transform":"sky","text_color":"white"},
+    "font_lab_font30": {"font":"font30","transform":"sky","text_color":"white"},
+    "font_lab_font42": {"font":"font42","transform":"sky","text_color":"white"},
+    "font_lab_formal10": {"font":"formal10_sky","transform":"sky","text_color":"white"},
+    "font_lab_formal11": {"font":"formal11_units","transform":"sky","text_color":"white"},
+    "font_lab_formal12": {"font":"formal12_sky","transform":"sky","text_color":"white"},
+    "font_lab_color": {"font":"font16","transform":"sky","text_color":"white"},
+    "font_lab_gold_sky": {"font":"font16","transform":"sky","text_color":"gold"},
+    "font_lab_gold_fechar": {"font":"font16","transform":"fechar","text_color":"gold"},
+    "font_lab_gold_act1": {"font":"font16","transform":"act1","text_color":"gold"}
   },
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",
@@ -127,6 +146,10 @@
     "skippable": true
   },
   "screens": {
+    "font_lab": {
+      "development_only": true,
+      "pages": 5
+    },
     "title": {
       "background": "data/global/ui/FrontEnd/trademarkscreenEXP.dc6",
       "palette": "sky",

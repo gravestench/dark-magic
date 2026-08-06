@@ -667,7 +667,10 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement reusable frames, boxes, scrollbars, text boxes, list controls,
   toggles, and modal focus rules from verified Blizzard assets and records.
 - [ ] Add native screenshot fixtures for every shared component state and migrate
-  every shim screen and overlay away from one-off styling code.
+  every shim screen and overlay away from one-off styling code. The interactive
+  five-page `font_lab` now isolates semantic screen styles, bitmap families, PL2
+  color slots and contexts, and text layout behavior; automated native screenshot
+  fixtures and the remaining component migrations are still outstanding.
 
 ## Gameplay acceptance milestone
 
