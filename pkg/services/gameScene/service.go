@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/png"
 	"io/fs"
 	"os"
@@ -30,7 +31,14 @@ import (
 const (
 	movementSpeed      = 220.0
 	hudRefreshInterval = 100 * time.Millisecond
+	mapChunkSize       = 512
+	mapCullMargin      = 64
 )
+
+type mapChunk struct {
+	bounds image.Rectangle
+	node   raylibRenderer.Renderable
+}
 
 type Service struct {
 	common.Service
@@ -40,7 +48,7 @@ type Service struct {
 	locale         locale.Dependency
 	Config         Config
 	state          *scene.State
-	mapNode        raylibRenderer.Renderable
+	mapChunks      []mapChunk
 	heroNode       raylibRenderer.Renderable
 	hudNode        raylibRenderer.Renderable
 	hudText        string
@@ -84,10 +92,14 @@ func (s *Service) Init(servicemesh.Mesh) {
 	}
 	worldWidth, worldHeight := mapImage.Bounds().Dx(), mapImage.Bounds().Dy()
 	s.state = scene.New(1, float64(worldWidth), float64(worldHeight))
-	s.mapNode = s.renderer.NewRenderable()
-	s.mapNode.SetOrigin(0, 0)
-	s.mapNode.SetZIndex(0)
-	s.mapNode.SetImage(mapImage)
+	for _, chunk := range splitMapImage(mapImage, mapChunkSize) {
+		node := s.renderer.NewRenderable()
+		node.SetOrigin(0, 0)
+		node.SetPosition(float32(chunk.bounds.Min.X), float32(chunk.bounds.Min.Y))
+		node.SetZIndex(0)
+		node.SetImage(chunk.image)
+		s.mapChunks = append(s.mapChunks, mapChunk{bounds: chunk.bounds, node: node})
+	}
 
 	s.heroNode = s.renderer.NewRenderable()
 	s.heroNode.SetZIndex(10)
@@ -150,7 +162,62 @@ func (s *Service) syncRenderState(now time.Time) {
 	width, height := s.renderer.WindowSize()
 	camera.Target = rl.Vector2{X: float32(s.state.Camera.X), Y: float32(s.state.Camera.Y)}
 	camera.Offset = rl.Vector2{X: float32(width) / 2, Y: float32(height) / 2}
+	s.syncMapChunks(camera, width, height)
 	s.syncHUD(camera, width, height, now)
+}
+
+func (s *Service) syncMapChunks(camera *rl.Camera2D, width, height int) {
+	zoom := camera.Zoom
+	if zoom <= 0 {
+		zoom = 1
+	}
+	halfWidth := float32(width)/(2*zoom) + mapCullMargin
+	halfHeight := float32(height)/(2*zoom) + mapCullMargin
+	viewport := floatBounds{
+		minX: camera.Target.X - halfWidth,
+		minY: camera.Target.Y - halfHeight,
+		maxX: camera.Target.X + halfWidth,
+		maxY: camera.Target.Y + halfHeight,
+	}
+	for _, chunk := range s.mapChunks {
+		if viewport.intersects(chunk.bounds) {
+			chunk.node.Enable()
+		} else {
+			chunk.node.Disable()
+		}
+	}
+}
+
+type chunkImage struct {
+	bounds image.Rectangle
+	image  image.Image
+}
+
+func splitMapImage(source image.Image, size int) []chunkImage {
+	if source == nil || size <= 0 {
+		return nil
+	}
+	bounds := source.Bounds()
+	chunks := make([]chunkImage, 0, ((bounds.Dx()+size-1)/size)*((bounds.Dy()+size-1)/size))
+	for y := bounds.Min.Y; y < bounds.Max.Y; y += size {
+		for x := bounds.Min.X; x < bounds.Max.X; x += size {
+			chunkBounds := image.Rect(x, y, min(x+size, bounds.Max.X), min(y+size, bounds.Max.Y))
+			chunk := image.NewRGBA(image.Rect(0, 0, chunkBounds.Dx(), chunkBounds.Dy()))
+			draw.Draw(chunk, chunk.Bounds(), source, chunkBounds.Min, draw.Src)
+			chunks = append(chunks, chunkImage{bounds: chunkBounds.Sub(bounds.Min), image: chunk})
+		}
+	}
+	return chunks
+}
+
+type floatBounds struct {
+	minX, minY float32
+	maxX, maxY float32
+}
+
+func (b floatBounds) intersects(rect image.Rectangle) bool {
+	return b.maxX > float32(rect.Min.X) && b.minX < float32(rect.Max.X) &&
+		b.maxY > float32(rect.Min.Y) && b.minY < float32(rect.Max.Y)
 }
 
 func (s *Service) syncHUD(camera *rl.Camera2D, width, height int, now time.Time) {

@@ -2,6 +2,8 @@ package gameScene
 
 import (
 	"encoding/json"
+	"image"
+	"image/color"
 	"math"
 	"os"
 	"testing"
@@ -70,5 +72,31 @@ func TestHUDRefreshIsBoundedButInitialRenderIsImmediate(t *testing.T) {
 	}
 	if !hudRefreshDue(last, now.Add(hudRefreshInterval), false) {
 		t.Fatal("HUD did not refresh when interval elapsed")
+	}
+}
+
+func TestSplitMapImagePreservesDimensionsAndPixels(t *testing.T) {
+	source := image.NewRGBA(image.Rect(10, 20, 15, 24))
+	source.Set(14, 23, color.RGBA{R: 12, G: 34, B: 56, A: 255})
+	chunks := splitMapImage(source, 3)
+	if len(chunks) != 4 {
+		t.Fatalf("chunk count = %d, want 4", len(chunks))
+	}
+	last := chunks[3]
+	if last.bounds != image.Rect(3, 3, 5, 4) {
+		t.Fatalf("last bounds = %v", last.bounds)
+	}
+	if got := color.RGBAModel.Convert(last.image.At(1, 0)).(color.RGBA); got != (color.RGBA{R: 12, G: 34, B: 56, A: 255}) {
+		t.Fatalf("last pixel = %v", got)
+	}
+}
+
+func TestFloatBoundsIntersection(t *testing.T) {
+	viewport := floatBounds{minX: 100, minY: 100, maxX: 200, maxY: 200}
+	if !viewport.intersects(image.Rect(150, 150, 250, 250)) {
+		t.Fatal("overlapping chunk was culled")
+	}
+	if viewport.intersects(image.Rect(200, 100, 300, 200)) {
+		t.Fatal("edge-adjacent chunk should be culled")
 	}
 }
