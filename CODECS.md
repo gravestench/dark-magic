@@ -57,12 +57,19 @@ convention, not part of Dark Magic's build contract.
 | P1 | `cof` | Validation and JSON inspection command |
 | P1 | `wav` | Standard-library interoperability tests |
 
-## First audit (2026-08-05)
+## Completed maintenance pass (2026-08-05)
 
-- `bitstream`, `dt1`, `mpq`, `pl2` core, and `wav` compile locally.
-- Other modules could not finish the offline audit because dependency versions
-  were not cached; those results are not yet classified as codec failures.
-- `pl2/go.mod` contains a developer-specific absolute `replace` directive.
-- Coverage is uneven and several modules have no package tests.
-- `dc6` and `dcc` carry GUI dependencies in their module graphs; core decoding
-  and optional viewers should be independently testable.
+- All eleven modules pass `go test ./...` and `go vet ./...` in a shared local
+  workspace, with race checks on their decoder paths.
+- Every public decoder has malformed/truncated-input coverage and a fuzz target;
+  format counts, offsets, dimensions, and allocation sizes are bounded before
+  use. Synthetic fixtures and encoder round trips cover formats that can be
+  produced without proprietary data.
+- `mpq` includes an opt-in `OD2_MPQ_TEST_FILE` smoke test. Optional expected
+  file-count and list-hash variables make owned archive fixtures reproducible
+  without placing Diablo II data in Git.
+- Headless JSON inspection and common-format conversion commands live under
+  each applicable module's `cmd/` tree. GUI viewers remain optional commands.
+- `bitstream` is published as `v0.2.0`; the other ten modules are published as
+  `v0.1.0`. Dark Magic consumes these tags and passes `go test ./...` and
+  `go vet ./...` with `GOWORK=off`, proving that no local replacement is needed.

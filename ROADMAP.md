@@ -251,10 +251,10 @@ their own legally obtained game data.
 ## Parallel codec maintenance
 
 - [x] Audit the sibling codec repositories and record ownership strategy.
-- [ ] Baseline all eleven modules online and remove local path replacements.
-- [ ] Add decoder fuzzing, synthetic fixtures, and optional real-asset tests.
-- [ ] Standardize headless inspection and conversion commands.
-- [ ] Tag stable codec releases and update Dark Magic dependencies.
+- [x] Baseline all eleven modules online and remove local path replacements.
+- [x] Add decoder fuzzing, synthetic fixtures, and optional real-asset tests.
+- [x] Standardize headless inspection and conversion commands.
+- [x] Tag stable codec releases and update Dark Magic dependencies.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.
