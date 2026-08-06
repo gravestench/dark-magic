@@ -756,7 +756,10 @@ implementations. The remaining work is tracked explicitly below.
   Guide-reviewed SuperUniques now provides stable encounter and hardcoded-ID
   indexes plus documented class, modifier, group, transform, and treasure-class
   relationships; undocumented patch columns remain available through generic
-  rows rather than speculative typed fields.
+  rows rather than speculative typed fields. Guide-referenced LowQualityItems,
+  BodyLocs, StorePage, Composit, and HitClass now expose their authored
+  name/code dictionaries for item naming, equipment placement, vendor UI,
+  composite animation, and impact presentation.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

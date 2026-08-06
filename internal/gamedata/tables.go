@@ -68,6 +68,11 @@ const (
 	TreasureClassTable        = "data/global/excel/TreasureClass.txt"
 	HirelingDescriptionsTable = "data/global/excel/HireDesc.txt"
 	SuperUniquesTable         = "data/global/excel/SuperUniques.txt"
+	LowQualityItemsTable      = "data/global/excel/LowQualityItems.txt"
+	BodyLocationsTable        = "data/global/excel/BodyLocs.txt"
+	StorePagesTable           = "data/global/excel/StorePage.txt"
+	CompositeComponentsTable  = "data/global/excel/Composit.txt"
+	HitClassesTable           = "data/global/excel/HitClass.txt"
 )
 
 func isAdmittedTable(path string) bool {
@@ -87,7 +92,9 @@ func isAdmittedTable(path string) bool {
 		ObjectGroupsTable, ObjectModesTable, QualityItemsTable, WeaponClassTable,
 		BooksTable, MonsterSequencesTable, MonsterUniqueModsTable,
 		UniqueAppellationsTable, UniquePrefixesTable, UniqueSuffixesTable,
-		TreasureClassTable, HirelingDescriptionsTable, SuperUniquesTable:
+		TreasureClassTable, HirelingDescriptionsTable, SuperUniquesTable,
+		LowQualityItemsTable, BodyLocationsTable, StorePagesTable,
+		CompositeComponentsTable, HitClassesTable:
 		return true
 	default:
 		return false

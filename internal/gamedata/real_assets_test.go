@@ -110,6 +110,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	}) {
 		t.Fatal("typed super-unique guide fields did not bind representative authored values")
 	}
+	if len(snapshot.LowQualityItemNames) == 0 || len(snapshot.BodyLocationsByCode) == 0 || len(snapshot.StorePagesByCode) == 0 || len(snapshot.CompositeComponentsByToken) == 0 || len(snapshot.HitClassesByCode) == 0 {
+		t.Fatal("typed item lookup tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
