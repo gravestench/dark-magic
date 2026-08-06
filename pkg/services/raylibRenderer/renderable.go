@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"image"
 	"math"
+	"sort"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
@@ -35,10 +36,11 @@ type node struct {
 
 	onUpdate func()
 
-	world    rl.Matrix
-	local    rl.Matrix
-	parent   Renderable
-	children []Renderable
+	world          rl.Matrix
+	local          rl.Matrix
+	parent         Renderable
+	children       []Renderable
+	childrenSorted bool
 
 	isDirty bool
 }
@@ -85,7 +87,13 @@ func (n *node) ZIndex() float32 {
 }
 
 func (n *node) SetZIndex(i float32) {
+	if n.local.M14 == i {
+		return
+	}
 	n.local.M14 = i
+	if parent, ok := n.parent.(*node); ok {
+		parent.childrenSorted = false
+	}
 }
 
 func (n *node) Position() (x, y float32) {
@@ -194,7 +202,9 @@ func (n *node) Texture() rl.Texture2D {
 	tx, isNew := n.renderer.GetTexture(n.uuid, n.Image())
 
 	if isNew {
-		rl.UpdateTexture(tx, getAllPixelData(n.Image()))
+		// LoadTextureFromImage already uploaded the complete image. Consume the
+		// dirty flag so renderNode does not immediately upload the same pixels.
+		n.dirty()
 	}
 
 	return tx
@@ -268,6 +278,7 @@ func (n *node) addChild(m Renderable) {
 	}
 
 	n.children = append(n.children, m)
+	n.childrenSorted = false
 }
 
 func (n *node) removeChild(m Renderable) {
@@ -281,11 +292,23 @@ func (n *node) removeChild(m Renderable) {
 		}
 
 		n.children = append(n.children[:idx], n.children[idx+1:]...)
+		n.childrenSorted = false
 	}
 }
 
 // Children yields the child nodes for this node
 func (n *node) Children() []Renderable {
+	return n.children
+}
+
+func (n *node) sortedChildren() []Renderable {
+	if n.childrenSorted {
+		return n.children
+	}
+	sort.SliceStable(n.children, func(i, j int) bool {
+		return n.children[i].ZIndex() < n.children[j].ZIndex()
+	})
+	n.childrenSorted = true
 	return n.children
 }
 

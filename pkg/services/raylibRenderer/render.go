@@ -3,7 +3,6 @@ package raylibRenderer
 import (
 	"image"
 	"image/color"
-	"sort"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -17,16 +16,15 @@ func (s *Service) render() {
 	s.renderRecursively(s.rootNode)
 }
 
-func (s *Service) renderRecursively(node Renderable) {
-	if node.IsEnabled() {
-		s.renderNode(node)
+func (s *Service) renderRecursively(renderable Renderable) {
+	if renderable.IsEnabled() {
+		s.renderNode(renderable)
 	}
 
-	children := node.Children()
-
-	sort.Slice(children, func(i, j int) bool {
-		return children[i].ZIndex() < children[j].ZIndex()
-	})
+	children := renderable.Children()
+	if concrete, ok := renderable.(*node); ok {
+		children = concrete.sortedChildren()
+	}
 
 	for _, child := range children {
 		s.renderRecursively(child)

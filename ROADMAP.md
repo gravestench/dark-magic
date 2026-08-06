@@ -94,8 +94,9 @@ their own legally obtained game data.
 ## Performance priorities
 
 - [x] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
+- [x] Avoid redundant pixel conversion and uploads when creating a texture.
 - [ ] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
-- [ ] Cache scene child ordering until topology or Z-index changes.
+- [x] Cache scene child ordering until topology or Z-index changes.
 - [ ] Avoid unconditional per-frame callback and input-map allocations.
 - [ ] Pre-index dynamic loot candidates by item type and level.
 - [ ] Replace coarse startup sleeps with lifecycle events or bounded waits.
