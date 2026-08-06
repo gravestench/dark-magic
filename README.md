@@ -112,6 +112,17 @@ go run -tags ffmpeg ./cmd/darkmagic --log-level debug
 DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/darkmagic
 ```
 
+Quantize the final composed display into any mounted Diablo `pal.dat` with the
+optional GPU post-process. The lookup cube emits only colors from the selected
+palette while preserving source alpha:
+
+```shell
+go run -tags ffmpeg ./cmd/darkmagic \
+  --output-palette data/global/Palette/fechar/pal.dat
+```
+
+The equivalent environment variable is `DARK_MAGIC_OUTPUT_PALETTE`.
+
 Capture CPU activity for the full client run and a live-heap snapshot at clean
 shutdown with:
 

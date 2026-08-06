@@ -36,6 +36,10 @@ func (s *Service) Start(context.Context) error {
 		rl.SetConfigFlags(rl.FlagWindowResizable)
 	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
+	if err := s.startPaletteQuantizer(); err != nil {
+		rl.CloseWindow()
+		return err
+	}
 	rl.InitAudioDevice()
 	rl.SetTargetFPS(60)
 	rl.HideCursor()
@@ -54,6 +58,13 @@ func (s *Service) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
+		}
+		if s.paletteQuantizer != nil {
+			if err := s.renderQuantizedFrame(); err != nil {
+				return err
+			}
+			s.runPostFrame()
+			continue
 		}
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
@@ -78,6 +89,7 @@ func (s *Service) Stop(context.Context) error {
 	if s.audioBackend != nil {
 		s.audioBackend.Close()
 	}
+	s.stopPaletteQuantizer()
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
 	return nil

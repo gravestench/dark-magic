@@ -54,6 +54,7 @@ func main() {
 	captureSettle := flag.Int("capture-settle-frames", 10, "stable frames to wait before capturing a scene")
 	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
+	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
 	flag.Parse()
 	logLevel, err := parseLogLevel(*logLevelFlag)
 	if err != nil {
@@ -93,7 +94,7 @@ func main() {
 	if captureDirectory != "" && *captureScenes == "" {
 		*captureScenes = "loading,title"
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
@@ -120,7 +121,7 @@ func parseLogLevel(value string) (slog.Level, error) {
 	}
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette string) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	sceneErrors := make(chan error, 1)
@@ -135,6 +136,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	renderer.SetLogger(slog.Default().With("component", "renderer"))
 	rendererConfig := raylibRenderer.DefaultConfig()
 	renderer.Configure(rendererConfig)
+	if err := renderer.ConfigurePaletteQuantization(contentFS, outputPalette); err != nil {
+		return err
+	}
 	inputService := input.New(renderer)
 	inputService.SetLogger(slog.Default().With("component", "input"))
 	locale := localization.New(contentFS, "English")

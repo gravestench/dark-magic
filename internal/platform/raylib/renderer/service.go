@@ -35,6 +35,8 @@ type Service struct {
 
 	audioMu      sync.Mutex
 	audioBackend *raylibAudioBackend
+
+	paletteQuantizer *paletteQuantizer
 }
 
 // SubscribePostFrame registers owner-thread work after the fully composed frame

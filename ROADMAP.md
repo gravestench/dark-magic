@@ -286,6 +286,11 @@ implementations. The remaining work is tracked explicitly below.
   lookup, grouped variants, fades, pan, and scope-owned playback.
 - [ ] Cache decoded CPU assets separately from renderer/audio resources and
   invalidate them by VFS generation without leaking owner-thread resources.
+- [x] Add optional final-display palette quantization. A CPU-built 32³
+  nearest-color lookup cube is uploaded as a point-sampled shader texture, so
+  every output RGB value belongs to the selected mounted `pal.dat` without a
+  256-entry search per fragment; alpha and resizable viewport geometry survive
+  the off-screen composition pass.
 
 ### M16 execution checkpoints
 
