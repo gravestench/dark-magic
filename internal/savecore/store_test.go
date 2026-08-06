@@ -56,3 +56,14 @@ func TestCreateNamedOwnsStorageIdentity(t *testing.T) {
 		t.Fatalf("created character = %#v", character)
 	}
 }
+
+func TestCreateNamedStoresCreationOptions(t *testing.T) {
+	store := New()
+	character, err := store.CreateNamedWithOptions("Iron-Wolf", "Paladin", false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if character.Expansion || !character.Hardcore {
+		t.Fatalf("creation options = expansion %v, hardcore %v", character.Expansion, character.Hardcore)
+	}
+}

@@ -14,10 +14,12 @@ var characterClasses = map[string]string{
 }
 
 type Character struct {
-	ID    string
-	Name  string
-	Class string
-	Level int
+	ID        string
+	Name      string
+	Class     string
+	Level     int
+	Expansion bool
+	Hardcore  bool
 }
 
 func (s *Store) Create(character Character) error {
@@ -50,6 +52,12 @@ func (s *Store) Create(character Character) error {
 // CreateNamed assigns the storage identity. Scripted presentation code chooses
 // player-facing metadata but never owns save-file naming or collision policy.
 func (s *Store) CreateNamed(name, class string) (Character, error) {
+	return s.CreateNamedWithOptions(name, class, true, false)
+}
+
+// CreateNamedWithOptions creates the character metadata selected by the
+// front-end while retaining save identity and validation inside the engine.
+func (s *Store) CreateNamedWithOptions(name, class string, expansion, hardcore bool) (Character, error) {
 	id := strings.ToLower(strings.TrimSpace(class)) + "-" + strings.ToLower(strings.TrimSpace(name))
 	id = strings.Map(func(current rune) rune {
 		if current >= 'a' && current <= 'z' || current >= '0' && current <= '9' {
@@ -61,7 +69,7 @@ func (s *Store) CreateNamed(name, class string) (Character, error) {
 		return -1
 	}, id)
 	id = strings.Trim(id, "-")
-	character := Character{ID: id, Name: name, Class: class, Level: 1}
+	character := Character{ID: id, Name: name, Class: class, Level: 1, Expansion: expansion, Hardcore: hardcore}
 	if err := s.Create(character); err != nil {
 		return Character{}, err
 	}

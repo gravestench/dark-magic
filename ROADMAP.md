@@ -374,7 +374,9 @@ implementations. The remaining work is tracked explicitly below.
   fabricating a hero. A focus/pointer-driven name dialog requests engine-owned
   save identities, while `savecore` canonicalizes the seven supported classes,
   enforces the 2–15 character naming grammar, and rejects duplicate names.
-  Walk transitions, narration, flags, final calibrated geometry, and visual
+  Verified per-class selection/deselection narration and manifest-backed
+  expansion/hardcore checkboxes now feed immutable creation metadata through
+  the save capability. Walk transitions, final calibrated geometry, and visual
   composition coverage remain.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.

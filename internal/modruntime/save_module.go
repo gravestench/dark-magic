@@ -11,7 +11,9 @@ func SaveModule(store *savecore.Store) Module {
 	return Module{Name: "dm.save/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"create_named": func(state *lua.LState) int {
-				character, err := store.CreateNamed(state.CheckString(1), state.CheckString(2))
+				character, err := store.CreateNamedWithOptions(
+					state.CheckString(1), state.CheckString(2), state.OptBool(3, true), state.OptBool(4, false),
+				)
 				if err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))
@@ -38,6 +40,8 @@ func SaveModule(store *savecore.Store) Module {
 					entry.RawSetString("name", lua.LString(character.Name))
 					entry.RawSetString("class", lua.LString(character.Class))
 					entry.RawSetString("level", lua.LNumber(character.Level))
+					entry.RawSetString("expansion", lua.LBool(character.Expansion))
+					entry.RawSetString("hardcore", lua.LBool(character.Hardcore))
 					result.Append(entry)
 				}
 				state.Push(result)
@@ -63,6 +67,8 @@ func SaveModule(store *savecore.Store) Module {
 				result.RawSetString("name", lua.LString(character.Name))
 				result.RawSetString("class", lua.LString(character.Class))
 				result.RawSetString("level", lua.LNumber(character.Level))
+				result.RawSetString("expansion", lua.LBool(character.Expansion))
+				result.RawSetString("hardcore", lua.LBool(character.Hardcore))
 				state.Push(result)
 				return 1
 			},

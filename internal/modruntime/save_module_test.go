@@ -37,11 +37,11 @@ func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.save/v1"); id=assert(s.create_named("Iron-Wolf", "paladin")); assert(s.select(id))`)}}, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.save/v1"); id=assert(s.create_named("Iron-Wolf", "paladin", false, true)); assert(s.select(id)); c=s.selected(); assert(not c.expansion and c.hardcore)`)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	selected, ok := store.Selected()
-	if !ok || selected.ID != "paladin-iron-wolf" || selected.Class != "Paladin" {
+	if !ok || selected.ID != "paladin-iron-wolf" || selected.Class != "Paladin" || selected.Expansion || !selected.Hardcore {
 		t.Fatalf("selected = %#v", selected)
 	}
 }
