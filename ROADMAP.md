@@ -758,7 +758,10 @@ implementations. The remaining work is tracked explicitly below.
   together and the former top-level path is guarded. Native-run screenshot capture
   and CPU, heap, and scene profiling now live under `internal/dev`, alongside the
   tools that inspect their artifacts; the client retains explicit opt-in wiring
-  and the former top-level paths are rejected.
+  and the former top-level paths are rejected. The typed TSV model layer no longer
+  imports the Lua VM: an unused legacy `SoundEntry` table-export method was
+  removed, current data exposure remains in `internal/runtime/lua`, and an
+  architecture test prevents this dependency inversion from returning.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

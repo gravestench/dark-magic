@@ -74,12 +74,21 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 			if strings.Contains(name, "servicemesh") {
 				t.Errorf("%s imports retired service-mesh package %s", path, name)
 			}
+			modelRoot := filepath.Join(root, "internal", "game", "data", "model")
+			if name == "github.com/yuin/gopher-lua" && pathWithin(path, modelRoot) {
+				t.Errorf("%s couples typed game data to the Lua VM", path)
+			}
 		}
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func pathWithin(path, root string) bool {
+	relative, err := filepath.Rel(root, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
