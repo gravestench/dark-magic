@@ -5,7 +5,7 @@ remain independent Go modules and Git repositories. They are useful outside
 this engine, have different release cadences, and should not inherit the
 engine's rendering or service dependencies.
 
-The sibling checkout at `../od2_codecs` currently contains eleven repositories:
+The codec collection contains eleven repositories:
 `bitstream`, `cof`, `dc6`, `dcc`, `ds1`, `dt1`, `gpl`, `mpq`, `pl2`,
 `tbl_text`, and `wav`.
 
@@ -13,21 +13,23 @@ The sibling checkout at `../od2_codecs` currently contains eleven repositories:
 
 - Keep each codec in its own repository and publish normal tagged Go modules.
 - Do not commit absolute-path `replace` directives to `go.mod` files.
-- Use a local `go.work` file while changing Dark Magic and codecs together.
+- Use an uncommitted `go.work` file while changing Dark Magic and codecs
+  together.
 - Keep codec APIs headless. Put viewers and converters under `cmd/` so GUI
   dependencies cannot prevent core package tests.
 - Keep proprietary assets out of Git. Real-asset tests should use an optional
   asset-root environment variable and skip cleanly when it is absent.
 
-Create a local workspace without changing module metadata:
+Create a development workspace without changing module metadata by adding this
+repository and the checked-out codec module directories:
 
 ```sh
 go work init .
-go work use ../od2_codecs/{bitstream,cof,dc6,dcc,ds1,dt1,gpl,mpq,pl2,tbl_text,wav}
+go work use /path/to/codec-module
 ```
 
-`go.work` remains uncommitted because the sibling location is a local checkout
-convention, not part of Dark Magic's build contract.
+`go.work` remains uncommitted because checkout locations are not part of Dark
+Magic's build contract.
 
 ## Milestones
 
@@ -59,7 +61,7 @@ convention, not part of Dark Magic's build contract.
 
 ## Completed maintenance pass (2026-08-05)
 
-- All eleven modules pass `go test ./...` and `go vet ./...` in a shared local
+- All eleven modules pass `go test ./...` and `go vet ./...` in a shared
   workspace, with race checks on their decoder paths.
 - Every public decoder has malformed/truncated-input coverage and a fuzz target;
   format counts, offsets, dimensions, and allocation sizes are bounded before
@@ -72,4 +74,5 @@ convention, not part of Dark Magic's build contract.
   each applicable module's `cmd/` tree. GUI viewers remain optional commands.
 - `bitstream` is published as `v0.2.0`; the other ten modules are published as
   `v0.1.0`. Dark Magic consumes these tags and passes `go test ./...` and
-  `go vet ./...` with `GOWORK=off`, proving that no local replacement is needed.
+  `go vet ./...` with `GOWORK=off`, proving that no filesystem replacement is
+  needed.

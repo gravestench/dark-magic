@@ -12,7 +12,7 @@ their own legally obtained game data.
 
 ## M1: Reproducible baseline
 
-- [x] Remove absolute local dependency replacements.
+- [x] Remove absolute filesystem dependency replacements.
 - [x] Make `go test ./...` pass on Go 1.24.
 - [x] Add repeatable Make targets and CI.
 - [x] Expand tests for configuration, file loading, records, and service startup.
@@ -237,7 +237,7 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M15: Verified Blizzard-asset knowledge
 
-- [x] Mine OpenDiablo2, AbyssEngine, and Riiablo for MPQ paths, palettes,
+- [x] Consolidate community research for MPQ paths, palettes,
   frames, coordinates, sounds, localization keys, and screen composition.
 - [x] Add a read-only catalog command with provenance, hashes, frame metadata,
   and palette-applied DC6 contact sheets.
@@ -380,8 +380,8 @@ implementations. The remaining work is tracked explicitly below.
 
 ## Parallel codec maintenance
 
-- [x] Audit the sibling codec repositories and record ownership strategy.
-- [x] Baseline all eleven modules online and remove local path replacements.
+- [x] Audit the codec repositories and record ownership strategy.
+- [x] Baseline all eleven modules online and remove filesystem path replacements.
 - [x] Add decoder fuzzing, synthetic fixtures, and optional real-asset tests.
 - [x] Standardize headless inspection and conversion commands.
 - [x] Tag stable codec releases and update Dark Magic dependencies.

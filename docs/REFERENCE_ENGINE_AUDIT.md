@@ -1,24 +1,13 @@
 # Diablo II MPQ knowledge audit
 
-This audit mines the local OpenDiablo2, AbyssEngine, and Riiablo repositories
-for hard-won facts about Blizzard's released Diablo II data: paths, palettes,
-frames, coordinates, labels, sounds, animation layers, and screen composition.
+This audit consolidates community-derived facts about Blizzard's released
+Diablo II data: paths, palettes, frames, coordinates, labels, sounds, animation
+layers, and screen composition.
 
 It deliberately does **not** propose carrying over their architecture,
 functionality, or implementation. Dark Magic should implement its own behavior
-through its Go runtime and Lua shim. These repositories are reference notebooks
-and cross-checks for what the original assets mean and how they fit together.
-
-## Audited snapshots
-
-| Repository | Revision | Most useful knowledge |
-| --- | --- | --- |
-| OpenDiablo2 | `75b480a56a6a12ee1b62377bbed0d242e99aca37` | Go constants linking MPQ paths to palettes, frame indices, screen coordinates, localization keys, and screen composition |
-| AbyssEngine | `885eea067f0d41a4fb75de2e88b3704215859a58` | Small, readable catalog of paths plus confirmed main-menu layering, tiling, blend modes, music, fonts, and video paths |
-| Riiablo | `4eba03fc1c63dd76759a385a642dd484852bde9e` | Broadest asset catalog: front end, panels, inventory, skills, maps, composites, sound handles, and many exact DC6 frame uses |
-
-The local OpenDiablo2 checkout has pre-existing uncommitted changes. This audit
-is read-only and does not depend on them.
+through its Go runtime and Lua shim. References are evidence for what the
+original assets mean and how they fit together, not implementations to import.
 
 ## What to extract
 
@@ -38,7 +27,7 @@ The result should live as data consumed by shim Lua, not as Go constants.
 
 ## Shared path vocabulary
 
-All three projects agree on the important path families:
+Community research consistently identifies these important path families:
 
 | Purpose | MPQ path family |
 | --- | --- |
@@ -69,21 +58,21 @@ Known palette names are `act1` through `act5`, `endgame`, `endgame2`, `fechar`,
 ### Assets
 
 - `data/global/ui/FrontEnd/gameselectscreenEXP.dc6` is the expansion game-select
-  background used by OpenDiablo2 and AbyssEngine with the `sky` palette.
-- Riiablo also identifies `data/global/ui/FrontEnd/TitleScreen.dc6`. This may be
+  background and uses the `sky` palette.
+- `data/global/ui/FrontEnd/TitleScreen.dc6` may be
   a different menu generation or classic/expansion variant and must be checked
   against the files rather than silently aliased.
 - `D2logoBlackLeft.DC6` and `D2logoBlackRight.DC6` are the opaque/dark logo
   layers.
 - `D2logoFireLeft.DC6` and `D2logoFireRight.DC6` are animated luminous/additive
   layers. Both halves share an anchor at `(400, 120)` in the 800x600 layout.
-- AbyssEngine draws frame 0 of `gameselectscreenEXP.dc6` as a `4 x 3` tile grid
+- `gameselectscreenEXP.dc6` is drawn as a `4 x 3` tile grid
   from `(0, 0)`.
 - `trademarkscreenEXP.dc6`, `TCPIPscreen.dc6`, and
   `CinematicsSelectionEXP.dc6` provide sibling front-end modes.
 - Button sheets include `WideButtonBlank.dc6`, `3WideButtonBlank.dc6`,
   `MediumButtonBlank.dc6`, `CancelButtonBlank.dc6`, and
-  `NarrowButtonBlank.dc6`. Riiablo confirms frame 0 as up and frame 1 as down
+  `NarrowButtonBlank.dc6`. Frame 0 is up and frame 1 is down
   for common wide/medium buttons.
 - Popup sheets include `PopUpOkCancel.dc6`, `PopUpOkCancel2.dc6`, `PopUpOk.dc6`,
   `PopUpLarge.dc6`, `PopUpLargest.dc6`, `PopUpWide.dc6`, and
@@ -91,13 +80,13 @@ Known palette names are `act1` through `act5`, `endgame`, `endgame2`, `fechar`,
 
 ### Audio and text
 
-- AbyssEngine and OpenDiablo2 use `data/global/music/introedit.wav` as title
-  music. Riiablo's menu uses `data/global/music/Act4/diablo.wav`; this
+- Research identifies `data/global/music/introedit.wav` and
+  `data/global/music/Act4/diablo.wav` as title-music candidates; this
   discrepancy is a verification target, not a choice to inherit blindly.
-- Riiablo identifies `data/global/sfx/cursor/button.wav` and
+- `data/global/sfx/cursor/button.wav` and
   `data/global/sfx/cursor/select.wav` for button interaction.
-- Front-end labels use Exocet and formal fonts. Common localized string IDs in
-  Riiablo are `5106` single player, `5107` multiplayer, `5109` exit Diablo, and
+- Front-end labels use Exocet and formal fonts. Common localized string IDs are
+  `5106` single player, `5107` multiplayer, `5109` exit Diablo, and
   `5101` exit/back. Cross-check these against the loaded TBL rather than baking
   English text into Lua.
 
@@ -174,12 +163,11 @@ exit `(33,537)`, and OK `(630,537)`.
 
 ## Loading screen
 
-- OpenDiablo2 and AbyssEngine identify
-  `data/global/ui/Loading/loadingscreen.dc6`.
-- Riiablo identifies `data/local/ui/loadingscreen.dc6`. Verify whether both
+- Research identifies `data/global/ui/Loading/loadingscreen.dc6` and
+  `data/local/ui/loadingscreen.dc6`. Verify whether both
   exist and whether selection differs by game version/language.
 - Use the `loading` palette.
-- Riiablo maps aggregate loading progress across the DC6 frames, suggesting the
+- Aggregate loading progress maps across the DC6 frames, suggesting the
   frames are progressive visual states rather than a time-based loop.
 
 ## In-game HUD
@@ -205,7 +193,7 @@ Useful 800x600 positions: run `(255,570)`, stamina `(273,572)` sized about
 `102x19`, experience `(256,561)` sized about `120x4`, new stats `(206,561)`,
 and new skills `(563,561)`.
 
-`minipanelbtn.DC6` is a sequence of up/down pairs. Riiablo uses frames `0/1`,
+`minipanelbtn.DC6` is a sequence of up/down pairs using frames `0/1`,
 `2/3`, ... through at least `16/17`; capture semantic button names by comparing
 the panel code and rendered contact sheet.
 
@@ -229,7 +217,7 @@ pixel corrections as shim data.
 - Skills: `data/global/ui/SPELLS/skltree_{class}_back.DC6`; class backgrounds
   contain multiple tab frames. Skill icons use the class icon sheets and
   `SkillDesc.txt`'s `IconCel`, with adjacent normal/pressed or available-state
-  frames observed in Riiablo.
+  frames observed in reference research.
 - Escape menu localized art: `options.dc6`, `exit.dc6`, `returntogame.dc6`,
   `soundoptions.dc6`, `videoOptions.dc6`, `automapOptions.dc6`, and related
   option labels under `data/local/ui/{language}/`.
@@ -246,11 +234,9 @@ pixel corrections as shim data.
 
 ## Music and video path catalog
 
-AbyssEngine's `src/common/ResourcePaths.h` provides a concise catalog of music
-paths for every act, including town, wilderness, dungeon, action, and
-resolution cues. Rather than copying those into Go, import them into a shim
-manifest and cross-reference `Sounds.txt` / `SoundEnviron.txt` for the actual
-selection rules.
+Music paths for every act include town, wilderness, dungeon, action, and
+resolution cues. Keep these in a shim manifest and cross-reference
+`Sounds.txt` / `SoundEnviron.txt` for the actual selection rules.
 
 Confirmed startup/video paths include:
 
@@ -268,7 +254,7 @@ choices. Before declaring a fact authoritative:
 1. Resolve the path against a user-provided Diablo II/LOD MPQ stack.
 2. Decode the file and generate frame/direction contact sheets.
 3. Record dimensions, offsets, palette, and transparent index.
-4. Compare all three references and label disagreements.
+4. Compare independent references and label disagreements.
 5. Check `Sounds.txt`, `SoundEnviron.txt`, `Inventory.txt`, `SkillDesc.txt`, and
    localization TBL records before retaining hardcoded interpretations.
 6. Store verified facts in versioned shim manifests with source/provenance and
@@ -281,8 +267,8 @@ reference implementation.
 
 ## First verification run
 
-The initial catalog was run against the local English Diablo II/LOD MPQ set on
-2026-08-05. All 90 curated hypotheses resolved, all 80 DC6 assets decoded with
+The initial catalog was run against an English Diablo II/LOD MPQ set. All 90
+curated hypotheses resolved, all 80 DC6 assets decoded with
 their expected palettes, and no warnings were reported. Resolution by archive
 was: 58 from `d2data.mpq`, 22 from `d2exp.mpq`, four patched TXT records from
 `patch_d2.mpq`, three from `d2music.mpq`, two from `d2sfx.mpq`, and one from

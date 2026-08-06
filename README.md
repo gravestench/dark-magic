@@ -73,7 +73,7 @@ Inspect a legally obtained Diablo II asset without starting the renderer:
 go run ./cmd/asset_inspect \
   -source /path/to/d2data.mpq \
   -asset data/global/ui/Loading/loadingscreen.dc6 \
-  -preview /tmp/loading.png
+  -preview ./loading.png
 ```
 
 Verify the curated screen-asset knowledge against a complete MPQ directory and
@@ -82,7 +82,7 @@ generate a JSON report plus palette-applied DC6 contact sheets:
 ```shell
 go run ./cmd/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
-  -out /tmp/dark-magic-asset-catalog
+  -out ./asset-catalog
 ```
 
 The report records missing and disputed paths, the archive layer that supplied
