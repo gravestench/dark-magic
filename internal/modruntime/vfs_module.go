@@ -5,6 +5,7 @@ import (
 	"io/fs"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -12,6 +13,21 @@ import (
 func VFSModule(source *content.FS) Module {
 	return Module{Name: "dm.vfs/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"read_text": func(state *lua.LState) int {
+				name := state.CheckString(1)
+				data, err := fs.ReadFile(source, name)
+				if err == nil {
+					var text string
+					text, err = assetdecode.Text(data)
+					if err == nil {
+						state.Push(lua.LString(text))
+						return 1
+					}
+				}
+				state.Push(lua.LNil)
+				state.Push(lua.LString(err.Error()))
+				return 2
+			},
 			"read": func(state *lua.LState) int {
 				name := state.CheckString(1)
 				data, err := fs.ReadFile(source, name)

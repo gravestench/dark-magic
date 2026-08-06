@@ -37,7 +37,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	}
 	expected := map[string][]string{
 		"dm.app/v1": {"request_exit", "version"},
-		"dm.vfs/v1": {"read", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor", "text"},
+		"dm.vfs/v1": {"read", "read_text", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor", "text"},
 		"dm.data/v1":  {"load", "load_manifest"},
 		"dm.audio/v1": {"diagnostics", "exists", "play", "play_record", "set_bus_volume", "stop_group"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"}, "dm.save/v1": {"create"},

@@ -15,5 +15,6 @@
   "darkmagic.tcpip.join": "JOIN GAME",
   "darkmagic.tcpip.address": "SERVER ADDRESS",
   "darkmagic.dialog.ok": "OK",
-  "darkmagic.dialog.cancel": "CANCEL"
+  "darkmagic.dialog.cancel": "CANCEL",
+  "darkmagic.credits.unavailable": "Expansion credits are unavailable in this installation."
 }

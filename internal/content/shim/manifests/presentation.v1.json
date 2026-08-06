@@ -112,6 +112,11 @@
       }
     },
     "cinematics": { "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6", "palette": "sky" },
-    "credits": { "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6", "palette": "sky" }
+    "credits": {
+      "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
+      "palette": "sky",
+      "text": "data/local/ui/eng/ExpansionCredits.txt",
+      "lines_per_page": 28
+    }
   }
 }

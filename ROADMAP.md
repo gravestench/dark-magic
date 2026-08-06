@@ -348,8 +348,9 @@ implementations. The remaining work is tracked explicitly below.
   through the bitmap-font path. A reusable focus-isolated text-entry modal now
   drives manifest-backed TCP/IP Host/Join intent controls. The supplied
   `Sounds.txt` resolves menu music through `ESOUND_MUSIC_DIABLO`, preserving its
-  record-owned streaming/loop/volume behavior; functional Credits/Cinematics
-  content remains.
+  record-owned streaming/loop/volume behavior. Expansion credits now decode the
+  verified UTF-16 text through the VFS and paginate it over the palette-correct
+  credits background; functional Cinematics content remains.
 - [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
   behavior.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.

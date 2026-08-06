@@ -140,6 +140,42 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	assertStack(t, navigator, "main_menu")
 
+	// Credits are authored as a real scene rather than a placeholder route. In
+	// the embedded/headless stack the localized MPQ payload is unavailable, so
+	// this also exercises its explicit fallback copy and return navigation.
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		publishAction(&input, "down")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "credits")
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "cancel")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "main_menu")
+
 	input.Publish(inputcore.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)

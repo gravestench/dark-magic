@@ -13,6 +13,7 @@ local options = require("darkmagic.overlays.options")
 local pause = require("darkmagic.overlays.pause")
 local static_frontend = require("darkmagic.screens.static_frontend")
 local tcpip = require("darkmagic.screens.tcpip")
+local credits = require("darkmagic.screens.credits")
 
 return {
     id = "darkmagic.boot",
@@ -29,7 +30,7 @@ return {
         scenes.register("character_select", character_select)
         scenes.register("game_world", game_world)
         scenes.register("tcpip", tcpip)
-        scenes.register("credits", static_frontend("credits"))
+        scenes.register("credits", credits)
         scenes.register("cinematics", static_frontend("cinematics"))
         scenes.register("inventory", inventory)
         scenes.register("character", character)
