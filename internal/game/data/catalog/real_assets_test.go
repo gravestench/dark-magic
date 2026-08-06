@@ -96,8 +96,11 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.QualityModifiers) == 0 || len(snapshot.WeaponClassByCode) == 0 || len(snapshot.BooksByName) == 0 {
 		t.Fatal("typed item support tables are incomplete")
 	}
-	if len(snapshot.MonsterSequences) == 0 || len(snapshot.MonsterUniqueByID) == 0 || len(snapshot.UniqueAppellations) == 0 || len(snapshot.UniquePrefixes) == 0 || len(snapshot.UniqueSuffixes) == 0 {
+	if len(snapshot.MonsterSequences) == 0 || len(snapshot.MonsterUniqueByID) == 0 || len(snapshot.UniqueAppellations) == 0 || len(snapshot.UniquePrefixes) == 0 || len(snapshot.UniqueSuffixes) == 0 || len(snapshot.UniqueTitles) == 0 {
 		t.Fatal("typed monster identity tables are incomplete")
+	}
+	if !slices.ContainsFunc(snapshot.UniqueTitles, func(record models.UniqueTitle) bool { return record.Name == "unused" && record.Namco == "Countess" }) {
+		t.Fatal("typed unique-title fields did not bind representative authored values")
 	}
 	if len(snapshot.ClassicTreasureByName) == 0 || len(snapshot.HirelingDescriptionByID) == 0 {
 		t.Fatal("typed classic and hireling support tables are incomplete")

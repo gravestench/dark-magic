@@ -833,8 +833,12 @@ implementations. The remaining work is tracked explicitly below.
   guide-referenced transform, component, element, callback-event, and formula
   dictionaries without embedding those authored descriptions in engine code.
   ArmType and CubeMod now expose the remaining unambiguous hardcoded armor and
-  cube-modifier dictionaries; CharTemplate and UniqueTitle remain deferred
-  because their guide semantics are incomplete or their layered schemas drift.
+  cube-modifier dictionaries. Direct classic-archive inspection resolved the
+  guide's broken UniqueTitle section: the shipped table is an ordered 16-row
+  title-fragment list whose `Name` column is always the repeated `unused`
+  sentinel, so it is admitted without a lossy index. CharTemplate remains
+  deferred because it is absent from the supplied classic patch data and has no
+  usable guide section or surviving schema.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

@@ -86,6 +86,7 @@ const (
 	SkillCalculationsTable    = "data/global/excel/SkillCalc.txt"
 	ArmorTypesTable           = "data/global/excel/ArmType.txt"
 	CubeModifierTypesTable    = "data/global/excel/CubeMod.txt"
+	UniqueTitlesTable         = "data/global/excel/UniqueTitle.txt"
 )
 
 func isAdmittedTable(path string) bool {
@@ -111,7 +112,7 @@ func isAdmittedTable(path string) bool {
 		PlayerModesTable, PlayerTypesTable, MonsterModesTable, MonsterPlacesTable,
 		ColorsTable, ComponentCodesTable, ElementTypesTable, EventsTable,
 		MissileCalculationsTable, SkillCalculationsTable, ArmorTypesTable,
-		CubeModifierTypesTable:
+		CubeModifierTypesTable, UniqueTitlesTable:
 		return true
 	default:
 		return false

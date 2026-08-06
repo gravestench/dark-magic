@@ -94,6 +94,7 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		SkillCalculationsTable:    &fstest.MapFile{Data: []byte("code\t*desc\nln12\ta+lvl*b\n")},
 		ArmorTypesTable:           &fstest.MapFile{Data: []byte("Name\tToken\nHeavy\thvy\n")},
 		CubeModifierTypesTable:    &fstest.MapFile{Data: []byte("cube modifier type\tCode\namethyst\tame\n")},
+		UniqueTitlesTable:         &fstest.MapFile{Data: []byte("Name\tNamco\nunused\tJudge\nunused\tCountess\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -141,6 +142,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.MonsterSequences) != 1 || first.MonsterUniqueByID[5].UniqueMod != "Extra Strong" || len(first.UniqueAppellations) != 1 || len(first.UniquePrefixes) != 1 || len(first.UniqueSuffixes) != 1 {
 		t.Fatalf("typed monster identity tables = %#v", first)
+	}
+	if len(first.UniqueTitles) != 2 || first.UniqueTitles[0].Namco != "Judge" || first.UniqueTitles[1].Namco != "Countess" {
+		t.Fatalf("typed unique titles = %#v", first.UniqueTitles)
 	}
 	if first.ClassicTreasureByName["Act 1 Classic"].Item1 != "cap" || !first.HirelingDescriptionByID[271].AlternateVoice {
 		t.Fatalf("typed classic and hireling support tables = %#v", first)
@@ -258,6 +262,7 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		SkillCalculationsTable:    &fstest.MapFile{Data: []byte("code\t*desc\nln12\ta+lvl*b\n")},
 		ArmorTypesTable:           &fstest.MapFile{Data: []byte("Name\tToken\nHeavy\thvy\n")},
 		CubeModifierTypesTable:    &fstest.MapFile{Data: []byte("cube modifier type\tCode\namethyst\tame\n")},
+		UniqueTitlesTable:         &fstest.MapFile{Data: []byte("Name\tNamco\nunused\tJudge\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

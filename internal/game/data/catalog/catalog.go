@@ -114,6 +114,7 @@ type Snapshot struct {
 	UniqueAppellations         []models.MonsterUniqueAppellation
 	UniquePrefixes             []models.UniquePrefix
 	UniqueSuffixes             []models.UniqueSuffix
+	UniqueTitles               []models.UniqueTitle
 	ClassicTreasureClasses     []models.TreasureClass
 	ClassicTreasureByName      map[string]models.TreasureClass
 	HirelingDescriptions       []models.HirelingDescription
@@ -654,6 +655,10 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	uniqueTitles, err := Load[models.UniqueTitle](c.store, UniqueTitlesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	classicTreasure, err := Load[models.TreasureClass](c.store, TreasureClassTable)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
@@ -878,7 +883,7 @@ func (c *Catalog) load() (Snapshot, error) {
 		QualityModifiers: qualityModifiers, WeaponClasses: weaponClasses, WeaponClassByCode: weaponClassByCode,
 		Books: books, BooksByName: booksByName,
 		MonsterSequences: monsterSequences, MonsterUniqueMods: monsterUniqueMods, MonsterUniqueByID: monsterUniqueByID,
-		UniqueAppellations: uniqueAppellations, UniquePrefixes: uniquePrefixes, UniqueSuffixes: uniqueSuffixes,
+		UniqueAppellations: uniqueAppellations, UniquePrefixes: uniquePrefixes, UniqueSuffixes: uniqueSuffixes, UniqueTitles: uniqueTitles,
 		ClassicTreasureClasses: classicTreasure, ClassicTreasureByName: classicTreasureByName,
 		HirelingDescriptions: hirelingDescriptions, HirelingDescriptionByID: hirelingDescriptionByID,
 		SuperUniques: superUniques, SuperUniquesByID: superUniquesByID, SuperUniquesByHardcodedID: superUniquesByHardcodedID,
@@ -1004,6 +1009,7 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		UniqueAppellations:         append([]models.MonsterUniqueAppellation(nil), source.UniqueAppellations...),
 		UniquePrefixes:             append([]models.UniquePrefix(nil), source.UniquePrefixes...),
 		UniqueSuffixes:             append([]models.UniqueSuffix(nil), source.UniqueSuffixes...),
+		UniqueTitles:               append([]models.UniqueTitle(nil), source.UniqueTitles...),
 		ClassicTreasureClasses:     append([]models.TreasureClass(nil), source.ClassicTreasureClasses...),
 		ClassicTreasureByName:      make(map[string]models.TreasureClass, len(source.ClassicTreasureByName)),
 		HirelingDescriptions:       append([]models.HirelingDescription(nil), source.HirelingDescriptions...),
