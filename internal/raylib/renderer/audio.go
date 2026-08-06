@@ -42,8 +42,9 @@ type raylibAudioBackend struct {
 }
 
 type pcmPlayback struct {
-	stream rl.AudioStream
-	queued [][]int16
+	stream   rl.AudioStream
+	channels int
+	queued   [][]int16
 }
 
 func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
@@ -57,7 +58,7 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		stream := rl.LoadAudioStream(uint32(command.Rate), 16, uint32(command.Channels))
 		rl.SetAudioStreamVolume(stream, command.Volume)
 		rl.PlayAudioStream(stream)
-		b.pcm[command.ID] = &pcmPlayback{stream: stream}
+		b.pcm[command.ID] = &pcmPlayback{stream: stream, channels: command.Channels}
 		return nil
 	case "pcm-write":
 		playback, exists := b.pcm[command.ID]
@@ -157,7 +158,12 @@ func (b *raylibAudioBackend) Update() {
 	}
 	for _, playback := range b.pcm {
 		if len(playback.queued) > 0 && rl.IsAudioStreamProcessed(playback.stream) {
-			rl.UpdateAudioStream(playback.stream, playback.queued[0])
+			samples := playback.queued[0]
+			// raylib's C API expects a frame count, while raylib-go derives that
+			// count directly from the slice length. For interleaved audio, expose
+			// one element per frame while retaining the complete backing buffer.
+			frames := len(samples) / playback.channels
+			rl.UpdateAudioStream(playback.stream, samples[:frames])
 			playback.queued = playback.queued[1:]
 		}
 	}

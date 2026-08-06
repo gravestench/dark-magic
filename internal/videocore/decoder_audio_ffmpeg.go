@@ -71,6 +71,7 @@ func (FFmpegDecoder) DecodeAudio(ctx context.Context, input io.ReadSeeker, emit 
 	defer decoded.Free()
 	defer resampler.Free()
 	timeBase := stream.TimeBase().Float64()
+	var nextPTS time.Duration
 	receive := func() error {
 		for {
 			decoded.Unref()
@@ -105,7 +106,13 @@ func (FFmpegDecoder) DecodeAudio(ctx context.Context, input io.ReadSeeker, emit 
 			if err != nil {
 				return fmt.Errorf("videocore: copy PCM frame: %w", err)
 			}
-			if err := emit(AudioChunk{PCM: pcm[:written], PTS: time.Duration(float64(decoded.Pts()) * timeBase * float64(time.Second)), SampleRate: decoded.SampleRate(), Channels: 2}); err != nil {
+			pts := nextPTS
+			if decoded.Pts() != astiav.NoPtsValue {
+				pts = time.Duration(float64(decoded.Pts()) * timeBase * float64(time.Second))
+			}
+			duration := time.Duration(float64(written) / float64(decoded.SampleRate()*2*2) * float64(time.Second))
+			nextPTS = pts + duration
+			if err := emit(AudioChunk{PCM: pcm[:written], PTS: pts, SampleRate: decoded.SampleRate(), Channels: 2}); err != nil {
 				return err
 			}
 		}

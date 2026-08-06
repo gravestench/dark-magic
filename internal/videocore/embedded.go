@@ -120,57 +120,60 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	}()
 
 	started := time.Now()
-	videoOpen, audioOpen := true, true
-	var audioEnd time.Duration
-	var runErr error
-	for videoOpen || audioOpen {
-		select {
-		case <-ctx.Done():
-			videoOpen, audioOpen = false, false
-		case frame, ok := <-videoFrames:
-			if !ok {
-				videoOpen = false
-				continue
-			}
+	presentationErrors := make(chan error, 2)
+	go func() {
+		var presentErr error
+		for frame := range videoFrames {
 			if err := waitForMediaTime(ctx, started, frame.PTS-mediaLead); err != nil {
-				videoOpen, audioOpen = false, false
-				continue
+				presentErr = err
+				break
 			}
 			if time.Since(started)-frame.PTS <= lateFrameLimit {
-				runErr = errors.Join(runErr, p.presenter.Present(frame.Image))
+				if err := p.presenter.Present(frame.Image); err != nil {
+					presentErr = err
+					break
+				}
 			}
-		case chunk, ok := <-audioChunks:
-			if !ok {
-				audioOpen = false
-				continue
-			}
+		}
+		presentationErrors <- presentErr
+	}()
+	go func() {
+		var streamErr error
+		var audioEnd time.Duration
+		for chunk := range audioChunks {
 			if err := waitForMediaTime(ctx, started, chunk.PTS-mediaLead); err != nil {
-				videoOpen, audioOpen = false, false
-				continue
+				streamErr = err
+				break
 			}
 			if p.audioID == (audiocore.SoundID{}) {
-				p.audioID, runErr = p.mixer.OpenPCMStream(chunk.SampleRate, chunk.Channels)
+				p.audioID, streamErr = p.mixer.OpenPCMStream(chunk.SampleRate, chunk.Channels)
 			}
-			if runErr == nil {
-				runErr = p.mixer.WritePCM(p.audioID, chunk.PCM)
+			if streamErr == nil {
+				streamErr = p.mixer.WritePCM(p.audioID, chunk.PCM)
+			}
+			if streamErr != nil {
+				break
 			}
 			bytesPerSecond := chunk.SampleRate * chunk.Channels * 2
 			if bytesPerSecond > 0 {
 				audioEnd = chunk.PTS + time.Duration(float64(len(chunk.PCM))/float64(bytesPerSecond)*float64(time.Second))
 			}
 		}
-		if runErr != nil {
+		if streamErr == nil && p.audioID != (audiocore.SoundID{}) {
+			streamErr = waitForMediaTime(ctx, started, audioEnd)
+		}
+		presentationErrors <- streamErr
+	}()
+
+	var runErr error
+	for range 2 {
+		if err := <-presentationErrors; err != nil && !errors.Is(err, context.Canceled) {
+			runErr = errors.Join(runErr, err)
 			p.cancel()
-			videoOpen, audioOpen = false, false
 		}
 	}
 	for range 2 {
 		if err := <-decodeErrors; err != nil && !errors.Is(err, context.Canceled) {
-			runErr = errors.Join(runErr, err)
-		}
-	}
-	if runErr == nil && p.audioID != (audiocore.SoundID{}) {
-		if err := waitForMediaTime(ctx, started, audioEnd); err != nil && !errors.Is(err, context.Canceled) {
 			runErr = errors.Join(runErr, err)
 		}
 	}
