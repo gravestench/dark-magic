@@ -99,6 +99,35 @@ func TestRenderCapabilityExposesCOFCompositionMetadata(t *testing.T) {
 	}
 }
 
+func TestCOFCompositionUsesFramePriorityAndPlacement(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 2
+	head, torso, none := cof.CompositeType(0), cof.CompositeType(1), cof.DrawEffect(8)
+	asset.CofLayers = []cof.CofLayer{{Type: head, DrawEffect: none}, {Type: torso, DrawEffect: none}}
+	asset.Priority = [][][]cof.CompositeType{{{torso, head}}}
+	red := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	blue := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	for y := 0; y < 2; y++ {
+		for x := 0; x < 2; x++ {
+			red.Set(x, y, color.RGBA{R: 255, A: 255})
+			blue.Set(x, y, color.RGBA{B: 255, A: 255})
+		}
+	}
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		torso: {image: red, bounds: image.Rect(-1, -1, 1, 1), layer: asset.CofLayers[1]},
+		head:  {image: blue, bounds: image.Rect(0, 0, 2, 2), layer: asset.CofLayers[0]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.B != 255 {
+		t.Fatalf("priority pixel = %#v", got)
+	}
+	if composed.Bounds().Dx() != 5 || composed.Bounds().Dy() != 5 {
+		t.Fatalf("bounds = %v", composed.Bounds())
+	}
+}
+
 func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	t.Parallel()
 

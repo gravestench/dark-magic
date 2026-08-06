@@ -285,11 +285,13 @@ implementations. The remaining work is tracked explicitly below.
 
 - [x] M16.1: Make animation a renderer-owned resource with per-frame durations,
   loop/once/ping-pong modes, pause/resume/seek, and deterministic clocks.
-- [ ] M16.2: Add palette-aware DCC decoding and COF-driven component direction,
+- [x] M16.2: Add palette-aware DCC decoding and COF-driven component direction,
   mode, weapon-class, layer, transform, shadow, and event composition.
-  Palette-aware DCC frame/animation handles and checked COF metadata for layer
+  Palette-aware DCC frame/animation handles and checked COF metadata cover layer
   priority, weapon class, draw effects, transparency, selection, speed, and
-  frame events are implemented; assembled multi-component rendering remains.
+  frame events. Lua can assemble supplied equipment-component DCCs into static
+  or managed composite animations with component offsets, COF ordering,
+  shadow/alpha transforms, timing, and returned frame events.
 - [x] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
   layout with color, alignment, wrapping, clipping, and fallback behavior.
 - [x] M16.4: Implement reusable Lua controls with pointer/controller focus,

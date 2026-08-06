@@ -43,6 +43,63 @@ type renderAssetCache struct {
 
 type generationSource interface{ Generation() uint64 }
 
+type compositeFrame struct {
+	image  image.Image
+	bounds image.Rectangle
+	layer  cof.CofLayer
+}
+
+func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame) (image.Image, error) {
+	if direction < 0 || direction >= len(asset.Priority) {
+		return nil, fmt.Errorf("COF direction %d is out of range", direction)
+	}
+	if frame < 0 || frame >= len(asset.Priority[direction]) {
+		return nil, fmt.Errorf("COF frame %d is out of range", frame)
+	}
+	var bounds image.Rectangle
+	for _, component := range components {
+		if bounds.Empty() {
+			bounds = component.bounds
+		} else {
+			bounds = bounds.Union(component.bounds)
+		}
+	}
+	if bounds.Empty() {
+		return nil, errors.New("COF composition has no component frames")
+	}
+	output := image.NewRGBA(image.Rect(0, 0, bounds.Dx()+2, bounds.Dy()+2))
+	for _, componentType := range asset.Priority[direction][frame] {
+		component, ok := components[componentType]
+		if !ok {
+			continue
+		}
+		destination := component.bounds.Min.Sub(bounds.Min)
+		if component.layer.Shadow != 0 {
+			mask := image.NewUniform(color.RGBA{A: 96})
+			draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
+		}
+		alpha := uint8(255)
+		switch component.layer.DrawEffect {
+		case cof.DrawEffect(0):
+			alpha = 191
+		case cof.DrawEffect(1):
+			alpha = 128
+		case cof.DrawEffect(2):
+			alpha = 64
+		}
+		if component.layer.Transparent && alpha == 255 {
+			alpha = 128
+		}
+		if alpha == 255 {
+			draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
+		} else {
+			mask := image.NewUniform(color.Alpha{A: alpha})
+			draw.DrawMask(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, mask, image.Point{}, draw.Over)
+		}
+	}
+	return output, nil
+}
+
 func (c *renderAssetCache) refresh(assets fs.FS) {
 	source, ok := assets.(generationSource)
 	if !ok || source.Generation() == c.generation {
@@ -230,6 +287,62 @@ func (n *ownedRenderNode) requireAnimation() error {
 		return errors.New("render node resource is not an animation")
 	}
 	return nil
+}
+
+func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, paths map[string]string) ([]image.Image, *cof.COF, error) {
+	asset, err := n.cache.loadCOF(n.assets, cofName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if direction < 0 || direction >= asset.NumberOfDirections {
+		return nil, nil, fmt.Errorf("COF direction %d is out of range", direction)
+	}
+	layers := make(map[cof.CompositeType]cof.CofLayer, len(asset.CofLayers))
+	decoded := make(map[cof.CompositeType]*dcc.DCC)
+	for _, layer := range asset.CofLayers {
+		name, ok := paths[layer.Type.String()]
+		if !ok || name == "" {
+			continue
+		}
+		component, err := n.cache.loadDCC(n.assets, name, palette)
+		if err != nil {
+			return nil, nil, fmt.Errorf("COF layer %s: %w", layer.Type, err)
+		}
+		if direction >= len(component.Directions()) {
+			return nil, nil, fmt.Errorf("COF layer %s lacks direction %d", layer.Type, direction)
+		}
+		layers[layer.Type], decoded[layer.Type] = layer, component
+	}
+	frames := make([]image.Image, asset.FramesPerDirection)
+	for frameIndex := range frames {
+		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
+		for componentType, component := range decoded {
+			directionFrames := component.Direction(direction).Frames()
+			if frameIndex >= len(directionFrames) {
+				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
+			}
+			frame := directionFrames[frameIndex]
+			normalized := image.NewRGBA(image.Rect(0, 0, frame.Bounds().Dx(), frame.Bounds().Dy()))
+			draw.Draw(normalized, normalized.Bounds(), frame, frame.Bounds().Min, draw.Src)
+			components[componentType] = compositeFrame{image: normalized, bounds: frame.Bounds(), layer: layers[componentType]}
+		}
+		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return frames, asset, nil
+}
+
+func luaComponentPaths(state *lua.LState, index int) map[string]string {
+	result := make(map[string]string)
+	table := state.CheckTable(index)
+	table.ForEach(func(key, value lua.LValue) {
+		if key.Type() == lua.LTString && value.Type() == lua.LTString {
+			result[key.String()] = value.String()
+		}
+	})
+	return result
 }
 
 // RenderModule exposes backend-neutral retained composition to scoped Lua
@@ -591,6 +704,64 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			state.Push(lua.LNumber(len(frames)))
 			return 1
+		},
+		"set_cof": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			cofName, palette := state.CheckString(2), state.OptString(3, "")
+			direction, frameIndex := state.OptInt(4, 0), state.OptInt(5, 0)
+			frames, asset, err := node.cofFrames(cofName, palette, direction, luaComponentPaths(state, 6))
+			if err != nil {
+				state.RaiseError("composing COF: %v", err)
+				return 0
+			}
+			if frameIndex < 0 || frameIndex >= len(frames) {
+				state.ArgError(5, "frame is out of range")
+				return 0
+			}
+			if err := node.setImage(frames[frameIndex]); err != nil {
+				state.RaiseError("updating COF render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(frames[frameIndex].Bounds().Dx()))
+			state.Push(lua.LNumber(frames[frameIndex].Bounds().Dy()))
+			state.Push(lua.LNumber(asset.AnimationFrames[frameIndex]))
+			return 3
+		},
+		"set_cof_animation": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			cofName, palette := state.CheckString(2), state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			paths := luaComponentPaths(state, 5)
+			loop := state.OptString(6, "loop")
+			frames, asset, err := node.cofFrames(cofName, palette, direction, paths)
+			if err != nil {
+				state.RaiseError("composing COF animation: %v", err)
+				return 0
+			}
+			if asset.Speed <= 0 {
+				state.RaiseError("COF speed must be positive")
+				return 0
+			}
+			duration := time.Duration(float64(time.Second) * 256 / (float64(asset.Speed) * 25))
+			if err := node.setAnimation(frames, duration, loop); err != nil {
+				state.RaiseError("updating COF animation: %v", err)
+				return 0
+			}
+			events := state.NewTable()
+			for _, event := range asset.AnimationFrames {
+				events.Append(lua.LNumber(event))
+			}
+			state.Push(lua.LNumber(len(frames)))
+			state.Push(events)
+			return 2
 		},
 		"set_text": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
