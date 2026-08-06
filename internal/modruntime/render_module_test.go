@@ -12,7 +12,29 @@ import (
 	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/rendercore"
+	dc6 "github.com/gravestench/dc6/pkg"
 )
+
+func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
+	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
+		{Width: 2, Height: 1, OffsetX: 5, OffsetY: 10, IndexData: []byte{1, 1}},
+		{Width: 1, Height: 1, OffsetX: 3, OffsetY: 12, IndexData: []byte{1}},
+	}}}}
+	asset.SetPalette(color.Palette{color.RGBA{}, color.RGBA{R: 255, A: 255}})
+	frames, bounds, err := normalizedDC6Frames(asset, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bounds != image.Rect(3, -12, 7, -9) {
+		t.Fatalf("normalized bounds = %v", bounds)
+	}
+	if got := color.RGBAModel.Convert(frames[0].At(2, 2)).(color.RGBA); got.R != 255 {
+		t.Fatalf("first anchored pixel = %#v", got)
+	}
+	if got := color.RGBAModel.Convert(frames[1].At(0, 0)).(color.RGBA); got.R != 255 {
+		t.Fatalf("second anchored pixel = %#v", got)
+	}
+}
 
 func TestAssetWeightReadsAssetContents(t *testing.T) {
 	t.Parallel()

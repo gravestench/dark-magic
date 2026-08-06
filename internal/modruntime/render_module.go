@@ -352,6 +352,37 @@ func luaComponentPaths(state *lua.LState, index int) map[string]string {
 	return result
 }
 
+// normalizedDC6Frames places every cropped frame on one shared canvas using
+// the DC6 anchor offsets. The retained node can then animate at a fixed world
+// position without jitter when individual frame bounds change.
+func normalizedDC6Frames(asset *dc6.DC6, direction int) ([]image.Image, image.Rectangle, error) {
+	frames := asset.Directions[direction].Frames
+	var bounds image.Rectangle
+	for index, frame := range frames {
+		frameBounds := image.Rect(int(frame.OffsetX), -int(frame.OffsetY), int(frame.OffsetX+int32(frame.Width)), -int(frame.OffsetY)+int(frame.Height))
+		if index == 0 {
+			bounds = frameBounds
+		} else {
+			bounds = bounds.Union(frameBounds)
+		}
+	}
+	if bounds.Empty() {
+		return nil, image.Rectangle{}, errors.New("DC6 animation has no visible frames")
+	}
+	result := make([]image.Image, len(frames))
+	for index, frame := range frames {
+		decoded, err := assetdecode.FrameImage(asset, frame)
+		if err != nil {
+			return nil, image.Rectangle{}, err
+		}
+		canvas := image.NewRGBA(image.Rectangle{Max: bounds.Size()})
+		position := image.Pt(int(frame.OffsetX)-bounds.Min.X, -int(frame.OffsetY)-bounds.Min.Y)
+		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Src)
+		result[index] = canvas
+	}
+	return result, bounds, nil
+}
+
 // RenderModule exposes backend-neutral retained composition to scoped Lua
 // components. Nodes are automatically destroyed with their component scope.
 func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
@@ -639,21 +670,21 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(4, "direction is out of range")
 				return 0
 			}
-			frames := make([]image.Image, len(asset.Directions[direction].Frames))
-			for index, frame := range asset.Directions[direction].Frames {
-				decoded, err := assetdecode.FrameImage(asset, frame)
-				if err != nil {
-					state.RaiseError("%v", err)
-					return 0
-				}
-				frames[index] = decoded
+			frames, bounds, err := normalizedDC6Frames(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
 			}
 			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
 				state.RaiseError("updating render animation: %v", err)
 				return 0
 			}
 			state.Push(lua.LNumber(len(frames)))
-			return 1
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(-bounds.Min.Y))
+			return 5
 		},
 		"set_dcc": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

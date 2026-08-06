@@ -369,8 +369,10 @@ implementations. The remaining work is tracked explicitly below.
   decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
   The expansion creation screen now composes the verified tiled background and
-  all seven class unselected/hover/selected assets through manifest-owned hit
-  regions and anchors. Empty character lists enter creation instead of silently
+  animates all seven class unselected/hover/selected assets through manifest-owned
+  hit regions and anchors. DC6 frame offsets are normalized onto a shared canvas
+  so cropped animation frames retain a stable world anchor instead of jittering.
+  Empty character lists enter creation instead of silently
   fabricating a hero. A focus/pointer-driven name dialog requests engine-owned
   save identities, while `savecore` canonicalizes the seven supported classes,
   enforces the 2–15 character naming grammar, and rejects duplicate names.
