@@ -69,6 +69,8 @@ func InspectData(path string, data []byte) (Report, error) {
 
 func decodeDetails(extension string, data []byte) (any, error) {
 	switch extension {
+	case "bik":
+		return assetdecode.BIK(data)
 	case "dc6":
 		asset, err := dc6.FromBytes(data)
 		if err != nil {

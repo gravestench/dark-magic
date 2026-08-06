@@ -358,7 +358,9 @@ implementations. The remaining work is tracked explicitly below.
   MPQ payloads outside Lua and exposes deterministic playing/complete/failed/
   stopped lifecycle state. The verified Blizzard and Blizzard North startup
   BIKs sequence with explicit skip/failure policy, and the Cinematics selector
-  drives the same contract. A native Bink 1 decoder/presenter remains.
+  drives the same contract. A strict BIK container parser now bounds dimensions,
+  timing, frame indexes, packet sizes, and audio-track configuration before a
+  native decoder receives data. A native Bink 1 decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.

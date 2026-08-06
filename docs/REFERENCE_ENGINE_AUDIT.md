@@ -246,6 +246,13 @@ Confirmed startup/video paths include:
   `act03start640x292.bik`, `act04start640x292.bik`, `act04end640x292.bik`,
   `d2x_intro_640x292.bik`, and `d2x_out_640x292.bik`.
 
+The BIK container headers in the supported English archive set consistently use
+`BIKi`, 24 fps, and one stereo 44.1 kHz 16-bit RDFT audio track. The startup
+movies are 640x480 (367 and 184 frames); the seven selectable cinematics are
+640x292 and contain, in menu order, 10,171, 4,604, 6,201, 4,973, 4,401, 5,792,
+and 3,008 frames. These properties are decoded from the archives at inspection
+time rather than embedded as playback assumptions.
+
 ## Verification work before use
 
 `Diablo2UberListfile.txt` is retained as a broad community discovery index. It
