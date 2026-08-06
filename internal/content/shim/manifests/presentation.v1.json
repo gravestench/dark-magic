@@ -235,11 +235,13 @@
       "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
       "palette": "fechar",
       "class_palette": "fechar",
-      "class_frames_per_second": 25,
+      "idle_frames_per_second": 15,
+      "transition_frames_per_second": 25,
       "campfire": {
         "sheet": "data/global/ui/FrontEnd/fire.DC6",
         "palette": "fechar",
         "anchor": {"x":380,"y":335},
+        "z": 90,
         "frames_per_second": 15
       },
       "labels": {
@@ -249,13 +251,13 @@
       },
       "option_style": "character_create_option",
       "stage": {
-        "Amazon": {"anchor":{"x":100,"y":339},"hit":{"x":70,"y":220,"width":55,"height":200}},
-        "Assassin": {"anchor":{"x":231,"y":365},"hit":{"x":175,"y":235,"width":50,"height":180}},
-        "Necromancer": {"anchor":{"x":300,"y":335},"hit":{"x":265,"y":220,"width":55,"height":175}},
-        "Barbarian": {"anchor":{"x":400,"y":330},"hit":{"x":364,"y":201,"width":90,"height":170}},
-        "Paladin": {"anchor":{"x":521,"y":338},"hit":{"x":490,"y":210,"width":65,"height":180}},
-        "Sorceress": {"anchor":{"x":626,"y":352},"hit":{"x":580,"y":240,"width":65,"height":160}},
-        "Druid": {"anchor":{"x":720,"y":370},"hit":{"x":680,"y":220,"width":70,"height":195}}
+        "Amazon": {"anchor":{"x":100,"y":339},"z":50,"hit":{"x":70,"y":220,"width":55,"height":200}},
+        "Assassin": {"anchor":{"x":231,"y":365},"z":70,"hit":{"x":175,"y":235,"width":50,"height":180}},
+        "Necromancer": {"anchor":{"x":300,"y":335},"z":30,"hit":{"x":265,"y":220,"width":55,"height":175}},
+        "Barbarian": {"anchor":{"x":400,"y":330},"z":20,"hit":{"x":364,"y":201,"width":90,"height":170}},
+        "Paladin": {"anchor":{"x":521,"y":338},"z":40,"hit":{"x":490,"y":210,"width":65,"height":180}},
+        "Sorceress": {"anchor":{"x":626,"y":352},"z":60,"hit":{"x":580,"y":240,"width":65,"height":160}},
+        "Druid": {"anchor":{"x":720,"y":370},"z":80,"hit":{"x":680,"y":220,"width":70,"height":195}}
       },
       "dialog": {
         "x": 270, "y": 185, "width": 260, "height": 180, "max_length": 15,

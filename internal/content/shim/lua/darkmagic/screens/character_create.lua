@@ -44,7 +44,7 @@ return {
                 screen.campfire.frames_per_second,
                 "loop"
             )
-            self.campfire:set_z(10)
+            self.campfire:set_z(screen.campfire.z)
 
             -- Heading and focused-class copy are renderer-owned bitmap text.
             -- Locale keys are derived from stable lowercase class IDs so mods
@@ -73,6 +73,8 @@ return {
             if render.assets_available() then
                 class.node = render.create("hud", self.root)
                 class.overlay = render.create("hud", self.root)
+                class.node:set_z(placement.z)
+                class.overlay:set_z(placement.z + 1)
             end
 
             -- A state can have a base DC6 plus an optional synchronized overlay.
@@ -80,9 +82,12 @@ return {
             -- headless tests where renderer assets are intentionally unavailable.
             class.show = function(state)
                 class.state = state
-                local frames_per_second = definition.frames_per_second or screen.class_frames_per_second
+                local transitioning = state == "forward" or state == "back"
+                local frames_per_second = definition[state .. "_frames_per_second"]
+                    or (transitioning and screen.transition_frames_per_second)
+                    or screen.idle_frames_per_second
                 local frames = definition[state .. "_frames"] or 0
-                local loop = (state == "forward" or state == "back") and "once" or "loop"
+                local loop = transitioning and "once" or "loop"
                 if class.node then
                     local overlay_path = definition[state .. "_overlay"]
                     local palette = manifest.palettes[screen.class_palette]

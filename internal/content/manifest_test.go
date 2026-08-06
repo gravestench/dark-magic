@@ -258,14 +258,17 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	var manifest struct {
 		Screens struct {
 			CharacterCreate struct {
-				Palette      string `json:"palette"`
-				ClassPalette string `json:"class_palette"`
-				ClassFPS     int    `json:"class_frames_per_second"`
-				Campfire     struct {
+				Palette       string `json:"palette"`
+				ClassPalette  string `json:"class_palette"`
+				IdleFPS       int    `json:"idle_frames_per_second"`
+				TransitionFPS int    `json:"transition_frames_per_second"`
+				Campfire      struct {
 					Sheet string `json:"sheet"`
+					Z     int    `json:"z"`
 				} `json:"campfire"`
 				Stage map[string]struct {
 					Anchor struct{ X, Y int }                `json:"anchor"`
+					Z      int                               `json:"z"`
 					Hit    struct{ X, Y, Width, Height int } `json:"hit"`
 				} `json:"stage"`
 				Classes []struct {
@@ -285,7 +288,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	}
 	classes := manifest.Screens.CharacterCreate.Classes
 	creation := manifest.Screens.CharacterCreate
-	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.ClassFPS != 25 || creation.Campfire.Sheet == "" {
+	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.IdleFPS != 15 || creation.TransitionFPS != 25 || creation.Campfire.Sheet == "" || creation.Campfire.Z <= 0 {
 		t.Fatalf("character creation palette/campfire facts = %#v", creation)
 	}
 	if len(classes) != 7 {
@@ -301,8 +304,16 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 			t.Errorf("unexpected shipped overlay pairing for %q: forward=%q back=%q", class.Class, class.ForwardOverlay, class.BackOverlay)
 		}
 		placement, ok := creation.Stage[class.Class]
-		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
+		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Z <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
 			t.Errorf("missing calibrated stage placement for %q: %#v", class.Class, placement)
+		}
+	}
+	if creation.Stage["Paladin"].Z <= creation.Stage["Barbarian"].Z {
+		t.Errorf("Paladin depth %d must render in front of Barbarian depth %d", creation.Stage["Paladin"].Z, creation.Stage["Barbarian"].Z)
+	}
+	for class, placement := range creation.Stage {
+		if placement.Z >= creation.Campfire.Z {
+			t.Errorf("class %q depth %d must remain behind foreground campfire depth %d", class, placement.Z, creation.Campfire.Z)
 		}
 	}
 }
