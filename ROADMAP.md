@@ -643,7 +643,8 @@ implementations. The remaining work is tracked explicitly below.
   separate gold, white, and green PL2 runs. Character creation now uses the
   verified Font30/Units heading and class name, Font16/Units description and
   gold option labels through the shared style path; remaining screens still need
-  migration.
+  migration. Credits now preserve their authored heading markers as red/gold PL2
+  runs using Formal10/Sky, leaving no direct screen-level `set_text` calls.
 - [ ] Implement reusable authored button families with their correct DC6 assets,
   segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
   keyboard focus, activation sounds, and hit bounds. The shared segmented-button

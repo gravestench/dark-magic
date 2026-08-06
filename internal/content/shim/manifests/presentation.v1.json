@@ -66,6 +66,11 @@
       "sheet": "data/local/FONT/latin/fontformal10.dc6",
       "palette": "static"
     },
+    "formal10_sky": {
+      "table": "data/local/FONT/latin/fontformal10.tbl",
+      "sheet": "data/local/FONT/latin/fontformal10.dc6",
+      "palette": "sky"
+    },
     "formal11_units": {
       "table": "data/local/FONT/latin/fontformal11.tbl",
       "sheet": "data/local/FONT/latin/fontformal11.dc6",
@@ -92,6 +97,7 @@
     "character_create_class": {"font":"font30","transform":"fechar","text_color":"white"},
     "character_create_description": {"font":"font16","transform":"fechar","text_color":"white"},
     "character_create_option": {"font":"font16","transform":"fechar","text_color":"gold"},
+    "credits": {"font":"formal10_sky","transform":"sky","text_color":"gold"},
     "button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
     "button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
     "label_button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
@@ -385,6 +391,7 @@
       "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
       "palette": "sky",
       "text": "data/local/ui/eng/ExpansionCredits.txt",
+      "text_style": "credits",
       "lines_per_page": 28
     }
   }

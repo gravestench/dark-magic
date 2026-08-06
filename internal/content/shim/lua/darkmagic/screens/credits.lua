@@ -10,9 +10,10 @@ local locale = require("dm.locale/v1")
 local vfs = require("dm.vfs/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local cursor = require("darkmagic.ui.cursor")
+local styled_text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
-local screen, font = manifest.screens.credits, manifest.fonts.exocet10
+local screen = manifest.screens.credits
 
 -- Split text into deterministic, fixed-line pages. A leading asterisk is an
 -- original formatting marker and is not shown to the player.
@@ -21,7 +22,9 @@ local function pages(text, count)
     text = text:gsub("\r\n", "\n"):gsub("\r", "\n")
     for line in (text .. "\n"):gmatch("(.-)\n") do
         if line:sub(1, 1) == "*" then
-            line = line:sub(2)
+            line = "[red]" .. line:sub(2)
+        elseif line ~= "" then
+            line = "[gold]" .. line
         end
         page[#page + 1], lines = line, lines + 1
         if lines == count then
@@ -56,19 +59,7 @@ return {
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
     draw_page = function(self)
-        self.text:set_text(
-            font.table,
-            font.sheet,
-            manifest.palettes[font.palette],
-            self.pages[self.page],
-            {
-                red = 205,
-                green = 190,
-                blue = 155,
-                max_width = 700,
-                align = "center",
-            }
-        )
+        styled_text.set(self.text, screen.text_style, self.pages[self.page], 700, "center")
         self.text:set_position(400, 300)
     end,
     update = function(self)
