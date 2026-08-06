@@ -351,6 +351,17 @@ implementations. The remaining work is tracked explicitly below.
   related records; keep only presentation corrections in shim manifests.
 - [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
   transition, and debug layers coexist.
+- [ ] Add an in-game Lua console with command history, multiline editing,
+  completion, source-aware errors, structured value inspection, and log output.
+- [ ] Bind each console tab to an explicit Lua runtime and dedicated disposable
+  resource scope; serialize evaluation through the runtime owner and clearly
+  display the selected runtime, scope, and capability set.
+- [ ] Gate mutation/debug capabilities by session policy: full local developer
+  access when enabled, read-only inspection where appropriate, and no path from
+  a realm-connected client to server-authoritative state or server-only APIs.
+- [ ] Tear down console-created handles, callbacks, subscriptions, and render
+  nodes on reset, runtime reload, disconnect, scene change when configured, and
+  client shutdown.
 
 ## M19: Character, item, and save fidelity
 

@@ -53,6 +53,14 @@ self-hosted server, or under realm orchestration. These modes must share
 simulation commands, snapshots, validation, and persistence contracts rather
 than grow separate gameplay implementations.
 
+The client also includes an in-game Lua console. It targets an explicitly
+selected Lua runtime rather than a process-global VM. Console evaluation is
+serialized through that runtime's owner, uses a dedicated disposable resource
+scope, and sees only the capabilities permitted for that runtime. Offline and
+development sessions may enable mutation/debug capabilities; realm-connected
+clients cannot use the console to bypass authoritative simulation or obtain
+server-only capabilities.
+
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
 fellow adventurers and follow the development of Dark Magic on our and 
