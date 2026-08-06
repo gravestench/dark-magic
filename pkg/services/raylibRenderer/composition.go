@@ -59,6 +59,9 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 		}
 		node.Disable()
 		node.SetParent(nil)
+		if b.renderer.cache != nil {
+			b.renderer.cache.Remove(node.UUID().String())
+		}
 		delete(b.nodes, change.ID)
 		return nil
 	default:
@@ -82,6 +85,9 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		node.Enable()
 	} else {
 		node.Disable()
+	}
+	if state.Image != nil {
+		node.SetImage(state.Image)
 	}
 	return nil
 }

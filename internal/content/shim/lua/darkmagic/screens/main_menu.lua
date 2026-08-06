@@ -5,6 +5,8 @@ local scenes = require("dm.scene/v1")
 return {
     enter = function(self)
         self.root = render.create("hud")
+        self.root:set_position(400, 300)
+        self.root:fill_rect(800, 600, 24, 12, 10, 255)
     end,
 
     update = function(self, elapsed)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/faiface/mainthread"
 
+	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/inputcore"
@@ -54,6 +55,7 @@ func run(contentFS *content.FS) error {
 
 	scripts := modruntime.New()
 	composer := &rendercore.Composer{}
+	mixer := &audiocore.Mixer{}
 	scenes := modruntime.NewScenes(scripts, navigation.New())
 	inputState := &inputcore.Store{}
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
@@ -65,7 +67,10 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.RenderModule(scripts, composer)); err != nil {
+	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.RenderModuleWithAssets(scripts, composer, contentFS)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(scenes.Module()); err != nil {
@@ -106,6 +111,9 @@ func run(contentFS *content.FS) error {
 			slog.Error("rendering Lua scenes", "error", err)
 		}
 	})
+	if err := renderer.AttachAudio(mixer); err != nil {
+		return err
+	}
 	// Register composition draining after scene updates so Lua mutations are
 	// visible to Raylib during the same frame.
 	if err := renderer.AttachComposer(composer); err != nil {

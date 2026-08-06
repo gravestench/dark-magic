@@ -33,6 +33,9 @@ type Service struct {
 	compositionMu      sync.Mutex
 	composition        *rendercore.Composer
 	compositionBackend *compositionBackend
+
+	audioMu      sync.Mutex
+	audioBackend *raylibAudioBackend
 }
 
 // OnFrame registers work that must run on the renderer thread, immediately

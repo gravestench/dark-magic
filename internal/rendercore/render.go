@@ -4,6 +4,7 @@ package rendercore
 import (
 	"errors"
 	"fmt"
+	"image"
 	"sort"
 	"sync"
 )
@@ -40,6 +41,7 @@ type Node struct {
 	Visible  bool
 	Clip     *Rect
 	Blend    string
+	Image    image.Image
 }
 
 // Rect is a clipping rectangle.

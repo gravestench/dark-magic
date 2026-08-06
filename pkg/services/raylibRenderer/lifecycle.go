@@ -68,6 +68,12 @@ func (s *Service) Stop(context.Context) error {
 	if !s.isInit.Swap(false) {
 		return nil
 	}
+	if s.cache != nil {
+		s.cache.Clear()
+	}
+	if s.audioBackend != nil {
+		s.audioBackend.Close()
+	}
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
 	return nil

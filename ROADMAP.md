@@ -134,7 +134,7 @@ their own legally obtained game data.
 
 ## M10: Capability-based Lua runtime
 
-- [ ] Replace the mutable global export table with versioned modules such as
+- [x] Replace the mutable global export table with versioned modules such as
   `dm.vfs/v1`, `dm.render/v1`, `dm.input/v1`, and `dm.audio/v1`.
 - [x] Expose narrow engine capabilities rather than the application host or
   component registry itself.

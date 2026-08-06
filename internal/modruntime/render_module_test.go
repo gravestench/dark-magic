@@ -29,7 +29,8 @@ return {
     start = function(self)
         self.root = render.create("transition")
         self.root:set_position(320, 240)
-        self.root:set_z(7)
+		self.root:set_z(7)
+		self.root:fill_rect(16, 8, 1, 2, 3, 4)
     end,
 }
 `)}}
@@ -47,6 +48,9 @@ return {
 	nodes := composer.Snapshot()
 	if len(nodes) != 1 || nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].Z != 7 || nodes[0].Layer != rendercore.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
+	}
+	if nodes[0].Image == nil || nodes[0].Image.Bounds().Dx() != 16 || nodes[0].Image.Bounds().Dy() != 8 {
+		t.Fatalf("node image = %#v", nodes[0].Image)
 	}
 	if err := manager.Disable(context.Background(), definition.ID); err != nil {
 		t.Fatal(err)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
@@ -53,7 +54,13 @@ func DefaultConfig() Config {
 // Configure explicitly supplies renderer configuration and cache ownership.
 func (s *Service) Configure(config Config) {
 	s.config = &config
-	s.FlushCache(cache.New(s.CacheBudget()))
+	textureCache := cache.New(s.CacheBudget())
+	textureCache.SetEvictionHandler(func(value interface{}) {
+		if texture, ok := value.(rl.Texture2D); ok && texture.ID != 0 {
+			rl.UnloadTexture(texture)
+		}
+	})
+	s.FlushCache(textureCache)
 }
 
 func (s *Service) IngestConfig(config *configManager.ConfigHandle) error {
