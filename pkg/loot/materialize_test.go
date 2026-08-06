@@ -53,7 +53,7 @@ func TestMaterializeItemRejectsInconsistentInputs(t *testing.T) {
 		{name: "missing unique", quality: QualityUnique, want: "requires a concrete"},
 		{name: "special on normal", quality: QualityNormal, special: &SpecialItem{Name: "Wrong", BaseCode: "ssd"}, want: "must not have special"},
 		{name: "affix on normal", quality: QualityNormal, prefix: []Affix{{Name: "Wrong"}}, want: "must not have magic affixes"},
-		{name: "bad range", quality: QualityMagic, prefix: []Affix{{Name: "Bad", Modifiers: []AffixModifier{{Code: "x", Minimum: 2, Maximum: 1}}}}, want: "above maximum"},
+		{name: "empty modifier", quality: QualityMagic, prefix: []Affix{{Name: "Bad", Modifiers: []AffixModifier{{Minimum: 2, Maximum: 1}}}}, want: "empty modifier code"},
 		{name: "unknown quality", quality: Quality("mythic"), want: "unsupported item quality"},
 	}
 	for _, test := range tests {

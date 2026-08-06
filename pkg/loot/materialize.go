@@ -71,12 +71,16 @@ func rollAffixValues(affixes []Affix, rng *splitMix64) ([]RolledAffix, int, erro
 			if modifier.Code == "" {
 				return nil, 0, fmt.Errorf("loot: affix %q has an empty modifier code", affix.Name)
 			}
-			if modifier.Minimum > modifier.Maximum {
-				return nil, 0, fmt.Errorf("loot: affix %q modifier %q has minimum %d above maximum %d", affix.Name, modifier.Code, modifier.Minimum, modifier.Maximum)
+			low, high := modifier.Minimum, modifier.Maximum
+			if low > high {
+				low, high = high, low
 			}
-			width := uint64(modifier.Maximum-modifier.Minimum) + 1
-			value := modifier.Minimum + int(rng.next()%width)
-			result.Modifiers = append(result.Modifiers, RolledModifier{Code: modifier.Code, Parameter: modifier.Parameter, Value: value})
+			width := uint64(high-low) + 1
+			value := low + int(rng.next()%width)
+			result.Modifiers = append(result.Modifiers, RolledModifier{
+				Code: modifier.Code, Parameter: modifier.Parameter,
+				Minimum: modifier.Minimum, Maximum: modifier.Maximum, Value: value,
+			})
 		}
 		rolled = append(rolled, result)
 	}

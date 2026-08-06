@@ -59,12 +59,17 @@ type GeneratedItem struct {
 	Prefixes         []RolledAffix         `json:"prefixes,omitempty"`
 	Suffixes         []RolledAffix         `json:"suffixes,omitempty"`
 	Stats            []ItemStat            `json:"stats,omitempty"`
+	Effects          []ItemEffect          `json:"effects,omitempty"`
+	Ethereal         bool                  `json:"ethereal,omitempty"`
+	Indestructible   bool                  `json:"indestructible,omitempty"`
 	Unsupported      []PropertyApplication `json:"unsupportedProperties,omitempty"`
 }
 
 type RolledModifier struct {
 	Code      string `json:"code"`
 	Parameter int    `json:"parameter,omitempty"`
+	Minimum   int    `json:"minimum"`
+	Maximum   int    `json:"maximum"`
 	Value     int    `json:"value"`
 }
 

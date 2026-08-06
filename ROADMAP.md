@@ -79,7 +79,8 @@ their own legally obtained game data.
 - [x] Parse and deterministically select eligible magic/rare prefixes and suffixes.
 - [x] Roll affix property values and materialize portable item instances.
 - [x] Parse Properties/ItemStatCost and interpret common property functions.
-- [ ] Implement specialized proc, skill, state, charged-skill, and boolean functions.
+- [x] Interpret damage, proc, skill, state, charged-skill, and boolean functions.
+- [ ] Resolve random class-skill function 36 against Skills records.
 - [ ] Add ladder-season eligibility to special-item selection.
 - [ ] Connect monster/chest events to deterministic loot seeds.
 
