@@ -23,7 +23,19 @@ func main() {
 	if *mpqDirectory == "" {
 		fatal("-mpq-dir or MPQ_DIRECTORY is required")
 	}
-	manifest, err := loadManifest(*manifestPath)
+	expandedMPQDirectory, err := expandUserPath(*mpqDirectory)
+	if err != nil {
+		fatal(err.Error())
+	}
+	expandedManifestPath, err := expandUserPath(*manifestPath)
+	if err != nil {
+		fatal(err.Error())
+	}
+	expandedOutputDirectory, err := expandUserPath(*outputDirectory)
+	if err != nil {
+		fatal(err.Error())
+	}
+	manifest, err := loadManifest(expandedManifestPath)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -31,11 +43,11 @@ func main() {
 		fatal(err.Error())
 	}
 
-	contentFS, err := openMPQStack(*mpqDirectory)
+	contentFS, err := openMPQStack(expandedMPQDirectory)
 	if err != nil {
 		fatal(err.Error())
 	}
-	if err := os.MkdirAll(*outputDirectory, 0o755); err != nil {
+	if err := os.MkdirAll(expandedOutputDirectory, 0o755); err != nil {
 		fatal(err.Error())
 	}
 
@@ -44,7 +56,7 @@ func main() {
 		return assetcatalog.Source{Layer: source.Layer, Path: source.Path}, err
 	}}
 	if !*noSheets {
-		sheetsDirectory := filepath.Join(*outputDirectory, "contact-sheets")
+		sheetsDirectory := filepath.Join(expandedOutputDirectory, "contact-sheets")
 		if err := os.MkdirAll(sheetsDirectory, 0o755); err != nil {
 			fatal(err.Error())
 		}
@@ -58,7 +70,7 @@ func main() {
 	}
 
 	report := assetcatalog.Verify(contentFS, manifest, options)
-	reportPath := filepath.Join(*outputDirectory, "report.json")
+	reportPath := filepath.Join(expandedOutputDirectory, "report.json")
 	file, err := os.Create(reportPath)
 	if err != nil {
 		fatal(err.Error())
@@ -81,6 +93,23 @@ func main() {
 		}
 	}
 	fmt.Printf("verified %d/%d hypotheses; report: %s\n", found, len(report.Results), reportPath)
+}
+
+func expandUserPath(name string) (string, error) {
+	if name == "" || name[0] != '~' {
+		return name, nil
+	}
+	if name != "~" && !strings.HasPrefix(name, "~/") && !strings.HasPrefix(name, `~\`) {
+		return "", fmt.Errorf("unsupported home-directory path %q", name)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+	if name == "~" {
+		return home, nil
+	}
+	return filepath.Join(home, name[2:]), nil
 }
 
 func loadManifest(name string) (assetcatalog.Manifest, error) {
