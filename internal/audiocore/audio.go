@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // SoundID is a generation-checked native sound handle.
@@ -32,6 +33,13 @@ type slot struct {
 	active     bool
 	bus        string
 	volume     float32
+	group      string
+	fade       *fade
+}
+
+type fade struct {
+	from, to          float32
+	elapsed, duration time.Duration
 }
 
 // PlayOptions selects routing and playback behavior for one sound.
@@ -40,6 +48,7 @@ type PlayOptions struct {
 	Volume float32
 	Pan    float32
 	Loop   bool
+	Group  string
 }
 
 // Mixer accepts concurrent sound requests and queues backend commands.
@@ -90,9 +99,78 @@ func (m *Mixer) PlayWithOptions(format string, data []byte, options PlayOptions)
 	entry.active = true
 	entry.bus = options.Bus
 	entry.volume = options.Volume
+	entry.group = options.Group
+	entry.fade = nil
 	id := SoundID{Slot: index, Generation: entry.generation}
 	m.pending = append(m.pending, Command{Kind: "play", ID: id, Format: format, Data: append([]byte(nil), data...), Volume: options.Volume * m.busVolume(options.Bus), Pan: options.Pan, Loop: options.Loop})
 	return id, nil
+}
+
+// Fade changes a sound's volume over deterministic mixer time.
+func (m *Mixer) Fade(id SoundID, volume float32, duration time.Duration) error {
+	if volume < 0 || volume > 1 {
+		return errors.New("audiocore: volume must be between 0 and 1")
+	}
+	if duration <= 0 {
+		return m.SetVolume(id, volume)
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.valid(id); err != nil {
+		return err
+	}
+	entry := &m.slots[id.Slot]
+	entry.fade = &fade{from: entry.volume, to: volume, duration: duration}
+	return nil
+}
+
+// Advance progresses fades without consulting wall-clock time.
+func (m *Mixer) Advance(delta time.Duration) {
+	if delta <= 0 {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for index := range m.slots {
+		entry := &m.slots[index]
+		if !entry.active || entry.fade == nil {
+			continue
+		}
+		entry.fade.elapsed += delta
+		amount := float32(entry.fade.elapsed) / float32(entry.fade.duration)
+		if amount >= 1 {
+			amount = 1
+		}
+		entry.volume = entry.fade.from + (entry.fade.to-entry.fade.from)*amount
+		m.pending = append(m.pending, Command{Kind: "volume", ID: SoundID{Slot: uint32(index), Generation: entry.generation}, Volume: entry.volume * m.busVolume(entry.bus)})
+		if amount == 1 {
+			entry.fade = nil
+		}
+	}
+}
+
+// StopGroup stops all active sounds carrying group.
+func (m *Mixer) StopGroup(group string) error {
+	if group == "" {
+		return errors.New("audiocore: group is required")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for index := range m.slots {
+		entry := &m.slots[index]
+		if !entry.active || entry.group != group {
+			continue
+		}
+		id := SoundID{Slot: uint32(index), Generation: entry.generation}
+		entry.active = false
+		entry.generation++
+		if entry.generation == 0 {
+			entry.generation = 1
+		}
+		m.free = append(m.free, uint32(index))
+		m.pending = append(m.pending, Command{Kind: "stop", ID: id})
+	}
+	return nil
 }
 
 // SetVolume queues a volume change in the range 0..1.

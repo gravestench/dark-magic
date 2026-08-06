@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
@@ -22,6 +23,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
+		mixer.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
 		if err := mixer.Drain(backend); err != nil && s.logger != nil {
 			s.logger.Error("draining audio commands", "error", err)
 		}

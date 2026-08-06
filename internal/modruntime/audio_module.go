@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	lua "github.com/yuin/gopher-lua"
@@ -61,6 +62,9 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 					if value := table.RawGetString("loop"); value != lua.LNil {
 						options.Loop = lua.LVAsBool(value)
 					}
+					if value := table.RawGetString("group"); value != lua.LNil {
+						options.Group = lua.LVAsString(value)
+					}
 				}
 				id, err := mixer.PlayWithOptions(format, data, options)
 				if err != nil {
@@ -85,6 +89,12 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 				}
 				return 0
 			},
+			"stop_group": func(state *lua.LState) int {
+				if err := mixer.StopGroup(state.CheckString(1)); err != nil {
+					state.RaiseError("stopping audio group: %v", err)
+				}
+				return 0
+			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
 		state.Push(module)
@@ -106,6 +116,13 @@ func registerSoundType(state *lua.LState) {
 			sound := checkSound(state, 1)
 			if err := sound.mixer.SetPan(sound.id, float32(state.CheckNumber(2))); err != nil {
 				state.RaiseError("setting sound pan: %v", err)
+			}
+			return 0
+		},
+		"fade_to": func(state *lua.LState) int {
+			sound := checkSound(state, 1)
+			if err := sound.mixer.Fade(sound.id, float32(state.CheckNumber(2)), time.Duration(state.CheckNumber(3))*time.Millisecond); err != nil {
+				state.RaiseError("fading sound: %v", err)
 			}
 			return 0
 		},

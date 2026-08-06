@@ -3,6 +3,7 @@ package audiocore
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 type recordingBackend struct{ commands []Command }
@@ -10,6 +11,30 @@ type recordingBackend struct{ commands []Command }
 func (b *recordingBackend) Apply(command Command) error {
 	b.commands = append(b.commands, command)
 	return nil
+}
+
+func TestMixerDeterministicFadeAndGroupStop(t *testing.T) {
+	t.Parallel()
+	var mixer Mixer
+	id, err := mixer.PlayWithOptions(".wav", []byte("wave"), PlayOptions{Bus: "ambience", Volume: 1, Group: "rain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mixer.Fade(id, 0, 100*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	mixer.Advance(25 * time.Millisecond)
+	mixer.Advance(75 * time.Millisecond)
+	if err := mixer.StopGroup("rain"); err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.commands) != 4 || backend.commands[1].Volume != .75 || backend.commands[2].Volume != 0 || backend.commands[3].Kind != "stop" {
+		t.Fatalf("commands = %#v", backend.commands)
+	}
 }
 
 func TestMixerQueuesCheckedSoundLifetime(t *testing.T) {
