@@ -24,7 +24,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	if s.audioBackend != nil {
 		return fmt.Errorf("renderer: audio mixer is already attached")
 	}
-	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]musicPlayback), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
+	backend := &raylibAudioBackend{mixer: mixer, sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]musicPlayback), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
 		mixer.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
@@ -38,6 +38,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 
 type raylibAudioBackend struct {
 	mu     sync.Mutex
+	mixer  *audiocore.Mixer
 	sounds map[audiocore.SoundID]rl.Sound
 	loops  map[audiocore.SoundID]bool
 	music  map[audiocore.SoundID]musicPlayback
@@ -45,12 +46,13 @@ type raylibAudioBackend struct {
 }
 
 type pcmPlayback struct {
-	stream   rl.AudioStream
-	channels int
-	pending  []int16
-	queued   [][]int16
-	started  bool
-	stopping bool
+	stream          rl.AudioStream
+	channels        int
+	pending         []int16
+	queued          [][]int16
+	started         bool
+	stopping        bool
+	submittedFrames int
 }
 
 // musicPlayback owns the staged encoded source consumed by raylib's streaming
@@ -194,7 +196,12 @@ func (b *raylibAudioBackend) Update() {
 		rl.UpdateMusicStream(playback.music)
 	}
 	for id, playback := range b.pcm {
-		if len(playback.queued) > 0 && rl.IsAudioStreamProcessed(playback.stream) {
+		processed := rl.IsAudioStreamProcessed(playback.stream)
+		if processed && playback.started && playback.submittedFrames > 0 {
+			_ = b.mixer.ReportPCMFrames(id, playback.submittedFrames)
+			playback.submittedFrames = 0
+		}
+		if len(playback.queued) > 0 && processed {
 			samples := playback.queued[0]
 			// raylib's C API expects a frame count, while raylib-go derives that
 			// count directly from the slice length. For interleaved audio, expose
@@ -202,6 +209,7 @@ func (b *raylibAudioBackend) Update() {
 			frames := len(samples) / playback.channels
 			rl.UpdateAudioStream(playback.stream, samples[:frames])
 			playback.queued = playback.queued[1:]
+			playback.submittedFrames = frames
 			if !playback.started {
 				rl.PlayAudioStream(playback.stream)
 				playback.started = true

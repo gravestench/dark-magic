@@ -45,6 +45,7 @@ func (m *Mixer) OpenPCMStream(sampleRate, channels int) (SoundID, error) {
 	}
 	entry := &m.slots[index]
 	entry.active, entry.bus, entry.volume = true, "cinematic", 1
+	entry.pcmRate, entry.pcmFrames = sampleRate, 0
 	id := SoundID{Slot: index, Generation: entry.generation}
 	m.pending = append(m.pending, Command{Kind: "pcm-open", ID: id, Rate: sampleRate, Channels: channels, Volume: m.busVolume("cinematic")})
 	return id, nil
@@ -64,6 +65,40 @@ func (m *Mixer) WritePCM(id SoundID, pcm []byte) error {
 	return nil
 }
 
+// ReportPCMFrames advances a stream clock from the audio owner thread after
+// the native device reports a submitted block as processed.
+func (m *Mixer) ReportPCMFrames(id SoundID, frames int) error {
+	if frames <= 0 {
+		return errors.New("audiocore: reported PCM frames must be positive")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.valid(id); err != nil {
+		return err
+	}
+	entry := &m.slots[id.Slot]
+	if entry.pcmRate <= 0 {
+		return errors.New("audiocore: sound is not a PCM stream")
+	}
+	entry.pcmFrames += int64(frames)
+	return nil
+}
+
+// PCMTime returns device-consumed media time and whether the stream has
+// reported at least one processed frame.
+func (m *Mixer) PCMTime(id SoundID) (time.Duration, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.valid(id) != nil {
+		return 0, false
+	}
+	entry := m.slots[id.Slot]
+	if entry.pcmRate <= 0 || entry.pcmFrames == 0 {
+		return 0, false
+	}
+	return time.Duration(entry.pcmFrames) * time.Second / time.Duration(entry.pcmRate), true
+}
+
 // Backend consumes audio commands on the native audio owner thread.
 type Backend interface{ Apply(Command) error }
 
@@ -74,6 +109,8 @@ type slot struct {
 	volume     float32
 	group      string
 	fade       *fade
+	pcmRate    int
+	pcmFrames  int64
 }
 
 type fade struct {

@@ -20,6 +20,7 @@ const (
 	decodedAudioQueue = 16
 	mediaLead         = 80 * time.Millisecond
 	lateFrameLimit    = 150 * time.Millisecond
+	audioClockStall   = 2 * time.Second
 )
 
 // Embedded coordinates in-process decoding with retained presentation and PCM
@@ -170,11 +171,12 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	go func() {
 		var presentErr error
 		for frame := range videoFrames {
-			if err := waitForMediaTime(ctx, started, frame.PTS-mediaLead); err != nil {
+			if err := p.waitForMediaTime(ctx, started, frame.PTS-mediaLead); err != nil {
 				presentErr = err
 				break
 			}
-			if time.Since(started)-frame.PTS <= lateFrameLimit {
+			mediaTime, _ := p.mediaTime(started)
+			if mediaTime-frame.PTS <= lateFrameLimit {
 				if err := p.presenter.Present(frame.Image); err != nil {
 					presentErr = err
 					break
@@ -186,16 +188,18 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	go func() {
 		var streamErr error
 		var audioEnd time.Duration
+		var audioID audiocore.SoundID
 		for chunk := range audioChunks {
-			if err := waitForMediaTime(ctx, started, chunk.PTS-mediaLead); err != nil {
+			if err := p.waitForMediaTime(ctx, started, chunk.PTS-mediaLead); err != nil {
 				streamErr = err
 				break
 			}
-			if p.audioID == (audiocore.SoundID{}) {
-				p.audioID, streamErr = p.mixer.OpenPCMStream(chunk.SampleRate, chunk.Channels)
+			if audioID == (audiocore.SoundID{}) {
+				audioID, streamErr = p.mixer.OpenPCMStream(chunk.SampleRate, chunk.Channels)
+				p.setAudioID(audioID)
 			}
 			if streamErr == nil {
-				streamErr = p.mixer.WritePCM(p.audioID, chunk.PCM)
+				streamErr = p.mixer.WritePCM(audioID, chunk.PCM)
 			}
 			if streamErr != nil {
 				break
@@ -205,8 +209,8 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 				audioEnd = chunk.PTS + time.Duration(float64(len(chunk.PCM))/float64(bytesPerSecond)*float64(time.Second))
 			}
 		}
-		if streamErr == nil && p.audioID != (audiocore.SoundID{}) {
-			streamErr = waitForMediaTime(ctx, started, audioEnd)
+		if streamErr == nil && audioID != (audiocore.SoundID{}) {
+			streamErr = p.waitForMediaTime(ctx, started, audioEnd)
 		}
 		presentationErrors <- streamErr
 	}()
@@ -223,8 +227,8 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 			runErr = errors.Join(runErr, err)
 		}
 	}
-	if p.audioID != (audiocore.SoundID{}) {
-		runErr = errors.Join(runErr, p.mixer.Stop(p.audioID))
+	if audioID := p.getAudioID(); audioID != (audiocore.SoundID{}) {
+		runErr = errors.Join(runErr, p.mixer.Stop(audioID))
 	}
 	runErr = errors.Join(runErr, p.presenter.Close())
 	p.mu.Lock()
@@ -238,17 +242,50 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	p.mu.Unlock()
 }
 
-func waitForMediaTime(ctx context.Context, started time.Time, target time.Duration) error {
-	wait := target - time.Since(started)
-	if wait <= 0 {
+func (p *embeddedPlayback) setAudioID(id audiocore.SoundID) {
+	p.mu.Lock()
+	p.audioID = id
+	p.mu.Unlock()
+}
+
+func (p *embeddedPlayback) getAudioID() audiocore.SoundID {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.audioID
+}
+
+func (p *embeddedPlayback) mediaTime(started time.Time) (time.Duration, bool) {
+	if id := p.getAudioID(); id != (audiocore.SoundID{}) {
+		if elapsed, available := p.mixer.PCMTime(id); available {
+			return elapsed, true
+		}
+	}
+	return time.Since(started), false
+}
+
+func (p *embeddedPlayback) waitForMediaTime(ctx context.Context, started time.Time, target time.Duration) error {
+	if target <= 0 {
 		return nil
 	}
-	timer := time.NewTimer(wait)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
+	lastMedia := time.Duration(-1)
+	lastAdvance := time.Now()
+	for {
+		current, audioClock := p.mediaTime(started)
+		if current >= target {
+			return nil
+		}
+		if current > lastMedia {
+			lastMedia = current
+			lastAdvance = time.Now()
+		} else if audioClock && time.Since(lastAdvance) >= audioClockStall {
+			return errors.New("videocore: cinematic audio device clock stalled")
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 }

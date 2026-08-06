@@ -40,6 +40,32 @@ func TestPCMStreamUsesCheckedAudioOwnership(t *testing.T) {
 	}
 }
 
+func TestPCMStreamReportsGenerationCheckedPlaybackClock(t *testing.T) {
+	var mixer Mixer
+	id, err := mixer.OpenPCMStream(48000, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, available := mixer.PCMTime(id); available {
+		t.Fatal("PCM clock was available before the device consumed frames")
+	}
+	if err := mixer.ReportPCMFrames(id, 4800); err != nil {
+		t.Fatal(err)
+	}
+	if elapsed, available := mixer.PCMTime(id); !available || elapsed != 100*time.Millisecond {
+		t.Fatalf("PCM clock = %v, %v", elapsed, available)
+	}
+	if err := mixer.Stop(id); err != nil {
+		t.Fatal(err)
+	}
+	if _, available := mixer.PCMTime(id); available {
+		t.Fatal("stale PCM clock remained available")
+	}
+	if err := mixer.ReportPCMFrames(id, 1); err == nil {
+		t.Fatal("stale PCM progress was accepted")
+	}
+}
+
 func TestMixerDeterministicFadeAndGroupStop(t *testing.T) {
 	t.Parallel()
 	var mixer Mixer

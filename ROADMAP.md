@@ -409,28 +409,31 @@ implementations. The remaining work is tracked explicitly below.
 
 ### M17.6: Embedded, single-window Bink playback
 
-- [ ] Decode Bink video and audio in-process behind `videocore.Backend`; keep
+- [x] Decode Bink video and audio in-process behind `videocore.Backend`; keep
   codec and FFmpeg details out of Lua and scene definitions. The build-tagged
   libav decoder now demuxes seekable VFS input, decodes video packets, converts
   native frames to RGBA, and emits timestamped frames. The same decoder now
   normalizes the preferred Bink audio track to timestamped interleaved stereo
-  S16 PCM; backend scheduling and audio-device streaming remain.
+  S16 PCM, with bounded backend scheduling and owner-thread audio streaming.
 - [x] Add checked streaming texture updates that transfer decoded frames onto
   the renderer owner thread without replacing the cinematic scene node.
 - [x] Present decoded frames on `LayerTransition` with aspect-preserving
   letterboxing inside the existing Dark Magic window.
-- [ ] Stream decoded PCM through the cinematic audio bus and use audio timestamps
+- [x] Stream decoded PCM through the cinematic audio bus and use audio timestamps
   as the synchronization clock, with bounded frame dropping when rendering lags.
   The audio core and raylib owner-thread backend now support checked S16 PCM
-  stream creation, incremental writes, playback, and teardown; clock reporting
-  and bounded decode scheduling remain.
-- [ ] Implement stop, skip, completion, decode failure, device loss, resize, and
+  stream creation, incremental writes, playback, and teardown. The audio owner
+  thread now reports generation-checked consumed-frame progress; video switches
+  from startup monotonic time to that device clock and retains bounded late-frame
+  dropping.
+- [x] Implement stop, skip, completion, decode failure, device loss, resize, and
   shutdown cleanup through the existing `dm.video/v1` lifecycle contract. The
   embedded scheduler now uses bounded decode queues, one monotonic media clock,
   late-video dropping, lossless audio ordering, cancellation, and checked
   presenter/audio teardown. Resizable windows now publish owner-thread viewport
   changes and refit every active cinematic without retaining completed
-  playbacks; device loss remains.
+  playbacks. A stalled audio-device clock now fails through the existing video
+  lifecycle instead of leaving cinematic playback hung indefinitely.
 - [x] Prefer the embedded backend in native FFmpeg client builds and retain
   FFplay as the portable developer/diagnostic fallback.
 - [ ] Verify every discovered BIK variant and capture startup-to-title

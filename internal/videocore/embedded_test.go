@@ -96,6 +96,25 @@ func TestEmbeddedResizeRefitsActivePlayback(t *testing.T) {
 	}
 }
 
+func TestEmbeddedPlaybackPrefersReportedAudioClock(t *testing.T) {
+	var mixer audiocore.Mixer
+	id, err := mixer.OpenPCMStream(48000, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playback := &embeddedPlayback{mixer: &mixer, audioID: id}
+	started := time.Now().Add(-time.Second)
+	if elapsed, audio := playback.mediaTime(started); audio || elapsed < 900*time.Millisecond {
+		t.Fatalf("initial media clock = %v, audio=%v", elapsed, audio)
+	}
+	if err := mixer.ReportPCMFrames(id, 4800); err != nil {
+		t.Fatal(err)
+	}
+	if elapsed, audio := playback.mediaTime(started); !audio || elapsed != 100*time.Millisecond {
+		t.Fatalf("reported media clock = %v, audio=%v", elapsed, audio)
+	}
+}
+
 func minimalBIK() []byte {
 	data := make([]byte, 60)
 	copy(data, "BIKi")
