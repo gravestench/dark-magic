@@ -227,7 +227,7 @@ their own legally obtained game data.
 - [x] Open and close inventory as an overlay without disrupting the world scene.
 - [x] Enable, disable, restart, and transactionally reload a scripted component at
   runtime without leaking callbacks, renderer resources, or native handles.
-- [ ] Shut down cleanly with race detection enabled and without Service Mesh.
+- [x] Shut down cleanly with race detection enabled and without Service Mesh.
 
 ## Later gameplay milestones
 
@@ -261,9 +261,9 @@ remain independent rather than being copied into this engine.
 
 ## Current handoff
 
-The repository builds and tests cleanly with portable dependencies. The engine
-now runs a real DS1/DT1 scene, polls input on the renderer thread, safely reloads
-Lua mods, and exposes records on demand. The current gameplay seam is M6: adapt
-supplied TreasureClassEx records to `pkg/loot`, then resolve rolled item codes
-and quality. Do not apply or drop historical stashes until their Lua experiments
-have been compared with the current implementation.
+All restart milestones and the architectural acceptance path are implemented.
+The repository builds against tagged codec releases, boots through the internal
+host and layered shim, runs the Lua-authored shell and world orchestration, and
+passes the complete package suite under race detection. Historical stashes
+remain preserved and documented in `STASHES.md`; do not apply or drop them
+without a separate comparison task.

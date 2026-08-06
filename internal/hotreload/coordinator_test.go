@@ -25,12 +25,19 @@ func TestHelperChangeInvalidatesRequireAndReplacesActiveDefinition(t *testing.T)
 		}
 	}
 	write("lua/helper.lua", `return { value = 1 }`)
-	write("boot.lua", `local h=require("helper"); return { id="boot", start=function() observed=h.value end }`)
+	write("boot.lua", `local h=require("helper"); local observe=require("test.observe/v1"); return { id="boot", start=function() observe.set(h.value) end }`)
 	contentFS, err := content.New(content.Layer{Name: "mods", FS: content.Directory(root)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	runtime := modruntime.New()
+	observed := 0
+	if err := runtime.RegisterModule(modruntime.Module{Name: "test.observe/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"set": func(state *lua.LState) int { observed = state.CheckInt(1); return 0 }}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
@@ -54,12 +61,7 @@ func TestHelperChangeInvalidatesRequireAndReplacesActiveDefinition(t *testing.T)
 	if err := coordinator.Reload(context.Background(), "lua/helper.lua"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if state.GetGlobal("observed") != lua.LNumber(2) {
-			t.Fatalf("observed = %s", state.GetGlobal("observed"))
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	if observed != 2 {
+		t.Fatalf("observed = %d", observed)
 	}
 }
