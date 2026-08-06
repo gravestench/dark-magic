@@ -10,11 +10,12 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/shell"
+	"golang.org/x/image/font/gofont/gomono"
 )
 
 const (
-	fontSize   = int32(18)
-	lineHeight = int32(22)
+	fontSize   = float32(18)
+	lineHeight = int32(23)
 )
 
 // Overlay adapts the shared session to Raylib input and immediate-mode debug
@@ -28,6 +29,8 @@ type Overlay struct {
 	candidates  []shell.Candidate
 	candidateAt int
 	finished    chan shell.Entry
+	font        rl.Font
+	fontLoaded  bool
 }
 
 func New(session *shell.Session) *Overlay {
@@ -35,6 +38,35 @@ func New(session *shell.Session) *Overlay {
 }
 
 func (o *Overlay) Open() bool { return o.open }
+
+// LoadFont creates the GPU atlas on the renderer owner thread. Go Mono is
+// embedded by the existing x/image dependency, so console typography is stable
+// across platforms and does not depend on user-installed fonts.
+func (o *Overlay) LoadFont() error {
+	if o.fontLoaded {
+		return nil
+	}
+	codepoints := make([]rune, 0, 224)
+	for current := rune(32); current <= 255; current++ {
+		codepoints = append(codepoints, current)
+	}
+	o.font = rl.LoadFontFromMemory(".ttf", gomono.TTF, 36, codepoints)
+	if !rl.IsFontValid(o.font) {
+		return fmt.Errorf("raylib shell: load embedded Go Mono font")
+	}
+	rl.SetTextureFilter(o.font.Texture, rl.FilterBilinear)
+	o.fontLoaded = true
+	return nil
+}
+
+// Close releases the font atlas before the renderer destroys its GPU context.
+func (o *Overlay) Close() {
+	if !o.fontLoaded {
+		return
+	}
+	rl.UnloadFont(o.font)
+	o.fontLoaded = false
+}
 
 // Handle consumes one stable input frame and reports whether scene input must
 // be suppressed for this frame.
@@ -99,13 +131,13 @@ func (o *Overlay) Draw(width, height int) {
 	if policy.Mutable {
 		mode = "mutable"
 	}
-	rl.DrawText("DARK MAGIC LUA SHELL", 16, 12, 22, rl.NewColor(222, 163, 58, 255))
-	rl.DrawText(fmt.Sprintf("target %s | policy %s (%s)", o.session.Target(), policy.Name, mode), 16, 40, 16, rl.Gray)
+	o.drawText("DARK MAGIC LUA SHELL", 16, 12, 22, rl.NewColor(222, 163, 58, 255))
+	o.drawText(fmt.Sprintf("target %s | policy %s (%s)", o.session.Target(), policy.Name, mode), 16, 40, 16, rl.Gray)
 
 	transcriptTop := int32(68)
 	promptTop := panelHeight - 58
 	available := int((promptTop-transcriptTop)/lineHeight) - 1
-	lines := transcriptLines(o.session.Transcript())
+	lines := wrapTranscript(transcriptLines(o.session.Transcript()), max(12, (width-36)/11))
 	if len(lines) > available {
 		lines = lines[len(lines)-available:]
 	}
@@ -116,14 +148,22 @@ func (o *Overlay) Draw(width, height int) {
 		} else if line.result {
 			color = rl.NewColor(125, 211, 167, 255)
 		}
-		rl.DrawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, color)
+		o.drawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, color)
 	}
 	status := ""
 	if o.busy {
 		status = " [evaluating]"
 	}
-	rl.DrawText("> "+o.input+status, 16, promptTop, fontSize, rl.RayWhite)
-	rl.DrawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, panelHeight-26, 14, rl.Gray)
+	o.drawText("> "+o.input+status, 16, promptTop, fontSize, rl.RayWhite)
+	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, panelHeight-26, 14, rl.Gray)
+}
+
+func (o *Overlay) drawText(text string, x, y int32, size float32, tint rl.Color) {
+	if o.fontLoaded {
+		rl.DrawTextEx(o.font, text, rl.NewVector2(float32(x), float32(y)), size, 1, tint)
+		return
+	}
+	rl.DrawText(text, x, y, int32(size), tint)
 }
 
 func (o *Overlay) submit(ctx context.Context) {
@@ -216,4 +256,17 @@ func transcriptLines(entries []shell.Entry) []transcriptLine {
 		}
 	}
 	return lines
+}
+
+func wrapTranscript(lines []transcriptLine, columns int) []transcriptLine {
+	var wrapped []transcriptLine
+	for _, line := range lines {
+		runes := []rune(line.text)
+		for len(runes) > columns {
+			wrapped = append(wrapped, transcriptLine{text: string(runes[:columns]), result: line.result, error: line.error})
+			runes = runes[columns:]
+		}
+		wrapped = append(wrapped, transcriptLine{text: string(runes), result: line.result, error: line.error})
+	}
+	return wrapped
 }

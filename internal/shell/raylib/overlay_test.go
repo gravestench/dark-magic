@@ -63,3 +63,10 @@ func TestOverlayCompletesAndEditsUTF8(t *testing.T) {
 		t.Fatalf("backspace = %q", overlay.input)
 	}
 }
+
+func TestWrapTranscriptPreservesStyleAndUnicode(t *testing.T) {
+	lines := wrapTranscript([]transcriptLine{{text: "héllo", result: true}}, 3)
+	if len(lines) != 2 || lines[0].text != "hél" || lines[1].text != "lo" || !lines[1].result {
+		t.Fatalf("wrapped = %#v", lines)
+	}
+}

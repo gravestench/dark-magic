@@ -522,7 +522,9 @@ implementations. The remaining work is tracked explicitly below.
   session core, persistent scoped Lua evaluator, and rich Charmbracelet v2
   terminal adapter are complete. The Raylib client now provides a grave-key
   overlay using the same session, suppresses scene input while focused, and
-  remains legible above palette quantization; the log stream remains.
+  remains legible above palette quantization. Its embedded Go Mono TrueType
+  face and Unicode-safe transcript wrapping are platform-independent; the log
+  stream remains.
 - [ ] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

@@ -294,6 +294,10 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	defer shellSession.Close()
 	console := raylibShell.New(shellSession)
+	if err := console.LoadFont(); err != nil {
+		return err
+	}
+	defer console.Close()
 
 	lastFrame := time.Now()
 	stopSceneFrames := renderer.SubscribeFrame(func() {
@@ -401,6 +405,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	stopSceneFrames()
 	stopShellOverlay()
+	console.Close()
 
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
