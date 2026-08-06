@@ -25,7 +25,6 @@ type Dependency = IsRenderer
 // should know about this service.
 
 type IsRenderer interface {
-	IsInit() bool
 	OnFrame(func())
 	SubscribeFrame(func()) func()
 	ManagesWindow

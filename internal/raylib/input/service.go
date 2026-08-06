@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/gravestench/dark-magic/pkg/services/common"
-	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
+	"github.com/gravestench/dark-magic/internal/raylib/common"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 )
 
 type Service struct {
@@ -51,9 +51,3 @@ func (s *Service) update() {
 	s.updateMouseCursorState()
 	s.updateMouseButtonState()
 }
-
-func (s *Service) Name() string {
-	return "Input"
-}
-
-func (s *Service) Ready() bool { return s.renderer != nil }

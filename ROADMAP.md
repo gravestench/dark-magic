@@ -8,7 +8,7 @@ their own legally obtained game data.
 
 - [x] Inventory the active branch, working tree, and stashes.
 - [x] Preserve all existing Git state without resetting or dropping work.
-- [ ] Review and name the four historical stashes before any are applied.
+- [x] Review and name the four historical stashes before any are applied.
 
 ## M1: Reproducible baseline
 
@@ -97,7 +97,7 @@ their own legally obtained game data.
   documented ownership.
 - [x] Add lifecycle tests covering order, failure rollback, cancellation, timeout,
   and idempotent shutdown.
-- [ ] Keep the new host under `internal` until its contracts have survived the
+- [x] Keep the new host under `internal` until its contracts have survived the
   engine migration.
 
 ## M8: Runtime component management
@@ -205,9 +205,9 @@ their own legally obtained game data.
 
 - [x] Migrate one simple native service to explicit construction and host lifecycle
   as a contract test for the new architecture.
-- [ ] Migrate the renderer, Lua runtime, VFS/assets, input, audio, records, locale,
+- [x] Migrate the renderer, Lua runtime, VFS/assets, input, audio, records, locale,
   configuration, file watching, debug web, and gameplay systems incrementally.
-- [ ] Replace `ResolveDependencies` polling, readiness flags, and coarse startup
+- [x] Replace `ResolveDependencies` polling, readiness flags, and coarse startup
   sleeps with constructors, lifecycle results, or bounded waits at real async
   boundaries.
 - [x] Replace `LuaPlugin` discovery with explicit capability registration.
@@ -215,7 +215,7 @@ their own legally obtained game data.
   subsystem moves.
 - [x] Remove the `servicemesh` dependency only after the main engine and utility
   commands run entirely on the internal host.
-- [ ] Rename or reorganize `pkg/services` around stable engine capabilities,
+- [x] Rename or reorganize `pkg/services` around stable engine capabilities,
   gameplay systems, and internal adapters instead of the old framework shape.
 
 ## Architectural acceptance milestone
@@ -246,7 +246,7 @@ their own legally obtained game data.
 - [x] Cache scene child ordering until topology or Z-index changes.
 - [x] Avoid unconditional per-frame callback and input-map allocations.
 - [x] Pre-index dynamic loot candidates by item type and level.
-- [ ] Replace coarse startup sleeps with lifecycle events or bounded waits.
+- [x] Replace coarse startup sleeps with lifecycle events or bounded waits.
 
 ## Parallel codec maintenance
 

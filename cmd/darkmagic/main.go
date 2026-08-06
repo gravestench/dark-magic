@@ -20,15 +20,15 @@ import (
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	input "github.com/gravestench/dark-magic/internal/raylib/input"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
+	gameScene "github.com/gravestench/dark-magic/internal/raylib/world"
 	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/scene"
-	"github.com/gravestench/dark-magic/pkg/services/gameScene"
-	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 type englishLanguage struct{}

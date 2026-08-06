@@ -3,14 +3,13 @@ package raylibRenderer
 import (
 	"image"
 	"image/color"
-	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func (s *Service) render() {
-	for s.cache == nil {
-		time.Sleep(time.Second)
+	if s.cache == nil {
+		return
 	}
 
 	s.renderRecursively(s.rootNode)

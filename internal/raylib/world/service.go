@@ -20,11 +20,11 @@ import (
 	"golang.org/x/image/math/fixed"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/raylib/common"
+	input "github.com/gravestench/dark-magic/internal/raylib/input"
+	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
 	"github.com/gravestench/dark-magic/pkg/scene"
-	"github.com/gravestench/dark-magic/pkg/services/common"
-	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
 const (
@@ -66,14 +66,6 @@ type LanguageSource interface {
 func New(renderer raylibRenderer.Dependency, inputService input.Dependency, files fs.FS, language LanguageSource, config Config) *Service {
 	return &Service{renderer: renderer, input: inputService, files: files, language: language, Config: config}
 }
-
-func (s *Service) Name() string { return "Game Scene" }
-
-func (s *Service) Ready() bool {
-	return s.renderer != nil && s.input != nil && s.files != nil && s.language != nil
-}
-
-func (s *Service) DependenciesResolved() bool { return s.Ready() && s.renderer.IsInit() }
 
 // Start creates the compatibility world renderables after its explicit native
 // dependencies are ready.

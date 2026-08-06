@@ -60,26 +60,6 @@ func (s *Service) SubscribeFrame(callback func()) func() {
 	return func() { active.Store(false) }
 }
 
-func (s *Service) DependenciesResolved() bool {
-	return s.config != nil
-}
-
-func (s *Service) IsInit() bool {
-	return s.isInit.Load()
-}
-
-func (s *Service) Name() string {
-	return "Renderer"
-}
-
-func (s *Service) Ready() bool {
-	if s.config == nil {
-		return false
-	}
-
-	return true
-}
-
 func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
