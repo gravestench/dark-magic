@@ -256,10 +256,11 @@ implementations. The remaining work is tracked explicitly below.
   confidence, game version, language, resolution, palette, layout, and timing.
 - [x] M15.2: Load manifests through a read-only versioned Lua capability and
   reject malformed or incompatible documents with actionable errors.
-- [ ] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
+- [x] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
   cinematic facts from compiled Go declarations into shim-owned manifests. The
-  90-entry verified asset catalog now lives in the embedded shim instead of a
-  compiled Go declaration; remaining legacy path constants still need migration.
+  verified asset catalog and every presentation fact consumed by the runtime
+  now live in the embedded shim. The unused legacy MPQ path constant dump was
+  removed so Go no longer presents a competing asset-knowledge source.
 - [ ] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
   without storing proprietary decoded pixels.
 
