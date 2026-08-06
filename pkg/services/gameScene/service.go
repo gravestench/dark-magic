@@ -137,7 +137,7 @@ func (s *Service) update() {
 	if delta > 0.1 {
 		delta = 0.1
 	}
-	dx, dy := movementVector(s.input.KeyboardState())
+	dx, dy := movementVectorFrom(s.input.KeyState)
 	if dx != 0 || dy != 0 {
 		s.state.MoveHero(dx*movementSpeed*delta, dy*movementSpeed*delta)
 	}
@@ -176,9 +176,14 @@ func hudRefreshDue(last, now time.Time, uninitialized bool) bool {
 }
 
 func movementVector(states map[int32]input.InputState) (float64, float64) {
+	return movementVectorFrom(func(key int32) input.InputState { return states[key] })
+}
+
+func movementVectorFrom(state func(int32) input.InputState) (float64, float64) {
 	down := func(keys ...int32) bool {
 		for _, key := range keys {
-			if states[key] == input.StateDown || states[key] == input.StatePressed {
+			keyState := state(key)
+			if keyState == input.StateDown || keyState == input.StatePressed {
 				return true
 			}
 		}

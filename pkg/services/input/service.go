@@ -23,7 +23,7 @@ type Service struct {
 		X, Y int
 	}
 
-	mux                 sync.Mutex
+	mux                 sync.RWMutex
 	callbackMux         sync.Mutex
 	keyPressedCallbacks map[int32][]*lua.LFunction
 }

@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"github.com/faiface/mainthread"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -22,9 +23,10 @@ type Service struct {
 
 	rootNode Renderable
 
-	isInit         bool
-	frameMux       sync.RWMutex
+	isInit         atomic.Bool
+	frameMux       sync.Mutex
 	frameCallbacks []func()
+	frameSnapshot  atomic.Value
 }
 
 // OnFrame registers work that must run on the renderer thread, immediately
@@ -35,6 +37,7 @@ func (s *Service) OnFrame(callback func()) {
 	}
 	s.frameMux.Lock()
 	s.frameCallbacks = append(s.frameCallbacks, callback)
+	s.frameSnapshot.Store(append([]func(){}, s.frameCallbacks...))
 	s.frameMux.Unlock()
 }
 
@@ -56,7 +59,7 @@ func (s *Service) Init(mesh servicemesh.Mesh) {
 }
 
 func (s *Service) IsInit() bool {
-	return s.isInit
+	return s.isInit.Load()
 }
 
 func (s *Service) Name() string {
@@ -115,7 +118,7 @@ func (s *Service) initRenderer() {
 			rl.InitAudioDevice()
 			rl.SetTargetFPS(60)
 			rl.HideCursor()
-			s.isInit = true
+			s.isInit.Store(true)
 
 			for !rl.WindowShouldClose() && !serviceMeshShuttingDown {
 				rl.BeginDrawing()

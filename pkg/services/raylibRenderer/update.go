@@ -5,11 +5,10 @@ import (
 )
 
 func (s *Service) update() {
-	s.frameMux.RLock()
-	callbacks := append([]func(){}, s.frameCallbacks...)
-	s.frameMux.RUnlock()
-	for _, callback := range callbacks {
-		callback()
+	if snapshot := s.frameSnapshot.Load(); snapshot != nil {
+		for _, callback := range snapshot.([]func()) {
+			callback()
+		}
 	}
 	s.rootNode.update()
 	s.rootNode.UpdateWorldMatrix(rl.MatrixIdentity())

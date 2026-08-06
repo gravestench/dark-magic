@@ -14,28 +14,34 @@ const (
 )
 
 func (s *Service) KeyboardState() map[int32]InputState {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 
 	return cloneStates(s.keyStates)
 }
 
+func (s *Service) KeyState(key int32) InputState {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+	return s.keyStates[key]
+}
+
 func (s *Service) KeyboardModifierState() map[int32]InputState {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 
 	return cloneStates(s.keyModStates)
 }
 
 func (s *Service) MouseCursorState() (x, y int) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 	return s.cursor.X, s.cursor.Y
 }
 
 func (s *Service) MouseButtonState() map[int32]InputState {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	s.mux.RLock()
+	defer s.mux.RUnlock()
 
 	return cloneStates(s.mouseButtonStates)
 }
@@ -64,7 +70,10 @@ func (s *Service) updateKeyboardState() {
 			pressed = append(pressed, key)
 		}
 	}
-	snapshot := cloneStates(s.keyStates)
+	var snapshot map[int32]InputState
+	if shouldEmitEvent {
+		snapshot = cloneStates(s.keyStates)
+	}
 	s.mux.Unlock()
 	if shouldEmitEvent {
 		s.mesh.Events().Emit("KeyboardKeyStateChange", snapshot)
@@ -87,7 +96,10 @@ func (s *Service) updateKeyboardModifierState() {
 			shouldEmitEvent = true
 		}
 	}
-	snapshot := cloneStates(s.keyModStates)
+	var snapshot map[int32]InputState
+	if shouldEmitEvent {
+		snapshot = cloneStates(s.keyModStates)
+	}
 	s.mux.Unlock()
 	if shouldEmitEvent {
 		s.mesh.Events().Emit("KeyboardModKeyStateChange", snapshot)
@@ -128,7 +140,10 @@ func (s *Service) updateMouseButtonState() {
 			shouldEmitEvent = true
 		}
 	}
-	snapshot := cloneStates(s.mouseButtonStates)
+	var snapshot map[int32]InputState
+	if shouldEmitEvent {
+		snapshot = cloneStates(s.mouseButtonStates)
+	}
 	s.mux.Unlock()
 	if shouldEmitEvent {
 		s.mesh.Events().Emit("MouseButtonStateChange", snapshot)
