@@ -74,6 +74,9 @@ Embrace the magic, rewrite the destiny - with Dark Magic.
 
 
 ## Roadmap
+
+The current package ownership rules, dependency direction, and target layout
+are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 The following services need to be implemented:
 * `Character Generator` - uses the record manager to create character instances
 * `Item Generator` - generates items using the record manager

@@ -674,20 +674,20 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M28: Repository architecture and legacy cleanup
 
-- [ ] Inventory every package, its responsibility, importers, lifecycle owner,
+- [x] Inventory every package, its responsibility, importers, lifecycle owner,
   stability, and whether it is engine infrastructure, game/shim implementation,
   tooling, or an intentionally supported external API. Record obsolete,
   duplicate, transitional, and misleadingly named code before moving anything.
-- [ ] Define and document a strict boundary policy: implementation details live
+- [x] Define and document a strict boundary policy: implementation details live
   under `internal`; `pkg` contains only deliberately supported, independently
   useful APIs with clear compatibility commitments. Default ambiguous legacy
   packages to `internal` rather than exposing accidental public surface area.
-- [ ] Design a small, feature-oriented top-level layout with obvious homes for
+- [x] Design a small, feature-oriented top-level layout with obvious homes for
   the application host, runtime capabilities, rendering, assets, audio, video,
   input, persistence, networking, Lua/mod execution, authored content, developer
   tools, and acceptance fixtures. Replace historical `*core`, `services`, and
   other implementation-era names where they obscure ownership or data flow.
-- [ ] Establish import-direction and ownership rules so low-level facilities do
+- [x] Establish import-direction and ownership rules so low-level facilities do
   not depend on presentation or game logic, Lua-facing adapters do not become
   global service locators, platform backends remain behind engine contracts, and
   commands stay thin composition roots.
