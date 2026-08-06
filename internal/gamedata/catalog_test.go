@@ -50,6 +50,11 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		StatesTable:          &fstest.MapFile{Data: []byte("state\tgroup\npoison\t1\n")},
 		OverlaysTable:        &fstest.MapFile{Data: []byte("overlay\tFilename\npoison\tpoisonoverlay\n")},
 		PetTypesTable:        &fstest.MapFile{Data: []byte("pet type\tgroup\nvalkyrie\t1\n")},
+		ExperienceTable:      &fstest.MapFile{Data: []byte("Amazon\tExpRatio\n500\t100\n")},
+		InventoryTable:       &fstest.MapFile{Data: []byte("class\tgridX\nAmazon\t10\n")},
+		BeltsTable:           &fstest.MapFile{Data: []byte("name\tnumboxes\nBelt\t8\n")},
+		HirelingTable:        &fstest.MapFile{Data: []byte("Hireling\tId\nRogue Scout\t1\n")},
+		DifficultyTable:      &fstest.MapFile{Data: []byte("Name\tResistPenalty\nNormal\t0\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -137,6 +142,11 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		StatesTable:          &fstest.MapFile{Data: []byte("state\tgroup\npoison\t1\n")},
 		OverlaysTable:        &fstest.MapFile{Data: []byte("overlay\tFilename\npoison\tpoisonoverlay\n")},
 		PetTypesTable:        &fstest.MapFile{Data: []byte("pet type\tgroup\nvalkyrie\t1\n")},
+		ExperienceTable:      &fstest.MapFile{Data: []byte("Amazon\tExpRatio\n500\t100\n")},
+		InventoryTable:       &fstest.MapFile{Data: []byte("class\tgridX\nAmazon\t10\n")},
+		BeltsTable:           &fstest.MapFile{Data: []byte("name\tnumboxes\nBelt\t8\n")},
+		HirelingTable:        &fstest.MapFile{Data: []byte("Hireling\tId\nRogue Scout\t1\n")},
+		DifficultyTable:      &fstest.MapFile{Data: []byte("Name\tResistPenalty\nNormal\t0\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

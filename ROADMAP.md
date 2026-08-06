@@ -735,7 +735,9 @@ implementations. The remaining work is tracked explicitly below.
   `mclass` and `micon` arrays retain their authored values. The client composition
   root now owns and eagerly validates the complete admitted catalog generation;
   hot reload invalidates through that owner so generic and typed records cannot
-  drift into different generations.
+  drift into different generations. Experience, Inventory, Belts, Hireling, and
+  Difficultylevels now supply the admitted character progression, layout,
+  mercenary, and difficulty-rule configuration layer.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

@@ -77,6 +77,14 @@ type Snapshot struct {
 	Overlays         []models.Overlay
 	OverlaysByName   map[string]models.Overlay
 	PetTypes         []models.PetType
+	Experience       []models.ExperienceData
+	Inventories      []models.InventoryData
+	InventoryByClass map[string]models.InventoryData
+	Belts            []models.BeltData
+	BeltsByName      map[string]models.BeltData
+	Hirelings        []models.Hireling
+	Difficulties     []models.Difficultylevel
+	DifficultyByName map[string]models.Difficultylevel
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -123,7 +131,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable && path != ExperienceTable && path != InventoryTable && path != BeltsTable && path != HirelingTable && path != DifficultyTable {
 		return
 	}
 	c.mu.Lock()
@@ -414,6 +422,41 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	experience, err := Load[models.ExperienceData](c.store, ExperienceTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	inventories, err := Load[models.InventoryData](c.store, InventoryTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	inventoryByClass, found, err := ObservedIndex(InventoryTable, inventories, func(record models.InventoryData) string { return record.Class })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	belts, err := Load[models.BeltData](c.store, BeltsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	beltsByName, found, err := ObservedIndex(BeltsTable, belts, func(record models.BeltData) string { return record.Name })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	hirelings, err := Load[models.Hireling](c.store, HirelingTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	difficulties, err := Load[models.Difficultylevel](c.store, DifficultyTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	difficultyByName, found, err := ObservedIndex(DifficultyTable, difficulties, func(record models.Difficultylevel) string { return record.Name })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -442,6 +485,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		MonsterSounds: monsterSounds, MonsterSoundByID: monsterSoundByID, MonsterEquipment: monsterEquipment,
 		Missiles: missiles, MissilesByName: missilesByName, States: states, StatesByName: statesByName,
 		Overlays: overlays, OverlaysByName: overlaysByName, PetTypes: petTypes,
+		Experience: experience, Inventories: inventories, InventoryByClass: inventoryByClass,
+		Belts: belts, BeltsByName: beltsByName, Hirelings: hirelings, Difficulties: difficulties, DifficultyByName: difficultyByName,
 	}, nil
 }
 
@@ -512,6 +557,14 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		Overlays:         append([]models.Overlay(nil), source.Overlays...),
 		OverlaysByName:   make(map[string]models.Overlay, len(source.OverlaysByName)),
 		PetTypes:         append([]models.PetType(nil), source.PetTypes...),
+		Experience:       append([]models.ExperienceData(nil), source.Experience...),
+		Inventories:      append([]models.InventoryData(nil), source.Inventories...),
+		InventoryByClass: make(map[string]models.InventoryData, len(source.InventoryByClass)),
+		Belts:            append([]models.BeltData(nil), source.Belts...),
+		BeltsByName:      make(map[string]models.BeltData, len(source.BeltsByName)),
+		Hirelings:        append([]models.Hireling(nil), source.Hirelings...),
+		Difficulties:     append([]models.Difficultylevel(nil), source.Difficulties...),
+		DifficultyByName: make(map[string]models.Difficultylevel, len(source.DifficultyByName)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -587,6 +640,15 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.OverlaysByName {
 		result.OverlaysByName[key] = value
+	}
+	for key, value := range source.InventoryByClass {
+		result.InventoryByClass[key] = value
+	}
+	for key, value := range source.BeltsByName {
+		result.BeltsByName[key] = value
+	}
+	for key, value := range source.DifficultyByName {
+		result.DifficultyByName[key] = value
 	}
 	return result
 }

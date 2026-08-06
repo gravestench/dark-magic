@@ -81,6 +81,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if !slices.ContainsFunc(snapshot.PetTypes, func(record models.PetType) bool { return record.MClass != [4]int{} || record.MIcon != [4]string{} }) {
 		t.Fatal("typed pet grouped fields did not bind authored values")
 	}
+	if len(snapshot.Experience) == 0 || len(snapshot.InventoryByClass) == 0 || len(snapshot.BeltsByName) == 0 || len(snapshot.Hirelings) == 0 || len(snapshot.DifficultyByName) == 0 {
+		t.Fatal("typed character configuration tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

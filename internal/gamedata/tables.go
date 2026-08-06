@@ -42,4 +42,9 @@ const (
 	StatesTable          = "data/global/excel/States.txt"
 	OverlaysTable        = "data/global/excel/Overlay.txt"
 	PetTypesTable        = "data/global/excel/PetType.txt"
+	ExperienceTable      = "data/global/excel/Experience.txt"
+	InventoryTable       = "data/global/excel/Inventory.txt"
+	BeltsTable           = "data/global/excel/Belts.txt"
+	HirelingTable        = "data/global/excel/Hireling.txt"
+	DifficultyTable      = "data/global/excel/Difficultylevels.txt"
 )
