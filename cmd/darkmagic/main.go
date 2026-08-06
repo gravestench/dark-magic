@@ -25,6 +25,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
+	"github.com/gravestench/dark-magic/pkg/scene"
 	"github.com/gravestench/dark-magic/pkg/services/gameScene"
 	"github.com/gravestench/dark-magic/pkg/services/input"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
@@ -67,6 +68,7 @@ func run(contentFS *content.FS) error {
 	records := recordstore.New(contentFS)
 	locale := localecore.New(contentFS, "English")
 	saves := savecore.New(savecore.Character{ID: "default-amazon", Name: "Dark Wanderer", Class: "Amazon", Level: 1})
+	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
@@ -87,6 +89,9 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.SaveModule(saves)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.SimulationModule(simulation)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RenderModuleWithAssets(scripts, composer, contentFS)); err != nil {

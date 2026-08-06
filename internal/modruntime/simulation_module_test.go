@@ -1,0 +1,27 @@
+package modruntime
+
+import (
+	"context"
+	"testing"
+	"testing/fstest"
+
+	"github.com/gravestench/dark-magic/pkg/scene"
+)
+
+func TestSimulationModuleMovesPersistentWorld(t *testing.T) {
+	world := scene.New(7, 100, 80)
+	runtime := New()
+	if err := runtime.RegisterModule(SimulationModule(NewSimulation(world))); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.simulation/v1"); s.move_hero(10,-5); x=s.state().hero_x`)}}, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if world.Hero.X != 60 || world.Hero.Y != 35 {
+		t.Fatalf("world = %#v", world)
+	}
+}

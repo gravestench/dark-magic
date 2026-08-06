@@ -29,6 +29,11 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"exists": func(state *lua.LState) int {
+				_, err := fs.Stat(source, state.CheckString(1))
+				state.Push(lua.LBool(err == nil))
+				return 1
+			},
 			"play": func(state *lua.LState) int {
 				scope, err := runtime.requireActiveScope()
 				if err != nil {

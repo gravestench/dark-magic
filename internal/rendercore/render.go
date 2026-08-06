@@ -4,7 +4,6 @@ package rendercore
 import (
 	"errors"
 	"fmt"
-	"image"
 	"sort"
 	"sync"
 )
@@ -27,6 +26,31 @@ type NodeID struct {
 	Generation uint32
 }
 
+// ResourceID is a generation-checked handle to renderer-owned resource input.
+type ResourceID struct {
+	Slot       uint32
+	Generation uint32
+}
+
+type ResourceKind string
+
+const (
+	ResourceTexture      ResourceKind = "texture"
+	ResourcePalette      ResourceKind = "palette"
+	ResourceFont         ResourceKind = "font"
+	ResourceAnimation    ResourceKind = "animation"
+	ResourceRenderTarget ResourceKind = "render-target"
+)
+
+// Resource carries decoded CPU-side input across the renderer command
+// boundary. Backends upload and destroy native resources while applying these
+// commands on their owner thread.
+type Resource struct {
+	ID      ResourceID
+	Kind    ResourceKind
+	Payload any
+}
+
 // Node is the backend-neutral retained state of one renderable.
 type Node struct {
 	ID       NodeID
@@ -41,7 +65,7 @@ type Node struct {
 	Visible  bool
 	Clip     *Rect
 	Blend    string
-	Image    image.Image
+	Resource ResourceID
 }
 
 // Rect is a clipping rectangle.
@@ -49,9 +73,11 @@ type Rect struct{ X, Y, Width, Height float64 }
 
 // Change is one ordered renderer-thread command.
 type Change struct {
-	Kind string
-	Node Node
-	ID   NodeID
+	Kind       string
+	Node       Node
+	ID         NodeID
+	Resource   Resource
+	ResourceID ResourceID
 }
 
 // Backend consumes changes on the renderer thread.
@@ -64,13 +90,67 @@ type slot struct {
 	node       *Node
 }
 
+type resourceSlot struct {
+	generation uint32
+	resource   *Resource
+}
+
 // Composer accepts thread-safe retained-state mutations and queues backend
 // changes. Drain must be called by the renderer owner thread.
 type Composer struct {
-	mu      sync.Mutex
-	slots   []slot
-	free    []uint32
-	pending []Change
+	mu            sync.Mutex
+	slots         []slot
+	free          []uint32
+	pending       []Change
+	resources     []resourceSlot
+	freeResources []uint32
+}
+
+// CreateResource queues decoded input for renderer-thread native creation.
+func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, error) {
+	if kind == "" || payload == nil {
+		return ResourceID{}, errors.New("rendercore: resource kind and payload are required")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var index uint32
+	if len(c.freeResources) > 0 {
+		index = c.freeResources[len(c.freeResources)-1]
+		c.freeResources = c.freeResources[:len(c.freeResources)-1]
+	} else {
+		index = uint32(len(c.resources))
+		c.resources = append(c.resources, resourceSlot{generation: 1})
+	}
+	id := ResourceID{Slot: index, Generation: c.resources[index].generation}
+	resource := &Resource{ID: id, Kind: kind, Payload: payload}
+	c.resources[index].resource = resource
+	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
+	return id, nil
+}
+
+// DestroyResource invalidates a managed resource and queues native destruction.
+func (c *Composer) DestroyResource(id ResourceID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry, err := c.resource(id)
+	if err != nil {
+		return err
+	}
+	for _, node := range c.slots {
+		if node.node != nil && node.node.Resource == id {
+			return fmt.Errorf("rendercore: resource %v is still attached to node %v", id, node.node.ID)
+		}
+	}
+	_ = entry
+	slot := &c.resources[id.Slot]
+	slot.resource = nil
+	slot.generation++
+	if slot.generation == 0 {
+		slot.generation = 1
+	}
+	c.freeResources = append(c.freeResources, id.Slot)
+	c.pending = append(c.pending, Change{Kind: "resource-destroy", ResourceID: id})
+	return nil
 }
 
 // Create reserves a node and queues its creation.
@@ -108,9 +188,27 @@ func (c *Composer) Update(id NodeID, update func(*Node)) error {
 	if err != nil {
 		return err
 	}
-	update(node)
+	candidate := *node
+	update(&candidate)
+	if candidate.Resource != (ResourceID{}) {
+		if _, err := c.resource(candidate.Resource); err != nil {
+			return fmt.Errorf("rendercore: node resource: %w", err)
+		}
+	}
+	*node = candidate
 	c.pending = append(c.pending, Change{Kind: "update", Node: *node, ID: id})
 	return nil
+}
+
+func (c *Composer) resource(id ResourceID) (*Resource, error) {
+	if int(id.Slot) >= len(c.resources) {
+		return nil, fmt.Errorf("rendercore: invalid resource slot %d", id.Slot)
+	}
+	entry := &c.resources[id.Slot]
+	if entry.resource == nil || entry.generation != id.Generation {
+		return nil, fmt.Errorf("rendercore: stale resource %v", id)
+	}
+	return entry.resource, nil
 }
 
 // Destroy invalidates id and recursively queues child destruction first.
@@ -162,6 +260,17 @@ func (c *Composer) Snapshot() []Node {
 		return result[i].ID.Slot < result[j].ID.Slot
 	})
 	return result
+}
+
+// ResourceSnapshot returns a checked copy for diagnostics and headless tests.
+func (c *Composer) ResourceSnapshot(id ResourceID) (Resource, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	resource, err := c.resource(id)
+	if err != nil {
+		return Resource{}, err
+	}
+	return *resource, nil
 }
 
 func (c *Composer) node(id NodeID) (*Node, error) {

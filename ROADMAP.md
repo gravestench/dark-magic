@@ -175,14 +175,14 @@ their own legally obtained game data.
   visibility, clipping, blend mode, and lifetime.
 - [ ] Make textures, palettes, fonts, animations, and render targets managed
   resources referenced by checked handles.
-- [ ] Separate asset decoding from GPU upload and make upload/destruction occur on
+- [x] Separate asset decoding from GPU upload and make upload/destruction occur on
   the renderer thread.
 - [x] Support deterministic world, HUD, modal, cursor, debug, and transition layers.
 - [ ] Preserve chunking, culling, child-order caching, and allocation-free hot paths
   from the current renderer while replacing its ownership model.
 - [x] Add a headless render-command backend for scene tests and golden composition
   fixtures where practical.
-- [ ] Prove the boundary by rendering one complete Lua-authored screen using only
+- [x] Prove the boundary by rendering one complete Lua-authored screen using only
   versioned capabilities.
 
 ## M13: Lua-authored Diablo shell
@@ -194,7 +194,7 @@ their own legally obtained game data.
 - [x] Implement the title and main game menus from the shim archive.
 - [x] Implement character selection/creation as Lua scenes backed by native save
   and record capabilities.
-- [ ] Implement the interactive game-world scene as Lua orchestration over native
+- [x] Implement the interactive game-world scene as Lua orchestration over native
   rendering, input, assets, simulation, and audio.
 - [x] Implement inventory, character, skill, automap, options, and pause UI as
   layered overlays rather than independent application services.

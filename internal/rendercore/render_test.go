@@ -2,6 +2,7 @@ package rendercore
 
 import (
 	"errors"
+	"image"
 	"reflect"
 	"sync"
 	"testing"
@@ -10,6 +11,45 @@ import (
 type recordingBackend struct {
 	changes []Change
 	fail    error
+}
+
+func TestManagedResourcesAreCheckedAndDrainInOwnershipOrder(t *testing.T) {
+	var composer Composer
+	resource, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 2, 2)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := composer.Create(NodeID{}, LayerHUD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Update(node, func(current *Node) { current.Resource = resource }); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.DestroyResource(resource); err == nil {
+		t.Fatal("destroyed attached resource")
+	}
+	if err := composer.Destroy(node); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.DestroyResource(resource); err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	var kinds []string
+	for _, change := range backend.changes {
+		kinds = append(kinds, change.Kind)
+	}
+	want := []string{"resource-create", "create", "update", "destroy", "resource-destroy"}
+	if !reflect.DeepEqual(kinds, want) {
+		t.Fatalf("changes = %v, want %v", kinds, want)
+	}
+	if _, err := composer.ResourceSnapshot(resource); err == nil {
+		t.Fatal("stale resource remained valid")
+	}
 }
 
 func (b *recordingBackend) Apply(change Change) error {

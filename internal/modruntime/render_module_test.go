@@ -2,6 +2,7 @@ package modruntime
 
 import (
 	"context"
+	"image"
 	"testing"
 	"testing/fstest"
 
@@ -49,8 +50,13 @@ return {
 	if len(nodes) != 1 || nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].Z != 7 || nodes[0].Layer != rendercore.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
 	}
-	if nodes[0].Image == nil || nodes[0].Image.Bounds().Dx() != 16 || nodes[0].Image.Bounds().Dy() != 8 {
-		t.Fatalf("node image = %#v", nodes[0].Image)
+	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, ok := resource.Payload.(image.Image)
+	if !ok || decoded.Bounds().Dx() != 16 || decoded.Bounds().Dy() != 8 {
+		t.Fatalf("node resource = %#v", resource)
 	}
 	if err := manager.Disable(context.Background(), definition.ID); err != nil {
 		t.Fatal(err)

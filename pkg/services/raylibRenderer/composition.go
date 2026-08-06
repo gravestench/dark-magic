@@ -2,6 +2,7 @@ package raylibRenderer
 
 import (
 	"fmt"
+	"image"
 	"sync"
 
 	"github.com/gravestench/dark-magic/internal/rendercore"
@@ -18,7 +19,7 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 	if s.composition != nil {
 		return fmt.Errorf("renderer: composition core is already attached")
 	}
-	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable)}
+	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]image.Image), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID)}
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
@@ -30,15 +31,42 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 }
 
 type compositionBackend struct {
-	renderer *Service
-	mu       sync.Mutex
-	nodes    map[rendercore.NodeID]Renderable
+	renderer      *Service
+	mu            sync.Mutex
+	nodes         map[rendercore.NodeID]Renderable
+	resources     map[rendercore.ResourceID]image.Image
+	nodeResources map[rendercore.NodeID]rendercore.ResourceID
 }
 
 func (b *compositionBackend) Apply(change rendercore.Change) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.nodes == nil {
+		b.nodes = make(map[rendercore.NodeID]Renderable)
+	}
+	if b.resources == nil {
+		b.resources = make(map[rendercore.ResourceID]image.Image)
+	}
+	if b.nodeResources == nil {
+		b.nodeResources = make(map[rendercore.NodeID]rendercore.ResourceID)
+	}
 	switch change.Kind {
+	case "resource-create":
+		if change.Resource.Kind != rendercore.ResourceTexture {
+			return fmt.Errorf("unsupported resource kind %q", change.Resource.Kind)
+		}
+		decoded, ok := change.Resource.Payload.(image.Image)
+		if !ok {
+			return fmt.Errorf("texture resource %v has payload %T", change.ResourceID, change.Resource.Payload)
+		}
+		b.resources[change.ResourceID] = decoded
+		return nil
+	case "resource-destroy":
+		if _, exists := b.resources[change.ResourceID]; !exists {
+			return fmt.Errorf("resource %v does not exist", change.ResourceID)
+		}
+		delete(b.resources, change.ResourceID)
+		return nil
 	case "create":
 		if _, exists := b.nodes[change.ID]; exists {
 			return fmt.Errorf("node %v already exists", change.ID)
@@ -63,6 +91,7 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 			b.renderer.cache.Remove(node.UUID().String())
 		}
 		delete(b.nodes, change.ID)
+		delete(b.nodeResources, change.ID)
 		return nil
 	default:
 		return fmt.Errorf("unknown composition change %q", change.Kind)
@@ -86,8 +115,18 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 	} else {
 		node.Disable()
 	}
-	if state.Image != nil {
-		node.SetImage(state.Image)
+	if state.Resource != (rendercore.ResourceID{}) {
+		decoded, exists := b.resources[state.Resource]
+		if !exists {
+			return fmt.Errorf("resource %v does not exist", state.Resource)
+		}
+		if b.nodeResources[state.ID] != state.Resource {
+			if b.renderer.cache != nil {
+				b.renderer.cache.Remove(node.UUID().String())
+			}
+			node.SetImage(decoded)
+			b.nodeResources[state.ID] = state.Resource
+		}
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/inputcore"
@@ -13,6 +14,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/savecore"
+	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
 func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
@@ -28,15 +30,19 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer rendercore.Composer
 	var input inputcore.Store
+	var mixer audiocore.Mixer
 	saves := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	simulation := modruntime.NewSimulation(scene.New(11, 1000, 1000))
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
 	for _, module := range []modruntime.Module{
 		modruntime.VFSModule(contentFS),
 		modruntime.InputModule(&input),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
+		modruntime.SimulationModule(simulation),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -102,7 +108,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "game_world")
-	assertNodes(t, &composer, 2)
+	assertNodes(t, &composer, 3)
 	if selected, ok := saves.Selected(); !ok || selected.ID != "hero" {
 		t.Fatalf("selected character = %#v, %v", selected, ok)
 	}
@@ -117,7 +123,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertStack(t, navigator, "game_world", overlay)
-		assertNodes(t, &composer, 3)
+		assertNodes(t, &composer, 4)
 		input.Publish(inputcore.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
@@ -127,7 +133,16 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertStack(t, navigator, "game_world")
-		assertNodes(t, &composer, 2)
+		assertNodes(t, &composer, 3)
+	}
+
+	before := simulation.Snapshot().Hero.X
+	input.Publish(inputcore.Frame{Actions: map[string]inputcore.ActionState{"right": {Down: true}}})
+	if err := scenes.Update(ctx, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if after := simulation.Snapshot().Hero.X; after <= before {
+		t.Fatalf("hero did not move: %v -> %v", before, after)
 	}
 
 	if err := scenes.Close(ctx); err != nil {
