@@ -30,6 +30,7 @@
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",
     "select": "data/global/sfx/cursor/select.wav",
+    "trademark_music": "data/global/music/Act4/diablo.wav",
     "title_record": "ESOUND_MUSIC_DIABLO"
   },
   "cursor": {

@@ -43,8 +43,11 @@ return {
             dc6.synchronize_animations(self.logo, 0)
         end
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
-        local ok, music = pcall(audio.play_record, manifest.sounds.title_record, 0)
-        if ok then self.music = music end
+        if audio.exists(manifest.sounds.trademark_music) then
+            self.music = audio.play(manifest.sounds.trademark_music, {
+                bus = "music", loop = true, stream = true, group = "frontend_music"
+            })
+        end
     end,
     update = function(self, elapsed)
         if self.logo then
