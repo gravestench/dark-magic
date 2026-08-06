@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gravestench/dark-magic/internal/host"
+	"github.com/gravestench/dark-magic/internal/app/host"
 )
 
 type component struct{}

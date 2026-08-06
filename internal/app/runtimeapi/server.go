@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/host"
+	"github.com/gravestench/dark-magic/internal/app/host"
 )
 
 type Server struct {

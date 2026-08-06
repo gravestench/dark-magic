@@ -10,7 +10,7 @@ import (
 	"time"
 
 	cof "github.com/gravestench/cof"
-	"github.com/gravestench/dark-magic/internal/host"
+	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
 )

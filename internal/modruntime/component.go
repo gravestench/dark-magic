@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/gravestench/dark-magic/internal/host"
+	"github.com/gravestench/dark-magic/internal/app/host"
 	lua "github.com/yuin/gopher-lua"
 )
 

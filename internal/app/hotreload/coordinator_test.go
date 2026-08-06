@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	lua "github.com/yuin/gopher-lua"
 )

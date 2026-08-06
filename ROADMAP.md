@@ -746,6 +746,9 @@ implementations. The remaining work is tracked explicitly below.
   and manual diagnostic applications now live together under `internal/dev`,
   every README, Make target, and root usage example points to the new commands,
   and an acceptance constraint rejects recreation of the ambiguous old roots.
+  Application lifecycle, filesystem observation, transactional reload, and the
+  local management API now live together under `internal/app`; the command stays
+  their composition root and all previous top-level import paths are guarded.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

@@ -48,7 +48,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | Package | Responsibility | Main importers | Owner | Disposition |
 | --- | --- | --- | --- | --- |
 | `cmd/darkmagic` | Client composition root | executable | Process | Keep thin |
-| `internal/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
+| `internal/app/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
 | `internal/content` | Layered directory/MPQ/ZIP/shim VFS | command, reload, Lua, tools | Application | Keep |
 | `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
 | `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
@@ -61,9 +61,9 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
 | `internal/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
 | `internal/modruntime` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters |
-| `internal/hotreload` | Transactional script/content reload | command | Application | Keep |
-| `internal/filewatch` | Filesystem change observation | command | Application | Keep |
-| `internal/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
+| `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
+| `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
+| `internal/app/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
 | `internal/profiling` | CPU/heap/scene profile capture | command | Application/run | Keep |
 | `internal/capture` | Screenshot fixture writing | command | Run | Keep |
 | `internal/platform/raylib/common` | Native adapter logging | raylib adapters | Application | Keep under platform |
@@ -113,7 +113,7 @@ real-asset, race, and relevant interactive acceptance checks green.
 
 The client boots in `cmd/darkmagic/main.go`. It parses process configuration,
 opens the layered content filesystem, constructs shared application capabilities,
-registers Lua modules, and gives those components to `internal/host` for ordered
+registers Lua modules, and gives those components to `internal/app/host` for ordered
 startup and shutdown. Keep this file as wiring: capability behavior belongs in
 the package that owns it.
 

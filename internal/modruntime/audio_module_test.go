@@ -5,8 +5,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
-	"github.com/gravestench/dark-magic/internal/host"
 )
 
 func TestAudioHandlesBelongToLuaComponentScope(t *testing.T) {
