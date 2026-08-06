@@ -4,6 +4,14 @@
   "game_version": "diablo-ii-lod",
   "language": "neutral",
   "resolution": { "width": 800, "height": 600 },
+  "supported_profiles": [
+    {
+      "id": "lod-english-800x600",
+      "game_version": "diablo-ii-lod",
+      "language": "English",
+      "resolution": { "width": 800, "height": 600 }
+    }
+  ],
   "provenance": "community research verified against user-supplied archives",
   "confidence": "verified",
   "palettes": {

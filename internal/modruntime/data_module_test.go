@@ -33,3 +33,20 @@ assert(value == nil and string.find(err, "only JSON"))
 		t.Fatal(err)
 	}
 }
+
+func TestManifestRejectsInvalidSupportedProfile(t *testing.T) {
+	decoded, err := readDataJSON(fstest.MapFS{
+		"manifest.json": &fstest.MapFile{Data: []byte(`{
+            "schema":"test/v1", "version":1, "game_version":"test",
+            "language":"neutral", "confidence":"verified",
+            "resolution":{"width":800,"height":600},
+            "supported_profiles":[{"id":"broken","game_version":"test","language":"English","resolution":{"width":0,"height":600}}]
+        }`)},
+	}, "manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateManifest(decoded, "test/v1"); err == nil {
+		t.Fatal("invalid supported profile was accepted")
+	}
+}

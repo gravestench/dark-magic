@@ -97,6 +97,28 @@ func validateManifest(decoded any, expectedSchema string) error {
 	if !ok || !positiveJSONNumber(resolution["width"]) || !positiveJSONNumber(resolution["height"]) {
 		return fmt.Errorf("dm.data/v1: manifest resolution requires positive width and height")
 	}
+	if profilesValue, exists := document["supported_profiles"]; exists {
+		profiles, ok := profilesValue.([]any)
+		if !ok || len(profiles) == 0 {
+			return fmt.Errorf("dm.data/v1: supported_profiles must be a non-empty array")
+		}
+		for index, value := range profiles {
+			profile, ok := value.(map[string]any)
+			if !ok {
+				return fmt.Errorf("dm.data/v1: supported_profiles[%d] must be an object", index)
+			}
+			for _, field := range []string{"id", "game_version", "language"} {
+				text, ok := profile[field].(string)
+				if !ok || strings.TrimSpace(text) == "" {
+					return fmt.Errorf("dm.data/v1: supported_profiles[%d].%s must be a non-empty string", index, field)
+				}
+			}
+			profileResolution, ok := profile["resolution"].(map[string]any)
+			if !ok || !positiveJSONNumber(profileResolution["width"]) || !positiveJSONNumber(profileResolution["height"]) {
+				return fmt.Errorf("dm.data/v1: supported_profiles[%d] resolution requires positive width and height", index)
+			}
+		}
+	}
 	return nil
 }
 

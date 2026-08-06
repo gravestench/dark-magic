@@ -338,7 +338,7 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement saved-character selection with paging, scrollbar, composite
   previews, metadata labels, deletion confirmation, and double activation.
 - [x] Implement progressive loading screens driven by real dependency progress.
-- [ ] Add screenshot/composition tests for every state without checking Blizzard
+- [x] Add screenshot/composition tests for every state without checking Blizzard
   imagery into the repository.
 
 ### M17 execution checkpoints
@@ -404,7 +404,7 @@ implementations. The remaining work is tracked explicitly below.
   the verified selected-class assets, including synchronized overlay layers
   where authored. Equipment-aware COF/DCC previews and real-asset calibration
   remain until save records expose authoritative component codes.
-- [ ] M17.5: Implement dependency-driven loading and front-end composition tests
+- [x] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants. An
   engine-owned coordinator now executes named character, loading-asset, and
   world readiness tasks and exposes immutable progress through
@@ -412,7 +412,12 @@ implementations. The remaining work is tracked explicitly below.
   treats its configured sweep duration as presentation smoothing only, reports
   failures, and cannot enter the world while a dependency remains blocked.
   Coordinator, capability, and end-to-end blocked-transition tests cover the
-  contract; the resolution/language/version composition matrix remains.
+  contract. The manifest now explicitly declares the supported 800x600,
+  English, Lord of Destruction profile. Its asset-independent composition
+  matrix checks every screen's geometry, exact frontend tile coverage, and all
+  referenced localized strings; runtime validation rejects malformed future
+  profiles. Existing headless scene acceptance covers every state and resource
+  lifetime, while opt-in native captures keep proprietary pixels local.
 
 ### M17.6: Embedded, single-window Bink playback
 
