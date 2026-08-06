@@ -91,3 +91,45 @@ func TestClear(t *testing.T) {
 		t.Fatal("Still able to retrieve nodes after cache was cleared")
 	}
 }
+
+func TestVersionedCacheInvalidationAndDiagnostics(t *testing.T) {
+	cache := New(3)
+	var evicted []string
+	cache.SetEvictionHandler(func(value interface{}) { evicted = append(evicted, value.(string)) })
+	if err := cache.InsertVersioned("vfs", "hero", 1, "old", 2); err != nil {
+		t.Fatal(err)
+	}
+	if value, ok := cache.RetrieveVersioned("vfs", "hero", 1); !ok || value != "old" {
+		t.Fatalf("value = %v, ok = %v", value, ok)
+	}
+	cache.InvalidateNamespace("vfs", 2)
+	if _, ok := cache.RetrieveVersioned("vfs", "hero", 2); ok {
+		t.Fatal("stale generation remained")
+	}
+	if err := cache.InsertVersioned("vfs", "hero", 2, "new", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := cache.SetBudget(1); err != nil {
+		t.Fatal(err)
+	}
+	stats := cache.Diagnostics()
+	if stats.Entries != 0 || stats.Weight != 0 || stats.Budget != 1 || stats.Hits != 1 || stats.Misses != 1 || stats.Evictions != 2 {
+		t.Fatalf("stats = %#v", stats)
+	}
+	if len(evicted) != 2 || evicted[0] != "old" || evicted[1] != "new" {
+		t.Fatalf("evicted = %v", evicted)
+	}
+}
+
+func TestVersionMismatchEvictsStaleEntry(t *testing.T) {
+	cache := New(10)
+	if err := cache.InsertVersioned("assets", "font", 4, "font", 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := cache.RetrieveVersioned("assets", "font", 5); ok {
+		t.Fatal("version mismatch hit")
+	}
+	if cache.Diagnostics().Entries != 0 {
+		t.Fatal("stale entry was not evicted")
+	}
+}

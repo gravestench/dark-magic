@@ -138,6 +138,27 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		assertStack(t, navigator, "game_world")
 		assertNodes(t, &composer, 3)
 	}
+	for cycle := 0; cycle < 50; cycle++ {
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		publishAction(&input, "inventory")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		input.Publish(inputcore.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		publishAction(&input, "cancel")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 3 || diagnostics.NodeSlots > 4 {
+		t.Fatalf("composer diagnostics after rapid transitions = %#v", diagnostics)
+	}
 
 	before := simulation.Snapshot().Hero.X
 	input.Publish(inputcore.Frame{Actions: map[string]inputcore.ActionState{"right": {Down: true}}})
@@ -155,6 +176,12 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertNodes(t, &composer, 0)
+	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 0 || diagnostics.ActiveResources != 0 {
+		t.Fatalf("composer leaked resources: %#v", diagnostics)
+	}
+	if diagnostics := mixer.Diagnostics(); diagnostics.Active != 0 {
+		t.Fatalf("mixer leaked sounds: %#v", diagnostics)
+	}
 }
 
 func publishAction(input *inputcore.Store, name string) {

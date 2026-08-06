@@ -129,6 +129,27 @@ type Composer struct {
 	freeResources []uint32
 }
 
+// Diagnostics summarizes retained and queued renderer state for leak checks.
+type Diagnostics struct{ ActiveNodes, ActiveResources, Pending, NodeSlots, ResourceSlots int }
+
+// Diagnostics returns a consistent composer snapshot without exposing payloads.
+func (c *Composer) Diagnostics() Diagnostics {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	result := Diagnostics{Pending: len(c.pending), NodeSlots: len(c.slots), ResourceSlots: len(c.resources)}
+	for _, entry := range c.slots {
+		if entry.node != nil {
+			result.ActiveNodes++
+		}
+	}
+	for _, entry := range c.resources {
+		if entry.resource != nil {
+			result.ActiveResources++
+		}
+	}
+	return result
+}
+
 // CreateResource queues decoded input for renderer-thread native creation.
 func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, error) {
 	if kind == "" || payload == nil {

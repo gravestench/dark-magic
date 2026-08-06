@@ -6,22 +6,33 @@ import (
 )
 
 type cacheNode struct {
-	next   *cacheNode
-	prev   *cacheNode
-	key    string
-	value  interface{}
-	weight int
+	next       *cacheNode
+	prev       *cacheNode
+	key        string
+	value      interface{}
+	weight     int
+	namespace  string
+	generation uint64
+}
+
+// Stats is an immutable cache diagnostics snapshot.
+type Stats struct {
+	Entries, Weight, Budget int
+	Hits, Misses, Evictions uint64
 }
 
 // Cache stores arbitrary data for fast retrieval
 type Cache struct {
-	head    *cacheNode
-	tail    *cacheNode
-	lookup  map[string]*cacheNode
-	weight  int
-	budget  int
-	mutex   sync.Mutex
-	onEvict func(interface{})
+	head      *cacheNode
+	tail      *cacheNode
+	lookup    map[string]*cacheNode
+	weight    int
+	budget    int
+	mutex     sync.Mutex
+	onEvict   func(interface{})
+	hits      uint64
+	misses    uint64
+	evictions uint64
 }
 
 // New creates an  instance of a Cache
@@ -52,6 +63,18 @@ func (c *Cache) SetEvictionHandler(handler func(interface{})) {
 
 // Insert inserts an object into the cache
 func (c *Cache) Insert(key string, value interface{}, weight int) error {
+	return c.InsertVersioned("", key, 0, value, weight)
+}
+
+// InsertVersioned inserts an entry tied to one content generation namespace.
+func (c *Cache) InsertVersioned(namespace, key string, generation uint64, value interface{}, weight int) error {
+	if key == "" {
+		return errors.New("cache key is required")
+	}
+	if weight < 0 {
+		return errors.New("cache weight cannot be negative")
+	}
+	key = versionedKey(namespace, key)
 	c.mutex.Lock()
 
 	if _, found := c.lookup[key]; found {
@@ -60,10 +83,12 @@ func (c *Cache) Insert(key string, value interface{}, weight int) error {
 	}
 
 	node := &cacheNode{
-		key:    key,
-		value:  value,
-		weight: weight,
-		next:   c.head,
+		key:        key,
+		value:      value,
+		weight:     weight,
+		namespace:  namespace,
+		generation: generation,
+		next:       c.head,
 	}
 
 	if c.head != nil {
@@ -83,6 +108,7 @@ func (c *Cache) Insert(key string, value interface{}, weight int) error {
 		c.weight -= c.tail.weight
 		c.tail.prev.next = nil
 		evicted = append(evicted, c.tail.value)
+		c.evictions++
 		delete(c.lookup, c.tail.key)
 	}
 	handler := c.onEvict
@@ -97,13 +123,30 @@ func (c *Cache) Insert(key string, value interface{}, weight int) error {
 
 // Retrieve gets an object out of the cache
 func (c *Cache) Retrieve(key string) (interface{}, bool) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	return c.RetrieveVersioned("", key, 0)
+}
 
+// RetrieveVersioned returns only an entry from the requested generation.
+func (c *Cache) RetrieveVersioned(namespace, key string, generation uint64) (interface{}, bool) {
+	key = versionedKey(namespace, key)
+	c.mutex.Lock()
 	node, found := c.lookup[key]
-	if !found {
+	if !found || node.generation != generation {
+		c.misses++
+		var stale interface{}
+		var handler func(interface{})
+		if found {
+			stale = c.removeLocked(node)
+			c.evictions++
+			handler = c.onEvict
+		}
+		c.mutex.Unlock()
+		if handler != nil {
+			handler(stale)
+		}
 		return nil, false
 	}
+	c.hits++
 
 	if node != c.head {
 		if node.next != nil {
@@ -128,7 +171,57 @@ func (c *Cache) Retrieve(key string) (interface{}, bool) {
 		c.head = node
 	}
 
-	return node.value, true
+	value := node.value
+	c.mutex.Unlock()
+	return value, true
+}
+
+// InvalidateNamespace evicts every entry not matching generation.
+func (c *Cache) InvalidateNamespace(namespace string, generation uint64) {
+	c.mutex.Lock()
+	var values []interface{}
+	for _, node := range c.lookup {
+		if node.namespace == namespace && node.generation != generation {
+			values = append(values, c.removeLocked(node))
+			c.evictions++
+		}
+	}
+	handler := c.onEvict
+	c.mutex.Unlock()
+	for _, value := range values {
+		if handler != nil {
+			handler(value)
+		}
+	}
+}
+
+// SetBudget changes the byte/weight budget and immediately evicts LRU entries.
+func (c *Cache) SetBudget(budget int) error {
+	if budget < 0 {
+		return errors.New("cache budget cannot be negative")
+	}
+	c.mutex.Lock()
+	c.budget = budget
+	var values []interface{}
+	for c.tail != nil && c.weight > c.budget {
+		values = append(values, c.removeLocked(c.tail))
+		c.evictions++
+	}
+	handler := c.onEvict
+	c.mutex.Unlock()
+	for _, value := range values {
+		if handler != nil {
+			handler(value)
+		}
+	}
+	return nil
+}
+
+// Diagnostics returns counters and current capacity without exposing entries.
+func (c *Cache) Diagnostics() Stats {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return Stats{Entries: len(c.lookup), Weight: c.weight, Budget: c.budget, Hits: c.hits, Misses: c.misses, Evictions: c.evictions}
 }
 
 // Clear removes all cache entries
@@ -142,6 +235,7 @@ func (c *Cache) Clear() {
 	c.tail = nil
 	c.lookup = make(map[string]*cacheNode)
 	c.weight = 0
+	c.evictions += uint64(len(values))
 	handler := c.onEvict
 	c.mutex.Unlock()
 	for _, value := range values {
@@ -153,12 +247,29 @@ func (c *Cache) Clear() {
 
 // Remove deletes key and invokes the eviction handler for its value.
 func (c *Cache) Remove(key string) (interface{}, bool) {
+	return c.RemoveVersioned("", key)
+}
+
+// RemoveVersioned removes key from namespace regardless of generation.
+func (c *Cache) RemoveVersioned(namespace, key string) (interface{}, bool) {
+	key = versionedKey(namespace, key)
 	c.mutex.Lock()
 	node, found := c.lookup[key]
 	if !found {
 		c.mutex.Unlock()
 		return nil, false
 	}
+	value := c.removeLocked(node)
+	c.evictions++
+	handler := c.onEvict
+	c.mutex.Unlock()
+	if handler != nil {
+		handler(value)
+	}
+	return value, true
+}
+
+func (c *Cache) removeLocked(node *cacheNode) interface{} {
 	if node.prev != nil {
 		node.prev.next = node.next
 	} else {
@@ -169,12 +280,9 @@ func (c *Cache) Remove(key string) (interface{}, bool) {
 	} else {
 		c.tail = node.prev
 	}
-	delete(c.lookup, key)
+	delete(c.lookup, node.key)
 	c.weight -= node.weight
-	handler := c.onEvict
-	c.mutex.Unlock()
-	if handler != nil {
-		handler(node.value)
-	}
-	return node.value, true
+	return node.value
 }
+
+func versionedKey(namespace, key string) string { return namespace + "\x00" + key }

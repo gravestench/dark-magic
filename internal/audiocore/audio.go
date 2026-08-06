@@ -62,6 +62,28 @@ type Mixer struct {
 	buses   map[string]float32
 }
 
+// Diagnostics summarizes checked handles and queued owner-thread work.
+type Diagnostics struct {
+	Active, Pending, Slots int
+	BusVolumes             map[string]float32
+}
+
+// Diagnostics returns a defensive mixer snapshot for debugging and leak tests.
+func (m *Mixer) Diagnostics() Diagnostics {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := Diagnostics{Pending: len(m.pending), Slots: len(m.slots), BusVolumes: make(map[string]float32, len(m.buses))}
+	for _, entry := range m.slots {
+		if entry.active {
+			result.Active++
+		}
+	}
+	for bus, volume := range m.buses {
+		result.BusVolumes[bus] = volume
+	}
+	return result
+}
+
 // Play queues a decoded-by-backend sound asset.
 func (m *Mixer) Play(format string, data []byte) (SoundID, error) {
 	return m.PlayWithOptions(format, data, PlayOptions{Bus: "sfx", Volume: 1})

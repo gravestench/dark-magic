@@ -22,3 +22,11 @@ func (s *Service) CacheBudget() int {
 func (s *Service) FlushCache(newCache *cache.Cache) {
 	s.cache = newCache
 }
+
+// CacheDiagnostics exposes aggregate cache health without native payloads.
+func (s *Service) CacheDiagnostics() cache.Stats {
+	if s.cache == nil {
+		return cache.Stats{}
+	}
+	return s.cache.Diagnostics()
+}
