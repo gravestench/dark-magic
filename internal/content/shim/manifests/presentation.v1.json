@@ -29,7 +29,8 @@
   },
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",
-    "select": "data/global/sfx/cursor/select.wav"
+    "select": "data/global/sfx/cursor/select.wav",
+    "title_record": "ESOUND_MUSIC_DIABLO"
   },
   "cursor": {
     "sheet": "data/global/ui/CURSOR/ohand.DC6",

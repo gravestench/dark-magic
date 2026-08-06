@@ -38,6 +38,8 @@ return {
         self:configure_controls()
         self:configure_labels()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+        local ok, music = pcall(audio.play_record, manifest.sounds.title_record, 0)
+        if ok then self.music = music end
     end,
 
     configure_labels = function(self)
