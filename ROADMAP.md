@@ -15,7 +15,7 @@ their own legally obtained game data.
 - [x] Remove absolute local dependency replacements.
 - [x] Make `go test ./...` pass on Go 1.24.
 - [x] Add repeatable Make targets and CI.
-- [ ] Expand tests for configuration, file loading, records, and service startup.
+- [x] Expand tests for configuration, file loading, records, and service startup.
 
 ## M2: Stable engine core
 

@@ -179,3 +179,23 @@ func TestExistsWalkAndInvalidation(t *testing.T) {
 		t.Fatalf("change = %#v observed = %#v", change, observed)
 	}
 }
+
+func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
+	mods := t.TempDir()
+	if err := os.WriteFile(filepath.Join(mods, "boot.lua"), []byte("mod boot"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", mods)
+	t.Setenv("MPQ_DIRECTORY", "")
+	contentFS, err := FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"user-mods", "darkmagic"}) {
+		t.Fatalf("layers = %v", got)
+	}
+	data, err := fs.ReadFile(contentFS, "boot.lua")
+	if err != nil || string(data) != "mod boot" {
+		t.Fatalf("boot = %q, %v", data, err)
+	}
+}
