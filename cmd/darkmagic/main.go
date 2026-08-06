@@ -89,7 +89,7 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videocore.Unavailable{}, contentFS)); err != nil {
+	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videocore.FFplay{}, contentFS)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RecordsModule(records)); err != nil {

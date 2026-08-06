@@ -360,7 +360,10 @@ implementations. The remaining work is tracked explicitly below.
   BIKs sequence with explicit skip/failure policy, and the Cinematics selector
   drives the same contract. A strict BIK container parser now bounds dimensions,
   timing, frame indexes, packet sizes, and audio-track configuration before a
-  native decoder receives data. A native Bink 1 decoder/presenter remains.
+  native decoder receives data. An optional FFplay backend now provides real
+  Bink video/RDFT audio playback, lifecycle polling, skip/stop, and temporary
+  extraction cleanup while retaining failure-safe behavior when FFmpeg is not
+  installed. An embedded in-window decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.
