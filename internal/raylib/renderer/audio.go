@@ -21,7 +21,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	if s.audioBackend != nil {
 		return fmt.Errorf("renderer: audio mixer is already attached")
 	}
-	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]rl.Music), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
+	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]musicPlayback), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
 		mixer.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
@@ -37,7 +37,7 @@ type raylibAudioBackend struct {
 	mu     sync.Mutex
 	sounds map[audiocore.SoundID]rl.Sound
 	loops  map[audiocore.SoundID]bool
-	music  map[audiocore.SoundID]rl.Music
+	music  map[audiocore.SoundID]musicPlayback
 	pcm    map[audiocore.SoundID]*pcmPlayback
 }
 
@@ -48,6 +48,13 @@ type pcmPlayback struct {
 	queued   [][]int16
 	started  bool
 	stopping bool
+}
+
+// musicPlayback retains the encoded source bytes because raylib's streaming
+// decoder continues reading the memory passed to LoadMusicStreamFromMemory.
+type musicPlayback struct {
+	music rl.Music
+	data  []byte
 }
 
 const pcmBlockFrames = 1024
@@ -96,7 +103,7 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 			rl.SetMusicVolume(music, command.Volume)
 			rl.SetMusicPan(music, (command.Pan+1)/2)
 			rl.PlayMusicStream(music)
-			b.music[command.ID] = music
+			b.music[command.ID] = musicPlayback{music: music, data: command.Data}
 			return nil
 		}
 		wave := rl.LoadWaveFromMemory(command.Format, command.Data, int32(len(command.Data)))
@@ -109,8 +116,8 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		b.loops[command.ID] = command.Loop
 		return nil
 	case "pan":
-		if music, exists := b.music[command.ID]; exists {
-			rl.SetMusicPan(music, (command.Pan+1)/2)
+		if playback, exists := b.music[command.ID]; exists {
+			rl.SetMusicPan(playback.music, (command.Pan+1)/2)
 			return nil
 		}
 		sound, exists := b.sounds[command.ID]
@@ -120,8 +127,8 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		rl.SetSoundPan(sound, (command.Pan+1)/2)
 		return nil
 	case "volume":
-		if music, exists := b.music[command.ID]; exists {
-			rl.SetMusicVolume(music, command.Volume)
+		if playback, exists := b.music[command.ID]; exists {
+			rl.SetMusicVolume(playback.music, command.Volume)
 			return nil
 		}
 		sound, exists := b.sounds[command.ID]
@@ -142,9 +149,9 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 			playback.stopping = true
 			return nil
 		}
-		if music, exists := b.music[command.ID]; exists {
-			rl.StopMusicStream(music)
-			rl.UnloadMusicStream(music)
+		if playback, exists := b.music[command.ID]; exists {
+			rl.StopMusicStream(playback.music)
+			rl.UnloadMusicStream(playback.music)
 			delete(b.music, command.ID)
 			return nil
 		}
@@ -170,8 +177,8 @@ func (b *raylibAudioBackend) Update() {
 			rl.PlaySound(b.sounds[id])
 		}
 	}
-	for _, music := range b.music {
-		rl.UpdateMusicStream(music)
+	for _, playback := range b.music {
+		rl.UpdateMusicStream(playback.music)
 	}
 	for id, playback := range b.pcm {
 		if len(playback.queued) > 0 && rl.IsAudioStreamProcessed(playback.stream) {
@@ -208,9 +215,9 @@ func (b *raylibAudioBackend) Close() {
 		rl.UnloadAudioStream(playback.stream)
 		delete(b.pcm, id)
 	}
-	for id, music := range b.music {
-		rl.StopMusicStream(music)
-		rl.UnloadMusicStream(music)
+	for id, playback := range b.music {
+		rl.StopMusicStream(playback.music)
+		rl.UnloadMusicStream(playback.music)
 		delete(b.music, id)
 	}
 }
