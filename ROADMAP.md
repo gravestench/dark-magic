@@ -755,7 +755,10 @@ implementations. The remaining work is tracked explicitly below.
   at call sites while the old top-level import path is rejected. Scene and overlay
   stack ownership now lives at `internal/presentation/navigation` beside retained
   rendering and headless scene state; command, acceptance, and Lua callers moved
-  together and the former top-level path is guarded.
+  together and the former top-level path is guarded. Native-run screenshot capture
+  and CPU, heap, and scene profiling now live under `internal/dev`, alongside the
+  tools that inspect their artifacts; the client retains explicit opt-in wiring
+  and the former top-level paths are rejected.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

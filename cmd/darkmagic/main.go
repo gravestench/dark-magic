@@ -22,8 +22,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/hotreload"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/audio"
-	"github.com/gravestench/dark-magic/internal/capture"
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/dev/capture"
+	"github.com/gravestench/dark-magic/internal/dev/profiling"
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -37,7 +38,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/profiling"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )

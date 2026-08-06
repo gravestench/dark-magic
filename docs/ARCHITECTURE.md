@@ -64,8 +64,8 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
 | `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
 | `internal/app/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
-| `internal/profiling` | CPU/heap/scene profile capture | command | Application/run | Keep |
-| `internal/capture` | Screenshot fixture writing | command | Run | Keep |
+| `internal/dev/profiling` | CPU/heap/scene profile capture | command | Application/run | Keep under developer support |
+| `internal/dev/capture` | Screenshot fixture writing | command | Run | Keep under developer support |
 | `internal/platform/raylib/common` | Native adapter logging | raylib adapters | Application | Keep under platform |
 | `internal/platform/raylib/input` | Raylib input adapter | command, world | Application | Keep under platform |
 | `internal/platform/raylib/renderer` | Raylib renderer/audio owner thread | command, world | Application | Keep under platform |
