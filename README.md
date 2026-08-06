@@ -116,6 +116,21 @@ the raw profiles and reports the rendering error. `DARK_MAGIC_PROFILE_DIR`
 provides the same opt-in configuration for launchers that cannot pass flags.
 Profile output under `profiles/` is intentionally ignored by Git.
 
+Add `--profile-scenes title,main_menu,character_create` (or
+`DARK_MAGIC_PROFILE_SCENES`) to generate filtered CPU reports and retained-heap
+snapshots for individual scenes. Use `all` to capture every visited scene:
+
+```shell
+go run -tags ffmpeg ./cmd/darkmagic \
+  --profile-dir ./profiles/frontend-review \
+  --profile-scenes all
+```
+
+Scene artifacts are written beneath `scenes/<scene-id>/`. `cpu.pdf` combines
+all visits to that scene using pprof labels. Each visit gets a numbered
+`heap-NNN.pprof` and `heap-NNN.pdf` snapshot taken immediately before the
+scene's owned resources are released.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell

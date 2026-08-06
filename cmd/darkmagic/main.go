@@ -41,6 +41,7 @@ func main() {
 	runtime.LockOSThread()
 	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
 	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
+	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
 	flag.Parse()
 	var profile *profiling.Session
 	if *profileDirectory != "" {
@@ -50,6 +51,7 @@ func main() {
 			slog.Error("starting profiler", "error", err)
 			return
 		}
+		profile.ConfigureScenes(*profileScenes)
 		defer func() {
 			if err := profile.Stop(); err != nil {
 				slog.Error("finishing profiler", "error", err)
@@ -61,12 +63,12 @@ func main() {
 		slog.Error("constructing content filesystem", "error", err)
 		return
 	}
-	if err := run(contentFS); err != nil {
+	if err := run(contentFS, profile); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
 
-func run(contentFS *content.FS) error {
+func run(contentFS *content.FS, profile *profiling.Session) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
@@ -80,6 +82,9 @@ func run(contentFS *content.FS) error {
 	composer := &rendercore.Composer{}
 	mixer := &audiocore.Mixer{}
 	scenes := modruntime.NewScenes(scripts, navigation.New())
+	if profile != nil {
+		scenes.SetProfiler(profile)
+	}
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
 	saves := savecore.New()

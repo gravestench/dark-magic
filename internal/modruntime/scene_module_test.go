@@ -26,6 +26,8 @@ func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	}
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
+	profiler := &recordingSceneProfiler{}
+	scenes.SetProfiler(profiler)
 	var composer rendercore.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -89,6 +91,16 @@ return {
 	if calls != "create;enter;update;render;exit;destroy;" {
 		t.Fatalf("calls = %q", calls)
 	}
+	if !reflect.DeepEqual(profiler.scenes, []string{"world"}) {
+		t.Fatalf("profiled scenes = %v", profiler.scenes)
+	}
+}
+
+type recordingSceneProfiler struct{ scenes []string }
+
+func (p *recordingSceneProfiler) CaptureSceneHeap(scene string) error {
+	p.scenes = append(p.scenes, scene)
+	return nil
 }
 
 func TestLuaSceneReplacementDestroysPreviousComposition(t *testing.T) {

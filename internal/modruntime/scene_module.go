@@ -3,6 +3,7 @@ package modruntime
 import (
 	"context"
 	"fmt"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -20,9 +21,14 @@ type Scenes struct {
 	runtime *Runtime
 	manager *navigation.Manager
 
-	mu      sync.Mutex
-	pending []navigationRequest
+	mu       sync.Mutex
+	pending  []navigationRequest
+	profiler SceneProfiler
 }
+
+type SceneProfiler interface{ CaptureSceneHeap(string) error }
+
+func (s *Scenes) SetProfiler(profiler SceneProfiler) { s.profiler = profiler }
 
 // NewScenes constructs a Lua scene controller.
 func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
@@ -96,7 +102,7 @@ func (s *Scenes) luaRegister(state *lua.LState) int {
 		return 0
 	}
 	if err := s.manager.Register(id, func(context.Context) (navigation.Scene, error) {
-		return &luaScene{runtime: s.runtime, definition: definition, scope: &Scope{}}, nil
+		return &luaScene{id: id, runtime: s.runtime, definition: definition, scope: &Scope{}, profiler: s.profiler}, nil
 	}); err != nil {
 		state.RaiseError("registering scene %q: %v", id, err)
 		return 0
@@ -156,9 +162,11 @@ func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, err
 }
 
 type luaScene struct {
+	id         string
 	runtime    *Runtime
 	definition luaSceneDefinition
 	scope      *Scope
+	profiler   SceneProfiler
 }
 
 func (s *luaScene) Create(ctx context.Context) error { return s.call(ctx, s.definition.create) }
@@ -174,21 +182,33 @@ func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, foc
 	if s.definition.update == nil {
 		return nil
 	}
-	return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-		return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
+	var result error
+	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
+		result = s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
+			return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
+		})
 	})
+	return result
 }
 func (s *luaScene) Destroy(ctx context.Context) error {
-	return errorsJoin(s.call(ctx, s.definition.destroy), s.scope.Close())
+	err := s.call(ctx, s.definition.destroy)
+	if s.profiler != nil {
+		err = errorsJoin(err, s.profiler.CaptureSceneHeap(s.id))
+	}
+	return errorsJoin(err, s.scope.Close())
 }
 
 func (s *luaScene) call(ctx context.Context, function *lua.LFunction) error {
 	if function == nil {
 		return nil
 	}
-	return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-		return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.definition.table)
+	var result error
+	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
+		result = s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
+			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.definition.table)
+		})
 	})
+	return result
 }
 
 func errorsJoin(errs ...error) error {
