@@ -492,7 +492,11 @@ implementations. The remaining work is tracked explicitly below.
   help, chat, pause, and escape panels from verified assets and records. The
   inventory placeholder is now replaced by the four authored expansion panel
   quadrants, a real close control, ten equipment focus regions, and all 40 item
-  cells; item instances and transfers remain part of M19.
+  cells. The character-sheet placeholder is likewise replaced by the authored
+  left-panel quadrants, real close control, localized labels, and an immutable
+  engine-owned stat snapshot for progression, attributes, defense, life, mana,
+  and stamina. Derived combat and resistance values remain part of M21; item
+  instances and transfers remain part of M19.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
   related records; keep only presentation corrections in shim manifests. The
   selected class's expansion Inventory.txt row now owns inventory grid and

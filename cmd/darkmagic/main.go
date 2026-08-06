@@ -108,7 +108,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	records := recordstore.New(contentFS)
 	fixtureEntries := developmentCharacters(fixtureCharacters)
 	saves := savecore.New(fixtureEntries...)
-	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory") {
+	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {
 		if err := saves.Select(fixtureEntries[0].ID); err != nil {
 			return fmt.Errorf("select development fixture: %w", err)
 		}
@@ -330,6 +330,12 @@ func developmentCharacters(count int) []savecore.Character {
 			Level:     index + 1,
 			Expansion: true,
 			Hardcore:  index%3 == 2,
+			Stats: &savecore.Stats{
+				Experience: 1200, NextLevelExperience: 2250,
+				Strength: 25, Dexterity: 20, Vitality: 25, Energy: 15,
+				Defense: 42, Health: 70, MaxHealth: 70, Mana: 30, MaxMana: 30,
+				Stamina: 84, MaxStamina: 84,
+			},
 		})
 	}
 	return result

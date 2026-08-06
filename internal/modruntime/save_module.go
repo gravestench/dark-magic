@@ -17,6 +17,24 @@ func SaveModule(store *savecore.Store) Module {
 			entry.RawSetString("level", lua.LNumber(character.Level))
 			entry.RawSetString("expansion", lua.LBool(character.Expansion))
 			entry.RawSetString("hardcore", lua.LBool(character.Hardcore))
+			if character.Stats != nil {
+				stats := state.NewTable()
+				values := map[string]int{
+					"experience": character.Stats.Experience, "next_level_experience": character.Stats.NextLevelExperience,
+					"strength": character.Stats.Strength, "dexterity": character.Stats.Dexterity,
+					"vitality": character.Stats.Vitality, "energy": character.Stats.Energy,
+					"defense": character.Stats.Defense, "health": character.Stats.Health,
+					"max_health": character.Stats.MaxHealth, "mana": character.Stats.Mana,
+					"max_mana": character.Stats.MaxMana, "stamina": character.Stats.Stamina,
+					"max_stamina": character.Stats.MaxStamina, "fire_resistance": character.Stats.FireResistance,
+					"cold_resistance": character.Stats.ColdResistance, "lightning_resistance": character.Stats.LightningResistance,
+					"poison_resistance": character.Stats.PoisonResistance,
+				}
+				for name, value := range values {
+					stats.RawSetString(name, lua.LNumber(value))
+				}
+				entry.RawSetString("stats", stats)
+			}
 			if character.Appearance != nil {
 				appearance := state.NewTable()
 				appearance.RawSetString("cof", lua.LString(character.Appearance.COF))

@@ -21,6 +21,19 @@ type Character struct {
 	Expansion  bool
 	Hardcore   bool
 	Appearance *Appearance
+	Stats      *Stats
+}
+
+// Stats is an immutable character-sheet snapshot. Authoritative simulation and
+// save importers replace it as values change; Lua receives copies for display.
+type Stats struct {
+	Experience, NextLevelExperience       int
+	Strength, Dexterity, Vitality, Energy int
+	Defense                               int
+	Health, MaxHealth, Mana, MaxMana      int
+	Stamina, MaxStamina                   int
+	FireResistance, ColdResistance        int
+	LightningResistance, PoisonResistance int
 }
 
 // Appearance is an immutable rendering snapshot decoded from a character save.
@@ -186,6 +199,10 @@ func (s *Store) Selected() (Character, bool) {
 }
 
 func cloneCharacter(character Character) Character {
+	if character.Stats != nil {
+		stats := *character.Stats
+		character.Stats = &stats
+	}
 	if character.Appearance == nil {
 		return character
 	}

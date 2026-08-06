@@ -76,6 +76,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		"game_loading",
 		"game_world",
 		"inventory",
+		"character",
 		"credits",
 	} {
 		if len(manifest.Screens[screen]) == 0 {

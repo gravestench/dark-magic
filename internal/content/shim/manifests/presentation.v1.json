@@ -39,6 +39,11 @@
       "sheet": "data/local/FONT/latin/font16.dc6",
       "palette": "units"
     },
+    "font6": {
+      "table": "data/local/FONT/latin/font6.tbl",
+      "sheet": "data/local/FONT/latin/font6.dc6",
+      "palette": "units"
+    },
     "font30": {
       "table": "data/local/FONT/latin/font30.tbl",
       "sheet": "data/local/FONT/latin/font30.dc6",
@@ -304,6 +309,30 @@
         {"id":"belt","prefix":"belt","label":"darkmagic.inventory.slot.belt"},
         {"id":"feet","prefix":"feet","label":"darkmagic.inventory.slot.feet"},
         {"id":"gloves","prefix":"gloves","label":"darkmagic.inventory.slot.gloves"}
+      ]
+    },
+    "character": {
+      "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","x":80,"y":64,"frames":[0,1,3,2]},
+      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":208,"y":453,"width":32,"height":32,"label":"darkmagic.character_panel.close"},
+      "heading_font":"font16",
+      "label_font":"font6",
+      "value_font":"font16",
+      "headings":[
+        {"field":"name","x":165,"y":72},
+        {"field":"class","x":330,"y":74}
+      ],
+      "values":[
+        {"field":"level","label":"darkmagic.character_panel.level","label_x":110,"label_y":100,"x":112,"y":110},
+        {"field":"experience","label":"darkmagic.character_panel.experience","label_x":200,"label_y":100,"x":200,"y":110},
+        {"field":"next_level_experience","label":"darkmagic.character_panel.next_level","label_x":330,"label_y":100,"x":330,"y":110},
+        {"field":"strength","label":"darkmagic.character_panel.strength","label_x":100,"label_y":150,"x":175,"y":147},
+        {"field":"dexterity","label":"darkmagic.character_panel.dexterity","label_x":100,"label_y":213,"x":175,"y":207},
+        {"field":"vitality","label":"darkmagic.character_panel.vitality","label_x":95,"label_y":300,"x":175,"y":295},
+        {"field":"energy","label":"darkmagic.character_panel.energy","label_x":100,"label_y":360,"x":175,"y":355},
+        {"field":"defense","label":"darkmagic.character_panel.defense","label_x":280,"label_y":260,"x":350,"y":260},
+        {"field":"stamina_pair","label":"darkmagic.character_panel.stamina","label_x":280,"label_y":300,"x":350,"y":295},
+        {"field":"health_pair","label":"darkmagic.character_panel.life","label_x":280,"label_y":322,"x":350,"y":320},
+        {"field":"mana_pair","label":"darkmagic.character_panel.mana","label_x":280,"label_y":360,"x":350,"y":355}
       ]
     },
     "credits": {

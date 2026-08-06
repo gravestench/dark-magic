@@ -90,3 +90,25 @@ assert(c.appearance.components.TR=="torso.dcc")`
 		t.Fatal(err)
 	}
 }
+
+func TestSaveModuleExposesCharacterStats(t *testing.T) {
+	t.Parallel()
+
+	store := savecore.New(savecore.Character{
+		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
+		Stats: &savecore.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
+	})
+	runtime := New()
+	if err := runtime.RegisterModule(SaveModule(store)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	script := `local s=require("dm.save/v1").characters()[1].stats
+assert(s.strength==25 and s.health==70 and s.max_health==80 and s.fire_resistance==15)`
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}

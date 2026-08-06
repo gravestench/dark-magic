@@ -64,5 +64,17 @@
   "darkmagic.inventory.slot.left_hand": "LEFT RING",
   "darkmagic.inventory.slot.belt": "BELT",
   "darkmagic.inventory.slot.feet": "BOOTS",
-  "darkmagic.inventory.slot.gloves": "GLOVES"
+  "darkmagic.inventory.slot.gloves": "GLOVES",
+  "darkmagic.character_panel.close": "CLOSE CHARACTER PANEL",
+  "darkmagic.character_panel.level": "LEVEL",
+  "darkmagic.character_panel.experience": "EXPERIENCE",
+  "darkmagic.character_panel.next_level": "NEXT LEVEL",
+  "darkmagic.character_panel.strength": "STRENGTH",
+  "darkmagic.character_panel.dexterity": "DEXTERITY",
+  "darkmagic.character_panel.vitality": "VITALITY",
+  "darkmagic.character_panel.energy": "ENERGY",
+  "darkmagic.character_panel.defense": "DEFENSE",
+  "darkmagic.character_panel.stamina": "STAMINA",
+  "darkmagic.character_panel.life": "LIFE",
+  "darkmagic.character_panel.mana": "MANA"
 }

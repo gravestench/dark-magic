@@ -50,6 +50,20 @@ func TestCharacterAppearanceIsDefensivelyCopied(t *testing.T) {
 	}
 }
 
+func TestCharacterStatsAreDefensivelyCopied(t *testing.T) {
+	t.Parallel()
+
+	stats := &Stats{Strength: 25, Health: 70, MaxHealth: 70}
+	store := New(Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1, Stats: stats})
+	stats.Strength = 999
+	listed := store.Characters()
+	listed[0].Stats.Health = 0
+	got := store.Characters()[0].Stats
+	if got.Strength != 25 || got.Health != 70 {
+		t.Fatalf("stored stats = %#v", got)
+	}
+}
+
 func TestCreateValidatesCharacterIdentity(t *testing.T) {
 	store := New()
 	for _, character := range []Character{
