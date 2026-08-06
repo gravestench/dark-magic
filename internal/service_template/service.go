@@ -1,46 +1,40 @@
 package service_template
 
 import (
+	"context"
 	"log/slog"
-
-	"github.com/gravestench/servicemesh"
 )
 
+// Service is a deliberately small example of an explicitly constructed engine
+// component. Required dependencies belong in New; optional dependencies can be
+// expressed with functional options or narrow setter methods before Start.
 type Service struct {
 	logger *slog.Logger
-
-	// these should be the exported integration
-	// interface exported by other services
-	bar any
-	baz any
+	foo    FooDependency
+	run    bool
 }
 
-func (s *Service) Init(mesh servicemesh.Mesh) {
-	// This init method will be invoked by the servicemesh
-	// as soon as the dependency resolution has finished.
-	// If the service does not implement servicemesh.HasDependencies,
-	// then this method is invoked immediately.
+// FooDependency is the narrow contract this component needs from a peer.
+type FooDependency interface {
+	Foo()
 }
 
-func (s *Service) Name() string {
-	return "Template"
+func New(logger *slog.Logger, foo FooDependency) *Service {
+	return &Service{logger: logger, foo: foo}
 }
 
-func (s *Service) Ready() bool {
-	return true
+func (s *Service) Start(context.Context) error {
+	s.run = true
+	return nil
 }
 
-// the following methods are boilerplate, but they are used
-// by the servicemesh to enforce a standard logging format.
-
-func (s *Service) SetLogger(logger *slog.Logger) {
-	s.logger = logger
+func (s *Service) Stop(context.Context) error {
+	s.run = false
+	return nil
 }
 
-func (s *Service) Logger() *slog.Logger {
-	return s.logger
-}
-
-func (s *Service) Foo() {
-	// do stuff here
+func (s *Service) DoWork() {
+	if s.run && s.foo != nil {
+		s.foo.Foo()
+	}
 }

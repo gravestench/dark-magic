@@ -15,8 +15,10 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/gameScene"
@@ -58,6 +60,8 @@ func run(contentFS *content.FS) error {
 	mixer := &audiocore.Mixer{}
 	scenes := modruntime.NewScenes(scripts, navigation.New())
 	inputState := &inputcore.Store{}
+	records := recordstore.New(contentFS)
+	locale := localecore.New(contentFS, "English")
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
 	}
@@ -68,6 +72,12 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.RecordsModule(records)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.LocaleModule(locale)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RenderModuleWithAssets(scripts, composer, contentFS)); err != nil {

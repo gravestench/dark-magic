@@ -1,37 +1,11 @@
-# Template service
-The purpose of this [Service Mesh](https://github.com/gravestench/servicemesh) service is ...
+# Internal component template
 
+Construct required dependencies explicitly with `New`, implement
+`Start(context.Context)` and `Stop(context.Context)`, and register the result
+with `internal/host`. Keep dependency interfaces narrow and owned by the
+consumer.
 
-## Dependencies
-This service has dependencies on all other Diablo2 file-loader services:
-* [bar](.)
-* [baz](.)
-
-
-## Integration with other services
-This service integrates with the following services:
-* [buzz](.)
-* [quzz](.)
-
-* describe where the integration is optonal or not ...
-
-_______
-This service exports an integration interface `IsFoo` with an alias 
-`Dependencncy` which are intended to be used by other services for dependency
-resolution (see servicemesh.HasDependencies), and expose just the methods which 
-other services should use.
-```golang
-type Dependency = Foo
-
-type IsFoo interface {
-    Foo()
-}
-```
-
-## Lua service integration
-Describe how this service integrates with the lua service (this is just an example).
-
-You should show an example of the lua API usage:
-```lua
-data = assets.load("/data/global/ui/Loading/loadingscreen.dc6")
-```
+Lua access is not added to a component directly. Expose a versioned capability
+module through `internal/modruntime`, returning checked handles for native
+resources. A script component owns all callbacks, handles, subscriptions, and
+render nodes through its runtime scope.

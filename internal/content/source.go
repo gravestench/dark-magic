@@ -5,10 +5,31 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gravestench/mpq"
 )
+
+// OpenSource opens a directory, MPQ, or ZIP path using the normalized content
+// filesystem contract.
+func OpenSource(fileName string) (fs.FS, error) {
+	info, err := os.Stat(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("content: inspect source %q: %w", fileName, err)
+	}
+	if info.IsDir() {
+		return Directory(fileName), nil
+	}
+	switch strings.ToLower(filepath.Ext(fileName)) {
+	case ".mpq":
+		return MPQ(fileName)
+	case ".zip":
+		return ZIP(fileName)
+	default:
+		return nil, fmt.Errorf("content: unsupported source %q", fileName)
+	}
+}
 
 // Directory opens root as a content filesystem.
 func Directory(root string) fs.FS {

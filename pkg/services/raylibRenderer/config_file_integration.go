@@ -2,18 +2,10 @@ package raylibRenderer
 
 import (
 	"encoding/json"
-	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/pkg/cache"
-	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
-
-var _ configManager.HasConfiguration = &Service{}
-
-func (s *Service) ConfigFileName() string {
-	return "raylib_renderer.json"
-}
 
 type Config struct {
 	Window struct {
@@ -61,17 +53,4 @@ func (s *Service) Configure(config Config) {
 		}
 	})
 	s.FlushCache(textureCache)
-}
-
-func (s *Service) IngestConfig(config *configManager.ConfigHandle) error {
-	data, err := config.Data()
-	if err != nil {
-		return fmt.Errorf("getting config data: %v", err)
-	}
-
-	if err = json.Unmarshal(data, &s.config); err != nil {
-		return fmt.Errorf("unmarshalling config: %v", err)
-	}
-
-	return nil
 }

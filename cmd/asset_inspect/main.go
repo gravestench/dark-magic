@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
-	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 )
 
 func main() {
@@ -27,8 +27,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	source := fileLoader.NewSource(*sourcePath)
-	filesystem, err := source.Filesystem()
+	filesystem, err := content.OpenSource(*sourcePath)
 	if err != nil {
 		fatal(err)
 	}

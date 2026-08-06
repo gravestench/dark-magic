@@ -5,23 +5,14 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
-	"github.com/gravestench/servicemesh"
 
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/pkg/services/cacheManager"
-	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
 // these are static declarations that force a
 // compile-time error if the service does not
 // implement them.
-var (
-	_ servicemesh.Service            = &Service{} // implement in`service.go`
-	_ servicemesh.HasLogger          = &Service{} // implement in`service.go`
-	_ configManager.HasConfiguration = &Service{} // implement in`lua_integration.go`
-	_ cacheManager.HasCache          = &Service{} // implement in`lua_integration.go`
-	_ IsRenderer                     = &Service{} // implement in`service.go`
-)
+var _ IsRenderer = &Service{}
 
 // this is an alias which can be used to make
 // the dependency resolution methods of other

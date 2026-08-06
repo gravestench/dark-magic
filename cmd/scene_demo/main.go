@@ -8,9 +8,9 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
+	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
 	"github.com/gravestench/dark-magic/pkg/scene"
-	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 )
 
 const (
@@ -34,7 +34,7 @@ func main() {
 		if *sourcePath == "" || *mapPath == "" {
 			fatal("both -source and -map are required")
 		}
-		filesystem, err := fileLoader.NewSource(*sourcePath).Filesystem()
+		filesystem, err := content.OpenSource(*sourcePath)
 		if err != nil {
 			fatal(err.Error())
 		}

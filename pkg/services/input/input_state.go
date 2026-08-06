@@ -56,76 +56,30 @@ func cloneStates(states map[int32]InputState) map[int32]InputState {
 
 func (s *Service) updateKeyboardState() {
 	s.mux.Lock()
-	var shouldEmitEvent bool
-	var pressed []int32
-
 	for _, key := range s.normalKeyCodes() {
-		beforeChange := s.keyStates[key]
 		s.keyStates[key] = currentKeyState(key)
-
-		if beforeChange != s.keyStates[key] {
-			shouldEmitEvent = true
-		}
-		if s.keyStates[key] == StatePressed {
-			pressed = append(pressed, key)
-		}
-	}
-	var snapshot map[int32]InputState
-	if shouldEmitEvent && s.mesh != nil {
-		snapshot = cloneStates(s.keyStates)
 	}
 	s.mux.Unlock()
-	if shouldEmitEvent && s.mesh != nil {
-		s.mesh.Events().Emit("KeyboardKeyStateChange", snapshot)
-	}
-	for _, key := range pressed {
-		s.dispatchKeyPressed(key)
-	}
 }
 
 func (s *Service) updateKeyboardModifierState() {
 	s.mux.Lock()
-	var shouldEmitEvent bool
-
 	for _, key := range s.modifierKeyCodes() {
-		beforeChange := s.keyModStates[key]
-
 		s.keyModStates[key] = currentKeyState(key)
-
-		if beforeChange != s.keyModStates[key] {
-			shouldEmitEvent = true
-		}
-	}
-	var snapshot map[int32]InputState
-	if shouldEmitEvent {
-		snapshot = cloneStates(s.keyModStates)
 	}
 	s.mux.Unlock()
-	if shouldEmitEvent {
-		s.mesh.Events().Emit("KeyboardModKeyStateChange", snapshot)
-	}
 }
 
 func (s *Service) updateMouseCursorState() {
 	s.mux.Lock()
-	beforeX, beforeY := s.cursor.X, s.cursor.Y
-
 	p := rl.GetMousePosition()
 	s.cursor.X, s.cursor.Y = int(p.X), int(p.Y)
-	cursor := s.cursor
 	s.mux.Unlock()
-
-	if (beforeX != cursor.X || beforeY != cursor.Y) && s.mesh != nil {
-		s.mesh.Events().Emit("MouseCursorStateChange", cursor)
-	}
 }
 
 func (s *Service) updateMouseButtonState() {
 	s.mux.Lock()
-	var shouldEmitEvent bool
-
 	for _, key := range s.mouseButtonKeyCodess() {
-		beforeChange := s.mouseButtonStates[key]
 		s.mouseButtonStates[key] = StateUp
 
 		if rl.IsMouseButtonPressed(key) {
@@ -135,19 +89,8 @@ func (s *Service) updateMouseButtonState() {
 		} else if rl.IsMouseButtonDown(key) {
 			s.mouseButtonStates[key] = StateDown
 		}
-
-		if beforeChange != s.mouseButtonStates[key] {
-			shouldEmitEvent = true
-		}
-	}
-	var snapshot map[int32]InputState
-	if shouldEmitEvent && s.mesh != nil {
-		snapshot = cloneStates(s.mouseButtonStates)
 	}
 	s.mux.Unlock()
-	if shouldEmitEvent {
-		s.mesh.Events().Emit("MouseButtonStateChange", snapshot)
-	}
 }
 
 func currentKeyState(key int32) InputState {

@@ -211,9 +211,9 @@ their own legally obtained game data.
   sleeps with constructors, lifecycle results, or bounded waits at real async
   boundaries.
 - [x] Replace `LuaPlugin` discovery with explicit capability registration.
-- [ ] Update commands, tests, documentation, and the service template as each
+- [x] Update commands, tests, documentation, and the service template as each
   subsystem moves.
-- [ ] Remove the `servicemesh` dependency only after the main engine and utility
+- [x] Remove the `servicemesh` dependency only after the main engine and utility
   commands run entirely on the internal host.
 - [ ] Rename or reorganize `pkg/services` around stable engine capabilities,
   gameplay systems, and internal adapters instead of the old framework shape.

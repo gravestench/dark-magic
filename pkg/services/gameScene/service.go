@@ -15,17 +15,15 @@ import (
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/gravestench/servicemesh"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 
+	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
 	"github.com/gravestench/dark-magic/pkg/scene"
 	"github.com/gravestench/dark-magic/pkg/services/common"
-	"github.com/gravestench/dark-magic/pkg/services/fileLoader"
 	"github.com/gravestench/dark-magic/pkg/services/input"
-	"github.com/gravestench/dark-magic/pkg/services/locale"
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
@@ -76,29 +74,6 @@ func (s *Service) Ready() bool {
 }
 
 func (s *Service) DependenciesResolved() bool { return s.Ready() && s.renderer.IsInit() }
-
-func (s *Service) ResolveDependencies(services []servicemesh.Service) {
-	for _, service := range services {
-		switch candidate := service.(type) {
-		case raylibRenderer.Dependency:
-			s.renderer = candidate
-		case input.Dependency:
-			s.input = candidate
-		case fileLoader.Dependency:
-			if s.files == nil {
-				s.files = candidate.FromGroups()
-			}
-		case locale.Dependency:
-			if s.language == nil {
-				s.language = candidate
-			}
-		}
-	}
-}
-
-func (s *Service) Init(servicemesh.Mesh) {
-	_ = s.Start(context.Background())
-}
 
 // Start creates the compatibility world renderables after its explicit native
 // dependencies are ready.
@@ -163,8 +138,7 @@ func (s *Service) loadMapImage() (image.Image, error) {
 		if strings.Contains(s.Config.Source, "$MPQ_DIRECTORY") && os.Getenv("MPQ_DIRECTORY") == "" {
 			return nil, fmt.Errorf("MPQ_DIRECTORY is not configured")
 		}
-		candidate := fileLoader.NewSource(os.ExpandEnv(s.Config.Source))
-		filesystem, err := candidate.Filesystem()
+		filesystem, err := content.OpenSource(os.ExpandEnv(s.Config.Source))
 		if err != nil {
 			return nil, fmt.Errorf("opening scene source: %w", err)
 		}
