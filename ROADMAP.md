@@ -517,15 +517,24 @@ implementations. The remaining work is tracked explicitly below.
   origin correction remain in the presentation manifest.
 - [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
   transition, and debug layers coexist.
-- [ ] Add an in-game Lua console with command history, multiline editing,
-  source-aware errors, structured value inspection, and log output.
+- [ ] Add a shared shell with command history, multiline editing, source-aware
+  errors, structured value inspection, and log output. The renderer-independent
+  session core, persistent scoped Lua evaluator, and rich Charmbracelet v2
+  terminal adapter are complete; the Raylib presentation and log stream remain.
 - [ ] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never
-  executes code or invokes metamethods with side effects.
+  executes code or invokes metamethods with side effects. Keywords, locals,
+  modules, globals, and raw table members are implemented; safe userdata
+  descriptors remain.
 - [ ] Bind each console tab to an explicit Lua runtime and dedicated disposable
   resource scope; serialize evaluation through the runtime owner and clearly
-  display the selected runtime, scope, and capability set.
+  display the selected runtime, scope, and capability set. Sessions already own
+  the explicit runtime scope and the terminal header exposes target and policy;
+  graphical multi-tab presentation remains.
+- [ ] Expose this exact shell/session contract through the graphical client,
+  standalone game server, and realm targets. Headless targets use the shared
+  Charmbracelet TUI; the in-game console supplies only a different view adapter.
 - [ ] Gate mutation/debug capabilities by session policy: full local developer
   access when enabled, read-only inspection where appropriate, and no path from
   a realm-connected client to server-authoritative state or server-only APIs.

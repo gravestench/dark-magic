@@ -94,7 +94,8 @@ internal/app               host wiring and configuration
 internal/content           VFS, records, localization, authored shim
 internal/assets            decode, cache, inspection, cataloging
 internal/platform/raylib   renderer, input, audio/video native adapters
-internal/runtime/lua       Lua ownership, capabilities, scopes, console
+internal/runtime/lua       Lua ownership, capabilities, scopes
+internal/shell             shared sessions, Lua evaluator, terminal adapter
 internal/presentation      navigation, scenes, controls, transitions
 internal/game/data         typed Diablo records and validation
 internal/game/loot         deterministic item generation

@@ -76,6 +76,27 @@ func (r *Runtime) runScoped(ctx context.Context, scope *Scope, fn func(*lua.LSta
 	})
 }
 
+// RunScoped executes fn on the runtime owner with resources assigned to scope.
+// Interactive shells use a dedicated scope so reset and disconnect cannot leak
+// handles into scene or server lifetimes.
+func (r *Runtime) RunScoped(ctx context.Context, scope *Scope, fn func(*lua.LState) error) error {
+	if scope == nil {
+		return errors.New("modruntime: nil invocation scope")
+	}
+	return r.runScoped(ctx, scope, fn)
+}
+
+// ModuleNames returns the registered capability names without exposing loaders.
+func (r *Runtime) ModuleNames() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	names := make([]string, len(r.modules))
+	for index, module := range r.modules {
+		names[index] = module.Name
+	}
+	return names
+}
+
 func (r *Runtime) requireActiveScope() (*Scope, error) {
 	if r.activeScope == nil {
 		return nil, errors.New("modruntime: capability requires an active component scope")
