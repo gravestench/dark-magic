@@ -6,4 +6,5 @@ go.work
 go.work.sum
 dark-magic-scene.json
 asset-catalog/
+/profiles/
 /dist/*.zip

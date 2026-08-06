@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"image"
 	"log/slog"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/profiling"
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/recordstore"
@@ -38,6 +40,22 @@ func main() {
 	// main thread. Keep the entire renderer lifecycle on that thread.
 	runtime.LockOSThread()
 	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
+	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
+	flag.Parse()
+	var profile *profiling.Session
+	if *profileDirectory != "" {
+		var err error
+		profile, err = profiling.Start(*profileDirectory, true)
+		if err != nil {
+			slog.Error("starting profiler", "error", err)
+			return
+		}
+		defer func() {
+			if err := profile.Stop(); err != nil {
+				slog.Error("finishing profiler", "error", err)
+			}
+		}()
+	}
 	contentFS, err := content.FromEnvironment()
 	if err != nil {
 		slog.Error("constructing content filesystem", "error", err)

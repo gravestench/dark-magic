@@ -100,6 +100,22 @@ make test
 make test-race
 ```
 
+Capture CPU activity for the full client run and a live-heap snapshot at clean
+shutdown with:
+
+```shell
+MPQ_DIRECTORY=/path/to/diablo-ii \
+  go run -tags ffmpeg ./cmd/darkmagic --profile-dir ./profiles/menu-review
+```
+
+Exit the client normally after exercising the behavior of interest. The output
+directory contains `cpu.pprof`, `heap.pprof`, `cpu.pdf`, and `heap.pdf`. Raw
+profiles can also be opened interactively with `go tool pprof`. PDF generation
+requires Graphviz (`dot`) on `PATH`; if it is unavailable, Dark Magic preserves
+the raw profiles and reports the rendering error. `DARK_MAGIC_PROFILE_DIR`
+provides the same opt-in configuration for launchers that cannot pass flags.
+Profile output under `profiles/` is intentionally ignored by Git.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell
