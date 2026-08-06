@@ -48,4 +48,16 @@ function M.anchored_animation(node, path, palette, anchor_x, anchor_y, frames_pe
     return frames
 end
 
+function M.pause_animations(nodes)
+    for _, node in pairs(nodes) do
+        node:animation_pause()
+    end
+end
+
+function M.synchronize_animations(nodes, position)
+    for _, node in pairs(nodes) do
+        node:animation_seek(position)
+    end
+end
+
 return M

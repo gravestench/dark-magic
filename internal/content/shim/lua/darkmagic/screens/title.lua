@@ -38,10 +38,17 @@ return {
             animate(self.logo.black_right, logo.black_right)
             animate(self.logo.fire_left, logo.fire_left)
             animate(self.logo.fire_right, logo.fire_right)
+            self.logo_elapsed = 0
+            dc6.pause_animations(self.logo)
+            dc6.synchronize_animations(self.logo, 0)
         end
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
     update = function(self, elapsed)
+        if self.logo then
+            self.logo_elapsed = self.logo_elapsed + elapsed
+            dc6.synchronize_animations(self.logo, self.logo_elapsed)
+        end
         self.cursor:update()
         if input.pressed("skip") then
             if audio.exists(manifest.sounds.select) then audio.play(manifest.sounds.select) end

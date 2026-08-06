@@ -65,6 +65,9 @@ return {
         animate(self.logo.black_right, logo.black_right)
         animate(self.logo.fire_left, logo.fire_left)
         animate(self.logo.fire_right, logo.fire_right)
+        self.logo_elapsed = 0
+        dc6.pause_animations(self.logo)
+        dc6.synchronize_animations(self.logo, 0)
     end,
 
     configure_controls = function(self)
@@ -111,6 +114,10 @@ return {
     end,
 
     update = function(self, elapsed)
+        if self.logo then
+            self.logo_elapsed = self.logo_elapsed + elapsed
+            dc6.synchronize_animations(self.logo, self.logo_elapsed)
+        end
         if self.controls then self.controls:update() end
         if self.cursor then self.cursor:update() end
         if input.pressed("cancel") then scenes.replace("title") end
