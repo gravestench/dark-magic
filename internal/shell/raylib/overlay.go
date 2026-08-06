@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/presentation/easing"
 	"github.com/gravestench/dark-magic/internal/shell"
 	"golang.org/x/image/font/gofont/gomono"
 )
@@ -31,7 +33,19 @@ type Overlay struct {
 	finished    chan shell.Entry
 	font        rl.Font
 	fontLoaded  bool
+	progress    float64
+	animationAt time.Time
 }
+
+var (
+	elasticEntrance = (&easing.ElasticOutEaseProvider{}).New([]float64{1, 0.32})
+	smoothExit      = (&easing.CubicOutEaseProvider{}).New(nil)
+)
+
+const (
+	openDuration  = 650 * time.Millisecond
+	closeDuration = 280 * time.Millisecond
+)
 
 func New(session *shell.Session) *Overlay {
 	return &Overlay{session: session, history: len(session.History()), finished: make(chan shell.Entry, 1)}
@@ -77,15 +91,15 @@ func (o *Overlay) Handle(ctx context.Context, frame inputstate.Frame) bool {
 	default:
 	}
 	if frame.Actions["shell_toggle"].Pressed {
-		o.open = !o.open
+		o.setOpen(!o.open, time.Now())
 		o.resetCompletion()
 		return true
 	}
 	if !o.open {
-		return false
+		return o.progress > 0
 	}
 	if frame.Actions["cancel"].Pressed {
-		o.open = false
+		o.setOpen(false, time.Now())
 		return true
 	}
 	if frame.Actions["backspace"].Pressed {
@@ -120,22 +134,29 @@ func (o *Overlay) Handle(ctx context.Context, frame inputstate.Frame) bool {
 }
 
 func (o *Overlay) Draw(width, height int) {
-	if !o.open {
+	o.updateAnimation(time.Now())
+	if o.progress <= 0 {
 		return
 	}
 	panelHeight := int32(max(220, height*3/5))
-	rl.DrawRectangle(0, 0, int32(width), panelHeight, rl.NewColor(8, 7, 6, 238))
-	rl.DrawRectangleLinesEx(rl.NewRectangle(0, 0, float32(width), float32(panelHeight)), 2, rl.NewColor(176, 119, 38, 255))
+	positionProgress := smoothExit(o.progress)
+	if o.open {
+		positionProgress = elasticEntrance(o.progress)
+	}
+	offsetY := int32(-float64(panelHeight) * (1 - positionProgress))
+	opacity := o.progress
+	rl.DrawRectangle(0, offsetY, int32(width), panelHeight, fade(rl.NewColor(8, 7, 6, 238), opacity))
+	rl.DrawRectangleLinesEx(rl.NewRectangle(0, float32(offsetY), float32(width), float32(panelHeight)), 2, fade(rl.NewColor(176, 119, 38, 255), opacity))
 	policy := o.session.Policy()
 	mode := "read-only"
 	if policy.Mutable {
 		mode = "mutable"
 	}
-	o.drawText("DARK MAGIC LUA SHELL", 16, 12, 22, rl.NewColor(222, 163, 58, 255))
-	o.drawText(fmt.Sprintf("target %s | policy %s (%s)", o.session.Target(), policy.Name, mode), 16, 40, 16, rl.Gray)
+	o.drawText("DARK MAGIC LUA SHELL", 16, offsetY+12, 22, fade(rl.NewColor(222, 163, 58, 255), opacity))
+	o.drawText(fmt.Sprintf("target %s | policy %s (%s)", o.session.Target(), policy.Name, mode), 16, offsetY+40, 16, fade(rl.Gray, opacity))
 
-	transcriptTop := int32(68)
-	promptTop := panelHeight - 58
+	transcriptTop := offsetY + 68
+	promptTop := offsetY + panelHeight - 58
 	available := int((promptTop-transcriptTop)/lineHeight) - 1
 	lines := wrapTranscript(transcriptLines(o.session.Transcript()), max(12, (width-36)/11))
 	if len(lines) > available {
@@ -148,14 +169,42 @@ func (o *Overlay) Draw(width, height int) {
 		} else if line.result {
 			color = rl.NewColor(125, 211, 167, 255)
 		}
-		o.drawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, color)
+		o.drawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, fade(color, opacity))
 	}
 	status := ""
 	if o.busy {
 		status = " [evaluating]"
 	}
-	o.drawText("> "+o.input+status, 16, promptTop, fontSize, rl.RayWhite)
-	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, panelHeight-26, 14, rl.Gray)
+	o.drawText("> "+o.input+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
+	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+}
+
+func (o *Overlay) setOpen(open bool, now time.Time) {
+	o.updateAnimation(now)
+	o.open = open
+	o.animationAt = now
+}
+
+func (o *Overlay) updateAnimation(now time.Time) {
+	if o.animationAt.IsZero() {
+		o.animationAt = now
+		return
+	}
+	elapsed := now.Sub(o.animationAt)
+	o.animationAt = now
+	if elapsed <= 0 {
+		return
+	}
+	if o.open {
+		o.progress = min(1, o.progress+float64(elapsed)/float64(openDuration))
+	} else {
+		o.progress = max(0, o.progress-float64(elapsed)/float64(closeDuration))
+	}
+}
+
+func fade(color rl.Color, opacity float64) rl.Color {
+	color.A = uint8(float64(color.A) * max(0, min(1, opacity)))
+	return color
 }
 
 func (o *Overlay) drawText(text string, x, y int32, size float32, tint rl.Color) {

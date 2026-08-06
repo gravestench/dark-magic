@@ -70,3 +70,25 @@ func TestWrapTranscriptPreservesStyleAndUnicode(t *testing.T) {
 		t.Fatalf("wrapped = %#v", lines)
 	}
 }
+
+func TestOverlayAnimatesAndCapturesThroughClose(t *testing.T) {
+	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
+	overlay := New(session)
+	started := time.Unix(100, 0)
+	overlay.setOpen(true, started)
+	overlay.updateAnimation(started.Add(openDuration / 2))
+	if overlay.progress != 0.5 {
+		t.Fatalf("opening progress = %v", overlay.progress)
+	}
+	overlay.setOpen(false, started.Add(openDuration/2))
+	if !overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{}}) {
+		t.Fatal("closing overlay released scene input before leaving the screen")
+	}
+	overlay.updateAnimation(started.Add(openDuration/2 + closeDuration))
+	if overlay.progress != 0 {
+		t.Fatalf("closing progress = %v", overlay.progress)
+	}
+	if overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{}}) {
+		t.Fatal("closed overlay still captures scene input")
+	}
+}
