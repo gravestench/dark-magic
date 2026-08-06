@@ -699,6 +699,13 @@ implementations. The remaining work is tracked explicitly below.
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical
   work have been audited.
+- [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
+  catalog. Preserve and verify every existing table struct and CSV tag, recover
+  useful loading, indexing, lookup, validation, hot-reload, and Lua exposure
+  behavior from the retired record-manager work, and replace its service wrappers
+  with explicit stores/catalogs owned by the application host. Generic row access
+  remains available for mods and unknown columns, but is not a substitute for the
+  typed records that drive simulation, rendering, audio, world generation, and UI.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
