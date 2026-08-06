@@ -10,5 +10,10 @@
   "darkmagic.menu.cinematics": "CINEMATICS",
   "darkmagic.menu.exit": "EXIT DIABLO II",
   "darkmagic.frontend.version": "Dark Magic %s",
-  "darkmagic.frontend.legal": "Requires a legally obtained Diablo II installation. Not affiliated with Blizzard Entertainment."
+  "darkmagic.frontend.legal": "Requires a legally obtained Diablo II installation. Not affiliated with Blizzard Entertainment.",
+  "darkmagic.tcpip.host": "HOST GAME",
+  "darkmagic.tcpip.join": "JOIN GAME",
+  "darkmagic.tcpip.address": "SERVER ADDRESS",
+  "darkmagic.dialog.ok": "OK",
+  "darkmagic.dialog.cancel": "CANCEL"
 }

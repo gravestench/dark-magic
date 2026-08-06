@@ -108,6 +108,32 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "tcpip")
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "down")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "tcpip")
+	publishAction(&input, "cancel")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "tcpip")
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
 	publishAction(&input, "cancel")
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)

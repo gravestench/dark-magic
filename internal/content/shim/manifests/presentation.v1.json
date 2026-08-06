@@ -99,7 +99,17 @@
         "fire_blend": "additive"
       }
     },
-    "tcpip": { "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky" },
+    "tcpip": {
+      "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky",
+      "controls": {
+        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "darkmagic.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3] },
+        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "darkmagic.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3] }
+      },
+      "dialog": {
+        "x": 270, "y": 175, "width": 260, "height": 180,
+        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
+      }
+    },
     "cinematics": { "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6", "palette": "sky" },
     "credits": { "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6", "palette": "sky" }
   }
