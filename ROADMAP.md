@@ -250,6 +250,17 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Add comparison fixtures that verify expected dimensions, frame counts,
   offsets, and hashes without distributing original asset bytes.
 
+### M15 execution checkpoints
+
+- [x] M15.1: Define a versioned presentation-manifest schema with provenance,
+  confidence, game version, language, resolution, palette, layout, and timing.
+- [x] M15.2: Load manifests through a read-only versioned Lua capability and
+  reject malformed or incompatible documents with actionable errors.
+- [ ] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
+  cinematic facts from compiled Go declarations into shim-owned manifests.
+- [ ] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
+  without storing proprietary decoded pixels.
+
 ## M16: MPQ-backed presentation primitives
 
 - [x] Decode DC6 assets with an explicit palette through managed render
@@ -270,6 +281,23 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Cache decoded CPU assets separately from renderer/audio resources and
   invalidate them by VFS generation without leaking owner-thread resources.
 
+### M16 execution checkpoints
+
+- [ ] M16.1: Make animation a renderer-owned resource with per-frame durations,
+  loop/once/ping-pong modes, pause/resume/seek, and deterministic clocks.
+  Renderer-owned frame sets, durations, and loop/once/ping-pong playback are
+  implemented; explicit clocks and playback controls remain.
+- [ ] M16.2: Add palette-aware DCC decoding and COF-driven component direction,
+  mode, weapon-class, layer, transform, shadow, and event composition.
+- [ ] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
+  layout with color, alignment, wrapping, clipping, and fallback behavior.
+- [ ] M16.4: Implement reusable Lua controls with pointer/controller focus,
+  hit-testing, state visuals, activation sounds, and accessibility metadata.
+- [ ] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
+  streaming, looping, fades, pan, grouping, and record-driven lookup.
+- [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
+  leak/race/rapid-scene-transition acceptance tests.
+
 ## M17: Authentic Lua-authored front end
 
 - [ ] Implement startup/trademark/cinematic sequencing from verified BIK and UI
@@ -287,6 +315,18 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement progressive loading screens driven by real dependency progress.
 - [ ] Add screenshot/composition tests for every state without checking Blizzard
   imagery into the repository.
+
+### M17 execution checkpoints
+
+- [ ] M17.1: Complete title/main-menu labels, controls, music, cursor, legal and
+  version text, dialogs, and single/multiplayer/credits/cinematics navigation.
+- [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
+  behavior.
+- [ ] M17.3: Implement all seven character-creation presentations and rules.
+- [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
+  previews, and activation.
+- [ ] M17.5: Implement dependency-driven loading and front-end composition tests
+  across supported resolution, language, and game-version variants.
 
 ## M18: Authentic in-game shell
 

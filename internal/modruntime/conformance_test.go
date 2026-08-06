@@ -29,13 +29,14 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	var composer rendercore.Composer
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
-		VFSModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source),
+		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localecore.New(source, "English")),
 		LootModule(source), SaveModule(savecore.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
 		"dm.vfs/v1": {"read", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor"},
+		"dm.data/v1":  {"load", "load_manifest"},
 		"dm.audio/v1": {"exists", "play"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.locale/v1": {"text"}, "dm.loot/v1": {"event_seed"}, "dm.save/v1": {"create"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create"},

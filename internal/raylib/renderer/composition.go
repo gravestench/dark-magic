@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"sync"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/internal/rendercore"
@@ -137,9 +138,66 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 				b.renderer.cache.Remove(node.UUID().String())
 			}
 			node.SetImage(decoded)
+			if resource.Kind == rendercore.ResourceAnimation {
+				if err := b.attachAnimation(node, resource); err != nil {
+					return err
+				}
+			} else {
+				node.OnUpdate(nil)
+			}
 			b.nodeResources[state.ID] = state.Resource
 		}
 	}
+	return nil
+}
+
+func (b *compositionBackend) attachAnimation(node Renderable, resource rendercore.Resource) error {
+	animation := resource.Payload.(rendercore.AnimationData)
+	frames := make([]image.Image, len(animation.Frames))
+	for index, id := range animation.Frames {
+		frame, exists := b.resources[id]
+		if !exists {
+			return fmt.Errorf("animation %v frame %d is unavailable", resource.ID, index)
+		}
+		frames[index] = frame.Payload.(image.Image)
+	}
+	index, direction := 0, 1
+	var elapsed time.Duration
+	node.OnUpdate(func() {
+		elapsed += time.Duration(float64(time.Second) * float64(rl.GetFrameTime()))
+		changed := false
+		for elapsed >= animation.Durations[index] {
+			elapsed -= animation.Durations[index]
+			switch animation.Loop {
+			case "once":
+				if index == len(frames)-1 {
+					elapsed = 0
+					return
+				}
+				index++
+				changed = true
+			case "ping-pong":
+				if len(frames) == 1 {
+					elapsed = 0
+					return
+				}
+				index += direction
+				if index == len(frames)-1 || index == 0 {
+					direction = -direction
+				}
+				changed = true
+			default:
+				index = (index + 1) % len(frames)
+				changed = true
+			}
+		}
+		if changed {
+			if b.renderer.cache != nil {
+				b.renderer.cache.Remove(node.UUID().String())
+			}
+			node.SetImage(frames[index])
+		}
+	})
 	return nil
 }
 

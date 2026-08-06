@@ -4,18 +4,18 @@ local M = {}
 
 -- Diablo II's 800x600 front-end backgrounds are stored as four columns by
 -- three rows. The final column/row are clipped to 32/88 pixels.
-function M.frontend_background(parent, layer, path, palette)
+function M.frontend_background(parent, layer, path, palette, layout)
     local nodes = {}
     if not render.assets_available() then return nodes end
-    local widths = { 256, 256, 256, 32 }
-    local heights = { 256, 256, 88 }
-    local frame = 0
+    local widths = layout.columns
+    local heights = layout.rows
+    local frame = layout.first_frame
     local y = 0
     for row = 1, #heights do
         local x = 0
         for column = 1, #widths do
             local node = render.create(layer, parent)
-            node:set_dc6(path, palette, 0, frame)
+            node:set_dc6(path, palette, layout.direction, frame)
             node:set_position(x + widths[column] / 2, y + heights[row] / 2)
             node:set_z(-100)
             nodes[#nodes + 1] = node

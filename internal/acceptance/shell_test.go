@@ -38,6 +38,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	for _, module := range []modruntime.Module{
 		modruntime.VFSModule(contentFS),
+		modruntime.DataModule(contentFS),
 		modruntime.InputModule(&input),
 		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.RenderModule(runtime, &composer),

@@ -11,6 +11,7 @@ import (
 	_ "image/png"
 	"io/fs"
 	"sync"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/assetdecode"
@@ -24,6 +25,7 @@ type ownedRenderNode struct {
 	composer *rendercore.Composer
 	id       rendercore.NodeID
 	resource rendercore.ResourceID
+	owned    []rendercore.ResourceID
 	assets   fs.FS
 	cache    *renderAssetCache
 	once     sync.Once
@@ -57,6 +59,10 @@ func (n *ownedRenderNode) release() error {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
 			n.resource = rendercore.ResourceID{}
 		}
+		for _, resource := range n.owned {
+			n.err = errors.Join(n.err, n.composer.DestroyResource(resource))
+		}
+		n.owned = nil
 	})
 	return n.err
 }
@@ -67,15 +73,60 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 		return err
 	}
 	previous := n.resource
+	previousOwned := n.owned
 	if err := n.composer.Update(n.id, func(current *rendercore.Node) { current.Resource = resource }); err != nil {
 		_ = n.composer.DestroyResource(resource)
 		return err
 	}
 	n.resource = resource
+	n.owned = nil
 	if previous != (rendercore.ResourceID{}) {
-		return n.composer.DestroyResource(previous)
+		err = n.composer.DestroyResource(previous)
 	}
-	return nil
+	for _, owned := range previousOwned {
+		err = errors.Join(err, n.composer.DestroyResource(owned))
+	}
+	return err
+}
+
+func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string) error {
+	textures := make([]rendercore.ResourceID, 0, len(frames))
+	cleanup := func() {
+		for _, texture := range textures {
+			_ = n.composer.DestroyResource(texture)
+		}
+	}
+	for _, frame := range frames {
+		texture, err := n.composer.CreateResource(rendercore.ResourceTexture, frame)
+		if err != nil {
+			cleanup()
+			return err
+		}
+		textures = append(textures, texture)
+	}
+	durations := make([]time.Duration, len(textures))
+	for index := range durations {
+		durations[index] = duration
+	}
+	animation, err := n.composer.CreateResource(rendercore.ResourceAnimation, rendercore.AnimationData{Frames: textures, Durations: durations, Loop: loop})
+	if err != nil {
+		cleanup()
+		return err
+	}
+	previous, previousOwned := n.resource, n.owned
+	if err := n.composer.Update(n.id, func(current *rendercore.Node) { current.Resource = animation }); err != nil {
+		_ = n.composer.DestroyResource(animation)
+		cleanup()
+		return err
+	}
+	n.resource, n.owned = animation, textures
+	if previous != (rendercore.ResourceID{}) {
+		err = n.composer.DestroyResource(previous)
+	}
+	for _, owned := range previousOwned {
+		err = errors.Join(err, n.composer.DestroyResource(owned))
+	}
+	return err
 }
 
 // RenderModule exposes backend-neutral retained composition to scoped Lua
@@ -244,6 +295,45 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(frame.OffsetX))
 			state.Push(lua.LNumber(frame.OffsetY))
 			return 4
+		},
+		"set_dc6_animation": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName := state.CheckString(2)
+			paletteName := state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			framesPerSecond := float64(state.OptNumber(5, 15))
+			loop := state.OptString(6, "loop")
+			if framesPerSecond <= 0 {
+				state.ArgError(5, "frames per second must be positive")
+				return 0
+			}
+			if loop != "loop" && loop != "once" && loop != "ping-pong" {
+				state.ArgError(6, "loop mode must be loop, once, or ping-pong")
+				return 0
+			}
+			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if direction < 0 || direction >= len(asset.Directions) {
+				state.ArgError(4, "direction is out of range")
+				return 0
+			}
+			frames := make([]image.Image, len(asset.Directions[direction].Frames))
+			for index, frame := range asset.Directions[direction].Frames {
+				frames[index] = frame.ToImageRGBA()
+			}
+			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
+				state.RaiseError("updating render animation: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(len(frames)))
+			return 1
 		},
 		"fill_rect": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

@@ -1,0 +1,44 @@
+{
+  "schema": "darkmagic.presentation/v1",
+  "version": 1,
+  "game_version": "diablo-ii-lod",
+  "language": "neutral",
+  "resolution": { "width": 800, "height": 600 },
+  "provenance": "community research verified against user-supplied archives",
+  "confidence": "verified",
+  "palettes": {
+    "sky": "data/global/Palette/sky/pal.dat",
+    "units": "data/global/Palette/units/pal.dat",
+    "loading": "data/global/Palette/loading/pal.dat",
+    "fechar": "data/global/Palette/fechar/pal.dat"
+  },
+  "layouts": {
+    "frontend_tiles": {
+      "columns": [256, 256, 256, 32],
+      "rows": [256, 256, 88],
+      "direction": 0,
+      "first_frame": 0
+    }
+  },
+  "screens": {
+    "title": {
+      "background": "data/global/ui/FrontEnd/TitleScreen.dc6",
+      "palette": "sky"
+    },
+    "main_menu": {
+      "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
+      "palette": "sky",
+      "logo": {
+        "anchor": { "x": 400, "y": 120 },
+        "frames": 30,
+        "frames_per_second": 15,
+        "palette": "units",
+        "black_left": "data/global/ui/FrontEnd/D2logoBlackLeft.DC6",
+        "black_right": "data/global/ui/FrontEnd/D2logoBlackRight.DC6",
+        "fire_left": "data/global/ui/FrontEnd/D2logoFireLeft.DC6",
+        "fire_right": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
+        "fire_blend": "additive"
+      }
+    }
+  }
+}

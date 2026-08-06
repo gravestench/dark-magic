@@ -65,6 +65,7 @@ type FontData struct {
 type AnimationData struct {
 	Frames    []ResourceID
 	Durations []time.Duration
+	Loop      string
 }
 
 // RenderTargetData describes a renderer-owned offscreen target.
@@ -170,6 +171,9 @@ func (c *Composer) validateResource(kind ResourceKind, payload any) error {
 		animation, ok := payload.(AnimationData)
 		if !ok || len(animation.Frames) == 0 || len(animation.Frames) != len(animation.Durations) {
 			return fmt.Errorf("rendercore: invalid animation payload %T", payload)
+		}
+		if animation.Loop != "" && animation.Loop != "loop" && animation.Loop != "once" && animation.Loop != "ping-pong" {
+			return fmt.Errorf("rendercore: invalid animation loop mode %q", animation.Loop)
 		}
 		for index, frame := range animation.Frames {
 			resource, err := c.resource(frame)

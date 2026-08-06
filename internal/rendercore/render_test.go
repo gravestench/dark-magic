@@ -67,6 +67,30 @@ func TestManagedResourcePayloadValidation(t *testing.T) {
 	}
 }
 
+func TestAnimationLoopModeValidation(t *testing.T) {
+	var composer Composer
+	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 1, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"", "loop", "once", "ping-pong"} {
+		animation, err := composer.CreateResource(ResourceAnimation, AnimationData{
+			Frames: []ResourceID{texture}, Durations: []time.Duration{time.Millisecond}, Loop: mode,
+		})
+		if err != nil {
+			t.Fatalf("mode %q: %v", mode, err)
+		}
+		if err := composer.DestroyResource(animation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := composer.CreateResource(ResourceAnimation, AnimationData{
+		Frames: []ResourceID{texture}, Durations: []time.Duration{time.Millisecond}, Loop: "random",
+	}); err == nil {
+		t.Fatal("accepted unsupported loop mode")
+	}
+}
+
 type recordingBackend struct {
 	changes []Change
 	fail    error

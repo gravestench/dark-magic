@@ -73,6 +73,9 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
 		return err
 	}
+	if err := scripts.RegisterModule(modruntime.DataModule(contentFS)); err != nil {
+		return err
+	}
 	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
 		return err
 	}
