@@ -93,6 +93,13 @@ type Change struct {
 	Generation uint64
 }
 
+// Generation returns the latest invalidation generation.
+func (f *FS) Generation() uint64 {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.generation
+}
+
 // New constructs a layered filesystem. Earlier layers override later layers.
 func New(layers ...Layer) (*FS, error) {
 	result := &FS{subscribers: make(map[uint64]chan Change)}

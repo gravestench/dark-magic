@@ -309,9 +309,10 @@ implementations. The remaining work is tracked explicitly below.
   The shared weighted LRU now supports generation namespaces, stale-entry
   invalidation, live budget enforcement, eviction callbacks, and hit/miss/weight
   diagnostics. Renderer/audio handle diagnostics and a race-tested 50-cycle
-  scene/overlay transition check detect leaked resources; wiring decoded CPU
-  asset caches to VFS generations and exposing consolidated runtime diagnostics
-  remain.
+  scene/overlay transition check detect leaked resources. Render decoding caches
+  now discard DC6, DCC, COF, and font entries on VFS generation changes; applying
+  weighted budgets to those decoded CPU objects and exposing consolidated runtime
+  diagnostics remain.
 
 ## M17: Authentic Lua-authored front end
 

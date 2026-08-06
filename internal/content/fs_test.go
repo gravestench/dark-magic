@@ -178,6 +178,9 @@ func TestExistsWalkAndInvalidation(t *testing.T) {
 	if observed := <-changes; observed != change || observed.Generation != 1 || observed.Path != "components/a.lua" {
 		t.Fatalf("change = %#v observed = %#v", change, observed)
 	}
+	if contentFS.Generation() != change.Generation {
+		t.Fatalf("generation = %d", contentFS.Generation())
+	}
 }
 
 func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {

@@ -35,17 +35,33 @@ type ownedRenderNode struct {
 }
 
 type renderAssetCache struct {
-	mu   sync.Mutex
-	dc6  map[string]*dc6.DC6
-	dcc  map[string]*dcc.DCC
-	cof  map[string]*cof.COF
-	font map[string]*assetdecode.BitmapFont
+	mu         sync.Mutex
+	generation uint64
+	dc6        map[string]*dc6.DC6
+	dcc        map[string]*dcc.DCC
+	cof        map[string]*cof.COF
+	font       map[string]*assetdecode.BitmapFont
+}
+
+type generationSource interface{ Generation() uint64 }
+
+func (c *renderAssetCache) refresh(assets fs.FS) {
+	source, ok := assets.(generationSource)
+	if !ok || source.Generation() == c.generation {
+		return
+	}
+	c.generation = source.Generation()
+	c.dc6 = make(map[string]*dc6.DC6)
+	c.dcc = make(map[string]*dcc.DCC)
+	c.cof = make(map[string]*cof.COF)
+	c.font = make(map[string]*assetdecode.BitmapFont)
 }
 
 func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) (*assetdecode.BitmapFont, error) {
 	key := table + "\x00" + sheet + "\x00" + palette
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.refresh(assets)
 	if font := c.font[key]; font != nil {
 		return font, nil
 	}
@@ -60,6 +76,7 @@ func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) 
 func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.refresh(assets)
 	if asset := c.cof[name]; asset != nil {
 		return asset, nil
 	}
@@ -75,6 +92,7 @@ func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC
 	key := name + "\x00" + palette
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.refresh(assets)
 	if asset := c.dcc[key]; asset != nil {
 		return asset, nil
 	}
@@ -90,6 +108,7 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 	key := name + "\x00" + palette
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.refresh(assets)
 	if asset := c.dc6[key]; asset != nil {
 		return asset, nil
 	}
