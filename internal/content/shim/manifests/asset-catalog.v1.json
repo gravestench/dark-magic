@@ -1,0 +1,914 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "main-game-select-exp",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion game-select background",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "main-title-screen",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/TitleScreen.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "title background candidate",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "main-trademark-exp",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/trademarkscreenEXP.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion trademark screen",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "main-logo-black-left",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/D2logoBlackLeft.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "left opaque logo layer",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "main-logo-fire-left",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/D2logoFireLeft.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "left luminous animated logo layer",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "main-logo-black-right",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/D2logoBlackRight.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "right opaque logo layer",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "main-logo-fire-right",
+      "screen": "main-menu",
+      "path": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "right luminous animated logo layer",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "button-wide",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/WideButtonBlank.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "wide blank button states",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "button-3wide",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/3WideButtonBlank.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "three-wide blank button states",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "button-medium",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/MediumButtonBlank.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "medium blank button states",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "popup-ok-cancel",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/PopUpOKCancel.dc6",
+      "palette": "data/global/Palette/fechar/pal.dat",
+      "meaning": "confirmation popup",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-background-exp",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion character creation background",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-campfire",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/fire.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "character creation campfire",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "select-background-exp",
+      "screen": "character-select",
+      "path": "data/global/ui/CharSelect/characterselectscreenEXP.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion saved-character list background",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "select-box",
+      "screen": "character-select",
+      "path": "data/global/ui/CharSelect/charselectbox.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "saved-character selection highlight",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "loading-global",
+      "screen": "loading",
+      "path": "data/global/ui/Loading/loadingscreen.dc6",
+      "palette": "data/global/Palette/loading/pal.dat",
+      "meaning": "global loading progress frames",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "loading-local",
+      "screen": "loading",
+      "path": "data/local/ui/loadingscreen.dc6",
+      "palette": "data/global/Palette/loading/pal.dat",
+      "meaning": "local loading progress frames candidate",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "hud-control-panel",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/800ctrlpnl7.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "800x600 control panel pieces",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "hud-overlap",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/overlap.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "health and mana globe overlap",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "hud-health-mana",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/hlthmana.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "health and mana numeric indicator",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "hud-mini-buttons",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/minipanelbtn.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "mini-panel button state pairs",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-character",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/invchar6.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "character inventory panel",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-weapon-tabs",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/invchar6Tab.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "alternate weapon tabs",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-buy-sell-button",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/buysellbtn.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "inventory and vendor button states",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "quest-background",
+      "screen": "quest-log",
+      "path": "data/global/ui/MENU/questbackground.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "quest log panel pieces",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "quest-tabs-exp",
+      "screen": "quest-log",
+      "path": "data/global/ui/MENU/expquesttabs.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion quest tab states",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "quest-sockets",
+      "screen": "quest-log",
+      "path": "data/global/ui/MENU/questsockets.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "quest socket states",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "waypoint-background",
+      "screen": "waypoint",
+      "path": "data/global/ui/MENU/waygatebackground.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "waypoint panel background",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "waypoint-tabs-exp",
+      "screen": "waypoint",
+      "path": "data/global/ui/MENU/expwaygatetabs.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expansion waypoint tabs",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "waypoint-icons",
+      "screen": "waypoint",
+      "path": "data/global/ui/MENU/waygateicons.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "waypoint icons",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMNU1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMNU2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMNU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-forward-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMFWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon forward walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-amazon-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/amazon/AMBW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "amazon back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SONU1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SONU2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SONU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-selected-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SONU3s.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress selected overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SOFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-forward-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SOFWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress forward walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SOBW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-sorceress-back-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/sorceress/SOBWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "sorceress back walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NENU1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NENU2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NENU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-selected-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NENU3s.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer selected overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NEFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-forward-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NEFWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer forward walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NEBW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-necromancer-back-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/necromancer/NEBWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "necromancer back walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PANU1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PANU2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PANU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PAFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-forward-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PAFWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin forward walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-paladin-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/paladin/PABW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "paladin back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/banu1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/banu2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/banu3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/bafw.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-forward-overlay",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/BAFWs.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian forward walk overlay animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-barbarian-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/barbarian/babw.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "barbarian back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-assassin-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/assassin/ASNU1.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "assassin unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-assassin-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/assassin/ASNU2.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "assassin hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-assassin-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/assassin/ASNU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "assassin selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-assassin-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/assassin/ASFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "assassin forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-assassin-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/assassin/ASBW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "assassin back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-druid-unselected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/druid/DZNU1.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "druid unselected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-druid-hover",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/druid/DZNU2.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "druid hover animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-druid-selected",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/druid/DZNU3.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "druid selected animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-druid-forward",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/druid/DZFW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "druid forward walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "create-druid-back",
+      "screen": "character-create",
+      "path": "data/global/ui/FrontEnd/druid/DZBW.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "druid back walk animation",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "inventory-armor-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_armor.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "armor equipment placeholder",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-belt-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_belt.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "belt equipment placeholder",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-boots-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_boots.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "boots equipment placeholder",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-helm-glove-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_helm_glove.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "helm and glove equipment placeholders",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-ring-amulet-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_ring_amulet.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "ring and amulet equipment placeholders",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "inventory-weapons-slot",
+      "screen": "inventory",
+      "path": "data/global/ui/PANEL/inv_weapons.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "weapon equipment placeholders",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "records-inventory",
+      "screen": "inventory",
+      "path": "data/global/excel/Inventory.txt",
+      "meaning": "class inventory and equipment geometry",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "records-sounds",
+      "screen": "audio",
+      "path": "data/global/excel/Sounds.txt",
+      "meaning": "sound handles, files, groups, channels, and playback metadata",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "records-sound-environment",
+      "screen": "audio",
+      "path": "data/global/excel/SoundEnviron.txt",
+      "meaning": "area music, ambience, and environmental sound mapping",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "records-skill-description",
+      "screen": "skills",
+      "path": "data/global/excel/SkillDesc.txt",
+      "meaning": "skill icon cells and localized description keys",
+      "references": [
+        "OpenDiablo2",
+        "Community research"
+      ]
+    },
+    {
+      "id": "audio-title-introedit",
+      "screen": "main-menu",
+      "path": "data/global/music/introedit.wav",
+      "meaning": "title music candidate",
+      "references": [
+        "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "audio-title-diablo",
+      "screen": "main-menu",
+      "path": "data/global/music/Act4/diablo.wav",
+      "meaning": "title music candidate",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "audio-button",
+      "screen": "front-end-common",
+      "path": "data/global/sfx/cursor/button.wav",
+      "meaning": "button interaction sound",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "audio-select",
+      "screen": "front-end-common",
+      "path": "data/global/sfx/cursor/select.wav",
+      "meaning": "selection confirmation sound",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "video-blizzard",
+      "screen": "startup",
+      "path": "data/local/video/New_Bliz640x480.bik",
+      "meaning": "Blizzard startup video",
+      "references": [
+        "Community research"
+      ]
+    },
+    {
+      "id": "video-blizzard-north",
+      "screen": "startup",
+      "path": "data/local/video/BlizNorth640x480.bik",
+      "meaning": "Blizzard North startup video",
+      "references": [
+        "Community research"
+      ]
+    }
+  ]
+}

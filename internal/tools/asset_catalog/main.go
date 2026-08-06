@@ -132,10 +132,13 @@ func main() {
 }
 
 func loadManifest(name string) (assetcatalog.Manifest, error) {
+	var data []byte
+	var err error
 	if name == "" {
-		return assetcatalog.DefaultManifest(), nil
+		data, err = fs.ReadFile(content.Shim(), "manifests/asset-catalog.v1.json")
+	} else {
+		data, err = os.ReadFile(name)
 	}
-	data, err := os.ReadFile(name)
 	if err != nil {
 		return assetcatalog.Manifest{}, err
 	}

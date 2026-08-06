@@ -257,7 +257,9 @@ implementations. The remaining work is tracked explicitly below.
 - [x] M15.2: Load manifests through a read-only versioned Lua capability and
   reject malformed or incompatible documents with actionable errors.
 - [ ] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
-  cinematic facts from compiled Go declarations into shim-owned manifests.
+  cinematic facts from compiled Go declarations into shim-owned manifests. The
+  90-entry verified asset catalog now lives in the embedded shim instead of a
+  compiled Go declaration; remaining legacy path constants still need migration.
 - [ ] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
   without storing proprietary decoded pixels.
 
@@ -546,6 +548,19 @@ implementations. The remaining work is tracked explicitly below.
   compromising gapless looping, synchronization, or shutdown behavior.
 - [x] Add repeatable profiling acceptance runs and budgets for startup, title,
   main menu, character selection, character creation, and in-game scenes.
+
+## M26: Native frame-path profiling follow-up
+
+- [ ] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
+  layout is already compatible with raylib, retaining conversion for genuinely
+  incompatible color models and padded subimages.
+- [ ] Measure cinematic upload bandwidth and distinguish frame-update traffic
+  from resident GPU texture bytes in scene diagnostics and budgets.
+- [ ] Destroy scenes and drain final composition commands on the renderer owner
+  thread before native renderer shutdown; require zero pending commands afterward.
+- [ ] Repeat the interactive acceptance profile through `game_loading` and
+  `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
+  against the latest frontend-only baseline.
 
 ## Gameplay acceptance milestone
 
