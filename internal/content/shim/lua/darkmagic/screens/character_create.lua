@@ -1,0 +1,67 @@
+local render = require("dm.render/v1")
+local input = require("dm.input/v1")
+local scenes = require("dm.scene/v1")
+local saves = require("dm.save/v1")
+local data = require("dm.data/v1")
+local dc6 = require("darkmagic.ui.dc6")
+local controls = require("darkmagic.ui.controls")
+local cursor = require("darkmagic.ui.cursor")
+local dialog = require("darkmagic.ui.dialog")
+
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local screen = manifest.screens.character_create
+
+return {
+    create = function(self)
+        self.root = render.create("hud")
+        self.background = dc6.frontend_background(self.root, "hud", screen.background,
+            manifest.palettes[screen.palette], manifest.layouts.frontend_tiles)
+        self.controls = controls.new()
+        self.classes = {}
+        for _, definition in ipairs(screen.classes) do
+            local class = {definition=definition}
+            if render.assets_available() then
+                class.node = render.create("hud", self.root)
+                local function show(state)
+                    local path = definition[state]
+                    dc6.anchored_frame(class.node, path, manifest.palettes[definition.palette],
+                        definition.anchor.x, definition.anchor.y, 0)
+                end
+                class.show = show
+                show("unselected")
+            end
+            class.control = self.controls:add({
+                id=string.lower(definition.class), label=definition.class,
+                x=definition.hit.x, y=definition.hit.y, width=definition.hit.width, height=definition.hit.height,
+                on_state=function(_, state)
+                    if class.show then class.show((state == "hover" or state == "focused") and "hover" or "unselected") end
+                end,
+                on_activate=function()
+                    self.selected = class
+                    if class.show then class.show("selected") end
+                    self.dialog = dialog.text_entry(self.root, screen.dialog, manifest.fonts.exocet10,
+                        manifest.palettes[screen.dialog.palette], manifest.palettes[manifest.fonts.exocet10.palette],
+                        "Character name", "", function(name)
+                            local id, err = saves.create_named(name, definition.class)
+                            if not id then self.error = err return false end
+                            assert(saves.select(id))
+                            scenes.replace("game_world")
+                            return true
+                        end)
+                end,
+            })
+            self.classes[#self.classes + 1] = class
+        end
+        self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+    end,
+    update = function(self)
+        self.cursor:update()
+        if self.dialog and self.dialog.open then
+            self.dialog:update()
+            if input.pressed("cancel") then self.dialog:close() end
+            return
+        end
+        self.controls:update()
+        if input.pressed("cancel") then scenes.replace("main_menu") end
+    end,
+}

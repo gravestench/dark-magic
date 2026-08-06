@@ -13,11 +13,13 @@ function M.text_entry(parent, definition, font, popup_palette, font_palette, pro
         dialog.root:fill_rect(definition.width, definition.height, 20, 15, 10, 245)
     end
     local field = dialog.manager:add_text_field({
-        id="value", scope="dialog", label=prompt, value=initial or "", max_length=255,
+        id="value", scope="dialog", label=prompt, value=initial or "", max_length=definition.max_length or 255,
         x=definition.x + 20, y=definition.y + 70, width=definition.width - 40, height=30,
     })
     dialog.manager:add({id="ok", scope="dialog", label="OK", x=definition.x + 35,
-        y=definition.y + 125, width=80, height=30, on_activate=function() on_accept(field.value); dialog:close() end})
+        y=definition.y + 125, width=80, height=30, on_activate=function()
+            if on_accept(field.value) ~= false then dialog:close() end
+        end})
     dialog.manager:add({id="cancel", scope="dialog", label="Cancel", x=definition.x + 145,
         y=definition.y + 125, width=80, height=30, on_activate=function() dialog:close() end})
     dialog.manager:set_scope("dialog")

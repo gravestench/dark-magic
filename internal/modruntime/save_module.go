@@ -10,6 +10,16 @@ import (
 func SaveModule(store *savecore.Store) Module {
 	return Module{Name: "dm.save/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"create_named": func(state *lua.LState) int {
+				character, err := store.CreateNamed(state.CheckString(1), state.CheckString(2))
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				state.Push(lua.LString(character.ID))
+				return 1
+			},
 			"create": func(state *lua.LState) int {
 				err := store.Create(savecore.Character{ID: state.CheckString(1), Name: state.CheckString(2), Class: state.CheckString(3), Level: 1})
 				if err != nil {

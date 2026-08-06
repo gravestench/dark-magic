@@ -119,6 +119,23 @@
         "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
       }
     },
+    "character_create": {
+      "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
+      "palette": "sky",
+      "dialog": {
+        "x": 270, "y": 185, "width": 260, "height": 180, "max_length": 15,
+        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
+      },
+      "classes": [
+        {"class":"Amazon", "palette":"units", "anchor":{"x":96,"y":520}, "hit":{"x":35,"y":190,"width":125,"height":330}, "unselected":"data/global/ui/FrontEnd/amazon/AMNU1.DC6", "hover":"data/global/ui/FrontEnd/amazon/AMNU2.DC6", "selected":"data/global/ui/FrontEnd/amazon/AMNU3.DC6"},
+        {"class":"Sorceress", "palette":"units", "anchor":{"x":704,"y":520}, "hit":{"x":640,"y":190,"width":125,"height":330}, "unselected":"data/global/ui/FrontEnd/sorceress/SONU1.DC6", "hover":"data/global/ui/FrontEnd/sorceress/SONU2.DC6", "selected":"data/global/ui/FrontEnd/sorceress/SONU3.DC6"},
+        {"class":"Necromancer", "palette":"units", "anchor":{"x":250,"y":500}, "hit":{"x":180,"y":175,"width":125,"height":325}, "unselected":"data/global/ui/FrontEnd/necromancer/NENU1.DC6", "hover":"data/global/ui/FrontEnd/necromancer/NENU2.DC6", "selected":"data/global/ui/FrontEnd/necromancer/NENU3.DC6"},
+        {"class":"Paladin", "palette":"units", "anchor":{"x":550,"y":500}, "hit":{"x":495,"y":175,"width":125,"height":325}, "unselected":"data/global/ui/FrontEnd/paladin/PANU1.DC6", "hover":"data/global/ui/FrontEnd/paladin/PANU2.DC6", "selected":"data/global/ui/FrontEnd/paladin/PANU3.DC6"},
+        {"class":"Barbarian", "palette":"units", "anchor":{"x":400,"y":470}, "hit":{"x":335,"y":145,"width":130,"height":325}, "unselected":"data/global/ui/FrontEnd/barbarian/banu1.DC6", "hover":"data/global/ui/FrontEnd/barbarian/banu2.DC6", "selected":"data/global/ui/FrontEnd/barbarian/banu3.DC6"},
+        {"class":"Assassin", "palette":"units", "anchor":{"x":175,"y":550}, "hit":{"x":115,"y":245,"width":125,"height":305}, "unselected":"data/global/ui/FrontEnd/assassin/ASNU1.DC6", "hover":"data/global/ui/FrontEnd/assassin/ASNU2.DC6", "selected":"data/global/ui/FrontEnd/assassin/ASNU3.DC6"},
+        {"class":"Druid", "palette":"units", "anchor":{"x":625,"y":550}, "hit":{"x":565,"y":245,"width":125,"height":305}, "unselected":"data/global/ui/FrontEnd/druid/DZNU1.DC6", "hover":"data/global/ui/FrontEnd/druid/DZNU2.DC6", "selected":"data/global/ui/FrontEnd/druid/DZNU3.DC6"}
+      ]
+    },
     "cinematics": {
       "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6",
       "palette": "sky",

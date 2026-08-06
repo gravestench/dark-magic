@@ -368,6 +368,14 @@ implementations. The remaining work is tracked explicitly below.
   movies into the MPQ-backed title composition. An embedded in-window
   decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
+  The expansion creation screen now composes the verified tiled background and
+  all seven class unselected/hover/selected assets through manifest-owned hit
+  regions and anchors. Empty character lists enter creation instead of silently
+  fabricating a hero. A focus/pointer-driven name dialog requests engine-owned
+  save identities, while `savecore` canonicalizes the seven supported classes,
+  enforces the 2–15 character naming grammar, and rejects duplicate names.
+  Walk transitions, narration, flags, final calibrated geometry, and visual
+  composition coverage remain.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests

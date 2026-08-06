@@ -7,8 +7,8 @@ return {
     create = function(self)
         self.characters = saves.characters()
         if #self.characters == 0 then
-            assert(saves.create("new-amazon", "New Hero", "Amazon"))
-            self.characters = saves.characters()
+            scenes.replace("character_create")
+            return
         end
         self.root = render.create("hud")
         self.root:set_position(400, 300)
