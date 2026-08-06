@@ -49,29 +49,31 @@ return {
 
     configure_controls = function(self)
         self.controls = controls.new()
-        local definition = screen.controls.single_player
-        local control = {
-            id = "single_player",
+        local function add_control(id, definition)
+          local control = {
+            id = id,
             label = assert(locale.text(definition.label)),
             x = definition.x, y = definition.y,
             width = definition.width, height = definition.height,
             on_activate = function()
                 if audio.exists(manifest.sounds.select) then audio.play(manifest.sounds.select) end
-                scenes.replace("character_select")
+                scenes.replace(definition.target or "character_select")
             end,
         }
         if render.assets_available() then
             local palette = manifest.palettes[definition.palette]
-            local left = render.create("hud", self.root)
-            local right = render.create("hud", self.root)
+            local pieces = {}
+            for index = 1, #definition.up_frames do pieces[index] = render.create("hud", self.root) end
             local label = render.create("hud", self.root)
             local function draw_frames(frames)
-                left:set_dc6(definition.sheet, palette, 0, frames[1])
-                right:set_dc6(definition.sheet, palette, 0, frames[2])
+                for index, node in ipairs(pieces) do node:set_dc6(definition.sheet, palette, 0, frames[index]) end
             end
             draw_frames(definition.up_frames)
-            left:set_position(definition.x + 128, definition.y + definition.height / 2)
-            right:set_position(definition.x + 264, definition.y + definition.height / 2)
+            if #pieces == 1 then pieces[1]:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
+            else
+                pieces[1]:set_position(definition.x + 128, definition.y + definition.height / 2)
+                pieces[2]:set_position(definition.x + 264, definition.y + definition.height / 2)
+            end
             local font = manifest.fonts.exocet10
             label:set_text(font.table, font.sheet, manifest.palettes[font.palette], control.label, {
                 red = 210, green = 180, blue = 110, max_width = definition.width, align = "center"
@@ -82,7 +84,9 @@ return {
                 else draw_frames(definition.up_frames) end
             end
         end
-        self.controls:add(control)
+          self.controls:add(control)
+        end
+        for _, id in ipairs({"single_player", "multiplayer", "credits", "cinematics"}) do add_control(id, screen.controls[id]) end
     end,
 
     update = function(self, elapsed)

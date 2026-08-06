@@ -4,5 +4,8 @@
   "darkmagic.hud.status": "%s | %s | %s",
   "darkmagic.hud.hero": "Hero: %.0f, %.0f",
   "darkmagic.hud.controls": "WASD / arrows to move",
-  "darkmagic.menu.single_player": "SINGLE PLAYER"
+  "darkmagic.menu.single_player": "SINGLE PLAYER",
+  "darkmagic.menu.multiplayer": "MULTIPLAYER",
+  "darkmagic.menu.credits": "CREDITS",
+  "darkmagic.menu.cinematics": "CINEMATICS"
 }

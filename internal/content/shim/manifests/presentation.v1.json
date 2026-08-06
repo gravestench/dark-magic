@@ -50,6 +50,24 @@
           "palette": "units",
           "up_frames": [0, 1],
           "down_frames": [2, 3]
+        },
+        "multiplayer": {
+          "x": 264, "y": 330, "width": 272, "height": 35,
+          "label": "darkmagic.menu.multiplayer", "target": "tcpip",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
+          "up_frames": [0, 1], "down_frames": [2, 3]
+        },
+        "credits": {
+          "x": 264, "y": 505, "width": 135, "height": 35,
+          "label": "darkmagic.menu.credits", "target": "credits",
+          "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
+          "up_frames": [0], "down_frames": [1]
+        },
+        "cinematics": {
+          "x": 401, "y": 505, "width": 135, "height": 35,
+          "label": "darkmagic.menu.cinematics", "target": "cinematics",
+          "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
+          "up_frames": [0], "down_frames": [1]
         }
       },
       "logo": {
@@ -63,6 +81,9 @@
         "fire_right": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
         "fire_blend": "additive"
       }
-    }
+    },
+    "tcpip": { "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky" },
+    "cinematics": { "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6", "palette": "sky" },
+    "credits": { "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6", "palette": "sky" }
   }
 }
