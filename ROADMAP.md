@@ -261,8 +261,11 @@ implementations. The remaining work is tracked explicitly below.
   verified asset catalog and every presentation fact consumed by the runtime
   now live in the embedded shim. The unused legacy MPQ path constant dump was
   removed so Go no longer presents a competing asset-knowledge source.
-- [ ] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
-  without storing proprietary decoded pixels.
+- [x] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
+  without storing proprietary decoded pixels. The 90 verified entries now have
+  source hashes, byte sizes, decoder types, direction/frame counts, dimension
+  ranges, and deterministic full-frame-metadata hashes. The catalog tool can
+  generate or compare the fixture and reports every mismatch in one pass.
 
 ## M16: MPQ-backed presentation primitives
 

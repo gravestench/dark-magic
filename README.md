@@ -163,6 +163,16 @@ go run ./internal/tools/asset_catalog \
   -out ./asset-catalog
 ```
 
+Validate the installation against the redistributable structural fixture
+without extracting or committing any Blizzard-owned pixels:
+
+```shell
+go run ./internal/tools/asset_catalog \
+  -mpq-dir /path/to/diablo-ii \
+  -no-sheets \
+  -fixture internal/content/shim/manifests/asset-fixture.v1.json
+```
+
 View a Bink cinematic directly from an MPQ directory (FFmpeg/`ffplay` is
 required, and the temporary extracted file is removed when playback exits):
 

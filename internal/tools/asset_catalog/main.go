@@ -20,6 +20,8 @@ func main() {
 	listfilePath := flag.String("listfile", "", "optional community MPQ listfile to audit against this installation")
 	outputDirectory := flag.String("out", "asset-catalog", "output directory for report.json and contact sheets")
 	noSheets := flag.Bool("no-sheets", false, "skip DC6 contact sheet generation")
+	writeFixture := flag.String("write-fixture", "", "write a structural fixture after every manifest asset verifies")
+	fixturePath := flag.String("fixture", "", "validate the installation against a structural fixture")
 	flag.Parse()
 
 	if *mpqDirectory == "" {
@@ -40,6 +42,17 @@ func main() {
 	expandedListfilePath, err := darkpaths.ExpandHost(*listfilePath)
 	if err != nil {
 		fatal(err.Error())
+	}
+	expandedWriteFixture, err := darkpaths.ExpandHost(*writeFixture)
+	if err != nil {
+		fatal(err.Error())
+	}
+	expandedFixturePath, err := darkpaths.ExpandHost(*fixturePath)
+	if err != nil {
+		fatal(err.Error())
+	}
+	if expandedWriteFixture != "" && expandedFixturePath != "" {
+		fatal("-write-fixture and -fixture are mutually exclusive")
 	}
 	manifest, err := loadManifest(expandedManifestPath)
 	if err != nil {
@@ -99,6 +112,26 @@ func main() {
 		}
 	}
 	fmt.Printf("verified %d/%d hypotheses; report: %s\n", found, len(report.Results), reportPath)
+	if expandedWriteFixture != "" {
+		fixture, err := assetcatalog.FixtureFromReport(report)
+		if err != nil {
+			fatal(err.Error())
+		}
+		if err := writeJSON(expandedWriteFixture, fixture); err != nil {
+			fatal(err.Error())
+		}
+		fmt.Printf("wrote structural fixture: %s\n", expandedWriteFixture)
+	}
+	if expandedFixturePath != "" {
+		var fixture assetcatalog.Fixture
+		if err := readJSON(expandedFixturePath, &fixture); err != nil {
+			fatal(err.Error())
+		}
+		if mismatches := assetcatalog.CompareFixture(report, fixture); len(mismatches) != 0 {
+			fatal("fixture mismatch:\n  " + strings.Join(mismatches, "\n  "))
+		}
+		fmt.Printf("fixture verified: %s\n", expandedFixturePath)
+	}
 	if expandedListfilePath != "" {
 		listfile, err := os.Open(expandedListfilePath)
 		if err != nil {
@@ -129,6 +162,31 @@ func main() {
 		}
 		fmt.Printf("resolved %d/%d listed paths; report: %s\n", audit.Found, audit.Listed, auditPath)
 	}
+}
+
+func readJSON(name string, destination any) error {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, destination)
+}
+
+func writeJSON(name string, value any) error {
+	if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+		return err
+	}
+	file, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	encodeErr, closeErr := encoder.Encode(value), file.Close()
+	if encodeErr != nil {
+		return encodeErr
+	}
+	return closeErr
 }
 
 func loadManifest(name string) (assetcatalog.Manifest, error) {

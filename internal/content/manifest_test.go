@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/fs"
 	"testing"
+
+	"github.com/gravestench/dark-magic/pkg/assetcatalog"
 )
 
 // TestShimPresentationManifestContract protects the architectural boundary
@@ -57,5 +59,24 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		if len(manifest.Screens[screen]) == 0 {
 			t.Errorf("presentation manifest is missing %q", screen)
 		}
+	}
+}
+
+func TestShimAssetFixtureContract(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture assetcatalog.Fixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatalf("decode asset fixture: %v", err)
+	}
+	if err := fixture.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.Assets) != 90 {
+		t.Fatalf("asset fixture contains %d entries, want 90", len(fixture.Assets))
 	}
 }
