@@ -9,6 +9,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"io/fs"
 	"sync"
 	"time"
@@ -112,8 +113,14 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 func assetWeight(assets fs.FS, names ...string) int {
 	weight := 0
 	for _, name := range names {
-		if info, err := fs.Stat(assets, name); err == nil {
-			weight += int(info.Size())
+		file, err := assets.Open(name)
+		if err != nil {
+			continue
+		}
+		count, readErr := io.Copy(io.Discard, file)
+		_ = file.Close()
+		if readErr == nil {
+			weight += int(count)
 		}
 	}
 	if weight < 1 {
@@ -589,7 +596,12 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			if err := node.setImage(frame.ToImageRGBA()); err != nil {
+			decoded, err := assetdecode.FrameImage(asset, frame)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating render node: %v", err)
 				return 0
 			}
@@ -629,7 +641,12 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			frames := make([]image.Image, len(asset.Directions[direction].Frames))
 			for index, frame := range asset.Directions[direction].Frames {
-				frames[index] = frame.ToImageRGBA()
+				decoded, err := assetdecode.FrameImage(asset, frame)
+				if err != nil {
+					state.RaiseError("%v", err)
+					return 0
+				}
+				frames[index] = decoded
 			}
 			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
 				state.RaiseError("updating render animation: %v", err)

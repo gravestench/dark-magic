@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"
@@ -327,7 +328,11 @@ func DC6Preview(source fs.FS, path string, direction, frame int) ([]byte, error)
 	}
 
 	var output bytes.Buffer
-	if err := png.Encode(&output, frames[frame].ToImageRGBA()); err != nil {
+	decoded, err := assetdecode.FrameImage(asset, frames[frame])
+	if err != nil {
+		return nil, err
+	}
+	if err := png.Encode(&output, decoded); err != nil {
 		return nil, fmt.Errorf("encoding preview: %w", err)
 	}
 	return output.Bytes(), nil

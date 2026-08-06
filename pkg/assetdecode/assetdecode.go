@@ -130,3 +130,24 @@ func Frame(asset *dc6.DC6, direction, frame int) (*dc6.Frame, error) {
 	}
 	return frames[frame], nil
 }
+
+// FrameImage converts a DC6 frame using its explicit owning asset. This avoids
+// relying on the decoder's private frame-to-asset back-pointer, which is not
+// part of its public contract and may be absent after cloning or caching.
+func FrameImage(asset *dc6.DC6, frame *dc6.Frame) (*image.RGBA, error) {
+	if asset == nil || frame == nil {
+		return nil, fmt.Errorf("dc6: asset and frame are required")
+	}
+	pixels := uint64(frame.Width) * uint64(frame.Height)
+	if pixels > uint64(len(frame.IndexData)) {
+		return nil, fmt.Errorf("dc6: frame index data has %d bytes, need %d", len(frame.IndexData), pixels)
+	}
+	palette := asset.Palette()
+	result := image.NewRGBA(image.Rect(0, 0, int(frame.Width), int(frame.Height)))
+	for y := 0; y < int(frame.Height); y++ {
+		for x := 0; x < int(frame.Width); x++ {
+			result.Set(x, y, palette[frame.IndexData[y*int(frame.Width)+x]])
+		}
+	}
+	return result, nil
+}

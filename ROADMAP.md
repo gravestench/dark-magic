@@ -363,7 +363,10 @@ implementations. The remaining work is tracked explicitly below.
   native decoder receives data. An optional FFplay backend now provides real
   Bink video/RDFT audio playback, lifecycle polling, skip/stop, and temporary
   extraction cleanup while retaining failure-safe behavior when FFmpeg is not
-  installed. An embedded in-window decoder/presenter remains.
+  installed. The macOS client now keeps Cocoa/GLFW on the process main thread,
+  uses the current raylib 6 bindings, and safely transitions from both startup
+  movies into the MPQ-backed title composition. An embedded in-window
+  decoder/presenter remains.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.

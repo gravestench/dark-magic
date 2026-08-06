@@ -64,7 +64,11 @@ func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*Bi
 	font := &BitmapFont{Glyphs: glyphs}
 	for _, direction := range sheet.Directions {
 		for _, frame := range direction.Frames {
-			font.Frames = append(font.Frames, frame.ToImageRGBA())
+			decoded, err := FrameImage(sheet, frame)
+			if err != nil {
+				return nil, err
+			}
+			font.Frames = append(font.Frames, decoded)
 		}
 	}
 	for code, glyph := range glyphs {

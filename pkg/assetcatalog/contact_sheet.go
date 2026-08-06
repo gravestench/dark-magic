@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"math"
 
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -53,7 +54,10 @@ func DC6ContactSheet(asset *dc6.DC6) ([]byte, error) {
 		for frameIndex, frame := range direction.Frames {
 			column, row := index%columns, index/columns
 			origin := image.Pt(column*cellWidth+padding, row*cellHeight+labelHeight+padding)
-			frameImage := frame.ToImageRGBA()
+			frameImage, err := assetdecode.FrameImage(asset, frame)
+			if err != nil {
+				return nil, err
+			}
 			x := origin.X + (maxWidth-frameImage.Bounds().Dx())/2
 			y := origin.Y + maxHeight - frameImage.Bounds().Dy()
 			draw.Draw(canvas, frameImage.Bounds().Add(image.Pt(x, y)), frameImage, frameImage.Bounds().Min, draw.Over)

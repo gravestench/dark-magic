@@ -14,6 +14,18 @@ import (
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
 
+func TestAssetWeightReadsAssetContents(t *testing.T) {
+	t.Parallel()
+
+	source := fstest.MapFS{
+		"first.bin":  &fstest.MapFile{Data: []byte{1, 2, 3}},
+		"second.bin": &fstest.MapFile{Data: []byte{4, 5}},
+	}
+	if got := assetWeight(source, "first.bin", "missing.bin", "second.bin"); got != 5 {
+		t.Fatalf("asset weight = %d, want 5", got)
+	}
+}
+
 func TestRenderNodesBelongToLuaComponentScope(t *testing.T) {
 	t.Parallel()
 

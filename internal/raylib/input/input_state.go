@@ -80,14 +80,15 @@ func (s *Service) updateMouseCursorState() {
 func (s *Service) updateMouseButtonState() {
 	s.mux.Lock()
 	for _, key := range s.mouseButtonKeyCodess() {
-		s.mouseButtonStates[key] = StateUp
+		code := int32(key)
+		s.mouseButtonStates[code] = StateUp
 
 		if rl.IsMouseButtonPressed(key) {
-			s.mouseButtonStates[key] = StatePressed
+			s.mouseButtonStates[code] = StatePressed
 		} else if rl.IsMouseButtonReleased(key) {
-			s.mouseButtonStates[key] = StateReleased
+			s.mouseButtonStates[code] = StateReleased
 		} else if rl.IsMouseButtonDown(key) {
-			s.mouseButtonStates[key] = StateDown
+			s.mouseButtonStates[code] = StateDown
 		}
 	}
 	s.mux.Unlock()
@@ -225,14 +226,14 @@ func (*Service) modifierKeyCodes() []int32 {
 	}
 }
 
-func (*Service) mouseButtonKeyCodess() []int32 {
-	return []int32{
-		rl.MouseLeftButton,
-		rl.MouseRightButton,
-		rl.MouseMiddleButton,
-		rl.MouseSideButton,
-		rl.MouseExtraButton,
-		rl.MouseForwardButton,
-		rl.MouseBackButton,
+func (*Service) mouseButtonKeyCodess() []rl.MouseButton {
+	return []rl.MouseButton{
+		rl.MouseButtonLeft,
+		rl.MouseButtonRight,
+		rl.MouseButtonMiddle,
+		rl.MouseButtonSide,
+		rl.MouseButtonExtra,
+		rl.MouseButtonForward,
+		rl.MouseButtonBack,
 	}
 }

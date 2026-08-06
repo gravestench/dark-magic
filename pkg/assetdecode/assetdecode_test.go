@@ -24,7 +24,11 @@ func TestPaletteAndDC6Frame(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := color.RGBAModel.Convert(frame.ToImageRGBA().At(0, 0)).(color.RGBA)
+	decoded, err := FrameImage(asset, frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := color.RGBAModel.Convert(decoded.At(0, 0)).(color.RGBA)
 	if got != (color.RGBA{R: 10, G: 20, B: 30, A: 0xff}) {
 		t.Fatalf("pixel = %#v", got)
 	}

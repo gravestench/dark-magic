@@ -3,9 +3,9 @@ module github.com/gravestench/dark-magic
 go 1.22.0
 
 require (
-	github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
-	github.com/gen2brain/raylib-go/raylib v0.0.0-20230928181314-dc2584151090
+	github.com/gen2brain/raylib-go/raylib v0.60.0
 	github.com/google/uuid v1.1.5
+	github.com/gravestench/cof v0.1.0
 	github.com/gravestench/dc6 v0.1.0
 	github.com/gravestench/dcc v0.1.0
 	github.com/gravestench/ds1 v0.1.0
@@ -16,7 +16,11 @@ require (
 	github.com/yuin/gopher-lua v1.1.0
 )
 
-require github.com/gravestench/cof v0.1.0 // indirect
+require (
+	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/jupiterrider/ffi v0.7.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
+)
 
 require (
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect

@@ -19,7 +19,7 @@ func (s *Service) Snapshot() inputcore.Frame {
 		CursorY: float64(y),
 		Text:    string(text),
 		Actions: map[string]inputcore.ActionState{
-			"pointer_primary": actionState(s.MouseButtonState()[rl.MouseLeftButton]),
+			"pointer_primary": actionState(s.MouseButtonState()[int32(rl.MouseButtonLeft)]),
 			"confirm":         actionState(s.KeyState(rl.KeyEnter)),
 			"cancel":          actionState(s.KeyState(rl.KeyEscape)),
 			"inventory":       actionState(s.KeyState(rl.KeyI)),

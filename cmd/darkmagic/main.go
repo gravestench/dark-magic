@@ -6,11 +6,10 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"syscall"
 	"time"
-
-	"github.com/faiface/mainthread"
 
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
@@ -21,7 +20,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
-	input "github.com/gravestench/dark-magic/internal/raylib/input"
+	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	gameScene "github.com/gravestench/dark-magic/internal/raylib/world"
 	"github.com/gravestench/dark-magic/internal/recordstore"
@@ -35,17 +34,18 @@ import (
 )
 
 func main() {
+	// Cocoa and GLFW must be initialized and pumped from the process's original
+	// main thread. Keep the entire renderer lifecycle on that thread.
+	runtime.LockOSThread()
 	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
 	contentFS, err := content.FromEnvironment()
 	if err != nil {
 		slog.Error("constructing content filesystem", "error", err)
 		return
 	}
-	mainthread.Run(func() {
-		if err := run(contentFS); err != nil {
-			slog.Error("running Dark Magic", "error", err)
-		}
-	})
+	if err := run(contentFS); err != nil {
+		slog.Error("running Dark Magic", "error", err)
+	}
 }
 
 func run(contentFS *content.FS) error {
