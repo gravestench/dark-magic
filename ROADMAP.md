@@ -400,7 +400,10 @@ implementations. The remaining work is tracked explicitly below.
   explicit New/Delete/Exit/OK controls, and the observed 1.25-second pointer
   double-activation policy. Deletion uses an isolated confirmation dialog and a
   narrow engine-owned save operation that clears stale selection safely.
-  Equipment-aware composite character previews and real-asset calibration remain.
+  Class-only and legacy saves now render clipped, scaled, animated previews from
+  the verified selected-class assets, including synchronized overlay layers
+  where authored. Equipment-aware COF/DCC previews and real-asset calibration
+  remain until save records expose authoritative component codes.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants.
 

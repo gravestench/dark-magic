@@ -43,6 +43,10 @@ return {
         self.page_size = screen.grid.columns * screen.grid.rows
         self.selected_id = self.characters[1].id
         self.slots = {}
+        self.class_presentations = {}
+        for _, definition in ipairs(manifest.screens.character_create.classes) do
+            self.class_presentations[definition.class] = definition
+        end
 
         local function launch_selected()
             if not self.selected_id then
@@ -106,6 +110,10 @@ return {
                 )
                 slot.selection:set_position(x + width / 2, y + height / 2)
                 slot.label = render.create("hud", self.root)
+                slot.preview = render.create("hud", self.root)
+                slot.preview_overlay = render.create("hud", self.root)
+                slot.preview:set_clip(x, y, screen.grid.cell_width, screen.grid.cell_height)
+                slot.preview_overlay:set_clip(x, y, screen.grid.cell_width, screen.grid.cell_height)
             end
             self.slots[#self.slots + 1] = slot
         end
@@ -125,6 +133,8 @@ return {
                 if slot.selection then
                     slot.selection:set_visible(character ~= nil and character.id == self.selected_id)
                     slot.label:set_visible(character ~= nil)
+                    slot.preview:set_visible(character ~= nil)
+                    slot.preview_overlay:set_visible(false)
                     if character then
                         local flags = character.hardcore and "Hardcore" or ""
                         slot.label:set_text(
@@ -140,6 +150,39 @@ return {
                             screen.grid.x + column * screen.grid.column_step + screen.grid.text_offset.x,
                             screen.grid.y + row * screen.grid.row_step + screen.grid.text_offset.y
                         )
+                        -- Class-only/legacy saves do not claim equipment state.
+                        -- Their preview uses the verified front-end selected
+                        -- animation, including an authored overlay when present.
+                        local presentation = assert(self.class_presentations[character.class])
+                        slot.preview:set_dc6_animation(
+                            presentation.selected,
+                            manifest.palettes[presentation.palette],
+                            0,
+                            presentation.frames_per_second or 15,
+                            "loop",
+                            "offsets"
+                        )
+                        slot.preview:set_scale(screen.grid.preview_scale, screen.grid.preview_scale)
+                        slot.preview:set_position(
+                            screen.grid.x + column * screen.grid.column_step + screen.grid.preview_offset.x,
+                            screen.grid.y + row * screen.grid.row_step + screen.grid.preview_offset.y
+                        )
+                        if presentation.selected_overlay then
+                            slot.preview_overlay:set_dc6_animation(
+                                presentation.selected_overlay,
+                                manifest.palettes[presentation.palette],
+                                0,
+                                presentation.frames_per_second or 15,
+                                "loop",
+                                "offsets"
+                            )
+                            slot.preview_overlay:set_scale(screen.grid.preview_scale, screen.grid.preview_scale)
+                            slot.preview_overlay:set_position(
+                                screen.grid.x + column * screen.grid.column_step + screen.grid.preview_offset.x,
+                                screen.grid.y + row * screen.grid.row_step + screen.grid.preview_offset.y
+                            )
+                            slot.preview_overlay:set_visible(true)
+                        end
                     end
                 end
             end

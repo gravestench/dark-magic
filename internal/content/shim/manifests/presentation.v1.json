@@ -160,7 +160,9 @@
         "x": 37, "y": 86, "columns": 2, "rows": 4,
         "cell_width": 272, "cell_height": 92,
         "column_step": 270, "row_step": 95,
-        "text_offset": {"x": 78, "y": 14}
+        "text_offset": {"x": 78, "y": 14},
+        "preview_offset": {"x": 42, "y": 48},
+        "preview_scale": 0.32
       },
       "scrollbar": {"x":586,"y":87,"width":20,"height":369},
       "double_activation_seconds": 1.25,
