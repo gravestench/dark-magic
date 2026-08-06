@@ -39,12 +39,20 @@ func (s *Service) renderNode(node Renderable) {
 	tx := node.Texture()
 
 	if node.dirty() {
-		px := getAllPixelData(node.Image())
-		if len(px) < 4 {
-			return
-		}
+		img := node.Image()
+		if px, ok := contiguousRGBA(img); ok {
+			if len(px) < 4 {
+				return
+			}
+			rl.UpdateTexture(tx, px)
+		} else {
+			px := getAllPixelData(img)
+			if len(px) == 0 {
+				return
+			}
 
-		rl.UpdateTexture(tx, px)
+			rl.UpdateTexture(tx, px)
+		}
 	}
 
 	//rl.DrawTextureEx(
@@ -77,6 +85,26 @@ func (s *Service) renderNode(node Renderable) {
 		defer rl.EndBlendMode()
 	}
 	rl.DrawTexturePro(tx, srcRect, dstRect, dstOrigin, node.Rotation(), tint)
+}
+
+// contiguousRGBA exposes an already GPU-ready RGBA surface without allocating
+// or performing color-model conversion. Decoded and normalized engine assets
+// use this layout; subimages with padded rows safely take the fallback path.
+func contiguousRGBA(img image.Image) ([]byte, bool) {
+	rgba, ok := img.(*image.RGBA)
+	if !ok {
+		return nil, false
+	}
+	bounds := rgba.Bounds()
+	size := bounds.Dx() * bounds.Dy() * 4
+	if size == 0 || rgba.Stride != bounds.Dx()*4 {
+		return nil, false
+	}
+	start := rgba.PixOffset(bounds.Min.X, bounds.Min.Y)
+	if start < 0 || start+size > len(rgba.Pix) {
+		return nil, false
+	}
+	return rgba.Pix[start : start+size], true
 }
 
 func getAllPixelData(img image.Image) []color.RGBA {

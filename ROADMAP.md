@@ -536,7 +536,7 @@ implementations. The remaining work is tracked explicitly below.
   time, and eviction so heap growth can be distinguished from intentional reuse.
 - [ ] Remove redundant retained DC6 representations by sharing decoded frames,
   lazily materializing presentation surfaces, and releasing scene-owned assets.
-- [ ] Replace per-pixel `image.Image` conversion in texture upload with cached or
+- [x] Replace per-pixel `image.Image` conversion in texture upload with cached or
   directly decoded GPU-ready buffers and benchmark the loading/front-end path.
 - [ ] Evaluate indexed GPU textures with palette lookup for DC6/DCC assets after
   the simpler lifetime and upload improvements are measured.
