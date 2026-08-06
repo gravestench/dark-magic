@@ -32,7 +32,7 @@ return {
 
     update = function(self)
         if self.finished then return end
-        if startup.skippable and (input.pressed("confirm") or input.pressed("cancel")) then self:advance(); return end
+        if startup.skippable and input.pressed("skip") then self:advance(); return end
         if not self.playback then self:advance(); return end
         local status = self.playback:status()
         if status.state == "complete" or status.state == "stopped" then self:advance() end

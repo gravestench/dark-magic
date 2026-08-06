@@ -58,7 +58,7 @@ return {
     end,
     update = function(self)
         if self.playback then
-            if input.pressed("confirm") or input.pressed("cancel") then
+            if input.pressed("skip") then
                 self.playback:stop()
                 self.playback = nil
                 return

@@ -10,6 +10,10 @@ import (
 // This adapter disappears when input is constructed directly by the new host.
 func (s *Service) Snapshot() inputcore.Frame {
 	x, y := s.MouseCursorState()
+	pointer := actionState(s.MouseButtonState()[int32(rl.MouseButtonLeft)])
+	confirm := actionState(s.KeyState(rl.KeyEnter))
+	cancel := actionState(s.KeyState(rl.KeyEscape))
+	space := actionState(s.KeyState(rl.KeySpace))
 	var text []rune
 	for character := rl.GetCharPressed(); character > 0; character = rl.GetCharPressed() {
 		text = append(text, rune(character))
@@ -19,9 +23,10 @@ func (s *Service) Snapshot() inputcore.Frame {
 		CursorY: float64(y),
 		Text:    string(text),
 		Actions: map[string]inputcore.ActionState{
-			"pointer_primary": actionState(s.MouseButtonState()[int32(rl.MouseButtonLeft)]),
-			"confirm":         actionState(s.KeyState(rl.KeyEnter)),
-			"cancel":          actionState(s.KeyState(rl.KeyEscape)),
+			"pointer_primary": pointer,
+			"confirm":         confirm,
+			"cancel":          cancel,
+			"skip":            mergeActionStates(pointer, confirm, cancel, space),
 			"inventory":       actionState(s.KeyState(rl.KeyI)),
 			"character":       actionState(s.KeyState(rl.KeyC)),
 			"skills":          actionState(s.KeyState(rl.KeyT)),
@@ -35,6 +40,16 @@ func (s *Service) Snapshot() inputcore.Frame {
 			"backspace":       actionState(s.KeyState(rl.KeyBackspace)),
 		},
 	}
+}
+
+func mergeActionStates(states ...inputcore.ActionState) inputcore.ActionState {
+	var result inputcore.ActionState
+	for _, state := range states {
+		result.Down = result.Down || state.Down
+		result.Pressed = result.Pressed || state.Pressed
+		result.Released = result.Released || state.Released
+	}
+	return result
 }
 
 func actionState(state InputState) inputcore.ActionState {

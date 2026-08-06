@@ -84,11 +84,12 @@ func (p *Presenter) fit(frameSize, viewport image.Point) error {
 	scaleX := float64(viewport.X) / float64(frameSize.X)
 	scaleY := float64(viewport.Y) / float64(frameSize.Y)
 	scale := min(scaleX, scaleY)
-	width, height := float64(frameSize.X)*scale, float64(frameSize.Y)*scale
 	return p.composer.Update(p.node, func(node *rendercore.Node) {
 		node.Resource = p.texture
-		node.X = (float64(viewport.X) - width) / 2
-		node.Y = (float64(viewport.Y) - height) / 2
+		// Raylib composition nodes use a centered origin. Position the center of
+		// the fitted frame at the center of the live render viewport.
+		node.X = float64(viewport.X) / 2
+		node.Y = float64(viewport.Y) / 2
 		node.ScaleX = scale
 		node.ScaleY = scale
 		node.Visible = true

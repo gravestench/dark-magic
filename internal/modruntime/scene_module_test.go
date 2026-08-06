@@ -90,3 +90,56 @@ return {
 		t.Fatalf("calls = %q", calls)
 	}
 }
+
+func TestLuaSceneReplacementDestroysPreviousComposition(t *testing.T) {
+	runtime := New()
+	manager := navigation.New()
+	scenes := NewScenes(runtime, manager)
+	var composer rendercore.Composer
+	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
+		if err := runtime.RegisterModule(module); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
+local render=require("dm.render/v1"); local scenes=require("dm.scene/v1")
+local function screen(layer) return {create=function(self)
+  self.root=render.create(layer); self.child=render.create(layer,self.root)
+end} end
+return {id="boot",api=1,start=function(self)
+  scenes.register("one",screen("hud")); scenes.register("two",screen("hud")); scenes.replace("one")
+end}`)}}
+	definition, err := LoadDefinition(context.Background(), runtime, source, "boot.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	components := host.NewManager()
+	if err := components.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := components.Enable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := scenes.Flush(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().ActiveNodes; got != 2 {
+		t.Fatalf("first scene nodes = %d", got)
+	}
+	err = runtime.Run(context.Background(), func(state *lua.LState) error {
+		return state.DoString(`require("dm.scene/v1").replace("two")`)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := scenes.Flush(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().ActiveNodes; got != 2 {
+		t.Fatalf("replacement retained both scenes: nodes = %d", got)
+	}
+}

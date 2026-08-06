@@ -18,7 +18,7 @@ func TestPresenterLetterboxesAndReusesOneTexture(t *testing.T) {
 	if len(nodes) != 1 || nodes[0].Layer != rendercore.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
 	}
-	if nodes[0].X != 0 || math.Abs(nodes[0].Y-94) > 0.001 || nodes[0].ScaleX != 1 {
+	if nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].ScaleX != 1 {
 		t.Fatalf("initial fit = x %.2f y %.2f scale %.2f", nodes[0].X, nodes[0].Y, nodes[0].ScaleX)
 	}
 	before := composer.Diagnostics()
@@ -34,7 +34,7 @@ func TestPresenterLetterboxesAndReusesOneTexture(t *testing.T) {
 		t.Fatal(err)
 	}
 	node := composer.Snapshot()[0]
-	if math.Abs(node.X) > 0.001 || math.Abs(node.Y-117.5) > 0.001 || math.Abs(node.ScaleX-1.25) > 0.001 {
+	if math.Abs(node.X-400) > 0.001 || math.Abs(node.Y-300) > 0.001 || math.Abs(node.ScaleX-1.25) > 0.001 {
 		t.Fatalf("resized fit = x %.2f y %.2f scale %.2f", node.X, node.Y, node.ScaleX)
 	}
 	if err := presenter.Close(); err != nil {

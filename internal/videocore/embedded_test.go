@@ -85,7 +85,7 @@ func TestEmbeddedResizeRefitsActivePlayback(t *testing.T) {
 		t.Fatal(err)
 	}
 	nodes := composer.Snapshot()
-	if len(nodes) != 1 || nodes[0].ScaleX != 1.25 || nodes[0].X != 0 || nodes[0].Y != 0 {
+	if len(nodes) != 1 || nodes[0].ScaleX != 1.25 || nodes[0].X != 400 || nodes[0].Y != 300 {
 		t.Fatalf("resized cinematic node = %#v", nodes)
 	}
 	if err := playback.Stop(); err != nil {
