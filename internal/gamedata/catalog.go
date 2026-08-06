@@ -70,6 +70,13 @@ type Snapshot struct {
 	MonsterSounds    []models.MonsterSounds
 	MonsterSoundByID map[string]models.MonsterSounds
 	MonsterEquipment []models.MonsterEquipment
+	Missiles         []models.Missile
+	MissilesByName   map[string]models.Missile
+	States           []models.State
+	StatesByName     map[string]models.State
+	Overlays         []models.Overlay
+	OverlaysByName   map[string]models.Overlay
+	PetTypes         []models.PetType
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -116,7 +123,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable {
 		return
 	}
 	c.mu.Lock()
@@ -376,6 +383,37 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	missiles, err := Load[models.Missile](c.store, MissilesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	missilesByName, found, err := ObservedIndex(MissilesTable, missiles, func(record models.Missile) string { return record.Missile })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index missiles: %w", err)
+	}
+	issues = append(issues, found...)
+	states, err := Load[models.State](c.store, StatesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	statesByName, found, err := ObservedIndex(StatesTable, states, func(record models.State) string { return record.State })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index states: %w", err)
+	}
+	issues = append(issues, found...)
+	overlays, err := Load[models.Overlay](c.store, OverlaysTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	overlaysByName, found, err := ObservedIndex(OverlaysTable, overlays, func(record models.Overlay) string { return record.Overlay })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index overlays: %w", err)
+	}
+	issues = append(issues, found...)
+	petTypes, err := Load[models.PetType](c.store, PetTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -402,6 +440,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		Monsters: monsters, MonstersByID: monstersByID, MonsterGraphics: monsterGraphics, MonsterGfxByID: monsterGfxByID,
 		MonsterLevels: monsterLevels, MonsterProps: monsterProps, MonsterPropsByID: monsterPropsByID,
 		MonsterSounds: monsterSounds, MonsterSoundByID: monsterSoundByID, MonsterEquipment: monsterEquipment,
+		Missiles: missiles, MissilesByName: missilesByName, States: states, StatesByName: statesByName,
+		Overlays: overlays, OverlaysByName: overlaysByName, PetTypes: petTypes,
 	}, nil
 }
 
@@ -465,6 +505,13 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		MonsterSounds:    append([]models.MonsterSounds(nil), source.MonsterSounds...),
 		MonsterSoundByID: make(map[string]models.MonsterSounds, len(source.MonsterSoundByID)),
 		MonsterEquipment: append([]models.MonsterEquipment(nil), source.MonsterEquipment...),
+		Missiles:         append([]models.Missile(nil), source.Missiles...),
+		MissilesByName:   make(map[string]models.Missile, len(source.MissilesByName)),
+		States:           append([]models.State(nil), source.States...),
+		StatesByName:     make(map[string]models.State, len(source.StatesByName)),
+		Overlays:         append([]models.Overlay(nil), source.Overlays...),
+		OverlaysByName:   make(map[string]models.Overlay, len(source.OverlaysByName)),
+		PetTypes:         append([]models.PetType(nil), source.PetTypes...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -531,6 +578,15 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.MonsterSoundByID {
 		result.MonsterSoundByID[key] = value
+	}
+	for key, value := range source.MissilesByName {
+		result.MissilesByName[key] = value
+	}
+	for key, value := range source.StatesByName {
+		result.StatesByName[key] = value
+	}
+	for key, value := range source.OverlaysByName {
+		result.OverlaysByName[key] = value
 	}
 	return result
 }

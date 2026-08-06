@@ -38,4 +38,8 @@ const (
 	MonsterPropsTable    = "data/global/excel/MonProp.txt"
 	MonsterSoundsTable   = "data/global/excel/MonSounds.txt"
 	MonsterEquipTable    = "data/global/excel/MonEquip.txt"
+	MissilesTable        = "data/global/excel/Missiles.txt"
+	StatesTable          = "data/global/excel/States.txt"
+	OverlaysTable        = "data/global/excel/Overlay.txt"
+	PetTypesTable        = "data/global/excel/PetType.txt"
 )

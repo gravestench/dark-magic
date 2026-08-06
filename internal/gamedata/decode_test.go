@@ -58,6 +58,22 @@ func TestLoadRecoversHistoricalGroupedCSVTags(t *testing.T) {
 	}
 }
 
+func TestLoadRecoversHistoricalArrayCSVTags(t *testing.T) {
+	t.Parallel()
+
+	type record struct {
+		Values [3]int `csv:"value1,value2,value3"`
+	}
+	source := fstest.MapFS{"array.txt": &fstest.MapFile{Data: []byte("value1\tvalue2\tvalue3\n4\t5\t6\n")}}
+	records, err := Load[record](recordstore.New(source), "array.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if records[0].Values != [3]int{4, 5, 6} {
+		t.Fatalf("array values = %#v", records[0].Values)
+	}
+}
+
 func TestLoadReportsSourceRowColumnAndField(t *testing.T) {
 	t.Parallel()
 

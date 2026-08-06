@@ -75,6 +75,12 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.MonstersByID) == 0 || len(snapshot.MonsterGfxByID) == 0 || len(snapshot.MonsterLevels) == 0 || len(snapshot.MonsterPropsByID) == 0 || len(snapshot.MonsterSoundByID) == 0 || len(snapshot.MonsterEquipment) == 0 {
 		t.Fatal("typed monster foundation tables are incomplete")
 	}
+	if len(snapshot.MissilesByName) == 0 || len(snapshot.StatesByName) == 0 || len(snapshot.OverlaysByName) == 0 || len(snapshot.PetTypes) == 0 {
+		t.Fatal("typed combat presentation tables are incomplete")
+	}
+	if !slices.ContainsFunc(snapshot.PetTypes, func(record models.PetType) bool { return record.MClass != [4]int{} || record.MIcon != [4]string{} }) {
+		t.Fatal("typed pet grouped fields did not bind authored values")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -209,6 +215,19 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"monster equipment": func() (int, error) {
 			records, err := Load[models.MonsterEquipment](store, MonsterEquipTable)
+			return len(records), err
+		},
+		"missiles": func() (int, error) {
+			records, err := Load[models.Missile](store, MissilesTable)
+			return len(records), err
+		},
+		"states": func() (int, error) { records, err := Load[models.State](store, StatesTable); return len(records), err },
+		"overlays": func() (int, error) {
+			records, err := Load[models.Overlay](store, OverlaysTable)
+			return len(records), err
+		},
+		"pet types": func() (int, error) {
+			records, err := Load[models.PetType](store, PetTypesTable)
 			return len(records), err
 		},
 	} {

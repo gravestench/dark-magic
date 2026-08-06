@@ -56,16 +56,20 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 			if !exists {
 				continue
 			}
-			if value.Field(field.index).Kind() == reflect.Pointer && raw == "" {
+			destination := value.Field(field.index)
+			if field.arrayIndex >= 0 {
+				destination = destination.Index(field.arrayIndex)
+			}
+			if destination.Kind() == reflect.Pointer && raw == "" {
 				// gocsv allocates a zero pointer for blank optional cells. The
 				// surviving schemas use nil to distinguish absent from authored 0.
-				value.Field(field.index).SetZero()
+				destination.SetZero()
 				continue
 			}
 			if !field.grouped {
 				continue
 			}
-			if err := assign(value.Field(field.index), raw); err != nil {
+			if err := assign(destination, raw); err != nil {
 				return nil, fmt.Errorf("gamedata: %s row %d column %q field %s: %w", path, rowIndex+2, field.column, field.name, err)
 			}
 		}
@@ -74,10 +78,11 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 }
 
 type fieldBinding struct {
-	index   int
-	name    string
-	column  string
-	grouped bool
+	index      int
+	name       string
+	column     string
+	grouped    bool
+	arrayIndex int
 }
 
 func recordFields[T any]() ([]fieldBinding, error) {
@@ -108,6 +113,16 @@ func recordFields[T any]() ([]fieldBinding, error) {
 			groupEnd++
 		}
 		columns := strings.Split(tag, ",")
+		if field.Type.Kind() == reflect.Array {
+			if len(columns) != field.Type.Len() {
+				return nil, fmt.Errorf("array csv tag %q has %d columns for %d elements", tag, len(columns), field.Type.Len())
+			}
+			for arrayIndex, column := range columns {
+				bindings = append(bindings, fieldBinding{index: index, name: field.Name, column: column, grouped: true, arrayIndex: arrayIndex})
+			}
+			index++
+			continue
+		}
 		if groupEnd-index == 1 {
 			columns = columns[:1]
 		} else if len(columns) != groupEnd-index {
@@ -120,7 +135,7 @@ func recordFields[T any]() ([]fieldBinding, error) {
 				return nil, fmt.Errorf("duplicate csv column %q on fields %s and %s", column, previous, groupField.Name)
 			}
 			seen[column] = groupField.Name
-			bindings = append(bindings, fieldBinding{index: index + offset, name: groupField.Name, column: column, grouped: grouped})
+			bindings = append(bindings, fieldBinding{index: index + offset, name: groupField.Name, column: column, grouped: grouped, arrayIndex: -1})
 		}
 		index = groupEnd
 	}

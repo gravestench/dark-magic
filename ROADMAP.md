@@ -730,6 +730,9 @@ implementations. The remaining work is tracked explicitly below.
   binding rather than accepting a silently zero-filled field. MonStats, MonStats2,
   MonLvl, MonProp, MonSounds, and MonEquip now provide the admitted typed monster
   foundation with immutable ID indexes and ordered scaling/equipment records.
+  Missiles, States, Overlay, and PetType now cover combat presentation/state data;
+  fixed-size grouped legacy fields are rebound element-by-element so PetType's
+  `mclass` and `micon` arrays retain their authored values.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

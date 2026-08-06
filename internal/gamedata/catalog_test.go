@@ -46,6 +46,10 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		MonsterPropsTable:    &fstest.MapFile{Data: []byte("Id\tprop1\nzombie\tres-all\n")},
 		MonsterSoundsTable:   &fstest.MapFile{Data: []byte("Id\tAttack1\nzombie\tzombie_attack\n")},
 		MonsterEquipTable:    &fstest.MapFile{Data: []byte("monster\titem1\nzombie\thax\n")},
+		MissilesTable:        &fstest.MapFile{Data: []byte("Missile\tVel\narrow\t24\n")},
+		StatesTable:          &fstest.MapFile{Data: []byte("state\tgroup\npoison\t1\n")},
+		OverlaysTable:        &fstest.MapFile{Data: []byte("overlay\tFilename\npoison\tpoisonoverlay\n")},
+		PetTypesTable:        &fstest.MapFile{Data: []byte("pet type\tgroup\nvalkyrie\t1\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -75,6 +79,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.MonstersByID["zombie"].Code != "ZM" || first.MonsterGfxByID["zombie"].Id == "" || len(first.MonsterLevels) != 1 || first.MonsterPropsByID["zombie"].Prop1 != "res-all" || first.MonsterSoundByID["zombie"].Attack1 != "zombie_attack" || len(first.MonsterEquipment) != 1 {
 		t.Fatalf("typed monster tables = %#v", first)
+	}
+	if len(first.MissilesByName) != 1 || len(first.StatesByName) != 1 || len(first.OverlaysByName) != 1 || len(first.PetTypes) != 1 {
+		t.Fatalf("typed combat presentation tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -126,6 +133,10 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		MonsterPropsTable:    &fstest.MapFile{Data: []byte("Id\tprop1\nzombie\tres-all\n")},
 		MonsterSoundsTable:   &fstest.MapFile{Data: []byte("Id\tAttack1\nzombie\tzombie_attack\n")},
 		MonsterEquipTable:    &fstest.MapFile{Data: []byte("monster\titem1\nzombie\thax\n")},
+		MissilesTable:        &fstest.MapFile{Data: []byte("Missile\tVel\narrow\t24\n")},
+		StatesTable:          &fstest.MapFile{Data: []byte("state\tgroup\npoison\t1\n")},
+		OverlaysTable:        &fstest.MapFile{Data: []byte("overlay\tFilename\npoison\tpoisonoverlay\n")},
+		PetTypesTable:        &fstest.MapFile{Data: []byte("pet type\tgroup\nvalkyrie\t1\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {
