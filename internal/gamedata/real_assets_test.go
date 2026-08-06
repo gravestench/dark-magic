@@ -55,6 +55,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.ItemRatios) == 0 || len(snapshot.ItemStatsByName) == 0 || len(snapshot.PropertiesByCode) == 0 || len(snapshot.UniqueByIndex) == 0 || len(snapshot.SetItemsByIndex) == 0 {
 		t.Fatal("typed item-rule catalog indexes are incomplete")
 	}
+	if len(snapshot.MagicPrefixes) == 0 || len(snapshot.MagicSuffixes) == 0 || len(snapshot.AutoMagic) == 0 || len(snapshot.RarePrefixes) == 0 || len(snapshot.RareSuffixes) == 0 {
+		t.Fatal("typed affix tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -109,6 +112,26 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"set items": func() (int, error) {
 			records, err := Load[models.SetItemData](store, SetItemsTable)
+			return len(records), err
+		},
+		"magic prefixes": func() (int, error) {
+			records, err := Load[models.MagicPrefix](store, MagicPrefixTable)
+			return len(records), err
+		},
+		"magic suffixes": func() (int, error) {
+			records, err := Load[models.MagicSuffix](store, MagicSuffixTable)
+			return len(records), err
+		},
+		"automagic": func() (int, error) {
+			records, err := Load[models.AutoMagicData](store, AutoMagicTable)
+			return len(records), err
+		},
+		"rare prefixes": func() (int, error) {
+			records, err := Load[models.RarePrefix](store, RarePrefixTable)
+			return len(records), err
+		},
+		"rare suffixes": func() (int, error) {
+			records, err := Load[models.RareSuffix](store, RareSuffixTable)
 			return len(records), err
 		},
 	} {

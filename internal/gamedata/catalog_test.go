@@ -26,6 +26,11 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		PropertiesTable:      &fstest.MapFile{Data: []byte("code\tfunc1\tstat1\nstr\t1\tstrength\n")},
 		UniqueItemsTable:     &fstest.MapFile{Data: []byte("index\tcode\nThe Gnasher\thax\n")},
 		SetItemsTable:        &fstest.MapFile{Data: []byte("index\tset\titem\nCiverb's Ward\tCiverb's Vestments\tsml\n")},
+		MagicPrefixTable:     &fstest.MapFile{Data: []byte("Name\tversion\nStrong\t100\n")},
+		MagicSuffixTable:     &fstest.MapFile{Data: []byte("Name\tversion\nof Strength\t100\n")},
+		AutoMagicTable:       &fstest.MapFile{Data: []byte("Name\tversion\nAmazon Bow\t100\n")},
+		RarePrefixTable:      &fstest.MapFile{Data: []byte("name\tversion\nBitter\t100\n")},
+		RareSuffixTable:      &fstest.MapFile{Data: []byte("name\tversion\nGrasp\t100\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -43,6 +48,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.ItemRatios) != 1 || first.ItemStatsByName["strength"].SaveBits != 10 || first.PropertiesByCode["str"].Stat1 != "strength" || first.UniqueByIndex["The Gnasher"].Code != "hax" || first.SetItemsByIndex["Civerb's Ward"].Item != "sml" {
 		t.Fatalf("typed item-rule indexes = %#v", first)
+	}
+	if len(first.MagicPrefixes) != 1 || len(first.MagicSuffixes) != 1 || len(first.AutoMagic) != 1 || len(first.RarePrefixes) != 1 || len(first.RareSuffixes) != 1 {
+		t.Fatalf("typed affix tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -74,6 +82,11 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		PropertiesTable:      &fstest.MapFile{Data: []byte("code\tfunc1\tstat1\nstr\t1\tstrength\n")},
 		UniqueItemsTable:     &fstest.MapFile{Data: []byte("index\tcode\nThe Gnasher\thax\n")},
 		SetItemsTable:        &fstest.MapFile{Data: []byte("index\tset\titem\nCiverb's Ward\tCiverb's Vestments\tsml\n")},
+		MagicPrefixTable:     &fstest.MapFile{Data: []byte("Name\tversion\nStrong\t100\n")},
+		MagicSuffixTable:     &fstest.MapFile{Data: []byte("Name\tversion\nof Strength\t100\n")},
+		AutoMagicTable:       &fstest.MapFile{Data: []byte("Name\tversion\nAmazon Bow\t100\n")},
+		RarePrefixTable:      &fstest.MapFile{Data: []byte("name\tversion\nBitter\t100\n")},
+		RareSuffixTable:      &fstest.MapFile{Data: []byte("name\tversion\nGrasp\t100\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

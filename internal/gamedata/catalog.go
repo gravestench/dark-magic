@@ -42,6 +42,11 @@ type Snapshot struct {
 	UniqueByIndex    map[string]models.ItemUnique
 	SetItems         []models.SetItemData
 	SetItemsByIndex  map[string]models.SetItemData
+	MagicPrefixes    []models.MagicPrefix
+	MagicSuffixes    []models.MagicSuffix
+	AutoMagic        []models.AutoMagicData
+	RarePrefixes     []models.RarePrefix
+	RareSuffixes     []models.RareSuffix
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -88,7 +93,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable {
 		return
 	}
 	c.mu.Lock()
@@ -228,6 +233,26 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("gamedata: index set items: %w", err)
 	}
 	issues = append(issues, found...)
+	magicPrefixes, err := Load[models.MagicPrefix](c.store, MagicPrefixTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	magicSuffixes, err := Load[models.MagicSuffix](c.store, MagicSuffixTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	autoMagic, err := Load[models.AutoMagicData](c.store, AutoMagicTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	rarePrefixes, err := Load[models.RarePrefix](c.store, RarePrefixTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	rareSuffixes, err := Load[models.RareSuffix](c.store, RareSuffixTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -245,6 +270,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		Properties: properties, PropertiesByCode: propertiesByCode,
 		UniqueItems: uniqueItems, UniqueByIndex: uniqueByIndex,
 		SetItems: setItems, SetItemsByIndex: setItemsByIndex,
+		MagicPrefixes: magicPrefixes, MagicSuffixes: magicSuffixes,
+		AutoMagic: autoMagic, RarePrefixes: rarePrefixes, RareSuffixes: rareSuffixes,
 	}, nil
 }
 
@@ -280,6 +307,11 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		UniqueByIndex:    make(map[string]models.ItemUnique, len(source.UniqueByIndex)),
 		SetItems:         append([]models.SetItemData(nil), source.SetItems...),
 		SetItemsByIndex:  make(map[string]models.SetItemData, len(source.SetItemsByIndex)),
+		MagicPrefixes:    append([]models.MagicPrefix(nil), source.MagicPrefixes...),
+		MagicSuffixes:    append([]models.MagicSuffix(nil), source.MagicSuffixes...),
+		AutoMagic:        append([]models.AutoMagicData(nil), source.AutoMagic...),
+		RarePrefixes:     append([]models.RarePrefix(nil), source.RarePrefixes...),
+		RareSuffixes:     append([]models.RareSuffix(nil), source.RareSuffixes...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value

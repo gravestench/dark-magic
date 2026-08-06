@@ -18,4 +18,9 @@ const (
 	PropertiesTable      = "data/global/excel/Properties.txt"
 	UniqueItemsTable     = "data/global/excel/UniqueItems.txt"
 	SetItemsTable        = "data/global/excel/SetItems.txt"
+	MagicPrefixTable     = "data/global/excel/MagicPrefix.txt"
+	MagicSuffixTable     = "data/global/excel/MagicSuffix.txt"
+	AutoMagicTable       = "data/global/excel/AutoMagic.txt"
+	RarePrefixTable      = "data/global/excel/RarePrefix.txt"
+	RareSuffixTable      = "data/global/excel/RareSuffix.txt"
 )
