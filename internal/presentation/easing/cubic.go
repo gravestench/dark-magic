@@ -8,6 +8,7 @@ type CubicOutEaseProvider struct{}
 
 func (*CubicOutEaseProvider) New(_ []float64) func(float64) float64 {
 	cubic := func(v float64) float64 {
+		v--
 		return v*v*v + 1
 	}
 
@@ -31,9 +32,9 @@ func (*CubicInOutEaseProvider) New(_ []float64) func(float64) float64 {
 		v *= 2
 		if v < 1 {
 			return 0.5 * v * v * v
-		} else {
-			return -0.5 * ((v-2)*v*v + 2)
 		}
+		v -= 2
+		return 0.5 * (v*v*v + 2)
 	}
 
 	return cubic

@@ -80,7 +80,15 @@ func TestOverlayAnimatesAndCapturesThroughClose(t *testing.T) {
 	if overlay.progress != 0.5 {
 		t.Fatalf("opening progress = %v", overlay.progress)
 	}
+	_, opacity := overlay.presentation()
+	if opacity != 0.875 {
+		t.Fatalf("opening opacity = %v", opacity)
+	}
 	overlay.setOpen(false, started.Add(openDuration/2))
+	position, opacity := overlay.presentation()
+	if position != 0.5 || opacity != 0.125 {
+		t.Fatalf("closing presentation = position %v, opacity %v", position, opacity)
+	}
 	if !overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{}}) {
 		t.Fatal("closing overlay released scene input before leaving the screen")
 	}

@@ -525,7 +525,8 @@ implementations. The remaining work is tracked explicitly below.
   remains legible above palette quantization. Its embedded Go Mono TrueType
   face and Unicode-safe transcript wrapping are platform-independent. Opening
   elastically settles from above while opacity fades in; closing slides upward
-  with a shorter fade and retains input focus until gone. The log stream remains.
+  on a normalized cubic curve with a quick nonlinear fade and retains input
+  focus until gone. The log stream remains.
 - [ ] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

@@ -39,7 +39,9 @@ type Overlay struct {
 
 var (
 	elasticEntrance = (&easing.ElasticOutEaseProvider{}).New([]float64{1, 0.32})
-	smoothExit      = (&easing.CubicOutEaseProvider{}).New(nil)
+	smoothExit      = (&easing.CubicInOutEaseProvider{}).New(nil)
+	quickFadeIn     = (&easing.CubicOutEaseProvider{}).New(nil)
+	quickFadeOut    = (&easing.CubicInEaseProvider{}).New(nil)
 )
 
 const (
@@ -139,12 +141,8 @@ func (o *Overlay) Draw(width, height int) {
 		return
 	}
 	panelHeight := int32(max(220, height*3/5))
-	positionProgress := smoothExit(o.progress)
-	if o.open {
-		positionProgress = elasticEntrance(o.progress)
-	}
+	positionProgress, opacity := o.presentation()
 	offsetY := int32(-float64(panelHeight) * (1 - positionProgress))
-	opacity := o.progress
 	rl.DrawRectangle(0, offsetY, int32(width), panelHeight, fade(rl.NewColor(8, 7, 6, 238), opacity))
 	rl.DrawRectangleLinesEx(rl.NewRectangle(0, float32(offsetY), float32(width), float32(panelHeight)), 2, fade(rl.NewColor(176, 119, 38, 255), opacity))
 	policy := o.session.Policy()
@@ -177,6 +175,13 @@ func (o *Overlay) Draw(width, height int) {
 	}
 	o.drawText("> "+o.input+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
 	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+}
+
+func (o *Overlay) presentation() (position, opacity float64) {
+	if o.open {
+		return elasticEntrance(o.progress), quickFadeIn(o.progress)
+	}
+	return smoothExit(o.progress), quickFadeOut(o.progress)
 }
 
 func (o *Overlay) setOpen(open bool, now time.Time) {
