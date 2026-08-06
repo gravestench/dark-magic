@@ -8,5 +8,7 @@
   "darkmagic.menu.multiplayer": "MULTIPLAYER",
   "darkmagic.menu.credits": "CREDITS",
   "darkmagic.menu.cinematics": "CINEMATICS",
-  "darkmagic.menu.exit": "EXIT DIABLO II"
+  "darkmagic.menu.exit": "EXIT DIABLO II",
+  "darkmagic.frontend.version": "Dark Magic %s",
+  "darkmagic.frontend.legal": "Requires a legally obtained Diablo II installation. Not affiliated with Blizzard Entertainment."
 }

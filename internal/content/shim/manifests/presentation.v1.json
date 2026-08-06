@@ -46,6 +46,10 @@
     "main_menu": {
       "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
       "palette": "sky",
+      "labels": {
+        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "key": "darkmagic.frontend.version" },
+        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "key": "darkmagic.frontend.legal" }
+      },
       "controls": {
         "single_player": {
           "x": 264,

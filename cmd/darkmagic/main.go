@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -72,7 +73,7 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.AppModule("development", stopSignals)); err != nil {
+	if err := scripts.RegisterModule(modruntime.AppModule(buildVersion(), stopSignals)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
@@ -199,6 +200,14 @@ func run(contentFS *content.FS) error {
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true
 	return err
+}
+
+func buildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info.Main.Version == "" || info.Main.Version == "(devel)" {
+		return "development"
+	}
+	return info.Main.Version
 }
 
 func stopHost(appHost *host.Host) {

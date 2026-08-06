@@ -36,7 +36,22 @@ return {
             self:configure_logo()
         end
         self:configure_controls()
+        self:configure_labels()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+    end,
+
+    configure_labels = function(self)
+        if not render.assets_available() then return end
+        local font = manifest.fonts.exocet10
+        for id, definition in pairs(screen.labels) do
+            local label = render.create("hud", self.root)
+            local text = assert(locale.text(definition.key))
+            if id == "version" then text = string.format(text, app.version()) end
+            label:set_text(font.table, font.sheet, manifest.palettes[font.palette], text, {
+                red = 150, green = 135, blue = 105, max_width = definition.width, align = definition.align
+            })
+            label:set_position(definition.x, definition.y)
+        end
     end,
 
     configure_logo = function(self)
