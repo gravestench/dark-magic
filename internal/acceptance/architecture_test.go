@@ -163,7 +163,7 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 	root := repositoryRoot(t)
 	allowedFunctions := map[string]struct{}{
 		"main": {}, "environmentDefault": {}, "parseLogLevel": {}, "run": {},
-		"validateClientContent": {}, "developmentCharacters": {}, "buildVersion": {}, "stopHost": {},
+		"developmentCharacters": {}, "buildVersion": {}, "stopHost": {},
 	}
 	err := filepath.WalkDir(filepath.Join(root, "cmd"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {

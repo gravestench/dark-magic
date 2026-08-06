@@ -81,7 +81,7 @@ func main() {
 		slog.Error("constructing content filesystem", "error", err)
 		return
 	}
-	if err := validateClientContent(contentFS); err != nil {
+	if err := content.ValidateClientAssets(contentFS); err != nil {
 		slog.Error("validating client content", "error", err)
 		return
 	}
@@ -150,6 +150,10 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	records := recordstore.New(contentFS)
 	records.SetLogger(slog.Default().With("component", "records"))
 	gameData := gamedata.New(records)
+	presentation, err := content.LoadPresentationBootstrap(contentFS)
+	if err != nil {
+		return err
+	}
 	typedRecords, err := gameData.Snapshot()
 	if err != nil {
 		return fmt.Errorf("load typed game data: %w", err)
@@ -171,7 +175,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 			return nil
 		},
 		"loading_assets": func(_ context.Context) error {
-			for _, name := range []string{"data/global/ui/Loading/loadingscreen.dc6", "data/global/Palette/loading/pal.dat"} {
+			for _, name := range presentation.LoadingAssets {
 				if _, err := fs.Stat(contentFS, name); err != nil {
 					return fmt.Errorf("load dependency %q: %w", name, err)
 				}
@@ -371,14 +375,6 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true
 	return err
-}
-
-func validateClientContent(contentFS fs.FS) error {
-	const required = "data/global/ui/FrontEnd/trademarkscreenEXP.dc6"
-	if _, err := fs.Stat(contentFS, required); err != nil {
-		return fmt.Errorf("required Diablo II asset %q is unavailable; set MPQ_DIRECTORY to the directory containing the game MPQs: %w", required, err)
-	}
-	return nil
 }
 
 func developmentCharacters(count int) []persistence.Character {

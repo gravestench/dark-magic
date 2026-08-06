@@ -243,11 +243,11 @@ implementations. The remaining work is tracked explicitly below.
   and palette-applied DC6 contact sheets.
 - [x] Verify the initial 90 hypotheses against a complete English Diablo II/LOD
   MPQ stack without committing derived game imagery.
-- [ ] Move verified screen facts from Go literals into versioned shim manifests
+- [x] Move verified screen facts from Go literals into versioned shim manifests
   with confidence, game-version, language, and resolution fields.
 - [ ] Catalog every front-end screen, HUD/panel sheet, cursor, font, cinematic,
   sound cue, and relevant TXT/TBL dependency.
-- [ ] Add comparison fixtures that verify expected dimensions, frame counts,
+- [x] Add comparison fixtures that verify expected dimensions, frame counts,
   offsets, and hashes without distributing original asset bytes.
 
 ### M15 execution checkpoints
