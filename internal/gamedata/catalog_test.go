@@ -31,6 +31,10 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		AutoMagicTable:       &fstest.MapFile{Data: []byte("Name\tversion\nAmazon Bow\t100\n")},
 		RarePrefixTable:      &fstest.MapFile{Data: []byte("name\tversion\nBitter\t100\n")},
 		RareSuffixTable:      &fstest.MapFile{Data: []byte("name\tversion\nGrasp\t100\n")},
+		GemsTable:            &fstest.MapFile{Data: []byte("name\tcode\nChipped Amethyst\tgcw\n")},
+		RunesTable:           &fstest.MapFile{Data: []byte("Name\tcomplete\nAncient's Pledge\t1\n")},
+		CubeMainTable:        &fstest.MapFile{Data: []byte("description\tenabled\nPotion Upgrade\t1\n")},
+		SetsTable:            &fstest.MapFile{Data: []byte("index\tname\nCiverb's Vestments\tCiverb's Vestments\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -51,6 +55,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.MagicPrefixes) != 1 || len(first.MagicSuffixes) != 1 || len(first.AutoMagic) != 1 || len(first.RarePrefixes) != 1 || len(first.RareSuffixes) != 1 {
 		t.Fatalf("typed affix tables = %#v", first)
+	}
+	if first.GemsByCode["gcw"].Name != "Chipped Amethyst" || len(first.RuneWords) != 1 || len(first.CubeRecipes) != 1 || first.SetsByIndex["Civerb's Vestments"].Name != "Civerb's Vestments" {
+		t.Fatalf("typed socketing and crafting tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -87,6 +94,10 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		AutoMagicTable:       &fstest.MapFile{Data: []byte("Name\tversion\nAmazon Bow\t100\n")},
 		RarePrefixTable:      &fstest.MapFile{Data: []byte("name\tversion\nBitter\t100\n")},
 		RareSuffixTable:      &fstest.MapFile{Data: []byte("name\tversion\nGrasp\t100\n")},
+		GemsTable:            &fstest.MapFile{Data: []byte("name\tcode\nChipped Amethyst\tgcw\n")},
+		RunesTable:           &fstest.MapFile{Data: []byte("Name\tcomplete\nAncient's Pledge\t1\n")},
+		CubeMainTable:        &fstest.MapFile{Data: []byte("description\tenabled\nPotion Upgrade\t1\n")},
+		SetsTable:            &fstest.MapFile{Data: []byte("index\tname\nCiverb's Vestments\tCiverb's Vestments\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

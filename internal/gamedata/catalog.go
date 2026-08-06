@@ -47,6 +47,12 @@ type Snapshot struct {
 	AutoMagic        []models.AutoMagicData
 	RarePrefixes     []models.RarePrefix
 	RareSuffixes     []models.RareSuffix
+	Gems             []models.GemData
+	GemsByCode       map[string]models.GemData
+	RuneWords        []models.RuneWordData
+	CubeRecipes      []models.CubeRecipe
+	Sets             []models.SetBonusData
+	SetsByIndex      map[string]models.SetBonusData
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -93,7 +99,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable {
 		return
 	}
 	c.mu.Lock()
@@ -253,6 +259,32 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	gems, err := Load[models.GemData](c.store, GemsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	gemsByCode, found, err := ObservedIndex(GemsTable, gems, func(record models.GemData) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index gems: %w", err)
+	}
+	issues = append(issues, found...)
+	runeWords, err := Load[models.RuneWordData](c.store, RunesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	cubeRecipes, err := Load[models.CubeRecipe](c.store, CubeMainTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	sets, err := Load[models.SetBonusData](c.store, SetsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	setsByIndex, found, err := ObservedIndex(SetsTable, sets, func(record models.SetBonusData) string { return record.Index })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index sets: %w", err)
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -272,6 +304,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		SetItems: setItems, SetItemsByIndex: setItemsByIndex,
 		MagicPrefixes: magicPrefixes, MagicSuffixes: magicSuffixes,
 		AutoMagic: autoMagic, RarePrefixes: rarePrefixes, RareSuffixes: rareSuffixes,
+		Gems: gems, GemsByCode: gemsByCode, RuneWords: runeWords, CubeRecipes: cubeRecipes,
+		Sets: sets, SetsByIndex: setsByIndex,
 	}, nil
 }
 
@@ -312,6 +346,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		AutoMagic:        append([]models.AutoMagicData(nil), source.AutoMagic...),
 		RarePrefixes:     append([]models.RarePrefix(nil), source.RarePrefixes...),
 		RareSuffixes:     append([]models.RareSuffix(nil), source.RareSuffixes...),
+		Gems:             append([]models.GemData(nil), source.Gems...),
+		GemsByCode:       make(map[string]models.GemData, len(source.GemsByCode)),
+		RuneWords:        append([]models.RuneWordData(nil), source.RuneWords...),
+		CubeRecipes:      append([]models.CubeRecipe(nil), source.CubeRecipes...),
+		Sets:             append([]models.SetBonusData(nil), source.Sets...),
+		SetsByIndex:      make(map[string]models.SetBonusData, len(source.SetsByIndex)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -354,6 +394,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.SetItemsByIndex {
 		result.SetItemsByIndex[key] = value
+	}
+	for key, value := range source.GemsByCode {
+		result.GemsByCode[key] = value
+	}
+	for key, value := range source.SetsByIndex {
+		result.SetsByIndex[key] = value
 	}
 	return result
 }

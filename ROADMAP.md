@@ -722,6 +722,9 @@ implementations. The remaining work is tracked explicitly below.
   provides a stable key. Ordered typed generations now also preserve MagicPrefix,
   MagicSuffix, AutoMagic, RarePrefix, and RareSuffix; deliberately repeated display
   names remain ordered records rather than being forced into lossy lookup maps.
+  Gems, Runes, CubeMain, and Sets now form the next admitted typed generation,
+  with stable code/index lookups for gems and set definitions and ordered recipes
+  where descriptions or display names are not authoritative identities.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

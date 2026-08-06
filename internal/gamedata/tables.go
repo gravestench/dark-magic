@@ -23,4 +23,8 @@ const (
 	AutoMagicTable       = "data/global/excel/AutoMagic.txt"
 	RarePrefixTable      = "data/global/excel/RarePrefix.txt"
 	RareSuffixTable      = "data/global/excel/RareSuffix.txt"
+	GemsTable            = "data/global/excel/Gems.txt"
+	RunesTable           = "data/global/excel/Runes.txt"
+	CubeMainTable        = "data/global/excel/CubeMain.txt"
+	SetsTable            = "data/global/excel/Sets.txt"
 )

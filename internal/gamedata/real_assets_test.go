@@ -58,6 +58,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.MagicPrefixes) == 0 || len(snapshot.MagicSuffixes) == 0 || len(snapshot.AutoMagic) == 0 || len(snapshot.RarePrefixes) == 0 || len(snapshot.RareSuffixes) == 0 {
 		t.Fatal("typed affix tables are incomplete")
 	}
+	if len(snapshot.GemsByCode) == 0 || len(snapshot.RuneWords) == 0 || len(snapshot.CubeRecipes) == 0 || len(snapshot.SetsByIndex) == 0 {
+		t.Fatal("typed socketing and crafting tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -132,6 +135,22 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"rare suffixes": func() (int, error) {
 			records, err := Load[models.RareSuffix](store, RareSuffixTable)
+			return len(records), err
+		},
+		"gems": func() (int, error) {
+			records, err := Load[models.GemData](store, GemsTable)
+			return len(records), err
+		},
+		"rune words": func() (int, error) {
+			records, err := Load[models.RuneWordData](store, RunesTable)
+			return len(records), err
+		},
+		"cube recipes": func() (int, error) {
+			records, err := Load[models.CubeRecipe](store, CubeMainTable)
+			return len(records), err
+		},
+		"sets": func() (int, error) {
+			records, err := Load[models.SetBonusData](store, SetsTable)
 			return len(records), err
 		},
 	} {
