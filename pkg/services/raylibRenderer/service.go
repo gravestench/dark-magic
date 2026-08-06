@@ -1,6 +1,7 @@
 package raylibRenderer
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -37,13 +38,27 @@ type Service struct {
 // OnFrame registers work that must run on the renderer thread, immediately
 // before scene graph updates. Raylib window and input calls belong here.
 func (s *Service) OnFrame(callback func()) {
+	_ = s.SubscribeFrame(callback)
+}
+
+// SubscribeFrame registers renderer-thread work and returns a safe idempotent
+// cancellation function.
+func (s *Service) SubscribeFrame(callback func()) func() {
 	if callback == nil {
-		return
+		return func() {}
+	}
+	var active atomic.Bool
+	active.Store(true)
+	wrapper := func() {
+		if active.Load() {
+			callback()
+		}
 	}
 	s.frameMux.Lock()
-	s.frameCallbacks = append(s.frameCallbacks, callback)
+	s.frameCallbacks = append(s.frameCallbacks, wrapper)
 	s.frameSnapshot.Store(append([]func(){}, s.frameCallbacks...))
 	s.frameMux.Unlock()
+	return func() { active.Store(false) }
 }
 
 func (s *Service) DependenciesResolved() bool {
@@ -91,24 +106,10 @@ func (s *Service) Logger() *slog.Logger {
 }
 
 func (s *Service) initRenderer() {
-	title := s.config.Window.Title
-	width := s.config.Window.Width
-	height := s.config.Window.Height
-
-	rl.SetTraceLogCallback(func(level int, msg string) {
-		switch level {
-		case 0, 1, 2, 3:
-			s.logger.Debug(msg)
-		case 4:
-			s.logger.Error(msg)
-			panic(msg)
-		}
-	})
-
-	var serviceMeshShuttingDown bool
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	s.mesh.Events().On(servicemesh.EventServiceMeshShutdownInitiated, func(_ ...any) {
-		serviceMeshShuttingDown = true
+		cancel()
 	})
 
 	for {
@@ -119,24 +120,12 @@ func (s *Service) initRenderer() {
 		}()
 
 		mainthread.Call(func() {
-			rl.InitWindow(int32(width), int32(height), title)
-			rl.InitAudioDevice()
-			rl.SetTargetFPS(60)
-			rl.HideCursor()
-			s.isInit.Store(true)
-
-			for !rl.WindowShouldClose() && !serviceMeshShuttingDown {
-				rl.BeginDrawing()
-				rl.ClearBackground(rl.Black)
-				rl.BeginMode2D(*s.GetDefaultCamera())
-				s.update()
-				s.render()
-				rl.EndMode2D()
-
-				rl.EndDrawing()
+			if err := s.Start(context.Background()); err != nil {
+				s.logger.Error("starting renderer", "error", err)
+				return
 			}
-
-			rl.CloseWindow()
+			_ = s.Run(ctx)
+			_ = s.Stop(context.Background())
 			s.mesh.Shutdown()
 		})
 

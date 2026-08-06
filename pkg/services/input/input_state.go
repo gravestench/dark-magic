@@ -71,11 +71,11 @@ func (s *Service) updateKeyboardState() {
 		}
 	}
 	var snapshot map[int32]InputState
-	if shouldEmitEvent {
+	if shouldEmitEvent && s.mesh != nil {
 		snapshot = cloneStates(s.keyStates)
 	}
 	s.mux.Unlock()
-	if shouldEmitEvent {
+	if shouldEmitEvent && s.mesh != nil {
 		s.mesh.Events().Emit("KeyboardKeyStateChange", snapshot)
 	}
 	for _, key := range pressed {
@@ -115,7 +115,7 @@ func (s *Service) updateMouseCursorState() {
 	cursor := s.cursor
 	s.mux.Unlock()
 
-	if beforeX != cursor.X || beforeY != cursor.Y {
+	if (beforeX != cursor.X || beforeY != cursor.Y) && s.mesh != nil {
 		s.mesh.Events().Emit("MouseCursorStateChange", cursor)
 	}
 }
@@ -141,7 +141,7 @@ func (s *Service) updateMouseButtonState() {
 		}
 	}
 	var snapshot map[int32]InputState
-	if shouldEmitEvent {
+	if shouldEmitEvent && s.mesh != nil {
 		snapshot = cloneStates(s.mouseButtonStates)
 	}
 	s.mux.Unlock()

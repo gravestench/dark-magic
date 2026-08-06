@@ -2,6 +2,7 @@ package gameScene
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -44,8 +45,8 @@ type Service struct {
 	common.Service
 	renderer       raylibRenderer.Dependency
 	input          input.Dependency
-	files          fileLoader.Dependency
-	locale         locale.Dependency
+	files          fs.FS
+	language       LanguageSource
 	Config         Config
 	state          *scene.State
 	mapChunks      []mapChunk
@@ -57,10 +58,21 @@ type Service struct {
 	lastHUDRefresh time.Time
 }
 
+// LanguageSource is the narrow localization seam needed by the compatibility
+// HUD while the Lua-authored UI replaces it.
+type LanguageSource interface {
+	GetSupportedLanguages() []string
+}
+
+// New constructs the compatibility world scene with explicit dependencies.
+func New(renderer raylibRenderer.Dependency, inputService input.Dependency, files fs.FS, language LanguageSource, config Config) *Service {
+	return &Service{renderer: renderer, input: inputService, files: files, language: language, Config: config}
+}
+
 func (s *Service) Name() string { return "Game Scene" }
 
 func (s *Service) Ready() bool {
-	return s.renderer != nil && s.input != nil && s.files != nil && s.locale != nil
+	return s.renderer != nil && s.input != nil && s.files != nil && s.language != nil
 }
 
 func (s *Service) DependenciesResolved() bool { return s.Ready() && s.renderer.IsInit() }
@@ -73,14 +85,24 @@ func (s *Service) ResolveDependencies(services []servicemesh.Service) {
 		case input.Dependency:
 			s.input = candidate
 		case fileLoader.Dependency:
-			s.files = candidate
+			if s.files == nil {
+				s.files = candidate.FromGroups()
+			}
 		case locale.Dependency:
-			s.locale = candidate
+			if s.language == nil {
+				s.language = candidate
+			}
 		}
 	}
 }
 
 func (s *Service) Init(servicemesh.Mesh) {
+	_ = s.Start(context.Background())
+}
+
+// Start creates the compatibility world renderables after its explicit native
+// dependencies are ready.
+func (s *Service) Start(context.Context) error {
 	const fallbackWidth, fallbackHeight = 1280, 800
 	mapImage, err := s.loadMapImage()
 	if err != nil {
@@ -111,6 +133,25 @@ func (s *Service) Init(servicemesh.Mesh) {
 	s.lastTick = now
 	s.heroNode.OnUpdate(s.update)
 	s.syncRenderState(now)
+	return nil
+}
+
+// Stop detaches all compatibility scene nodes from the renderer graph.
+func (s *Service) Stop(context.Context) error {
+	for _, chunk := range s.mapChunks {
+		chunk.node.Disable()
+		chunk.node.SetParent(nil)
+	}
+	s.mapChunks = nil
+	for _, node := range []raylibRenderer.Renderable{s.heroNode, s.hudNode} {
+		if node != nil {
+			node.Disable()
+			node.SetParent(nil)
+		}
+	}
+	s.heroNode = nil
+	s.hudNode = nil
+	return nil
 }
 
 func (s *Service) loadMapImage() (image.Image, error) {
@@ -129,7 +170,7 @@ func (s *Service) loadMapImage() (image.Image, error) {
 		}
 		source = filesystem
 	} else {
-		source = s.files.FromGroups()
+		source = s.files
 	}
 	preview, err := assetinspect.TexturedDS1Preview(source, s.Config.Map, s.Config.Tiles, s.Config.Palette)
 	if err != nil {
@@ -227,7 +268,7 @@ func (s *Service) syncHUD(camera *rl.Camera2D, width, height int, now time.Time)
 	}
 	s.lastHUDRefresh = now
 	language := "Unknown"
-	if languages := s.locale.GetSupportedLanguages(); len(languages) != 0 {
+	if languages := s.language.GetSupportedLanguages(); len(languages) != 0 {
 		language = languages[0]
 	}
 	text := fmt.Sprintf("Dark Magic | %s | %s\nHero: %.0f, %.0f | WASD / arrows to move",

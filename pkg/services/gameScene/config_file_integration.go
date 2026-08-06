@@ -18,7 +18,14 @@ type Config struct {
 func (s *Service) ConfigFileName() string { return "game_scene.json" }
 
 func (s *Service) DefaultConfigData() []byte {
-	config := Config{
+	config := DefaultConfig()
+	data, _ := json.MarshalIndent(config, "", "\t")
+	return data
+}
+
+// DefaultConfig returns the production scene defaults.
+func DefaultConfig() Config {
+	return Config{
 		Enabled: true,
 		Source:  "$MPQ_DIRECTORY/d2data.mpq",
 		Map:     "data/global/tiles/Act1/BARRACKS/barE.ds1",
@@ -29,8 +36,6 @@ func (s *Service) DefaultConfigData() []byte {
 		},
 		Palette: "data/global/palette/ACT1/pal.pl2",
 	}
-	data, _ := json.MarshalIndent(config, "", "\t")
-	return data
 }
 
 func (s *Service) IngestConfig(handle *configManager.ConfigHandle) error {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gravestench/dark-magic/pkg/cache"
 	"github.com/gravestench/dark-magic/pkg/services/configManager"
 )
 
@@ -29,20 +30,30 @@ type Config struct {
 }
 
 func (s *Service) DefaultConfigData() []byte {
-	var cfg Config
-
-	cfg.Window.Title = "Dark Magic"
-	cfg.Window.Width = 800
-	cfg.Window.Height = 600
-
-	cfg.Resolution.Width = 800
-	cfg.Resolution.Height = 600
-
-	cfg.Cache.BudgetMB = 100
+	cfg := DefaultConfig()
 
 	data, _ := json.MarshalIndent(&cfg, "", "\t")
 
 	return data
+}
+
+// DefaultConfig returns a complete renderer configuration without requiring
+// the legacy configuration service.
+func DefaultConfig() Config {
+	var cfg Config
+	cfg.Window.Title = "Dark Magic"
+	cfg.Window.Width = 800
+	cfg.Window.Height = 600
+	cfg.Resolution.Width = 800
+	cfg.Resolution.Height = 600
+	cfg.Cache.BudgetMB = 100
+	return cfg
+}
+
+// Configure explicitly supplies renderer configuration and cache ownership.
+func (s *Service) Configure(config Config) {
+	s.config = &config
+	s.FlushCache(cache.New(s.CacheBudget()))
 }
 
 func (s *Service) IngestConfig(config *configManager.ConfigHandle) error {
