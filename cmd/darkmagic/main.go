@@ -23,7 +23,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
-	gameScene "github.com/gravestench/dark-magic/internal/raylib/world"
 	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
@@ -59,11 +58,6 @@ func run(contentFS *content.FS) error {
 	inputService := input.New(renderer)
 	inputService.SetLogger(slog.Default().With("component", "input"))
 	locale := localecore.New(contentFS, "English")
-	worldConfig := gameScene.DefaultConfig()
-	worldConfig.Source = ""
-	world := gameScene.New(renderer, inputService, contentFS, locale, worldConfig)
-	world.SetLogger(slog.Default().With("component", "world"))
-
 	scripts := modruntime.New()
 	composer := &rendercore.Composer{}
 	mixer := &audiocore.Mixer{}
@@ -128,7 +122,6 @@ func run(contentFS *content.FS) error {
 	staticDefinitions := []host.Definition{
 		{ID: "engine.renderer", Component: renderer},
 		{ID: "engine.input", DependsOn: []string{"engine.renderer"}, Component: inputService},
-		{ID: "game.world.compatibility", DependsOn: []string{"engine.renderer", "engine.input"}, Component: world},
 		{ID: "engine.lua", DependsOn: []string{"engine.renderer", "engine.input"}, Component: scripts},
 	}
 	if address := os.Getenv("DARK_MAGIC_DEBUG_ADDR"); address != "" {

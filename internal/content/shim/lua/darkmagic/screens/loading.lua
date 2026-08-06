@@ -10,7 +10,9 @@ local startup = manifest.startup
 return {
     enter = function(self)
         self.root = render.create("transition")
-        self.root:set_z(1)
+        -- Keep the letterbox backdrop below the embedded presenter, which
+        -- occupies z=0 on the transition layer.
+        self.root:set_z(-1)
         self.root:set_position(400, 300)
         self.root:fill_rect(800, 600, 8, 8, 12, 255)
         self.index = 0

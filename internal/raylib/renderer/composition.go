@@ -74,13 +74,19 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 		if resource.Kind != rendercore.ResourceTexture || change.Resource.Kind != rendercore.ResourceTexture {
 			return fmt.Errorf("resource %v is not an updateable texture", change.ResourceID)
 		}
+		previous := resource.Payload.(image.Image).Bounds().Size()
+		next := change.Resource.Payload.(image.Image).Bounds().Size()
 		b.resources[change.ResourceID] = change.Resource
 		for nodeID, resourceID := range b.nodeResources {
 			if resourceID != change.ResourceID {
 				continue
 			}
 			node := b.nodes[nodeID]
-			node.ClearTextures()
+			// Streaming video frames retain one native texture. A resize is the
+			// exceptional case that requires replacing its GPU allocation.
+			if previous != next {
+				node.ClearTextures()
+			}
 			node.SetImage(change.Resource.Payload.(image.Image))
 		}
 		return nil
