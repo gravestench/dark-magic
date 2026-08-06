@@ -49,6 +49,9 @@ return {
         if not focused then
             return
         end
+        if self.hud then
+            game_hud.update(self.hud)
+        end
         local speed = 160 * elapsed
         local dx, dy = 0, 0
         if input.down("left") then

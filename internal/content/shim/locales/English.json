@@ -46,5 +46,12 @@
   "darkmagic.cinematics.act4": "ACT IV — TERROR'S END",
   "darkmagic.cinematics.terror_end": "EPILOGUE — TERROR'S END",
   "darkmagic.cinematics.act5": "ACT V — DESTRUCTION'S END",
-  "darkmagic.cinematics.destruction_end": "EPILOGUE — DESTRUCTION'S END"
+  "darkmagic.cinematics.destruction_end": "EPILOGUE — DESTRUCTION'S END",
+  "darkmagic.minipanel.character": "CHARACTER",
+  "darkmagic.minipanel.inventory": "INVENTORY",
+  "darkmagic.minipanel.skills": "SKILL TREE",
+  "darkmagic.minipanel.automap": "AUTOMAP",
+  "darkmagic.minipanel.messages": "MESSAGES",
+  "darkmagic.minipanel.quests": "QUEST LOG",
+  "darkmagic.minipanel.options": "OPTIONS"
 }

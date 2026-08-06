@@ -282,6 +282,25 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 					Skills struct {
 						Sheet string `json:"sheet"`
 					} `json:"skills"`
+					Run struct {
+						Sheet     string `json:"sheet"`
+						WalkFrame int    `json:"walk_frame"`
+						RunFrame  int    `json:"run_frame"`
+					} `json:"run"`
+					Menu struct {
+						Sheet       string `json:"sheet"`
+						ClosedFrame int    `json:"closed_frame"`
+						OpenFrame   int    `json:"open_frame"`
+					} `json:"menu"`
+					Minipanel struct {
+						Sheet       string `json:"sheet"`
+						ButtonSheet string `json:"button_sheet"`
+						Buttons     []struct {
+							ID      string `json:"id"`
+							Frame   int    `json:"frame"`
+							Enabled bool   `json:"enabled"`
+						} `json:"buttons"`
+					} `json:"minipanel"`
 				} `json:"hud"`
 			} `json:"game_world"`
 		} `json:"screens"`
@@ -292,6 +311,21 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	hud := manifest.Screens.GameWorld.HUD
 	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
 		t.Fatalf("incomplete HUD asset facts: %#v", hud)
+	}
+	if hud.Run.Sheet == "" || hud.Menu.Sheet == "" || hud.Minipanel.Sheet == "" || hud.Minipanel.ButtonSheet == "" {
+		t.Fatalf("incomplete HUD control assets: %#v", hud)
+	}
+	if hud.Run.WalkFrame != 0 || hud.Run.RunFrame != 2 || hud.Menu.ClosedFrame != 0 || hud.Menu.OpenFrame != 2 {
+		t.Fatalf("unexpected HUD toggle frames: run=%#v menu=%#v", hud.Run, hud.Menu)
+	}
+	if len(hud.Minipanel.Buttons) != 7 {
+		t.Fatalf("minipanel buttons = %d, want 7", len(hud.Minipanel.Buttons))
+	}
+	wantFrames := []int{0, 2, 4, 8, 10, 12, 14}
+	for index, button := range hud.Minipanel.Buttons {
+		if button.ID == "" || button.Frame != wantFrames[index] {
+			t.Errorf("minipanel button %d = %#v", index, button)
+		}
 	}
 	wantX := []int{0, 165, 293, 421, 549, 683}
 	if len(hud.PanelParts) != len(wantX) {

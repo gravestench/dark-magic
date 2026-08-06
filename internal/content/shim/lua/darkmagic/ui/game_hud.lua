@@ -3,6 +3,9 @@
 -- The manifest owns asset/frame/placement facts. This module owns only the
 -- disposable render-node lifecycle and value-driven clipping behavior.
 local render = require("dm.render/v1")
+local scenes = require("dm.scene/v1")
+local locale = require("dm.locale/v1")
+local controls = require("darkmagic.ui.controls")
 
 local M = {}
 
@@ -40,7 +43,7 @@ local function add_globe(root, definition, sheet, overlap_sheet, palette)
 end
 
 function M.create(root, definition, palettes)
-    local hud = { root = render.create("hud", root) }
+    local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false }
     local palette = palettes[definition.palette]
 
     for _, part in ipairs(definition.panel_parts) do
@@ -72,7 +75,79 @@ function M.create(root, definition, palettes)
     for _, placement in ipairs({ skills.left, skills.right }) do
         dc6_at(hud.root, skills.sheet, palette, skills.frame, placement.x, placement.y)
     end
+
+    local run = definition.run
+    local run_node = dc6_at(hud.root, run.sheet, palette, run.walk_frame, run.x, run.y)
+    hud.controls:add({
+        id = "run",
+        label = "Run/Walk",
+        x = run.x,
+        y = run.y,
+        width = run.width,
+        height = run.height,
+        on_activate = function()
+            hud.running = not hud.running
+            run_node:set_dc6(run.sheet, palette, 0, hud.running and run.run_frame or run.walk_frame)
+        end,
+    })
+
+    local minipanel = definition.minipanel
+    local minipanel_node = dc6_at(hud.root, minipanel.sheet, palette, 0, minipanel.x, minipanel.y)
+    minipanel_node:set_visible(false)
+    for index, button in ipairs(minipanel.buttons) do
+        local button_definition = button
+        local node = dc6_at(
+            hud.root,
+            minipanel.button_sheet,
+            palette,
+            button_definition.frame,
+            minipanel.button_x + (index - 1) * minipanel.button_step,
+            minipanel.button_y
+        )
+        node:set_visible(false)
+        local control = hud.controls:add({
+            id = "minipanel_" .. button_definition.id,
+            label = assert(locale.text(button_definition.label)),
+            x = minipanel.button_x + (index - 1) * minipanel.button_step,
+            y = minipanel.button_y,
+            width = minipanel.button_width,
+            height = minipanel.button_height,
+            enabled = button_definition.enabled,
+            visible = false,
+            on_activate = function()
+                if button_definition.scene then
+                    scenes.push(button_definition.scene)
+                end
+            end,
+        })
+        control.node = node
+    end
+
+    local menu = definition.menu
+    local menu_node = dc6_at(hud.root, menu.sheet, palette, menu.closed_frame, menu.x, menu.y)
+    hud.controls:add({
+        id = "minipanel_toggle",
+        label = "Open/Close Mini-panel",
+        x = menu.x,
+        y = menu.y,
+        width = menu.width,
+        height = menu.height,
+        on_activate = function()
+            hud.menu_open = not hud.menu_open
+            menu_node:set_dc6(menu.sheet, palette, 0, hud.menu_open and menu.open_frame or menu.closed_frame)
+            minipanel_node:set_visible(hud.menu_open)
+            for _, button in ipairs(minipanel.buttons) do
+                local control = hud.controls:get("minipanel_" .. button.id)
+                control.visible = hud.menu_open
+                control.node:set_visible(hud.menu_open)
+            end
+        end,
+    })
     return hud
+end
+
+function M.update(hud)
+    hud.controls:update()
 end
 
 return M
