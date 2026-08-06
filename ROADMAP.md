@@ -289,9 +289,9 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Add palette quantization to either the final display or individual
   retained textures and animations. A CPU-built 32³ nearest-color lookup cube
   is uploaded as a point-sampled shader texture, so every output RGB value
-  belongs to an arbitrary non-empty raw-BGR or JSON palette without a search per
-  fragment. Monotone and black/white palettes are supported; alpha and resizable
-  viewport geometry survive the off-screen composition pass.
+  belongs to an arbitrary non-empty raw-BGR, GIMP GPL, or JSON palette without
+  a search per fragment. Monotone and black/white palettes are supported; alpha
+  and resizable viewport geometry survive the off-screen composition pass.
 
 ### M16 execution checkpoints
 

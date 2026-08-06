@@ -131,10 +131,11 @@ node:set_palette_quantization("palettes/black-white.json")
 node:clear_palette_quantization()
 ```
 
-Palette files may be normal Diablo `pal.dat` files or any non-empty sequence of
-packed BGR triples. Tiny palettes are intentional: three bytes force one color,
-while six bytes can define black and white. JSON palettes are also supported as
-either `["#000000", "#ffffff"]` or `{"colors":["#000000","#ffffff"]}`.
+Palette files may be normal Diablo `pal.dat` files, GIMP `.gpl` files, or any
+non-empty sequence of packed BGR triples. Tiny palettes are intentional: three
+bytes force one color, while six bytes can define black and white. JSON palettes
+are also supported as either `["#000000", "#ffffff"]` or
+`{"colors":["#000000","#ffffff"]}`.
 
 Capture CPU activity for the full client run and a live-heap snapshot at clean
 shutdown with:
