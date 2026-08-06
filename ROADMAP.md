@@ -730,7 +730,10 @@ implementations. The remaining work is tracked explicitly below.
   caches or source resolution. Four small renderer-independent capabilities now
   use feature ownership instead of historical `*core` names: `inputstate`,
   `loading`, `localization`, and `persistence`; all composition, Lua, acceptance,
-  and Raylib callers migrated together and the retired paths are guarded.
+  and Raylib callers migrated together and the retired paths are guarded. The
+  engine-side audio command boundary, sound catalog, buses, and playback state
+  now live in `internal/audio`; the native Raylib audio device remains a platform
+  adapter and the previous `audiocore` path is rejected.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

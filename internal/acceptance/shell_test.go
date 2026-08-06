@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -32,7 +32,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer rendercore.Composer
 	var input inputstate.Store
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	simulation := modruntime.NewSimulation(scene.New(11, 1000, 1000))
 	worldReady := make(chan struct{})

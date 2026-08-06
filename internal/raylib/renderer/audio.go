@@ -11,11 +11,11 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 )
 
 // AttachAudio drains audio commands on the Raylib owner thread.
-func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
+func (s *Service) AttachAudio(mixer *audio.Mixer) error {
 	if mixer == nil {
 		return fmt.Errorf("renderer: nil audio mixer")
 	}
@@ -24,7 +24,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	if s.audioBackend != nil {
 		return fmt.Errorf("renderer: audio mixer is already attached")
 	}
-	backend := &raylibAudioBackend{mixer: mixer, sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]musicPlayback), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
+	backend := &raylibAudioBackend{mixer: mixer, sounds: make(map[audio.SoundID]rl.Sound), loops: make(map[audio.SoundID]bool), music: make(map[audio.SoundID]musicPlayback), pcm: make(map[audio.SoundID]*pcmPlayback)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
 		mixer.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
@@ -38,11 +38,11 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 
 type raylibAudioBackend struct {
 	mu     sync.Mutex
-	mixer  *audiocore.Mixer
-	sounds map[audiocore.SoundID]rl.Sound
-	loops  map[audiocore.SoundID]bool
-	music  map[audiocore.SoundID]musicPlayback
-	pcm    map[audiocore.SoundID]*pcmPlayback
+	mixer  *audio.Mixer
+	sounds map[audio.SoundID]rl.Sound
+	loops  map[audio.SoundID]bool
+	music  map[audio.SoundID]musicPlayback
+	pcm    map[audio.SoundID]*pcmPlayback
 }
 
 type pcmPlayback struct {
@@ -65,7 +65,7 @@ type musicPlayback struct {
 
 const pcmBlockFrames = 1024
 
-func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
+func (b *raylibAudioBackend) Apply(command audio.Command) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	switch command.Kind {

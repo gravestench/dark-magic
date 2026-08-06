@@ -10,7 +10,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
 
@@ -49,7 +49,7 @@ func (immediateMediaDecoder) DecodeAudio(_ context.Context, _ io.ReadSeeker, emi
 func TestEmbeddedPlaybackCompletesAndReleasesOwnership(t *testing.T) {
 	data := minimalBIK()
 	var composer rendercore.Composer
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	decoder := immediateMediaDecoder{}
 	backend := &Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
 	playback, err := backend.Play(fstest.MapFS{"intro.bik": &fstest.MapFile{Data: data}}, "intro.bik")
@@ -73,7 +73,7 @@ func TestEmbeddedPlaybackCompletesAndReleasesOwnership(t *testing.T) {
 
 func TestEmbeddedResizeRefitsActivePlayback(t *testing.T) {
 	var composer rendercore.Composer
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	decoder := &holdingMediaDecoder{ready: make(chan struct{})}
 	backend := &Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
 	playback, err := backend.Play(fstest.MapFS{"intro.bik": &fstest.MapFile{Data: minimalBIK()}}, "intro.bik")
@@ -97,7 +97,7 @@ func TestEmbeddedResizeRefitsActivePlayback(t *testing.T) {
 }
 
 func TestEmbeddedPlaybackPrefersReportedAudioClock(t *testing.T) {
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	id, err := mixer.OpenPCMStream(48000, 2)
 	if err != nil {
 		t.Fatal(err)

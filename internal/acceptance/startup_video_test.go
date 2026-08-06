@@ -7,7 +7,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -164,7 +164,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	backend := &startupVideoBackend{}
 	var input inputstate.Store
 	var composer rendercore.Composer
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
 	loading := acceptanceLoadingCoordinator()
 	t.Cleanup(loading.Close)

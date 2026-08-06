@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -26,7 +26,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	}
 	runtime := New()
 	var input inputstate.Store
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	var composer rendercore.Composer
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{

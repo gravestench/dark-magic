@@ -7,21 +7,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	lua "github.com/yuin/gopher-lua"
 )
 
 const audioSoundType = "dm.audio.sound/v1"
 
 type ownedSound struct {
-	mixer *audiocore.Mixer
-	id    audiocore.SoundID
+	mixer *audio.Mixer
+	id    audio.SoundID
 	once  sync.Once
 	err   error
 }
 
-func luaPlayOptions(state *lua.LState, index int) audiocore.PlayOptions {
-	options := audiocore.PlayOptions{Bus: "sfx", Volume: 1}
+func luaPlayOptions(state *lua.LState, index int) audio.PlayOptions {
+	options := audio.PlayOptions{Bus: "sfx", Volume: 1}
 	if table := state.OptTable(index, nil); table != nil {
 		for name, apply := range map[string]func(lua.LValue){
 			"bus":    func(value lua.LValue) { options.Bus = lua.LVAsString(value) },
@@ -45,8 +45,8 @@ func (s *ownedSound) release() error {
 }
 
 // AudioModule exposes scoped archive-backed sound playback.
-func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module {
-	catalog := audiocore.NewCatalog(source)
+func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
+	catalog := audio.NewCatalog(source)
 	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{

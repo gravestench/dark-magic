@@ -53,7 +53,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
 | `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
 | `internal/rendercore` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep |
-| `internal/audiocore` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
+| `internal/audio` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
 | `internal/videocore` | Cinematic decode/playback orchestration | command, Lua | Scene | Keep |
 | `internal/inputstate` | Serialized input state | command, Lua, raylib | Application | Keep |
 | `internal/localization` | TBL-backed localization | command, Lua | Application | Keep |

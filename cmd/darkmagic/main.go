@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/capture"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/filewatch"
@@ -140,7 +140,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	locale := localization.New(contentFS, "English")
 	scripts := modruntime.New()
 	composer := &rendercore.Composer{}
-	mixer := &audiocore.Mixer{}
+	mixer := &audio.Mixer{}
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(scripts, navigator)
 	if profile != nil {

@@ -1,4 +1,4 @@
-package audiocore
+package audio
 
 import (
 	"reflect"

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/videocore"
@@ -120,7 +120,7 @@ func TestEmbeddedBackendPresentsRealBIKFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 	var composer rendercore.Composer
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	decoder := videocore.FFmpegDecoder{}
 	backend := &videocore.Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
 	playback, err := backend.Play(archive, "data/local/video/New_Bliz640x480.bik")

@@ -5,14 +5,14 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/host"
 )
 
 func TestAudioHandlesBelongToLuaComponentScope(t *testing.T) {
 	t.Parallel()
 
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	source := fstest.MapFS{
 		"sound.wav": &fstest.MapFile{Data: []byte("wave")},
 		"system.lua": &fstest.MapFile{Data: []byte(`
@@ -55,7 +55,7 @@ return { id = "sound", start = function(self) audio.set_bus_volume("ui", .8); se
 }
 
 func TestPersistentAudioOutlivesCallingComponent(t *testing.T) {
-	var mixer audiocore.Mixer
+	var mixer audio.Mixer
 	source := fstest.MapFS{
 		"music.wav": &fstest.MapFile{Data: []byte("music")},
 		"system.lua": &fstest.MapFile{Data: []byte(`
@@ -108,9 +108,9 @@ end }
 	}
 }
 
-type recordingAudioBackend struct{ commands []audiocore.Command }
+type recordingAudioBackend struct{ commands []audio.Command }
 
-func (b *recordingAudioBackend) Apply(command audiocore.Command) error {
+func (b *recordingAudioBackend) Apply(command audio.Command) error {
 	b.commands = append(b.commands, command)
 	return nil
 }

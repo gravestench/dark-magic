@@ -1,5 +1,5 @@
-// Package audiocore defines the renderer-thread command boundary for audio.
-package audiocore
+// Package audio defines the renderer-thread command boundary for audio.
+package audio
 
 import (
 	"errors"

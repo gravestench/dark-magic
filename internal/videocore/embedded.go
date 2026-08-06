@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/assets/decode"
-	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
 
@@ -29,7 +29,7 @@ const (
 type Embedded struct {
 	mu       sync.Mutex
 	Composer *rendercore.Composer
-	Mixer    *audiocore.Mixer
+	Mixer    *audio.Mixer
 	Viewport image.Point
 	Video    Decoder
 	Audio    AudioDecoder
@@ -102,10 +102,10 @@ func (b *Embedded) Resize(viewport image.Point) error {
 
 type embeddedPlayback struct {
 	mu        sync.RWMutex
-	mixer     *audiocore.Mixer
+	mixer     *audio.Mixer
 	presenter *Presenter
 	cancel    context.CancelFunc
-	audioID   audiocore.SoundID
+	audioID   audio.SoundID
 	snapshot  Snapshot
 	done      chan struct{}
 	stopOnce  sync.Once
@@ -131,7 +131,7 @@ func (p *embeddedPlayback) Stop() error {
 	return nil
 }
 
-func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, audio AudioDecoder) {
+func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, audioDecoder AudioDecoder) {
 	defer close(p.done)
 	defer func() {
 		if p.onDone != nil {
@@ -154,7 +154,7 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 		decodeErrors <- err
 	}()
 	go func() {
-		err := audio.DecodeAudio(ctx, bytes.NewReader(data), func(chunk AudioChunk) error {
+		err := audioDecoder.DecodeAudio(ctx, bytes.NewReader(data), func(chunk AudioChunk) error {
 			select {
 			case audioChunks <- chunk:
 				return nil
@@ -188,13 +188,13 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	go func() {
 		var streamErr error
 		var audioEnd time.Duration
-		var audioID audiocore.SoundID
+		var audioID audio.SoundID
 		for chunk := range audioChunks {
 			if err := p.waitForMediaTime(ctx, started, chunk.PTS-mediaLead); err != nil {
 				streamErr = err
 				break
 			}
-			if audioID == (audiocore.SoundID{}) {
+			if audioID == (audio.SoundID{}) {
 				audioID, streamErr = p.mixer.OpenPCMStream(chunk.SampleRate, chunk.Channels)
 				p.setAudioID(audioID)
 			}
@@ -209,7 +209,7 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 				audioEnd = chunk.PTS + time.Duration(float64(len(chunk.PCM))/float64(bytesPerSecond)*float64(time.Second))
 			}
 		}
-		if streamErr == nil && audioID != (audiocore.SoundID{}) {
+		if streamErr == nil && audioID != (audio.SoundID{}) {
 			streamErr = p.waitForMediaTime(ctx, started, audioEnd)
 		}
 		presentationErrors <- streamErr
@@ -227,7 +227,7 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 			runErr = errors.Join(runErr, err)
 		}
 	}
-	if audioID := p.getAudioID(); audioID != (audiocore.SoundID{}) {
+	if audioID := p.getAudioID(); audioID != (audio.SoundID{}) {
 		runErr = errors.Join(runErr, p.mixer.Stop(audioID))
 	}
 	runErr = errors.Join(runErr, p.presenter.Close())
@@ -242,20 +242,20 @@ func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, 
 	p.mu.Unlock()
 }
 
-func (p *embeddedPlayback) setAudioID(id audiocore.SoundID) {
+func (p *embeddedPlayback) setAudioID(id audio.SoundID) {
 	p.mu.Lock()
 	p.audioID = id
 	p.mu.Unlock()
 }
 
-func (p *embeddedPlayback) getAudioID() audiocore.SoundID {
+func (p *embeddedPlayback) getAudioID() audio.SoundID {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.audioID
 }
 
 func (p *embeddedPlayback) mediaTime(started time.Time) (time.Duration, bool) {
-	if id := p.getAudioID(); id != (audiocore.SoundID{}) {
+	if id := p.getAudioID(); id != (audio.SoundID{}) {
 		if elapsed, available := p.mixer.PCMTime(id); available {
 			return elapsed, true
 		}
