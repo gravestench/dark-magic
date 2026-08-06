@@ -151,6 +151,10 @@ type Snapshot struct {
 	MissileCalculationsByCode  map[string]models.MissileCalculation
 	SkillCalculations          []models.SkillCalculation
 	SkillCalculationsByCode    map[string]models.SkillCalculation
+	ArmorTypes                 []models.ArmorType
+	ArmorTypesByToken          map[string]models.ArmorType
+	CubeModifierTypes          []models.CubeModifierType
+	CubeModifierTypesByCode    map[string]models.CubeModifierType
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -816,6 +820,24 @@ func (c *Catalog) load() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	issues = append(issues, found...)
+	armorTypes, err := Load[models.ArmorType](c.store, ArmorTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	armorTypesByToken, found, err := ObservedIndex(ArmorTypesTable, armorTypes, func(record models.ArmorType) string { return record.Token })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	cubeModifierTypes, err := Load[models.CubeModifierType](c.store, CubeModifierTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	cubeModifierTypesByCode, found, err := ObservedIndex(CubeModifierTypesTable, cubeModifierTypes, func(record models.CubeModifierType) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -873,6 +895,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		ElementTypes: elementTypes, ElementTypesByCode: elementTypesByCode, Events: events, EventsByName: eventsByName,
 		MissileCalculations: missileCalculations, MissileCalculationsByCode: missileCalculationsByCode,
 		SkillCalculations: skillCalculations, SkillCalculationsByCode: skillCalculationsByCode,
+		ArmorTypes: armorTypes, ArmorTypesByToken: armorTypesByToken,
+		CubeModifierTypes: cubeModifierTypes, CubeModifierTypesByCode: cubeModifierTypesByCode,
 	}, nil
 }
 
@@ -1017,6 +1041,10 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		MissileCalculationsByCode:  make(map[string]models.MissileCalculation, len(source.MissileCalculationsByCode)),
 		SkillCalculations:          append([]models.SkillCalculation(nil), source.SkillCalculations...),
 		SkillCalculationsByCode:    make(map[string]models.SkillCalculation, len(source.SkillCalculationsByCode)),
+		ArmorTypes:                 append([]models.ArmorType(nil), source.ArmorTypes...),
+		ArmorTypesByToken:          make(map[string]models.ArmorType, len(source.ArmorTypesByToken)),
+		CubeModifierTypes:          append([]models.CubeModifierType(nil), source.CubeModifierTypes...),
+		CubeModifierTypesByCode:    make(map[string]models.CubeModifierType, len(source.CubeModifierTypesByCode)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -1188,6 +1216,12 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.SkillCalculationsByCode {
 		result.SkillCalculationsByCode[key] = value
+	}
+	for key, value := range source.ArmorTypesByToken {
+		result.ArmorTypesByToken[key] = value
+	}
+	for key, value := range source.CubeModifierTypesByCode {
+		result.CubeModifierTypesByCode[key] = value
 	}
 	return result
 }

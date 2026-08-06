@@ -119,6 +119,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.TransformColorsByCode) == 0 || len(snapshot.ComponentCodesByCode) == 0 || len(snapshot.ElementTypesByCode) == 0 || len(snapshot.EventsByName) == 0 || len(snapshot.MissileCalculationsByCode) == 0 || len(snapshot.SkillCalculationsByCode) == 0 {
 		t.Fatal("typed calculation lookup tables are incomplete")
 	}
+	if len(snapshot.ArmorTypesByToken) == 0 || len(snapshot.CubeModifierTypesByCode) == 0 {
+		t.Fatal("typed hardcoded reference tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

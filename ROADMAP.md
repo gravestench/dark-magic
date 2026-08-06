@@ -766,6 +766,9 @@ implementations. The remaining work is tracked explicitly below.
   Colors, CompCode, ElemTypes, Events, MissCalc, and SkillCalc now expose the
   guide-referenced transform, component, element, callback-event, and formula
   dictionaries without embedding those authored descriptions in engine code.
+  ArmType and CubeMod now expose the remaining unambiguous hardcoded armor and
+  cube-modifier dictionaries; CharTemplate and UniqueTitle remain deferred
+  because their guide semantics are incomplete or their layered schemas drift.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
