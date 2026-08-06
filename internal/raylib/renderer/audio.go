@@ -1,6 +1,7 @@
 package raylibRenderer
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"time"
@@ -20,7 +21,7 @@ func (s *Service) AttachAudio(mixer *audiocore.Mixer) error {
 	if s.audioBackend != nil {
 		return fmt.Errorf("renderer: audio mixer is already attached")
 	}
-	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]rl.Music)}
+	backend := &raylibAudioBackend{sounds: make(map[audiocore.SoundID]rl.Sound), loops: make(map[audiocore.SoundID]bool), music: make(map[audiocore.SoundID]rl.Music), pcm: make(map[audiocore.SoundID]*pcmPlayback)}
 	s.audioBackend = backend
 	s.SubscribeFrame(func() {
 		mixer.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
@@ -37,12 +38,38 @@ type raylibAudioBackend struct {
 	sounds map[audiocore.SoundID]rl.Sound
 	loops  map[audiocore.SoundID]bool
 	music  map[audiocore.SoundID]rl.Music
+	pcm    map[audiocore.SoundID]*pcmPlayback
+}
+
+type pcmPlayback struct {
+	stream rl.AudioStream
+	queued [][]int16
 }
 
 func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	switch command.Kind {
+	case "pcm-open":
+		if _, exists := b.pcm[command.ID]; exists {
+			return fmt.Errorf("PCM stream %v already exists", command.ID)
+		}
+		stream := rl.LoadAudioStream(uint32(command.Rate), 16, uint32(command.Channels))
+		rl.SetAudioStreamVolume(stream, command.Volume)
+		rl.PlayAudioStream(stream)
+		b.pcm[command.ID] = &pcmPlayback{stream: stream}
+		return nil
+	case "pcm-write":
+		playback, exists := b.pcm[command.ID]
+		if !exists {
+			return fmt.Errorf("PCM stream %v does not exist", command.ID)
+		}
+		samples := make([]int16, len(command.Data)/2)
+		for index := range samples {
+			samples[index] = int16(binary.LittleEndian.Uint16(command.Data[index*2:]))
+		}
+		playback.queued = append(playback.queued, samples)
+		return nil
 	case "play":
 		if _, exists := b.sounds[command.ID]; exists {
 			return fmt.Errorf("sound %v already exists", command.ID)
@@ -91,6 +118,12 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		rl.SetSoundVolume(sound, command.Volume)
 		return nil
 	case "stop":
+		if playback, exists := b.pcm[command.ID]; exists {
+			rl.StopAudioStream(playback.stream)
+			rl.UnloadAudioStream(playback.stream)
+			delete(b.pcm, command.ID)
+			return nil
+		}
 		if music, exists := b.music[command.ID]; exists {
 			rl.StopMusicStream(music)
 			rl.UnloadMusicStream(music)
@@ -122,6 +155,12 @@ func (b *raylibAudioBackend) Update() {
 	for _, music := range b.music {
 		rl.UpdateMusicStream(music)
 	}
+	for _, playback := range b.pcm {
+		if len(playback.queued) > 0 && rl.IsAudioStreamProcessed(playback.stream) {
+			rl.UpdateAudioStream(playback.stream, playback.queued[0])
+			playback.queued = playback.queued[1:]
+		}
+	}
 }
 
 func (b *raylibAudioBackend) Close() {
@@ -131,6 +170,11 @@ func (b *raylibAudioBackend) Close() {
 		rl.StopSound(sound)
 		rl.UnloadSound(sound)
 		delete(b.sounds, id)
+	}
+	for id, playback := range b.pcm {
+		rl.StopAudioStream(playback.stream)
+		rl.UnloadAudioStream(playback.stream)
+		delete(b.pcm, id)
 	}
 	for id, music := range b.music {
 		rl.StopMusicStream(music)

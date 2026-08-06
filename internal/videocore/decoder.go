@@ -19,3 +19,16 @@ type Frame struct {
 type Decoder interface {
 	Decode(context.Context, io.ReadSeeker, func(Frame) error) error
 }
+
+// AudioChunk is interleaved signed 16-bit little-endian PCM and its media PTS.
+type AudioChunk struct {
+	PCM        []byte
+	PTS        time.Duration
+	SampleRate int
+	Channels   int
+}
+
+// AudioDecoder normalizes a media stream into timestamped engine PCM.
+type AudioDecoder interface {
+	DecodeAudio(context.Context, io.ReadSeeker, func(AudioChunk) error) error
+}

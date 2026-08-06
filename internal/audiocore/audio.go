@@ -16,14 +16,52 @@ type SoundID struct {
 
 // Command is one ordered backend operation.
 type Command struct {
-	Kind   string
-	ID     SoundID
-	Format string
-	Data   []byte
-	Volume float32
-	Pan    float32
-	Loop   bool
-	Stream bool
+	Kind     string
+	ID       SoundID
+	Format   string
+	Data     []byte
+	Volume   float32
+	Pan      float32
+	Loop     bool
+	Stream   bool
+	Rate     int
+	Channels int
+}
+
+// OpenPCMStream reserves a continuously fed signed-16-bit audio stream.
+func (m *Mixer) OpenPCMStream(sampleRate, channels int) (SoundID, error) {
+	if sampleRate <= 0 || channels <= 0 {
+		return SoundID{}, errors.New("audiocore: PCM sample rate and channels must be positive")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var index uint32
+	if len(m.free) != 0 {
+		index = m.free[len(m.free)-1]
+		m.free = m.free[:len(m.free)-1]
+	} else {
+		index = uint32(len(m.slots))
+		m.slots = append(m.slots, slot{generation: 1})
+	}
+	entry := &m.slots[index]
+	entry.active, entry.bus, entry.volume = true, "cinematic", 1
+	id := SoundID{Slot: index, Generation: entry.generation}
+	m.pending = append(m.pending, Command{Kind: "pcm-open", ID: id, Rate: sampleRate, Channels: channels, Volume: m.busVolume("cinematic")})
+	return id, nil
+}
+
+// WritePCM queues interleaved signed-16-bit little-endian samples.
+func (m *Mixer) WritePCM(id SoundID, pcm []byte) error {
+	if len(pcm) == 0 || len(pcm)%2 != 0 {
+		return errors.New("audiocore: PCM data must contain complete signed-16-bit samples")
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.valid(id); err != nil {
+		return err
+	}
+	m.pending = append(m.pending, Command{Kind: "pcm-write", ID: id, Data: append([]byte(nil), pcm...)})
+	return nil
 }
 
 // Backend consumes audio commands on the native audio owner thread.
@@ -268,7 +306,7 @@ func (m *Mixer) Stop(id SoundID) error {
 
 func validBus(bus string) bool {
 	switch bus {
-	case "music", "ui", "sfx", "ambience", "speech":
+	case "music", "ui", "sfx", "ambience", "speech", "cinematic":
 		return true
 	}
 	return false

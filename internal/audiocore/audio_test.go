@@ -13,6 +13,33 @@ func (b *recordingBackend) Apply(command Command) error {
 	return nil
 }
 
+func TestPCMStreamUsesCheckedAudioOwnership(t *testing.T) {
+	var mixer Mixer
+	id, err := mixer.OpenPCMStream(44100, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mixer.WritePCM(id, []byte{1, 0, 2, 0}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mixer.Stop(id); err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.commands) != 3 || backend.commands[0].Kind != "pcm-open" || backend.commands[1].Kind != "pcm-write" || backend.commands[2].Kind != "stop" {
+		t.Fatalf("PCM commands = %#v", backend.commands)
+	}
+	if backend.commands[0].Rate != 44100 || backend.commands[0].Channels != 2 {
+		t.Fatalf("PCM format = %#v", backend.commands[0])
+	}
+	if err := mixer.WritePCM(id, []byte{0, 0}); err == nil {
+		t.Fatal("wrote PCM through stale stream handle")
+	}
+}
+
 func TestMixerDeterministicFadeAndGroupStop(t *testing.T) {
 	t.Parallel()
 	var mixer Mixer

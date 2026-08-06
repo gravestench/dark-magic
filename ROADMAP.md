@@ -378,14 +378,18 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Decode Bink video and audio in-process behind `videocore.Backend`; keep
   codec and FFmpeg details out of Lua and scene definitions. The build-tagged
   libav decoder now demuxes seekable VFS input, decodes video packets, converts
-  native frames to RGBA, and emits timestamped frames; audio and backend
-  scheduling remain.
+  native frames to RGBA, and emits timestamped frames. The same decoder now
+  normalizes the preferred Bink audio track to timestamped interleaved stereo
+  S16 PCM; backend scheduling and audio-device streaming remain.
 - [x] Add checked streaming texture updates that transfer decoded frames onto
   the renderer owner thread without replacing the cinematic scene node.
 - [x] Present decoded frames on `LayerTransition` with aspect-preserving
   letterboxing inside the existing Dark Magic window.
 - [ ] Stream decoded PCM through the cinematic audio bus and use audio timestamps
   as the synchronization clock, with bounded frame dropping when rendering lags.
+  The audio core and raylib owner-thread backend now support checked S16 PCM
+  stream creation, incremental writes, playback, and teardown; clock reporting
+  and bounded decode scheduling remain.
 - [ ] Implement stop, skip, completion, decode failure, device loss, resize, and
   shutdown cleanup through the existing `dm.video/v1` lifecycle contract.
 - [ ] Prefer the embedded backend in the client and retain FFplay only as an
