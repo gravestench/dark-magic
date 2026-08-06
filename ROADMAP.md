@@ -323,9 +323,9 @@ implementations. The remaining work is tracked explicitly below.
   assets with skip and failure behavior.
 - [x] Replace the placeholder title and main-menu rectangles with verified,
   palette-aware tiled backgrounds and the anchored layered animated logo.
-- [ ] Add localized front-end buttons, legal/version labels, cursor behavior,
+- [x] Add localized front-end buttons, legal/version labels, cursor behavior,
   and title audio.
-- [ ] Implement single-player, multiplayer/TCP-IP, credits, cinematics, dialogs,
+- [x] Implement single-player, multiplayer/TCP-IP, credits, cinematics, dialogs,
   and navigation using verified front-end assets.
 - [ ] Implement character creation with all seven class animation sets, hit
   regions, narration, name validation, expansion/hardcore flags, and cancel.
@@ -337,7 +337,7 @@ implementations. The remaining work is tracked explicitly below.
 
 ### M17 execution checkpoints
 
-- [ ] M17.1: Complete title/main-menu labels, controls, music, cursor, legal and
+- [x] M17.1: Complete title/main-menu labels, controls, music, cursor, legal and
   version text, dialogs, and single/multiplayer/credits/cinematics navigation.
   The localized Single Player control now uses the verified split DC6 button,
   Exocet TBL/DC6 text, pointer/focus activation, and selection sound. Manifest-
@@ -350,7 +350,9 @@ implementations. The remaining work is tracked explicitly below.
   `Sounds.txt` resolves menu music through `ESOUND_MUSIC_DIABLO`, preserving its
   record-owned streaming/loop/volume behavior. Expansion credits now decode the
   verified UTF-16 text through the VFS and paginate it over the palette-correct
-  credits background; functional Cinematics content remains.
+  credits background. The Cinematics scene now exposes all seven verified
+  English 640x292 BIK entries as VFS-aware localized controls; playback and
+  startup sequencing proceed under M17.2.
 - [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
   behavior.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.

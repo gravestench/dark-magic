@@ -16,5 +16,12 @@
   "darkmagic.tcpip.address": "SERVER ADDRESS",
   "darkmagic.dialog.ok": "OK",
   "darkmagic.dialog.cancel": "CANCEL",
-  "darkmagic.credits.unavailable": "Expansion credits are unavailable in this installation."
+  "darkmagic.credits.unavailable": "Expansion credits are unavailable in this installation.",
+  "darkmagic.cinematics.act1": "ACT I — THE WANDERER",
+  "darkmagic.cinematics.act2": "ACT II — THE SECRET OF THE VIZJEREI",
+  "darkmagic.cinematics.act3": "ACT III — THE GATEWAY TO HELL",
+  "darkmagic.cinematics.act4": "ACT IV — TERROR'S END",
+  "darkmagic.cinematics.terror_end": "EPILOGUE — TERROR'S END",
+  "darkmagic.cinematics.act5": "ACT V — DESTRUCTION'S END",
+  "darkmagic.cinematics.destruction_end": "EPILOGUE — DESTRUCTION'S END"
 }

@@ -11,9 +11,9 @@ local skills = require("darkmagic.overlays.skills")
 local automap = require("darkmagic.overlays.automap")
 local options = require("darkmagic.overlays.options")
 local pause = require("darkmagic.overlays.pause")
-local static_frontend = require("darkmagic.screens.static_frontend")
 local tcpip = require("darkmagic.screens.tcpip")
 local credits = require("darkmagic.screens.credits")
+local cinematics = require("darkmagic.screens.cinematics")
 
 return {
     id = "darkmagic.boot",
@@ -31,7 +31,7 @@ return {
         scenes.register("game_world", game_world)
         scenes.register("tcpip", tcpip)
         scenes.register("credits", credits)
-        scenes.register("cinematics", static_frontend("cinematics"))
+        scenes.register("cinematics", cinematics)
         scenes.register("inventory", inventory)
         scenes.register("character", character)
         scenes.register("skills", skills)

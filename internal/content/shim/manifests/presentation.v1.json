@@ -111,7 +111,20 @@
         "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
       }
     },
-    "cinematics": { "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6", "palette": "sky" },
+    "cinematics": {
+      "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6",
+      "palette": "sky",
+      "entries": [
+        { "id": "act1", "label": "darkmagic.cinematics.act1", "path": "data/local/Video/ENG/d2intro640x292.bik" },
+        { "id": "act2", "label": "darkmagic.cinematics.act2", "path": "data/local/Video/ENG/Act02start640x292.bik" },
+        { "id": "act3", "label": "darkmagic.cinematics.act3", "path": "data/local/Video/ENG/Act03start640x292.bik" },
+        { "id": "act4", "label": "darkmagic.cinematics.act4", "path": "data/local/Video/ENG/Act04start640x292.bik" },
+        { "id": "terror_end", "label": "darkmagic.cinematics.terror_end", "path": "data/local/Video/ENG/Act04end640x292.bik" },
+        { "id": "act5", "label": "darkmagic.cinematics.act5", "path": "data/local/Video/ENG/D2x_Intro_640x292.bik" },
+        { "id": "destruction_end", "label": "darkmagic.cinematics.destruction_end", "path": "data/local/Video/ENG/D2x_Out_640x292.bik" }
+      ],
+      "list": { "x": 235, "y": 145, "width": 330, "row_height": 42 }
+    },
     "credits": {
       "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
       "palette": "sky",
