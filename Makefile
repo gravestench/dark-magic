@@ -1,7 +1,10 @@
-.PHONY: test test-race fmt vet shim bik-view profile profile-check capture
+.PHONY: test architecture test-race fmt vet shim bik-view profile profile-check capture
 
 test:
 	go test ./...
+
+architecture:
+	go test ./internal/acceptance -run 'Test(Retired|NoAccidental|DependencyDirection|CommandRemains)'
 
 test-race:
 	go test -race ./...

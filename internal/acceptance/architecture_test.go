@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"errors"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -77,6 +78,115 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 			modelRoot := filepath.Join(root, "internal", "game", "data", "model")
 			if pathWithin(path, modelRoot) && (name == "github.com/yuin/gopher-lua" || strings.HasPrefix(name, "github.com/gravestench/dark-magic/internal/")) {
 				t.Errorf("%s couples typed game data to engine/runtime package %s", path, name)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDependencyDirection(t *testing.T) {
+	root := repositoryRoot(t)
+	err := filepath.WalkDir(filepath.Join(root, "internal"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			return nil
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
+		if err != nil {
+			return err
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		packagePath := filepath.ToSlash(filepath.Dir(relative))
+		for _, imported := range file.Imports {
+			name, err := strconv.Unquote(imported.Path.Value)
+			if err != nil {
+				return err
+			}
+			const projectInternal = "github.com/gravestench/dark-magic/internal/"
+			if !strings.HasPrefix(name, projectInternal) {
+				continue
+			}
+			dependency := strings.TrimPrefix(name, "github.com/gravestench/dark-magic/")
+			if !strings.HasPrefix(packagePath, "internal/dev") && strings.HasPrefix(dependency, "internal/dev/") {
+				t.Errorf("%s imports developer-only package %s", relative, dependency)
+			}
+			if forbiddenLayerImport(packagePath, dependency) {
+				t.Errorf("%s points outward from %s to %s", relative, packagePath, dependency)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func forbiddenLayerImport(packagePath, dependency string) bool {
+	for _, root := range []string{"internal/cache", "internal/paths", "internal/logging", "internal/game/data/model"} {
+		if packagePath == root || strings.HasPrefix(packagePath, root+"/") {
+			return strings.HasPrefix(dependency, "internal/")
+		}
+	}
+	if packagePath == "internal/content" || strings.HasPrefix(packagePath, "internal/content/") {
+		return strings.HasPrefix(dependency, "internal/") && dependency != "internal/paths"
+	}
+	if strings.HasPrefix(packagePath, "internal/game/") {
+		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/platform/", "internal/presentation/", "internal/runtime/")
+	}
+	if strings.HasPrefix(packagePath, "internal/presentation/") {
+		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/platform/", "internal/runtime/")
+	}
+	if strings.HasPrefix(packagePath, "internal/platform/") {
+		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/runtime/")
+	}
+	return false
+}
+
+func hasAnyPrefix(value string, prefixes ...string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCommandRemainsCompositionOnly(t *testing.T) {
+	root := repositoryRoot(t)
+	allowedFunctions := map[string]struct{}{
+		"main": {}, "environmentDefault": {}, "parseLogLevel": {}, "run": {},
+		"validateClientContent": {}, "developmentCharacters": {}, "buildVersion": {}, "stopHost": {},
+	}
+	err := filepath.WalkDir(filepath.Join(root, "cmd"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			return nil
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			return err
+		}
+		for _, declaration := range file.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			if function.Recv != nil {
+				t.Errorf("command contains method %s; move behavior under internal", function.Name.Name)
+				continue
+			}
+			if _, allowed := allowedFunctions[function.Name.Name]; !allowed {
+				t.Errorf("command contains unreviewed function %s; keep commands to composition and move behavior under internal", function.Name.Name)
 			}
 		}
 		return nil

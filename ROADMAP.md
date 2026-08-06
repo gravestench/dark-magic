@@ -851,10 +851,13 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
-- [ ] Enforce the intended architecture with dependency tests or static checks,
+- [x] Enforce the intended architecture with dependency tests or static checks,
   package-level tests at moved boundaries, and CI checks that reject new accidental
   public packages, forbidden imports, compatibility-service resurrection, and
-  business logic added directly to `cmd`.
+  business logic added directly to `cmd`. Acceptance checks now enforce inward
+  dependency direction for foundations, game, presentation, and platform layers;
+  prevent production dependencies on developer tooling; freeze the reviewed
+  command composition helpers; and run as an explicit CI stage.
 - [ ] Complete the migration as behavior-preserving commits with the full unit,
   race, real-asset, and interactive acceptance suites green; then remove temporary
   migration notes and verify a newcomer can locate and extend a representative
