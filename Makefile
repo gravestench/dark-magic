@@ -1,4 +1,4 @@
-.PHONY: test test-race fmt vet
+.PHONY: test test-race fmt vet shim
 
 test:
 	go test ./...
@@ -11,3 +11,6 @@ fmt:
 
 vet:
 	go vet ./...
+
+shim:
+	go run ./internal/tools/shim_pack -output ./dist/darkmagic.zip
