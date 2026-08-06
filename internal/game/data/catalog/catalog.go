@@ -197,6 +197,15 @@ func (c *Catalog) SoundRecords() ([]models.SoundEntry, error) {
 	return Load[models.SoundEntry](c.store, SoundsTable)
 }
 
+// TreasureClassRecords returns the ordered typed expansion treasure classes
+// without requiring construction of unrelated tables in the full snapshot.
+func (c *Catalog) TreasureClassRecords() ([]models.TreasureClassEx, error) {
+	if c == nil || c.store == nil {
+		return nil, fmt.Errorf("gamedata: catalog has no record store")
+	}
+	return Load[models.TreasureClassEx](c.store, TreasureClassExTable)
+}
+
 // Snapshot returns a defensive copy of the current typed game-data generation.
 func (c *Catalog) Snapshot() (Snapshot, error) {
 	if c == nil || c.store == nil {

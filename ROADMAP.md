@@ -850,6 +850,10 @@ implementations. The remaining work is tracked explicitly below.
   `dm.game_data/v1` capability now supplies copied, typed character starting
   attributes and ordered unique-title fragments without exposing Go records or
   coupling authored scripts to arbitrary TSV columns.
+  The Lua loot capability likewise consumes typed `TreasureClassEx` records and
+  exposes `roll(class, seed)`; arbitrary TSV paths and duplicate parsing no
+  longer cross the runtime boundary, while deterministic event seeds and roll
+  results retain their existing simulation-owned representation.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

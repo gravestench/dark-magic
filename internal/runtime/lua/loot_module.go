@@ -1,15 +1,12 @@
 package modruntime
 
 import (
-	"bytes"
-	"io/fs"
-
 	"github.com/gravestench/dark-magic/internal/game/loot"
 	lua "github.com/yuin/gopher-lua"
 )
 
-// LootModule exposes deterministic treasure-class rolling over layered content.
-func LootModule(source fs.FS) Module {
+// LootModule exposes deterministic rolling over typed treasure-class records.
+func LootModule(records loot.TreasureClassRecords) Module {
 	return Module{Name: "dm.loot/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"event_seed": func(state *lua.LState) int {
@@ -22,17 +19,10 @@ func LootModule(source fs.FS) Module {
 				state.Push(lua.LNumber(seed))
 				return 1
 			},
-			"roll_tsv": func(state *lua.LState) int {
-				fileName := state.CheckString(1)
-				className := state.CheckString(2)
-				seed := uint64(state.CheckNumber(3))
-				data, err := fs.ReadFile(source, fileName)
-				if err != nil {
-					state.Push(lua.LNil)
-					state.Push(lua.LString(err.Error()))
-					return 2
-				}
-				catalog, err := loot.ParseTreasureClassTSV(bytes.NewReader(data))
+			"roll": func(state *lua.LState) int {
+				className := state.CheckString(1)
+				seed := uint64(state.CheckNumber(2))
+				catalog, err := loot.CatalogFromRecords(records)
 				if err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))

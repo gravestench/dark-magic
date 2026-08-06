@@ -8,17 +8,18 @@ import (
 	"os"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/game/data/catalog"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 
 func main() {
-	fileName := flag.String("file", "data/global/excel/treasureclassex.txt", "layered TreasureClass TSV path")
 	className := flag.String("class", "", "treasure class to roll")
 	seed := flag.Uint64("seed", 1, "deterministic seed")
 	flag.Parse()
 	if *className == "" {
-		fmt.Fprintln(os.Stderr, "usage: treasure_roll_test_lua -class CLASS [-file path] [-seed N]")
+		fmt.Fprintln(os.Stderr, "usage: treasure_roll_test_lua -class CLASS [-seed N]")
 		os.Exit(2)
 	}
 	contentFS, err := content.FromEnvironment()
@@ -26,7 +27,8 @@ func main() {
 		fatal(err)
 	}
 	runtime := modruntime.New()
-	if err := runtime.RegisterModule(modruntime.LootModule(contentFS)); err != nil {
+	gameData := gamedata.New(recordstore.New(contentFS))
+	if err := runtime.RegisterModule(modruntime.LootModule(gameData)); err != nil {
 		fatal(err)
 	}
 	ctx := context.Background()
@@ -41,8 +43,8 @@ func main() {
 		}
 		lootModule := state.Get(-1).(*lua.LTable)
 		state.Pop(1)
-		roll := lootModule.RawGetString("roll_tsv")
-		if err := state.CallByParam(lua.P{Fn: roll, NRet: 2, Protect: true}, lua.LString(*fileName), lua.LString(*className), lua.LNumber(*seed)); err != nil {
+		roll := lootModule.RawGetString("roll")
+		if err := state.CallByParam(lua.P{Fn: roll, NRet: 2, Protect: true}, lua.LString(*className), lua.LNumber(*seed)); err != nil {
 			return err
 		}
 		errorValue := state.Get(-1)

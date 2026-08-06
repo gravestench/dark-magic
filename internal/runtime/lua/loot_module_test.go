@@ -5,6 +5,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gravestench/dark-magic/internal/game/data/catalog"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -12,11 +14,11 @@ func TestLootModuleRollsLayeredTSVDeterministically(t *testing.T) {
 	t.Parallel()
 
 	source := fstest.MapFS{
-		"treasure.txt": &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tNoDrop\tItem1\tProb1\nRoot\t1\t0\tr01\t1\n")},
-		"test.lua":     &fstest.MapFile{Data: []byte(`local loot=require("dm.loot/v1"); event_seed=assert(loot.event_seed(9,"monster",17,2)); drops=assert(loot.roll_tsv("treasure.txt", "Root", event_seed))`)},
+		"data/global/excel/TreasureClassEx.txt": &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tNoDrop\tItem1\tProb1\nRoot\t1\t0\tr01\t1\n")},
+		"test.lua":                              &fstest.MapFile{Data: []byte(`local loot=require("dm.loot/v1"); event_seed=assert(loot.event_seed(9,"monster",17,2)); drops=assert(loot.roll("Root", event_seed))`)},
 	}
 	runtime := New()
-	if err := runtime.RegisterModule(LootModule(source)); err != nil {
+	if err := runtime.RegisterModule(LootModule(gamedata.New(recordstore.New(source)))); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {

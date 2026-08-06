@@ -35,7 +35,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), GameDataModule(staticGameData{snapshot: gamedata.Snapshot{}}), LocaleModule(localization.New(source, "English")),
-		LootModule(source), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		LootModule(gamedata.New(recordstore.New(source))), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
@@ -45,7 +45,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.video/v1":     {"available", "play"},
 		"dm.game_data/v1": {"character_class", "unique_titles"},
-		"dm.locale/v1":    {"text"}, "dm.loot/v1": {"event_seed"},
+		"dm.locale/v1":    {"text"}, "dm.loot/v1": {"event_seed", "roll"},
 		"dm.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create", "diagnostics"},
 		"dm.scene/v1": {"register", "replace", "push", "pop"},
