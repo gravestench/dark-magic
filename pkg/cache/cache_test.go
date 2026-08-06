@@ -20,6 +20,9 @@ func TestCacheInsertWithinBudget(t *testing.T) {
 	if insertError != nil {
 		t.Fatalf("Cache insert resulted in unexpected error: %s", insertError)
 	}
+	if cache.GetWeight() != 0 {
+		t.Fatal("oversized entry should be evicted")
+	}
 }
 
 func TestCacheInsertUpdatesWeight(t *testing.T) {

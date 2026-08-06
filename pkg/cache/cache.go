@@ -104,12 +104,10 @@ func (c *Cache) InsertVersioned(namespace, key string, generation uint64, value 
 	c.weight += node.weight
 
 	var evicted []interface{}
-	for ; c.tail != nil && c.tail != c.head && c.weight > c.budget; c.tail = c.tail.prev {
-		c.weight -= c.tail.weight
-		c.tail.prev.next = nil
-		evicted = append(evicted, c.tail.value)
+	for c.tail != nil && c.weight > c.budget {
+		node := c.tail
+		evicted = append(evicted, c.removeLocked(node))
 		c.evictions++
-		delete(c.lookup, c.tail.key)
 	}
 	handler := c.onEvict
 	c.mutex.Unlock()

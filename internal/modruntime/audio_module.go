@@ -31,6 +31,20 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"diagnostics": func(state *lua.LState) int {
+				diagnostics := mixer.Diagnostics()
+				result := state.NewTable()
+				result.RawSetString("active", lua.LNumber(diagnostics.Active))
+				result.RawSetString("pending", lua.LNumber(diagnostics.Pending))
+				result.RawSetString("slots", lua.LNumber(diagnostics.Slots))
+				buses := state.NewTable()
+				for bus, volume := range diagnostics.BusVolumes {
+					buses.RawSetString(bus, lua.LNumber(volume))
+				}
+				result.RawSetString("buses", buses)
+				state.Push(result)
+				return 1
+			},
 			"exists": func(state *lua.LState) int {
 				_, err := fs.Stat(source, state.CheckString(1))
 				state.Push(lua.LBool(err == nil))

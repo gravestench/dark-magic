@@ -304,15 +304,16 @@ implementations. The remaining work is tracked explicitly below.
   and grouped stopping. Long-form assets use owner-thread streaming, while
   deterministic `Sounds.txt` lookup resolves paths, routing, volume ranges,
   grouped variants, looping, and streaming intent through layered content.
-- [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
+- [x] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
   leak/race/rapid-scene-transition acceptance tests.
   The shared weighted LRU now supports generation namespaces, stale-entry
   invalidation, live budget enforcement, eviction callbacks, and hit/miss/weight
   diagnostics. Renderer/audio handle diagnostics and a race-tested 50-cycle
   scene/overlay transition check detect leaked resources. Render decoding caches
-  now discard DC6, DCC, COF, and font entries on VFS generation changes; applying
-  weighted budgets to those decoded CPU objects and exposing consolidated runtime
-  diagnostics remain.
+  now discard DC6, DCC, COF, and font entries on VFS generation changes and are
+  governed by a weighted decoded-data budget. Versioned Lua diagnostics expose
+  decoded cache, retained renderer, and audio lifecycle state without exposing
+  native payloads.
 
 ## M17: Authentic Lua-authored front end
 

@@ -16,6 +16,7 @@ import (
 	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/pkg/assetdecode"
+	cachepkg "github.com/gravestench/dark-magic/pkg/cache"
 	dc6 "github.com/gravestench/dc6/pkg"
 	dcc "github.com/gravestench/dcc/pkg"
 	lua "github.com/yuin/gopher-lua"
@@ -37,10 +38,7 @@ type ownedRenderNode struct {
 type renderAssetCache struct {
 	mu         sync.Mutex
 	generation uint64
-	dc6        map[string]*dc6.DC6
-	dcc        map[string]*dcc.DCC
-	cof        map[string]*cof.COF
-	font       map[string]*assetdecode.BitmapFont
+	decoded    *cachepkg.Cache
 }
 
 type generationSource interface{ Generation() uint64 }
@@ -51,10 +49,20 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 		return
 	}
 	c.generation = source.Generation()
-	c.dc6 = make(map[string]*dc6.DC6)
-	c.dcc = make(map[string]*dcc.DCC)
-	c.cof = make(map[string]*cof.COF)
-	c.font = make(map[string]*assetdecode.BitmapFont)
+	c.decoded.InvalidateNamespace("decoded", c.generation)
+}
+
+func assetWeight(assets fs.FS, names ...string) int {
+	weight := 0
+	for _, name := range names {
+		if info, err := fs.Stat(assets, name); err == nil {
+			weight += int(info.Size())
+		}
+	}
+	if weight < 1 {
+		return 1
+	}
+	return weight
 }
 
 func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) (*assetdecode.BitmapFont, error) {
@@ -62,14 +70,16 @@ func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.refresh(assets)
-	if font := c.font[key]; font != nil {
-		return font, nil
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", "font\x00"+key, c.generation); ok {
+		return cached.(*assetdecode.BitmapFont), nil
 	}
 	font, err := assetdecode.LoadBitmapFont(assets, table, sheet, palette)
 	if err != nil {
 		return nil, err
 	}
-	c.font[key] = font
+	if err := c.decoded.InsertVersioned("decoded", "font\x00"+key, c.generation, font, assetWeight(assets, table, sheet, palette)); err != nil {
+		return nil, err
+	}
 	return font, nil
 }
 
@@ -77,14 +87,16 @@ func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.refresh(assets)
-	if asset := c.cof[name]; asset != nil {
-		return asset, nil
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", "cof\x00"+name, c.generation); ok {
+		return cached.(*cof.COF), nil
 	}
 	asset, err := assetdecode.COF(assets, name)
 	if err != nil {
 		return nil, err
 	}
-	c.cof[name] = asset
+	if err := c.decoded.InsertVersioned("decoded", "cof\x00"+name, c.generation, asset, assetWeight(assets, name)); err != nil {
+		return nil, err
+	}
 	return asset, nil
 }
 
@@ -93,14 +105,16 @@ func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.refresh(assets)
-	if asset := c.dcc[key]; asset != nil {
-		return asset, nil
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dcc\x00"+key, c.generation); ok {
+		return cached.(*dcc.DCC), nil
 	}
 	asset, err := assetdecode.DCC(assets, name, palette)
 	if err != nil {
 		return nil, err
 	}
-	c.dcc[key] = asset
+	if err := c.decoded.InsertVersioned("decoded", "dcc\x00"+key, c.generation, asset, assetWeight(assets, name, palette)); err != nil {
+		return nil, err
+	}
 	return asset, nil
 }
 
@@ -109,14 +123,16 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.refresh(assets)
-	if asset := c.dc6[key]; asset != nil {
-		return asset, nil
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dc6\x00"+key, c.generation); ok {
+		return cached.(*dc6.DC6), nil
 	}
 	asset, err := assetdecode.DC6(assets, name, palette)
 	if err != nil {
 		return nil, err
 	}
-	c.dc6[key] = asset
+	if err := c.decoded.InsertVersioned("decoded", "dc6\x00"+key, c.generation, asset, assetWeight(assets, name, palette)); err != nil {
+		return nil, err
+	}
 	return asset, nil
 }
 
@@ -226,10 +242,26 @@ func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
-	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6), dcc: make(map[string]*dcc.DCC), cof: make(map[string]*cof.COF), font: make(map[string]*assetdecode.BitmapFont)}
+	const decodedAssetBudget = 256 * 1024 * 1024
+	cache := &renderAssetCache{decoded: cachepkg.New(decodedAssetBudget)}
 	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"diagnostics": func(state *lua.LState) int {
+				decoded, retained := cache.decoded.Diagnostics(), composer.Diagnostics()
+				result := state.NewTable()
+				result.RawSetString("decoded_entries", lua.LNumber(decoded.Entries))
+				result.RawSetString("decoded_weight", lua.LNumber(decoded.Weight))
+				result.RawSetString("decoded_budget", lua.LNumber(decoded.Budget))
+				result.RawSetString("cache_hits", lua.LNumber(decoded.Hits))
+				result.RawSetString("cache_misses", lua.LNumber(decoded.Misses))
+				result.RawSetString("cache_evictions", lua.LNumber(decoded.Evictions))
+				result.RawSetString("active_nodes", lua.LNumber(retained.ActiveNodes))
+				result.RawSetString("active_resources", lua.LNumber(retained.ActiveResources))
+				result.RawSetString("pending_commands", lua.LNumber(retained.Pending))
+				state.Push(result)
+				return 1
+			},
 			"assets_available": func(state *lua.LState) int {
 				state.Push(lua.LBool(assets != nil))
 				return 1
