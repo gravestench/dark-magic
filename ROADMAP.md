@@ -672,6 +672,45 @@ implementations. The remaining work is tracked explicitly below.
   color slots and contexts, and text layout behavior; automated native screenshot
   fixtures and the remaining component migrations are still outstanding.
 
+## M28: Repository architecture and legacy cleanup
+
+- [ ] Inventory every package, its responsibility, importers, lifecycle owner,
+  stability, and whether it is engine infrastructure, game/shim implementation,
+  tooling, or an intentionally supported external API. Record obsolete,
+  duplicate, transitional, and misleadingly named code before moving anything.
+- [ ] Define and document a strict boundary policy: implementation details live
+  under `internal`; `pkg` contains only deliberately supported, independently
+  useful APIs with clear compatibility commitments. Default ambiguous legacy
+  packages to `internal` rather than exposing accidental public surface area.
+- [ ] Design a small, feature-oriented top-level layout with obvious homes for
+  the application host, runtime capabilities, rendering, assets, audio, video,
+  input, persistence, networking, Lua/mod execution, authored content, developer
+  tools, and acceptance fixtures. Replace historical `*core`, `services`, and
+  other implementation-era names where they obscure ownership or data flow.
+- [ ] Establish import-direction and ownership rules so low-level facilities do
+  not depend on presentation or game logic, Lua-facing adapters do not become
+  global service locators, platform backends remain behind engine contracts, and
+  commands stay thin composition roots.
+- [ ] Move accidental public packages from `pkg` into their final `internal`
+  homes incrementally, updating imports and tests without compatibility aliases
+  unless a real external consumer is identified. Keep independently versioned
+  codec modules outside this repository.
+- [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
+  remnants, test applications, and tools around one authoritative implementation
+  per concept. Delete superseded code only after callers and preserved historical
+  work have been audited.
+- [ ] Add package documentation and a concise newcomer architecture guide showing
+  the boot path, frame path, scene/mod boundary, asset path, and where new code of
+  each kind belongs. Keep examples aligned with the resulting structure.
+- [ ] Enforce the intended architecture with dependency tests or static checks,
+  package-level tests at moved boundaries, and CI checks that reject new accidental
+  public packages, forbidden imports, compatibility-service resurrection, and
+  business logic added directly to `cmd`.
+- [ ] Complete the migration as behavior-preserving commits with the full unit,
+  race, real-asset, and interactive acceptance suites green; then remove temporary
+  migration notes and verify a newcomer can locate and extend a representative
+  renderer, asset, Lua capability, scene, tool, and server feature from the guide.
+
 ## Gameplay acceptance milestone
 
 - [ ] Starting from legally supplied MPQs, watch/skip startup, navigate the real
