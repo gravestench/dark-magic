@@ -63,7 +63,7 @@ func TestLoadReportsSourceRowColumnAndField(t *testing.T) {
 
 	source := fstest.MapFS{"bad.txt": &fstest.MapFile{Data: []byte("class\tstr\nama\tnot-a-number\n")}}
 	_, err := Load[models.CharStats](recordstore.New(source), "bad.txt")
-	for _, fragment := range []string{"bad.txt", "row 2", `column "str"`, "field Strength"} {
+	for _, fragment := range []string{"bad.txt", "line 2", "column 2", "not-a-number"} {
 		if err == nil || !strings.Contains(err.Error(), fragment) {
 			t.Fatalf("error %q does not contain %q", err, fragment)
 		}

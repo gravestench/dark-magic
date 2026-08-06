@@ -14,12 +14,14 @@ require (
 	github.com/gravestench/mpq v0.1.0
 	github.com/gravestench/pl2 v0.1.0
 	github.com/gravestench/tbl_text v0.1.0
+	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/yuin/gopher-lua v1.1.0
 )
 
 require (
 	github.com/asticode/go-astikit v0.42.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d // indirect
 	github.com/jupiterrider/ffi v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 )

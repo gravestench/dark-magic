@@ -711,7 +711,9 @@ implementations. The remaining work is tracked explicitly below.
   CharStats, Levels, Objects, Skills, Sounds, and TreasureClassEx. Admission also
   recovered the legacy grouped-column tag convention and corrected monster-code
   fields that real records prove are strings; remaining schemas and consumers
-  still need admission and migration.
+  still need admission and migration. Typed binding now delegates to the existing
+  independent TSV codec; Dark Magic retains layered source ownership, generic
+  rows, compatibility overlays, diagnostics, and immutable catalog policy.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

@@ -5,9 +5,9 @@ remain independent Go modules and Git repositories. They are useful outside
 this engine, have different release cadences, and should not inherit the
 engine's rendering or service dependencies.
 
-The codec collection contains eleven repositories:
+The codec collection contains twelve repositories:
 `bitstream`, `cof`, `dc6`, `dcc`, `ds1`, `dt1`, `gpl`, `mpq`, `pl2`,
-`tbl_text`, and `wav`.
+`tbl_text`, `tsv`, and `wav`.
 
 ## Repository strategy
 
@@ -57,11 +57,12 @@ Magic's build contract.
 | P1 | `pl2`, `gpl` | Round trips and palette image export |
 | P1 | `tbl_text` | Lookup, duplicate, and corruption tests |
 | P1 | `cof` | Validation and JSON inspection command |
+| P1 | `tsv` | Typed record decoding with malformed-row diagnostics |
 | P1 | `wav` | Standard-library interoperability tests |
 
 ## Completed maintenance pass (2026-08-05)
 
-- All eleven modules pass `go test ./...` and `go vet ./...` in a shared
+- The original eleven binary codecs pass `go test ./...` and `go vet ./...` in a shared
   workspace, with race checks on their decoder paths.
 - Every public decoder has malformed/truncated-input coverage and a fuzz target;
   format counts, offsets, dimensions, and allocation sizes are bounded before
@@ -76,3 +77,6 @@ Magic's build contract.
   `v0.1.0`. Dark Magic consumes these tags and passes `go test ./...` and
   `go vet ./...` with `GOWORK=off`, proving that no filesystem replacement is
   needed.
+- The TSV codec is restored as Dark Magic's typed tabular format boundary. It
+  remains on its historical pseudo-version pending malformed-input,
+  concurrency, diagnostics, and tagged-release maintenance.

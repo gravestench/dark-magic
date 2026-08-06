@@ -10,9 +10,12 @@ most other simulation and presentation facts.
 The repository still contains 91 model files representing the historical typed
 table schemas. The Service Mesh retirement in commit `68e3c9e` removed the old
 record-manager implementation, including typed loading and lookup behavior. The
-current `internal/recordstore` correctly provides layered, cached generic TSV
-rows to native code and Lua, but `map[string]string` access does not replace the
-typed game-data catalog.
+current `internal/recordstore` provides layered, cached generic TSV rows to
+native code and Lua. Typed schema binding is owned by the independent
+`github.com/gravestench/tsv` codec, while `internal/gamedata` owns catalog
+snapshots, indexes, diagnostics, and compatibility handling for the surviving
+historical structs. Generic `map[string]string` access does not replace the typed
+game-data catalog.
 
 The schemas must be preserved during repository cleanup. The old service
 lifecycle and integration wrappers should not be restored wholesale; useful

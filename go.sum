@@ -10,6 +10,8 @@ github.com/ebitengine/purego v0.10.0 h1:QIw4xfpWT6GWTzaW5XEKy3HXoqrJGx1ijYHzTF0/
 github.com/ebitengine/purego v0.10.0/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
 github.com/gen2brain/raylib-go/raylib v0.60.0 h1:KsP7W3EMkmb9zztivdgbh1bXR78pEuqP6jeUR8GCbEA=
 github.com/gen2brain/raylib-go/raylib v0.60.0/go.mod h1:puAMU7Zcx6VJ6pcZSSs3gGFPyFvJuTwQlfm4KzeoXy8=
+github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d h1:KbPOUXFUDJxwZ04vbmDOc3yuruGvVO+LOa7cVER3yWw=
+github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d/go.mod h1:5YoVOkjYAQumqlV356Hj3xeYh4BdZuLE0/nRkf2NKkI=
 github.com/google/uuid v1.1.5 h1:kxhtnfFVi+rYdOALN0B3k9UT86zVJKfBimRaciULW4I=
 github.com/google/uuid v1.1.5/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gravestench/bitstream v0.2.0 h1:Q1OccEw1u5GYNYzPaKXa1JyHuI38cI74AkAQGjPERDI=
@@ -32,6 +34,8 @@ github.com/gravestench/pl2 v0.1.0 h1:1whYtjZI4Tzi+KakEV3AtwrAESs5YEpsd/Vkp4gw8Y4
 github.com/gravestench/pl2 v0.1.0/go.mod h1:qEHIaarIiqhu+MoAW7U8gvxKNc04cRg/gzKySWFzNJw=
 github.com/gravestench/tbl_text v0.1.0 h1:Vgo13thKVspnEl1EbX6UXKEvQmSYayKh+TQgoEFtWGc=
 github.com/gravestench/tbl_text v0.1.0/go.mod h1:Dhk7kuMFbojtDeZ+C/vIFtqw2YP0nbqfCoamHjugWhU=
+github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988 h1:UFbntCBaqCMOlx2JZ8hcaP0yEOewAZpBswOkqI7Ydxg=
+github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988/go.mod h1:Y/9agPFwBUEniuqNLKbbIOyhPlZSUloA0mk4/Of4HKU=
 github.com/gravestench/wav v0.1.0 h1:LBfyzhVYHz8M3bHqx7CCXa5wUqyuT6LXNGuH4hw1Tow=
 github.com/gravestench/wav v0.1.0/go.mod h1:dICul72I5bCcY2kThu3OjmDBlrn/PYTmAoWGvilZgPU=
 github.com/jupiterrider/ffi v0.7.0 h1:RKsl6Ascal+3kyAqR5Qcbp83LceQMLc1VZbPfHWoNzs=

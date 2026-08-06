@@ -8,9 +8,15 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gravestench/dark-magic/internal/recordstore"
+	"github.com/gravestench/tsv"
 )
+
+// The historical codec configures gocsv process globals during Unmarshal.
+// Serialize calls until the codec exposes instance-local decoding options.
+var codecMu sync.Mutex
 
 // Load decodes one layered TSV table into the surviving csv-tagged record type.
 // Unknown columns are retained by the generic record store and ignored here,
@@ -19,20 +25,44 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 	if store == nil {
 		return nil, fmt.Errorf("gamedata: nil record store")
 	}
+	data, err := store.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	var result []T
+	codecMu.Lock()
+	err = tsv.Unmarshal(data, &result)
+	codecMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("gamedata: %s: %w", path, err)
+	}
 	rows, err := store.Load(path)
 	if err != nil {
 		return nil, err
+	}
+	if len(result) != len(rows) {
+		// The codec intentionally filters malformed-width rows such as shipped
+		// one-cell expansion sentinels. Generic access still preserves them.
+		return result, nil
 	}
 	fields, err := recordFields[T]()
 	if err != nil {
 		return nil, fmt.Errorf("gamedata: %s: %w", path, err)
 	}
-	result := make([]T, len(rows))
 	for rowIndex, row := range rows {
 		value := reflect.ValueOf(&result[rowIndex]).Elem()
 		for _, field := range fields {
 			raw, exists := row[field.column]
 			if !exists {
+				continue
+			}
+			if value.Field(field.index).Kind() == reflect.Pointer && raw == "" {
+				// gocsv allocates a zero pointer for blank optional cells. The
+				// surviving schemas use nil to distinguish absent from authored 0.
+				value.Field(field.index).SetZero()
+				continue
+			}
+			if !field.grouped {
 				continue
 			}
 			if err := assign(value.Field(field.index), raw); err != nil {
@@ -44,9 +74,10 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 }
 
 type fieldBinding struct {
-	index  int
-	name   string
-	column string
+	index   int
+	name    string
+	column  string
+	grouped bool
 }
 
 func recordFields[T any]() ([]fieldBinding, error) {
@@ -82,13 +113,14 @@ func recordFields[T any]() ([]fieldBinding, error) {
 		} else if len(columns) != groupEnd-index {
 			return nil, fmt.Errorf("grouped csv tag %q has %d columns for %d fields", tag, len(columns), groupEnd-index)
 		}
+		grouped := groupEnd-index > 1
 		for offset, column := range columns {
 			groupField := typeOf.Field(index + offset)
 			if previous, exists := seen[column]; exists {
 				return nil, fmt.Errorf("duplicate csv column %q on fields %s and %s", column, previous, groupField.Name)
 			}
 			seen[column] = groupField.Name
-			bindings = append(bindings, fieldBinding{index: index + offset, name: groupField.Name, column: column})
+			bindings = append(bindings, fieldBinding{index: index + offset, name: groupField.Name, column: column, grouped: grouped})
 		}
 		index = groupEnd
 	}

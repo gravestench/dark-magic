@@ -2,6 +2,7 @@
 package recordstore
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -20,6 +21,19 @@ type Store struct {
 // New constructs a record store over source.
 func New(source fs.FS) *Store {
 	return &Store{source: source, cache: make(map[string][]map[string]string)}
+}
+
+// Read returns original layered table bytes for a format codec. Generic rows
+// and typed decoding share VFS ownership without duplicating source discovery.
+func (s *Store) Read(path string) ([]byte, error) {
+	if s == nil || s.source == nil {
+		return nil, fmt.Errorf("recordstore: no content source")
+	}
+	data, err := fs.ReadFile(s.source, path)
+	if err != nil {
+		return nil, fmt.Errorf("recordstore: read %q: %w", path, err)
+	}
+	return bytes.Clone(data), nil
 }
 
 // Load returns a defensive copy of a TSV table.
