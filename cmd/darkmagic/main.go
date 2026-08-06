@@ -64,7 +64,13 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		return
 	}
-	slog.SetDefault(slog.New(logging.NewHandler(&slog.HandlerOptions{Level: logLevel})))
+	shellLogs := shell.NewLogBuffer(1000)
+	logHandler := logging.NewHandlerWithObserver(&slog.HandlerOptions{Level: logLevel}, func(record logging.Record) {
+		shellLogs.Append(shell.LogEntry{
+			At: record.At, Level: record.Level.String(), Message: record.Message, Attributes: record.Attributes,
+		})
+	})
+	slog.SetDefault(slog.New(logHandler))
 	var profile *profiling.Session
 	if *profileDirectory != "" {
 		var err error
@@ -97,7 +103,7 @@ func main() {
 	if captureDirectory != "" && *captureScenes == "" {
 		*captureScenes = "loading,title"
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, shellLogs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
@@ -124,7 +130,7 @@ func parseLogLevel(value string) (slog.Level, error) {
 	}
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette string) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette string, shellLogs *shell.LogBuffer) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	sceneErrors := make(chan error, 1)
@@ -292,6 +298,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err != nil {
 		return err
 	}
+	shellSession.AttachLogs(shellLogs)
 	defer shellSession.Close()
 	console := raylibShell.New(shellSession)
 	if err := console.LoadFont(); err != nil {

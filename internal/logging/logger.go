@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strconv"
 	"sync"
+	"time"
 )
 
 const (
@@ -32,6 +33,21 @@ const (
 )
 
 func NewHandler(opts *slog.HandlerOptions) *Handler {
+	return NewHandlerWithObserver(opts, nil)
+}
+
+// Record is the structured log representation delivered to shell and other
+// diagnostic observers after handler attributes and groups are resolved.
+type Record struct {
+	At         time.Time
+	Level      slog.Level
+	Message    string
+	Attributes map[string]any
+}
+
+// NewHandlerWithObserver preserves terminal logging while also publishing
+// structured records to an optional in-process diagnostic consumer.
+func NewHandlerWithObserver(opts *slog.HandlerOptions, observer func(Record)) *Handler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}
@@ -43,7 +59,8 @@ func NewHandler(opts *slog.HandlerOptions) *Handler {
 			AddSource:   opts.AddSource,
 			ReplaceAttr: suppressDefaults(opts.ReplaceAttr),
 		}),
-		m: &sync.Mutex{},
+		m:        &sync.Mutex{},
+		observer: observer,
 	}
 }
 
@@ -52,9 +69,10 @@ func colorize(colorCode int, v string) string {
 }
 
 type Handler struct {
-	h slog.Handler
-	b *bytes.Buffer
-	m *sync.Mutex
+	h        slog.Handler
+	b        *bytes.Buffer
+	m        *sync.Mutex
+	observer func(Record)
 }
 
 func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -62,11 +80,11 @@ func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &Handler{h: h.h.WithAttrs(attrs), b: h.b, m: h.m}
+	return &Handler{h: h.h.WithAttrs(attrs), b: h.b, m: h.m, observer: h.observer}
 }
 
 func (h *Handler) WithGroup(name string) slog.Handler {
-	return &Handler{h: h.h.WithGroup(name), b: h.b, m: h.m}
+	return &Handler{h: h.h.WithGroup(name), b: h.b, m: h.m, observer: h.observer}
 }
 
 const (
@@ -91,6 +109,9 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	attrs, err := h.computeAttrs(ctx, r)
 	if err != nil {
 		return err
+	}
+	if h.observer != nil {
+		h.observer(Record{At: r.Time, Level: r.Level, Message: r.Message, Attributes: cloneAttrs(attrs)})
 	}
 
 	service := attrs["service"]
@@ -119,6 +140,14 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	)
 
 	return nil
+}
+
+func cloneAttrs(attributes map[string]any) map[string]any {
+	result := make(map[string]any, len(attributes))
+	for key, value := range attributes {
+		result[key] = value
+	}
+	return result
 }
 
 func (h *Handler) computeAttrs(

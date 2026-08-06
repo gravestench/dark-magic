@@ -40,23 +40,26 @@ type Evaluator interface {
 
 // Entry is one immutable transcript event.
 type Entry struct {
-	At     time.Time
-	Source string
-	Result Result
-	Error  string
+	At          time.Time
+	CompletedAt time.Time
+	Source      string
+	Result      Result
+	Error       string
 }
 
 // Session serializes history and transcript state around one explicit runtime.
 type Session struct {
-	mu         sync.RWMutex
-	evalMu     sync.Mutex
-	id         string
-	target     string
-	policy     Policy
-	evaluator  Evaluator
-	history    []string
-	transcript []Entry
-	closed     bool
+	mu                 sync.RWMutex
+	evalMu             sync.Mutex
+	id                 string
+	target             string
+	policy             Policy
+	evaluator          Evaluator
+	history            []string
+	transcript         []Entry
+	logs               *LogBuffer
+	transcriptRevision uint64
+	closed             bool
 }
 
 func NewSession(id, target string, policy Policy, evaluator Evaluator) (*Session, error) {
@@ -96,12 +99,14 @@ func (s *Session) Submit(ctx context.Context, source string) Entry {
 	s.mu.Unlock()
 	result, err := s.evaluator.Evaluate(ctx, source)
 	s.evalMu.Unlock()
+	entry.CompletedAt = time.Now()
 	entry.Result = result
 	if err != nil {
 		entry.Error = err.Error()
 	}
 	s.mu.Lock()
 	s.transcript = append(s.transcript, entry)
+	s.transcriptRevision++
 	s.mu.Unlock()
 	return entry
 }

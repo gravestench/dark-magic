@@ -517,7 +517,7 @@ implementations. The remaining work is tracked explicitly below.
   origin correction remain in the presentation manifest.
 - [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
   transition, and debug layers coexist.
-- [ ] Add a shared shell with command history, multiline editing, source-aware
+- [x] Add a shared shell with command history, multiline editing, source-aware
   errors, structured value inspection, and log output. The renderer-independent
   session core, persistent scoped Lua evaluator, and rich Charmbracelet v2
   terminal adapter are complete. The Raylib client now provides a grave-key
@@ -526,7 +526,9 @@ implementations. The remaining work is tracked explicitly below.
   face and Unicode-safe transcript wrapping are platform-independent. Opening
   elastically settles from above while opacity fades in; closing slides upward
   on a normalized cubic curve with a quick nonlinear fade and retains input
-  focus until gone. The log stream remains.
+  focus until gone. Lua print/register diagnostics and a bounded structured
+  `slog` tail now share one chronological, revision-cached timeline in both the
+  Raylib and Charm views.
 - [ ] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

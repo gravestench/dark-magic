@@ -38,6 +38,8 @@ func (e *Evaluator) Evaluate(ctx context.Context, source string) (shell.Result, 
 	var result shell.Result
 	err := e.runtime.RunScoped(ctx, e.scope, func(state *glua.LState) error {
 		environment := e.environment(state)
+		printed := make([]string, 0, 4)
+		installShellOutput(state, environment, &printed)
 		function, expression, err := compile(state, source)
 		if err != nil {
 			return err
@@ -54,16 +56,64 @@ func (e *Evaluator) Evaluate(ctx context.Context, source string) (shell.Result, 
 			values = append(values, formatValue(state.Get(index), 0))
 		}
 		state.SetTop(base)
+		outputs := append(printed, values...)
 		result.Kind = "statement"
-		if expression || len(values) > 0 {
+		if len(printed) > 0 {
+			result.Kind = "output"
+		}
+		if expression && len(values) > 0 {
 			result.Kind = "value"
-			result.Text = strings.Join(values, "\t")
+		}
+		if len(outputs) > 0 {
+			result.Text = strings.Join(outputs, "\n")
 		} else {
 			result.Text = "ok"
 		}
 		return nil
 	})
 	return result, err
+}
+
+func installShellOutput(state *glua.LState, environment *glua.LTable, output *[]string) {
+	printFunction := state.NewFunction(func(current *glua.LState) int {
+		values := make([]string, current.GetTop())
+		for index := 1; index <= current.GetTop(); index++ {
+			values[index-1] = current.ToStringMeta(current.Get(index)).String()
+		}
+		*output = append(*output, strings.Join(values, "\t"))
+		return 0
+	})
+	environment.RawSetString("print", printFunction)
+
+	registerFunction := state.NewFunction(func(current *glua.LState) int {
+		lines := []string{"Lua call frames:"}
+		for level := 1; ; level++ {
+			frame, ok := current.GetStack(level)
+			if !ok {
+				break
+			}
+			_, _ = current.GetInfo("nSl", frame, glua.LNil)
+			location := frame.Source
+			if frame.CurrentLine >= 0 {
+				location += fmt.Sprintf(":%d", frame.CurrentLine)
+			}
+			lines = append(lines, fmt.Sprintf("  [%d] %s %s", level, frame.Name, location))
+			for local := 1; ; local++ {
+				name, value := current.GetLocal(frame, local)
+				if name == "" {
+					break
+				}
+				lines = append(lines, fmt.Sprintf("      %s = %s", name, formatValue(value, 0)))
+			}
+		}
+		*output = append(*output, strings.Join(lines, "\n"))
+		return 0
+	})
+	// GopherLua's private _printregs writes directly to process stderr. Shadow
+	// it inside shell scopes and provide a friendly alias that returns the same
+	// class of debugging information through the shell transcript.
+	environment.RawSetString("_printregs", registerFunction)
+	environment.RawSetString("printregs", registerFunction)
 }
 
 func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candidate, error) {

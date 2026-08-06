@@ -1,0 +1,130 @@
+package shell
+
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+// LogEntry is the presentation-neutral subset of one structured process log.
+type LogEntry struct {
+	At         time.Time
+	Level      string
+	Message    string
+	Attributes map[string]any
+}
+
+// LogBuffer retains a bounded process-log tail for interactive shell views.
+type LogBuffer struct {
+	mu       sync.RWMutex
+	limit    int
+	entries  []LogEntry
+	revision uint64
+}
+
+func NewLogBuffer(limit int) *LogBuffer {
+	if limit < 1 {
+		limit = 1
+	}
+	return &LogBuffer{limit: limit}
+}
+
+func (b *LogBuffer) Append(entry LogEntry) {
+	entry.Attributes = cloneAttributes(entry.Attributes)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.revision++
+	if len(b.entries) == b.limit {
+		copy(b.entries, b.entries[1:])
+		b.entries[len(b.entries)-1] = entry
+		return
+	}
+	b.entries = append(b.entries, entry)
+}
+
+func (b *LogBuffer) Revision() uint64 {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.revision
+}
+
+func (b *LogBuffer) Snapshot() []LogEntry {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	result := make([]LogEntry, len(b.entries))
+	for index, entry := range b.entries {
+		entry.Attributes = cloneAttributes(entry.Attributes)
+		result[index] = entry
+	}
+	return result
+}
+
+func cloneAttributes(attributes map[string]any) map[string]any {
+	if len(attributes) == 0 {
+		return nil
+	}
+	result := make(map[string]any, len(attributes))
+	for key, value := range attributes {
+		result[key] = value
+	}
+	return result
+}
+
+// TimelineEvent merges commands, results, errors, and process logs in the
+// order they actually occurred.
+type TimelineEvent struct {
+	At   time.Time
+	Kind string
+	Text string
+}
+
+func (s *Session) AttachLogs(logs *LogBuffer) {
+	s.mu.Lock()
+	s.logs = logs
+	s.mu.Unlock()
+}
+
+func (s *Session) Logs() []LogEntry {
+	s.mu.RLock()
+	logs := s.logs
+	s.mu.RUnlock()
+	if logs == nil {
+		return nil
+	}
+	return logs.Snapshot()
+}
+
+func (s *Session) Timeline() []TimelineEvent {
+	entries := s.Transcript()
+	logs := s.Logs()
+	events := make([]TimelineEvent, 0, len(entries)*2+len(logs))
+	for _, entry := range entries {
+		events = append(events, TimelineEvent{At: entry.At, Kind: "command", Text: entry.Source})
+		if entry.Error != "" {
+			events = append(events, TimelineEvent{At: entry.CompletedAt, Kind: "error", Text: entry.Error})
+		} else if entry.Result.Text != "" {
+			events = append(events, TimelineEvent{At: entry.CompletedAt, Kind: "value", Text: entry.Result.Text})
+		}
+	}
+	for _, entry := range logs {
+		text := entry.At.Format("15:04:05.000") + " " + strings.ToUpper(entry.Level) + " " + entry.Message
+		if encoded, err := json.Marshal(entry.Attributes); err == nil && string(encoded) != "null" && string(encoded) != "{}" {
+			text += " " + string(encoded)
+		}
+		events = append(events, TimelineEvent{At: entry.At, Kind: "log-" + strings.ToLower(entry.Level), Text: text})
+	}
+	sort.SliceStable(events, func(i, j int) bool { return events[i].At.Before(events[j].At) })
+	return events
+}
+
+func (s *Session) TimelineRevision() uint64 {
+	s.mu.RLock()
+	revision, logs := s.transcriptRevision, s.logs
+	s.mu.RUnlock()
+	if logs != nil {
+		revision += logs.Revision()
+	}
+	return revision
+}

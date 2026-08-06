@@ -23,18 +23,21 @@ const (
 // Overlay adapts the shared session to Raylib input and immediate-mode debug
 // drawing. Evaluation remains serialized by Session and its Lua runtime.
 type Overlay struct {
-	session     *shell.Session
-	open        bool
-	busy        bool
-	input       string
-	history     int
-	candidates  []shell.Candidate
-	candidateAt int
-	finished    chan shell.Entry
-	font        rl.Font
-	fontLoaded  bool
-	progress    float64
-	animationAt time.Time
+	session         *shell.Session
+	open            bool
+	busy            bool
+	input           string
+	history         int
+	candidates      []shell.Candidate
+	candidateAt     int
+	finished        chan shell.Entry
+	font            rl.Font
+	fontLoaded      bool
+	progress        float64
+	animationAt     time.Time
+	displayRevision uint64
+	displayColumns  int
+	displayLines    []transcriptLine
 }
 
 var (
@@ -156,7 +159,7 @@ func (o *Overlay) Draw(width, height int) {
 	transcriptTop := offsetY + 68
 	promptTop := offsetY + panelHeight - 58
 	available := int((promptTop-transcriptTop)/lineHeight) - 1
-	lines := wrapTranscript(transcriptLines(o.session.Transcript()), max(12, (width-36)/11))
+	lines := o.timeline(width)
 	if len(lines) > available {
 		lines = lines[len(lines)-available:]
 	}
@@ -164,8 +167,12 @@ func (o *Overlay) Draw(width, height int) {
 		color := rl.LightGray
 		if line.error {
 			color = rl.NewColor(255, 104, 88, 255)
+		} else if line.warning {
+			color = rl.NewColor(245, 190, 75, 255)
 		} else if line.result {
 			color = rl.NewColor(125, 211, 167, 255)
+		} else if line.dim {
+			color = rl.Gray
 		}
 		o.drawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, fade(color, opacity))
 	}
@@ -175,6 +182,17 @@ func (o *Overlay) Draw(width, height int) {
 	}
 	o.drawText("> "+o.input+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
 	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+}
+
+func (o *Overlay) timeline(width int) []transcriptLine {
+	columns := max(12, (width-36)/11)
+	revision := o.session.TimelineRevision()
+	if revision != o.displayRevision || columns != o.displayColumns {
+		o.displayLines = wrapTranscript(timelineLines(o.session.Timeline()), columns)
+		o.displayRevision = revision
+		o.displayColumns = columns
+	}
+	return o.displayLines
 }
 
 func (o *Overlay) presentation() (position, opacity float64) {
@@ -295,19 +313,28 @@ func completionToken(source string) string {
 }
 
 type transcriptLine struct {
-	text          string
-	result, error bool
+	text                   string
+	result, error, warning bool
+	dim                    bool
 }
 
-func transcriptLines(entries []shell.Entry) []transcriptLine {
-	lines := make([]transcriptLine, 0, len(entries)*2)
-	for _, entry := range entries {
-		lines = append(lines, transcriptLine{text: "> " + strings.ReplaceAll(entry.Source, "\n", " ")})
-		if entry.Error != "" {
-			lines = append(lines, transcriptLine{text: entry.Error, error: true})
-		} else if entry.Result.Text != "" {
-			lines = append(lines, transcriptLine{text: entry.Result.Text, result: true})
+func timelineLines(events []shell.TimelineEvent) []transcriptLine {
+	lines := make([]transcriptLine, 0, len(events))
+	for _, event := range events {
+		line := transcriptLine{text: strings.ReplaceAll(event.Text, "\n", " ")}
+		switch event.Kind {
+		case "command":
+			line.text = "> " + line.text
+		case "value":
+			line.result = true
+		case "error", "log-error":
+			line.error = true
+		case "log-warn":
+			line.warning = true
+		case "log-debug":
+			line.dim = true
 		}
+		lines = append(lines, line)
 	}
 	return lines
 }
@@ -317,7 +344,9 @@ func wrapTranscript(lines []transcriptLine, columns int) []transcriptLine {
 	for _, line := range lines {
 		runes := []rune(line.text)
 		for len(runes) > columns {
-			wrapped = append(wrapped, transcriptLine{text: string(runes[:columns]), result: line.result, error: line.error})
+			wrapped = append(wrapped, transcriptLine{
+				text: string(runes[:columns]), result: line.result, error: line.error, warning: line.warning, dim: line.dim,
+			})
 			runes = runes[columns:]
 		}
 		wrapped = append(wrapped, transcriptLine{text: string(runes), result: line.result, error: line.error})

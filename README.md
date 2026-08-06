@@ -67,6 +67,9 @@ server-only capabilities.
 Press the grave/backtick key (`` ` ``) to open or close the in-game shell.
 Enter evaluates the current Lua source, Shift+Enter inserts a newline, Tab
 completes names, and the arrow keys browse command history.
+Lua `print(...)`, `printregs()`/`_printregs()`, and the bounded structured
+application-log tail appear directly in the shell timeline; normal process log
+output remains available outside the game window as well.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 

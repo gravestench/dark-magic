@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
@@ -15,28 +16,31 @@ import (
 )
 
 var (
-	accentStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#D69A2D")).Bold(true)
-	dimStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#817A6D"))
-	errorStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B5E"))
-	valueStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#7DD3A7"))
-	panelStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#6E5228"))
+	accentStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#D69A2D")).Bold(true)
+	dimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#817A6D"))
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B5E"))
+	valueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#7DD3A7"))
+	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E8B84A"))
+	panelStyle   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#6E5228"))
 )
 
 type evaluationMsg shell.Entry
+type refreshMsg struct{}
 
 // Model is the Charmbracelet adapter for a renderer-independent shell Session.
 type Model struct {
-	ctx         context.Context
-	session     *shell.Session
-	input       textarea.Model
-	output      viewport.Model
-	width       int
-	height      int
-	busy        bool
-	history     int
-	candidates  []shell.Candidate
-	candidateAt int
-	status      string
+	ctx              context.Context
+	session          *shell.Session
+	input            textarea.Model
+	output           viewport.Model
+	width            int
+	height           int
+	busy             bool
+	history          int
+	candidates       []shell.Candidate
+	candidateAt      int
+	status           string
+	timelineRevision uint64
 }
 
 // NewModel prepares an interactive terminal model without starting a terminal.
@@ -60,7 +64,7 @@ func newModel(ctx context.Context, session *shell.Session) Model {
 	return model
 }
 
-func (m Model) Init() tea.Cmd { return textarea.Blink }
+func (m Model) Init() tea.Cmd { return tea.Batch(textarea.Blink, refreshLogs()) }
 
 func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch message := message.(type) {
@@ -97,6 +101,11 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.history = len(m.session.History())
 		m.refreshTranscript()
 		return m, nil
+	case refreshMsg:
+		if m.session.TimelineRevision() != m.timelineRevision {
+			m.refreshTranscript()
+		}
+		return m, refreshLogs()
 	}
 
 	var commands []tea.Cmd
@@ -146,21 +155,34 @@ func (m *Model) resize() {
 }
 
 func (m *Model) refreshTranscript() {
-	entries := m.session.Transcript()
-	lines := make([]string, 0, len(entries)*2+1)
-	if len(entries) == 0 {
+	events := m.session.Timeline()
+	m.timelineRevision = m.session.TimelineRevision()
+	lines := make([]string, 0, len(events)+1)
+	if len(events) == 0 {
 		lines = append(lines, dimStyle.Render("No commands have been evaluated in this scope."))
 	}
-	for _, entry := range entries {
-		lines = append(lines, accentStyle.Render("❯ ")+entry.Source)
-		if entry.Error != "" {
-			lines = append(lines, errorStyle.Render(entry.Error))
-		} else if entry.Result.Text != "" {
-			lines = append(lines, valueStyle.Render(entry.Result.Text))
+	for _, event := range events {
+		switch event.Kind {
+		case "command":
+			lines = append(lines, accentStyle.Render("❯ ")+event.Text)
+		case "value":
+			lines = append(lines, valueStyle.Render(event.Text))
+		case "error", "log-error":
+			lines = append(lines, errorStyle.Render(event.Text))
+		case "log-warn":
+			lines = append(lines, warningStyle.Render(event.Text))
+		case "log-debug":
+			lines = append(lines, dimStyle.Render(event.Text))
+		default:
+			lines = append(lines, event.Text)
 		}
 	}
 	m.output.SetContent(strings.Join(lines, "\n"))
 	m.output.GotoBottom()
+}
+
+func refreshLogs() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg { return refreshMsg{} })
 }
 
 func (m *Model) complete(reverse bool) {
