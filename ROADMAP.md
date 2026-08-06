@@ -325,7 +325,7 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M17: Authentic Lua-authored front end
 
-- [ ] Implement startup/trademark/cinematic sequencing from verified BIK and UI
+- [x] Implement startup/trademark/cinematic sequencing from verified BIK and UI
   assets with skip and failure behavior.
 - [x] Replace the placeholder title and main-menu rectangles with verified,
   palette-aware tiled backgrounds and the anchored layered animated logo.
@@ -337,7 +337,7 @@ implementations. The remaining work is tracked explicitly below.
   regions, narration, name validation, expansion/hardcore flags, and cancel.
 - [ ] Implement saved-character selection with paging, scrollbar, composite
   previews, metadata labels, deletion confirmation, and double activation.
-- [ ] Implement progressive loading screens driven by real dependency progress.
+- [x] Implement progressive loading screens driven by real dependency progress.
 - [ ] Add screenshot/composition tests for every state without checking Blizzard
   imagery into the repository.
 
@@ -405,7 +405,14 @@ implementations. The remaining work is tracked explicitly below.
   where authored. Equipment-aware COF/DCC previews and real-asset calibration
   remain until save records expose authoritative component codes.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests
-  across supported resolution, language, and game-version variants.
+  across supported resolution, language, and game-version variants. An
+  engine-owned coordinator now executes named character, loading-asset, and
+  world readiness tasks and exposes immutable progress through
+  `dm.loading/v1`. The Lua loading screen animates toward that real progress,
+  treats its configured sweep duration as presentation smoothing only, reports
+  failures, and cannot enter the world while a dependency remains blocked.
+  Coordinator, capability, and end-to-end blocked-transition tests cover the
+  contract; the resolution/language/version composition matrix remains.
 
 ### M17.6: Embedded, single-window Bink playback
 

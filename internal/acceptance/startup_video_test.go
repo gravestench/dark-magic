@@ -166,6 +166,8 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *st
 	var composer rendercore.Composer
 	var mixer audiocore.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
+	loading := acceptanceLoadingCoordinator()
+	t.Cleanup(loading.Close)
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +182,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *st
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(savecore.New(entries...)),
 		modruntime.SimulationModule(simulation),
+		modruntime.LoadingModule(loading),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {

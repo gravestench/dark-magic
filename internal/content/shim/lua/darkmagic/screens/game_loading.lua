@@ -1,11 +1,12 @@
 -- Transition from the frontend shell into an interactive game session.
 --
--- The current progress source is elapsed time. The same animation contract can
--- later consume dependency progress without changing the scene boundary.
+-- Engine-owned dependency work determines the target progress. Elapsed time is
+-- used only to smooth the visual sweep so fast local loads remain legible.
 local render = require("dm.render/v1")
 local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local audio = require("dm.audio/v1")
+local loading = require("dm.loading/v1")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_loading
@@ -14,7 +15,8 @@ return {
     enter = function(self)
         -- Frontend music spans all menus and stops only when game loading begins.
         audio.stop_group("frontend_music")
-        self.elapsed = 0
+        self.displayed_progress = 0
+        loading.begin(screen.dependencies)
         self.root = render.create("transition")
         self.root:set_position(400, 300)
         self.root:fill_rect(800, 600, 0, 0, 0, 255)
@@ -35,14 +37,18 @@ return {
     end,
 
     update = function(self, elapsed)
-        self.elapsed = self.elapsed + elapsed
-        local progress = math.min(self.elapsed / screen.duration_seconds, 1)
+        local status = loading.status()
+        if status.state == "failed" then
+            error(status.error or "game dependencies failed to load")
+        end
+        local step = elapsed / screen.sweep_seconds
+        self.displayed_progress = math.min(status.progress, self.displayed_progress + step)
         if self.animation then
             -- Seeking a paused renderer-owned animation makes progress
             -- deterministic and independent of the frame rate.
-            self.animation:animation_seek(progress * (self.frames - 1) / 10)
+            self.animation:animation_seek(self.displayed_progress * (self.frames - 1) / 10)
         end
-        if progress >= 1 then
+        if status.state == "complete" and self.displayed_progress >= 1 then
             scenes.replace("game_world")
         end
     end,

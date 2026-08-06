@@ -35,6 +35,9 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	var mixer audiocore.Mixer
 	saves := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	simulation := modruntime.NewSimulation(scene.New(11, 1000, 1000))
+	worldReady := make(chan struct{})
+	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
+	defer loading.Close()
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +52,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
 		modruntime.SimulationModule(simulation),
+		modruntime.LoadingModule(loading),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -250,6 +254,14 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	input.Publish(inputcore.Frame{})
 	if err := scenes.Update(ctx, 2*time.Second); err != nil {
 		t.Fatal(err)
+	}
+	assertStack(t, navigator, "game_loading")
+	close(worldReady)
+	for frame := 0; frame < 120 && reflect.DeepEqual(navigator.Stack(), []string{"game_loading"}); frame++ {
+		time.Sleep(time.Millisecond)
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
 	}
 	assertStack(t, navigator, "game_world")
 	assertNodes(t, &composer, 3)

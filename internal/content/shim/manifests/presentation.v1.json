@@ -196,7 +196,8 @@
     "game_loading": {
       "sheet": "data/global/ui/Loading/loadingscreen.dc6",
       "palette": "loading",
-      "duration_seconds": 1.5
+      "sweep_seconds": 1.5,
+      "dependencies": ["selected_character", "loading_assets", "world"]
     },
     "credits": {
       "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"image"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -21,6 +23,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/hotreload"
 	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/loadcore"
 	"github.com/gravestench/dark-magic/internal/localecore"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
@@ -103,6 +106,27 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	records := recordstore.New(contentFS)
 	saves := savecore.New()
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
+	loading := loadcore.New(map[string]loadcore.Task{
+		"selected_character": func(context.Context) error {
+			if _, ok := saves.Selected(); !ok {
+				return errors.New("no character is selected")
+			}
+			return nil
+		},
+		"loading_assets": func(_ context.Context) error {
+			for _, name := range []string{"data/global/ui/Loading/loadingscreen.dc6", "data/global/Palette/loading/pal.dat"} {
+				if _, err := fs.Stat(contentFS, name); err != nil {
+					return fmt.Errorf("load dependency %q: %w", name, err)
+				}
+			}
+			return nil
+		},
+		"world": func(context.Context) error {
+			_ = simulation.Snapshot()
+			return nil
+		},
+	})
+	defer loading.Close()
 	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
@@ -146,6 +170,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.SimulationModule(simulation)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.LoadingModule(loading)); err != nil {
 		return err
 	}
 	renderCapability := modruntime.NewRenderCapability(scripts, composer, contentFS)
