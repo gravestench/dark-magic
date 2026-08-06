@@ -18,7 +18,8 @@
     "sky": "data/global/Palette/sky/pal.dat",
     "units": "data/global/Palette/units/pal.dat",
     "loading": "data/global/Palette/loading/pal.dat",
-    "fechar": "data/global/Palette/fechar/pal.dat"
+    "fechar": "data/global/Palette/fechar/pal.dat",
+    "static": "data/global/Palette/static/pal.dat"
   },
   "layouts": {
     "frontend_tiles": {
@@ -53,7 +54,33 @@
       "table": "data/local/FONT/latin/font42.tbl",
       "sheet": "data/local/FONT/latin/font42.dc6",
       "palette": "units"
+    },
+    "formal10_static": {
+      "table": "data/local/FONT/latin/fontformal10.tbl",
+      "sheet": "data/local/FONT/latin/fontformal10.dc6",
+      "palette": "static"
+    },
+    "formal11_units": {
+      "table": "data/local/FONT/latin/fontformal11.tbl",
+      "sheet": "data/local/FONT/latin/fontformal11.dc6",
+      "palette": "units"
+    },
+    "formal12_static": {
+      "table": "data/local/FONT/latin/fontformal12.tbl",
+      "sheet": "data/local/FONT/latin/fontformal12.dc6",
+      "palette": "static"
     }
+  },
+  "text_styles": {
+    "panel_heading": {"font":"font16","color":{"red":255,"green":255,"blue":255}},
+    "panel_label": {"font":"font6","color":{"red":255,"green":255,"blue":255}},
+    "panel_value": {"font":"font16","color":{"red":255,"green":255,"blue":255}},
+    "formal_small": {"font":"formal10_static","color":{"red":255,"green":255,"blue":255}},
+    "formal_body": {"font":"formal11_units","color":{"red":255,"green":255,"blue":255}},
+    "formal_large": {"font":"formal12_static","color":{"red":255,"green":255,"blue":255}},
+    "button_normal": {"font":"exocet10","color":{"red":210,"green":180,"blue":110}},
+    "button_hover": {"font":"exocet10","color":{"red":255,"green":255,"blue":255}},
+    "disabled": {"font":"font16","color":{"red":95,"green":95,"blue":95}}
   },
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",
@@ -314,9 +341,9 @@
     "character": {
       "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","x":80,"y":64,"frames":[0,1,3,2]},
       "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":208,"y":453,"width":32,"height":32,"label":"darkmagic.character_panel.close"},
-      "heading_font":"font16",
-      "label_font":"font6",
-      "value_font":"font16",
+      "heading_style":"panel_heading",
+      "label_style":"panel_label",
+      "value_style":"panel_value",
       "headings":[
         {"field":"name","x":165,"y":72},
         {"field":"class","x":330,"y":74}

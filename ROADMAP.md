@@ -631,6 +631,27 @@ implementations. The remaining work is tracked explicitly below.
   `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
   against the latest frontend-only baseline.
 
+## M27: Diablo UI styling fidelity
+
+- [x] Preserve palette-authored bitmap-font shading, DC6 frame offsets, and a
+  shared glyph origin while applying sprite-style color modulation.
+- [ ] Replace screen-local font paths and approximate colors with semantic text
+  styles pairing the verified bitmap fonts with units, static, sky, and other
+  context-specific palettes. The shared style vocabulary and character panel
+  migration are complete; remaining screens still need migration.
+- [ ] Implement reusable authored button families with their correct DC6 assets,
+  segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
+  keyboard focus, activation sounds, and hit bounds.
+- [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
+  per-run colors, and optional glyph-sized background highlights.
+- [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
+  the authentic translucent-black backing box, then connect item, skill, HUD,
+  and panel-control tooltip content.
+- [ ] Implement reusable frames, boxes, scrollbars, text boxes, list controls,
+  toggles, and modal focus rules from verified Blizzard assets and records.
+- [ ] Add native screenshot fixtures for every shared component state and migrate
+  every shim screen and overlay away from one-off styling code.
+
 ## Gameplay acceptance milestone
 
 - [ ] Starting from legally supplied MPQs, watch/skip startup, navigate the real

@@ -6,6 +6,7 @@ local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
+local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.character
@@ -15,19 +16,6 @@ local function dc6_at(root, sheet, palette, frame, x, y)
     local width, height = node:set_dc6(sheet, palette, 0, frame)
     node:set_position(x + width / 2, y + height / 2)
     return node
-end
-
-local function text_at(root, font, text, x, y, width)
-    local node = render.create("modal", root)
-    local rendered_width, rendered_height = node:set_text(
-        font.table,
-        font.sheet,
-        manifest.palettes[font.palette],
-        text,
-        { red = 210, green = 180, blue = 110, max_width = width or 150, align = "center" }
-    )
-    node:set_position(x, y + rendered_height / 2)
-    return node, rendered_width, rendered_height
 end
 
 local function displayed_value(character, field)
@@ -65,16 +53,13 @@ return {
             dc6_at(self.root, panel.sheet, palette, frame, positions[index].x, positions[index].y)
         end
 
-        local heading_font = manifest.fonts[screen.heading_font]
         local heading_values = { name = character.name, class = character.class }
         for _, heading in ipairs(screen.headings) do
-            text_at(self.root, heading_font, heading_values[heading.field], heading.x, heading.y, 150)
+            text.create(self.root, screen.heading_style, heading_values[heading.field], heading.x, heading.y, 150)
         end
-        local label_font = manifest.fonts[screen.label_font]
-        local value_font = manifest.fonts[screen.value_font]
         for _, value in ipairs(screen.values) do
-            text_at(self.root, label_font, assert(locale.text(value.label)), value.label_x, value.label_y, 130)
-            text_at(self.root, value_font, tostring(displayed_value(character, value.field)), value.x, value.y, 100)
+            text.create(self.root, screen.label_style, assert(locale.text(value.label)), value.label_x, value.label_y, 130)
+            text.create(self.root, screen.value_style, displayed_value(character, value.field), value.x, value.y, 100)
         end
 
         local close = screen.close

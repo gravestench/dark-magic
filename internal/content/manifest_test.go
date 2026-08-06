@@ -25,6 +25,9 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		Version  int                        `json:"version"`
 		Palettes map[string]string          `json:"palettes"`
 		Fonts    map[string]json.RawMessage `json:"fonts"`
+		Styles   map[string]struct {
+			Font string `json:"font"`
+		} `json:"text_styles"`
 		Sounds   map[string]string          `json:"sounds"`
 		Cursor   json.RawMessage            `json:"cursor"`
 		Startup  json.RawMessage            `json:"startup"`
@@ -62,6 +65,16 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
+	}
+	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "button_normal", "button_hover", "disabled"} {
+		style, ok := manifest.Styles[name]
+		if !ok {
+			t.Errorf("presentation manifest is missing text style %q", name)
+			continue
+		}
+		if _, ok := manifest.Fonts[style.Font]; !ok {
+			t.Errorf("text style %q references unknown font %q", name, style.Font)
+		}
 	}
 	if len(manifest.Cursor) == 0 || len(manifest.Startup) == 0 {
 		t.Fatal("presentation manifest must own cursor and startup facts")
