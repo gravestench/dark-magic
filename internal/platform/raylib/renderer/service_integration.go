@@ -84,7 +84,9 @@ type Renderable interface {
 	BlendMode() (mode rl.BlendMode)
 	SetBlendMode(mode rl.BlendMode)
 	Shader() *rl.Shader
-	SetShader(*rl.Shader)
+	ShaderTexture() *rl.Texture2D
+	ShaderTextureLocation() int32
+	SetShader(*rl.Shader, *rl.Texture2D, int32)
 	Clip() *rl.Rectangle
 	SetClip(*rl.Rectangle)
 

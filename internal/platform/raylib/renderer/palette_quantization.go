@@ -35,16 +35,18 @@ void main() {
 }`
 
 type paletteQuantizer struct {
-	path    string
-	lut     *image.RGBA
-	target  rl.RenderTexture2D
-	shader  rl.Shader
-	texture rl.Texture2D
+	path            string
+	lut             *image.RGBA
+	target          rl.RenderTexture2D
+	shader          rl.Shader
+	texture         rl.Texture2D
+	textureLocation int32
 }
 
 type gpuPaletteEffect struct {
-	shader  rl.Shader
-	texture rl.Texture2D
+	shader          rl.Shader
+	texture         rl.Texture2D
+	textureLocation int32
 }
 
 func newGPUPaletteEffect(palette color.Palette) (*gpuPaletteEffect, error) {
@@ -62,8 +64,7 @@ func newGPUPaletteEffect(palette color.Palette) (*gpuPaletteEffect, error) {
 		return nil, fmt.Errorf("renderer: compile palette quantization shader")
 	}
 	location := rl.GetShaderLocation(shader, "paletteLUT")
-	rl.SetShaderValueTexture(shader, location, texture)
-	return &gpuPaletteEffect{shader: shader, texture: texture}, nil
+	return &gpuPaletteEffect{shader: shader, texture: texture, textureLocation: location}, nil
 }
 
 func (effect *gpuPaletteEffect) close() {
@@ -146,7 +147,7 @@ func (s *Service) startPaletteQuantizer() error {
 		return fmt.Errorf("renderer: compile palette quantization shader")
 	}
 	location := rl.GetShaderLocation(quantizer.shader, "paletteLUT")
-	rl.SetShaderValueTexture(quantizer.shader, location, quantizer.texture)
+	quantizer.textureLocation = location
 	if err := s.resizePaletteTarget(rl.GetRenderWidth(), rl.GetRenderHeight()); err != nil {
 		rl.UnloadShader(quantizer.shader)
 		rl.UnloadTexture(quantizer.texture)
@@ -200,6 +201,9 @@ func (s *Service) renderQuantizedFrame() error {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.Black)
 	rl.BeginShaderMode(quantizer.shader)
+	// Raylib clears auxiliary sampler registrations after every render-batch
+	// flush, so the LUT must be rebound for the draw that consumes it.
+	rl.SetShaderValueTexture(quantizer.shader, quantizer.textureLocation, quantizer.texture)
 	source := rl.NewRectangle(0, 0, float32(quantizer.target.Texture.Width), -float32(quantizer.target.Texture.Height))
 	destination := rl.NewRectangle(0, 0, float32(rl.GetRenderWidth()), float32(rl.GetRenderHeight()))
 	rl.DrawTexturePro(quantizer.target.Texture, source, destination, rl.Vector2{}, 0, rl.White)

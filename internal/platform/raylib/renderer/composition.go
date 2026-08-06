@@ -180,7 +180,7 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 	}
 	node.SetZIndex(float32(int(state.Layer)*1_000_000 + state.Z))
 	if state.Palette == (render.ResourceID{}) {
-		node.SetShader(nil)
+		node.SetShader(nil, nil, 0)
 	} else {
 		effect := b.paletteEffects[state.Palette]
 		if effect == nil {
@@ -195,7 +195,7 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 			}
 			b.paletteEffects[state.Palette] = effect
 		}
-		node.SetShader(&effect.shader)
+		node.SetShader(&effect.shader, &effect.texture, effect.textureLocation)
 	}
 	if state.Resource != (render.ResourceID{}) {
 		resource, exists := b.resources[state.Resource]

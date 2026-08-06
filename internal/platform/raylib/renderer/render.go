@@ -81,6 +81,10 @@ func (s *Service) renderNode(node Renderable) {
 	tint := rl.NewColor(255, 255, 255, uint8(node.Opacity()*255))
 	if shader := node.Shader(); shader != nil {
 		rl.BeginShaderMode(*shader)
+		if texture := node.ShaderTexture(); texture != nil {
+			// Auxiliary sampler registrations live for one Raylib batch only.
+			rl.SetShaderValueTexture(*shader, node.ShaderTextureLocation(), *texture)
+		}
 		defer rl.EndShaderMode()
 	}
 

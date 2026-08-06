@@ -27,17 +27,19 @@ func (s *Service) NewRenderable() Renderable {
 }
 
 type node struct {
-	renderer       *Service
-	uuid           uuid.UUID
-	opacity        float32
-	blendMode      rl.BlendMode
-	image          image.Image
-	enabled        bool
-	origin         rl.Vector2
-	textureVariant string
-	textureKeys    map[string]struct{}
-	clip           *rl.Rectangle
-	shader         *rl.Shader
+	renderer              *Service
+	uuid                  uuid.UUID
+	opacity               float32
+	blendMode             rl.BlendMode
+	image                 image.Image
+	enabled               bool
+	origin                rl.Vector2
+	textureVariant        string
+	textureKeys           map[string]struct{}
+	clip                  *rl.Rectangle
+	shader                *rl.Shader
+	shaderTexture         *rl.Texture2D
+	shaderTextureLocation int32
 
 	onUpdate func()
 
@@ -50,9 +52,13 @@ type node struct {
 	isDirty bool
 }
 
-func (n *node) Shader() *rl.Shader { return n.shader }
+func (n *node) Shader() *rl.Shader           { return n.shader }
+func (n *node) ShaderTexture() *rl.Texture2D { return n.shaderTexture }
+func (n *node) ShaderTextureLocation() int32 { return n.shaderTextureLocation }
 
-func (n *node) SetShader(shader *rl.Shader) { n.shader = shader }
+func (n *node) SetShader(shader *rl.Shader, texture *rl.Texture2D, location int32) {
+	n.shader, n.shaderTexture, n.shaderTextureLocation = shader, texture, location
+}
 
 func (n *node) dirty() bool {
 	if !n.isDirty {
