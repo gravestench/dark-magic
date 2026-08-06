@@ -98,3 +98,18 @@ func TestMixerRoutesBusVolumePanAndLoop(t *testing.T) {
 		t.Fatalf("commands = %#v", backend.commands)
 	}
 }
+
+func TestMixerPreservesStreamingIntent(t *testing.T) {
+	t.Parallel()
+	var mixer Mixer
+	if _, err := mixer.PlayWithOptions(".wav", []byte("music"), PlayOptions{Bus: "music", Volume: 1, Stream: true, Loop: true}); err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.commands) != 1 || !backend.commands[0].Stream || !backend.commands[0].Loop {
+		t.Fatalf("commands = %#v", backend.commands)
+	}
+}

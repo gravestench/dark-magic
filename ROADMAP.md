@@ -297,11 +297,13 @@ implementations. The remaining work is tracked explicitly below.
   Buttons, UTF-8 text fields, checkboxes, and scrollbars provide pointer
   hit-testing, scoped directional focus, disabled/hidden states, activation,
   change/sound and visual-state callbacks, and accessibility snapshots.
-- [ ] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
+- [x] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
   streaming, looping, fades, pan, grouping, and record-driven lookup.
   Generation-checked sounds now route through independently adjustable named
   buses with per-sound volume/pan, owner-thread looping, deterministic fades,
-  and grouped stopping; streaming and record-driven lookup remain.
+  and grouped stopping. Long-form assets use owner-thread streaming, while
+  deterministic `Sounds.txt` lookup resolves paths, routing, volume ranges,
+  grouped variants, looping, and streaming intent through layered content.
 - [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
   leak/race/rapid-scene-transition acceptance tests.
 

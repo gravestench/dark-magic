@@ -27,6 +27,7 @@ func (s *ownedSound) release() error {
 
 // AudioModule exposes scoped archive-backed sound playback.
 func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module {
+	catalog := audiocore.NewCatalog(source)
 	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -65,6 +66,9 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 					if value := table.RawGetString("group"); value != lua.LNil {
 						options.Group = lua.LVAsString(value)
 					}
+					if value := table.RawGetString("stream"); value != lua.LNil {
+						options.Stream = lua.LVAsBool(value)
+					}
 				}
 				id, err := mixer.PlayWithOptions(format, data, options)
 				if err != nil {
@@ -88,6 +92,34 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 					state.RaiseError("setting bus volume: %v", err)
 				}
 				return 0
+			},
+			"play_record": func(state *lua.LState) int {
+				scope, err := runtime.requireActiveScope()
+				if err != nil {
+					state.RaiseError("%v", err)
+					return 0
+				}
+				definition, err := catalog.Resolve(state.CheckString(1), uint64(state.OptInt64(2, 0)))
+				if err != nil {
+					state.RaiseError("resolving sound record: %v", err)
+					return 0
+				}
+				id, err := mixer.PlayWithOptions(definition.Format, definition.Data, definition.Options)
+				if err != nil {
+					state.RaiseError("playing sound record %q: %v", definition.Name, err)
+					return 0
+				}
+				sound := &ownedSound{mixer: mixer, id: id}
+				if err := scope.Add(sound.release); err != nil {
+					_ = sound.release()
+					state.RaiseError("owning sound record %q: %v", definition.Name, err)
+					return 0
+				}
+				userData := state.NewUserData()
+				userData.Value = sound
+				state.SetMetatable(userData, state.GetTypeMetatable(audioSoundType))
+				state.Push(userData)
+				return 1
 			},
 			"stop_group": func(state *lua.LState) int {
 				if err := mixer.StopGroup(state.CheckString(1)); err != nil {

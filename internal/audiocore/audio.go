@@ -23,6 +23,7 @@ type Command struct {
 	Volume float32
 	Pan    float32
 	Loop   bool
+	Stream bool
 }
 
 // Backend consumes audio commands on the native audio owner thread.
@@ -49,6 +50,7 @@ type PlayOptions struct {
 	Pan    float32
 	Loop   bool
 	Group  string
+	Stream bool
 }
 
 // Mixer accepts concurrent sound requests and queues backend commands.
@@ -102,7 +104,7 @@ func (m *Mixer) PlayWithOptions(format string, data []byte, options PlayOptions)
 	entry.group = options.Group
 	entry.fade = nil
 	id := SoundID{Slot: index, Generation: entry.generation}
-	m.pending = append(m.pending, Command{Kind: "play", ID: id, Format: format, Data: append([]byte(nil), data...), Volume: options.Volume * m.busVolume(options.Bus), Pan: options.Pan, Loop: options.Loop})
+	m.pending = append(m.pending, Command{Kind: "play", ID: id, Format: format, Data: append([]byte(nil), data...), Volume: options.Volume * m.busVolume(options.Bus), Pan: options.Pan, Loop: options.Loop, Stream: options.Stream})
 	return id, nil
 }
 
