@@ -44,8 +44,13 @@ type raylibAudioBackend struct {
 type pcmPlayback struct {
 	stream   rl.AudioStream
 	channels int
+	pending  []int16
 	queued   [][]int16
+	started  bool
+	stopping bool
 }
+
+const pcmBlockFrames = 1024
 
 func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 	b.mu.Lock()
@@ -55,9 +60,10 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		if _, exists := b.pcm[command.ID]; exists {
 			return fmt.Errorf("PCM stream %v already exists", command.ID)
 		}
+		rl.SetAudioStreamBufferSizeDefault(pcmBlockFrames)
 		stream := rl.LoadAudioStream(uint32(command.Rate), 16, uint32(command.Channels))
+		rl.SetAudioStreamBufferSizeDefault(0)
 		rl.SetAudioStreamVolume(stream, command.Volume)
-		rl.PlayAudioStream(stream)
 		b.pcm[command.ID] = &pcmPlayback{stream: stream, channels: command.Channels}
 		return nil
 	case "pcm-write":
@@ -69,7 +75,13 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		for index := range samples {
 			samples[index] = int16(binary.LittleEndian.Uint16(command.Data[index*2:]))
 		}
-		playback.queued = append(playback.queued, samples)
+		playback.pending = append(playback.pending, samples...)
+		blockSamples := pcmBlockFrames * playback.channels
+		for len(playback.pending) >= blockSamples {
+			block := append([]int16(nil), playback.pending[:blockSamples]...)
+			playback.queued = append(playback.queued, block)
+			playback.pending = playback.pending[blockSamples:]
+		}
 		return nil
 	case "play":
 		if _, exists := b.sounds[command.ID]; exists {
@@ -120,9 +132,14 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 		return nil
 	case "stop":
 		if playback, exists := b.pcm[command.ID]; exists {
-			rl.StopAudioStream(playback.stream)
-			rl.UnloadAudioStream(playback.stream)
-			delete(b.pcm, command.ID)
+			if len(playback.pending) > 0 {
+				blockSamples := pcmBlockFrames * playback.channels
+				block := make([]int16, blockSamples)
+				copy(block, playback.pending)
+				playback.queued = append(playback.queued, block)
+				playback.pending = nil
+			}
+			playback.stopping = true
 			return nil
 		}
 		if music, exists := b.music[command.ID]; exists {
@@ -156,7 +173,7 @@ func (b *raylibAudioBackend) Update() {
 	for _, music := range b.music {
 		rl.UpdateMusicStream(music)
 	}
-	for _, playback := range b.pcm {
+	for id, playback := range b.pcm {
 		if len(playback.queued) > 0 && rl.IsAudioStreamProcessed(playback.stream) {
 			samples := playback.queued[0]
 			// raylib's C API expects a frame count, while raylib-go derives that
@@ -165,6 +182,15 @@ func (b *raylibAudioBackend) Update() {
 			frames := len(samples) / playback.channels
 			rl.UpdateAudioStream(playback.stream, samples[:frames])
 			playback.queued = playback.queued[1:]
+			if !playback.started {
+				rl.PlayAudioStream(playback.stream)
+				playback.started = true
+			}
+		}
+		if playback.stopping && len(playback.queued) == 0 && (!playback.started || rl.IsAudioStreamProcessed(playback.stream)) {
+			rl.StopAudioStream(playback.stream)
+			rl.UnloadAudioStream(playback.stream)
+			delete(b.pcm, id)
 		}
 	}
 }
