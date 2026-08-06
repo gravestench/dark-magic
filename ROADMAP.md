@@ -655,7 +655,8 @@ implementations. The remaining work is tracked explicitly below.
   highlights remain.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
   the authentic translucent-black backing box, then connect item, skill, HUD,
-  and panel-control tooltip content.
+  and panel-control tooltip content. The shared tooltip and inventory/character
+  close-control help are complete; item, skill, and HUD content remain.
 - [ ] Implement reusable frames, boxes, scrollbars, text boxes, list controls,
   toggles, and modal focus rules from verified Blizzard assets and records.
 - [ ] Add native screenshot fixtures for every shared component state and migrate

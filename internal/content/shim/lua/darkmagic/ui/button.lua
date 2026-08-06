@@ -8,6 +8,7 @@ local render = require("dm.render/v1")
 local audio = require("dm.audio/v1")
 local data = require("dm.data/v1")
 local text = require("darkmagic.ui.text")
+local tooltips = require("darkmagic.ui.tooltip")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 
@@ -27,6 +28,7 @@ function button.create(root, manager, id, definition, label, options)
     assert(#up_frames == #down_frames, "button state frame counts must match")
     local draw = function() end
     local draw_label = function() end
+    local help
 
     if render.assets_available() then
         local pieces = {}
@@ -55,6 +57,15 @@ function button.create(root, manager, id, definition, label, options)
         end
         draw(up_frames)
         draw_label(normal_style)
+        if options.tooltip then
+            help = tooltips.create(
+                root,
+                options.tooltip,
+                definition.x + definition.width / 2,
+                definition.y - (options.tooltip_gap or 2),
+                { layer = options.tooltip_layer or "modal", style = options.tooltip_style or "tooltip" }
+            )
+        end
     end
 
     local control = {
@@ -83,8 +94,12 @@ function button.create(root, manager, id, definition, label, options)
             else
                 draw_label(highlighted and hover_style or normal_style)
             end
+            if help then
+                help:set_visible(state == "hover")
+            end
         end,
     }
+    control.tooltip = help
 
     manager:add(control)
     return control

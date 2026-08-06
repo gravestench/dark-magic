@@ -104,6 +104,7 @@ return {
             layer = "modal",
             show_label = false,
             sound = manifest.sounds.button,
+            tooltip = assert(locale.text(close.label)),
             on_activate = function()
                 scenes.pop()
             end,

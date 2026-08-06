@@ -90,6 +90,7 @@
     "label_button_normal": {"font":"exocet10","transform":"fechar","text_color":"gold"},
     "label_button_hover": {"font":"exocet10","transform":"fechar","text_color":"white"},
     "dialog_text": {"font":"exocet10","transform":"fechar","text_color":"gold"},
+    "tooltip": {"font":"font16","transform":"act1","text_color":"white"},
     "disabled": {"font":"font16","transform":"fechar","text_color":"grey"}
   },
   "sounds": {
