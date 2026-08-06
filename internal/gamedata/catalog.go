@@ -60,6 +60,16 @@ type Snapshot struct {
 	LevelMazeByLevel map[int]models.LevelMazeData
 	LevelWarps       []models.LevelWarp
 	LevelSubs        []models.LevelSubstitutionData
+	Monsters         []models.MonsterStats
+	MonstersByID     map[string]models.MonsterStats
+	MonsterGraphics  []models.MonsterStats2
+	MonsterGfxByID   map[string]models.MonsterStats2
+	MonsterLevels    []models.MonsterLevelStats
+	MonsterProps     []models.MonsterProp
+	MonsterPropsByID map[string]models.MonsterProp
+	MonsterSounds    []models.MonsterSounds
+	MonsterSoundByID map[string]models.MonsterSounds
+	MonsterEquipment []models.MonsterEquipment
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -106,7 +116,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable {
+	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable {
 		return
 	}
 	c.mu.Lock()
@@ -322,6 +332,50 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	monsters, err := Load[models.MonsterStats](c.store, MonsterStatsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monstersByID, found, err := ObservedIndex(MonsterStatsTable, monsters, func(record models.MonsterStats) string { return record.Id })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index monsters: %w", err)
+	}
+	issues = append(issues, found...)
+	monsterGraphics, err := Load[models.MonsterStats2](c.store, MonsterStats2Table)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterGfxByID, found, err := ObservedIndex(MonsterStats2Table, monsterGraphics, func(record models.MonsterStats2) string { return record.Id })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index monster graphics: %w", err)
+	}
+	issues = append(issues, found...)
+	monsterLevels, err := Load[models.MonsterLevelStats](c.store, MonsterLevelsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterProps, err := Load[models.MonsterProp](c.store, MonsterPropsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterPropsByID, found, err := ObservedIndex(MonsterPropsTable, monsterProps, func(record models.MonsterProp) string { return record.ID })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index monster properties: %w", err)
+	}
+	issues = append(issues, found...)
+	monsterSounds, err := Load[models.MonsterSounds](c.store, MonsterSoundsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	monsterSoundByID, found, err := ObservedIndex(MonsterSoundsTable, monsterSounds, func(record models.MonsterSounds) string { return record.ID })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index monster sounds: %w", err)
+	}
+	issues = append(issues, found...)
+	monsterEquipment, err := Load[models.MonsterEquipment](c.store, MonsterEquipTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -345,6 +399,9 @@ func (c *Catalog) load() (Snapshot, error) {
 		Sets: sets, SetsByIndex: setsByIndex,
 		LevelTypes: levelTypes, LevelPresets: levelPresets, LevelPresetByDef: levelPresetByDef,
 		LevelMazes: levelMazes, LevelMazeByLevel: levelMazeByLevel, LevelWarps: levelWarps, LevelSubs: levelSubs,
+		Monsters: monsters, MonstersByID: monstersByID, MonsterGraphics: monsterGraphics, MonsterGfxByID: monsterGfxByID,
+		MonsterLevels: monsterLevels, MonsterProps: monsterProps, MonsterPropsByID: monsterPropsByID,
+		MonsterSounds: monsterSounds, MonsterSoundByID: monsterSoundByID, MonsterEquipment: monsterEquipment,
 	}, nil
 }
 
@@ -398,6 +455,16 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		LevelMazeByLevel: make(map[int]models.LevelMazeData, len(source.LevelMazeByLevel)),
 		LevelWarps:       append([]models.LevelWarp(nil), source.LevelWarps...),
 		LevelSubs:        append([]models.LevelSubstitutionData(nil), source.LevelSubs...),
+		Monsters:         append([]models.MonsterStats(nil), source.Monsters...),
+		MonstersByID:     make(map[string]models.MonsterStats, len(source.MonstersByID)),
+		MonsterGraphics:  append([]models.MonsterStats2(nil), source.MonsterGraphics...),
+		MonsterGfxByID:   make(map[string]models.MonsterStats2, len(source.MonsterGfxByID)),
+		MonsterLevels:    append([]models.MonsterLevelStats(nil), source.MonsterLevels...),
+		MonsterProps:     append([]models.MonsterProp(nil), source.MonsterProps...),
+		MonsterPropsByID: make(map[string]models.MonsterProp, len(source.MonsterPropsByID)),
+		MonsterSounds:    append([]models.MonsterSounds(nil), source.MonsterSounds...),
+		MonsterSoundByID: make(map[string]models.MonsterSounds, len(source.MonsterSoundByID)),
+		MonsterEquipment: append([]models.MonsterEquipment(nil), source.MonsterEquipment...),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -452,6 +519,18 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.LevelMazeByLevel {
 		result.LevelMazeByLevel[key] = value
+	}
+	for key, value := range source.MonstersByID {
+		result.MonstersByID[key] = value
+	}
+	for key, value := range source.MonsterGfxByID {
+		result.MonsterGfxByID[key] = value
+	}
+	for key, value := range source.MonsterPropsByID {
+		result.MonsterPropsByID[key] = value
+	}
+	for key, value := range source.MonsterSoundByID {
+		result.MonsterSoundByID[key] = value
 	}
 	return result
 }

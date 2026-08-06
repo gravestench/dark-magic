@@ -40,6 +40,12 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		LevelMazeTable:       &fstest.MapFile{Data: []byte("Name\tLevel\tRooms\nDen of Evil\t8\t4\n")},
 		LevelWarpTable:       &fstest.MapFile{Data: []byte("Name\tId\nCave Entrance\t1\n")},
 		LevelSubTable:        &fstest.MapFile{Data: []byte("Name\tItemSuperType\nWilderness\t1\n")},
+		MonsterStatsTable:    &fstest.MapFile{Data: []byte("Id\tCode\nzombie\tZM\n")},
+		MonsterStats2Table:   &fstest.MapFile{Data: []byte("Id\tHeight\nzombie\t64\n")},
+		MonsterLevelsTable:   &fstest.MapFile{Data: []byte("Level\tAC\n1\t100\n")},
+		MonsterPropsTable:    &fstest.MapFile{Data: []byte("Id\tprop1\nzombie\tres-all\n")},
+		MonsterSoundsTable:   &fstest.MapFile{Data: []byte("Id\tAttack1\nzombie\tzombie_attack\n")},
+		MonsterEquipTable:    &fstest.MapFile{Data: []byte("monster\titem1\nzombie\thax\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -66,6 +72,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if len(first.LevelTypes) != 1 || first.LevelPresetByDef[1].LevelId != 1 || first.LevelMazeByLevel[8].Rooms != 4 || len(first.LevelWarps) != 1 || len(first.LevelSubs) != 1 {
 		t.Fatalf("typed world-generation tables = %#v", first)
+	}
+	if first.MonstersByID["zombie"].Code != "ZM" || first.MonsterGfxByID["zombie"].Id == "" || len(first.MonsterLevels) != 1 || first.MonsterPropsByID["zombie"].Prop1 != "res-all" || first.MonsterSoundByID["zombie"].Attack1 != "zombie_attack" || len(first.MonsterEquipment) != 1 {
+		t.Fatalf("typed monster tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -111,6 +120,12 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		LevelMazeTable:       &fstest.MapFile{Data: []byte("Name\tLevel\tRooms\nDen of Evil\t8\t4\n")},
 		LevelWarpTable:       &fstest.MapFile{Data: []byte("Name\tId\nCave Entrance\t1\n")},
 		LevelSubTable:        &fstest.MapFile{Data: []byte("Name\tItemSuperType\nWilderness\t1\n")},
+		MonsterStatsTable:    &fstest.MapFile{Data: []byte("Id\tCode\nzombie\tZM\n")},
+		MonsterStats2Table:   &fstest.MapFile{Data: []byte("Id\tHeight\nzombie\t64\n")},
+		MonsterLevelsTable:   &fstest.MapFile{Data: []byte("Level\tAC\n1\t100\n")},
+		MonsterPropsTable:    &fstest.MapFile{Data: []byte("Id\tprop1\nzombie\tres-all\n")},
+		MonsterSoundsTable:   &fstest.MapFile{Data: []byte("Id\tAttack1\nzombie\tzombie_attack\n")},
+		MonsterEquipTable:    &fstest.MapFile{Data: []byte("monster\titem1\nzombie\thax\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

@@ -727,7 +727,9 @@ implementations. The remaining work is tracked explicitly below.
   where descriptions or display names are not authoritative identities. The world
   dependency layer now admits LvlTypes, LvlPrest, LvlMaze, LvlWarp, and LvlSub,
   including real-data semantic checks that corrected the legacy LvlSub `Type`
-  binding rather than accepting a silently zero-filled field.
+  binding rather than accepting a silently zero-filled field. MonStats, MonStats2,
+  MonLvl, MonProp, MonSounds, and MonEquip now provide the admitted typed monster
+  foundation with immutable ID indexes and ordered scaling/equipment records.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

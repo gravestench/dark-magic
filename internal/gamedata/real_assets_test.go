@@ -72,6 +72,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		!slices.ContainsFunc(snapshot.LevelSubs, func(record models.LevelSubstitutionData) bool { return record.Type > 0 && record.File != "" }) {
 		t.Fatal("typed world-generation fields did not bind representative authored values")
 	}
+	if len(snapshot.MonstersByID) == 0 || len(snapshot.MonsterGfxByID) == 0 || len(snapshot.MonsterLevels) == 0 || len(snapshot.MonsterPropsByID) == 0 || len(snapshot.MonsterSoundByID) == 0 || len(snapshot.MonsterEquipment) == 0 {
+		t.Fatal("typed monster foundation tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}
@@ -182,6 +185,30 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 		},
 		"level substitutions": func() (int, error) {
 			records, err := Load[models.LevelSubstitutionData](store, LevelSubTable)
+			return len(records), err
+		},
+		"monster stats": func() (int, error) {
+			records, err := Load[models.MonsterStats](store, MonsterStatsTable)
+			return len(records), err
+		},
+		"monster graphics": func() (int, error) {
+			records, err := Load[models.MonsterStats2](store, MonsterStats2Table)
+			return len(records), err
+		},
+		"monster levels": func() (int, error) {
+			records, err := Load[models.MonsterLevelStats](store, MonsterLevelsTable)
+			return len(records), err
+		},
+		"monster properties": func() (int, error) {
+			records, err := Load[models.MonsterProp](store, MonsterPropsTable)
+			return len(records), err
+		},
+		"monster sounds": func() (int, error) {
+			records, err := Load[models.MonsterSounds](store, MonsterSoundsTable)
+			return len(records), err
+		},
+		"monster equipment": func() (int, error) {
+			records, err := Load[models.MonsterEquipment](store, MonsterEquipTable)
 			return len(records), err
 		},
 	} {

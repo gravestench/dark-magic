@@ -32,4 +32,10 @@ const (
 	LevelMazeTable       = "data/global/excel/LvlMaze.txt"
 	LevelWarpTable       = "data/global/excel/LvlWarp.txt"
 	LevelSubTable        = "data/global/excel/LvlSub.txt"
+	MonsterStatsTable    = "data/global/excel/MonStats.txt"
+	MonsterStats2Table   = "data/global/excel/MonStats2.txt"
+	MonsterLevelsTable   = "data/global/excel/MonLvl.txt"
+	MonsterPropsTable    = "data/global/excel/MonProp.txt"
+	MonsterSoundsTable   = "data/global/excel/MonSounds.txt"
+	MonsterEquipTable    = "data/global/excel/MonEquip.txt"
 )
