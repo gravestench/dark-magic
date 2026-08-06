@@ -27,22 +27,26 @@ import (
 	"github.com/gravestench/dark-magic/pkg/services/raylibRenderer"
 )
 
-const movementSpeed = 220.0
+const (
+	movementSpeed      = 220.0
+	hudRefreshInterval = 100 * time.Millisecond
+)
 
 type Service struct {
 	common.Service
-	renderer raylibRenderer.Dependency
-	input    input.Dependency
-	files    fileLoader.Dependency
-	locale   locale.Dependency
-	Config   Config
-	state    *scene.State
-	mapNode  raylibRenderer.Renderable
-	heroNode raylibRenderer.Renderable
-	hudNode  raylibRenderer.Renderable
-	hudText  string
-	mapLabel string
-	lastTick time.Time
+	renderer       raylibRenderer.Dependency
+	input          input.Dependency
+	files          fileLoader.Dependency
+	locale         locale.Dependency
+	Config         Config
+	state          *scene.State
+	mapNode        raylibRenderer.Renderable
+	heroNode       raylibRenderer.Renderable
+	hudNode        raylibRenderer.Renderable
+	hudText        string
+	mapLabel       string
+	lastTick       time.Time
+	lastHUDRefresh time.Time
 }
 
 func (s *Service) Name() string { return "Game Scene" }
@@ -91,9 +95,10 @@ func (s *Service) Init(servicemesh.Mesh) {
 	s.hudNode = s.renderer.NewRenderable()
 	s.hudNode.SetOrigin(0, 0)
 	s.hudNode.SetZIndex(100)
-	s.lastTick = time.Now()
+	now := time.Now()
+	s.lastTick = now
 	s.heroNode.OnUpdate(s.update)
-	s.syncRenderState()
+	s.syncRenderState(now)
 }
 
 func (s *Service) loadMapImage() (image.Image, error) {
@@ -136,19 +141,24 @@ func (s *Service) update() {
 	if dx != 0 || dy != 0 {
 		s.state.MoveHero(dx*movementSpeed*delta, dy*movementSpeed*delta)
 	}
-	s.syncRenderState()
+	s.syncRenderState(now)
 }
 
-func (s *Service) syncRenderState() {
+func (s *Service) syncRenderState(now time.Time) {
 	s.heroNode.SetPosition(float32(s.state.Hero.X), float32(s.state.Hero.Y))
 	camera := s.renderer.GetDefaultCamera()
 	width, height := s.renderer.WindowSize()
 	camera.Target = rl.Vector2{X: float32(s.state.Camera.X), Y: float32(s.state.Camera.Y)}
 	camera.Offset = rl.Vector2{X: float32(width) / 2, Y: float32(height) / 2}
-	s.syncHUD(camera, width, height)
+	s.syncHUD(camera, width, height, now)
 }
 
-func (s *Service) syncHUD(camera *rl.Camera2D, width, height int) {
+func (s *Service) syncHUD(camera *rl.Camera2D, width, height int, now time.Time) {
+	s.hudNode.SetPosition(camera.Target.X-float32(width)/2+12, camera.Target.Y-float32(height)/2+12)
+	if !hudRefreshDue(s.lastHUDRefresh, now, s.hudText == "") {
+		return
+	}
+	s.lastHUDRefresh = now
 	language := "Unknown"
 	if languages := s.locale.GetSupportedLanguages(); len(languages) != 0 {
 		language = languages[0]
@@ -159,7 +169,10 @@ func (s *Service) syncHUD(camera *rl.Camera2D, width, height int) {
 		s.hudText = text
 		s.hudNode.SetImage(hudImage(text, 470, 44))
 	}
-	s.hudNode.SetPosition(camera.Target.X-float32(width)/2+12, camera.Target.Y-float32(height)/2+12)
+}
+
+func hudRefreshDue(last, now time.Time, uninitialized bool) bool {
+	return uninitialized || last.IsZero() || now.Sub(last) >= hudRefreshInterval
 }
 
 func movementVector(states map[int32]input.InputState) (float64, float64) {

@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"testing"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
@@ -55,5 +56,19 @@ func TestHUDImageIsOpaqueWhereBackgroundIsDrawn(t *testing.T) {
 	_, _, _, alpha := img.At(0, 0).RGBA()
 	if alpha == 0 {
 		t.Fatal("HUD background is transparent")
+	}
+}
+
+func TestHUDRefreshIsBoundedButInitialRenderIsImmediate(t *testing.T) {
+	now := time.Unix(100, 0)
+	if !hudRefreshDue(time.Time{}, now, true) {
+		t.Fatal("initial HUD render should be immediate")
+	}
+	last := now
+	if hudRefreshDue(last, now.Add(hudRefreshInterval-time.Millisecond), false) {
+		t.Fatal("HUD refreshed before interval elapsed")
+	}
+	if !hudRefreshDue(last, now.Add(hudRefreshInterval), false) {
+		t.Fatal("HUD did not refresh when interval elapsed")
 	}
 }

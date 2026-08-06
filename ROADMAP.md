@@ -93,7 +93,7 @@ their own legally obtained game data.
 
 ## Performance priorities
 
-- [ ] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
+- [x] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
 - [ ] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
 - [ ] Cache scene child ordering until topology or Z-index changes.
 - [ ] Avoid unconditional per-frame callback and input-map allocations.
