@@ -706,6 +706,10 @@ implementations. The remaining work is tracked explicitly below.
   with explicit stores/catalogs owned by the application host. Generic row access
   remains available for mods and unknown columns, but is not a substitute for the
   typed records that drive simulation, rendering, audio, world generation, and UI.
+  The internal reflection decoder, deterministic primary-key indexing, atomic
+  snapshot/invalidation contract, and real-archive verification are complete for
+  the initial CharStats and Sounds slice; the remaining schemas and consumers
+  still need admission and migration.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
