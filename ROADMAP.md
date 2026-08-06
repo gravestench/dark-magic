@@ -352,7 +352,11 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
   transition, and debug layers coexist.
 - [ ] Add an in-game Lua console with command history, multiline editing,
-  completion, source-aware errors, structured value inspection, and log output.
+  source-aware errors, structured value inspection, and log output.
+- [ ] Provide capability-aware autocompletion for Lua keywords, console-local
+  names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
+  candidates, a shared prefix is inserted first, and candidate browsing never
+  executes code or invokes metamethods with side effects.
 - [ ] Bind each console tab to an explicit Lua runtime and dedicated disposable
   resource scope; serialize evaluation through the runtime owner and clearly
   display the selected runtime, scope, and capability set.
