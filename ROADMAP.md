@@ -399,7 +399,7 @@ implementations. The remaining work is tracked explicitly below.
   control, and corrected the frontend background and character palettes.
   Resource-less grouping nodes are now never drawn, eliminating raylib's
   default-texture artifact without sacrificing retained parent transforms.
-- [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
+- [x] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation. The manifest-backed two-column/four-row list now
   provides stable focus slots, vertical paging, metadata labels, selection art,
   explicit New/Delete/Exit/OK controls, and the observed 1.25-second pointer
@@ -411,8 +411,11 @@ implementations. The remaining work is tracked explicitly below.
   font, stable segmented focus frame, Font16 metadata baselines, frontend
   palette, scrollbar frames, and Tall/Medium footer controls at their observed
   positions. A development-only deterministic fixture source exercises filled
-  pages without touching player saves. Equipment-aware COF/DCC previews remain
-  until save records expose authoritative component codes.
+  pages without touching player saves. Save records can now carry an optional,
+  defensively copied appearance snapshot containing the authoritative COF,
+  palette, direction, and component DCC paths. The shim feeds that snapshot to
+  the generic compositor while legacy records retain their class-only fallback;
+  this keeps save decoding and asset resolution out of presentation code.
 - [x] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants. An
   engine-owned coordinator now executes named character, loading-asset, and

@@ -192,24 +192,36 @@ return {
                             screen.grid.x + column * screen.grid.column_step + screen.grid.text_offset.x + label_width / 2,
                             screen.grid.y + row * screen.grid.row_step + screen.grid.text_offset.y + label_height / 2
                         )
-                        -- Class-only/legacy saves do not claim equipment state.
-                        -- Their preview uses the verified front-end selected
-                        -- animation, including an authored overlay when present.
                         local presentation = assert(self.class_presentations[character.class])
-                        slot.preview:set_dc6_animation(
-                            presentation.selected,
-                            manifest.palettes[screen.preview_palette],
-                            0,
-                            presentation.frames_per_second or 15,
-                            "loop",
-                            "offsets"
-                        )
+                        if character.appearance then
+                            -- Save importers resolve equipment codes into an
+                            -- immutable COF/DCC snapshot. The shim supplies it
+                            -- directly to the generic composite renderer.
+                            slot.preview:set_cof_animation(
+                                character.appearance.cof,
+                                character.appearance.palette,
+                                character.appearance.direction,
+                                character.appearance.components,
+                                "loop"
+                            )
+                        else
+                            -- Class-only/legacy saves do not claim equipment
+                            -- state and retain the verified front-end fallback.
+                            slot.preview:set_dc6_animation(
+                                presentation.selected,
+                                manifest.palettes[screen.preview_palette],
+                                0,
+                                presentation.frames_per_second or 15,
+                                "loop",
+                                "offsets"
+                            )
+                        end
                         slot.preview:set_scale(screen.grid.preview_scale, screen.grid.preview_scale)
                         slot.preview:set_position(
                             screen.grid.x + column * screen.grid.column_step + screen.grid.preview_offset.x,
                             screen.grid.y + row * screen.grid.row_step + screen.grid.preview_offset.y
                         )
-                        if presentation.selected_overlay then
+                        if not character.appearance and presentation.selected_overlay then
                             slot.preview_overlay:set_dc6_animation(
                                 presentation.selected_overlay,
                                 manifest.palettes[screen.preview_palette],

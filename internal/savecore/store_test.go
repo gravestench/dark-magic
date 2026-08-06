@@ -24,6 +24,32 @@ func TestSelectionAndDefensiveCharacterList(t *testing.T) {
 	}
 }
 
+func TestCharacterAppearanceIsDefensivelyCopied(t *testing.T) {
+	t.Parallel()
+
+	appearance := &Appearance{
+		COF:        "data/global/chars/AM/COF/AMTNHTH.cof",
+		Palette:    "data/global/Palette/ACT1/pal.dat",
+		Direction:  2,
+		Components: map[string]string{"HD": "data/global/chars/AM/HD/head.dcc"},
+	}
+	store := New(Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1, Appearance: appearance})
+	appearance.Components["HD"] = "mutated"
+	listed := store.Characters()
+	listed[0].Appearance.Components["HD"] = "also-mutated"
+	if got := store.Characters()[0].Appearance.Components["HD"]; got != "data/global/chars/AM/HD/head.dcc" {
+		t.Fatalf("stored appearance component = %q", got)
+	}
+	if err := store.Select("hero"); err != nil {
+		t.Fatal(err)
+	}
+	selected, _ := store.Selected()
+	selected.Appearance.Components["HD"] = "selected-mutated"
+	if got := store.Characters()[0].Appearance.Components["HD"]; got != "data/global/chars/AM/HD/head.dcc" {
+		t.Fatalf("stored appearance component after Selected mutation = %q", got)
+	}
+}
+
 func TestCreateValidatesCharacterIdentity(t *testing.T) {
 	store := New()
 	for _, character := range []Character{

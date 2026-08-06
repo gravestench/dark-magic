@@ -14,12 +14,23 @@ var characterClasses = map[string]string{
 }
 
 type Character struct {
-	ID        string
-	Name      string
-	Class     string
-	Level     int
-	Expansion bool
-	Hardcore  bool
+	ID         string
+	Name       string
+	Class      string
+	Level      int
+	Expansion  bool
+	Hardcore   bool
+	Appearance *Appearance
+}
+
+// Appearance is an immutable rendering snapshot decoded from a character save.
+// Asset resolution belongs to the save importer; the store carries only the
+// authoritative COF and DCC paths needed by presentation code.
+type Appearance struct {
+	COF        string
+	Palette    string
+	Direction  int
+	Components map[string]string
 }
 
 func (s *Store) Create(character Character) error {
@@ -35,6 +46,7 @@ func (s *Store) Create(character Character) error {
 	if character.Level < 1 {
 		character.Level = 1
 	}
+	character = cloneCharacter(character)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, existing := range s.entries {
@@ -113,14 +125,21 @@ type Store struct {
 }
 
 func New(entries ...Character) *Store {
-	copyEntries := append([]Character(nil), entries...)
+	copyEntries := make([]Character, len(entries))
+	for index, entry := range entries {
+		copyEntries[index] = cloneCharacter(entry)
+	}
 	return &Store{entries: copyEntries}
 }
 
 func (s *Store) Characters() []Character {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return append([]Character(nil), s.entries...)
+	result := make([]Character, len(s.entries))
+	for index, entry := range s.entries {
+		result[index] = cloneCharacter(entry)
+	}
+	return result
 }
 
 func (s *Store) Select(id string) error {
@@ -160,8 +179,21 @@ func (s *Store) Selected() (Character, bool) {
 	defer s.mu.RUnlock()
 	for _, character := range s.entries {
 		if character.ID == s.selected {
-			return character, true
+			return cloneCharacter(character), true
 		}
 	}
 	return Character{}, false
+}
+
+func cloneCharacter(character Character) Character {
+	if character.Appearance == nil {
+		return character
+	}
+	appearance := *character.Appearance
+	appearance.Components = make(map[string]string, len(character.Appearance.Components))
+	for component, path := range character.Appearance.Components {
+		appearance.Components[component] = path
+	}
+	character.Appearance = &appearance
+	return character
 }

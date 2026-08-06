@@ -9,6 +9,28 @@ import (
 // file ownership or mutable Go objects to Lua.
 func SaveModule(store *savecore.Store) Module {
 	return Module{Name: "dm.save/v1", Loader: func(state *lua.LState) int {
+		characterTable := func(character savecore.Character) *lua.LTable {
+			entry := state.NewTable()
+			entry.RawSetString("id", lua.LString(character.ID))
+			entry.RawSetString("name", lua.LString(character.Name))
+			entry.RawSetString("class", lua.LString(character.Class))
+			entry.RawSetString("level", lua.LNumber(character.Level))
+			entry.RawSetString("expansion", lua.LBool(character.Expansion))
+			entry.RawSetString("hardcore", lua.LBool(character.Hardcore))
+			if character.Appearance != nil {
+				appearance := state.NewTable()
+				appearance.RawSetString("cof", lua.LString(character.Appearance.COF))
+				appearance.RawSetString("palette", lua.LString(character.Appearance.Palette))
+				appearance.RawSetString("direction", lua.LNumber(character.Appearance.Direction))
+				components := state.NewTable()
+				for component, path := range character.Appearance.Components {
+					components.RawSetString(component, lua.LString(path))
+				}
+				appearance.RawSetString("components", components)
+				entry.RawSetString("appearance", appearance)
+			}
+			return entry
+		}
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"create_named": func(state *lua.LState) int {
 				character, err := store.CreateNamedWithOptions(
@@ -35,14 +57,7 @@ func SaveModule(store *savecore.Store) Module {
 			"characters": func(state *lua.LState) int {
 				result := state.NewTable()
 				for _, character := range store.Characters() {
-					entry := state.NewTable()
-					entry.RawSetString("id", lua.LString(character.ID))
-					entry.RawSetString("name", lua.LString(character.Name))
-					entry.RawSetString("class", lua.LString(character.Class))
-					entry.RawSetString("level", lua.LNumber(character.Level))
-					entry.RawSetString("expansion", lua.LBool(character.Expansion))
-					entry.RawSetString("hardcore", lua.LBool(character.Hardcore))
-					result.Append(entry)
+					result.Append(characterTable(character))
 				}
 				state.Push(result)
 				return 1
@@ -71,14 +86,7 @@ func SaveModule(store *savecore.Store) Module {
 					state.Push(lua.LNil)
 					return 1
 				}
-				result := state.NewTable()
-				result.RawSetString("id", lua.LString(character.ID))
-				result.RawSetString("name", lua.LString(character.Name))
-				result.RawSetString("class", lua.LString(character.Class))
-				result.RawSetString("level", lua.LNumber(character.Level))
-				result.RawSetString("expansion", lua.LBool(character.Expansion))
-				result.RawSetString("hardcore", lua.LBool(character.Hardcore))
-				state.Push(result)
+				state.Push(characterTable(character))
 				return 1
 			},
 		})
