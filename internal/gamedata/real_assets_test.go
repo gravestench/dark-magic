@@ -90,6 +90,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.NPCTradesByID) == 0 || len(snapshot.ShrinesByType) == 0 || len(snapshot.MonsterPresets) == 0 || len(snapshot.GambleItemsByCode) == 0 {
 		t.Fatal("typed world-interaction tables are incomplete")
 	}
+	if len(snapshot.ObjectTypesByName) == 0 || len(snapshot.ObjectGroupsByName) == 0 || len(snapshot.ObjectModesByName) == 0 {
+		t.Fatal("typed object metadata tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

@@ -54,6 +54,9 @@ const (
 	ShrinesTable         = "data/global/excel/Shrines.txt"
 	MonsterPresetsTable  = "data/global/excel/MonPreset.txt"
 	GambleTable          = "data/global/excel/Gamble.txt"
+	ObjectTypesTable     = "data/global/excel/ObjType.txt"
+	ObjectGroupsTable    = "data/global/excel/ObjGroup.txt"
+	ObjectModesTable     = "data/global/excel/ObjMode.txt"
 )
 
 func isAdmittedTable(path string) bool {
@@ -69,7 +72,8 @@ func isAdmittedTable(path string) bool {
 		MonsterEquipTable, MissilesTable, StatesTable, OverlaysTable,
 		PetTypesTable, ExperienceTable, InventoryTable, BeltsTable, HirelingTable,
 		DifficultyTable, SkillDescTable, SoundEnvironTable, AutoMapTable, NPCTable,
-		ShrinesTable, MonsterPresetsTable, GambleTable:
+		ShrinesTable, MonsterPresetsTable, GambleTable, ObjectTypesTable,
+		ObjectGroupsTable, ObjectModesTable:
 		return true
 	default:
 		return false

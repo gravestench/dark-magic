@@ -62,6 +62,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		ShrinesTable:         &fstest.MapFile{Data: []byte("Shrine Type\tShrine name\tCode\nMana\tMana Shrine\t1\n")},
 		MonsterPresetsTable:  &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
 		GambleTable:          &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
+		ObjectTypesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nShrine\tSH\n")},
+		ObjectGroupsTable:    &fstest.MapFile{Data: []byte("GroupName\tID0\tDENSITY0\tPROB0\nCaves\t1\t10\t100\n")},
+		ObjectModesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nNeutral\tNU\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -100,6 +103,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.NPCTradesByID["Akara"].BuyMult != 1024 || first.ShrinesByType["Mana"].Code != 1 || len(first.MonsterPresets) != 1 || first.GambleItemsByCode["cap"].Name != "Cap" {
 		t.Fatalf("typed world-interaction tables = %#v", first)
+	}
+	if first.ObjectTypesByName["Shrine"].Token != "SH" || first.ObjectGroupsByName["Caves"].ObjectID0 != 1 || first.ObjectModesByName["Neutral"].Token != "NU" {
+		t.Fatalf("typed object metadata tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -167,6 +173,9 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		ShrinesTable:         &fstest.MapFile{Data: []byte("Shrine Type\tShrine name\tCode\nMana\tMana Shrine\t1\n")},
 		MonsterPresetsTable:  &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
 		GambleTable:          &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
+		ObjectTypesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nShrine\tSH\n")},
+		ObjectGroupsTable:    &fstest.MapFile{Data: []byte("GroupName\tID0\tDENSITY0\tPROB0\nCaves\t1\t10\t100\n")},
+		ObjectModesTable:     &fstest.MapFile{Data: []byte("Name\tToken\nNeutral\tNU\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

@@ -741,7 +741,9 @@ implementations. The remaining work is tracked explicitly below.
   and AutoMap now admit skill-tooltip layout, area audio environments, and
   automap-cell presentation data with stable skill and environment indexes.
   Npc, Shrines, MonPreset, and Gamble now preserve town economics, world
-  interactables, preset population, and gambling-pool configuration.
+  interactables, preset population, and gambling-pool configuration. ObjType,
+  ObjGroup, and ObjMode now admit object tokens, population distributions, and
+  animation-mode metadata.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
