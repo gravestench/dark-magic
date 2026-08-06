@@ -14,7 +14,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/modruntime"
+	"github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 type Invalidator interface {

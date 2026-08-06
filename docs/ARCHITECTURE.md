@@ -60,7 +60,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/loading` | Observable loading progress | command, Lua | Application | Keep |
 | `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
 | `internal/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
-| `internal/modruntime` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters |
+| `internal/runtime/lua` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters by feature when useful |
 | `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
 | `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
 | `internal/app/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
@@ -119,7 +119,7 @@ the package that owns it.
 
 Each frame begins at the Raylib renderer owner thread. Native input is translated
 through `internal/platform/raylib/input`, Lua scene updates run through
-`internal/modruntime`, and retained presentation commands cross
+`internal/runtime/lua`, and retained presentation commands cross
 `internal/presentation/render` before `internal/platform/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
 

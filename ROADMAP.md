@@ -749,6 +749,10 @@ implementations. The remaining work is tracked explicitly below.
   Application lifecycle, filesystem observation, transactional reload, and the
   local management API now live together under `internal/app`; the command stays
   their composition root and all previous top-level import paths are guarded.
+  Serialized Lua VM ownership, capability modules, dynamic services, scopes,
+  diagnostics, console-facing runtime behavior, and tests now live together at
+  `internal/runtime/lua`; the existing `modruntime` package name remains explicit
+  at call sites while the old top-level import path is rejected.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

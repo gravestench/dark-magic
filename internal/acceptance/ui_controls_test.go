@@ -7,7 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/inputstate"
-	"github.com/gravestench/dark-magic/internal/modruntime"
+	"github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 func TestLuaControlsPointerKeyboardFocusAndAccessibility(t *testing.T) {
