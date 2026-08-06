@@ -70,7 +70,7 @@ function button.create(root, manager, id, definition, label, options)
             end
         end,
         on_state = function(_, state)
-            local highlighted = state == "focused" or state == "hover"
+            local highlighted = state == "focused" or state == "hover" or state == "pressed"
             draw(highlighted and definition.down_frames or definition.up_frames)
             if state == "disabled" then
                 draw_label(disabled_style)

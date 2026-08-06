@@ -30,6 +30,9 @@ local function state_of(manager, control, x, y)
     if control.enabled == false then
         return "disabled"
     end
+    if manager.pressed == control then
+        return "pressed"
+    end
     if contains(control, x, y) then
         return "hover"
     end
@@ -242,6 +245,12 @@ function Manager:update()
     end
     if hovered and eligible(self, hovered) then
         self.focus = hovered
+    end
+    self.pressed = nil
+    if hovered and input.down("pointer_primary") then
+        self.pressed = hovered
+    elseif self.focus and input.down("confirm") then
+        self.pressed = self.focus
     end
     if input.pressed("pointer_primary") then
         if hovered and hovered.role == "scrollbar" then

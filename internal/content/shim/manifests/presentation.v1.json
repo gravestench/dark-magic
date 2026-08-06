@@ -81,6 +81,8 @@
     "frontend_metadata": {"font":"exocet10","color":{"red":150,"green":135,"blue":105}},
     "button_normal": {"font":"exocet10","color":{"red":210,"green":180,"blue":110}},
     "button_hover": {"font":"exocet10","color":{"red":255,"green":255,"blue":255}},
+    "label_button_normal": {"font":"exocet10","color":{"red":165,"green":145,"blue":90}},
+    "label_button_hover": {"font":"exocet10","color":{"red":235,"green":205,"blue":125}},
     "disabled": {"font":"font16","color":{"red":95,"green":95,"blue":95}}
   },
   "sounds": {

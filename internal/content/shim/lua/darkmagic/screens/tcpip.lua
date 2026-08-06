@@ -9,6 +9,7 @@ local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
+local button = require("darkmagic.ui.button")
 local cursor = require("darkmagic.ui.cursor")
 local dialog = require("darkmagic.ui.dialog")
 local dc6 = require("darkmagic.ui.dc6")
@@ -28,57 +29,12 @@ return {
         )
         self.controls = controls.new()
 
-        -- Both buttons use the same interaction contract but retain independent
-        -- manifest geometry, localized labels, and DC6 frame definitions.
         local function add(id, activate)
             local definition = screen.controls[id]
-            local label_text = assert(locale.text(definition.label))
-            local control = {
-                id = id,
-                label = label_text,
-                x = definition.x,
-                y = definition.y,
-                width = definition.width,
-                height = definition.height,
+            button.create(self.root, self.controls, id, definition, assert(locale.text(definition.label)), {
+                layer = "hud",
                 on_activate = activate,
-            }
-            if render.assets_available() then
-                local left = render.create("hud", self.root)
-                local right = render.create("hud", self.root)
-                local label = render.create("hud", self.root)
-                local palette = manifest.palettes[definition.palette]
-
-                local function draw_frames(frames)
-                    left:set_dc6(definition.sheet, palette, 0, frames[1])
-                    right:set_dc6(definition.sheet, palette, 0, frames[2])
-                end
-
-                draw_frames(definition.up_frames)
-                left:set_position(definition.x + 128, definition.y + definition.height / 2)
-                right:set_position(definition.x + 264, definition.y + definition.height / 2)
-                label:set_text(
-                    font.table,
-                    font.sheet,
-                    manifest.palettes[font.palette],
-                    label_text,
-                    {
-                        red = 210,
-                        green = 180,
-                        blue = 110,
-                        max_width = definition.width,
-                        align = "center",
-                    }
-                )
-                label:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
-                control.on_state = function(_, state)
-                    if state == "focused" or state == "hover" then
-                        draw_frames(definition.down_frames)
-                    else
-                        draw_frames(definition.up_frames)
-                    end
-                end
-            end
-            self.controls:add(control)
+            })
         end
 
         add("host", function()

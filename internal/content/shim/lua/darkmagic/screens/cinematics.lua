@@ -10,11 +10,12 @@ local locale = require("dm.locale/v1")
 local vfs = require("dm.vfs/v1")
 local video = require("dm.video/v1")
 local controls = require("darkmagic.ui.controls")
+local label_button = require("darkmagic.ui.label_button")
 local cursor = require("darkmagic.ui.cursor")
 local dc6 = require("darkmagic.ui.dc6")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
-local screen, font = manifest.screens.cinematics, manifest.fonts.exocet10
+local screen = manifest.screens.cinematics
 
 return {
     create = function(self)
@@ -31,13 +32,14 @@ return {
         for index, definition in ipairs(screen.entries) do
             local label_text = assert(locale.text(definition.label))
             local y = screen.list.y + (index - 1) * screen.list.row_height
-            local control = {
+            local control_definition = {
                 id = definition.id,
-                label = label_text,
                 x = screen.list.x,
                 y = y,
                 width = screen.list.width,
                 height = screen.list.row_height,
+            }
+            local control = label_button.create(self.root, self.controls, control_definition, label_text, {
                 enabled = vfs.source(definition.path) ~= nil,
                 on_activate = function()
                     if not video.available() then
@@ -48,26 +50,8 @@ return {
                         self.playback = playback
                     end
                 end,
-            }
-            if render.assets_available() then
-                local label = render.create("hud", self.root)
-                local function draw(state)
-                    local focused = state == "focused" or state == "hover"
-                    label:set_text(font.table, font.sheet, manifest.palettes[font.palette], label_text, {
-                        red = focused and 235 or 165,
-                        green = focused and 205 or 145,
-                        blue = focused and 125 or 90,
-                        max_width = screen.list.width,
-                        align = "center",
-                    })
-                end
-                draw("normal")
-                label:set_position(screen.list.x + screen.list.width / 2, y + screen.list.row_height / 2)
-                control.on_state = function(_, state)
-                    draw(state)
-                end
-            end
-            self.entries[#self.entries + 1] = self.controls:add(control)
+            })
+            self.entries[#self.entries + 1] = control
         end
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
