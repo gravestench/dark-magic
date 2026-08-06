@@ -1,8 +1,13 @@
 package recordstore
 
 import (
+	"bytes"
+	"log/slog"
+	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/gravestench/dark-magic/internal/content"
 )
 
 func TestStoreLoadsCachesClonesAndInvalidatesTSV(t *testing.T) {
@@ -54,5 +59,33 @@ func TestStorePreservesUnnamedShippedColumns(t *testing.T) {
 	}
 	if rows[0]["code"] != "cax" || rows[0]["#unnamed-2"] != "unused" {
 		t.Fatalf("unnamed column was not preserved deterministically: %#v", rows)
+	}
+}
+
+func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
+	t.Parallel()
+
+	source, err := content.New(content.Layer{Name: "patch_d2.mpq", FS: fstest.MapFS{
+		"data/global/excel/armor.txt": &fstest.MapFile{Data: []byte("code\ncap\n")},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	store := New(source)
+	store.SetLogger(slog.New(slog.NewJSONHandler(&output, nil)))
+	for range 2 {
+		if _, err := store.Load("data/global/excel/armor.txt"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logged := output.String()
+	for _, expected := range []string{`"msg":"loaded records"`, `"table":"data/global/excel/armor.txt"`, `"records":1`, `"source":"patch_d2.mpq"`, `"source_path":"data/global/excel/armor.txt"`} {
+		if !strings.Contains(logged, expected) {
+			t.Errorf("load log %q does not contain %q", logged, expected)
+		}
+	}
+	if strings.Count(logged, `"msg":"loaded records"`) != 1 {
+		t.Fatalf("cache hit produced another load event: %q", logged)
 	}
 }

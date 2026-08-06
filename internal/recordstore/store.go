@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"strings"
 	"sync"
 )
@@ -14,13 +15,21 @@ import (
 // Store caches immutable generic TSV records by normalized content path.
 type Store struct {
 	source fs.FS
+	logger *slog.Logger
 	mu     sync.RWMutex
 	cache  map[string][]map[string]string
 }
 
 // New constructs a record store over source.
 func New(source fs.FS) *Store {
-	return &Store{source: source, cache: make(map[string][]map[string]string)}
+	return &Store{source: source, logger: slog.Default(), cache: make(map[string][]map[string]string)}
+}
+
+// SetLogger configures record-load diagnostics. A nil logger disables them.
+func (s *Store) SetLogger(logger *slog.Logger) {
+	s.mu.Lock()
+	s.logger = logger
+	s.mu.Unlock()
 }
 
 // Read returns original layered table bytes for a format codec. Generic rows
@@ -54,13 +63,34 @@ func (s *Store) Load(path string) ([]map[string]string, error) {
 		return nil, fmt.Errorf("recordstore: parse %q: %w", path, err)
 	}
 	s.mu.Lock()
-	if existing, loaded := s.cache[path]; loaded {
+	loaded := false
+	if existing, cached := s.cache[path]; cached {
 		rows = existing
 	} else {
 		s.cache[path] = rows
+		loaded = true
 	}
+	logger := s.logger
 	s.mu.Unlock()
+	if loaded && logger != nil {
+		sourceLayer, sourcePath := s.resolveSource(path)
+		logger.Info("loaded records", "table", path, "records", len(rows), "source", sourceLayer, "source_path", sourcePath)
+	}
 	return cloneRows(rows), nil
+}
+
+func (s *Store) resolveSource(path string) (string, string) {
+	resolver, ok := s.source.(interface {
+		ResolveSource(string) (layer string, path string, err error)
+	})
+	if !ok {
+		return "filesystem", path
+	}
+	layer, resolvedPath, err := resolver.ResolveSource(path)
+	if err != nil {
+		return "unresolved", path
+	}
+	return layer, resolvedPath
 }
 
 // Invalidate removes one cached table so its next access reloads layered content.

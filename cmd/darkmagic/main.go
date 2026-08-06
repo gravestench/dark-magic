@@ -147,6 +147,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
+	records.SetLogger(slog.Default().With("component", "records"))
 	fixtureEntries := developmentCharacters(fixtureCharacters)
 	saves := savecore.New(fixtureEntries...)
 	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {

@@ -191,6 +191,16 @@ func (f *FS) Resolve(name string) (Source, error) {
 	return Source{}, &fs.PathError{Op: "resolve", Path: clean, Err: fs.ErrNotExist}
 }
 
+// ResolveSource exposes provenance to consumers that should not depend on the
+// content package's concrete Source type.
+func (f *FS) ResolveSource(name string) (layer string, resolvedPath string, err error) {
+	resolved, err := f.Resolve(name)
+	if err != nil {
+		return "", "", err
+	}
+	return resolved.Layer, resolved.Path, nil
+}
+
 // ReadDir returns the union of a directory across all layers. A
 // higher-priority entry shadows a lower-priority entry with the same name.
 func (f *FS) ReadDir(name string) ([]fs.DirEntry, error) {
