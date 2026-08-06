@@ -1,3 +1,8 @@
+-- Saved-character selection scene.
+--
+-- This intentionally small implementation demonstrates save enumeration,
+-- selection, and navigation. M17.4 will replace the placeholder presentation
+-- with manifest-driven paging, previews, metadata, and deletion controls.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local saves = require("dm.save/v1")
@@ -6,6 +11,9 @@ local scenes = require("dm.scene/v1")
 return {
     create = function(self)
         self.characters = saves.characters()
+
+        -- New installations enter character creation instead of fabricating a
+        -- placeholder save in Lua or native code.
         if #self.characters == 0 then
             scenes.replace("character_create")
             return

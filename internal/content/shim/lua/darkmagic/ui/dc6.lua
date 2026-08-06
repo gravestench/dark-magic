@@ -1,3 +1,8 @@
+-- Higher-level helpers for composing Diablo II DC6 presentation assets.
+--
+-- The engine capability handles decoding and checked resource ownership. This
+-- module demonstrates how mods can apply manifest layout and anchor metadata
+-- without hard-coding those concerns into native code.
 local render = require("dm.render/v1")
 
 local M = {}
@@ -6,7 +11,9 @@ local M = {}
 -- three rows. The final column/row are clipped to 32/88 pixels.
 function M.frontend_background(parent, layer, path, palette, layout)
     local nodes = {}
-    if not render.assets_available() then return nodes end
+    if not render.assets_available() then
+        return nodes
+    end
     local widths = layout.columns
     local heights = layout.rows
     local frame = layout.first_frame
@@ -29,7 +36,9 @@ end
 
 -- DC6 offsets describe placement relative to a common animation anchor.
 function M.anchored_frame(node, path, palette, anchor_x, anchor_y, frame)
-    if not render.assets_available() then return end
+    if not render.assets_available() then
+        return
+    end
     local width, height, offset_x, offset_y = node:set_dc6(path, palette, 0, frame)
     node:set_position(
         anchor_x + offset_x + width / 2,
@@ -38,9 +47,17 @@ function M.anchored_frame(node, path, palette, anchor_x, anchor_y, frame)
 end
 
 function M.anchored_animation(node, path, palette, anchor_x, anchor_y, frames_per_second, loop, anchor_mode)
-    if not render.assets_available() then return 0 end
+    if not render.assets_available() then
+        return 0
+    end
     local frames, width, height, offset_x, offset_y = node:set_dc6_animation(
-        path, palette, 0, frames_per_second, loop or "loop", anchor_mode or "offsets")
+        path,
+        palette,
+        0,
+        frames_per_second,
+        loop or "loop",
+        anchor_mode or "offsets"
+    )
     node:set_position(
         anchor_x + offset_x + width / 2,
         anchor_y + offset_y + height / 2
@@ -51,7 +68,9 @@ end
 -- Load independently cropped layers into the same anchor-space canvas. This
 -- keeps a composite immobile while preserving each DC6 frame's authored offset.
 function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_per_second, loop)
-    if not render.assets_available() then return 0 end
+    if not render.assets_available() then
+        return 0
+    end
     local min_x, min_y, max_x, max_y
     for index, path in ipairs(paths) do
         local x1, y1, x2, y2 = render.dc6_animation_bounds(path, palette, 0, "offsets")
@@ -62,14 +81,28 @@ function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_
     end
     local count = 0
     for index, node in ipairs(nodes) do
-        count = node:set_dc6_animation(paths[index], palette, 0, frames_per_second,
-            loop or "loop", "offsets", min_x, min_y, max_x, max_y)
-        node:set_position(anchor_x + min_x + (max_x - min_x) / 2,
-            anchor_y + min_y + (max_y - min_y) / 2)
+        count = node:set_dc6_animation(
+            paths[index],
+            palette,
+            0,
+            frames_per_second,
+            loop or "loop",
+            "offsets",
+            min_x,
+            min_y,
+            max_x,
+            max_y
+        )
+        node:set_position(
+            anchor_x + min_x + (max_x - min_x) / 2,
+            anchor_y + min_y + (max_y - min_y) / 2
+        )
     end
     return count
 end
 
+-- Pausing every layer lets the caller drive one shared animation clock. This is
+-- important for multi-file composites such as the four-part Diablo II logo.
 function M.pause_animations(nodes)
     for _, node in pairs(nodes) do
         node:animation_pause()

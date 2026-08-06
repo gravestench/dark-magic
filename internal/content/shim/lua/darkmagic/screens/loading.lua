@@ -1,3 +1,8 @@
+-- Startup cinematic sequence.
+--
+-- The scene consumes only the versioned video capability and manifest policy.
+-- Decoder selection, temporary files, native resources, and cleanup remain
+-- engine-owned implementation details.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -20,26 +25,53 @@ return {
     end,
 
     advance = function(self)
-        if self.playback then self.playback:stop(); self.playback = nil end
+        -- Stop the previous checked handle before attempting the next entry.
+        if self.playback then
+            self.playback:stop()
+            self.playback = nil
+        end
         while self.index < #startup.sequence do
             self.index = self.index + 1
             if video.available() then
                 local ok, playback = pcall(video.play, startup.sequence[self.index])
-                if ok then self.playback = playback; return end
-                if startup.failure ~= "skip" then error(playback) end
+                if ok then
+                    self.playback = playback
+                    return
+                end
+                if startup.failure ~= "skip" then
+                    error(playback)
+                end
             end
         end
-        if not self.finished then self.finished = true; scenes.replace("title") end
+        if not self.finished then
+            self.finished = true
+            scenes.replace("title")
+        end
     end,
 
     update = function(self)
-        if self.finished then return end
-        if startup.skippable and input.pressed("skip") then self:advance(); return end
-        if not self.playback then self:advance(); return end
+        if self.finished then
+            return
+        end
+        if startup.skippable and input.pressed("skip") then
+            self:advance()
+            return
+        end
+        if not self.playback then
+            self:advance()
+            return
+        end
+
         local status = self.playback:status()
-        if status.state == "complete" or status.state == "stopped" then self:advance() end
+        if status.state == "complete" or status.state == "stopped" then
+            self:advance()
+        end
         if status.state == "failed" then
-            if startup.failure == "skip" then self:advance() else error(status.error or "video playback failed") end
+            if startup.failure == "skip" then
+                self:advance()
+            else
+                error(status.error or "video playback failed")
+            end
         end
     end,
 }

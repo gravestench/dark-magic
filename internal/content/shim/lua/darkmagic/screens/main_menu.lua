@@ -1,3 +1,8 @@
+-- Primary expansion frontend menu.
+--
+-- This scene is the most complete example of manifest-driven composition:
+-- tiled DC6 art, synchronized animation layers, localized bitmap-font labels,
+-- reusable controls, scoped audio, cursor rendering, and scene navigation.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -25,6 +30,8 @@ return {
             manifest.layouts.frontend_tiles
         )
         if render.assets_available() then
+            -- The logo is four independently decoded resources sharing one
+            -- authored anchor and one deterministic animation clock.
             self.logo = {
                 black_left = render.create("hud", self.root),
                 black_right = render.create("hud", self.root),
@@ -41,28 +48,48 @@ return {
     end,
 
     configure_labels = function(self)
-        if not render.assets_available() then return end
+        if not render.assets_available() then
+            return
+        end
         local font = manifest.fonts.exocet10
         for id, definition in pairs(screen.labels) do
             local label = render.create("hud", self.root)
             local text = assert(locale.text(definition.key))
-            if id == "version" then text = string.format(text, app.version()) end
+            if id == "version" then
+                text = string.format(text, app.version())
+            end
             label:set_text(font.table, font.sheet, manifest.palettes[font.palette], text, {
-                red = 150, green = 135, blue = 105, max_width = definition.width, align = definition.align
+                red = 150,
+                green = 135,
+                blue = 105,
+                max_width = definition.width,
+                align = definition.align,
             })
             label:set_position(definition.x, definition.y)
         end
     end,
 
+    -- Compose each half separately because its black and flame layers share
+    -- bounds with each other, while both halves share the same world anchor.
     configure_logo = function(self)
         dc6.anchored_composite(
             { self.logo.black_left, self.logo.fire_left },
-            { logo.black_left, logo.fire_left }, units_palette, logo.anchor.x, logo.anchor.y,
-            logo.frames_per_second, "loop")
+            { logo.black_left, logo.fire_left },
+            units_palette,
+            logo.anchor.x,
+            logo.anchor.y,
+            logo.frames_per_second,
+            "loop"
+        )
         dc6.anchored_composite(
             { self.logo.black_right, self.logo.fire_right },
-            { logo.black_right, logo.fire_right }, units_palette, logo.anchor.x, logo.anchor.y,
-            logo.frames_per_second, "loop")
+            { logo.black_right, logo.fire_right },
+            units_palette,
+            logo.anchor.x,
+            logo.anchor.y,
+            logo.frames_per_second,
+            "loop"
+        )
         self.logo_elapsed = 0
         dc6.pause_animations(self.logo)
         dc6.synchronize_animations(self.logo, 0)
@@ -70,45 +97,81 @@ return {
 
     configure_controls = function(self)
         self.controls = controls.new()
+
+        -- Controls contain interaction metadata. Their render nodes are captured
+        -- by closures and updated only when focus/hover state changes.
         local function add_control(id, definition)
-          local control = {
-            id = id,
-            label = assert(locale.text(definition.label)),
-            x = definition.x, y = definition.y,
-            width = definition.width, height = definition.height,
-            on_activate = function()
-                if audio.exists(manifest.sounds.select) then audio.play(manifest.sounds.select) end
-                if definition.action == "exit" then app.request_exit()
-                else scenes.replace(definition.target or "character_select") end
-            end,
-        }
-        if render.assets_available() then
-            local palette = manifest.palettes[definition.palette]
-            local pieces = {}
-            for index = 1, #definition.up_frames do pieces[index] = render.create("hud", self.root) end
-            local label = render.create("hud", self.root)
-            local function draw_frames(frames)
-                for index, node in ipairs(pieces) do node:set_dc6(definition.sheet, palette, 0, frames[index]) end
+            local control = {
+                id = id,
+                label = assert(locale.text(definition.label)),
+                x = definition.x,
+                y = definition.y,
+                width = definition.width,
+                height = definition.height,
+                on_activate = function()
+                    if audio.exists(manifest.sounds.select) then
+                        audio.play(manifest.sounds.select)
+                    end
+                    if definition.action == "exit" then
+                        app.request_exit()
+                    else
+                        scenes.replace(definition.target or "character_select")
+                    end
+                end,
+            }
+
+            if render.assets_available() then
+                local palette = manifest.palettes[definition.palette]
+                local pieces = {}
+                for index = 1, #definition.up_frames do
+                    pieces[index] = render.create("hud", self.root)
+                end
+                local label = render.create("hud", self.root)
+
+                local function draw_frames(frames)
+                    for index, node in ipairs(pieces) do
+                        node:set_dc6(definition.sheet, palette, 0, frames[index])
+                    end
+                end
+
+                draw_frames(definition.up_frames)
+                if #pieces == 1 then
+                    pieces[1]:set_position(
+                        definition.x + definition.width / 2,
+                        definition.y + definition.height / 2
+                    )
+                else
+                    pieces[1]:set_position(definition.x + 128, definition.y + definition.height / 2)
+                    pieces[2]:set_position(definition.x + 264, definition.y + definition.height / 2)
+                end
+
+                local font = manifest.fonts.exocet10
+                label:set_text(font.table, font.sheet, manifest.palettes[font.palette], control.label, {
+                    red = 210,
+                    green = 180,
+                    blue = 110,
+                    max_width = definition.width,
+                    align = "center",
+                })
+                label:set_position(
+                    definition.x + definition.width / 2,
+                    definition.y + definition.height / 2
+                )
+                control.on_state = function(_, state)
+                    if state == "focused" or state == "hover" then
+                        draw_frames(definition.down_frames)
+                    else
+                        draw_frames(definition.up_frames)
+                    end
+                end
             end
-            draw_frames(definition.up_frames)
-            if #pieces == 1 then pieces[1]:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
-            else
-                pieces[1]:set_position(definition.x + 128, definition.y + definition.height / 2)
-                pieces[2]:set_position(definition.x + 264, definition.y + definition.height / 2)
-            end
-            local font = manifest.fonts.exocet10
-            label:set_text(font.table, font.sheet, manifest.palettes[font.palette], control.label, {
-                red = 210, green = 180, blue = 110, max_width = definition.width, align = "center"
-            })
-            label:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
-            control.on_state = function(_, state)
-                if state == "focused" or state == "hover" then draw_frames(definition.down_frames)
-                else draw_frames(definition.up_frames) end
-            end
+
+            self.controls:add(control)
         end
-          self.controls:add(control)
+
+        for _, id in ipairs({ "single_player", "multiplayer", "credits", "cinematics", "exit" }) do
+            add_control(id, screen.controls[id])
         end
-        for _, id in ipairs({"single_player", "multiplayer", "credits", "cinematics", "exit"}) do add_control(id, screen.controls[id]) end
     end,
 
     update = function(self, elapsed)
@@ -116,8 +179,14 @@ return {
             self.logo_elapsed = self.logo_elapsed + elapsed
             dc6.synchronize_animations(self.logo, self.logo_elapsed)
         end
-        if self.controls then self.controls:update() end
-        if self.cursor then self.cursor:update() end
-        if input.pressed("cancel") then scenes.replace("title") end
+        if self.controls then
+            self.controls:update()
+        end
+        if self.cursor then
+            self.cursor:update()
+        end
+        if input.pressed("cancel") then
+            scenes.replace("title")
+        end
     end,
 }

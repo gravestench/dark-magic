@@ -1,3 +1,7 @@
+-- Transition from the frontend shell into an interactive game session.
+--
+-- The current progress source is elapsed time. The same animation contract can
+-- later consume dependency progress without changing the scene boundary.
 local render = require("dm.render/v1")
 local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
@@ -8,6 +12,7 @@ local screen = manifest.screens.game_loading
 
 return {
     enter = function(self)
+        -- Frontend music spans all menus and stops only when game loading begins.
         audio.stop_group("frontend_music")
         self.elapsed = 0
         self.root = render.create("transition")
@@ -16,7 +21,13 @@ return {
         if render.assets_available() then
             self.animation = render.create("transition", self.root)
             self.frames = self.animation:set_dc6_animation(
-                screen.sheet, manifest.palettes[screen.palette], 0, 10, "once", "offsets")
+                screen.sheet,
+                manifest.palettes[screen.palette],
+                0,
+                10,
+                "once",
+                "offsets"
+            )
             self.animation:set_position(0, 0)
             self.animation:animation_pause()
             self.animation:animation_seek(0)
@@ -27,8 +38,12 @@ return {
         self.elapsed = self.elapsed + elapsed
         local progress = math.min(self.elapsed / screen.duration_seconds, 1)
         if self.animation then
+            -- Seeking a paused renderer-owned animation makes progress
+            -- deterministic and independent of the frame rate.
             self.animation:animation_seek(progress * (self.frames - 1) / 10)
         end
-        if progress >= 1 then scenes.replace("game_world") end
+        if progress >= 1 then
+            scenes.replace("game_world")
+        end
     end,
 }

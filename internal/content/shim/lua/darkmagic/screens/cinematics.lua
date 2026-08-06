@@ -1,3 +1,7 @@
+-- Player-selectable cinematic browser.
+--
+-- Availability is derived from the layered VFS, so missing localized movies
+-- disable only their corresponding controls instead of failing the whole scene.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -15,8 +19,13 @@ local screen, font = manifest.screens.cinematics, manifest.fonts.exocet10
 return {
     create = function(self)
         self.root = render.create("hud")
-        self.background = dc6.frontend_background(self.root, "hud", screen.background,
-            manifest.palettes[screen.palette], manifest.layouts.frontend_tiles)
+        self.background = dc6.frontend_background(
+            self.root,
+            "hud",
+            screen.background,
+            manifest.palettes[screen.palette],
+            manifest.layouts.frontend_tiles
+        )
         self.controls = controls.new()
         self.entries = {}
         for index, definition in ipairs(screen.entries) do
@@ -31,9 +40,13 @@ return {
                 height = screen.list.row_height,
                 enabled = vfs.source(definition.path) ~= nil,
                 on_activate = function()
-                    if not video.available() then return end
+                    if not video.available() then
+                        return
+                    end
                     local ok, playback = pcall(video.play, definition.path)
-                    if ok then self.playback = playback end
+                    if ok then
+                        self.playback = playback
+                    end
                 end,
             }
             if render.assets_available() then
@@ -50,7 +63,9 @@ return {
                 end
                 draw("normal")
                 label:set_position(screen.list.x + screen.list.width / 2, y + screen.list.row_height / 2)
-                control.on_state = function(_, state) draw(state) end
+                control.on_state = function(_, state)
+                    draw(state)
+                end
             end
             self.entries[#self.entries + 1] = self.controls:add(control)
         end
@@ -64,11 +79,15 @@ return {
                 return
             end
             local status = self.playback:status()
-            if status.state ~= "playing" then self.playback = nil end
+            if status.state ~= "playing" then
+                self.playback = nil
+            end
             return
         end
         self.controls:update()
         self.cursor:update()
-        if input.pressed("cancel") then scenes.replace("main_menu") end
+        if input.pressed("cancel") then
+            scenes.replace("main_menu")
+        end
     end,
 }
