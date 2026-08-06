@@ -22,7 +22,7 @@ require (
 	github.com/gravestench/font_table v0.0.0-20230728064306-03207a3fe3e5
 	github.com/gravestench/mpq v0.0.0-20240422203048-fb87f9ab3d86
 	github.com/gravestench/pl2 v0.0.0-20230725165913-2db58cb532a1
-	github.com/gravestench/servicemesh v0.0.0-20231220222440-92910d5e643c
+	github.com/gravestench/servicemesh v0.0.0-20260805154732-86fb7979229b
 	github.com/gravestench/tbl_text v0.0.0-20230725174936-d9a704b9514a
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
 	github.com/hajimehoshi/oto v0.7.1

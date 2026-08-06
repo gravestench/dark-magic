@@ -132,13 +132,6 @@ func (s *Service) exportToLuaEnvironment(service servicemesh.Service) {
 		return
 	}
 
-	if candidate, ok := service.(servicemesh.HasDependencies); ok {
-		for !candidate.DependenciesResolved() {
-			s.Logger().Info("waiting for service to resolve dependencies", "target", service.Name())
-			time.Sleep(time.Second)
-		}
-	}
-
 	s.mux.Lock()
 	if _, exists := s.boundServices[service.Name()]; exists {
 		s.mux.Unlock()

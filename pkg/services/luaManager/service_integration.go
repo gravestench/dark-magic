@@ -6,10 +6,11 @@ import (
 )
 
 var (
-	_ servicemesh.Service             = &Service{}
-	_ servicemesh.HasLogger           = &Service{}
-	_ servicemesh.HasGracefulShutdown = &Service{}
-	_ ManagesLuaEnvironment           = &Service{}
+	_ servicemesh.Service                        = &Service{}
+	_ servicemesh.HasLogger                      = &Service{}
+	_ servicemesh.HasGracefulShutdown            = &Service{}
+	_ servicemesh.EventHandlerServiceInitialized = &Service{}
+	_ ManagesLuaEnvironment                      = &Service{}
 )
 
 type Dependency = ManagesLuaEnvironment
