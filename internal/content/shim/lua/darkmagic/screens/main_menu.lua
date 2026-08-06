@@ -8,9 +8,10 @@ local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
-local audio = require("dm.audio/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
+local button = require("darkmagic.ui.button")
+local text = require("darkmagic.ui.text")
 local app = require("dm.app/v1")
 local cursor = require("darkmagic.ui.cursor")
 
@@ -51,20 +52,13 @@ return {
         if not render.assets_available() then
             return
         end
-        local font = manifest.fonts.exocet10
         for id, definition in pairs(screen.labels) do
             local label = render.create("hud", self.root)
-            local text = assert(locale.text(definition.key))
+            local text_value = assert(locale.text(definition.key))
             if id == "version" then
-                text = string.format(text, app.version())
+                text_value = string.format(text_value, app.version())
             end
-            label:set_text(font.table, font.sheet, manifest.palettes[font.palette], text, {
-                red = 150,
-                green = 135,
-                blue = 105,
-                max_width = definition.width,
-                align = definition.align,
-            })
+            text.set(label, "frontend_metadata", text_value, definition.width, definition.align)
             label:set_position(definition.x, definition.y)
         end
     end,
@@ -98,75 +92,17 @@ return {
     configure_controls = function(self)
         self.controls = controls.new()
 
-        -- Controls contain interaction metadata. Their render nodes are captured
-        -- by closures and updated only when focus/hover state changes.
         local function add_control(id, definition)
-            local control = {
-                id = id,
-                label = assert(locale.text(definition.label)),
-                x = definition.x,
-                y = definition.y,
-                width = definition.width,
-                height = definition.height,
+            button.create(self.root, self.controls, id, definition, assert(locale.text(definition.label)), {
+                layer = "hud",
                 on_activate = function()
-                    if audio.exists(manifest.sounds.select) then
-                        audio.play(manifest.sounds.select)
-                    end
                     if definition.action == "exit" then
                         app.request_exit()
                     else
                         scenes.replace(definition.target or "character_select")
                     end
                 end,
-            }
-
-            if render.assets_available() then
-                local palette = manifest.palettes[definition.palette]
-                local pieces = {}
-                for index = 1, #definition.up_frames do
-                    pieces[index] = render.create("hud", self.root)
-                end
-                local label = render.create("hud", self.root)
-
-                local function draw_frames(frames)
-                    for index, node in ipairs(pieces) do
-                        node:set_dc6(definition.sheet, palette, 0, frames[index])
-                    end
-                end
-
-                draw_frames(definition.up_frames)
-                if #pieces == 1 then
-                    pieces[1]:set_position(
-                        definition.x + definition.width / 2,
-                        definition.y + definition.height / 2
-                    )
-                else
-                    pieces[1]:set_position(definition.x + 128, definition.y + definition.height / 2)
-                    pieces[2]:set_position(definition.x + 264, definition.y + definition.height / 2)
-                end
-
-                local font = manifest.fonts.exocet10
-                label:set_text(font.table, font.sheet, manifest.palettes[font.palette], control.label, {
-                    red = 210,
-                    green = 180,
-                    blue = 110,
-                    max_width = definition.width,
-                    align = "center",
-                })
-                label:set_position(
-                    definition.x + definition.width / 2,
-                    definition.y + definition.height / 2
-                )
-                control.on_state = function(_, state)
-                    if state == "focused" or state == "hover" then
-                        draw_frames(definition.down_frames)
-                    else
-                        draw_frames(definition.up_frames)
-                    end
-                end
-            end
-
-            self.controls:add(control)
+            })
         end
 
         for _, id in ipairs({ "single_player", "multiplayer", "credits", "cinematics", "exit" }) do

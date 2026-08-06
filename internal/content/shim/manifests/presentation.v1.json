@@ -78,6 +78,7 @@
     "formal_small": {"font":"formal10_static","color":{"red":255,"green":255,"blue":255}},
     "formal_body": {"font":"formal11_units","color":{"red":255,"green":255,"blue":255}},
     "formal_large": {"font":"formal12_static","color":{"red":255,"green":255,"blue":255}},
+    "frontend_metadata": {"font":"exocet10","color":{"red":150,"green":135,"blue":105}},
     "button_normal": {"font":"exocet10","color":{"red":210,"green":180,"blue":110}},
     "button_hover": {"font":"exocet10","color":{"red":255,"green":255,"blue":255}},
     "disabled": {"font":"font16","color":{"red":95,"green":95,"blue":95}}

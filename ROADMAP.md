@@ -641,7 +641,9 @@ implementations. The remaining work is tracked explicitly below.
   migration are complete; remaining screens still need migration.
 - [ ] Implement reusable authored button families with their correct DC6 assets,
   segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
-  keyboard focus, activation sounds, and hit bounds.
+  keyboard focus, activation sounds, and hit bounds. The shared segmented-button
+  component and main-menu migration are complete; the remaining button families
+  and screens still need migration and pressed-state input.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
   per-run colors, and optional glyph-sized background highlights.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and

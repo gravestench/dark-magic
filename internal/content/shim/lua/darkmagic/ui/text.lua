@@ -22,10 +22,9 @@ end
 -- Create centered-positioned text. The x coordinate is the center of the
 -- requested text box, matching the retained renderer's node positioning.
 -- Callers may still select left, center, or right alignment within that box.
-function text.create(root, style_name, value, x, y, width, alignment)
+function text.set(node, style_name, value, width, alignment)
     local style, font = resolve(style_name)
     local color = style.color or {}
-    local node = render.create("modal", root)
     local rendered_width, rendered_height = node:set_text(
         font.table,
         font.sheet,
@@ -40,6 +39,12 @@ function text.create(root, style_name, value, x, y, width, alignment)
             align = alignment or style.align or "center",
         }
     )
+    return rendered_width, rendered_height
+end
+
+function text.create(root, style_name, value, x, y, width, alignment, layer)
+    local node = render.create(layer or "modal", root)
+    local rendered_width, rendered_height = text.set(node, style_name, value, width, alignment)
     node:set_position(x, y + rendered_height / 2)
     return node, rendered_width, rendered_height
 end
