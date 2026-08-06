@@ -21,9 +21,10 @@ type Glyph struct {
 }
 
 type BitmapFont struct {
-	Glyphs     map[rune]Glyph
-	Frames     []image.Image
-	LineHeight int
+	Glyphs       map[rune]Glyph
+	Frames       []image.Image
+	FrameOffsets []image.Point
+	LineHeight   int
 }
 
 // FontTable decodes Diablo II's Woo! glyph metric table with strict bounds.
@@ -69,6 +70,7 @@ func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*Bi
 				return nil, err
 			}
 			font.Frames = append(font.Frames, decoded)
+			font.FrameOffsets = append(font.FrameOffsets, image.Pt(int(frame.OffsetX), int(frame.OffsetY)))
 		}
 	}
 	for code, glyph := range glyphs {
@@ -116,9 +118,14 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 			}
 			frame := f.Frames[glyph.Frame]
 			bounds := frame.Bounds()
-			top := lineIndex*f.LineHeight + f.LineHeight - bounds.Dy()
-			destination := image.Rect(x, top, x+bounds.Dx(), top+bounds.Dy())
-			draw.DrawMask(output, destination, image.NewUniform(tint), image.Point{}, alphaMask{frame}, bounds.Min, draw.Over)
+			offset := image.Point{}
+			if glyph.Frame < len(f.FrameOffsets) {
+				offset = f.FrameOffsets[glyph.Frame]
+			}
+			top := lineIndex*f.LineHeight + offset.Y
+			left := x + offset.X
+			destination := image.Rect(left, top, left+bounds.Dx(), top+bounds.Dy())
+			draw.Draw(output, destination, modulatedImage{Image: frame, Tint: tint}, bounds.Min, draw.Over)
 			x += glyph.Width
 		}
 	}
@@ -173,12 +180,23 @@ func (f *BitmapFont) glyph(code rune) (Glyph, bool) {
 	return glyph, ok
 }
 
-type alphaMask struct{ image.Image }
+// modulatedImage preserves the palette-authored shading within a glyph while
+// applying the label color like the original sprite renderer. Treating a glyph
+// as a mask flattens its highlights, shadows, and antialiased edge colors.
+type modulatedImage struct {
+	image.Image
+	Tint color.Color
+}
 
-func (m alphaMask) ColorModel() color.Model { return color.AlphaModel }
-func (m alphaMask) At(x, y int) color.Color {
-	_, _, _, alpha := m.Image.At(x, y).RGBA()
-	return color.Alpha{A: uint8(alpha >> 8)}
+func (m modulatedImage) At(x, y int) color.Color {
+	red, green, blue, alpha := m.Image.At(x, y).RGBA()
+	tintRed, tintGreen, tintBlue, tintAlpha := m.Tint.RGBA()
+	return color.RGBA64{
+		R: uint16(uint64(red) * uint64(tintRed) / 0xffff),
+		G: uint16(uint64(green) * uint64(tintGreen) / 0xffff),
+		B: uint16(uint64(blue) * uint64(tintBlue) / 0xffff),
+		A: uint16(uint64(alpha) * uint64(tintAlpha) / 0xffff),
+	}
 }
 
 func maxInt(a, b int) int {
