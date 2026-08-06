@@ -112,7 +112,6 @@
     "disabled": {"font":"font16","transform":"fechar","text_color":"grey"},
     "font_lab_heading": {"font":"font30","transform":"sky","text_color":"white"},
     "font_lab_caption": {"font":"formal10_sky","transform":"sky","text_color":"white"},
-    "font_lab_exocet10": {"font":"exocet10","transform":"sky","text_color":"white"},
     "font_lab_font6": {"font":"font6","transform":"sky","text_color":"white"},
     "font_lab_font16": {"font":"font16","transform":"sky","text_color":"white"},
     "font_lab_font30": {"font":"font30","transform":"sky","text_color":"white"},

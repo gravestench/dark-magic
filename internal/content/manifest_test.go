@@ -74,7 +74,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
 	}
-	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "character_create_heading", "character_create_class", "character_create_description", "character_create_option", "credits", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text", "tooltip", "disabled", "font_lab_heading", "font_lab_caption", "font_lab_exocet10", "font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10", "font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar", "font_lab_gold_act1"} {
+	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "character_create_heading", "character_create_class", "character_create_description", "character_create_option", "credits", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text", "tooltip", "disabled", "font_lab_heading", "font_lab_caption", "font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10", "font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar", "font_lab_gold_act1"} {
 		style, ok := manifest.Styles[name]
 		if !ok {
 			t.Errorf("presentation manifest is missing text style %q", name)

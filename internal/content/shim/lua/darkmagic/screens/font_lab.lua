@@ -57,10 +57,10 @@ local pages = {
     },
     {
         title = "Bitmap font families",
-        detail = "One neutral white Sky transform across each decoded TBL/DC6 family",
+        detail = "Palette-authored baselines; Exocet10 is shown in its intended button treatment",
         draw = function(root)
             local rows = {
-                { "font_lab_exocet10", "Exocet10" },
+                { "button_normal", "Exocet10 (button)" },
                 { "font_lab_font6", "Font6" },
                 { "font_lab_font16", "Font16" },
                 { "font_lab_font30", "Font30" },
