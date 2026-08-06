@@ -130,9 +130,17 @@ go run ./internal/tools/bik_view \
 Standalone files are supported with `-file movie.bik`. The equivalent Make
 target accepts `MPQ_DIRECTORY` and `BIK_ASSET` environment variables.
 
-When `ffplay` is on `PATH`, the client uses the same decoder backend for startup
-and menu-selected cinematics. If it is absent, startup follows the manifest's
-failure policy and skips video without preventing the client from loading.
+Build the client with `-tags ffmpeg` and link FFmpeg development libraries via
+`pkg-config` to decode Bink video and audio in-process inside the Dark Magic
+window:
+
+```sh
+MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/darkmagic
+```
+
+Portable builds retain `ffplay` as a separate-window diagnostic fallback. If it
+is absent, startup follows the manifest's failure policy and skips video without
+preventing the client from loading.
 
 The report records missing and disputed paths, the archive layer that supplied
 each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use

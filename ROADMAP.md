@@ -391,9 +391,12 @@ implementations. The remaining work is tracked explicitly below.
   stream creation, incremental writes, playback, and teardown; clock reporting
   and bounded decode scheduling remain.
 - [ ] Implement stop, skip, completion, decode failure, device loss, resize, and
-  shutdown cleanup through the existing `dm.video/v1` lifecycle contract.
-- [ ] Prefer the embedded backend in the client and retain FFplay only as an
-  explicit developer/diagnostic fallback.
+  shutdown cleanup through the existing `dm.video/v1` lifecycle contract. The
+  embedded scheduler now uses bounded decode queues, one monotonic media clock,
+  late-video dropping, lossless audio ordering, cancellation, and checked
+  presenter/audio teardown; device loss and runtime resize remain.
+- [x] Prefer the embedded backend in native FFmpeg client builds and retain
+  FFplay as the portable developer/diagnostic fallback.
 - [ ] Verify every discovered BIK variant and capture startup-to-title
   composition screenshots without committing Blizzard-owned media.
 

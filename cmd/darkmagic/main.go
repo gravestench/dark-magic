@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"image"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -89,7 +90,11 @@ func run(contentFS *content.FS) error {
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videocore.FFplay{}, contentFS)); err != nil {
+	videoBackend := videocore.NewEmbeddedBackend(composer, mixer, image.Pt(640, 480))
+	if !videoBackend.Available() {
+		videoBackend = videocore.FFplay{}
+	}
+	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videoBackend, contentFS)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.RecordsModule(records)); err != nil {
