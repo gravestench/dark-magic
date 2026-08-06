@@ -359,7 +359,7 @@ implementations. The remaining work is tracked explicitly below.
   credits background. The Cinematics scene now exposes all seven verified
   English 640x292 BIK entries as VFS-aware localized controls; playback and
   startup sequencing proceed under M17.2.
-- [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
+- [x] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
   behavior. A scoped backend-neutral `dm.video/v1` capability now keeps large
   MPQ payloads outside Lua and exposes deterministic playing/complete/failed/
   stopped lifecycle state. The verified Blizzard and Blizzard North startup
@@ -375,7 +375,9 @@ implementations. The remaining work is tracked explicitly below.
   the distinct `trademarkscreenEXP.dc6` background and the synchronized black
   left/right plus additive fire left/right 30-frame logo layers, then accepts
   click, Space, Enter, or Escape before entering the main menu. Embedded
-  in-window playback is tracked in M17.6.
+  in-window playback is tracked in M17.6. Engine-level acceptance now drives
+  both startup entries through playing, failed, complete, and skipped states,
+  verifies manifest ordering, and asserts scope-owned playback cleanup.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
   The expansion creation screen now composes the verified tiled background and
   animates all seven class unselected/hover/selected assets through manifest-owned
