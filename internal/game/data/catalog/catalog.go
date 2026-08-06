@@ -171,6 +171,21 @@ func New(store *recordstore.Store) *Catalog {
 	return &Catalog{store: store}
 }
 
+// Load returns generic rows from the same store that backs typed snapshots.
+// Runtime adapters use this gateway so their invalidation cannot bypass the
+// catalog generation.
+func (c *Catalog) Load(path string) ([]map[string]string, error) {
+	if c == nil || c.store == nil {
+		return nil, fmt.Errorf("gamedata: catalog has no record store")
+	}
+	return c.store.Load(path)
+}
+
+// Loaded reports whether the shared generic store currently caches path.
+func (c *Catalog) Loaded(path string) bool {
+	return c != nil && c.store != nil && c.store.Loaded(path)
+}
+
 // Snapshot returns a defensive copy of the current typed game-data generation.
 func (c *Catalog) Snapshot() (Snapshot, error) {
 	if c == nil || c.store == nil {

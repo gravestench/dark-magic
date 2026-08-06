@@ -842,6 +842,9 @@ implementations. The remaining work is tracked explicitly below.
   the client-owned shared table store instead of constructing and indefinitely
   caching a second Sounds generation; hot-reload invalidation therefore reaches
   typed records, generic Lua rows, and audio through the same source generation.
+  The Lua records capability now uses the typed catalog as its generic-row
+  gateway, so script-requested reloads also drop the typed snapshot rather than
+  bypassing catalog invalidation through the raw store.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

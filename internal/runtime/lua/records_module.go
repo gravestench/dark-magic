@@ -1,12 +1,15 @@
 package modruntime
 
-import (
-	"github.com/gravestench/dark-magic/internal/game/data/store"
-	lua "github.com/yuin/gopher-lua"
-)
+import lua "github.com/yuin/gopher-lua"
+
+type recordsGateway interface {
+	Load(string) ([]map[string]string, error)
+	Invalidate(string)
+	Loaded(string) bool
+}
 
 // RecordsModule exposes generic cached TSV records from layered content.
-func RecordsModule(records *recordstore.Store) Module {
+func RecordsModule(records recordsGateway) Module {
 	return Module{Name: "dm.records/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"load": func(state *lua.LState) int {

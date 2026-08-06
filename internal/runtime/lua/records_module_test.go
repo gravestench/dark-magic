@@ -9,6 +9,16 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+type trackingRecordsGateway struct {
+	*recordstore.Store
+	invalidated []string
+}
+
+func (g *trackingRecordsGateway) Invalidate(path string) {
+	g.invalidated = append(g.invalidated, path)
+	g.Store.Invalidate(path)
+}
+
 func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 	t.Parallel()
 
@@ -17,7 +27,8 @@ func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 		"test.lua":  &fstest.MapFile{Data: []byte(`local r=require("dm.records/v1"); rows=assert(r.load("items.txt")); was_loaded=r.loaded("items.txt"); r.reload("items.txt"); is_loaded=r.loaded("items.txt")`)},
 	}
 	runtime := New()
-	if err := runtime.RegisterModule(RecordsModule(recordstore.New(source))); err != nil {
+	records := &trackingRecordsGateway{Store: recordstore.New(source)}
+	if err := runtime.RegisterModule(RecordsModule(records)); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {
@@ -35,5 +46,8 @@ func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+	if len(records.invalidated) != 1 || records.invalidated[0] != "items.txt" {
+		t.Fatalf("invalidations = %v", records.invalidated)
 	}
 }

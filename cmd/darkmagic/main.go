@@ -217,7 +217,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videoBackend, contentFS)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.RecordsModule(records)); err != nil {
+	if err := scripts.RegisterModule(modruntime.RecordsModule(gameData)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.LocaleModule(locale)); err != nil {
