@@ -75,8 +75,9 @@ func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*Bi
 		if glyph.Frame < 0 || glyph.Frame >= len(font.Frames) {
 			return nil, fmt.Errorf("font table %q: glyph %U frame %d out of range", tableName, code, glyph.Frame)
 		}
-		if glyph.Height > font.LineHeight {
-			font.LineHeight = glyph.Height
+		visualHeight := font.Frames[glyph.Frame].Bounds().Dy()
+		if visualHeight > font.LineHeight {
+			font.LineHeight = visualHeight
 		}
 	}
 	return font, nil
@@ -115,7 +116,8 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 			}
 			frame := f.Frames[glyph.Frame]
 			bounds := frame.Bounds()
-			destination := image.Rect(x, lineIndex*f.LineHeight+f.LineHeight-glyph.Height, x+bounds.Dx(), lineIndex*f.LineHeight+f.LineHeight-glyph.Height+bounds.Dy())
+			top := lineIndex*f.LineHeight + f.LineHeight - bounds.Dy()
+			destination := image.Rect(x, top, x+bounds.Dx(), top+bounds.Dy())
 			draw.DrawMask(output, destination, image.NewUniform(tint), image.Point{}, alphaMask{frame}, bounds.Min, draw.Over)
 			x += glyph.Width
 		}

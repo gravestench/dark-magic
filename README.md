@@ -159,6 +159,11 @@ development review. Capture exits automatically once every requested scene has
 been recorded. The capture directory contains numbered PNGs plus a
 `report.json` recording scene names, dimensions, and SHA-256 hashes. Capture
 output under `captures/` is ignored by Git so Blizzard imagery remains local.
+Saved-character presentation can be reviewed without modifying a real save
+directory by combining `START_SCENE=character_select`,
+`CAPTURE_SCENES=character_select`, and `FIXTURE_CHARACTERS=10`. The equivalent
+development-only CLI option is `--fixture-characters 10`; its deterministic
+in-memory records exercise both columns, paging, and expansion/hardcore labels.
 
 Inspect a legally obtained Diablo II asset without starting the renderer:
 

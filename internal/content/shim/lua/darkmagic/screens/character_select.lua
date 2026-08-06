@@ -47,6 +47,26 @@ return {
         for _, definition in ipairs(manifest.screens.character_create.classes) do
             self.class_presentations[definition.class] = definition
         end
+        if render.assets_available() then
+            self.title = render.create("hud", self.root)
+            self.title:set_z(100)
+        end
+
+        local function update_title(character)
+            if not self.title or not character then
+                return
+            end
+            local definition = screen.title
+            local title_font = manifest.fonts[definition.font]
+            self.title:set_text(
+                title_font.table,
+                title_font.sheet,
+                manifest.palettes[title_font.palette],
+                character.name,
+                { red = 210, green = 180, blue = 110, max_width = definition.width, align = "center" }
+            )
+            self.title:set_position(definition.x, definition.y)
+        end
 
         local function launch_selected()
             if not self.selected_id then
@@ -58,9 +78,10 @@ return {
 
         local function select_character(character)
             self.selected_id = character.id
+            update_title(character)
             for _, slot in ipairs(self.slots) do
-                if slot.selection then
-                    slot.selection:set_visible(slot.character ~= nil and slot.character.id == self.selected_id)
+                for _, piece in ipairs(slot.selection or {}) do
+                    piece:set_visible(slot.character ~= nil and slot.character.id == self.selected_id)
                 end
             end
         end
@@ -101,14 +122,20 @@ return {
                 end,
             })
             if render.assets_available() then
-                slot.selection = render.create("hud", self.root)
-                local width, height = slot.selection:set_dc6(
-                    screen.selection,
-                    manifest.palettes[screen.selection_palette],
-                    0,
-                    0
-                )
-                slot.selection:set_position(x + width / 2, y + height / 2)
+                slot.selection = {}
+                local selection_x = x
+                for frame = 0, 1 do
+                    local piece = render.create("hud", self.root)
+                    local width, height = piece:set_dc6(
+                        screen.selection,
+                        manifest.palettes[screen.selection_palette],
+                        0,
+                        frame
+                    )
+                    piece:set_position(selection_x + width / 2, y + height / 2)
+                    selection_x = selection_x + width
+                    slot.selection[#slot.selection + 1] = piece
+                end
                 slot.label = render.create("hud", self.root)
                 slot.preview = render.create("hud", self.root)
                 slot.preview_overlay = render.create("hud", self.root)
@@ -131,24 +158,39 @@ return {
                     slot.control.label = character.name
                 end
                 if slot.selection then
-                    slot.selection:set_visible(character ~= nil and character.id == self.selected_id)
+                    for _, piece in ipairs(slot.selection) do
+                        piece:set_visible(character ~= nil and character.id == self.selected_id)
+                    end
                     slot.label:set_visible(character ~= nil)
                     slot.preview:set_visible(character ~= nil)
                     slot.preview_overlay:set_visible(false)
                     if character then
-                        local flags = character.hardcore and "Hardcore" or ""
-                        slot.label:set_text(
-                            font.table,
-                            font.sheet,
-                            manifest.palettes[font.palette],
-                            string.format("%s\nLevel %d %s\n%s", character.name, character.level, character.class, flags),
+                        local flags = {}
+                        if character.expansion then
+                            flags[#flags + 1] = "Expansion"
+                        end
+                        if character.hardcore then
+                            flags[#flags + 1] = "Hardcore"
+                        end
+                        local metadata_font = manifest.fonts[screen.metadata_font]
+                        local label_width, label_height = slot.label:set_text(
+                            metadata_font.table,
+                            metadata_font.sheet,
+                            manifest.palettes[metadata_font.palette],
+                            string.format(
+                                "%s\nLevel %d %s\n%s",
+                                character.name,
+                                character.level,
+                                character.class,
+                                table.concat(flags, " ")
+                            ),
                             { red = 210, green = 180, blue = 110, max_width = 185, align = "left" }
                         )
                         local column = (slot_index - 1) % screen.grid.columns
                         local row = math.floor((slot_index - 1) / screen.grid.columns)
                         slot.label:set_position(
-                            screen.grid.x + column * screen.grid.column_step + screen.grid.text_offset.x,
-                            screen.grid.y + row * screen.grid.row_step + screen.grid.text_offset.y
+                            screen.grid.x + column * screen.grid.column_step + screen.grid.text_offset.x + label_width / 2,
+                            screen.grid.y + row * screen.grid.row_step + screen.grid.text_offset.y + label_height / 2
                         )
                         -- Class-only/legacy saves do not claim equipment state.
                         -- Their preview uses the verified front-end selected
@@ -156,7 +198,7 @@ return {
                         local presentation = assert(self.class_presentations[character.class])
                         slot.preview:set_dc6_animation(
                             presentation.selected,
-                            manifest.palettes[presentation.palette],
+                            manifest.palettes[screen.preview_palette],
                             0,
                             presentation.frames_per_second or 15,
                             "loop",
@@ -170,7 +212,7 @@ return {
                         if presentation.selected_overlay then
                             slot.preview_overlay:set_dc6_animation(
                                 presentation.selected_overlay,
-                                manifest.palettes[presentation.palette],
+                                manifest.palettes[screen.preview_palette],
                                 0,
                                 presentation.frames_per_second or 15,
                                 "loop",
@@ -204,8 +246,44 @@ return {
             on_change = function(_, value)
                 self.page = math.floor(value + 0.5)
                 refresh_page()
+                if self.update_scrollbar_visual then
+                    self:update_scrollbar_visual()
+                end
             end,
         })
+        if render.assets_available() and self.scrollbar.max > 1 then
+            local definition = screen.scrollbar
+            local palette = manifest.palettes[definition.palette]
+            self.scrollbar_visual = {
+                up = render.create("hud", self.root),
+                down = render.create("hud", self.root),
+                thumb = render.create("hud", self.root),
+            }
+            local up_width, up_height = self.scrollbar_visual.up:set_dc6(
+                definition.sheet, palette, 0, definition.up_frame
+            )
+            local down_width, down_height = self.scrollbar_visual.down:set_dc6(
+                definition.sheet, palette, 0, definition.down_frame
+            )
+            local thumb_width, thumb_height = self.scrollbar_visual.thumb:set_dc6(
+                definition.sheet, palette, 0, definition.thumb_frame
+            )
+            self.scrollbar_visual.up:set_position(definition.x + up_width / 2, definition.y + up_height / 2)
+            self.scrollbar_visual.down:set_position(
+                definition.x + down_width / 2,
+                definition.y + definition.height - down_height / 2
+            )
+            self.update_scrollbar_visual = function()
+                local span = definition.height - up_height - down_height - thumb_height
+                local ratio = (self.scrollbar.value - self.scrollbar.min)
+                    / math.max(1, self.scrollbar.max - self.scrollbar.min)
+                self.scrollbar_visual.thumb:set_position(
+                    definition.x + thumb_width / 2,
+                    definition.y + up_height + thumb_height / 2 + span * ratio
+                )
+            end
+            self:update_scrollbar_visual()
+        end
 
         local button_actions = {
             new = function()
@@ -255,7 +333,7 @@ return {
         }
         for _, id in ipairs({ "new", "delete", "exit", "ok" }) do
             local definition = screen.controls[id]
-            self.controls:add({
+            local control = {
                 id = id,
                 label = assert(locale.text(definition.label)),
                 x = definition.x,
@@ -263,10 +341,33 @@ return {
                 width = definition.width,
                 height = definition.height,
                 on_activate = button_actions[id],
-            })
+            }
+            if render.assets_available() then
+                local button = render.create("hud", self.root)
+                local label = render.create("hud", self.root)
+                local palette = manifest.palettes[definition.palette]
+                local function draw(frame)
+                    button:set_dc6(definition.sheet, palette, 0, frame)
+                end
+                draw(definition.up_frame)
+                button:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
+                label:set_text(
+                    font.table,
+                    font.sheet,
+                    manifest.palettes[font.palette],
+                    control.label,
+                    { red = 210, green = 180, blue = 110, max_width = definition.width, align = "center" }
+                )
+                label:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
+                control.on_state = function(_, state)
+                    draw((state == "focused" or state == "hover") and definition.down_frame or definition.up_frame)
+                end
+            end
+            self.controls:add(control)
         end
 
         refresh_page()
+        update_title(self.characters[1])
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
 

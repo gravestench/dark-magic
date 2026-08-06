@@ -43,6 +43,11 @@
       "table": "data/local/FONT/latin/font30.tbl",
       "sheet": "data/local/FONT/latin/font30.dc6",
       "palette": "units"
+    },
+    "font42": {
+      "table": "data/local/FONT/latin/font42.tbl",
+      "sheet": "data/local/FONT/latin/font42.dc6",
+      "palette": "units"
     }
   },
   "sounds": {
@@ -198,6 +203,9 @@
       "palette": "sky",
       "selection": "data/global/ui/CharSelect/charselectbox.dc6",
       "selection_palette": "sky",
+      "preview_palette": "fechar",
+      "metadata_font": "font16",
+      "title": {"x":400,"y":45,"width":760,"font":"font42"},
       "grid": {
         "x": 37, "y": 86, "columns": 2, "rows": 4,
         "cell_width": 272, "cell_height": 92,
@@ -206,13 +214,13 @@
         "preview_offset": {"x": 42, "y": 48},
         "preview_scale": 0.32
       },
-      "scrollbar": {"x":586,"y":87,"width":20,"height":369},
+      "scrollbar": {"x":586,"y":87,"width":20,"height":369,"sheet":"data/global/ui/PANEL/scrollbar.dc6","palette":"sky","up_frame":0,"down_frame":1,"thumb_frame":4},
       "double_activation_seconds": 1.25,
       "controls": {
-        "new": {"x":33,"y":468,"width":160,"height":35,"label":"darkmagic.character_select.new"},
-        "delete": {"x":433,"y":468,"width":160,"height":35,"label":"darkmagic.character_select.delete"},
-        "exit": {"x":33,"y":537,"width":160,"height":35,"label":"darkmagic.character_select.exit"},
-        "ok": {"x":625,"y":537,"width":142,"height":35,"label":"darkmagic.character_select.ok"}
+        "new": {"x":33,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"darkmagic.character_select.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "ok": {"x":625,"y":537,"width":135,"height":35,"label":"darkmagic.character_select.ok","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1}
       },
       "delete_dialog": {
         "x":270,"y":175,"width":260,"height":180,

@@ -51,6 +51,7 @@ func main() {
 	captureScenes := flag.String("capture-scenes", os.Getenv("DARK_MAGIC_CAPTURE_SCENES"), "comma-separated scene IDs to capture (defaults to loading,title)")
 	captureSettle := flag.Int("capture-settle-frames", 10, "stable frames to wait before capturing a scene")
 	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
+	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
 	flag.Parse()
 	var profile *profiling.Session
 	if *profileDirectory != "" {
@@ -80,12 +81,12 @@ func main() {
 	if captureDirectory != "" && *captureScenes == "" {
 		*captureScenes = "loading,title"
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
@@ -105,7 +106,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
-	saves := savecore.New()
+	saves := savecore.New(developmentCharacters(fixtureCharacters)...)
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	loading := loadcore.New(map[string]loadcore.Task{
 		"selected_character": func(context.Context) error {
@@ -306,6 +307,26 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true
 	return err
+}
+
+func developmentCharacters(count int) []savecore.Character {
+	if count <= 0 {
+		return nil
+	}
+	classes := []string{"Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Assassin", "Druid"}
+	result := make([]savecore.Character, 0, count)
+	for index := 0; index < count; index++ {
+		class := classes[index%len(classes)]
+		result = append(result, savecore.Character{
+			ID:        fmt.Sprintf("fixture-%02d", index+1),
+			Name:      fmt.Sprintf("Hero%02d", index+1),
+			Class:     class,
+			Level:     index + 1,
+			Expansion: true,
+			Hardcore:  index%3 == 2,
+		})
+	}
+	return result
 }
 
 func buildVersion() string {

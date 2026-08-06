@@ -407,8 +407,12 @@ implementations. The remaining work is tracked explicitly below.
   narrow engine-owned save operation that clears stale selection safely.
   Class-only and legacy saves now render clipped, scaled, animated previews from
   the verified selected-class assets, including synchronized overlay layers
-  where authored. Equipment-aware COF/DCC previews and real-asset calibration
-  remain until save records expose authoritative component codes.
+  where authored. Native real-asset calibration now supplies the authored title
+  font, stable segmented focus frame, Font16 metadata baselines, frontend
+  palette, scrollbar frames, and Tall/Medium footer controls at their observed
+  positions. A development-only deterministic fixture source exercises filled
+  pages without touching player saves. Equipment-aware COF/DCC previews remain
+  until save records expose authoritative component codes.
 - [x] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants. An
   engine-owned coordinator now executes named character, loading-asset, and

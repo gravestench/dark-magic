@@ -44,3 +44,30 @@ func TestFontTableRejectsTruncatedGlyph(t *testing.T) {
 		t.Fatal("expected truncated glyph error")
 	}
 }
+
+func TestBitmapFontUsesDecodedFrameForMultilineBaseline(t *testing.T) {
+	t.Parallel()
+
+	frame := image.NewAlpha(image.Rect(0, 0, 2, 4))
+	for index := range frame.Pix {
+		frame.Pix[index] = 0xff
+	}
+	font := &BitmapFont{
+		Glyphs:     map[rune]Glyph{'A': {Width: 2, Height: 2, Frame: 0}},
+		Frames:     []image.Image{frame},
+		LineHeight: 4,
+	}
+	rendered, err := font.Render("A\nA", color.White, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rendered.Bounds() != image.Rect(0, 0, 2, 8) {
+		t.Fatalf("bounds = %v", rendered.Bounds())
+	}
+	for _, point := range []image.Point{{0, 0}, {0, 3}, {0, 4}, {0, 7}} {
+		_, _, _, alpha := rendered.At(point.X, point.Y).RGBA()
+		if alpha == 0 {
+			t.Errorf("baseline left pixel %v transparent", point)
+		}
+	}
+}
