@@ -18,7 +18,7 @@ import (
 	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/assets/decode"
 	cachepkg "github.com/gravestench/dark-magic/internal/cache"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
 	dcc "github.com/gravestench/dcc/pkg"
 	lua "github.com/yuin/gopher-lua"
@@ -27,10 +27,10 @@ import (
 const renderNodeType = "dm.render.node/v1"
 
 type ownedRenderNode struct {
-	composer *rendercore.Composer
-	id       rendercore.NodeID
-	resource rendercore.ResourceID
-	owned    []rendercore.ResourceID
+	composer *render.Composer
+	id       render.NodeID
+	resource render.ResourceID
+	owned    []render.ResourceID
 	assets   fs.FS
 	cache    *renderAssetCache
 	once     sync.Once
@@ -50,7 +50,7 @@ type renderAssetCache struct {
 // texture bytes estimates expanded RGBA residency.
 type RenderDiagnostics struct {
 	Decoded     cachepkg.Stats
-	Retained    rendercore.Diagnostics
+	Retained    render.Diagnostics
 	DecodeCalls uint64
 	DecodeTime  time.Duration
 }
@@ -58,12 +58,12 @@ type RenderDiagnostics struct {
 // RenderCapability owns the shared asset cache behind dm.render/v1.
 type RenderCapability struct {
 	runtime  *Runtime
-	composer *rendercore.Composer
+	composer *render.Composer
 	assets   fs.FS
 	cache    *renderAssetCache
 }
 
-func NewRenderCapability(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) *RenderCapability {
+func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.FS) *RenderCapability {
 	const decodedAssetBudget = 64 * 1024 * 1024
 	return &RenderCapability{runtime: runtime, composer: composer, assets: assets, cache: &renderAssetCache{decoded: cachepkg.New(decodedAssetBudget)}}
 }
@@ -273,9 +273,9 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 func (n *ownedRenderNode) release() error {
 	n.once.Do(func() {
 		n.err = n.composer.Destroy(n.id)
-		if n.resource != (rendercore.ResourceID{}) {
+		if n.resource != (render.ResourceID{}) {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
-			n.resource = rendercore.ResourceID{}
+			n.resource = render.ResourceID{}
 		}
 		for _, resource := range n.owned {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(resource))
@@ -286,19 +286,19 @@ func (n *ownedRenderNode) release() error {
 }
 
 func (n *ownedRenderNode) setImage(decoded image.Image) error {
-	resource, err := n.composer.CreateResource(rendercore.ResourceTexture, decoded)
+	resource, err := n.composer.CreateResource(render.ResourceTexture, decoded)
 	if err != nil {
 		return err
 	}
 	previous := n.resource
 	previousOwned := n.owned
-	if err := n.composer.Update(n.id, func(current *rendercore.Node) { current.Resource = resource }); err != nil {
+	if err := n.composer.Update(n.id, func(current *render.Node) { current.Resource = resource }); err != nil {
 		_ = n.composer.DestroyResource(resource)
 		return err
 	}
 	n.resource = resource
 	n.owned = nil
-	if previous != (rendercore.ResourceID{}) {
+	if previous != (render.ResourceID{}) {
 		err = n.composer.DestroyResource(previous)
 	}
 	for _, owned := range previousOwned {
@@ -308,9 +308,9 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 }
 
 func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string) error {
-	textures := make([]rendercore.ResourceID, 0, len(frames))
-	owned := make([]rendercore.ResourceID, 0, len(frames))
-	duplicates := make(map[rgbaFrameDigest]rendercore.ResourceID)
+	textures := make([]render.ResourceID, 0, len(frames))
+	owned := make([]render.ResourceID, 0, len(frames))
+	duplicates := make(map[rgbaFrameDigest]render.ResourceID)
 	cleanup := func() {
 		for _, texture := range owned {
 			_ = n.composer.DestroyResource(texture)
@@ -324,7 +324,7 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 				continue
 			}
 		}
-		texture, err := n.composer.CreateResource(rendercore.ResourceTexture, frame)
+		texture, err := n.composer.CreateResource(render.ResourceTexture, frame)
 		if err != nil {
 			cleanup()
 			return err
@@ -339,13 +339,13 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 	for index := range durations {
 		durations[index] = duration
 	}
-	animation, err := n.composer.CreateResource(rendercore.ResourceAnimation, rendercore.AnimationData{Frames: textures, Durations: durations, Loop: loop})
+	animation, err := n.composer.CreateResource(render.ResourceAnimation, render.AnimationData{Frames: textures, Durations: durations, Loop: loop})
 	if err != nil {
 		cleanup()
 		return err
 	}
 	previous, previousOwned := n.resource, n.owned
-	if err := n.composer.Update(n.id, func(current *rendercore.Node) {
+	if err := n.composer.Update(n.id, func(current *render.Node) {
 		current.Resource = animation
 		current.AnimationPaused = false
 		current.AnimationSeek = 0
@@ -356,7 +356,7 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 		return err
 	}
 	n.resource, n.owned = animation, owned
-	if previous != (rendercore.ResourceID{}) {
+	if previous != (render.ResourceID{}) {
 		err = n.composer.DestroyResource(previous)
 	}
 	for _, owned := range previousOwned {
@@ -380,14 +380,14 @@ func rgbaFrameKey(frame image.Image) (rgbaFrameDigest, bool) {
 }
 
 func (n *ownedRenderNode) requireAnimation() error {
-	if n.resource == (rendercore.ResourceID{}) {
+	if n.resource == (render.ResourceID{}) {
 		return errors.New("render node has no animation")
 	}
 	resource, err := n.composer.ResourceSnapshot(n.resource)
 	if err != nil {
 		return err
 	}
-	if resource.Kind != rendercore.ResourceAnimation {
+	if resource.Kind != render.ResourceAnimation {
 		return errors.New("render node resource is not an animation")
 	}
 	return nil
@@ -547,14 +547,14 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 
 // RenderModule exposes backend-neutral retained composition to scoped Lua
 // components. Nodes are automatically destroyed with their component scope.
-func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
+func RenderModule(runtime *Runtime, composer *render.Composer) Module {
 	return RenderModuleWithAssets(runtime, composer, nil)
 }
 
 // RenderModuleWithAssets additionally lets nodes decode standard image assets
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
-func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
+func RenderModuleWithAssets(runtime *Runtime, composer *render.Composer, assets fs.FS) Module {
 	return NewRenderCapability(runtime, composer, assets).Module()
 }
 
@@ -670,7 +670,7 @@ func (r *RenderCapability) Module() Module {
 					state.RaiseError("%v", err)
 					return 0
 				}
-				var parent rendercore.NodeID
+				var parent render.NodeID
 				if state.GetTop() >= 2 && state.Get(2) != lua.LNil {
 					parent = checkRenderNode(state, 2).id
 				}
@@ -704,7 +704,7 @@ func registerRenderNodeType(state *lua.LState) {
 		"set_position": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			x, y := float64(state.CheckNumber(2)), float64(state.CheckNumber(3))
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.X, current.Y = x, y }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.X, current.Y = x, y }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -712,7 +712,7 @@ func registerRenderNodeType(state *lua.LState) {
 		"set_scale": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			x, y := float64(state.CheckNumber(2)), float64(state.CheckNumber(3))
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.ScaleX, current.ScaleY = x, y }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.ScaleX, current.ScaleY = x, y }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -720,7 +720,7 @@ func registerRenderNodeType(state *lua.LState) {
 		"set_z": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			z := state.CheckInt(2)
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Z = z }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.Z = z }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -728,7 +728,7 @@ func registerRenderNodeType(state *lua.LState) {
 		"set_rotation": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			rotation := float64(state.CheckNumber(2))
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Rotation = rotation }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.Rotation = rotation }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -742,7 +742,7 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, or subtract-colors")
 				return 0
 			}
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Blend = blend }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.Blend = blend }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -750,7 +750,7 @@ func registerRenderNodeType(state *lua.LState) {
 		"set_visible": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			visible := state.CheckBool(2)
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Visible = visible }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.Visible = visible }); err != nil {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
@@ -763,8 +763,8 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(4, "clip width and height must be positive")
 				return 0
 			}
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) {
-				current.Clip = &rendercore.Rect{X: x, Y: y, Width: width, Height: height}
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.Clip = &render.Rect{X: x, Y: y, Width: width, Height: height}
 			}); err != nil {
 				state.RaiseError("updating render clip: %v", err)
 			}
@@ -772,7 +772,7 @@ func registerRenderNodeType(state *lua.LState) {
 		},
 		"clear_clip": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Clip = nil }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.Clip = nil }); err != nil {
 				state.RaiseError("clearing render clip: %v", err)
 			}
 			return 0
@@ -1081,7 +1081,7 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("pausing animation: %v", err)
 				return 0
 			}
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.AnimationPaused = true }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.AnimationPaused = true }); err != nil {
 				state.RaiseError("pausing animation: %v", err)
 			}
 			return 0
@@ -1092,7 +1092,7 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("resuming animation: %v", err)
 				return 0
 			}
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.AnimationPaused = false }); err != nil {
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.AnimationPaused = false }); err != nil {
 				state.RaiseError("resuming animation: %v", err)
 			}
 			return 0
@@ -1109,7 +1109,7 @@ func registerRenderNodeType(state *lua.LState) {
 				return 0
 			}
 			position := time.Duration(seconds * float64(time.Second))
-			if err := node.composer.Update(node.id, func(current *rendercore.Node) {
+			if err := node.composer.Update(node.id, func(current *render.Node) {
 				current.AnimationSeek = position
 				current.AnimationSeekRevision++
 			}); err != nil {
@@ -1160,20 +1160,20 @@ func checkRenderNode(state *lua.LState, index int) *ownedRenderNode {
 	return node
 }
 
-func parseLayer(name string) (rendercore.Layer, error) {
+func parseLayer(name string) (render.Layer, error) {
 	switch name {
 	case "world":
-		return rendercore.LayerWorld, nil
+		return render.LayerWorld, nil
 	case "hud":
-		return rendercore.LayerHUD, nil
+		return render.LayerHUD, nil
 	case "modal":
-		return rendercore.LayerModal, nil
+		return render.LayerModal, nil
 	case "cursor":
-		return rendercore.LayerCursor, nil
+		return render.LayerCursor, nil
 	case "debug":
-		return rendercore.LayerDebug, nil
+		return render.LayerDebug, nil
 	case "transition":
-		return rendercore.LayerTransition, nil
+		return render.LayerTransition, nil
 	default:
 		return 0, fmt.Errorf("unknown render layer %q", name)
 	}

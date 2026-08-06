@@ -7,12 +7,12 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/modruntime"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 func TestScriptRuntimeManagementAndTransactionalReloadDoNotLeak(t *testing.T) {
 	ctx := context.Background()
-	var composer rendercore.Composer
+	var composer render.Composer
 	runtime := modruntime.New()
 	if err := runtime.RegisterModule(modruntime.RenderModule(runtime, &composer)); err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func TestScriptRuntimeManagementAndTransactionalReloadDoNotLeak(t *testing.T) {
 		t.Fatal(err)
 	}
 	nodes := composer.Snapshot()
-	if len(nodes) != 1 || nodes[0].Layer != rendercore.LayerModal {
+	if len(nodes) != 1 || nodes[0].Layer != render.LayerModal {
 		t.Fatalf("nodes after reload = %#v", nodes)
 	}
 	if err := manager.Disable(ctx, "dynamic"); err != nil {

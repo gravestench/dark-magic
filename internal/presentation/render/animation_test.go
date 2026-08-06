@@ -1,4 +1,4 @@
-package rendercore
+package render
 
 import (
 	"testing"

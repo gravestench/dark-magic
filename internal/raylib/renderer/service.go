@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 
 	"github.com/gravestench/dark-magic/internal/cache"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 type Service struct {
@@ -30,7 +30,7 @@ type Service struct {
 	postFrameSnapshot  atomic.Value
 
 	compositionMu      sync.Mutex
-	composition        *rendercore.Composer
+	composition        *render.Composer
 	compositionBackend *compositionBackend
 
 	audioMu      sync.Mutex

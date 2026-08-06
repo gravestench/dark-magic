@@ -11,7 +11,7 @@ import (
 
 	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/host"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
 )
 
@@ -81,7 +81,7 @@ func TestDC6DecodedWeightCountsRetainedFrameBuffers(t *testing.T) {
 func TestRenderNodesBelongToLuaComponentScope(t *testing.T) {
 	t.Parallel()
 
-	var composer rendercore.Composer
+	var composer render.Composer
 	runtime := New()
 	if err := runtime.RegisterModule(RenderModule(runtime, &composer)); err != nil {
 		t.Fatal(err)
@@ -116,10 +116,10 @@ return {
 		t.Fatal(err)
 	}
 	nodes := composer.Snapshot()
-	if len(nodes) != 1 || nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].Z != 7 || nodes[0].Layer != rendercore.LayerTransition {
+	if len(nodes) != 1 || nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].Z != 7 || nodes[0].Layer != render.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
 	}
-	if nodes[0].Clip == nil || *nodes[0].Clip != (rendercore.Rect{X: 10, Y: 20, Width: 300, Height: 200}) {
+	if nodes[0].Clip == nil || *nodes[0].Clip != (render.Rect{X: 10, Y: 20, Width: 300, Height: 200}) {
 		t.Fatalf("clip = %#v", nodes[0].Clip)
 	}
 	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
@@ -148,7 +148,7 @@ func TestRenderCapabilityExposesCOFCompositionMetadata(t *testing.T) {
 	input.AnimationFrames = []cof.FrameEvent{1}
 	input.Priority = [][][]cof.CompositeType{{{0}}}
 	assets := fstest.MapFS{"unit.cof": &fstest.MapFile{Data: cof.Marshal(input)}}
-	var composer rendercore.Composer
+	var composer render.Composer
 	runtime := New()
 	if err := runtime.RegisterModule(RenderModuleWithAssets(runtime, &composer, assets)); err != nil {
 		t.Fatal(err)
@@ -212,7 +212,7 @@ func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 		"pal.dat": &fstest.MapFile{Data: palette},
 	}
 
-	var composer rendercore.Composer
+	var composer render.Composer
 	runtime := New()
 	if err := runtime.RegisterModule(RenderModuleWithAssets(runtime, &composer, assets)); err != nil {
 		t.Fatal(err)
@@ -257,7 +257,7 @@ return { id = "screen.dc6", start = function(self)
 	}
 	animationNode := nodes[1]
 	animation, err := composer.ResourceSnapshot(animationNode.Resource)
-	if err != nil || animation.Kind != rendercore.ResourceAnimation {
+	if err != nil || animation.Kind != render.ResourceAnimation {
 		t.Fatalf("animation = %#v, %v", animation, err)
 	}
 	if animationNode.AnimationPaused || animationNode.AnimationSeekRevision != 2 || animationNode.AnimationSeek != 250*time.Millisecond {
@@ -274,7 +274,7 @@ return { id = "screen.dc6", start = function(self)
 func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 	t.Parallel()
 
-	var composer rendercore.Composer
+	var composer render.Composer
 	runtime := New()
 	if err := runtime.RegisterModule(RenderModule(runtime, &composer)); err != nil {
 		t.Fatal(err)
@@ -290,8 +290,8 @@ func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 }
 
 func TestAnimationSharesIdenticalRGBAFrames(t *testing.T) {
-	composer := &rendercore.Composer{}
-	nodeID, err := composer.Create(rendercore.NodeID{}, rendercore.LayerHUD)
+	composer := &render.Composer{}
+	nodeID, err := composer.Create(render.NodeID{}, render.LayerHUD)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func TestAnimationSharesIdenticalRGBAFrames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	animation := resource.Payload.(rendercore.AnimationData)
+	animation := resource.Payload.(render.AnimationData)
 	if animation.Frames[0] != animation.Frames[1] || animation.Frames[1] == animation.Frames[2] {
 		t.Fatalf("animation frames were not deduplicated: %v", animation.Frames)
 	}

@@ -1,5 +1,5 @@
-// Package rendercore defines the backend-neutral retained composition model.
-package rendercore
+// Package render defines the backend-neutral retained composition model.
+package render
 
 import (
 	"errors"

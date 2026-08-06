@@ -33,11 +33,11 @@ import (
 	"github.com/gravestench/dark-magic/internal/navigation"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/internal/persistence"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/profiling"
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
-	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
@@ -139,7 +139,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	inputService.SetLogger(slog.Default().With("component", "input"))
 	locale := localization.New(contentFS, "English")
 	scripts := modruntime.New()
-	composer := &rendercore.Composer{}
+	composer := &render.Composer{}
 	mixer := &audio.Mixer{}
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(scripts, navigator)

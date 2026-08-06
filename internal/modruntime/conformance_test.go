@@ -12,8 +12,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/persistence"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -27,7 +27,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	runtime := New()
 	var input inputstate.Store
 	var mixer audio.Mixer
-	var composer rendercore.Composer
+	var composer render.Composer
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
 		AppModule("test", func() {}),

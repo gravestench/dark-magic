@@ -52,7 +52,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/content` | Layered directory/MPQ/ZIP/shim VFS | command, reload, Lua, tools | Application | Keep |
 | `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
 | `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
-| `internal/rendercore` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep |
+| `internal/presentation/render` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep internal |
 | `internal/audio` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
 | `internal/videocore` | Cinematic decode/playback orchestration | command, Lua | Scene | Keep |
 | `internal/inputstate` | Serialized input state | command, Lua, raylib | Application | Keep |
@@ -120,7 +120,7 @@ the package that owns it.
 Each frame begins at the Raylib renderer owner thread. Native input is translated
 through `internal/raylib/input`, Lua scene updates run through
 `internal/modruntime`, and retained presentation commands cross
-`internal/rendercore` before `internal/raylib/renderer` executes them. Game rules
+`internal/presentation/render` before `internal/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
 
 Scene navigation belongs to `internal/navigation`; renderer-independent scene
@@ -130,7 +130,7 @@ capabilities but do not own native resources or discover arbitrary services.
 
 Assets enter through `internal/content`, which resolves layered directory, MPQ,
 ZIP, and shim sources. `internal/assets/decode` converts supported formats,
-`internal/rendercore` describes retained resources, and the Raylib adapter owns
+`internal/presentation/render` describes retained resources, and the Raylib adapter owns
 uploads and disposal. Inspection and catalog tools reuse the same content and
 decode paths under `internal/assets/inspect` and `internal/assets/catalog`.
 

@@ -7,12 +7,12 @@ import (
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 // AttachComposer drains backend-neutral render changes on the Raylib owner
 // thread immediately before the legacy scene graph update.
-func (s *Service) AttachComposer(composer *rendercore.Composer) error {
+func (s *Service) AttachComposer(composer *render.Composer) error {
 	if composer == nil {
 		return fmt.Errorf("renderer: nil composition core")
 	}
@@ -21,7 +21,7 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 	if s.composition != nil {
 		return fmt.Errorf("renderer: composition core is already attached")
 	}
-	backend := &compositionBackend{renderer: s, nodes: make(map[rendercore.NodeID]Renderable), resources: make(map[rendercore.ResourceID]rendercore.Resource), nodeResources: make(map[rendercore.NodeID]rendercore.ResourceID), playbacks: make(map[rendercore.NodeID]*animationPlayback)}
+	backend := &compositionBackend{renderer: s, nodes: make(map[render.NodeID]Renderable), resources: make(map[render.ResourceID]render.Resource), nodeResources: make(map[render.NodeID]render.ResourceID), playbacks: make(map[render.NodeID]*animationPlayback)}
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
@@ -35,32 +35,32 @@ func (s *Service) AttachComposer(composer *rendercore.Composer) error {
 type compositionBackend struct {
 	renderer      *Service
 	mu            sync.Mutex
-	nodes         map[rendercore.NodeID]Renderable
-	resources     map[rendercore.ResourceID]rendercore.Resource
-	nodeResources map[rendercore.NodeID]rendercore.ResourceID
-	playbacks     map[rendercore.NodeID]*animationPlayback
+	nodes         map[render.NodeID]Renderable
+	resources     map[render.ResourceID]render.Resource
+	nodeResources map[render.NodeID]render.ResourceID
+	playbacks     map[render.NodeID]*animationPlayback
 }
 
 type animationPlayback struct {
-	player       *rendercore.AnimationPlayer
+	player       *render.AnimationPlayer
 	frames       []image.Image
 	seekRevision uint64
 }
 
-func (b *compositionBackend) Apply(change rendercore.Change) error {
+func (b *compositionBackend) Apply(change render.Change) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.nodes == nil {
-		b.nodes = make(map[rendercore.NodeID]Renderable)
+		b.nodes = make(map[render.NodeID]Renderable)
 	}
 	if b.resources == nil {
-		b.resources = make(map[rendercore.ResourceID]rendercore.Resource)
+		b.resources = make(map[render.ResourceID]render.Resource)
 	}
 	if b.nodeResources == nil {
-		b.nodeResources = make(map[rendercore.NodeID]rendercore.ResourceID)
+		b.nodeResources = make(map[render.NodeID]render.ResourceID)
 	}
 	if b.playbacks == nil {
-		b.playbacks = make(map[rendercore.NodeID]*animationPlayback)
+		b.playbacks = make(map[render.NodeID]*animationPlayback)
 	}
 	switch change.Kind {
 	case "resource-create":
@@ -71,7 +71,7 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 		if !exists {
 			return fmt.Errorf("resource %v does not exist", change.ResourceID)
 		}
-		if resource.Kind != rendercore.ResourceTexture || change.Resource.Kind != rendercore.ResourceTexture {
+		if resource.Kind != render.ResourceTexture || change.Resource.Kind != render.ResourceTexture {
 			return fmt.Errorf("resource %v is not an updateable texture", change.ResourceID)
 		}
 		previous := resource.Payload.(image.Image).Bounds().Size()
@@ -126,8 +126,8 @@ func (b *compositionBackend) Apply(change rendercore.Change) error {
 	}
 }
 
-func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) error {
-	if state.Parent != (rendercore.NodeID{}) {
+func (b *compositionBackend) applyNode(node Renderable, state render.Node) error {
+	if state.Parent != (render.NodeID{}) {
 		parent, exists := b.nodes[state.Parent]
 		if !exists {
 			return fmt.Errorf("parent node %v does not exist", state.Parent)
@@ -158,7 +158,7 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		return fmt.Errorf("unsupported blend mode %q", state.Blend)
 	}
 	node.SetZIndex(float32(int(state.Layer)*1_000_000 + state.Z))
-	if state.Resource != (rendercore.ResourceID{}) {
+	if state.Resource != (render.ResourceID{}) {
 		resource, exists := b.resources[state.Resource]
 		if !exists {
 			return fmt.Errorf("resource %v does not exist", state.Resource)
@@ -169,7 +169,7 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 		}
 		if b.nodeResources[state.ID] != state.Resource {
 			node.ClearTextures()
-			if resource.Kind == rendercore.ResourceAnimation {
+			if resource.Kind == render.ResourceAnimation {
 				if err := b.attachAnimation(state.ID, node, resource); err != nil {
 					return err
 				}
@@ -183,7 +183,7 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 	}
 	// Resource-less retained nodes are grouping transforms, not drawable
 	// surfaces. Enabling one would make raylib render its default 1x1 texture.
-	if state.Visible && state.Resource != (rendercore.ResourceID{}) {
+	if state.Visible && state.Resource != (render.ResourceID{}) {
 		node.Enable()
 	} else {
 		node.Disable()
@@ -201,8 +201,8 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 	return nil
 }
 
-func (b *compositionBackend) attachAnimation(id rendercore.NodeID, node Renderable, resource rendercore.Resource) error {
-	animation := resource.Payload.(rendercore.AnimationData)
+func (b *compositionBackend) attachAnimation(id render.NodeID, node Renderable, resource render.Resource) error {
+	animation := resource.Payload.(render.AnimationData)
 	frames := make([]image.Image, len(animation.Frames))
 	for index, id := range animation.Frames {
 		frame, exists := b.resources[id]
@@ -211,7 +211,7 @@ func (b *compositionBackend) attachAnimation(id rendercore.NodeID, node Renderab
 		}
 		frames[index] = frame.Payload.(image.Image)
 	}
-	player := rendercore.NewAnimationPlayer(animation.Durations, animation.Loop)
+	player := render.NewAnimationPlayer(animation.Durations, animation.Loop)
 	b.playbacks[id] = &animationPlayback{player: player, frames: frames}
 	node.SetAnimationFrame(frames[0], 0)
 	node.OnUpdate(func() {
@@ -227,19 +227,19 @@ func (b *compositionBackend) setAnimationFrame(node Renderable, frame image.Imag
 	node.SetAnimationFrame(frame, index)
 }
 
-func (b *compositionBackend) drawableImage(resource rendercore.Resource) (image.Image, error) {
+func (b *compositionBackend) drawableImage(resource render.Resource) (image.Image, error) {
 	switch resource.Kind {
-	case rendercore.ResourceTexture:
+	case render.ResourceTexture:
 		return resource.Payload.(image.Image), nil
-	case rendercore.ResourceAnimation:
-		animation := resource.Payload.(rendercore.AnimationData)
+	case render.ResourceAnimation:
+		animation := resource.Payload.(render.AnimationData)
 		frame, exists := b.resources[animation.Frames[0]]
 		if !exists {
 			return nil, fmt.Errorf("animation %v frame is unavailable", resource.ID)
 		}
 		return frame.Payload.(image.Image), nil
-	case rendercore.ResourceRenderTarget:
-		target := resource.Payload.(rendercore.RenderTargetData)
+	case render.ResourceRenderTarget:
+		target := resource.Payload.(render.RenderTargetData)
 		return image.NewRGBA(image.Rect(0, 0, target.Width, target.Height)), nil
 	default:
 		return nil, fmt.Errorf("resource kind %q is not drawable", resource.Kind)

@@ -6,9 +6,9 @@ import (
 	"image"
 
 	"github.com/gravestench/dark-magic/internal/audio"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
-func NewEmbeddedBackend(*rendercore.Composer, *audio.Mixer, image.Point) Backend {
+func NewEmbeddedBackend(*render.Composer, *audio.Mixer, image.Point) Backend {
 	return Unavailable{}
 }

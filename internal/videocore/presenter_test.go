@@ -5,17 +5,17 @@ import (
 	"math"
 	"testing"
 
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 func TestPresenterLetterboxesAndReusesOneTexture(t *testing.T) {
-	var composer rendercore.Composer
+	var composer render.Composer
 	presenter, err := NewPresenter(&composer, image.Pt(640, 292), image.Pt(640, 480))
 	if err != nil {
 		t.Fatal(err)
 	}
 	nodes := composer.Snapshot()
-	if len(nodes) != 1 || nodes[0].Layer != rendercore.LayerTransition {
+	if len(nodes) != 1 || nodes[0].Layer != render.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
 	}
 	if nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].ScaleX != 1 {

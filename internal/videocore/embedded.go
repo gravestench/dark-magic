@@ -12,7 +12,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/audio"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 const (
@@ -28,7 +28,7 @@ const (
 // and video frames that can no longer be displayed on time are discarded.
 type Embedded struct {
 	mu       sync.Mutex
-	Composer *rendercore.Composer
+	Composer *render.Composer
 	Mixer    *audio.Mixer
 	Viewport image.Point
 	Video    Decoder

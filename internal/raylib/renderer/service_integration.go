@@ -6,7 +6,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/google/uuid"
 
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
 // these are static declarations that force a
@@ -31,7 +31,7 @@ type IsRenderer interface {
 	ManagesCameras
 	ProvidesTextures
 	ProvidesRenderables
-	AttachComposer(*rendercore.Composer) error
+	AttachComposer(*render.Composer) error
 }
 
 type ManagesWindow interface {

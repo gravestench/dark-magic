@@ -15,7 +15,7 @@ type Frame struct {
 
 // Decoder converts a seekable media stream into timestamped video frames.
 // Implementations decode only; presentation and native texture ownership stay
-// behind Presenter and rendercore.
+// behind Presenter and the retained presentation contract.
 type Decoder interface {
 	Decode(context.Context, io.ReadSeeker, func(Frame) error) error
 }

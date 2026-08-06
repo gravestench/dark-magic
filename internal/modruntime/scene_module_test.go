@@ -10,7 +10,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/navigation"
-	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -59,7 +59,7 @@ func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	scenes := NewScenes(runtime, manager)
 	profiler := &recordingSceneProfiler{}
 	scenes.SetProfiler(profiler)
-	var composer rendercore.Composer
+	var composer render.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
@@ -138,7 +138,7 @@ func TestLuaSceneReplacementDestroysPreviousComposition(t *testing.T) {
 	runtime := New()
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
-	var composer rendercore.Composer
+	var composer render.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)

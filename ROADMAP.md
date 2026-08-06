@@ -733,7 +733,10 @@ implementations. The remaining work is tracked explicitly below.
   and Raylib callers migrated together and the retired paths are guarded. The
   engine-side audio command boundary, sound catalog, buses, and playback state
   now live in `internal/audio`; the native Raylib audio device remains a platform
-  adapter and the previous `audiocore` path is rejected.
+  adapter and the previous `audiocore` path is rejected. Backend-neutral retained
+  nodes, resources, handles, animations, and composition commands now live under
+  `internal/presentation/render`; Lua and video produce that contract while the
+  Raylib backend consumes it, and the old `rendercore` path is guarded.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

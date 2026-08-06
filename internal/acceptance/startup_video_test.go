@@ -15,8 +15,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/persistence"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
 
@@ -163,7 +163,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	scenes := modruntime.NewScenes(runtime, navigator)
 	backend := &startupVideoBackend{}
 	var input inputstate.Store
-	var composer rendercore.Composer
+	var composer render.Composer
 	var mixer audio.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
 	loading := acceptanceLoadingCoordinator()

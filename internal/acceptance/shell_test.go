@@ -14,8 +14,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/persistence"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
-	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
 
@@ -30,7 +30,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	runtime := modruntime.New()
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
-	var composer rendercore.Composer
+	var composer render.Composer
 	var input inputstate.Store
 	var mixer audio.Mixer
 	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
@@ -351,7 +351,7 @@ func assertStack(t *testing.T, navigator *navigation.Manager, want ...string) {
 	}
 }
 
-func assertNodes(t *testing.T, composer *rendercore.Composer, want int) {
+func assertNodes(t *testing.T, composer *render.Composer, want int) {
 	t.Helper()
 	if got := len(composer.Snapshot()); got != want {
 		t.Fatalf("render node count = %d, want %d; nodes=%#v", got, want, composer.Snapshot())
