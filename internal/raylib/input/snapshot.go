@@ -3,12 +3,12 @@ package input
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 
-	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
 )
 
 // Snapshot translates the legacy backend state into stable logical actions.
 // This adapter disappears when input is constructed directly by the new host.
-func (s *Service) Snapshot() inputcore.Frame {
+func (s *Service) Snapshot() inputstate.Frame {
 	x, y := s.MouseCursorState()
 	pointer := actionState(s.MouseButtonState()[int32(rl.MouseButtonLeft)])
 	confirm := actionState(s.KeyState(rl.KeyEnter))
@@ -18,11 +18,11 @@ func (s *Service) Snapshot() inputcore.Frame {
 	for character := rl.GetCharPressed(); character > 0; character = rl.GetCharPressed() {
 		text = append(text, rune(character))
 	}
-	return inputcore.Frame{
+	return inputstate.Frame{
 		CursorX: float64(x),
 		CursorY: float64(y),
 		Text:    string(text),
-		Actions: map[string]inputcore.ActionState{
+		Actions: map[string]inputstate.ActionState{
 			"pointer_primary": pointer,
 			"confirm":         confirm,
 			"cancel":          cancel,
@@ -42,8 +42,8 @@ func (s *Service) Snapshot() inputcore.Frame {
 	}
 }
 
-func mergeActionStates(states ...inputcore.ActionState) inputcore.ActionState {
-	var result inputcore.ActionState
+func mergeActionStates(states ...inputstate.ActionState) inputstate.ActionState {
+	var result inputstate.ActionState
 	for _, state := range states {
 		result.Down = result.Down || state.Down
 		result.Pressed = result.Pressed || state.Pressed
@@ -52,8 +52,8 @@ func mergeActionStates(states ...inputcore.ActionState) inputcore.ActionState {
 	return result
 }
 
-func actionState(state InputState) inputcore.ActionState {
-	return inputcore.ActionState{
+func actionState(state InputState) inputstate.ActionState {
+	return inputstate.ActionState{
 		Down:     state == StateDown,
 		Pressed:  state == StatePressed,
 		Released: state == StateReleased,

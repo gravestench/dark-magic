@@ -1,5 +1,5 @@
-// Package localecore loads layered Diablo string tables.
-package localecore
+// Package localization loads layered Diablo string tables.
+package localization
 
 import (
 	"encoding/json"
@@ -33,7 +33,7 @@ func (l *Locale) Text(key string) (string, error) {
 	}
 	value, exists := l.strings[key]
 	if !exists {
-		return key, fmt.Errorf("localecore: key %q is not present", key)
+		return key, fmt.Errorf("localization: key %q is not present", key)
 	}
 	return value, nil
 }
@@ -46,11 +46,11 @@ func (l *Locale) load() {
 	shimPath := fmt.Sprintf("locales/%s.json", l.language)
 	if data, err := fs.ReadFile(l.source, shimPath); err == nil {
 		if err := json.Unmarshal(data, &l.strings); err != nil {
-			l.err = fmt.Errorf("localecore: decode %q: %w", shimPath, err)
+			l.err = fmt.Errorf("localization: decode %q: %w", shimPath, err)
 			return
 		}
 	} else if !errors.Is(err, fs.ErrNotExist) {
-		l.err = fmt.Errorf("localecore: read %q: %w", shimPath, err)
+		l.err = fmt.Errorf("localization: read %q: %w", shimPath, err)
 		return
 	}
 	paths := []string{
@@ -65,12 +65,12 @@ func (l *Locale) load() {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
-			l.err = fmt.Errorf("localecore: read %q: %w", path, err)
+			l.err = fmt.Errorf("localization: read %q: %w", path, err)
 			return
 		}
 		table, err := tbl.Unmarshal(data)
 		if err != nil {
-			l.err = fmt.Errorf("localecore: decode %q: %w", path, err)
+			l.err = fmt.Errorf("localization: decode %q: %w", path, err)
 			return
 		}
 		loaded = true
@@ -79,6 +79,6 @@ func (l *Locale) load() {
 		}
 	}
 	if !loaded {
-		l.err = fmt.Errorf("localecore: no %s string tables found", l.language)
+		l.err = fmt.Errorf("localization: no %s string tables found", l.language)
 	}
 }

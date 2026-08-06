@@ -6,13 +6,13 @@ import (
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 )
 
 func TestLuaControlsPointerKeyboardFocusAndAccessibility(t *testing.T) {
 	ctx := context.Background()
-	var input inputcore.Store
+	var input inputstate.Store
 	runtime := modruntime.New()
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ manager:add({id="two", label="Second", x=30, y=0, width=20, height=20,
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
 		t.Fatal(err)
 	}
-	input.Publish(inputcore.Frame{CursorX: 35, CursorY: 5, Actions: map[string]inputcore.ActionState{"pointer_primary": {Pressed: true}}})
+	input.Publish(inputstate.Frame{CursorX: 35, CursorY: 5, Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true}}})
 	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ manager:add({id="two", label="Second", x=30, y=0, width=20, height=20,
 
 func TestLuaControlsFormFieldsAndFocusScopes(t *testing.T) {
 	ctx := context.Background()
-	var input inputcore.Store
+	var input inputstate.Store
 	runtime := modruntime.New()
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
 		t.Fatal(err)
@@ -83,13 +83,13 @@ assert(a[1].focused==false and a[2].checked==true and a[3].value=="é" and a[4].
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
 		t.Fatal(err)
 	}
-	frames := []inputcore.Frame{
-		{Actions: map[string]inputcore.ActionState{"confirm": {Pressed: true}}},
-		{Actions: map[string]inputcore.ActionState{"down": {Pressed: true}}},
-		{Text: "éx", Actions: map[string]inputcore.ActionState{}},
-		{Actions: map[string]inputcore.ActionState{"backspace": {Pressed: true}}},
-		{Actions: map[string]inputcore.ActionState{"down": {Pressed: true}}},
-		{Actions: map[string]inputcore.ActionState{"right": {Pressed: true}}},
+	frames := []inputstate.Frame{
+		{Actions: map[string]inputstate.ActionState{"confirm": {Pressed: true}}},
+		{Actions: map[string]inputstate.ActionState{"down": {Pressed: true}}},
+		{Text: "éx", Actions: map[string]inputstate.ActionState{}},
+		{Actions: map[string]inputstate.ActionState{"backspace": {Pressed: true}}},
+		{Actions: map[string]inputstate.ActionState{"down": {Pressed: true}}},
+		{Actions: map[string]inputstate.ActionState{"right": {Pressed: true}}},
 	}
 	for _, frame := range frames {
 		input.Publish(frame)

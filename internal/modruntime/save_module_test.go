@@ -5,12 +5,12 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/savecore"
+	"github.com/gravestench/dark-magic/internal/persistence"
 )
 
 func TestSaveModuleSelectsCharacter(t *testing.T) {
 	runtime := New()
-	store := savecore.New()
+	store := persistence.New()
 	if err := runtime.RegisterModule(SaveModule(store)); err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestSaveModuleSelectsCharacter(t *testing.T) {
 
 func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
 	runtime := New()
-	store := savecore.New()
+	store := persistence.New()
 	if err := runtime.RegisterModule(SaveModule(store)); err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
 
 func TestSaveModuleDeletesCharacterByOpaqueID(t *testing.T) {
 	runtime := New()
-	store := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	store := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	if err := runtime.RegisterModule(SaveModule(store)); err != nil {
 		t.Fatal(err)
 	}
@@ -65,9 +65,9 @@ func TestSaveModuleDeletesCharacterByOpaqueID(t *testing.T) {
 func TestSaveModuleExposesImmutableAppearanceSnapshot(t *testing.T) {
 	t.Parallel()
 
-	store := savecore.New(savecore.Character{
+	store := persistence.New(persistence.Character{
 		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
-		Appearance: &savecore.Appearance{
+		Appearance: &persistence.Appearance{
 			COF: "hero.cof", Palette: "units.dat", Direction: 3,
 			Components: map[string]string{"HD": "head.dcc", "TR": "torso.dcc"},
 		},
@@ -94,9 +94,9 @@ assert(c.appearance.components.TR=="torso.dcc")`
 func TestSaveModuleExposesCharacterStats(t *testing.T) {
 	t.Parallel()
 
-	store := savecore.New(savecore.Character{
+	store := persistence.New(persistence.Character{
 		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
-		Stats: &savecore.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
+		Stats: &persistence.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
 	})
 	runtime := New()
 	if err := runtime.RegisterModule(SaveModule(store)); err != nil {

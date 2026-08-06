@@ -1,4 +1,4 @@
-package loadcore
+package loading
 
 import (
 	"context"

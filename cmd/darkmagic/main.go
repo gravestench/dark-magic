@@ -25,20 +25,20 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/host"
 	"github.com/gravestench/dark-magic/internal/hotreload"
-	"github.com/gravestench/dark-magic/internal/inputcore"
-	"github.com/gravestench/dark-magic/internal/loadcore"
-	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/loading"
+	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/logging"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/profiling"
 	"github.com/gravestench/dark-magic/internal/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
-	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
 
@@ -137,7 +137,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	renderer.Configure(rendererConfig)
 	inputService := input.New(renderer)
 	inputService.SetLogger(slog.Default().With("component", "input"))
-	locale := localecore.New(contentFS, "English")
+	locale := localization.New(contentFS, "English")
 	scripts := modruntime.New()
 	composer := &rendercore.Composer{}
 	mixer := &audiocore.Mixer{}
@@ -146,7 +146,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if profile != nil {
 		scenes.SetProfiler(profile)
 	}
-	inputState := &inputcore.Store{}
+	inputState := &inputstate.Store{}
 	records := recordstore.New(contentFS)
 	records.SetLogger(slog.Default().With("component", "records"))
 	gameData := gamedata.New(records)
@@ -156,14 +156,14 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	slog.Info("loaded typed game-data catalog", "issues", len(typedRecords.Issues))
 	fixtureEntries := developmentCharacters(fixtureCharacters)
-	saves := savecore.New(fixtureEntries...)
+	saves := persistence.New(fixtureEntries...)
 	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {
 		if err := saves.Select(fixtureEntries[0].ID); err != nil {
 			return fmt.Errorf("select development fixture: %w", err)
 		}
 	}
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
-	loading := loadcore.New(map[string]loadcore.Task{
+	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {
 			if _, ok := saves.Selected(); !ok {
 				return errors.New("no character is selected")
@@ -378,22 +378,22 @@ func validateClientContent(contentFS fs.FS) error {
 	return nil
 }
 
-func developmentCharacters(count int) []savecore.Character {
+func developmentCharacters(count int) []persistence.Character {
 	if count <= 0 {
 		return nil
 	}
 	classes := []string{"Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Assassin", "Druid"}
-	result := make([]savecore.Character, 0, count)
+	result := make([]persistence.Character, 0, count)
 	for index := 0; index < count; index++ {
 		class := classes[index%len(classes)]
-		result = append(result, savecore.Character{
+		result = append(result, persistence.Character{
 			ID:        fmt.Sprintf("fixture-%02d", index+1),
 			Name:      fmt.Sprintf("Hero%02d", index+1),
 			Class:     class,
 			Level:     index + 1,
 			Expansion: true,
 			Hardcore:  index%3 == 2,
-			Stats: &savecore.Stats{
+			Stats: &persistence.Stats{
 				Experience: 1200, NextLevelExperience: 2250,
 				Strength: 25, Dexterity: 20, Vitality: 25, Energy: 15,
 				Defense: 42, Health: 70, MaxHealth: 70, Mana: 30, MaxMana: 30,

@@ -3,14 +3,14 @@ package acceptance
 import (
 	"context"
 
-	"github.com/gravestench/dark-magic/internal/loadcore"
+	"github.com/gravestench/dark-magic/internal/loading"
 )
 
-func acceptanceLoadingCoordinator() *loadcore.Coordinator {
+func acceptanceLoadingCoordinator() *loading.Coordinator {
 	return acceptanceLoadingCoordinatorWithWorld(nil)
 }
 
-func acceptanceLoadingCoordinatorWithWorld(release <-chan struct{}) *loadcore.Coordinator {
+func acceptanceLoadingCoordinatorWithWorld(release <-chan struct{}) *loading.Coordinator {
 	ready := func(context.Context) error { return nil }
 	world := ready
 	if release != nil {
@@ -23,7 +23,7 @@ func acceptanceLoadingCoordinatorWithWorld(release <-chan struct{}) *loadcore.Co
 			}
 		}
 	}
-	return loadcore.New(map[string]loadcore.Task{
+	return loading.New(map[string]loading.Task{
 		"selected_character": ready,
 		"loading_assets":     ready,
 		"world":              world,

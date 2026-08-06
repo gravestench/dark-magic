@@ -1,5 +1,5 @@
-// Package loadcore coordinates engine-owned work required by scene transitions.
-package loadcore
+// Package loading coordinates engine-owned work required by scene transitions.
+package loading
 
 import (
 	"context"

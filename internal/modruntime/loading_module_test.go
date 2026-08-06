@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gravestench/dark-magic/internal/loadcore"
+	"github.com/gravestench/dark-magic/internal/loading"
 	lua "github.com/yuin/gopher-lua"
 )
 
 func TestLoadingModuleStartsNamedEngineDependencies(t *testing.T) {
-	coordinator := loadcore.New(map[string]loadcore.Task{"world": func(context.Context) error { return nil }})
+	coordinator := loading.New(map[string]loading.Task{"world": func(context.Context) error { return nil }})
 	defer coordinator.Close()
 	runtime := New()
 	if err := runtime.RegisterModule(LoadingModule(coordinator)); err != nil {

@@ -8,12 +8,12 @@ import (
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/inputcore"
-	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -25,7 +25,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		t.Fatal(err)
 	}
 	runtime := New()
-	var input inputcore.Store
+	var input inputstate.Store
 	var mixer audiocore.Mixer
 	var composer rendercore.Composer
 	scenes := NewScenes(runtime, navigation.New())
@@ -33,8 +33,8 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		AppModule("test", func() {}),
 		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source),
 		VideoModule(runtime, videocore.Unavailable{}, source),
-		RecordsModule(recordstore.New(source)), LocaleModule(localecore.New(source, "English")),
-		LootModule(source), SaveModule(savecore.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
+		LootModule(source), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{

@@ -5,15 +5,15 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
 	lua "github.com/yuin/gopher-lua"
 )
 
 func TestInputModuleReadsLogicalFrameSnapshot(t *testing.T) {
 	t.Parallel()
 
-	var input inputcore.Store
-	input.Publish(inputcore.Frame{Actions: map[string]inputcore.ActionState{"confirm": {Pressed: true}}, Text: "hé", CursorX: 12, CursorY: 34})
+	var input inputstate.Store
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"confirm": {Pressed: true}}, Text: "hé", CursorX: 12, CursorY: 34})
 	runtime := New()
 	if err := runtime.RegisterModule(InputModule(&input)); err != nil {
 		t.Fatal(err)

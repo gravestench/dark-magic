@@ -1,4 +1,4 @@
-package inputcore
+package inputstate
 
 import "testing"
 

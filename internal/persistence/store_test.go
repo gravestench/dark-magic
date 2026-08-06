@@ -1,4 +1,4 @@
-package savecore
+package persistence
 
 import "testing"
 

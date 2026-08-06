@@ -1,5 +1,5 @@
-// Package savecore owns engine-side character metadata exposed to the Lua shell.
-package savecore
+// Package persistence owns engine-side character metadata exposed to the Lua shell.
+package persistence
 
 import (
 	"errors"
@@ -51,7 +51,7 @@ func (s *Store) Create(character Character) error {
 	character.Name = strings.TrimSpace(character.Name)
 	character.Class = characterClasses[strings.ToLower(strings.TrimSpace(character.Class))]
 	if character.ID == "" || character.Name == "" || character.Class == "" {
-		return errors.New("savecore: character ID, name, and a supported class are required")
+		return errors.New("persistence: character ID, name, and a supported class are required")
 	}
 	if err := validateCharacterName(character.Name); err != nil {
 		return err
@@ -64,10 +64,10 @@ func (s *Store) Create(character Character) error {
 	defer s.mu.Unlock()
 	for _, existing := range s.entries {
 		if existing.ID == character.ID {
-			return fmt.Errorf("savecore: character %q already exists", character.ID)
+			return fmt.Errorf("persistence: character %q already exists", character.ID)
 		}
 		if strings.EqualFold(existing.Name, character.Name) {
-			return fmt.Errorf("savecore: character name %q already exists", character.Name)
+			return fmt.Errorf("persistence: character name %q already exists", character.Name)
 		}
 	}
 	s.entries = append(s.entries, character)
@@ -109,13 +109,13 @@ func (s *Store) characterByID(id string) (Character, error) {
 			return character, nil
 		}
 	}
-	return Character{}, errors.New("savecore: created character is unavailable")
+	return Character{}, errors.New("persistence: created character is unavailable")
 }
 
 func validateCharacterName(name string) error {
 	runes := []rune(name)
 	if len(runes) < 2 || len(runes) > 15 {
-		return errors.New("savecore: character name must contain 2 to 15 characters")
+		return errors.New("persistence: character name must contain 2 to 15 characters")
 	}
 	punctuation := false
 	for index, current := range runes {
@@ -124,7 +124,7 @@ func validateCharacterName(name string) error {
 			continue
 		}
 		if (current != '-' && current != '\'') || index == 0 || index == len(runes)-1 || punctuation {
-			return errors.New("savecore: character name may contain ASCII letters and single internal hyphens or apostrophes")
+			return errors.New("persistence: character name may contain ASCII letters and single internal hyphens or apostrophes")
 		}
 		punctuation = true
 	}
@@ -164,7 +164,7 @@ func (s *Store) Select(id string) error {
 			return nil
 		}
 	}
-	return errors.New("savecore: unknown character")
+	return errors.New("persistence: unknown character")
 }
 
 // Delete removes one character identity and clears the active selection when
@@ -184,7 +184,7 @@ func (s *Store) Delete(id string) error {
 		}
 		return nil
 	}
-	return errors.New("savecore: unknown character")
+	return errors.New("persistence: unknown character")
 }
 
 func (s *Store) Selected() (Character, bool) {

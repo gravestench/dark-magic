@@ -727,7 +727,10 @@ implementations. The remaining work is tracked explicitly below.
   `store` owns layered TSV bytes and immutable generic rows, while `catalog` owns
   the one atomic typed snapshot and indexes. The client continues to construct a
   single shared store for typed records, Lua, and audio rather than duplicating
-  caches or source resolution.
+  caches or source resolution. Four small renderer-independent capabilities now
+  use feature ownership instead of historical `*core` names: `inputstate`,
+  `loading`, `localization`, and `persistence`; all composition, Lua, acceptance,
+  and Raylib callers migrated together and the retired paths are guarded.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

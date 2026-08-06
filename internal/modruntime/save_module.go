@@ -1,15 +1,15 @@
 package modruntime
 
 import (
-	"github.com/gravestench/dark-magic/internal/savecore"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // SaveModule exposes character metadata and selection without exposing save
 // file ownership or mutable Go objects to Lua.
-func SaveModule(store *savecore.Store) Module {
+func SaveModule(store *persistence.Store) Module {
 	return Module{Name: "dm.save/v1", Loader: func(state *lua.LState) int {
-		characterTable := func(character savecore.Character) *lua.LTable {
+		characterTable := func(character persistence.Character) *lua.LTable {
 			entry := state.NewTable()
 			entry.RawSetString("id", lua.LString(character.ID))
 			entry.RawSetString("name", lua.LString(character.Name))
@@ -63,7 +63,7 @@ func SaveModule(store *savecore.Store) Module {
 				return 1
 			},
 			"create": func(state *lua.LState) int {
-				err := store.Create(savecore.Character{ID: state.CheckString(1), Name: state.CheckString(2), Class: state.CheckString(3), Level: 1})
+				err := store.Create(persistence.Character{ID: state.CheckString(1), Name: state.CheckString(2), Class: state.CheckString(3), Level: 1})
 				if err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))

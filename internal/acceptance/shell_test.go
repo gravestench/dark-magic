@@ -9,13 +9,13 @@ import (
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
-	"github.com/gravestench/dark-magic/internal/inputcore"
-	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
 
@@ -31,9 +31,9 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer rendercore.Composer
-	var input inputcore.Store
+	var input inputstate.Store
 	var mixer audiocore.Mixer
-	saves := savecore.New(savecore.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	simulation := modruntime.NewSimulation(scene.New(11, 1000, 1000))
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
@@ -48,7 +48,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.InputModule(&input),
 		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.VideoModule(runtime, videocore.Unavailable{}, contentFS),
-		modruntime.LocaleModule(localecore.New(contentFS, "English")),
+		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
 		modruntime.SimulationModule(simulation),
@@ -87,7 +87,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	assertStack(t, navigator, "title")
 	assertNodes(t, &composer, 2)
 
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	assertStack(t, navigator, "main_menu")
 	assertNodes(t, &composer, 2)
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "tcpip")
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "tcpip")
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	// Credits are authored as a real scene rather than a placeholder route. In
 	// the embedded/headless stack the localized MPQ payload is unavailable, so
 	// this also exercises its explicit fallback copy and return navigation.
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -168,7 +168,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "credits")
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	assertStack(t, navigator, "main_menu")
 
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -201,7 +201,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "cinematics")
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	assertStack(t, navigator, "main_menu")
 
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	assertStack(t, navigator, "character_select")
 	assertNodes(t, &composer, 2)
 
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	// A single activation selects the row. Move through the page scrollbar and
 	// footer controls to the explicit OK button before launching.
 	for range 5 {
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -242,7 +242,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "game_loading")
-	input.Publish(inputcore.Frame{})
+	input.Publish(inputstate.Frame{})
 	if err := scenes.Update(ctx, 2*time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 
 	for _, overlay := range []string{"inventory", "character", "skills", "automap", "options", "pause"} {
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -283,7 +283,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		}
 		assertStack(t, navigator, "game_world", overlay)
 		assertNodes(t, &composer, 3)
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -295,7 +295,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		assertNodes(t, &composer, 2)
 	}
 	for cycle := 0; cycle < 50; cycle++ {
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -303,7 +303,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
-		input.Publish(inputcore.Frame{})
+		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
 		}
@@ -317,7 +317,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 
 	before := simulation.Snapshot().Hero.X
-	input.Publish(inputcore.Frame{Actions: map[string]inputcore.ActionState{"right": {Down: true}}})
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
 	if err := scenes.Update(ctx, time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -340,8 +340,8 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 }
 
-func publishAction(input *inputcore.Store, name string) {
-	input.Publish(inputcore.Frame{Actions: map[string]inputcore.ActionState{name: {Pressed: true}}})
+func publishAction(input *inputstate.Store, name string) {
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{name: {Pressed: true}}})
 }
 
 func assertStack(t *testing.T, navigator *navigation.Manager, want ...string) {

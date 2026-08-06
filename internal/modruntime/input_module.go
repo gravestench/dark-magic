@@ -1,13 +1,13 @@
 package modruntime
 
 import (
-	"github.com/gravestench/dark-magic/internal/inputcore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // InputModule exposes frame-stable logical actions rather than backend key
 // codes or direct Raylib calls.
-func InputModule(input *inputcore.Store) Module {
+func InputModule(input *inputstate.Store) Module {
 	return Module{Name: "dm.input/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {

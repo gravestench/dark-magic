@@ -1,4 +1,4 @@
-package localecore
+package localization
 
 import (
 	"strings"

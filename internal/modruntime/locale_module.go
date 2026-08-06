@@ -1,12 +1,12 @@
 package modruntime
 
 import (
-	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/localization"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // LocaleModule exposes string lookup without exposing locale storage ownership.
-func LocaleModule(locale *localecore.Locale) Module {
+func LocaleModule(locale *localization.Locale) Module {
 	return Module{Name: "dm.locale/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {

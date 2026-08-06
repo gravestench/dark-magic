@@ -10,13 +10,13 @@ import (
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/host"
-	"github.com/gravestench/dark-magic/internal/inputcore"
-	"github.com/gravestench/dark-magic/internal/localecore"
+	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/modruntime"
 	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/internal/savecore"
 	"github.com/gravestench/dark-magic/internal/videocore"
 )
 
@@ -98,9 +98,9 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		assertStack(t, harness.navigator, "character_create")
 
 		harness.action(t, "confirm") // Select the initially focused Amazon.
-		harness.input.Publish(inputcore.Frame{Text: "Hero"})
+		harness.input.Publish(inputstate.Frame{Text: "Hero"})
 		harness.update(t)
-		harness.input.Publish(inputcore.Frame{})
+		harness.input.Publish(inputstate.Frame{})
 		harness.action(t, "down")    // Move dialog focus from the field to OK.
 		harness.action(t, "confirm") // Accept the name and begin forward walk.
 		assertStack(t, harness.navigator, "character_create")
@@ -112,7 +112,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 	})
 
 	t.Run("character deletion is confirmed before leaving the list", func(t *testing.T) {
-		harness := newStartupHarnessWithSaves(t, savecore.Character{
+		harness := newStartupHarnessWithSaves(t, persistence.Character{
 			ID: "hero", Name: "Hero", Class: "Amazon", Level: 1,
 		})
 		harness.skip(t)
@@ -136,7 +136,7 @@ type startupHarness struct {
 	runtime   *modruntime.Runtime
 	scenes    *modruntime.Scenes
 	navigator *navigation.Manager
-	input     *inputcore.Store
+	input     *inputstate.Store
 	backend   *startupVideoBackend
 }
 
@@ -144,7 +144,7 @@ func newStartupHarness(t *testing.T) *startupHarness {
 	return newStartupHarnessWithSaves(t)
 }
 
-func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *startupHarness {
+func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) *startupHarness {
 	t.Helper()
 	ctx := context.Background()
 	videos := fstest.MapFS{
@@ -162,7 +162,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *st
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
 	backend := &startupVideoBackend{}
-	var input inputcore.Store
+	var input inputstate.Store
 	var composer rendercore.Composer
 	var mixer audiocore.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
@@ -178,9 +178,9 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...savecore.Character) *st
 		modruntime.InputModule(&input),
 		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.VideoModule(runtime, backend, contentFS),
-		modruntime.LocaleModule(localecore.New(contentFS, "English")),
+		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(savecore.New(entries...)),
+		modruntime.SaveModule(persistence.New(entries...)),
 		modruntime.SimulationModule(simulation),
 		modruntime.LoadingModule(loading),
 		scenes.Module(),
@@ -233,14 +233,14 @@ func (h *startupHarness) action(t *testing.T, name string) {
 	t.Helper()
 	publishAction(h.input, name)
 	h.update(t)
-	h.input.Publish(inputcore.Frame{})
+	h.input.Publish(inputstate.Frame{})
 }
 
 func (h *startupHarness) skip(t *testing.T) {
 	t.Helper()
 	publishAction(h.input, "skip")
 	h.update(t)
-	h.input.Publish(inputcore.Frame{})
+	h.input.Publish(inputstate.Frame{})
 }
 
 func (h *startupHarness) assertPaths(t *testing.T, paths ...string) {

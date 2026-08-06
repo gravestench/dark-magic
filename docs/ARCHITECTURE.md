@@ -55,10 +55,10 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/rendercore` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep |
 | `internal/audiocore` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
 | `internal/videocore` | Cinematic decode/playback orchestration | command, Lua | Scene | Keep |
-| `internal/inputcore` | Serialized input state | command, Lua, raylib | Application | Keep |
-| `internal/localecore` | TBL-backed localization | command, Lua | Application | Keep |
-| `internal/loadcore` | Observable loading progress | command, Lua | Application | Keep |
-| `internal/savecore` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
+| `internal/inputstate` | Serialized input state | command, Lua, raylib | Application | Keep |
+| `internal/localization` | TBL-backed localization | command, Lua | Application | Keep |
+| `internal/loading` | Observable loading progress | command, Lua | Application | Keep |
+| `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
 | `internal/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
 | `internal/modruntime` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters |
 | `internal/hotreload` | Transactional script/content reload | command | Application | Keep |

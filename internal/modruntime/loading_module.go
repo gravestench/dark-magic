@@ -3,12 +3,12 @@ package modruntime
 import (
 	"context"
 
-	"github.com/gravestench/dark-magic/internal/loadcore"
+	"github.com/gravestench/dark-magic/internal/loading"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // LoadingModule exposes read-only progress for engine-owned transition work.
-func LoadingModule(coordinator *loadcore.Coordinator) Module {
+func LoadingModule(coordinator *loading.Coordinator) Module {
 	return Module{Name: "dm.loading/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"begin": func(state *lua.LState) int {

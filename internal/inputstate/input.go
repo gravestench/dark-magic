@@ -1,5 +1,5 @@
-// Package inputcore defines backend-neutral, frame-stable input snapshots.
-package inputcore
+// Package inputstate defines backend-neutral, frame-stable input snapshots.
+package inputstate
 
 import "sync/atomic"
 
