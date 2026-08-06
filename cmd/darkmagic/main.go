@@ -135,7 +135,11 @@ func run(contentFS *content.FS, profile *profiling.Session) error {
 	if err := scripts.RegisterModule(modruntime.SimulationModule(simulation)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.RenderModuleWithAssets(scripts, composer, contentFS)); err != nil {
+	renderCapability := modruntime.NewRenderCapability(scripts, composer, contentFS)
+	if profile != nil {
+		profile.SetDiagnostics(func() any { return renderCapability.Diagnostics() })
+	}
+	if err := scripts.RegisterModule(renderCapability.Module()); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(scenes.Module()); err != nil {

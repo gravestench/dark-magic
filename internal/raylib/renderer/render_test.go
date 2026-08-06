@@ -42,3 +42,24 @@ func TestContiguousRGBARejectsPaddedSubimage(t *testing.T) {
 		t.Fatal("padded subimage unexpectedly used direct upload path")
 	}
 }
+
+func BenchmarkTexturePixelPreparation(b *testing.B) {
+	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
+	b.Run("direct-rgba", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			pixels, ok := contiguousRGBA(img)
+			if !ok || len(pixels) == 0 {
+				b.Fatal("direct path unavailable")
+			}
+		}
+	})
+	b.Run("generic-conversion", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			if pixels := getAllPixelData(img); len(pixels) == 0 {
+				b.Fatal("conversion returned no pixels")
+			}
+		}
+	})
+}

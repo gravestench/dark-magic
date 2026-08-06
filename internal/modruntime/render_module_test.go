@@ -69,6 +69,15 @@ func TestAssetWeightReadsAssetContents(t *testing.T) {
 	}
 }
 
+func TestDC6DecodedWeightCountsRetainedFrameBuffers(t *testing.T) {
+	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
+		{FrameData: []byte{1, 2}, Terminator: []byte{3, 4, 5}, IndexData: []byte{6, 7, 8, 9}},
+	}}}}
+	if got := dc6DecodedWeight(asset); got != 9 {
+		t.Fatalf("decoded weight = %d, want 9", got)
+	}
+}
+
 func TestRenderNodesBelongToLuaComponentScope(t *testing.T) {
 	t.Parallel()
 
@@ -277,5 +286,34 @@ func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 	err := runtime.Execute(context.Background(), fstest.MapFS{"bad.lua": &fstest.MapFile{Data: []byte(`local render = require("dm.render/v1"); render.create("world")`)}}, "bad.lua")
 	if err == nil {
 		t.Fatal("expected unscoped allocation to fail")
+	}
+}
+
+func TestAnimationSharesIdenticalRGBAFrames(t *testing.T) {
+	composer := &rendercore.Composer{}
+	nodeID, err := composer.Create(rendercore.NodeID{}, rendercore.LayerHUD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node := &ownedRenderNode{composer: composer, id: nodeID}
+	first := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	first.Pix[0] = 1
+	duplicate := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	copy(duplicate.Pix, first.Pix)
+	different := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	different.Pix[0] = 2
+	if err := node.setAnimation([]image.Image{first, duplicate, different}, time.Millisecond, "loop"); err != nil {
+		t.Fatal(err)
+	}
+	if len(node.owned) != 2 {
+		t.Fatalf("owned textures = %d, want 2", len(node.owned))
+	}
+	resource, err := composer.ResourceSnapshot(node.resource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	animation := resource.Payload.(rendercore.AnimationData)
+	if animation.Frames[0] != animation.Frames[1] || animation.Frames[1] == animation.Frames[2] {
+		t.Fatalf("animation frames were not deduplicated: %v", animation.Frames)
 	}
 }

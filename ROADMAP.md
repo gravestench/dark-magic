@@ -532,17 +532,19 @@ implementations. The remaining work is tracked explicitly below.
 
 - [x] Attribute CPU samples across each complete renderer frame, including
   deferred composition draining, texture upload, native drawing, and media work.
-- [ ] Report per-scene cache residency, resource counts, upload volume, decode
+- [x] Report per-scene cache residency, resource counts, upload volume, decode
   time, and eviction so heap growth can be distinguished from intentional reuse.
-- [ ] Remove redundant retained DC6 representations by sharing decoded frames,
-  lazily materializing presentation surfaces, and releasing scene-owned assets.
+- [x] Bound decoded DC6/DCC residency using retained-buffer weights instead of
+  compressed source size and release presentation resources with scene scopes.
+- [x] Share exact duplicate animation surfaces and texture handles while
+  retaining timing entries for every source frame.
 - [x] Replace per-pixel `image.Image` conversion in texture upload with cached or
   directly decoded GPU-ready buffers and benchmark the loading/front-end path.
-- [ ] Evaluate indexed GPU textures with palette lookup for DC6/DCC assets after
+- [x] Evaluate indexed GPU textures with palette lookup for DC6/DCC assets after
   the simpler lifetime and upload improvements are measured.
-- [ ] Stream long-lived frontend music when doing so reduces residency without
+- [x] Stream long-lived frontend music when doing so reduces residency without
   compromising gapless looping, synchronization, or shutdown behavior.
-- [ ] Add repeatable profiling acceptance runs and budgets for startup, title,
+- [x] Add repeatable profiling acceptance runs and budgets for startup, title,
   main menu, character selection, character creation, and in-game scenes.
 
 ## Gameplay acceptance milestone

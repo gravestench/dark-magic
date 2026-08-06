@@ -3,6 +3,7 @@ package profiling
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -20,14 +21,15 @@ import (
 
 // Session owns one CPU capture and writes a heap snapshot when stopped.
 type Session struct {
-	directory string
-	cpu       *os.File
-	binary    string
-	renderPDF bool
-	mu        sync.Mutex
-	allScenes bool
-	scenes    map[string]bool
-	heaps     map[string][]string
+	directory   string
+	cpu         *os.File
+	binary      string
+	renderPDF   bool
+	mu          sync.Mutex
+	allScenes   bool
+	scenes      map[string]bool
+	heaps       map[string][]string
+	diagnostics func() any
 }
 
 // Start begins CPU profiling in directory. When renderPDF is true, Stop also
@@ -55,6 +57,14 @@ func Start(directory string, renderPDF bool) (*Session, error) {
 		return nil, fmt.Errorf("profiling: locate executable: %w", err)
 	}
 	return &Session{directory: expanded, cpu: cpu, binary: binary, renderPDF: renderPDF, scenes: make(map[string]bool), heaps: make(map[string][]string)}, nil
+}
+
+// SetDiagnostics installs a snapshot provider written beside every scene heap
+// and once more at shutdown. The provider must be safe to call synchronously.
+func (s *Session) SetDiagnostics(provider func() any) {
+	s.mu.Lock()
+	s.diagnostics = provider
+	s.mu.Unlock()
 }
 
 // ConfigureScenes selects a comma-separated list of scene IDs, or "all".
@@ -98,6 +108,9 @@ func (s *Session) CaptureSceneHeap(name string) error {
 	if err != nil {
 		return fmt.Errorf("profiling: capture scene %q heap: %w", name, err)
 	}
+	if err := s.writeDiagnostics(filepath.Join(directory, fmt.Sprintf("diagnostics-%03d.json", index))); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	s.heaps[name] = append(s.heaps[name], path)
 	s.mu.Unlock()
@@ -121,9 +134,9 @@ func (s *Session) Stop() error {
 		heapErr = errors.Join(heapErr, heap.Close())
 	}
 	if !s.renderPDF {
-		return errors.Join(err, heapErr)
+		return errors.Join(err, heapErr, s.writeDiagnostics(filepath.Join(s.directory, "diagnostics.json")))
 	}
-	err = errors.Join(err, heapErr,
+	err = errors.Join(err, heapErr, s.writeDiagnostics(filepath.Join(s.directory, "diagnostics.json")),
 		render(s.binary, filepath.Join(s.directory, "cpu.pprof"), filepath.Join(s.directory, "cpu.pdf"), "cpu"),
 		render(s.binary, heapPath, filepath.Join(s.directory, "heap.pdf"), "inuse_space"))
 	s.mu.Lock()
@@ -145,6 +158,24 @@ func (s *Session) Stop() error {
 		}
 	}
 	return err
+}
+
+func (s *Session) writeDiagnostics(path string) error {
+	s.mu.Lock()
+	provider := s.diagnostics
+	s.mu.Unlock()
+	if provider == nil {
+		return nil
+	}
+	data, err := json.MarshalIndent(provider(), "", "  ")
+	if err != nil {
+		return fmt.Errorf("profiling: encode diagnostics: %w", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("profiling: write diagnostics: %w", err)
+	}
+	return nil
 }
 
 func safeName(name string) string {

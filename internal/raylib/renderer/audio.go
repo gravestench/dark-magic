@@ -3,6 +3,9 @@ package raylibRenderer
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,11 +53,12 @@ type pcmPlayback struct {
 	stopping bool
 }
 
-// musicPlayback retains the encoded source bytes because raylib's streaming
-// decoder continues reading the memory passed to LoadMusicStreamFromMemory.
+// musicPlayback owns the staged encoded source consumed by raylib's streaming
+// decoder. Keeping it on disk avoids retaining multi-megabyte MPQ payloads in
+// the Go heap for the entire frontend session.
 type musicPlayback struct {
 	music rl.Music
-	data  []byte
+	path  string
 }
 
 const pcmBlockFrames = 1024
@@ -98,12 +102,20 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 			return fmt.Errorf("sound %v already exists", command.ID)
 		}
 		if command.Stream {
-			music := rl.LoadMusicStreamFromMemory(command.Format, command.Data, int32(len(command.Data)))
+			path, err := stageMusicData(command.Format, command.Data)
+			if err != nil {
+				return err
+			}
+			music := rl.LoadMusicStream(path)
+			if music.CtxData == nil {
+				_ = os.Remove(path)
+				return fmt.Errorf("loading staged music %q", command.Format)
+			}
 			music.Looping = command.Loop
 			rl.SetMusicVolume(music, command.Volume)
 			rl.SetMusicPan(music, (command.Pan+1)/2)
 			rl.PlayMusicStream(music)
-			b.music[command.ID] = musicPlayback{music: music, data: command.Data}
+			b.music[command.ID] = musicPlayback{music: music, path: path}
 			return nil
 		}
 		wave := rl.LoadWaveFromMemory(command.Format, command.Data, int32(len(command.Data)))
@@ -153,6 +165,7 @@ func (b *raylibAudioBackend) Apply(command audiocore.Command) error {
 			rl.StopMusicStream(playback.music)
 			rl.UnloadMusicStream(playback.music)
 			delete(b.music, command.ID)
+			_ = os.Remove(playback.path)
 			return nil
 		}
 		sound, exists := b.sounds[command.ID]
@@ -219,5 +232,28 @@ func (b *raylibAudioBackend) Close() {
 		rl.StopMusicStream(playback.music)
 		rl.UnloadMusicStream(playback.music)
 		delete(b.music, id)
+		_ = os.Remove(playback.path)
 	}
+}
+
+func stageMusicData(format string, data []byte) (string, error) {
+	extension := strings.ToLower(filepath.Ext(format))
+	if extension == "" {
+		extension = ".audio"
+	}
+	file, err := os.CreateTemp("", "darkmagic-music-*"+extension)
+	if err != nil {
+		return "", fmt.Errorf("staging music: %w", err)
+	}
+	path := file.Name()
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		_ = os.Remove(path)
+		return "", fmt.Errorf("staging music payload: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", fmt.Errorf("closing staged music: %w", err)
+	}
+	return path, nil
 }

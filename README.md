@@ -131,6 +131,20 @@ all visits to that scene using pprof labels. Each visit gets a numbered
 `heap-NNN.pprof` and `heap-NNN.pdf` snapshot taken immediately before the
 scene's owned resources are released.
 
+Every scene snapshot also receives `diagnostics-NNN.json`, containing decoded
+cache residency and hit/miss/eviction counts, cumulative decode time, retained
+render resources and estimated RGBA bytes, and texture upload volume. A
+repeatable frontend acceptance run is available with:
+
+```shell
+MPQ_DIRECTORY=/path/to/diablo-ii make profile
+make profile-check
+```
+
+`profile-check` requires every scene listed in `docs/profile-budgets.json` to
+have been visited and rejects snapshots exceeding the tracked budgets. Override
+`PROFILE_DIR` or `PROFILE_BUDGETS` to compare another run or budget set.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell

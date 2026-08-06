@@ -1,6 +1,7 @@
 package modruntime
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"image"
@@ -37,9 +38,40 @@ type ownedRenderNode struct {
 }
 
 type renderAssetCache struct {
-	mu         sync.Mutex
-	generation uint64
-	decoded    *cachepkg.Cache
+	mu          sync.Mutex
+	generation  uint64
+	decoded     *cachepkg.Cache
+	decodeCalls uint64
+	decodeTime  time.Duration
+}
+
+// RenderDiagnostics is a stable profiling snapshot of decoded and retained
+// renderer state. Cache weight estimates retained decoded bytes, while retained
+// texture bytes estimates expanded RGBA residency.
+type RenderDiagnostics struct {
+	Decoded     cachepkg.Stats
+	Retained    rendercore.Diagnostics
+	DecodeCalls uint64
+	DecodeTime  time.Duration
+}
+
+// RenderCapability owns the shared asset cache behind dm.render/v1.
+type RenderCapability struct {
+	runtime  *Runtime
+	composer *rendercore.Composer
+	assets   fs.FS
+	cache    *renderAssetCache
+}
+
+func NewRenderCapability(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) *RenderCapability {
+	const decodedAssetBudget = 64 * 1024 * 1024
+	return &RenderCapability{runtime: runtime, composer: composer, assets: assets, cache: &renderAssetCache{decoded: cachepkg.New(decodedAssetBudget)}}
+}
+
+func (r *RenderCapability) Diagnostics() RenderDiagnostics {
+	r.cache.mu.Lock()
+	defer r.cache.mu.Unlock()
+	return RenderDiagnostics{Decoded: r.cache.decoded.Diagnostics(), Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime}
 }
 
 type generationSource interface{ Generation() uint64 }
@@ -48,6 +80,11 @@ type compositeFrame struct {
 	image  image.Image
 	bounds image.Rectangle
 	layer  cof.CofLayer
+}
+
+type rgbaFrameDigest struct {
+	width, height int
+	pixels        [32]byte
 }
 
 func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame) (image.Image, error) {
@@ -129,6 +166,27 @@ func assetWeight(assets fs.FS, names ...string) int {
 	return weight
 }
 
+func dc6DecodedWeight(asset *dc6.DC6) int {
+	weight := 0
+	for _, direction := range asset.Directions {
+		for _, frame := range direction.Frames {
+			weight += len(frame.FrameData) + len(frame.Terminator) + len(frame.IndexData)
+		}
+	}
+	return max(weight, 1)
+}
+
+func dccDecodedWeight(asset *dcc.DCC) int {
+	weight := 0
+	for _, direction := range asset.Directions() {
+		weight += len(direction.PixelData)
+		for _, frame := range direction.Frames() {
+			weight += len(frame.PixelData)
+		}
+	}
+	return max(weight, 1)
+}
+
 func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) (*assetdecode.BitmapFont, error) {
 	key := table + "\x00" + sheet + "\x00" + palette
 	c.mu.Lock()
@@ -137,7 +195,10 @@ func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) 
 	if cached, ok := c.decoded.RetrieveVersioned("decoded", "font\x00"+key, c.generation); ok {
 		return cached.(*assetdecode.BitmapFont), nil
 	}
+	started := time.Now()
 	font, err := assetdecode.LoadBitmapFont(assets, table, sheet, palette)
+	c.decodeCalls++
+	c.decodeTime += time.Since(started)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +215,10 @@ func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) 
 	if cached, ok := c.decoded.RetrieveVersioned("decoded", "cof\x00"+name, c.generation); ok {
 		return cached.(*cof.COF), nil
 	}
+	started := time.Now()
 	asset, err := assetdecode.COF(assets, name)
+	c.decodeCalls++
+	c.decodeTime += time.Since(started)
 	if err != nil {
 		return nil, err
 	}
@@ -172,11 +236,14 @@ func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC
 	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dcc\x00"+key, c.generation); ok {
 		return cached.(*dcc.DCC), nil
 	}
+	started := time.Now()
 	asset, err := assetdecode.DCC(assets, name, palette)
+	c.decodeCalls++
+	c.decodeTime += time.Since(started)
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "dcc\x00"+key, c.generation, asset, assetWeight(assets, name, palette)); err != nil {
+	if err := c.decoded.InsertVersioned("decoded", "dcc\x00"+key, c.generation, asset, dccDecodedWeight(asset)); err != nil {
 		return nil, err
 	}
 	return asset, nil
@@ -190,11 +257,14 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dc6\x00"+key, c.generation); ok {
 		return cached.(*dc6.DC6), nil
 	}
+	started := time.Now()
 	asset, err := assetdecode.DC6(assets, name, palette)
+	c.decodeCalls++
+	c.decodeTime += time.Since(started)
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "dc6\x00"+key, c.generation, asset, assetWeight(assets, name, palette)); err != nil {
+	if err := c.decoded.InsertVersioned("decoded", "dc6\x00"+key, c.generation, asset, dc6DecodedWeight(asset)); err != nil {
 		return nil, err
 	}
 	return asset, nil
@@ -239,18 +309,31 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 
 func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string) error {
 	textures := make([]rendercore.ResourceID, 0, len(frames))
+	owned := make([]rendercore.ResourceID, 0, len(frames))
+	duplicates := make(map[rgbaFrameDigest]rendercore.ResourceID)
 	cleanup := func() {
-		for _, texture := range textures {
+		for _, texture := range owned {
 			_ = n.composer.DestroyResource(texture)
 		}
 	}
 	for _, frame := range frames {
+		key, shareable := rgbaFrameKey(frame)
+		if shareable {
+			if texture, exists := duplicates[key]; exists {
+				textures = append(textures, texture)
+				continue
+			}
+		}
 		texture, err := n.composer.CreateResource(rendercore.ResourceTexture, frame)
 		if err != nil {
 			cleanup()
 			return err
 		}
 		textures = append(textures, texture)
+		owned = append(owned, texture)
+		if shareable {
+			duplicates[key] = texture
+		}
 	}
 	durations := make([]time.Duration, len(textures))
 	for index := range durations {
@@ -272,7 +355,7 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 		cleanup()
 		return err
 	}
-	n.resource, n.owned = animation, textures
+	n.resource, n.owned = animation, owned
 	if previous != (rendercore.ResourceID{}) {
 		err = n.composer.DestroyResource(previous)
 	}
@@ -280,6 +363,20 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 		err = errors.Join(err, n.composer.DestroyResource(owned))
 	}
 	return err
+}
+
+func rgbaFrameKey(frame image.Image) (rgbaFrameDigest, bool) {
+	rgba, ok := frame.(*image.RGBA)
+	if !ok || rgba.Stride != rgba.Bounds().Dx()*4 {
+		return rgbaFrameDigest{}, false
+	}
+	bounds := rgba.Bounds()
+	size := bounds.Dx() * bounds.Dy() * 4
+	start := rgba.PixOffset(bounds.Min.X, bounds.Min.Y)
+	if size <= 0 || start < 0 || start+size > len(rgba.Pix) {
+		return rgbaFrameDigest{}, false
+	}
+	return rgbaFrameDigest{width: bounds.Dx(), height: bounds.Dy(), pixels: sha256.Sum256(rgba.Pix[start : start+size])}, true
 }
 
 func (n *ownedRenderNode) requireAnimation() error {
@@ -458,8 +555,12 @@ func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
-	const decodedAssetBudget = 256 * 1024 * 1024
-	cache := &renderAssetCache{decoded: cachepkg.New(decodedAssetBudget)}
+	return NewRenderCapability(runtime, composer, assets).Module()
+}
+
+// Module returns the versioned Lua render capability.
+func (r *RenderCapability) Module() Module {
+	runtime, composer, assets, cache := r.runtime, r.composer, r.assets, r.cache
 	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{

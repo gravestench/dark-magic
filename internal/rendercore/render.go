@@ -121,16 +121,25 @@ type resourceSlot struct {
 // Composer accepts thread-safe retained-state mutations and queues backend
 // changes. Drain must be called by the renderer owner thread.
 type Composer struct {
-	mu            sync.Mutex
-	slots         []slot
-	free          []uint32
-	pending       []Change
-	resources     []resourceSlot
-	freeResources []uint32
+	mu               sync.Mutex
+	slots            []slot
+	free             []uint32
+	pending          []Change
+	resources        []resourceSlot
+	freeResources    []uint32
+	textureUploads   uint64
+	textureBytes     uint64
+	resourceCreates  uint64
+	resourceDestroys uint64
 }
 
 // Diagnostics summarizes retained and queued renderer state for leak checks.
-type Diagnostics struct{ ActiveNodes, ActiveResources, Pending, NodeSlots, ResourceSlots int }
+type Diagnostics struct {
+	ActiveNodes, ActiveResources, Pending, NodeSlots, ResourceSlots int
+	RetainedTextureBytes                                            uint64
+	TextureUploads, TextureUploadBytes                              uint64
+	ResourceCreates, ResourceDestroys                               uint64
+}
 
 // Diagnostics returns a consistent composer snapshot without exposing payloads.
 func (c *Composer) Diagnostics() Diagnostics {
@@ -145,8 +154,13 @@ func (c *Composer) Diagnostics() Diagnostics {
 	for _, entry := range c.resources {
 		if entry.resource != nil {
 			result.ActiveResources++
+			result.RetainedTextureBytes += resourceTextureBytes(*entry.resource)
 		}
 	}
+	result.TextureUploads = c.textureUploads
+	result.TextureUploadBytes = c.textureBytes
+	result.ResourceCreates = c.resourceCreates
+	result.ResourceDestroys = c.resourceDestroys
 	return result
 }
 
@@ -172,6 +186,11 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	resource := &Resource{ID: id, Kind: kind, Payload: payload}
 	c.resources[index].resource = resource
 	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
+	c.resourceCreates++
+	if bytes := resourceTextureBytes(*resource); bytes > 0 {
+		c.textureUploads++
+		c.textureBytes += bytes
+	}
 	return id, nil
 }
 
@@ -234,6 +253,8 @@ func (c *Composer) UpdateTexture(id ResourceID, pixels image.Image) error {
 	}
 	resource.Payload = pixels
 	c.pending = append(c.pending, Change{Kind: "resource-update", Resource: *resource, ResourceID: id})
+	c.textureUploads++
+	c.textureBytes += resourceTextureBytes(*resource)
 	return nil
 }
 
@@ -270,7 +291,23 @@ func (c *Composer) DestroyResource(id ResourceID) error {
 	}
 	c.freeResources = append(c.freeResources, id.Slot)
 	c.pending = append(c.pending, Change{Kind: "resource-destroy", ResourceID: id})
+	c.resourceDestroys++
 	return nil
+}
+
+func resourceTextureBytes(resource Resource) uint64 {
+	if resource.Kind != ResourceTexture {
+		return 0
+	}
+	pixels, ok := resource.Payload.(image.Image)
+	if !ok {
+		return 0
+	}
+	bounds := pixels.Bounds()
+	if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+		return 0
+	}
+	return uint64(bounds.Dx()) * uint64(bounds.Dy()) * 4
 }
 
 // Create reserves a node and queues its creation.

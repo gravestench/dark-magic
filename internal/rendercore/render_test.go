@@ -100,6 +100,28 @@ func TestTextureUpdatesRemainCheckedAndOrdered(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsTrackTextureResidencyAndUploadVolume(t *testing.T) {
+	composer := &Composer{}
+	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 4, 3)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.UpdateTexture(texture, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	diagnostics := composer.Diagnostics()
+	if diagnostics.RetainedTextureBytes != 16 || diagnostics.TextureUploads != 2 || diagnostics.TextureUploadBytes != 64 || diagnostics.ResourceCreates != 1 {
+		t.Fatalf("diagnostics after upload = %#v", diagnostics)
+	}
+	if err := composer.DestroyResource(texture); err != nil {
+		t.Fatal(err)
+	}
+	diagnostics = composer.Diagnostics()
+	if diagnostics.RetainedTextureBytes != 0 || diagnostics.ResourceDestroys != 1 {
+		t.Fatalf("diagnostics after destroy = %#v", diagnostics)
+	}
+}
+
 func TestAnimationLoopModeValidation(t *testing.T) {
 	var composer Composer
 	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 1, 1)))

@@ -1,4 +1,4 @@
-.PHONY: test test-race fmt vet shim bik-view
+.PHONY: test test-race fmt vet shim bik-view profile profile-check
 
 test:
 	go test ./...
@@ -17,3 +17,12 @@ shim:
 
 bik-view:
 	go run ./internal/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"
+
+PROFILE_DIR ?= ./profiles/acceptance
+PROFILE_BUDGETS ?= ./docs/profile-budgets.json
+
+profile:
+	go run -tags ffmpeg ./cmd/darkmagic --profile-dir "$(PROFILE_DIR)" --profile-scenes all
+
+profile-check:
+	go run ./internal/tools/profile_check -profile-dir "$(PROFILE_DIR)" -budgets "$(PROFILE_BUDGETS)"
