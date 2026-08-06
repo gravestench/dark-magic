@@ -40,10 +40,10 @@ type StateImporter interface {
 
 // Status reports desired and actual state without exposing the instance.
 type Status struct {
-	ID      string
-	Desired bool
-	State   State
-	Err     error
+	ID      string `json:"id"`
+	Desired bool   `json:"desired"`
+	State   State  `json:"state"`
+	Err     error  `json:"-"`
 }
 
 // Event records an observed state transition. Events are diagnostic; callers
@@ -326,6 +326,18 @@ func (m *Manager) Status(id string) (Status, bool) {
 		return Status{}, false
 	}
 	return Status{ID: id, Desired: entry.desired, State: entry.state, Err: entry.err}, true
+}
+
+// Statuses returns deterministic snapshots for every registered definition.
+func (m *Manager) Statuses() []Status {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := make([]Status, 0, len(m.order))
+	for _, id := range m.order {
+		entry := m.entries[id]
+		result = append(result, Status{ID: id, Desired: entry.desired, State: entry.state, Err: entry.err})
+	}
+	return result
 }
 
 // Subscribe returns a buffered stream of diagnostic state changes and a cancel

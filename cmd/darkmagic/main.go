@@ -20,6 +20,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/navigation"
 	"github.com/gravestench/dark-magic/internal/recordstore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/services/gameScene"
 	"github.com/gravestench/dark-magic/pkg/services/input"
@@ -62,6 +63,7 @@ func run(contentFS *content.FS) error {
 	inputState := &inputcore.Store{}
 	records := recordstore.New(contentFS)
 	locale := localecore.New(contentFS, "English")
+	components := host.NewManager()
 	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		return err
 	}
@@ -88,12 +90,16 @@ func run(contentFS *content.FS) error {
 	}
 
 	appHost := host.New()
-	for _, definition := range []host.Definition{
+	staticDefinitions := []host.Definition{
 		{ID: "engine.renderer", Component: renderer},
 		{ID: "engine.input", DependsOn: []string{"engine.renderer"}, Component: inputService},
 		{ID: "game.world.compatibility", DependsOn: []string{"engine.renderer", "engine.input"}, Component: world},
 		{ID: "engine.lua", DependsOn: []string{"engine.renderer", "engine.input"}, Component: scripts},
-	} {
+	}
+	if address := os.Getenv("DARK_MAGIC_DEBUG_ADDR"); address != "" {
+		staticDefinitions = append(staticDefinitions, host.Definition{ID: "engine.runtime-api", Component: runtimeapi.New(address, components)})
+	}
+	for _, definition := range staticDefinitions {
 		if err := appHost.Register(definition); err != nil {
 			return err
 		}
@@ -130,13 +136,18 @@ func run(contentFS *content.FS) error {
 		return err
 	}
 
-	components := host.NewManager()
-	boot, err := modruntime.LoadDefinition(context.Background(), scripts, contentFS, "boot.lua")
+	definitions, err := modruntime.DiscoverDefinitions(context.Background(), scripts, contentFS)
+	for _, definition := range definitions {
+		if err == nil {
+			err = components.Register(definition.Managed())
+		}
+	}
+	desired, desiredErr := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "darkmagic.boot")
 	if err == nil {
-		err = components.Register(boot.Managed())
+		err = desiredErr
 	}
 	if err == nil {
-		err = components.Enable(context.Background(), boot.ID)
+		err = components.ApplyDesired(context.Background(), desired)
 	}
 	if err == nil {
 		err = scenes.Flush(context.Background())
@@ -153,7 +164,7 @@ func run(contentFS *content.FS) error {
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err = errors.Join(err, scenes.Close(shutdown))
-	err = errors.Join(err, components.DisableCascade(shutdown, boot.ID))
+	err = errors.Join(err, components.ApplyDesired(shutdown, map[string]bool{}))
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true
 	return err

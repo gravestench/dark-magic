@@ -102,7 +102,7 @@ their own legally obtained game data.
 
 ## M8: Runtime component management
 
-- [ ] Register definitions for every available native and scripted component
+- [x] Register definitions for every available native and scripted component
   without necessarily starting each one.
 - [x] Track desired and actual state through `disabled`, `enabling`, `enabled`,
   `disabling`, and `failed` transitions.
@@ -111,7 +111,7 @@ their own legally obtained game data.
 - [x] Validate dependencies and reject dependency cycles at registration time.
 - [x] Reject disabling a dependency that still has active dependents, with an
   explicit opt-in cascading operation.
-- [ ] Drive desired state from startup configuration and a runtime management API.
+- [x] Drive desired state from startup configuration and a runtime management API.
 - [x] Publish typed observational lifecycle events without using events for
   dependency injection or startup coordination.
 - [x] Add deterministic tests for concurrent requests, partial failures, retries,
@@ -155,7 +155,7 @@ their own legally obtained game data.
 
 - [x] Let trusted Lua modules declare stable IDs, dependencies, configuration,
   and lifecycle callbacks using the same runtime definition model as Go code.
-- [ ] Load all available script definitions at startup, then enable only those
+- [x] Load all available script definitions at startup, then enable only those
   selected by configuration or runtime state.
 - [x] Adapt Lua lifecycle callbacks to the host without pretending screens and
   short-lived UI objects are application services.
