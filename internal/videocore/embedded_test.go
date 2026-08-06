@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"image"
 	"io"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -14,6 +15,28 @@ import (
 )
 
 type immediateMediaDecoder struct{}
+
+type holdingMediaDecoder struct {
+	ready chan struct{}
+	once  sync.Once
+}
+
+func (d *holdingMediaDecoder) Decode(ctx context.Context, _ io.ReadSeeker, emit func(Frame) error) error {
+	if err := emit(Frame{Image: image.NewRGBA(image.Rect(0, 0, 640, 480))}); err != nil {
+		return err
+	}
+	d.once.Do(func() { close(d.ready) })
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (*holdingMediaDecoder) DecodeAudio(ctx context.Context, _ io.ReadSeeker, emit func(AudioChunk) error) error {
+	if err := emit(AudioChunk{PCM: []byte{0, 0, 0, 0}, SampleRate: 44100, Channels: 2}); err != nil {
+		return err
+	}
+	<-ctx.Done()
+	return ctx.Err()
+}
 
 func (immediateMediaDecoder) Decode(_ context.Context, _ io.ReadSeeker, emit func(Frame) error) error {
 	return emit(Frame{Image: image.NewRGBA(image.Rect(0, 0, 640, 480))})
@@ -45,6 +68,31 @@ func TestEmbeddedPlaybackCompletesAndReleasesOwnership(t *testing.T) {
 	}
 	if got := mixer.Diagnostics(); got.Active != 0 {
 		t.Fatalf("audio ownership leaked: %#v", got)
+	}
+}
+
+func TestEmbeddedResizeRefitsActivePlayback(t *testing.T) {
+	var composer rendercore.Composer
+	var mixer audiocore.Mixer
+	decoder := &holdingMediaDecoder{ready: make(chan struct{})}
+	backend := &Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
+	playback, err := backend.Play(fstest.MapFS{"intro.bik": &fstest.MapFile{Data: minimalBIK()}}, "intro.bik")
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-decoder.ready
+	if err := backend.Resize(image.Pt(800, 600)); err != nil {
+		t.Fatal(err)
+	}
+	nodes := composer.Snapshot()
+	if len(nodes) != 1 || nodes[0].ScaleX != 1.25 || nodes[0].X != 0 || nodes[0].Y != 0 {
+		t.Fatalf("resized cinematic node = %#v", nodes)
+	}
+	if err := playback.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.Resize(image.Pt(1024, 768)); err != nil {
+		t.Fatalf("completed playback remained registered: %v", err)
 	}
 }
 

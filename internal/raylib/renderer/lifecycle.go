@@ -32,6 +32,9 @@ func (s *Service) Start(context.Context) error {
 		}
 		s.logger.Debug(message)
 	})
+	if s.config.Window.Resizable {
+		rl.SetConfigFlags(rl.FlagWindowResizable)
+	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
 	rl.InitAudioDevice()
 	rl.SetTargetFPS(60)

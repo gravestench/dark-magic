@@ -394,7 +394,9 @@ implementations. The remaining work is tracked explicitly below.
   shutdown cleanup through the existing `dm.video/v1` lifecycle contract. The
   embedded scheduler now uses bounded decode queues, one monotonic media clock,
   late-video dropping, lossless audio ordering, cancellation, and checked
-  presenter/audio teardown; device loss and runtime resize remain.
+  presenter/audio teardown. Resizable windows now publish owner-thread viewport
+  changes and refit every active cinematic without retaining completed
+  playbacks; device loss remains.
 - [x] Prefer the embedded backend in native FFmpeg client builds and retain
   FFplay as the portable developer/diagnostic fallback.
 - [ ] Verify every discovered BIK variant and capture startup-to-title

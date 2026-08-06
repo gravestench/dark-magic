@@ -26,15 +26,22 @@ const (
 // streaming. Both streams use one monotonic media clock; audio is never dropped
 // and video frames that can no longer be displayed on time are discarded.
 type Embedded struct {
+	mu       sync.Mutex
 	Composer *rendercore.Composer
 	Mixer    *audiocore.Mixer
 	Viewport image.Point
 	Video    Decoder
 	Audio    AudioDecoder
+	active   map[*embeddedPlayback]struct{}
 }
 
 func (b *Embedded) Available() bool {
-	return b != nil && b.Composer != nil && b.Mixer != nil && b.Video != nil && b.Audio != nil && b.Viewport.X > 0 && b.Viewport.Y > 0
+	if b == nil {
+		return false
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.Composer != nil && b.Mixer != nil && b.Video != nil && b.Audio != nil && b.Viewport.X > 0 && b.Viewport.Y > 0
 }
 
 func (b *Embedded) Play(source fs.FS, path string) (Playback, error) {
@@ -49,14 +56,47 @@ func (b *Embedded) Play(source fs.FS, path string) (Playback, error) {
 	if err != nil {
 		return nil, err
 	}
-	presenter, err := NewPresenter(b.Composer, image.Pt(int(metadata.Width), int(metadata.Height)), b.Viewport)
+	b.mu.Lock()
+	viewport := b.Viewport
+	b.mu.Unlock()
+	presenter, err := NewPresenter(b.Composer, image.Pt(int(metadata.Width), int(metadata.Height)), viewport)
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &embeddedPlayback{mixer: b.Mixer, presenter: presenter, cancel: cancel, snapshot: Snapshot{State: Playing}, done: make(chan struct{})}
+	b.mu.Lock()
+	if b.active == nil {
+		b.active = make(map[*embeddedPlayback]struct{})
+	}
+	b.active[p] = struct{}{}
+	p.onDone = func() {
+		b.mu.Lock()
+		delete(b.active, p)
+		b.mu.Unlock()
+	}
+	b.mu.Unlock()
 	go p.run(ctx, data, b.Video, b.Audio)
 	return p, nil
+}
+
+// Resize refits every active cinematic to the new render viewport.
+func (b *Embedded) Resize(viewport image.Point) error {
+	if viewport.X <= 0 || viewport.Y <= 0 {
+		return fmt.Errorf("videocore: invalid viewport %v", viewport)
+	}
+	b.mu.Lock()
+	b.Viewport = viewport
+	active := make([]*embeddedPlayback, 0, len(b.active))
+	for playback := range b.active {
+		active = append(active, playback)
+	}
+	b.mu.Unlock()
+	var resizeErr error
+	for _, playback := range active {
+		resizeErr = errors.Join(resizeErr, playback.presenter.Resize(viewport))
+	}
+	return resizeErr
 }
 
 type embeddedPlayback struct {
@@ -68,6 +108,7 @@ type embeddedPlayback struct {
 	snapshot  Snapshot
 	done      chan struct{}
 	stopOnce  sync.Once
+	onDone    func()
 }
 
 func (p *embeddedPlayback) Snapshot() Snapshot {
@@ -91,6 +132,11 @@ func (p *embeddedPlayback) Stop() error {
 
 func (p *embeddedPlayback) run(ctx context.Context, data []byte, video Decoder, audio AudioDecoder) {
 	defer close(p.done)
+	defer func() {
+		if p.onDone != nil {
+			p.onDone()
+		}
+	}()
 	videoFrames := make(chan Frame, decodedVideoQueue)
 	audioChunks := make(chan AudioChunk, decodedAudioQueue)
 	decodeErrors := make(chan error, 2)

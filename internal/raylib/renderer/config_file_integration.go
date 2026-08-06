@@ -13,6 +13,7 @@ type Config struct {
 		Width, Height int
 		Fullscreen    bool
 		Borderless    bool
+		Resizable     bool
 	}
 	Resolution struct {
 		Width, Height int
@@ -37,6 +38,7 @@ func DefaultConfig() Config {
 	cfg.Window.Title = "Dark Magic"
 	cfg.Window.Width = 800
 	cfg.Window.Height = 600
+	cfg.Window.Resizable = true
 	cfg.Resolution.Width = 800
 	cfg.Resolution.Height = 600
 	cfg.Cache.BudgetMB = 100

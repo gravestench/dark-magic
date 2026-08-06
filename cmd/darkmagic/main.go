@@ -95,6 +95,13 @@ func run(contentFS *content.FS) error {
 	if !videoBackend.Available() {
 		videoBackend = videocore.FFplay{}
 	}
+	if resizable, ok := videoBackend.(interface{ Resize(image.Point) error }); ok {
+		renderer.SubscribeViewport(func(width, height int) {
+			if err := resizable.Resize(image.Pt(width, height)); err != nil {
+				slog.Error("resizing cinematic viewport", "error", err)
+			}
+		})
+	}
 	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videoBackend, contentFS)); err != nil {
 		return err
 	}
