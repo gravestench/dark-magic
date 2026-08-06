@@ -23,6 +23,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 		CursorY: float64(y),
 		Text:    string(text),
 		Actions: map[string]inputstate.ActionState{
+			"shell_toggle":    actionState(s.KeyState(rl.KeyGrave)),
 			"pointer_primary": pointer,
 			"confirm":         confirm,
 			"cancel":          cancel,
@@ -38,6 +39,12 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"left":            actionState(s.KeyState(rl.KeyLeft)),
 			"right":           actionState(s.KeyState(rl.KeyRight)),
 			"backspace":       actionState(s.KeyState(rl.KeyBackspace)),
+			"delete":          actionState(s.KeyState(rl.KeyDelete)),
+			"tab":             actionState(s.KeyState(rl.KeyTab)),
+			"shift": mergeActionStates(
+				actionState(s.ModifierKeyState(rl.KeyLeftShift)),
+				actionState(s.ModifierKeyState(rl.KeyRightShift)),
+			),
 		},
 	}
 }

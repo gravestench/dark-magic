@@ -33,6 +33,12 @@ func (s *Service) KeyboardModifierState() map[int32]InputState {
 	return cloneStates(s.keyModStates)
 }
 
+func (s *Service) ModifierKeyState(key int32) InputState {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+	return s.keyModStates[key]
+}
+
 func (s *Service) MouseCursorState() (x, y int) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()

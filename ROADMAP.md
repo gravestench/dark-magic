@@ -520,7 +520,9 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Add a shared shell with command history, multiline editing, source-aware
   errors, structured value inspection, and log output. The renderer-independent
   session core, persistent scoped Lua evaluator, and rich Charmbracelet v2
-  terminal adapter are complete; the Raylib presentation and log stream remain.
+  terminal adapter are complete. The Raylib client now provides a grave-key
+  overlay using the same session, suppresses scene input while focused, and
+  remains legible above palette quantization; the log stream remains.
 - [ ] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

@@ -208,6 +208,7 @@ func (s *Service) renderQuantizedFrame() error {
 	destination := rl.NewRectangle(0, 0, float32(rl.GetRenderWidth()), float32(rl.GetRenderHeight()))
 	rl.DrawTexturePro(quantizer.target.Texture, source, destination, rl.Vector2{}, 0, rl.White)
 	rl.EndShaderMode()
+	s.runOverlays()
 	rl.EndDrawing()
 	return nil
 }

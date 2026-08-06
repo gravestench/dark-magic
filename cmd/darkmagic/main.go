@@ -39,6 +39,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
+	"github.com/gravestench/dark-magic/internal/shell"
+	"github.com/gravestench/dark-magic/internal/shell/luashell"
+	raylibShell "github.com/gravestench/dark-magic/internal/shell/raylib"
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
@@ -277,12 +280,34 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 			stopHost(appHost)
 		}
 	}()
+	shellEvaluator, err := luashell.New(scripts)
+	if err != nil {
+		return err
+	}
+	shellSession, err := shell.NewSession("client-local", "client", shell.Policy{
+		Name:         "local-developer",
+		Capabilities: scripts.ModuleNames(),
+		Mutable:      true,
+	}, shellEvaluator)
+	if err != nil {
+		return err
+	}
+	defer shellSession.Close()
+	console := raylibShell.New(shellSession)
 
 	lastFrame := time.Now()
 	stopSceneFrames := renderer.SubscribeFrame(func() {
 		frameContext := scenes.FrameContext(context.Background())
 		pprof.SetGoroutineLabels(frameContext)
-		inputState.Publish(inputService.Snapshot())
+		inputFrame := inputService.Snapshot()
+		if console.Handle(runContext, inputFrame) {
+			inputFrame = inputstate.Frame{
+				Actions: make(map[string]inputstate.ActionState),
+				CursorX: inputFrame.CursorX,
+				CursorY: inputFrame.CursorY,
+			}
+		}
+		inputState.Publish(inputFrame)
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
@@ -306,6 +331,10 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := renderer.AttachComposer(composer); err != nil {
 		return err
 	}
+	stopShellOverlay := renderer.SubscribeOverlay(func() {
+		width, height := renderer.WindowSize()
+		console.Draw(width, height)
+	})
 
 	definitions, err := modruntime.DiscoverDefinitions(context.Background(), scripts, contentFS)
 	for _, definition := range definitions {
@@ -371,10 +400,12 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		err = errors.Join(err, captureSession.Close())
 	}
 	stopSceneFrames()
+	stopShellOverlay()
 
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err = errors.Join(err, scenes.Close(shutdown))
+	err = errors.Join(err, shellSession.Close())
 	err = errors.Join(err, components.ApplyDesired(shutdown, map[string]bool{}))
 	err = errors.Join(err, appHost.Stop(shutdown))
 	stopped = true

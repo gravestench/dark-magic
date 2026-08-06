@@ -28,6 +28,9 @@ type Service struct {
 	postFrameMux       sync.Mutex
 	postFrameCallbacks []func()
 	postFrameSnapshot  atomic.Value
+	overlayMux         sync.Mutex
+	overlayCallbacks   []func()
+	overlaySnapshot    atomic.Value
 
 	compositionMu      sync.Mutex
 	composition        *render.Composer
@@ -37,6 +40,36 @@ type Service struct {
 	audioBackend *raylibAudioBackend
 
 	paletteQuantizer *paletteQuantizer
+}
+
+// SubscribeOverlay registers owner-thread drawing after scene composition and
+// display quantization but before the back buffer is presented.
+func (s *Service) SubscribeOverlay(callback func()) func() {
+	if callback == nil {
+		return func() {}
+	}
+	var active atomic.Bool
+	active.Store(true)
+	wrapper := func() {
+		if active.Load() {
+			callback()
+		}
+	}
+	s.overlayMux.Lock()
+	s.overlayCallbacks = append(s.overlayCallbacks, wrapper)
+	s.overlaySnapshot.Store(append([]func(){}, s.overlayCallbacks...))
+	s.overlayMux.Unlock()
+	return func() { active.Store(false) }
+}
+
+func (s *Service) runOverlays() {
+	snapshot := s.overlaySnapshot.Load()
+	if snapshot == nil {
+		return
+	}
+	for _, callback := range snapshot.([]func()) {
+		callback()
+	}
 }
 
 // SubscribePostFrame registers owner-thread work after the fully composed frame

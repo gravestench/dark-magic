@@ -64,6 +64,10 @@ development sessions may enable mutation/debug capabilities; realm-connected
 clients cannot use the console to bypass authoritative simulation or obtain
 server-only capabilities.
 
+Press the grave/backtick key (`` ` ``) to open or close the in-game shell.
+Enter evaluates the current Lua source, Shift+Enter inserts a newline, Tab
+completes names, and the arrow keys browse command history.
+
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
 fellow adventurers and follow the development of Dark Magic on our and 

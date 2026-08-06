@@ -36,6 +36,10 @@ func (s *Service) Start(context.Context) error {
 		rl.SetConfigFlags(rl.FlagWindowResizable)
 	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
+	// Escape belongs to scene and shell focus routing. WindowShouldClose still
+	// observes the native close control after Raylib's default Escape binding is
+	// disabled.
+	rl.SetExitKey(rl.KeyNull)
 	if err := s.startPaletteQuantizer(); err != nil {
 		rl.CloseWindow()
 		return err
@@ -72,6 +76,7 @@ func (s *Service) Run(ctx context.Context) error {
 		s.update()
 		s.render()
 		rl.EndMode2D()
+		s.runOverlays()
 		rl.EndDrawing()
 		s.runPostFrame()
 	}
