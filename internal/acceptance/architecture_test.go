@@ -23,6 +23,9 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 		"github.com/gravestench/dark-magic/pkg/cache":                 {},
 		"github.com/gravestench/dark-magic/pkg/easing":                {},
 		"github.com/gravestench/dark-magic/pkg/scene":                 {},
+		"github.com/gravestench/dark-magic/pkg/assetdecode":           {},
+		"github.com/gravestench/dark-magic/pkg/assetcatalog":          {},
+		"github.com/gravestench/dark-magic/pkg/assetinspect":          {},
 		"github.com/gravestench/dark-magic/internal/service_template": {},
 	}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {

@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"

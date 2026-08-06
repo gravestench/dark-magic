@@ -16,9 +16,9 @@ import (
 	"time"
 
 	cof "github.com/gravestench/cof"
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	cachepkg "github.com/gravestench/dark-magic/internal/cache"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	dcc "github.com/gravestench/dcc/pkg"
 	lua "github.com/yuin/gopher-lua"

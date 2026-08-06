@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
 )
 
 // This optional test protects the indexed-font/PL2 boundary with legally

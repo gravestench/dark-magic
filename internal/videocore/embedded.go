@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/audiocore"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
 )
 
 const (

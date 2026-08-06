@@ -72,9 +72,9 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/acceptance` | Cross-system acceptance fixtures | tests | Test | Keep |
 | `internal/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
 | `internal/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
-| `pkg/assetdecode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Move to `internal/assets/decode` |
-| `pkg/assetcatalog` | Presentation asset research/catalog output | tools | Stateless | Move to `internal/assets/catalog` |
-| `pkg/assetinspect` | Asset metadata and preview helpers | tools, world | Stateless | Move to `internal/assets/inspect` |
+| `internal/assets/decode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Keep internal |
+| `internal/assets/catalog` | Presentation asset research/catalog output | tools | Stateless | Keep internal |
+| `internal/assets/inspect` | Asset metadata and preview helpers | tools, world | Stateless | Keep internal |
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
 | `pkg/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Move to `internal/game/loot` |

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gravestench/dark-magic/internal/assets/inspect"
 	"github.com/gravestench/dark-magic/internal/content"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/pkg/assetinspect"
 )
 
 func main() {

@@ -708,7 +708,10 @@ implementations. The remaining work is tracked explicitly below.
   without discarding the historical implementation. Renderer-independent world
   scene state is now owned by `internal/presentation/scene`; command, Lua,
   acceptance, test-app, and Raylib callers migrated together, and the retired
-  public import path is guarded.
+  public import path is guarded. Engine-specific decoding, cataloging, and
+  inspection now form one `internal/assets` subsystem; runtime, presentation,
+  content, test-app, and developer-tool callers migrated atomically, with guards
+  for all three retired public paths.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

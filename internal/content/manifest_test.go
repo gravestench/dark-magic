@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gravestench/dark-magic/pkg/assetcatalog"
+	"github.com/gravestench/dark-magic/internal/assets/catalog"
 )
 
 // TestShimPresentationManifestContract protects the architectural boundary

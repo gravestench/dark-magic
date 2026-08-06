@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 )
 
 func TestVerifyReportsFoundAndMissingAssetsWithoutStopping(t *testing.T) {

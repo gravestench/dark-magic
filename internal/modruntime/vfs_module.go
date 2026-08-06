@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	lua "github.com/yuin/gopher-lua"
 )
 

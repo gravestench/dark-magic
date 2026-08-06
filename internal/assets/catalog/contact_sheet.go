@@ -9,7 +9,7 @@ import (
 	"image/png"
 	"math"
 
-	"github.com/gravestench/dark-magic/pkg/assetdecode"
+	"github.com/gravestench/dark-magic/internal/assets/decode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
