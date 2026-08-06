@@ -722,7 +722,12 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical
-  work have been audited.
+  work have been audited. Generic table storage and the typed catalog have been
+  audited as complementary layers and consolidated under `internal/game/data`:
+  `store` owns layered TSV bytes and immutable generic rows, while `catalog` owns
+  the one atomic typed snapshot and indexes. The client continues to construct a
+  single shared store for typed records, Lua, and audio rather than duplicating
+  caches or source resolution.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure

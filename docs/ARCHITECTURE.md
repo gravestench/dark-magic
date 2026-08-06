@@ -50,8 +50,8 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `cmd/darkmagic` | Client composition root | executable | Process | Keep thin |
 | `internal/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
 | `internal/content` | Layered directory/MPQ/ZIP/shim VFS | command, reload, Lua, tools | Application | Keep |
-| `internal/recordstore` | Generic immutable TSV generations | game data, audio, Lua | Application | Keep |
-| `internal/gamedata` | Typed Diablo data snapshots and indexes | command | Application | Keep; split by domain |
+| `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
+| `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
 | `internal/rendercore` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep |
 | `internal/audiocore` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
 | `internal/videocore` | Cinematic decode/playback orchestration | command, Lua | Scene | Keep |

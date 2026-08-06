@@ -6,7 +6,7 @@ import (
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/game/data/model"
-	"github.com/gravestench/dark-magic/internal/recordstore"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
 func TestLoadDecodesSurvivingTypedSchema(t *testing.T) {

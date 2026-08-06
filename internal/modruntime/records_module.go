@@ -1,7 +1,7 @@
 package modruntime
 
 import (
-	"github.com/gravestench/dark-magic/internal/recordstore"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 	lua "github.com/yuin/gopher-lua"
 )
 

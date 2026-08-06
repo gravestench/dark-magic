@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gravestench/dark-magic/internal/recordstore"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
 const soundsTable = "data/global/excel/Sounds.txt"
