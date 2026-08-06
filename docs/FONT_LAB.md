@@ -8,7 +8,7 @@ font preview implementation.
 Launch it directly with a directory containing supported game archives:
 
 ```sh
-MPQ_DIRECTORY=/path/to/mpqs go run -tags ffmpeg ./cmd/darkmagic --start-scene font_lab
+MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run -tags ffmpeg ./cmd/darkmagic --start-scene font_lab
 ```
 
 Use Right, Down, Enter, or the primary mouse button to advance. Use Left or Up

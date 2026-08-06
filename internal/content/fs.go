@@ -36,30 +36,45 @@ func FromEnvironment() (*FS, error) {
 		layers = append(layers, Layer{Name: "user-mods", FS: Directory(mods)})
 	}
 	layers = append(layers, Layer{Name: "darkmagic", FS: Shim()})
-	if directory := os.Getenv("MPQ_DIRECTORY"); directory != "" {
-		expanded, err := darkpaths.ExpandHost(directory)
-		if err != nil {
-			return nil, fmt.Errorf("content: expand MPQ directory %q: %w", directory, err)
-		}
-		directory = expanded
-		priority := []string{
-			"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
-			"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
-			"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
-		}
-		for _, name := range priority {
-			fileName := filepath.Join(directory, name)
-			if _, err := os.Stat(fileName); err != nil {
-				if os.IsNotExist(err) {
-					continue
-				}
-				return nil, fmt.Errorf("content: inspect archive %q: %w", fileName, err)
+	if configured := os.Getenv("MPQ_DIRECTORY"); configured != "" {
+		for index, entry := range strings.Split(configured, ",") {
+			directory := strings.TrimSpace(entry)
+			if directory == "" {
+				return nil, fmt.Errorf("content: MPQ_DIRECTORY entry %d is empty", index+1)
 			}
-			archive, err := MPQ(fileName)
+			expanded, err := darkpaths.ExpandHost(directory)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("content: expand MPQ directory %q: %w", directory, err)
 			}
-			layers = append(layers, Layer{Name: name, FS: archive})
+			directory = expanded
+			info, err := os.Stat(directory)
+			if err != nil {
+				return nil, fmt.Errorf("content: inspect MPQ directory %q: %w", directory, err)
+			}
+			if !info.IsDir() {
+				return nil, fmt.Errorf("content: MPQ path %q is not a directory", directory)
+			}
+			prefix := fmt.Sprintf("mpq-%d", index)
+			layers = append(layers, Layer{Name: prefix + "-directory", FS: Directory(directory)})
+			priority := []string{
+				"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
+				"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
+				"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
+			}
+			for _, name := range priority {
+				fileName := filepath.Join(directory, name)
+				if _, err := os.Stat(fileName); err != nil {
+					if os.IsNotExist(err) {
+						continue
+					}
+					return nil, fmt.Errorf("content: inspect archive %q: %w", fileName, err)
+				}
+				archive, err := MPQ(fileName)
+				if err != nil {
+					return nil, err
+				}
+				layers = append(layers, Layer{Name: prefix + "-" + name, FS: archive})
+			}
 		}
 	}
 	return New(layers...)

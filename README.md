@@ -299,11 +299,13 @@ go run ./internal/dev/testapps/scene_demo
 ```
 
 The main engine also starts the integrated scene service. Set `MPQ_DIRECTORY`
-to the directory containing `d2data.mpq` to render its configured DS1/DT1 map;
-without it, the service uses a diagnostic grid:
+to one or more comma-separated content directories. Each directory is mounted
+for ordinary filesystem assets and scanned for the supported Diablo MPQs. The
+listed paths are ordered from highest to lowest priority and support
+cross-platform aliases:
 
 ```shell
-MPQ_DIRECTORY=/path/to/mpqs go run ./cmd/darkmagic
+MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run ./cmd/darkmagic
 ```
 
 To explore a real DS1 layout from an MPQ:

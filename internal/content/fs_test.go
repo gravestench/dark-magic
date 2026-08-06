@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -201,5 +202,45 @@ func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
 	data, err := fs.ReadFile(contentFS, "boot.lua")
 	if err != nil || string(data) != "mod boot" {
 		t.Fatalf("boot = %q, %v", data, err)
+	}
+}
+
+func TestFromEnvironmentMountsMultipleMPQDirectoriesInOrder(t *testing.T) {
+	first, second := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(first, "shared.gpl"), []byte("first"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, "shared.gpl"), []byte("second"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, "second-only.gpl"), []byte("mounted"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", "")
+	t.Setenv("DARK_MAGIC_FIRST_CONTENT", first)
+	t.Setenv("DARK_MAGIC_SECOND_CONTENT", second)
+	t.Setenv("MPQ_DIRECTORY", "$DARK_MAGIC_FIRST_CONTENT, $DARK_MAGIC_SECOND_CONTENT")
+	contentFS, err := FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"darkmagic", "mpq-0-directory", "mpq-1-directory"}) {
+		t.Fatalf("layers = %v", got)
+	}
+	shared, err := fs.ReadFile(contentFS, "shared.gpl")
+	if err != nil || string(shared) != "first" {
+		t.Fatalf("shared = %q, %v", shared, err)
+	}
+	secondOnly, err := fs.ReadFile(contentFS, "second-only.gpl")
+	if err != nil || string(secondOnly) != "mounted" {
+		t.Fatalf("second-only = %q, %v", secondOnly, err)
+	}
+}
+
+func TestFromEnvironmentRejectsEmptyMPQDirectoryEntry(t *testing.T) {
+	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", "")
+	t.Setenv("MPQ_DIRECTORY", t.TempDir()+",")
+	if _, err := FromEnvironment(); err == nil || !strings.Contains(err.Error(), "entry 2 is empty") {
+		t.Fatalf("error = %v", err)
 	}
 }
