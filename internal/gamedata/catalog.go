@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/gravestench/dark-magic/internal/game/data/model"
 	"github.com/gravestench/dark-magic/internal/recordstore"
-	"github.com/gravestench/dark-magic/pkg/models"
 )
 
 // Snapshot is an immutable, internally consistent view of admitted typed game

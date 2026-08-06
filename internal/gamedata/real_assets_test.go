@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/game/data/model"
 	"github.com/gravestench/dark-magic/internal/recordstore"
-	"github.com/gravestench/dark-magic/pkg/models"
 )
 
 func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {

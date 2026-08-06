@@ -713,7 +713,10 @@ implementations. The remaining work is tracked explicitly below.
   content, test-app, and developer-tool callers migrated atomically, with guards
   for all three retired public paths. Diablo loot generation and TSV adaptation
   now live under `internal/game/loot`; Lua and diagnostic applications migrated
-  with the package, and its former public path is rejected.
+  with the package, and its former public path is rejected. The complete typed
+  Diablo TSV schema and legacy lookup corpus is preserved under
+  `internal/game/data/model`; the game-data catalog and real-asset validation
+  tests now consume that internal authority, and the old public path is guarded.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

@@ -78,7 +78,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
 | `internal/game/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Keep internal |
-| `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |
+| `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
 | `internal/presentation/scene` | Headless scene state | command, Lua, world | Scene | Keep internal; merge with navigation when lifecycles converge |
