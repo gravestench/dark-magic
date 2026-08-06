@@ -226,6 +226,11 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
+	assertStack(t, navigator, "game_loading")
+	input.Publish(inputcore.Frame{})
+	if err := scenes.Update(ctx, 2*time.Second); err != nil {
+		t.Fatal(err)
+	}
 	assertStack(t, navigator, "game_world")
 	assertNodes(t, &composer, 3)
 	if selected, ok := saves.Selected(); !ok || selected.ID != "hero" {

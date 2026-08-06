@@ -19,7 +19,7 @@ return {
             scenes.replace("main_menu")
         elseif input.pressed("confirm") and #self.characters > 0 then
             assert(saves.select(self.characters[1].id))
-            scenes.replace("game_world")
+            scenes.replace("game_loading")
         end
     end,
 }

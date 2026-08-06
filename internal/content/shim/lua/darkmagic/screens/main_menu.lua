@@ -38,11 +38,6 @@ return {
         self:configure_controls()
         self:configure_labels()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
-        if audio.exists(manifest.sounds.title_music) then
-            self.music = audio.play(manifest.sounds.title_music, {
-                bus = "music", loop = true, stream = true, group = "frontend_music"
-            })
-        end
     end,
 
     configure_labels = function(self)

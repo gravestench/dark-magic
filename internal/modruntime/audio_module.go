@@ -20,6 +20,25 @@ type ownedSound struct {
 	err   error
 }
 
+func luaPlayOptions(state *lua.LState, index int) audiocore.PlayOptions {
+	options := audiocore.PlayOptions{Bus: "sfx", Volume: 1}
+	if table := state.OptTable(index, nil); table != nil {
+		for name, apply := range map[string]func(lua.LValue){
+			"bus":    func(value lua.LValue) { options.Bus = lua.LVAsString(value) },
+			"volume": func(value lua.LValue) { options.Volume = float32(lua.LVAsNumber(value)) },
+			"pan":    func(value lua.LValue) { options.Pan = float32(lua.LVAsNumber(value)) },
+			"loop":   func(value lua.LValue) { options.Loop = lua.LVAsBool(value) },
+			"group":  func(value lua.LValue) { options.Group = lua.LVAsString(value) },
+			"stream": func(value lua.LValue) { options.Stream = lua.LVAsBool(value) },
+		} {
+			if value := table.RawGetString(name); value != lua.LNil {
+				apply(value)
+			}
+		}
+	}
+	return options
+}
+
 func (s *ownedSound) release() error {
 	s.once.Do(func() { s.err = s.mixer.Stop(s.id) })
 	return s.err
@@ -63,27 +82,7 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 					return 0
 				}
 				format := strings.ToLower(filepath.Ext(fileName))
-				options := audiocore.PlayOptions{Bus: "sfx", Volume: 1}
-				if table := state.OptTable(2, nil); table != nil {
-					if value := table.RawGetString("bus"); value != lua.LNil {
-						options.Bus = lua.LVAsString(value)
-					}
-					if value := table.RawGetString("volume"); value != lua.LNil {
-						options.Volume = float32(lua.LVAsNumber(value))
-					}
-					if value := table.RawGetString("pan"); value != lua.LNil {
-						options.Pan = float32(lua.LVAsNumber(value))
-					}
-					if value := table.RawGetString("loop"); value != lua.LNil {
-						options.Loop = lua.LVAsBool(value)
-					}
-					if value := table.RawGetString("group"); value != lua.LNil {
-						options.Group = lua.LVAsString(value)
-					}
-					if value := table.RawGetString("stream"); value != lua.LNil {
-						options.Stream = lua.LVAsBool(value)
-					}
-				}
+				options := luaPlayOptions(state, 2)
 				id, err := mixer.PlayWithOptions(format, data, options)
 				if err != nil {
 					state.RaiseError("playing sound %q: %v", fileName, err)
@@ -100,6 +99,27 @@ func AudioModule(runtime *Runtime, mixer *audiocore.Mixer, source fs.FS) Module 
 				state.SetMetatable(userData, state.GetTypeMetatable(audioSoundType))
 				state.Push(userData)
 				return 1
+			},
+			"play_persistent": func(state *lua.LState) int {
+				fileName := state.CheckString(1)
+				options := luaPlayOptions(state, 2)
+				if options.Group == "" {
+					state.ArgError(2, "persistent audio requires a group")
+					return 0
+				}
+				data, err := fs.ReadFile(source, fileName)
+				if err != nil {
+					state.RaiseError("reading persistent sound %q: %v", fileName, err)
+					return 0
+				}
+				if err := mixer.StopGroup(options.Group); err != nil {
+					state.RaiseError("replacing persistent audio group %q: %v", options.Group, err)
+					return 0
+				}
+				if _, err := mixer.PlayWithOptions(strings.ToLower(filepath.Ext(fileName)), data, options); err != nil {
+					state.RaiseError("playing persistent sound %q: %v", fileName, err)
+				}
+				return 0
 			},
 			"set_bus_volume": func(state *lua.LState) int {
 				if err := mixer.SetBusVolume(state.CheckString(1), float32(state.CheckNumber(2))); err != nil {

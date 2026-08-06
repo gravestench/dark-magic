@@ -54,6 +54,60 @@ return { id = "sound", start = function(self) audio.set_bus_volume("ui", .8); se
 	}
 }
 
+func TestPersistentAudioOutlivesCallingComponent(t *testing.T) {
+	var mixer audiocore.Mixer
+	source := fstest.MapFS{
+		"music.wav": &fstest.MapFile{Data: []byte("music")},
+		"system.lua": &fstest.MapFile{Data: []byte(`
+local audio = require("dm.audio/v1")
+return { id = "music", start = function(self)
+  audio.play_persistent("music.wav", {bus="music", loop=true, stream=true, group="frontend"})
+end }
+`)},
+	}
+	runtime := New()
+	if err := runtime.RegisterModule(AudioModule(runtime, &mixer, source)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	definition, err := LoadDefinition(context.Background(), runtime, source, "system.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := host.NewManager()
+	if err := manager.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Enable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingAudioBackend{}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Disable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.commands) != 1 || backend.commands[0].Kind != "play" || !backend.commands[0].Loop || !backend.commands[0].Stream {
+		t.Fatalf("persistent commands = %#v", backend.commands)
+	}
+	if err := mixer.StopGroup("frontend"); err != nil {
+		t.Fatal(err)
+	}
+	if err := mixer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.commands) != 2 || backend.commands[1].Kind != "stop" {
+		t.Fatalf("stopped commands = %#v", backend.commands)
+	}
+}
+
 type recordingAudioBackend struct{ commands []audiocore.Command }
 
 func (b *recordingAudioBackend) Apply(command audiocore.Command) error {

@@ -56,7 +56,7 @@ return {
                             local id, err = saves.create_named(name, definition.class, self.expansion, self.hardcore)
                             if not id then self.error = err return false end
                             assert(saves.select(id))
-                            scenes.replace("game_world")
+                            scenes.replace("game_loading")
                             return true
                         end)
                 end,
