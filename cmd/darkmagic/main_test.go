@@ -1,6 +1,31 @@
 package main
 
-import "testing"
+import (
+	"log/slog"
+	"testing"
+)
+
+func TestParseLogLevel(t *testing.T) {
+	t.Parallel()
+
+	for input, want := range map[string]slog.Level{
+		"debug":   slog.LevelDebug,
+		"INFO":    slog.LevelInfo,
+		" warn ":  slog.LevelWarn,
+		"warning": slog.LevelWarn,
+		"error":   slog.LevelError,
+	} {
+		got, err := parseLogLevel(input)
+		if err != nil {
+			t.Errorf("parseLogLevel(%q): %v", input, err)
+		} else if got != want {
+			t.Errorf("parseLogLevel(%q) = %v, want %v", input, got, want)
+		}
+	}
+	if _, err := parseLogLevel("verbose"); err == nil {
+		t.Fatal("parseLogLevel accepted an unsupported level")
+	}
+}
 
 func TestDevelopmentCharacters(t *testing.T) {
 	t.Parallel()

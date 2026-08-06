@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,7 +45,7 @@ func main() {
 	// Cocoa and GLFW must be initialized and pumped from the process's original
 	// main thread. Keep the entire renderer lifecycle on that thread.
 	runtime.LockOSThread()
-	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
+	logLevelFlag := flag.String("log-level", environmentDefault("DARK_MAGIC_LOG_LEVEL", "info"), "log verbosity: debug, info, warn, or error")
 	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
 	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
 	captureDirectoryFlag := flag.String("capture-dir", os.Getenv("DARK_MAGIC_CAPTURE_DIR"), "write local scene screenshots and report.json to this directory")
@@ -53,6 +54,12 @@ func main() {
 	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
 	flag.Parse()
+	logLevel, err := parseLogLevel(*logLevelFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: logLevel})))
 	var profile *profiling.Session
 	if *profileDirectory != "" {
 		var err error
@@ -83,6 +90,28 @@ func main() {
 	}
 	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters); err != nil {
 		slog.Error("running Dark Magic", "error", err)
+	}
+}
+
+func environmentDefault(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func parseLogLevel(value string) (slog.Level, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info", "":
+		return slog.LevelInfo, nil
+	case "warn", "warning":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, fmt.Errorf("invalid log level %q: expected debug, info, warn, or error", value)
 	}
 }
 

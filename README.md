@@ -100,6 +100,14 @@ make test
 make test-race
 ```
 
+Client logging defaults to `info`. Select `debug`, `info`, `warn`, or `error`
+with either the command-line flag or its environment equivalent:
+
+```shell
+go run -tags ffmpeg ./cmd/darkmagic --log-level debug
+DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/darkmagic
+```
+
 Capture CPU activity for the full client run and a live-heap snapshot at clean
 shutdown with:
 
