@@ -392,17 +392,41 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Implement record-driven music, ambience, speech, monster, object, item, UI,
   and combat sound selection with deterministic event identity where required.
 
-## M22: Persistence, networking, and release acceptance
+## M22: Client and game-session networking
 
 - [ ] Define deterministic simulation snapshots, commands, event logs, RNG
   streams, checksums, replay files, and desync diagnostics.
-- [ ] Implement local play, listen/dedicated servers, discovery/direct connect,
-  authentication boundaries, snapshot transfer, command replication, rollback or
-  correction, and reconnect.
+- [ ] Add a first-class `cmd` client for offline single-player, self-hosted
+  listen/dedicated multiplayer, and realm-connected games.
+- [ ] Run one authoritative deterministic game-session implementation in-process,
+  as a listen server, as a standalone self-hosted server, or under a realm.
+- [ ] Implement discovery/direct connect, authentication boundaries, snapshot
+  transfer, command replication, rollback or correction, and reconnect.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
+
+## M23: Realm, mod delivery, and trusted persistence
+
+- [ ] Add a first-class `cmd` realm providing accounts, authentication, game
+  creation/discovery, session assignment, and operational administration.
+- [ ] Define signed/versioned mod manifests containing dependency order, engine
+  and capability compatibility, payload identities, hashes, sizes, and trust
+  policy.
+- [ ] Let clients negotiate, fetch, verify, cache, and activate redistributable
+  realm mod payloads before joining; never serve Blizzard-owned game data.
+- [ ] Persist realm-owned characters, items, progression, social/account records,
+  and session handoff state through transactional versioned storage contracts.
+- [ ] Ensure authoritative sessions validate commands and commit character state;
+  connected clients must never write trusted realm characters directly.
+- [ ] Support realm-managed game lifecycle, capacity/health reporting, graceful
+  draining, crash recovery, reconnect tokens, and auditable persistence events.
+- [ ] Add compatibility, tampering, interrupted-download, duplicate-session,
+  migration, failover, and recovery acceptance tests.
+
+## M24: Packaging and release acceptance
+
 - [ ] Package the engine and shim without Blizzard assets and verify first-run
   installation discovery, configuration, diagnostics, mod isolation, and update
   behavior.

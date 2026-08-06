@@ -19,7 +19,9 @@ authentic and faithful journey into the dark and dangerous world of Sanctuary.
 Together, we can bring back the magic of this iconic game and shape its future.
 
 ## Directory Structure
-* `cmd` - contains a directory for each binary that can be compiled. some of what is here may be migrated to a `tools` directory in the future. 
+* `cmd` - contains product binaries and developer tools. The product targets are
+  the Dark Magic client and realm; asset inspection, cataloging, packing, and
+  diagnostic programs may move to `tools` as those boundaries settle.
 * `pkg/models` - contains all the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
 * `internal` - application host, layered content, native adapters, runtime capabilities, navigation, and engine-owned implementations.
 
@@ -30,6 +32,26 @@ a dynamic manager for native and Lua-defined components, a layered content VFS,
 and versioned Lua capabilities. The Raylib backend remains isolated beneath
 `internal/raylib`; scripts author scenes and overlays through retained rendering,
 input, audio, records, locale, save, simulation, and navigation capabilities.
+
+### Product binaries
+
+Dark Magic targets two primary executables under `cmd`:
+
+* **Client** — runs presentation and input for offline single-player,
+  self-hosted multiplayer, and realm-connected games. Offline play may host the
+  same authoritative simulation in-process, but client code must not become the
+  authority for a remote realm character.
+* **Realm** — provides the Battle.net-like control plane: authentication,
+  accounts, trusted character persistence, game creation and discovery, and
+  assignment to authoritative game sessions. It publishes the exact mod
+  manifest required by a game and serves or identifies the corresponding
+  redistributable payloads. User-supplied Diablo II data is never distributed.
+
+The deterministic game-session server is shared infrastructure. It can run
+in-process for offline play, as a client-created listen server, as a standalone
+self-hosted server, or under realm orchestration. These modes must share
+simulation commands, snapshots, validation, and persistence contracts rather
+than grow separate gameplay implementations.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
