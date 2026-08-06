@@ -76,7 +76,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `pkg/assetdecode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Move to `internal/assets/decode` |
 | `pkg/assetcatalog` | Presentation asset research/catalog output | tools | Stateless | Move to `internal/assets/catalog` |
 | `pkg/assetinspect` | Asset metadata and preview helpers | tools, world | Stateless | Move to `internal/assets/inspect` |
-| `pkg/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Move to `internal/cache` |
+| `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `pkg/easing` | Tween easing functions | no current importer | Stateless | Audit, then internal/remove |
 | `pkg/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Move to `internal/game/loot` |
 | `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |

@@ -1,7 +1,7 @@
 package raylibRenderer
 
 import (
-	"github.com/gravestench/dark-magic/pkg/cache"
+	"github.com/gravestench/dark-magic/internal/cache"
 )
 
 func (s *Service) CacheBudget() int {

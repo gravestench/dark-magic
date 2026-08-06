@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/gravestench/dark-magic/pkg/cache"
+	"github.com/gravestench/dark-magic/internal/cache"
 )
 
 type Config struct {

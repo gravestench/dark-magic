@@ -20,6 +20,7 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	forbidden := map[string]struct{}{
 		"github.com/gravestench/dark-magic/pkg/paths":     {},
 		"github.com/gravestench/dark-magic/pkg/prettylog": {},
+		"github.com/gravestench/dark-magic/pkg/cache":     {},
 	}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {

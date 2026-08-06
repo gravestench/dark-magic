@@ -698,6 +698,8 @@ implementations. The remaining work is tracked explicitly below.
   `internal/paths`; all callers migrated atomically and an architecture test
   rejects resurrection of the retired public import path. Process log formatting
   is likewise owned by `internal/logging`, with its public import path retired.
+  The weighted generation-aware cache is now `internal/cache`; renderer and Lua
+  consumers migrated together and the old public import is guarded.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

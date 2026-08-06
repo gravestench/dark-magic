@@ -7,8 +7,8 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
+	"github.com/gravestench/dark-magic/internal/cache"
 	"github.com/gravestench/dark-magic/internal/rendercore"
-	"github.com/gravestench/dark-magic/pkg/cache"
 )
 
 type Service struct {
