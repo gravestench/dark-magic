@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -42,17 +43,21 @@ func main() {
 	}
 
 	if *previewPath != "" {
-		var preview []byte
-		var err error
-		if *dt1Paths != "" && strings.EqualFold(filepath.Ext(*assetPath), ".ds1") {
-			preview, err = assetinspect.TexturedDS1Preview(filesystem, *assetPath, strings.Split(*dt1Paths, ","), *palettePath)
-		} else {
-			preview, err = assetinspect.Preview(filesystem, *assetPath, *direction, *frame)
-		}
+		expandedPreview, err := darkpaths.ExpandHost(*previewPath)
 		if err != nil {
 			fatal(err)
 		}
-		if err := os.WriteFile(*previewPath, preview, 0o644); err != nil {
+		var preview []byte
+		var previewErr error
+		if *dt1Paths != "" && strings.EqualFold(filepath.Ext(*assetPath), ".ds1") {
+			preview, previewErr = assetinspect.TexturedDS1Preview(filesystem, *assetPath, strings.Split(*dt1Paths, ","), *palettePath)
+		} else {
+			preview, previewErr = assetinspect.Preview(filesystem, *assetPath, *direction, *frame)
+		}
+		if previewErr != nil {
+			fatal(previewErr)
+		}
+		if err := os.WriteFile(expandedPreview, preview, 0o644); err != nil {
 			fatal(fmt.Errorf("writing preview: %w", err))
 		}
 	}

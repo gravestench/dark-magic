@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -29,6 +30,12 @@ func main() {
 		fatal(err)
 	}
 	fileName := *output
+	if fileName != "" {
+		fileName, err = darkpaths.ExpandHost(fileName)
+		if err != nil {
+			fatal(err)
+		}
+	}
 	temporary := false
 	if fileName == "" && *play {
 		file, err := os.CreateTemp("", "dark-magic-*.wav")

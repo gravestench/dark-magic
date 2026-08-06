@@ -90,6 +90,11 @@ each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use
 `-manifest custom.json` to verify additional hypotheses or `-no-sheets` for a
 metadata-only pass. The command is read-only with respect to the MPQs.
 
+Host filesystem paths accepted by Dark Magic consistently expand `~`, `~/`,
+`~\`, `$NAME`, `${NAME}`, and `%NAME%` forms on every supported platform.
+This applies to environment configuration and command input/output paths. MPQ
+asset paths are virtual paths and are intentionally not expanded.
+
 When the debug web server is running, the same metadata and selected DC6/DCC
 frames are available through the asset routes:
 

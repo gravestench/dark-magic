@@ -27,6 +27,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	"github.com/gravestench/dark-magic/internal/runtimeapi"
 	"github.com/gravestench/dark-magic/internal/savecore"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/prettylog"
 	"github.com/gravestench/dark-magic/pkg/scene"
 )
@@ -151,6 +152,9 @@ func run(contentFS *content.FS) error {
 		}
 	}
 	modDirectory := os.Getenv("DARK_MAGIC_MOD_DIRECTORY")
+	if modDirectory != "" {
+		modDirectory, err = darkpaths.ExpandHost(modDirectory)
+	}
 	if err == nil && modDirectory != "" {
 		coordinator := hotreload.New(contentFS, scripts, components, records, definitions)
 		err = components.Register(host.ManagedDefinition{

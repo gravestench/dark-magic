@@ -3,8 +3,26 @@ package content
 import (
 	"errors"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+func TestOpenSourceExpandsEnvironmentAlias(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "asset.txt"), []byte("ok"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DARK_MAGIC_SOURCE_TEST", directory)
+	source, err := OpenSource("$DARK_MAGIC_SOURCE_TEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := fs.ReadFile(source, "asset.txt")
+	if err != nil || string(data) != "ok" {
+		t.Fatalf("data = %q, err = %v", data, err)
+	}
+}
 
 type missingMPQFS struct{ wrapped bool }
 

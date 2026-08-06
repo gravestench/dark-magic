@@ -10,7 +10,6 @@ import (
 	"image/draw"
 	"image/png"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -131,10 +130,7 @@ func (s *Service) loadMapImage() (image.Image, error) {
 	}
 	var source fs.FS
 	if s.Config.Source != "" {
-		if strings.Contains(s.Config.Source, "$MPQ_DIRECTORY") && os.Getenv("MPQ_DIRECTORY") == "" {
-			return nil, fmt.Errorf("MPQ_DIRECTORY is not configured")
-		}
-		filesystem, err := content.OpenSource(os.ExpandEnv(s.Config.Source))
+		filesystem, err := content.OpenSource(s.Config.Source)
 		if err != nil {
 			return nil, fmt.Errorf("opening scene source: %w", err)
 		}

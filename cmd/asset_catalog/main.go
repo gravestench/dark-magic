@@ -11,6 +11,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetcatalog"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -23,15 +24,15 @@ func main() {
 	if *mpqDirectory == "" {
 		fatal("-mpq-dir or MPQ_DIRECTORY is required")
 	}
-	expandedMPQDirectory, err := expandUserPath(*mpqDirectory)
+	expandedMPQDirectory, err := darkpaths.ExpandHost(*mpqDirectory)
 	if err != nil {
 		fatal(err.Error())
 	}
-	expandedManifestPath, err := expandUserPath(*manifestPath)
+	expandedManifestPath, err := darkpaths.ExpandHost(*manifestPath)
 	if err != nil {
 		fatal(err.Error())
 	}
-	expandedOutputDirectory, err := expandUserPath(*outputDirectory)
+	expandedOutputDirectory, err := darkpaths.ExpandHost(*outputDirectory)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -93,23 +94,6 @@ func main() {
 		}
 	}
 	fmt.Printf("verified %d/%d hypotheses; report: %s\n", found, len(report.Results), reportPath)
-}
-
-func expandUserPath(name string) (string, error) {
-	if name == "" || name[0] != '~' {
-		return name, nil
-	}
-	if name != "~" && !strings.HasPrefix(name, "~/") && !strings.HasPrefix(name, `~\`) {
-		return "", fmt.Errorf("unsupported home-directory path %q", name)
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	if name == "~" {
-		return home, nil
-	}
-	return filepath.Join(home, name[2:]), nil
 }
 
 func loadManifest(name string) (assetcatalog.Manifest, error) {

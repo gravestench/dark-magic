@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/gravestench/dark-magic/pkg/loot"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -26,7 +27,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	contents, err := os.ReadFile(*file)
+	expandedFile, err := darkpaths.ExpandHost(*file)
+	if err != nil {
+		fatal(err)
+	}
+	contents, err := os.ReadFile(expandedFile)
 	if err != nil {
 		fatal(err)
 	}
@@ -67,7 +72,11 @@ func main() {
 		if itemFile.path == "" {
 			continue
 		}
-		contents, err := os.ReadFile(itemFile.path)
+		expandedPath, err := darkpaths.ExpandHost(itemFile.path)
+		if err != nil {
+			fatal(err)
+		}
+		contents, err := os.ReadFile(expandedPath)
 		if err != nil {
 			fatal(err)
 		}
@@ -85,7 +94,11 @@ func main() {
 		if *itemTypes == "" {
 			output = loot.ResolveBaseItems(drops, items)
 		} else {
-			contents, err := os.ReadFile(*itemTypes)
+			expandedPath, err := darkpaths.ExpandHost(*itemTypes)
+			if err != nil {
+				fatal(err)
+			}
+			contents, err := os.ReadFile(expandedPath)
 			if err != nil {
 				fatal(err)
 			}

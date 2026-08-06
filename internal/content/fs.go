@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 // FromEnvironment constructs the production content stack. User content wins,
@@ -19,6 +21,11 @@ import (
 func FromEnvironment() (*FS, error) {
 	layers := make([]Layer, 0, 16)
 	if mods := os.Getenv("DARK_MAGIC_MOD_DIRECTORY"); mods != "" {
+		expanded, err := darkpaths.ExpandHost(mods)
+		if err != nil {
+			return nil, fmt.Errorf("content: expand mod directory %q: %w", mods, err)
+		}
+		mods = expanded
 		info, err := os.Stat(mods)
 		if err != nil {
 			return nil, fmt.Errorf("content: inspect mod directory %q: %w", mods, err)
@@ -30,6 +37,11 @@ func FromEnvironment() (*FS, error) {
 	}
 	layers = append(layers, Layer{Name: "darkmagic", FS: Shim()})
 	if directory := os.Getenv("MPQ_DIRECTORY"); directory != "" {
+		expanded, err := darkpaths.ExpandHost(directory)
+		if err != nil {
+			return nil, fmt.Errorf("content: expand MPQ directory %q: %w", directory, err)
+		}
+		directory = expanded
 		priority := []string{
 			"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
 			"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",

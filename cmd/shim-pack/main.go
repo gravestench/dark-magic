@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -16,10 +17,14 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	}
-	if err := os.MkdirAll(filepath.Dir(*output), 0o755); err != nil {
+	expandedOutput, err := darkpaths.ExpandHost(*output)
+	if err != nil {
 		fail(err)
 	}
-	file, err := os.Create(*output)
+	if err := os.MkdirAll(filepath.Dir(expandedOutput), 0o755); err != nil {
+		fail(err)
+	}
+	file, err := os.Create(expandedOutput)
 	if err != nil {
 		fail(err)
 	}

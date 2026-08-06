@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/gravestench/dark-magic/pkg/loot"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 )
 
 func main() {
@@ -30,7 +31,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	contents, err := os.ReadFile(*file)
+	expandedFile, err := darkpaths.ExpandHost(*file)
+	if err != nil {
+		fatal(err)
+	}
+	contents, err := os.ReadFile(expandedFile)
 	if err != nil {
 		fatal(err)
 	}

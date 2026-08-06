@@ -185,7 +185,8 @@ func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(mods, "boot.lua"), []byte("mod boot"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", mods)
+	t.Setenv("DARK_MAGIC_TEST_MODS", mods)
+	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", "$DARK_MAGIC_TEST_MODS")
 	t.Setenv("MPQ_DIRECTORY", "")
 	contentFS, err := FromEnvironment()
 	if err != nil {

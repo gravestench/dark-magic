@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/pkg/assetinspect"
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/dark-magic/pkg/scene"
 )
 
@@ -28,6 +29,10 @@ func main() {
 	dt1Paths := flag.String("dt1", "", "comma-separated DT1 paths used to texture the DS1 map")
 	palettePath := flag.String("palette", "", "optional PL2 palette for DT1 tiles")
 	flag.Parse()
+	expandedSavePath, err := darkpaths.ExpandHost(*savePath)
+	if err != nil {
+		fatal(err.Error())
+	}
 
 	var mapPNG []byte
 	if *sourcePath != "" || *mapPath != "" {
@@ -80,10 +85,10 @@ func main() {
 		state.MoveHero(dx, dy)
 
 		if rl.IsKeyPressed(rl.KeyF5) {
-			_ = save(state, *savePath)
+			_ = save(state, expandedSavePath)
 		}
 		if rl.IsKeyPressed(rl.KeyF9) {
-			if loaded, err := load(*savePath); err == nil {
+			if loaded, err := load(expandedSavePath); err == nil {
 				state = loaded
 			}
 		}

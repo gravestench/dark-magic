@@ -8,12 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	darkpaths "github.com/gravestench/dark-magic/pkg/paths"
 	"github.com/gravestench/mpq"
 )
 
 // OpenSource opens a directory, MPQ, or ZIP path using the normalized content
 // filesystem contract.
 func OpenSource(fileName string) (fs.FS, error) {
+	expanded, err := darkpaths.ExpandHost(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("content: expand source %q: %w", fileName, err)
+	}
+	fileName = expanded
 	info, err := os.Stat(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("content: inspect source %q: %w", fileName, err)
@@ -38,6 +44,11 @@ func Directory(root string) fs.FS {
 
 // ZIP opens a zip archive as a content filesystem.
 func ZIP(fileName string) (fs.FS, error) {
+	expanded, err := darkpaths.ExpandHost(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("content: expand ZIP path %q: %w", fileName, err)
+	}
+	fileName = expanded
 	reader, err := zip.OpenReader(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("content: open zip %q: %w", fileName, err)
@@ -47,6 +58,11 @@ func ZIP(fileName string) (fs.FS, error) {
 
 // MPQ opens a Diablo MPQ archive as a content filesystem.
 func MPQ(fileName string) (fs.FS, error) {
+	expanded, err := darkpaths.ExpandHost(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("content: expand MPQ path %q: %w", fileName, err)
+	}
+	fileName = expanded
 	archive, err := mpq.New(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("content: open MPQ %q: %w", fileName, err)
