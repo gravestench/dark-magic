@@ -21,7 +21,7 @@ const (
 	paletteByteSize = paletteColors * bytesPerColor
 )
 
-// Palette reads a Diablo II RGB palette. Palette index zero is transparent,
+// Palette reads a Diablo II BGR palette. Palette index zero is transparent,
 // which is the convention used by interface DC6 assets.
 func Palette(source fs.FS, name string) (color.Palette, error) {
 	data, err := fs.ReadFile(source, name)
@@ -34,7 +34,7 @@ func Palette(source fs.FS, name string) (color.Palette, error) {
 	palette := make(color.Palette, paletteColors)
 	for index := range palette {
 		offset := index * bytesPerColor
-		palette[index] = color.RGBA{R: data[offset], G: data[offset+1], B: data[offset+2], A: 0xff}
+		palette[index] = color.RGBA{R: data[offset+2], G: data[offset+1], B: data[offset], A: 0xff}
 	}
 	palette[0] = color.RGBA{}
 	return palette, nil

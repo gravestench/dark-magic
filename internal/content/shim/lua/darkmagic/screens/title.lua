@@ -32,7 +32,7 @@ return {
             self.logo.fire_right:set_blend(logo.fire_blend)
             local function animate(node, path)
                 dc6.anchored_animation(node, path, palette, logo.anchor.x, logo.anchor.y,
-                    logo.frames_per_second, "loop")
+                    logo.frames_per_second, "loop", "first-frame")
             end
             animate(self.logo.black_left, logo.black_left)
             animate(self.logo.black_right, logo.black_right)

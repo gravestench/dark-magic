@@ -59,7 +59,7 @@ return {
     configure_logo = function(self)
         local function animate(node, path)
             dc6.anchored_animation(node, path, units_palette, logo.anchor.x, logo.anchor.y,
-                logo.frames_per_second, "loop")
+                logo.frames_per_second, "loop", "first-frame")
         end
         animate(self.logo.black_left, logo.black_left)
         animate(self.logo.black_right, logo.black_right)

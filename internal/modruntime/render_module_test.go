@@ -21,7 +21,7 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 		{Width: 1, Height: 1, OffsetX: 3, OffsetY: 12, IndexData: []byte{1}},
 	}}}}
 	asset.SetPalette(color.Palette{color.RGBA{}, color.RGBA{R: 255, A: 255}})
-	frames, bounds, err := normalizedDC6Frames(asset, 0)
+	frames, bounds, err := normalizedDC6Frames(asset, 0, "offsets")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,6 +33,16 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	}
 	if got := color.RGBAModel.Convert(frames[1].At(0, 0)).(color.RGBA); got.R != 255 {
 		t.Fatalf("second anchored pixel = %#v", got)
+	}
+	fixed, fixedBounds, err := normalizedDC6Frames(asset, 0, "first-frame")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fixedBounds != image.Rect(5, -10, 7, -9) {
+		t.Fatalf("fixed bounds = %v", fixedBounds)
+	}
+	if got := color.RGBAModel.Convert(fixed[1].At(0, 0)).(color.RGBA); got.R != 255 {
+		t.Fatalf("fixed second pixel = %#v", got)
 	}
 }
 
@@ -222,7 +232,7 @@ return { id = "screen.dc6", start = function(self)
 	}
 	decoded := resource.Payload.(image.Image)
 	got := color.RGBAModel.Convert(decoded.At(0, 0)).(color.RGBA)
-	if got != (color.RGBA{R: 10, G: 20, B: 30, A: 0xff}) {
+	if got != (color.RGBA{R: 30, G: 20, B: 10, A: 0xff}) {
 		t.Fatalf("pixel = %#v", got)
 	}
 	animationNode := nodes[1]

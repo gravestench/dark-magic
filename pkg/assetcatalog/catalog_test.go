@@ -70,7 +70,7 @@ func TestReadPalette(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, g, b, a := palette[1].RGBA()
-	if r>>8 != 10 || g>>8 != 20 || b>>8 != 30 || a>>8 != 255 {
+	if r>>8 != 30 || g>>8 != 20 || b>>8 != 10 || a>>8 != 255 {
 		t.Fatalf("unexpected color: %d %d %d %d", r>>8, g>>8, b>>8, a>>8)
 	}
 }
