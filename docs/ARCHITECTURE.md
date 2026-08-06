@@ -108,3 +108,40 @@ Package moves must not introduce compatibility aliases unless a real external
 consumer is identified. Before deleting transitional code, verify its callers,
 tests, Git history, and any preserved stash notes. Every move must keep unit,
 real-asset, race, and relevant interactive acceptance checks green.
+
+## Finding the main execution paths
+
+The client boots in `cmd/darkmagic/main.go`. It parses process configuration,
+opens the layered content filesystem, constructs shared application capabilities,
+registers Lua modules, and gives those components to `internal/host` for ordered
+startup and shutdown. Keep this file as wiring: capability behavior belongs in
+the package that owns it.
+
+Each frame begins at the Raylib renderer owner thread. Native input is translated
+through `internal/raylib/input`, Lua scene updates run through
+`internal/modruntime`, and retained presentation commands cross
+`internal/rendercore` before `internal/raylib/renderer` executes them. Game rules
+must remain usable without this native frame loop.
+
+Scene navigation belongs to `internal/navigation`; renderer-independent scene
+state belongs to `internal/presentation`; and authored screen behavior belongs in
+the shim Lua scripts under `internal/content/shim`. Lua modules expose explicit
+capabilities but do not own native resources or discover arbitrary services.
+
+Assets enter through `internal/content`, which resolves layered directory, MPQ,
+ZIP, and shim sources. `internal/assets/decode` converts supported formats,
+`internal/rendercore` describes retained resources, and the Raylib adapter owns
+uploads and disposal. Inspection and catalog tools reuse the same content and
+decode paths under `internal/assets/inspect` and `internal/assets/catalog`.
+
+Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
+typed, atomic generation and indexes live in `internal/game/data/catalog`, using
+schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and
+the bundled Data File Guide before admitting or interpreting another table, then
+verify assumptions against real layered MPQs.
+
+New developer-only executables belong under `internal/tools` or
+`internal/testapps`; production entry points belong under `cmd`. A new engine
+capability should expose a renderer-independent contract under the relevant
+feature directory, receive explicit ownership from the composition root, and
+gain both focused tests and a cross-system acceptance test when appropriate.
