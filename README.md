@@ -145,6 +145,18 @@ make profile-check
 have been visited and rejects snapshots exceeding the tracked budgets. Override
 `PROFILE_DIR` or `PROFILE_BUDGETS` to compare another run or budget set.
 
+Capture locally reviewable scene screenshots after ten stable presented frames:
+
+```shell
+MPQ_DIRECTORY=/path/to/diablo-ii make capture
+```
+
+The default captures `loading` and `title`; override `CAPTURE_SCENES` with a
+comma-separated list or pass `--capture-scenes` directly. `--capture-settle-frames`
+controls stabilization. The capture directory contains numbered PNGs plus a
+`report.json` recording scene names, dimensions, and SHA-256 hashes. Capture
+output under `captures/` is ignored by Git so Blizzard imagery remains local.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell

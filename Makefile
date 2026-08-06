@@ -1,4 +1,4 @@
-.PHONY: test test-race fmt vet shim bik-view profile profile-check
+.PHONY: test test-race fmt vet shim bik-view profile profile-check capture
 
 test:
 	go test ./...
@@ -26,3 +26,9 @@ profile:
 
 profile-check:
 	go run ./internal/tools/profile_check -profile-dir "$(PROFILE_DIR)" -budgets "$(PROFILE_BUDGETS)"
+
+CAPTURE_DIR ?= ./captures/frontend
+CAPTURE_SCENES ?= loading,title
+
+capture:
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)"

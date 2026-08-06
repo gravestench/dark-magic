@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/audiocore"
+	"github.com/gravestench/dark-magic/internal/capture"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/filewatch"
 	"github.com/gravestench/dark-magic/internal/host"
@@ -43,6 +44,9 @@ func main() {
 	slog.SetDefault(slog.New(prettylog.NewHandler(&slog.HandlerOptions{Level: slog.LevelDebug})))
 	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
 	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
+	captureDirectoryFlag := flag.String("capture-dir", os.Getenv("DARK_MAGIC_CAPTURE_DIR"), "write local scene screenshots and report.json to this directory")
+	captureScenes := flag.String("capture-scenes", os.Getenv("DARK_MAGIC_CAPTURE_SCENES"), "comma-separated scene IDs to capture (defaults to loading,title)")
+	captureSettle := flag.Int("capture-settle-frames", 10, "stable frames to wait before capturing a scene")
 	flag.Parse()
 	var profile *profiling.Session
 	if *profileDirectory != "" {
@@ -64,12 +68,20 @@ func main() {
 		slog.Error("constructing content filesystem", "error", err)
 		return
 	}
-	if err := run(contentFS, profile); err != nil {
+	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
+	if err != nil {
+		slog.Error("expanding capture directory", "error", err)
+		return
+	}
+	if captureDirectory != "" && *captureScenes == "" {
+		*captureScenes = "loading,title"
+	}
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 	}
 }
 
-func run(contentFS *content.FS, profile *profiling.Session) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	renderer := &raylibRenderer.Service{}
@@ -82,7 +94,8 @@ func run(contentFS *content.FS, profile *profiling.Session) error {
 	scripts := modruntime.New()
 	composer := &rendercore.Composer{}
 	mixer := &audiocore.Mixer{}
-	scenes := modruntime.NewScenes(scripts, navigation.New())
+	navigator := navigation.New()
+	scenes := modruntime.NewScenes(scripts, navigator)
 	if profile != nil {
 		scenes.SetProfiler(profile)
 	}
@@ -233,8 +246,23 @@ func run(contentFS *content.FS, profile *profiling.Session) error {
 	if err != nil {
 		return err
 	}
+	var captureSession *capture.Session
+	stopCaptureFrames := func() {}
+	if captureDirectory != "" {
+		captureSession, err = capture.New(captureDirectory, captureScenes, captureSettle, renderer)
+		if err != nil {
+			return err
+		}
+		stopCaptureFrames = renderer.SubscribePostFrame(func() {
+			captureSession.Observe(navigator.Stack())
+		})
+	}
 
 	err = renderer.Run(runContext)
+	stopCaptureFrames()
+	if captureSession != nil {
+		err = errors.Join(err, captureSession.Close())
+	}
 	stopSceneFrames()
 
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

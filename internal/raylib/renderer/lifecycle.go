@@ -62,6 +62,7 @@ func (s *Service) Run(ctx context.Context) error {
 		s.render()
 		rl.EndMode2D()
 		rl.EndDrawing()
+		s.runPostFrame()
 	}
 	return nil
 }

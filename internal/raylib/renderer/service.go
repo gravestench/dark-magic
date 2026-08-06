@@ -21,10 +21,13 @@ type Service struct {
 
 	rootNode Renderable
 
-	isInit         atomic.Bool
-	frameMux       sync.Mutex
-	frameCallbacks []func()
-	frameSnapshot  atomic.Value
+	isInit             atomic.Bool
+	frameMux           sync.Mutex
+	frameCallbacks     []func()
+	frameSnapshot      atomic.Value
+	postFrameMux       sync.Mutex
+	postFrameCallbacks []func()
+	postFrameSnapshot  atomic.Value
 
 	compositionMu      sync.Mutex
 	composition        *rendercore.Composer
@@ -32,6 +35,36 @@ type Service struct {
 
 	audioMu      sync.Mutex
 	audioBackend *raylibAudioBackend
+}
+
+// SubscribePostFrame registers owner-thread work after the fully composed frame
+// has been presented. Screenshot and visual-inspection tools belong here.
+func (s *Service) SubscribePostFrame(callback func()) func() {
+	if callback == nil {
+		return func() {}
+	}
+	var active atomic.Bool
+	active.Store(true)
+	wrapper := func() {
+		if active.Load() {
+			callback()
+		}
+	}
+	s.postFrameMux.Lock()
+	s.postFrameCallbacks = append(s.postFrameCallbacks, wrapper)
+	s.postFrameSnapshot.Store(append([]func(){}, s.postFrameCallbacks...))
+	s.postFrameMux.Unlock()
+	return func() { active.Store(false) }
+}
+
+func (s *Service) runPostFrame() {
+	snapshot := s.postFrameSnapshot.Load()
+	if snapshot == nil {
+		return
+	}
+	for _, callback := range snapshot.([]func()) {
+		callback()
+	}
 }
 
 // OnFrame registers work that must run on the renderer thread, immediately

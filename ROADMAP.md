@@ -439,8 +439,10 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Verify every discovered BIK variant and capture startup-to-title
   composition screenshots without committing Blizzard-owned media. A native
   integration matrix now requires successful video and audio decoding for both
-  startup movies and all seven localized act cinematics; automated composition
-  capture remains.
+  startup movies and all seven localized act cinematics. An opt-in owner-thread
+  capture session now waits for stable presented scene frames, writes numbered
+  local PNGs, and records dimensions plus hashes in `report.json`; completing a
+  native capture review remains.
 
 ## M18: Authentic in-game shell
 
