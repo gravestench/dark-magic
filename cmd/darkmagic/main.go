@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/debug"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -167,14 +168,20 @@ func run(contentFS *content.FS, profile *profiling.Session) error {
 
 	lastFrame := time.Now()
 	stopSceneFrames := renderer.SubscribeFrame(func() {
+		frameContext := scenes.FrameContext(context.Background())
+		pprof.SetGoroutineLabels(frameContext)
 		inputState.Publish(inputService.Snapshot())
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
-		if err := scenes.Update(context.Background(), elapsed); err != nil {
+		if err := scenes.Update(frameContext, elapsed); err != nil {
 			slog.Error("updating Lua scenes", "error", err)
 		}
-		if err := scenes.Render(context.Background()); err != nil {
+		// Updating can replace the focused scene. Refresh the persistent label so
+		// composer draining and native frame work are charged to the new owner.
+		frameContext = scenes.FrameContext(context.Background())
+		pprof.SetGoroutineLabels(frameContext)
+		if err := scenes.Render(frameContext); err != nil {
 			slog.Error("rendering Lua scenes", "error", err)
 		}
 	})

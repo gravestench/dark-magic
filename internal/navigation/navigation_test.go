@@ -101,6 +101,27 @@ func TestReplacePreservesStackWhenNewSceneCannotEnter(t *testing.T) {
 	}
 }
 
+func TestFocusedReportsTopScene(t *testing.T) {
+	t.Parallel()
+
+	var calls []string
+	manager := New()
+	if _, ok := manager.Focused(); ok {
+		t.Fatal("empty manager reported a focused scene")
+	}
+	registerScene(t, manager, "world", false, nil, &calls)
+	registerScene(t, manager, "inventory", true, nil, &calls)
+	if err := manager.Replace(context.Background(), "world"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Push(context.Background(), "inventory"); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := manager.Focused(); !ok || got != "inventory" {
+		t.Fatalf("focused = %q, %v; want inventory, true", got, ok)
+	}
+}
+
 func registerScene(t *testing.T, manager *Manager, id string, blocks bool, enterErr error, calls *[]string) {
 	t.Helper()
 	if err := manager.Register(id, func(context.Context) (Scene, error) {

@@ -180,6 +180,17 @@ func (m *Manager) Stack() []string {
 	return result
 }
 
+// Focused returns the ID of the topmost scene receiving input. The value is a
+// stable observation only; callers must not use it to coordinate navigation.
+func (m *Manager) Focused() (string, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.stack) == 0 {
+		return "", false
+	}
+	return m.stack[len(m.stack)-1].id, true
+}
+
 func (m *Manager) createAndEnter(ctx context.Context, id string) (entry, error) {
 	factory, exists := m.factories[id]
 	if !exists {

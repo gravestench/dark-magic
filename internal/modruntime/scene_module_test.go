@@ -3,6 +3,7 @@ package modruntime
 import (
 	"context"
 	"reflect"
+	"runtime/pprof"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -12,6 +13,36 @@ import (
 	"github.com/gravestench/dark-magic/internal/rendercore"
 	lua "github.com/yuin/gopher-lua"
 )
+
+func TestSceneFrameContextLabelsFocusedScene(t *testing.T) {
+	manager := navigation.New()
+	scenes := NewScenes(New(), manager)
+	ctx := scenes.FrameContext(context.Background())
+	if got, ok := pprof.Label(ctx, "scene"); !ok || got != "none" {
+		t.Fatalf("empty scene label = %q, %v; want none, true", got, ok)
+	}
+	if err := manager.Register("title", func(context.Context) (navigation.Scene, error) {
+		return &frameLabelScene{}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Replace(context.Background(), "title"); err != nil {
+		t.Fatal(err)
+	}
+	ctx = scenes.FrameContext(context.Background())
+	if got, ok := pprof.Label(ctx, "scene"); !ok || got != "title" {
+		t.Fatalf("focused scene label = %q, %v; want title, true", got, ok)
+	}
+}
+
+type frameLabelScene struct{}
+
+func (*frameLabelScene) Create(context.Context) error                { return nil }
+func (*frameLabelScene) Enter(context.Context) error                 { return nil }
+func (*frameLabelScene) Update(context.Context, time.Duration) error { return nil }
+func (*frameLabelScene) Render(context.Context) error                { return nil }
+func (*frameLabelScene) Exit(context.Context) error                  { return nil }
+func (*frameLabelScene) Destroy(context.Context) error               { return nil }
 
 func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	t.Parallel()

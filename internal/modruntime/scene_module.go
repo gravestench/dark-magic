@@ -30,6 +30,16 @@ type SceneProfiler interface{ CaptureSceneHeap(string) error }
 
 func (s *Scenes) SetProfiler(profiler SceneProfiler) { s.profiler = profiler }
 
+// FrameContext labels work performed after Lua scene callbacks, including
+// deferred renderer uploads and native drawing, with the focused scene.
+func (s *Scenes) FrameContext(ctx context.Context) context.Context {
+	name, ok := s.manager.Focused()
+	if !ok {
+		name = "none"
+	}
+	return pprof.WithLabels(ctx, pprof.Labels("scene", name))
+}
+
 // NewScenes constructs a Lua scene controller.
 func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
 	return &Scenes{runtime: runtime, manager: manager}
