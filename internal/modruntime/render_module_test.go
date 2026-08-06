@@ -25,26 +25,26 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bounds != image.Rect(3, -12, 7, -9) {
+	if bounds != image.Rect(3, 10, 7, 13) {
 		t.Fatalf("normalized bounds = %v", bounds)
 	}
-	if got := color.RGBAModel.Convert(frames[0].At(2, 2)).(color.RGBA); got.R != 255 {
+	if got := color.RGBAModel.Convert(frames[0].At(2, 0)).(color.RGBA); got.R != 255 {
 		t.Fatalf("first anchored pixel = %#v", got)
 	}
-	if got := color.RGBAModel.Convert(frames[1].At(0, 0)).(color.RGBA); got.R != 255 {
+	if got := color.RGBAModel.Convert(frames[1].At(0, 2)).(color.RGBA); got.R != 255 {
 		t.Fatalf("second anchored pixel = %#v", got)
 	}
 	fixed, fixedBounds, err := normalizedDC6Frames(asset, 0, "first-frame")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fixedBounds != image.Rect(5, -10, 7, -9) {
+	if fixedBounds != image.Rect(5, 10, 7, 11) {
 		t.Fatalf("fixed bounds = %v", fixedBounds)
 	}
 	if got := color.RGBAModel.Convert(fixed[1].At(0, 0)).(color.RGBA); got.R != 255 {
 		t.Fatalf("fixed second pixel = %#v", got)
 	}
-	shared := image.Rect(1, -14, 8, -8)
+	shared := image.Rect(1, 8, 8, 14)
 	sharedFixed, sharedFixedBounds, err := normalizedDC6Frames(asset, 0, "first-frame", shared)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	if sharedFixedBounds != shared {
 		t.Fatalf("shared fixed bounds = %v", sharedFixedBounds)
 	}
-	if got := color.RGBAModel.Convert(sharedFixed[1].At(4, 4)).(color.RGBA); got.R != 255 {
+	if got := color.RGBAModel.Convert(sharedFixed[1].At(4, 2)).(color.RGBA); got.R != 255 {
 		t.Fatalf("shared fixed second pixel = %#v", got)
 	}
 }

@@ -355,10 +355,18 @@ func luaComponentPaths(state *lua.LState, index int) map[string]string {
 // normalizedDC6Frames places every cropped frame on one shared canvas using
 // the DC6 anchor offsets. The retained node can then animate at a fixed world
 // position without jitter when individual frame bounds change.
+func dc6FrameTop(frame *dc6.Frame) int {
+	if frame.Flipped > 0 {
+		return int(frame.OffsetY)
+	}
+	return int(frame.OffsetY) - int(frame.Height) + 1
+}
+
 func dc6AnimationBounds(asset *dc6.DC6, direction int) image.Rectangle {
 	var bounds image.Rectangle
 	for index, frame := range asset.Directions[direction].Frames {
-		frameBounds := image.Rect(int(frame.OffsetX), -int(frame.OffsetY), int(frame.OffsetX+int32(frame.Width)), -int(frame.OffsetY)+int(frame.Height))
+		top := dc6FrameTop(frame)
+		frameBounds := image.Rect(int(frame.OffsetX), top, int(frame.OffsetX+int32(frame.Width)), top+int(frame.Height))
 		if index == 0 {
 			bounds = frameBounds
 		} else {
@@ -378,8 +386,12 @@ func dc6FixedAnimationBounds(asset *dc6.DC6, direction int) image.Rectangle {
 		width = max(width, int(frame.Width))
 		height = max(height, int(frame.Height))
 	}
-	return image.Rect(int(frames[0].OffsetX), -int(frames[0].OffsetY),
-		int(frames[0].OffsetX)+width, -int(frames[0].OffsetY)+height)
+	top := int(frames[0].OffsetY) - height + 1
+	if frames[0].Flipped > 0 {
+		top = int(frames[0].OffsetY)
+	}
+	return image.Rect(int(frames[0].OffsetX), top,
+		int(frames[0].OffsetX)+width, top+height)
 }
 
 func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, sharedBounds ...image.Rectangle) ([]image.Image, image.Rectangle, error) {
@@ -393,7 +405,11 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 			width = max(width, int(frame.Width))
 			height = max(height, int(frame.Height))
 		}
-		bounds = image.Rect(int(frames[0].OffsetX), -int(frames[0].OffsetY), int(frames[0].OffsetX)+width, -int(frames[0].OffsetY)+height)
+		top := int(frames[0].OffsetY) - height + 1
+		if frames[0].Flipped > 0 {
+			top = int(frames[0].OffsetY)
+		}
+		bounds = image.Rect(int(frames[0].OffsetX), top, int(frames[0].OffsetX)+width, top+height)
 	}
 	for index, frame := range frames {
 		if len(sharedBounds) > 0 {
@@ -402,7 +418,8 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 		if anchorMode == "first-frame" {
 			continue
 		}
-		frameBounds := image.Rect(int(frame.OffsetX), -int(frame.OffsetY), int(frame.OffsetX+int32(frame.Width)), -int(frame.OffsetY)+int(frame.Height))
+		top := dc6FrameTop(frame)
+		frameBounds := image.Rect(int(frame.OffsetX), top, int(frame.OffsetX+int32(frame.Width)), top+int(frame.Height))
 		if index == 0 {
 			bounds = frameBounds
 		} else {
@@ -421,9 +438,9 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 		canvas := image.NewRGBA(image.Rectangle{Max: bounds.Size()})
 		position := image.Point{}
 		if anchorMode == "first-frame" && len(sharedBounds) > 0 {
-			position = image.Pt(int(frames[0].OffsetX)-bounds.Min.X, -int(frames[0].OffsetY)-bounds.Min.Y)
+			position = image.Pt(int(frames[0].OffsetX)-bounds.Min.X, dc6FrameTop(frames[0])-bounds.Min.Y)
 		} else if anchorMode != "first-frame" {
-			position = image.Pt(int(frame.OffsetX)-bounds.Min.X, -int(frame.OffsetY)-bounds.Min.Y)
+			position = image.Pt(int(frame.OffsetX)-bounds.Min.X, dc6FrameTop(frame)-bounds.Min.Y)
 		}
 		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Src)
 		result[index] = canvas
@@ -714,7 +731,7 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(frame.Width))
 			state.Push(lua.LNumber(frame.Height))
 			state.Push(lua.LNumber(frame.OffsetX))
-			state.Push(lua.LNumber(frame.OffsetY))
+			state.Push(lua.LNumber(dc6FrameTop(frame)))
 			return 4
 		},
 		"set_dc6_animation": func(state *lua.LState) int {
@@ -772,7 +789,7 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(bounds.Dx()))
 			state.Push(lua.LNumber(bounds.Dy()))
 			state.Push(lua.LNumber(bounds.Min.X))
-			state.Push(lua.LNumber(-bounds.Min.Y))
+			state.Push(lua.LNumber(bounds.Min.Y))
 			return 5
 		},
 		"set_dcc": func(state *lua.LState) int {
