@@ -37,4 +37,15 @@ function M.anchored_frame(node, path, palette, anchor_x, anchor_y, frame)
     )
 end
 
+function M.anchored_animation(node, path, palette, anchor_x, anchor_y, frames_per_second, loop)
+    if not render.assets_available() then return 0 end
+    local frames, width, height, offset_x, offset_y = node:set_dc6_animation(
+        path, palette, 0, frames_per_second, loop or "loop")
+    node:set_position(
+        anchor_x + offset_x + width / 2,
+        anchor_y - offset_y + height / 2
+    )
+    return frames
+end
+
 return M

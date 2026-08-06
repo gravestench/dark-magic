@@ -15,7 +15,7 @@ func DefaultManifest() Manifest {
 	manifest := Manifest{Version: 1, Assets: []Hypothesis{
 		{ID: "main-game-select-exp", Screen: "main-menu", Path: "data/global/ui/FrontEnd/gameselectscreenEXP.dc6", Palette: paletteSky, Meaning: "expansion game-select background", References: ref("OpenDiablo2")},
 		{ID: "main-title-screen", Screen: "main-menu", Path: "data/global/ui/FrontEnd/TitleScreen.dc6", Palette: paletteSky, Meaning: "title background candidate", References: ref("Community research")},
-		{ID: "main-trademark-exp", Screen: "main-menu", Path: "data/global/ui/FrontEnd/trademarkscreenEXP.dc6", Palette: "data/global/Palette/trademark/pal.dat", Meaning: "expansion trademark screen", References: ref("OpenDiablo2")},
+		{ID: "main-trademark-exp", Screen: "main-menu", Path: "data/global/ui/FrontEnd/trademarkscreenEXP.dc6", Palette: paletteSky, Meaning: "expansion trademark screen", References: ref("Community research")},
 		{ID: "main-logo-black-left", Screen: "main-menu", Path: "data/global/ui/FrontEnd/D2logoBlackLeft.DC6", Palette: paletteUnits, Meaning: "left opaque logo layer", References: ref("OpenDiablo2", "Community research")},
 		{ID: "main-logo-fire-left", Screen: "main-menu", Path: "data/global/ui/FrontEnd/D2logoFireLeft.DC6", Palette: paletteUnits, Meaning: "left luminous animated logo layer", References: ref("OpenDiablo2", "Community research")},
 		{ID: "main-logo-black-right", Screen: "main-menu", Path: "data/global/ui/FrontEnd/D2logoBlackRight.DC6", Palette: paletteUnits, Meaning: "right opaque logo layer", References: ref("OpenDiablo2", "Community research")},

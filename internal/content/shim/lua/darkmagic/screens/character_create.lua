@@ -28,11 +28,8 @@ return {
                 class.node = render.create("hud", self.root)
                 local function show(state)
                     local path = definition[state]
-                    local _, width, height, offset_x, offset_y = class.node:set_dc6_animation(
-                        path, manifest.palettes[definition.palette], 0, definition.frames_per_second or 15, "loop")
-                    class.node:set_position(
-                        definition.anchor.x + offset_x + width / 2,
-                        definition.anchor.y - offset_y + height / 2)
+                    dc6.anchored_animation(class.node, path, manifest.palettes[definition.palette],
+                        definition.anchor.x, definition.anchor.y, definition.frames_per_second or 15, "loop")
                 end
                 class.show = show
                 show("unselected")

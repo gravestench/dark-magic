@@ -49,8 +49,19 @@
   },
   "screens": {
     "title": {
-      "background": "data/global/ui/FrontEnd/TitleScreen.dc6",
-      "palette": "sky"
+      "background": "data/global/ui/FrontEnd/trademarkscreenEXP.dc6",
+      "palette": "sky",
+      "logo": {
+        "anchor": { "x": 400, "y": 120 },
+        "frames": 30,
+        "frames_per_second": 15,
+        "palette": "units",
+        "black_left": "data/global/ui/FrontEnd/D2logoBlackLeft.DC6",
+        "black_right": "data/global/ui/FrontEnd/D2logoBlackRight.DC6",
+        "fire_left": "data/global/ui/FrontEnd/D2logoFireLeft.DC6",
+        "fire_right": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
+        "fire_blend": "additive"
+      }
     },
     "main_menu": {
       "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",

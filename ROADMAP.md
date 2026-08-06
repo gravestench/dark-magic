@@ -365,8 +365,11 @@ implementations. The remaining work is tracked explicitly below.
   extraction cleanup while retaining failure-safe behavior when FFmpeg is not
   installed. The macOS client now keeps Cocoa/GLFW on the process main thread,
   uses the current raylib 6 bindings, and safely transitions from both startup
-  movies into the MPQ-backed title composition. An embedded in-window
-  decoder/presenter remains.
+  movies into the verified expansion trademark composition. That scene uses
+  the distinct `trademarkscreenEXP.dc6` background and the synchronized black
+  left/right plus additive fire left/right 30-frame logo layers, then accepts
+  click, Space, Enter, or Escape before entering the main menu. Embedded
+  in-window playback is tracked in M17.6.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.
   The expansion creation screen now composes the verified tiled background and
   animates all seven class unselected/hover/selected assets through manifest-owned
