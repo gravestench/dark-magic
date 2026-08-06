@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
-	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
 )

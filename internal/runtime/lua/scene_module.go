@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravestench/dark-magic/internal/navigation"
+	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	lua "github.com/yuin/gopher-lua"
 )
 

@@ -45,6 +45,7 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 		"github.com/gravestench/dark-magic/internal/hotreload":        {},
 		"github.com/gravestench/dark-magic/internal/runtimeapi":       {},
 		"github.com/gravestench/dark-magic/internal/modruntime":       {},
+		"github.com/gravestench/dark-magic/internal/navigation":       {},
 	}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {

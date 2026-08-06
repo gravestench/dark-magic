@@ -59,7 +59,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/localization` | TBL-backed localization | command, Lua | Application | Keep |
 | `internal/loading` | Observable loading progress | command, Lua | Application | Keep |
 | `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
-| `internal/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
+| `internal/presentation/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
 | `internal/runtime/lua` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters by feature when useful |
 | `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
 | `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
@@ -123,7 +123,7 @@ through `internal/platform/raylib/input`, Lua scene updates run through
 `internal/presentation/render` before `internal/platform/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
 
-Scene navigation belongs to `internal/navigation`; renderer-independent scene
+Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
 state belongs to `internal/presentation`; and authored screen behavior belongs in
 the shim Lua scripts under `internal/content/shim`. Lua modules expose explicit
 capabilities but do not own native resources or discover arbitrary services.

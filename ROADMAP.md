@@ -752,7 +752,10 @@ implementations. The remaining work is tracked explicitly below.
   Serialized Lua VM ownership, capability modules, dynamic services, scopes,
   diagnostics, console-facing runtime behavior, and tests now live together at
   `internal/runtime/lua`; the existing `modruntime` package name remains explicit
-  at call sites while the old top-level import path is rejected.
+  at call sites while the old top-level import path is rejected. Scene and overlay
+  stack ownership now lives at `internal/presentation/navigation` beside retained
+  rendering and headless scene state; command, acceptance, and Lua callers moved
+  together and the former top-level path is guarded.
 - [ ] Restore the complete typed Diablo TSV record layer as an internal game-data
   catalog. Preserve and verify every existing table struct and CSV tag, recover
   useful loading, indexing, lookup, validation, hot-reload, and Lua exposure
