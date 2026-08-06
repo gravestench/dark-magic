@@ -35,10 +35,26 @@ type ownedRenderNode struct {
 }
 
 type renderAssetCache struct {
-	mu  sync.Mutex
-	dc6 map[string]*dc6.DC6
-	dcc map[string]*dcc.DCC
-	cof map[string]*cof.COF
+	mu   sync.Mutex
+	dc6  map[string]*dc6.DC6
+	dcc  map[string]*dcc.DCC
+	cof  map[string]*cof.COF
+	font map[string]*assetdecode.BitmapFont
+}
+
+func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette string) (*assetdecode.BitmapFont, error) {
+	key := table + "\x00" + sheet + "\x00" + palette
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if font := c.font[key]; font != nil {
+		return font, nil
+	}
+	font, err := assetdecode.LoadBitmapFont(assets, table, sheet, palette)
+	if err != nil {
+		return nil, err
+	}
+	c.font[key] = font
+	return font, nil
 }
 
 func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) {
@@ -191,7 +207,7 @@ func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
-	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6), dcc: make(map[string]*dcc.DCC), cof: make(map[string]*cof.COF)}
+	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6), dcc: make(map[string]*dcc.DCC), cof: make(map[string]*cof.COF), font: make(map[string]*assetdecode.BitmapFont)}
 	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -341,6 +357,28 @@ func registerRenderNodeType(state *lua.LState) {
 			visible := state.CheckBool(2)
 			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Visible = visible }); err != nil {
 				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
+		"set_clip": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			x, y := float64(state.CheckNumber(2)), float64(state.CheckNumber(3))
+			width, height := float64(state.CheckNumber(4)), float64(state.CheckNumber(5))
+			if width <= 0 || height <= 0 {
+				state.ArgError(4, "clip width and height must be positive")
+				return 0
+			}
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) {
+				current.Clip = &rendercore.Rect{X: x, Y: y, Width: width, Height: height}
+			}); err != nil {
+				state.RaiseError("updating render clip: %v", err)
+			}
+			return 0
+		},
+		"clear_clip": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Clip = nil }); err != nil {
+				state.RaiseError("clearing render clip: %v", err)
 			}
 			return 0
 		},
@@ -502,6 +540,59 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			state.Push(lua.LNumber(len(frames)))
 			return 1
+		},
+		"set_text": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			tableName, sheetName := state.CheckString(2), state.CheckString(3)
+			paletteName, text := state.OptString(4, ""), state.CheckString(5)
+			red, green, blue, alpha := 255, 255, 255, 255
+			maxWidth, align := 0, "left"
+			if state.GetTop() >= 6 && state.Get(6) != lua.LNil {
+				options := state.CheckTable(6)
+				integer := func(name string, fallback int) int {
+					value := options.RawGetString(name)
+					if value == lua.LNil {
+						return fallback
+					}
+					return int(lua.LVAsNumber(value))
+				}
+				red, green, blue, alpha = integer("red", red), integer("green", green), integer("blue", blue), integer("alpha", alpha)
+				maxWidth = integer("max_width", 0)
+				if value := options.RawGetString("align"); value != lua.LNil {
+					align = lua.LVAsString(value)
+				}
+			}
+			for _, channel := range []int{red, green, blue, alpha} {
+				if channel < 0 || channel > 255 {
+					state.ArgError(6, "text color channels must be between 0 and 255")
+					return 0
+				}
+			}
+			if maxWidth < 0 {
+				state.ArgError(6, "max_width cannot be negative")
+				return 0
+			}
+			font, err := node.cache.loadFont(node.assets, tableName, sheetName, paletteName)
+			if err != nil {
+				state.RaiseError("loading bitmap font: %v", err)
+				return 0
+			}
+			rendered, err := font.Render(text, color.RGBA{R: uint8(red), G: uint8(green), B: uint8(blue), A: uint8(alpha)}, maxWidth, align)
+			if err != nil {
+				state.RaiseError("rendering bitmap text: %v", err)
+				return 0
+			}
+			if err := node.setImage(rendered); err != nil {
+				state.RaiseError("updating text render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(rendered.Bounds().Dx()))
+			state.Push(lua.LNumber(rendered.Bounds().Dy()))
+			return 2
 		},
 		"animation_pause": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

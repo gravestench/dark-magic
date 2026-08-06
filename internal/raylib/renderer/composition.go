@@ -113,6 +113,12 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 	node.SetPosition(float32(state.X), float32(state.Y))
 	node.SetScale(float32(state.ScaleX))
 	node.SetRotation(float32(state.Rotation))
+	if state.Clip == nil {
+		node.SetClip(nil)
+	} else {
+		clip := rl.NewRectangle(float32(state.Clip.X), float32(state.Clip.Y), float32(state.Clip.Width), float32(state.Clip.Height))
+		node.SetClip(&clip)
+	}
 	switch state.Blend {
 	case "", "alpha":
 		node.SetBlendMode(rl.BlendAlpha)

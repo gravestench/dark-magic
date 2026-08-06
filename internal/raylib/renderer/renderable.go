@@ -36,6 +36,7 @@ type node struct {
 	origin         rl.Vector2
 	textureVariant string
 	textureKeys    map[string]struct{}
+	clip           *rl.Rectangle
 
 	onUpdate func()
 
@@ -200,6 +201,10 @@ func (n *node) BlendMode() (mode rl.BlendMode) {
 func (n *node) SetBlendMode(mode rl.BlendMode) {
 	n.blendMode = mode
 }
+
+func (n *node) Clip() *rl.Rectangle { return n.clip }
+
+func (n *node) SetClip(clip *rl.Rectangle) { n.clip = clip }
 
 func (n *node) Texture() rl.Texture2D {
 	key := n.uuid.String() + n.textureVariant

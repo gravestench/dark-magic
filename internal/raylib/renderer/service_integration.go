@@ -83,6 +83,8 @@ type Renderable interface {
 
 	BlendMode() (mode rl.BlendMode)
 	SetBlendMode(mode rl.BlendMode)
+	Clip() *rl.Rectangle
+	SetClip(*rl.Rectangle)
 
 	Texture() rl.Texture2D
 	SetTexture(rl.Texture2D)

@@ -16,6 +16,10 @@ func (s *Service) render() {
 }
 
 func (s *Service) renderRecursively(renderable Renderable) {
+	if clip := renderable.Clip(); clip != nil {
+		rl.BeginScissorMode(int32(clip.X), int32(clip.Y), int32(clip.Width), int32(clip.Height))
+		defer rl.EndScissorMode()
+	}
 	if renderable.IsEnabled() {
 		s.renderNode(renderable)
 	}

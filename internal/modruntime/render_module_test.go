@@ -34,7 +34,8 @@ return {
     start = function(self)
         self.root = render.create("transition")
         self.root:set_position(320, 240)
-		self.root:set_z(7)
+			self.root:set_z(7)
+			self.root:set_clip(10, 20, 300, 200)
 		self.root:fill_rect(16, 8, 1, 2, 3, 4)
     end,
 }
@@ -53,6 +54,9 @@ return {
 	nodes := composer.Snapshot()
 	if len(nodes) != 1 || nodes[0].X != 320 || nodes[0].Y != 240 || nodes[0].Z != 7 || nodes[0].Layer != rendercore.LayerTransition {
 		t.Fatalf("nodes = %#v", nodes)
+	}
+	if nodes[0].Clip == nil || *nodes[0].Clip != (rendercore.Rect{X: 10, Y: 20, Width: 300, Height: 200}) {
+		t.Fatalf("clip = %#v", nodes[0].Clip)
 	}
 	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
 	if err != nil {

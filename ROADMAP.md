@@ -290,10 +290,13 @@ implementations. The remaining work is tracked explicitly below.
   Palette-aware DCC frame/animation handles and checked COF metadata for layer
   priority, weapon class, draw effects, transparency, selection, speed, and
   frame events are implemented; assembled multi-component rendering remains.
-- [ ] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
+- [x] M16.3: Decode Diablo font TBL/DC6 pairs and expose measured localized text
   layout with color, alignment, wrapping, clipping, and fallback behavior.
 - [ ] M16.4: Implement reusable Lua controls with pointer/controller focus,
   hit-testing, state visuals, activation sounds, and accessibility metadata.
+  Buttons now provide pointer hit-testing, directional focus, disabled/hidden
+  states, activation and visual-state callbacks, and accessibility snapshots;
+  text fields, checkboxes, scrollbars, and focus scopes remain.
 - [ ] M16.5: Implement scoped music, UI, SFX, ambience, and speech buses with
   streaming, looping, fades, pan, grouping, and record-driven lookup.
 - [ ] M16.6: Add generation-aware CPU/native caches, budgets, diagnostics, and
@@ -321,6 +324,9 @@ implementations. The remaining work is tracked explicitly below.
 
 - [ ] M17.1: Complete title/main-menu labels, controls, music, cursor, legal and
   version text, dialogs, and single/multiplayer/credits/cinematics navigation.
+  The localized Single Player control now uses the verified split DC6 button,
+  Exocet TBL/DC6 text, pointer/focus activation, and selection sound; remaining
+  controls and sibling screens remain.
 - [ ] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
   behavior.
 - [ ] M17.3: Implement all seven character-creation presentations and rules.

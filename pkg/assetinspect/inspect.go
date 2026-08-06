@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
 	"github.com/gravestench/dcc"
 	"github.com/gravestench/ds1"
@@ -103,6 +104,22 @@ func decodeDetails(extension string, data []byte) (any, error) {
 		}
 		return map[string]any{"tiles": len(asset.Tiles), "types": sortedInt32Keys(types), "styles": sortedInt32Keys(styles)}, nil
 	case "tbl":
+		if len(data) >= 5 && string(data[:5]) == "Woo!\x01" {
+			glyphs, err := assetdecode.FontTable(data)
+			if err != nil {
+				return nil, err
+			}
+			maxWidth, maxHeight := 0, 0
+			for _, glyph := range glyphs {
+				if glyph.Width > maxWidth {
+					maxWidth = glyph.Width
+				}
+				if glyph.Height > maxHeight {
+					maxHeight = glyph.Height
+				}
+			}
+			return map[string]any{"format": "font-table", "glyphs": len(glyphs), "max_width": maxWidth, "max_height": maxHeight}, nil
+		}
 		table, err := tbl.Unmarshal(data)
 		if err != nil {
 			return nil, err

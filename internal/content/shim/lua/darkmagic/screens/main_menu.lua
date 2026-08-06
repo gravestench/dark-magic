@@ -2,7 +2,10 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
+local locale = require("dm.locale/v1")
+local audio = require("dm.audio/v1")
 local dc6 = require("darkmagic.ui.dc6")
+local controls = require("darkmagic.ui.controls")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.main_menu
@@ -30,6 +33,7 @@ return {
             self.logo.fire_right:set_blend(logo.fire_blend)
             self:configure_logo()
         end
+        self:configure_controls()
     end,
 
     configure_logo = function(self)
@@ -43,9 +47,46 @@ return {
         animate(self.logo.fire_right, logo.fire_right)
     end,
 
-    update = function(self, elapsed)
-        if input.pressed("confirm") then
-            scenes.replace("character_select")
+    configure_controls = function(self)
+        self.controls = controls.new()
+        local definition = screen.controls.single_player
+        local control = {
+            id = "single_player",
+            label = assert(locale.text(definition.label)),
+            x = definition.x, y = definition.y,
+            width = definition.width, height = definition.height,
+            on_activate = function()
+                if audio.exists(manifest.sounds.select) then audio.play(manifest.sounds.select) end
+                scenes.replace("character_select")
+            end,
+        }
+        if render.assets_available() then
+            local palette = manifest.palettes[definition.palette]
+            local left = render.create("hud", self.root)
+            local right = render.create("hud", self.root)
+            local label = render.create("hud", self.root)
+            local function draw_frames(frames)
+                left:set_dc6(definition.sheet, palette, 0, frames[1])
+                right:set_dc6(definition.sheet, palette, 0, frames[2])
+            end
+            draw_frames(definition.up_frames)
+            left:set_position(definition.x + 128, definition.y + definition.height / 2)
+            right:set_position(definition.x + 264, definition.y + definition.height / 2)
+            local font = manifest.fonts.exocet10
+            label:set_text(font.table, font.sheet, manifest.palettes[font.palette], control.label, {
+                red = 210, green = 180, blue = 110, max_width = definition.width, align = "center"
+            })
+            label:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
+            control.on_state = function(_, state)
+                if state == "focused" or state == "hover" then draw_frames(definition.down_frames)
+                else draw_frames(definition.up_frames) end
+            end
         end
+        self.controls:add(control)
+    end,
+
+    update = function(self, elapsed)
+        if self.controls then self.controls:update() end
+        if input.pressed("cancel") then scenes.replace("title") end
     end,
 }

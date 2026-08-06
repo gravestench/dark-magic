@@ -20,6 +20,17 @@
       "first_frame": 0
     }
   },
+  "fonts": {
+    "exocet10": {
+      "table": "data/local/FONT/latin/fontexocet10.tbl",
+      "sheet": "data/local/FONT/latin/fontexocet10.dc6",
+      "palette": "units"
+    }
+  },
+  "sounds": {
+    "button": "data/global/sfx/cursor/button.wav",
+    "select": "data/global/sfx/cursor/select.wav"
+  },
   "screens": {
     "title": {
       "background": "data/global/ui/FrontEnd/TitleScreen.dc6",
@@ -28,6 +39,19 @@
     "main_menu": {
       "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
       "palette": "sky",
+      "controls": {
+        "single_player": {
+          "x": 264,
+          "y": 290,
+          "width": 272,
+          "height": 35,
+          "label": "darkmagic.menu.single_player",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6",
+          "palette": "units",
+          "up_frames": [0, 1],
+          "down_frames": [2, 3]
+        }
+      },
       "logo": {
         "anchor": { "x": 400, "y": 120 },
         "frames": 30,
