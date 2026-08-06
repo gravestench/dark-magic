@@ -1,5 +1,9 @@
 github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 h1:9bbQDlx6h7MyNk3Ljr5wNqFQ5gEhX7pE4j7EHL86/2Q=
 github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8/go.mod h1:rwSKMTLI/8tbw6YDRqtd3Hc0OI3eP/tSTVKshyd8dO8=
+github.com/asticode/go-astiav v0.41.0 h1:HZCQ71lPqRQHHIQ5cShrHEq9HtX0NiWIHm7FZ2Jk+x8=
+github.com/asticode/go-astiav v0.41.0/go.mod h1:GI0pHw6K2/pl/o8upCtT49P/q4KCwhv/8nGLlCsZLdA=
+github.com/asticode/go-astikit v0.42.0 h1:pnir/2KLUSr0527Tv908iAH6EGYYrYta132vvjXsH5w=
+github.com/asticode/go-astikit v0.42.0/go.mod h1:h4ly7idim1tNhaVkdVBeXQZEE3L0xblP7fCWbgwipF0=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ebitengine/purego v0.10.0 h1:QIw4xfpWT6GWTzaW5XEKy3HXoqrJGx1ijYHzTF0/ISU=

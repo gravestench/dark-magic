@@ -376,7 +376,10 @@ implementations. The remaining work is tracked explicitly below.
 ### M17.6: Embedded, single-window Bink playback
 
 - [ ] Decode Bink video and audio in-process behind `videocore.Backend`; keep
-  codec and FFmpeg details out of Lua and scene definitions.
+  codec and FFmpeg details out of Lua and scene definitions. The build-tagged
+  libav decoder now demuxes seekable VFS input, decodes video packets, converts
+  native frames to RGBA, and emits timestamped frames; audio and backend
+  scheduling remain.
 - [x] Add checked streaming texture updates that transfer decoded frames onto
   the renderer owner thread without replacing the cinematic scene node.
 - [x] Present decoded frames on `LayerTransition` with aspect-preserving

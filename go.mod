@@ -3,6 +3,7 @@ module github.com/gravestench/dark-magic
 go 1.22.0
 
 require (
+	github.com/asticode/go-astiav v0.41.0
 	github.com/gen2brain/raylib-go/raylib v0.60.0
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/cof v0.1.0
@@ -17,6 +18,7 @@ require (
 )
 
 require (
+	github.com/asticode/go-astikit v0.42.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/jupiterrider/ffi v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
