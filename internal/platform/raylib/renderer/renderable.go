@@ -37,6 +37,7 @@ type node struct {
 	textureVariant string
 	textureKeys    map[string]struct{}
 	clip           *rl.Rectangle
+	shader         *rl.Shader
 
 	onUpdate func()
 
@@ -48,6 +49,10 @@ type node struct {
 
 	isDirty bool
 }
+
+func (n *node) Shader() *rl.Shader { return n.shader }
+
+func (n *node) SetShader(shader *rl.Shader) { n.shader = shader }
 
 func (n *node) dirty() bool {
 	if !n.isDirty {

@@ -89,6 +89,9 @@ func (s *Service) Stop(context.Context) error {
 	if s.audioBackend != nil {
 		s.audioBackend.Close()
 	}
+	if s.compositionBackend != nil {
+		s.compositionBackend.closePaletteEffects()
+	}
 	s.stopPaletteQuantizer()
 	rl.CloseAudioDevice()
 	rl.CloseWindow()

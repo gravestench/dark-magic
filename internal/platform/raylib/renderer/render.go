@@ -79,6 +79,10 @@ func (s *Service) renderNode(node Renderable) {
 	dstOrigin := rl.Vector2{X: originX, Y: originY}
 
 	tint := rl.NewColor(255, 255, 255, uint8(node.Opacity()*255))
+	if shader := node.Shader(); shader != nil {
+		rl.BeginShaderMode(*shader)
+		defer rl.EndShaderMode()
+	}
 
 	if node.BlendMode() != rl.BlendAlpha {
 		rl.BeginBlendMode(node.BlendMode())

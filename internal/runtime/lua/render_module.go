@@ -30,6 +30,7 @@ type ownedRenderNode struct {
 	composer *render.Composer
 	id       render.NodeID
 	resource render.ResourceID
+	palette  render.ResourceID
 	owned    []render.ResourceID
 	assets   fs.FS
 	cache    *renderAssetCache
@@ -277,12 +278,45 @@ func (n *ownedRenderNode) release() error {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
 			n.resource = render.ResourceID{}
 		}
+		if n.palette != (render.ResourceID{}) {
+			n.err = errors.Join(n.err, n.composer.DestroyResource(n.palette))
+			n.palette = render.ResourceID{}
+		}
 		for _, resource := range n.owned {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(resource))
 		}
 		n.owned = nil
 	})
 	return n.err
+}
+
+func (n *ownedRenderNode) setPaletteQuantization(palette color.Palette) error {
+	resource, err := n.composer.CreateResource(render.ResourcePalette, palette)
+	if err != nil {
+		return err
+	}
+	previous := n.palette
+	if err := n.composer.Update(n.id, func(current *render.Node) { current.Palette = resource }); err != nil {
+		_ = n.composer.DestroyResource(resource)
+		return err
+	}
+	n.palette = resource
+	if previous != (render.ResourceID{}) {
+		return n.composer.DestroyResource(previous)
+	}
+	return nil
+}
+
+func (n *ownedRenderNode) clearPaletteQuantization() error {
+	previous := n.palette
+	if err := n.composer.Update(n.id, func(current *render.Node) { current.Palette = render.ResourceID{} }); err != nil {
+		return err
+	}
+	n.palette = render.ResourceID{}
+	if previous != (render.ResourceID{}) {
+		return n.composer.DestroyResource(previous)
+	}
+	return nil
 }
 
 func (n *ownedRenderNode) setImage(decoded image.Image) error {
@@ -744,6 +778,30 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.composer.Update(node.id, func(current *render.Node) { current.Blend = blend }); err != nil {
 				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
+		"set_palette_quantization": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			name := state.CheckString(2)
+			palette, err := assetdecode.DisplayPalette(node.assets, name)
+			if err != nil {
+				state.RaiseError("loading display palette %q: %v", name, err)
+				return 0
+			}
+			if err := node.setPaletteQuantization(palette); err != nil {
+				state.RaiseError("applying display palette: %v", err)
+			}
+			return 0
+		},
+		"clear_palette_quantization": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if err := node.clearPaletteQuantization(); err != nil {
+				state.RaiseError("clearing display palette: %v", err)
 			}
 			return 0
 		},

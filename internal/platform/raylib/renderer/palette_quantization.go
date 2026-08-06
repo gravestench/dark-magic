@@ -42,6 +42,39 @@ type paletteQuantizer struct {
 	texture rl.Texture2D
 }
 
+type gpuPaletteEffect struct {
+	shader  rl.Shader
+	texture rl.Texture2D
+}
+
+func newGPUPaletteEffect(palette color.Palette) (*gpuPaletteEffect, error) {
+	lut := buildPaletteLUT(palette)
+	image := rl.NewImageFromImage(lut)
+	texture := rl.LoadTextureFromImage(image)
+	rl.UnloadImage(image)
+	if !rl.IsTextureValid(texture) {
+		return nil, fmt.Errorf("renderer: upload palette lookup texture")
+	}
+	rl.SetTextureFilter(texture, rl.FilterPoint)
+	shader := rl.LoadShaderFromMemory("", paletteFragmentShader)
+	if !rl.IsShaderValid(shader) {
+		rl.UnloadTexture(texture)
+		return nil, fmt.Errorf("renderer: compile palette quantization shader")
+	}
+	location := rl.GetShaderLocation(shader, "paletteLUT")
+	rl.SetShaderValueTexture(shader, location, texture)
+	return &gpuPaletteEffect{shader: shader, texture: texture}, nil
+}
+
+func (effect *gpuPaletteEffect) close() {
+	if effect == nil || effect.shader.ID == 0 {
+		return
+	}
+	rl.UnloadShader(effect.shader)
+	rl.UnloadTexture(effect.texture)
+	effect.shader = rl.Shader{}
+}
+
 // ConfigurePaletteQuantization selects a Diablo pal.dat as an optional final
 // display transform. GPU resources are created later on the renderer owner
 // thread during Start.
@@ -50,7 +83,7 @@ func (s *Service) ConfigurePaletteQuantization(source fs.FS, palettePath string)
 		s.paletteQuantizer = nil
 		return nil
 	}
-	palette, err := assetdecode.Palette(source, palettePath)
+	palette, err := assetdecode.DisplayPalette(source, palettePath)
 	if err != nil {
 		return fmt.Errorf("renderer: output palette: %w", err)
 	}

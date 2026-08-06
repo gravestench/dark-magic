@@ -86,6 +86,7 @@ type Node struct {
 	Clip                  *Rect
 	Blend                 string
 	Resource              ResourceID
+	Palette               ResourceID
 	AnimationPaused       bool
 	AnimationSeek         time.Duration
 	AnimationSeekRevision uint64
@@ -267,8 +268,14 @@ func (c *Composer) DestroyResource(id ResourceID) error {
 		return err
 	}
 	for _, node := range c.slots {
-		if node.node != nil && node.node.Resource == id {
+		if node.node == nil {
+			continue
+		}
+		if node.node.Resource == id {
 			return fmt.Errorf("rendercore: resource %v is still attached to node %v", id, node.node.ID)
+		}
+		if node.node.Palette == id {
+			return fmt.Errorf("rendercore: palette %v is still attached to node %v", id, node.node.ID)
 		}
 	}
 	for _, candidate := range c.resources {
@@ -354,6 +361,15 @@ func (c *Composer) Update(id NodeID, update func(*Node)) error {
 		}
 		if resource.Kind != ResourceTexture && resource.Kind != ResourceAnimation && resource.Kind != ResourceRenderTarget {
 			return fmt.Errorf("rendercore: resource kind %q is not drawable", resource.Kind)
+		}
+	}
+	if candidate.Palette != (ResourceID{}) {
+		resource, err := c.resource(candidate.Palette)
+		if err != nil {
+			return fmt.Errorf("rendercore: node palette: %w", err)
+		}
+		if resource.Kind != ResourcePalette {
+			return fmt.Errorf("rendercore: node palette resource kind is %q", resource.Kind)
 		}
 	}
 	*node = candidate

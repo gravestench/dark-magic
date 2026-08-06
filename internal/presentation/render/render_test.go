@@ -67,6 +67,30 @@ func TestManagedResourcePayloadValidation(t *testing.T) {
 	}
 }
 
+func TestPaletteResourcesRemainAliveWhileAttached(t *testing.T) {
+	var composer Composer
+	palette, err := composer.CreateResource(ResourcePalette, color.Palette{color.Black})
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := composer.Create(NodeID{}, LayerHUD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Update(node, func(current *Node) { current.Palette = palette }); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.DestroyResource(palette); err == nil {
+		t.Fatal("destroyed a palette while it was attached to a node")
+	}
+	if err := composer.Update(node, func(current *Node) { current.Palette = ResourceID{} }); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.DestroyResource(palette); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTextureUpdatesRemainCheckedAndOrdered(t *testing.T) {
 	var composer Composer
 	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 2, 2)))

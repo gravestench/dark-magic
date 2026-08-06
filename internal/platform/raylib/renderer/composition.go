@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"sync"
 	"time"
 
@@ -21,7 +22,7 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 	if s.composition != nil {
 		return fmt.Errorf("renderer: composition core is already attached")
 	}
-	backend := &compositionBackend{renderer: s, nodes: make(map[render.NodeID]Renderable), resources: make(map[render.ResourceID]render.Resource), nodeResources: make(map[render.NodeID]render.ResourceID), playbacks: make(map[render.NodeID]*animationPlayback)}
+	backend := &compositionBackend{renderer: s, nodes: make(map[render.NodeID]Renderable), resources: make(map[render.ResourceID]render.Resource), nodeResources: make(map[render.NodeID]render.ResourceID), playbacks: make(map[render.NodeID]*animationPlayback), paletteEffects: make(map[render.ResourceID]*gpuPaletteEffect)}
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
@@ -33,12 +34,25 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 }
 
 type compositionBackend struct {
-	renderer      *Service
-	mu            sync.Mutex
-	nodes         map[render.NodeID]Renderable
-	resources     map[render.ResourceID]render.Resource
-	nodeResources map[render.NodeID]render.ResourceID
-	playbacks     map[render.NodeID]*animationPlayback
+	renderer       *Service
+	mu             sync.Mutex
+	nodes          map[render.NodeID]Renderable
+	resources      map[render.ResourceID]render.Resource
+	nodeResources  map[render.NodeID]render.ResourceID
+	playbacks      map[render.NodeID]*animationPlayback
+	paletteEffects map[render.ResourceID]*gpuPaletteEffect
+}
+
+func (b *compositionBackend) closePaletteEffects() {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for id, effect := range b.paletteEffects {
+		effect.close()
+		delete(b.paletteEffects, id)
+	}
 }
 
 type animationPlayback struct {
@@ -61,6 +75,9 @@ func (b *compositionBackend) Apply(change render.Change) error {
 	}
 	if b.playbacks == nil {
 		b.playbacks = make(map[render.NodeID]*animationPlayback)
+	}
+	if b.paletteEffects == nil {
+		b.paletteEffects = make(map[render.ResourceID]*gpuPaletteEffect)
 	}
 	switch change.Kind {
 	case "resource-create":
@@ -93,6 +110,10 @@ func (b *compositionBackend) Apply(change render.Change) error {
 	case "resource-destroy":
 		if _, exists := b.resources[change.ResourceID]; !exists {
 			return fmt.Errorf("resource %v does not exist", change.ResourceID)
+		}
+		if effect := b.paletteEffects[change.ResourceID]; effect != nil {
+			effect.close()
+			delete(b.paletteEffects, change.ResourceID)
 		}
 		delete(b.resources, change.ResourceID)
 		return nil
@@ -158,6 +179,24 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 		return fmt.Errorf("unsupported blend mode %q", state.Blend)
 	}
 	node.SetZIndex(float32(int(state.Layer)*1_000_000 + state.Z))
+	if state.Palette == (render.ResourceID{}) {
+		node.SetShader(nil)
+	} else {
+		effect := b.paletteEffects[state.Palette]
+		if effect == nil {
+			resource, exists := b.resources[state.Palette]
+			if !exists || resource.Kind != render.ResourcePalette {
+				return fmt.Errorf("palette resource %v is unavailable", state.Palette)
+			}
+			var err error
+			effect, err = newGPUPaletteEffect(resource.Payload.(color.Palette))
+			if err != nil {
+				return err
+			}
+			b.paletteEffects[state.Palette] = effect
+		}
+		node.SetShader(&effect.shader)
+	}
 	if state.Resource != (render.ResourceID{}) {
 		resource, exists := b.resources[state.Resource]
 		if !exists {

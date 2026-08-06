@@ -112,9 +112,9 @@ go run -tags ffmpeg ./cmd/darkmagic --log-level debug
 DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/darkmagic
 ```
 
-Quantize the final composed display into any mounted Diablo `pal.dat` with the
-optional GPU post-process. The lookup cube emits only colors from the selected
-palette while preserving source alpha:
+Quantize the final composed display with an optional GPU post-process. The
+lookup cube emits only colors from the selected palette while preserving source
+alpha:
 
 ```shell
 go run -tags ffmpeg ./cmd/darkmagic \
@@ -122,6 +122,19 @@ go run -tags ffmpeg ./cmd/darkmagic \
 ```
 
 The equivalent environment variable is `DARK_MAGIC_OUTPUT_PALETTE`.
+
+Lua can apply the same effect to one retained texture or animation instead of
+the whole screen:
+
+```lua
+node:set_palette_quantization("palettes/black-white.json")
+node:clear_palette_quantization()
+```
+
+Palette files may be normal Diablo `pal.dat` files or any non-empty sequence of
+packed BGR triples. Tiny palettes are intentional: three bytes force one color,
+while six bytes can define black and white. JSON palettes are also supported as
+either `["#000000", "#ffffff"]` or `{"colors":["#000000","#ffffff"]}`.
 
 Capture CPU activity for the full client run and a live-heap snapshot at clean
 shutdown with:

@@ -138,6 +138,64 @@ return {
 	}
 }
 
+func TestRenderNodePaletteQuantizationAcceptsTinyPalettes(t *testing.T) {
+	t.Parallel()
+
+	var composer render.Composer
+	runtime := New()
+	assets := fstest.MapFS{
+		"screen.lua": {Data: []byte(`
+local render = require("dm.render/v1")
+return {
+    id = "screen.palette",
+    start = function(self)
+        self.root = render.create("hud")
+        self.root:fill_rect(4, 4, 255, 0, 0, 255)
+        self.root:set_palette_quantization("black-white.pal")
+    end,
+}
+`)},
+		"black-white.pal": {Data: []byte{0, 0, 0, 255, 255, 255}},
+	}
+	if err := runtime.RegisterModule(RenderModuleWithAssets(runtime, &composer, assets)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+
+	definition, err := LoadDefinition(context.Background(), runtime, assets, "screen.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := host.NewManager()
+	if err := manager.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Enable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	nodes := composer.Snapshot()
+	if len(nodes) != 1 || nodes[0].Palette == (render.ResourceID{}) {
+		t.Fatalf("palette node = %#v", nodes)
+	}
+	resource, err := composer.ResourceSnapshot(nodes[0].Palette)
+	if err != nil {
+		t.Fatal(err)
+	}
+	palette, ok := resource.Payload.(color.Palette)
+	if !ok || len(palette) != 2 {
+		t.Fatalf("palette resource = %#v", resource)
+	}
+	if err := manager.Disable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if nodes := composer.Snapshot(); len(nodes) != 0 {
+		t.Fatalf("nodes leaked after disable: %#v", nodes)
+	}
+}
+
 func TestRenderCapabilityExposesCOFCompositionMetadata(t *testing.T) {
 	input := cof.New()
 	input.NumberOfDirections = 1
