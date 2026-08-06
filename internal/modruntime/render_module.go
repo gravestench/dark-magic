@@ -368,6 +368,20 @@ func dc6AnimationBounds(asset *dc6.DC6, direction int) image.Rectangle {
 	return bounds
 }
 
+func dc6FixedAnimationBounds(asset *dc6.DC6, direction int) image.Rectangle {
+	frames := asset.Directions[direction].Frames
+	if len(frames) == 0 {
+		return image.Rectangle{}
+	}
+	var width, height int
+	for _, frame := range frames {
+		width = max(width, int(frame.Width))
+		height = max(height, int(frame.Height))
+	}
+	return image.Rect(int(frames[0].OffsetX), -int(frames[0].OffsetY),
+		int(frames[0].OffsetX)+width, -int(frames[0].OffsetY)+height)
+}
+
 func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, sharedBounds ...image.Rectangle) ([]image.Image, image.Rectangle, error) {
 	frames := asset.Directions[direction].Frames
 	var bounds image.Rectangle
@@ -406,7 +420,9 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 		}
 		canvas := image.NewRGBA(image.Rectangle{Max: bounds.Size()})
 		position := image.Point{}
-		if anchorMode != "first-frame" || len(sharedBounds) > 0 {
+		if anchorMode == "first-frame" && len(sharedBounds) > 0 {
+			position = image.Pt(int(frames[0].OffsetX)-bounds.Min.X, -int(frames[0].OffsetY)-bounds.Min.Y)
+		} else if anchorMode != "first-frame" {
 			position = image.Pt(int(frame.OffsetX)-bounds.Min.X, -int(frame.OffsetY)-bounds.Min.Y)
 		}
 		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Src)
@@ -464,7 +480,12 @@ func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, ass
 					state.ArgError(3, "direction is out of range")
 					return 0
 				}
-				bounds := dc6AnimationBounds(asset, direction)
+				var bounds image.Rectangle
+				if state.OptString(4, "offsets") == "first-frame" {
+					bounds = dc6FixedAnimationBounds(asset, direction)
+				} else {
+					bounds = dc6AnimationBounds(asset, direction)
+				}
 				state.Push(lua.LNumber(bounds.Min.X))
 				state.Push(lua.LNumber(bounds.Min.Y))
 				state.Push(lua.LNumber(bounds.Max.X))

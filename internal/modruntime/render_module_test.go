@@ -44,6 +44,17 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	if got := color.RGBAModel.Convert(fixed[1].At(0, 0)).(color.RGBA); got.R != 255 {
 		t.Fatalf("fixed second pixel = %#v", got)
 	}
+	shared := image.Rect(1, -14, 8, -8)
+	sharedFixed, sharedFixedBounds, err := normalizedDC6Frames(asset, 0, "first-frame", shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sharedFixedBounds != shared {
+		t.Fatalf("shared fixed bounds = %v", sharedFixedBounds)
+	}
+	if got := color.RGBAModel.Convert(sharedFixed[1].At(4, 4)).(color.RGBA); got.R != 255 {
+		t.Fatalf("shared fixed second pixel = %#v", got)
+	}
 }
 
 func TestAssetWeightReadsAssetContents(t *testing.T) {

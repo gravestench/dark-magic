@@ -54,7 +54,7 @@ function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_
     if not render.assets_available() then return 0 end
     local min_x, min_y, max_x, max_y
     for index, path in ipairs(paths) do
-        local x1, y1, x2, y2 = render.dc6_animation_bounds(path, palette, 0)
+        local x1, y1, x2, y2 = render.dc6_animation_bounds(path, palette, 0, "first-frame")
         min_x = min_x and math.min(min_x, x1) or x1
         min_y = min_y and math.min(min_y, y1) or y1
         max_x = max_x and math.max(max_x, x2) or x2
@@ -63,7 +63,7 @@ function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_
     local count = 0
     for index, node in ipairs(nodes) do
         count = node:set_dc6_animation(paths[index], palette, 0, frames_per_second,
-            loop or "loop", "offsets", min_x, min_y, max_x, max_y)
+            loop or "loop", "first-frame", min_x, min_y, max_x, max_y)
         node:set_position(anchor_x + min_x + (max_x - min_x) / 2,
             anchor_y + min_y + (max_y - min_y) / 2)
     end
