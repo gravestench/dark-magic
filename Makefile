@@ -1,4 +1,4 @@
-.PHONY: test test-race fmt vet shim
+.PHONY: test test-race fmt vet shim bik-view
 
 test:
 	go test ./...
@@ -14,3 +14,6 @@ vet:
 
 shim:
 	go run ./internal/tools/shim_pack -output ./dist/darkmagic.zip
+
+bik-view:
+	go run ./internal/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"

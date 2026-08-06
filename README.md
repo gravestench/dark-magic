@@ -118,6 +118,18 @@ go run ./internal/tools/asset_catalog \
   -out ./asset-catalog
 ```
 
+View a Bink cinematic directly from an MPQ directory (FFmpeg/`ffplay` is
+required, and the temporary extracted file is removed when playback exits):
+
+```sh
+go run ./internal/tools/bik_view \
+  -source ~/d2_english_mpq \
+  -asset data/local/video/New_Bliz640x480.bik
+```
+
+Standalone files are supported with `-file movie.bik`. The equivalent Make
+target accepts `MPQ_DIRECTORY` and `BIK_ASSET` environment variables.
+
 The report records missing and disputed paths, the archive layer that supplied
 each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use
 `-manifest custom.json` to verify additional hypotheses or `-no-sheets` for a
