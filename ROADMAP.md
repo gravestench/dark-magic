@@ -231,12 +231,142 @@ their own legally obtained game data.
 
 ## Later gameplay milestones
 
-1. Monster generation and AI.
-2. Combat and progression.
-3. Audio and music integration.
-4. Expanded map generation and developer/mod packaging tools.
-5. Save compatibility, multiplayer synchronization, and replayable deterministic
-   simulation.
+The completed milestones above establish architecture and headless acceptance;
+they do not mean the corresponding screens or gameplay are faithful Diablo II
+implementations. The remaining work is tracked explicitly below.
+
+## M15: Verified Blizzard-asset knowledge
+
+- [x] Mine OpenDiablo2, AbyssEngine, and Riiablo for MPQ paths, palettes,
+  frames, coordinates, sounds, localization keys, and screen composition.
+- [x] Add a read-only catalog command with provenance, hashes, frame metadata,
+  and palette-applied DC6 contact sheets.
+- [x] Verify the initial 90 hypotheses against a complete English Diablo II/LOD
+  MPQ stack without committing derived game imagery.
+- [ ] Move verified screen facts from Go literals into versioned shim manifests
+  with confidence, game-version, language, and resolution fields.
+- [ ] Catalog every front-end screen, HUD/panel sheet, cursor, font, cinematic,
+  sound cue, and relevant TXT/TBL dependency.
+- [ ] Add comparison fixtures that verify expected dimensions, frame counts,
+  offsets, and hashes without distributing original asset bytes.
+
+## M16: MPQ-backed presentation primitives
+
+- [x] Decode DC6 assets with an explicit palette through managed render
+  resources exposed to Lua by checked handles.
+- [ ] Decode DCC assets with an explicit palette through the same managed path.
+- [x] Support DC6 frame/direction selection, placement offsets, anchoring,
+  front-end tiling, deterministic layer order, and alpha/additive/multiply blend
+  modes.
+- [ ] Support native animation timing, loop modes, clipping, general tiling,
+  and nine-slice composition.
+- [ ] Decode Diablo font TBL/DC6 pairs and render localized, colored, aligned,
+  wrapped text.
+- [ ] Add Lua-authored buttons, text fields, checkboxes, scrollbars, focus order,
+  controller navigation, hit testing, hover/pressed/disabled states, and cursor
+  sounds.
+- [ ] Add music/SFX/UI/ambience/speech buses, looping and streaming, sound-record
+  lookup, grouped variants, fades, pan, and scope-owned playback.
+- [ ] Cache decoded CPU assets separately from renderer/audio resources and
+  invalidate them by VFS generation without leaking owner-thread resources.
+
+## M17: Authentic Lua-authored front end
+
+- [ ] Implement startup/trademark/cinematic sequencing from verified BIK and UI
+  assets with skip and failure behavior.
+- [x] Replace the placeholder title and main-menu rectangles with verified,
+  palette-aware tiled backgrounds and the anchored layered animated logo.
+- [ ] Add localized front-end buttons, legal/version labels, cursor behavior,
+  and title audio.
+- [ ] Implement single-player, multiplayer/TCP-IP, credits, cinematics, dialogs,
+  and navigation using verified front-end assets.
+- [ ] Implement character creation with all seven class animation sets, hit
+  regions, narration, name validation, expansion/hardcore flags, and cancel.
+- [ ] Implement saved-character selection with paging, scrollbar, composite
+  previews, metadata labels, deletion confirmation, and double activation.
+- [ ] Implement progressive loading screens driven by real dependency progress.
+- [ ] Add screenshot/composition tests for every state without checking Blizzard
+  imagery into the repository.
+
+## M18: Authentic in-game shell
+
+- [ ] Replace the compatibility HUD and placeholder hero with Lua orchestration
+  over real world and character presentation handles.
+- [ ] Assemble the 640x480 and 800x600 control panels, globes, stamina and
+  experience bars, belt, skill buttons, minipanel, tooltips, and cursor states.
+- [ ] Implement interactive inventory/equipment, character stats, skill trees,
+  automap, quest log, waypoint, party, hireling, vendor, stash, cube, options,
+  help, chat, pause, and escape panels from verified assets and records.
+- [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
+  related records; keep only presentation corrections in shim manifests.
+- [ ] Implement correct focus/input routing when world, HUD, modal, cursor,
+  transition, and debug layers coexist.
+
+## M19: Character, item, and save fidelity
+
+- [ ] Implement COF/DCC composite animation with equipment components, weapon
+  classes, directions, modes, layer order, transforms, shadows, and events.
+- [ ] Replace placeholder character storage with versioned Diablo II save parsing,
+  validation, creation, migration, and non-destructive writing.
+- [ ] Implement authoritative inventory grids, body slots, belt, cursor item,
+  alternate weapons, stash/cube/vendor transfers, and placement validation.
+- [ ] Connect deterministic loot instances to item serialization, names, colors,
+  requirements, durability, sockets, runewords, set state, and tooltip stats.
+- [ ] Recalculate character attributes and presentation after every equipment,
+  skill, level, state, and difficulty change.
+
+## M20: World fidelity
+
+- [ ] Import DS1/DT1 collision, orientation, material, warp, object, shadow, roof,
+  and subtile flags into deterministic chunks and zones.
+- [ ] Implement entity-size-aware A* navigation, path smoothing, collision,
+  interaction range, line of sight, and movement modes.
+- [ ] Implement deterministic preset, maze, outdoor, substitution, warp, object,
+  monster, and waypoint generation for all acts and difficulties.
+- [ ] Add animated map tiles, doors, breakables, shrines, chests, portals,
+  missiles, overlays, selectable bounds, and automap discovery.
+- [ ] Stream and cull zones without changing deterministic simulation results.
+
+## M21: Diablo simulation
+
+- [ ] Implement the complete stat/value system, ItemStatCost encoding, derived
+  stats, caps, per-level values, state modifiers, and description functions.
+- [ ] Implement player and monster modes, animation events, targeting, AI,
+  spawning, packs, bosses, pets, hirelings, corpses, and death/respawn.
+- [ ] Implement attacks, hit checks, block, defense, damage types, resistance,
+  absorb, leech, regeneration, durability, experience, leveling, and difficulty.
+- [ ] Implement skills, skill trees, missiles, auras, states, procs, charges,
+  cooldowns, mana, targeting shapes, and server-authoritative validation.
+- [ ] Implement NPC interaction, vendors, gambling, repair, identify, cube,
+  shrines, quests, waypoints, acts, difficulties, and end-game transitions.
+- [ ] Implement record-driven music, ambience, speech, monster, object, item, UI,
+  and combat sound selection with deterministic event identity where required.
+
+## M22: Persistence, networking, and release acceptance
+
+- [ ] Define deterministic simulation snapshots, commands, event logs, RNG
+  streams, checksums, replay files, and desync diagnostics.
+- [ ] Implement local play, listen/dedicated servers, discovery/direct connect,
+  authentication boundaries, snapshot transfer, command replication, rollback or
+  correction, and reconnect.
+- [ ] Preserve offline characters safely and separate trusted server characters
+  from client-controlled saves.
+- [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
+  performance, and race tests across supported platforms.
+- [ ] Package the engine and shim without Blizzard assets and verify first-run
+  installation discovery, configuration, diagnostics, mod isolation, and update
+  behavior.
+
+## Gameplay acceptance milestone
+
+- [ ] Starting from legally supplied MPQs, watch/skip startup, navigate the real
+  front end, create/select a character, and enter a generated Act I world.
+- [ ] Fight monsters using skills, gain experience and loot, equip and store
+  items, use town services, complete quests, change areas, save, quit, and resume.
+- [ ] Run the same deterministic session as offline play, replay, listen-server,
+  and dedicated-server play with matching simulation checksums.
+- [ ] Complete all acceptance flows without placeholder rectangles,
+  compatibility services, leaked handles, data races, or bundled Blizzard data.
 
 ## Performance priorities
 

@@ -7,12 +7,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"image/color"
-	"io"
 	"io/fs"
 	"path/filepath"
 	"strings"
 
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 	dc6 "github.com/gravestench/dc6/pkg"
 )
 
@@ -146,7 +145,7 @@ func inspect(source fs.FS, hypothesis Hypothesis, options Options) Result {
 		return result
 	}
 	if hypothesis.Palette != "" {
-		palette, paletteErr := readPalette(source, hypothesis.Palette)
+		palette, paletteErr := assetdecode.Palette(source, hypothesis.Palette)
 		if paletteErr != nil {
 			result.Warnings = append(result.Warnings, paletteErr.Error())
 		} else {
@@ -182,29 +181,6 @@ func inspect(source fs.FS, hypothesis Hypothesis, options Options) Result {
 		}
 	}
 	return result
-}
-
-func readPalette(source fs.FS, name string) (color.Palette, error) {
-	file, err := source.Open(name)
-	if err != nil {
-		return nil, fmt.Errorf("palette %q: %w", name, err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("palette %q: %w", name, err)
-	}
-	const colors, bytesPerColor = 256, 3
-	if len(data) < colors*bytesPerColor {
-		return nil, fmt.Errorf("palette %q: got %d bytes, need at least %d", name, len(data), colors*bytesPerColor)
-	}
-	palette := make(color.Palette, colors)
-	for index := range palette {
-		offset := index * bytesPerColor
-		palette[index] = color.RGBA{R: data[offset], G: data[offset+1], B: data[offset+2], A: 0xff}
-	}
-	palette[0] = color.RGBA{}
-	return palette, nil
 }
 
 func safeName(value string) string {

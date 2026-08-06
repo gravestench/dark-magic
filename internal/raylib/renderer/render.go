@@ -68,6 +68,10 @@ func (s *Service) renderNode(node Renderable) {
 
 	tint := rl.NewColor(255, 255, 255, uint8(node.Opacity()*255))
 
+	if node.BlendMode() != rl.BlendAlpha {
+		rl.BeginBlendMode(node.BlendMode())
+		defer rl.EndBlendMode()
+	}
 	rl.DrawTexturePro(tx, srcRect, dstRect, dstOrigin, node.Rotation(), tint)
 }
 

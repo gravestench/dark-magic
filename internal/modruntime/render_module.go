@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"github.com/gravestench/dark-magic/internal/rendercore"
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
+	dc6 "github.com/gravestench/dc6/pkg"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -23,8 +25,29 @@ type ownedRenderNode struct {
 	id       rendercore.NodeID
 	resource rendercore.ResourceID
 	assets   fs.FS
+	cache    *renderAssetCache
 	once     sync.Once
 	err      error
+}
+
+type renderAssetCache struct {
+	mu  sync.Mutex
+	dc6 map[string]*dc6.DC6
+}
+
+func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6, error) {
+	key := name + "\x00" + palette
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if asset := c.dc6[key]; asset != nil {
+		return asset, nil
+	}
+	asset, err := assetdecode.DC6(assets, name, palette)
+	if err != nil {
+		return nil, err
+	}
+	c.dc6[key] = asset
+	return asset, nil
 }
 
 func (n *ownedRenderNode) release() error {
@@ -65,9 +88,14 @@ func RenderModule(runtime *Runtime, composer *rendercore.Composer) Module {
 // from the layered content filesystem. Decoding occurs on the Lua owner;
 // renderer upload remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, assets fs.FS) Module {
+	cache := &renderAssetCache{dc6: make(map[string]*dc6.DC6)}
 	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"assets_available": func(state *lua.LState) int {
+				state.Push(lua.LBool(assets != nil))
+				return 1
+			},
 			"create": func(state *lua.LState) int {
 				scope, err := runtime.requireActiveScope()
 				if err != nil {
@@ -88,7 +116,7 @@ func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, ass
 					state.RaiseError("creating render node: %v", err)
 					return 0
 				}
-				node := &ownedRenderNode{composer: composer, id: id, assets: assets}
+				node := &ownedRenderNode{composer: composer, id: id, assets: assets, cache: cache}
 				if err := scope.Add(node.release); err != nil {
 					_ = node.release()
 					state.RaiseError("owning render node: %v", err)
@@ -134,6 +162,28 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			return 0
 		},
+		"set_rotation": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			rotation := float64(state.CheckNumber(2))
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Rotation = rotation }); err != nil {
+				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
+		"set_blend": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			blend := state.CheckString(2)
+			switch blend {
+			case "alpha", "additive", "multiply", "add-colors", "subtract-colors":
+			default:
+				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, or subtract-colors")
+				return 0
+			}
+			if err := node.composer.Update(node.id, func(current *rendercore.Node) { current.Blend = blend }); err != nil {
+				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
 		"set_visible": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			visible := state.CheckBool(2)
@@ -164,6 +214,36 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
+		},
+		"set_dc6": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName := state.CheckString(2)
+			paletteName := state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			frameIndex := state.OptInt(5, 0)
+			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			frame, err := assetdecode.Frame(asset, direction, frameIndex)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if err := node.setImage(frame.ToImageRGBA()); err != nil {
+				state.RaiseError("updating render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(frame.Width))
+			state.Push(lua.LNumber(frame.Height))
+			state.Push(lua.LNumber(frame.OffsetX))
+			state.Push(lua.LNumber(frame.OffsetY))
+			return 4
 		},
 		"fill_rect": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

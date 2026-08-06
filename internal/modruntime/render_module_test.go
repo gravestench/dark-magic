@@ -2,7 +2,9 @@ package modruntime
 
 import (
 	"context"
+	"encoding/binary"
 	"image"
+	"image/color"
 	"testing"
 	"testing/fstest"
 
@@ -63,6 +65,66 @@ return {
 	}
 	if nodes := composer.Snapshot(); len(nodes) != 0 {
 		t.Fatalf("nodes leaked after disable: %#v", nodes)
+	}
+}
+
+func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
+	t.Parallel()
+
+	palette := make([]byte, 256*3)
+	palette[3], palette[4], palette[5] = 10, 20, 30
+	dc6Data := make([]byte, 16+8+4+32+3+3)
+	put := func(offset int, value uint32) { binary.LittleEndian.PutUint32(dc6Data[offset:offset+4], value) }
+	put(0, 6)
+	put(16, 1)
+	put(20, 1)
+	put(24, 28)
+	put(32, 1)
+	put(36, 1)
+	put(56, 3)
+	dc6Data[60], dc6Data[61], dc6Data[62] = 1, 1, 0x80
+	assets := fstest.MapFS{
+		"one.dc6": &fstest.MapFile{Data: dc6Data},
+		"pal.dat": &fstest.MapFile{Data: palette},
+	}
+
+	var composer rendercore.Composer
+	runtime := New()
+	if err := runtime.RegisterModule(RenderModuleWithAssets(runtime, &composer, assets)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	source := fstest.MapFS{"screen.lua": &fstest.MapFile{Data: []byte(`
+local render = require("dm.render/v1")
+return { id = "screen.dc6", start = function(self)
+  self.root = render.create("hud")
+  local w, h, ox, oy = self.root:set_dc6("one.dc6", "pal.dat", 0, 0)
+  assert(w == 1 and h == 1 and ox == 0 and oy == 0)
+end }
+`)}}
+	definition, err := LoadDefinition(context.Background(), runtime, source, "screen.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := host.NewManager()
+	if err := manager.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Enable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	nodes := composer.Snapshot()
+	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded := resource.Payload.(image.Image)
+	got := color.RGBAModel.Convert(decoded.At(0, 0)).(color.RGBA)
+	if got != (color.RGBA{R: 10, G: 20, B: 30, A: 0xff}) {
+		t.Fatalf("pixel = %#v", got)
 	}
 }
 

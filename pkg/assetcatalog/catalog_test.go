@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"testing/fstest"
+
+	"github.com/gravestench/dark-magic/pkg/assetdecode"
 )
 
 func TestVerifyReportsFoundAndMissingAssetsWithoutStopping(t *testing.T) {
@@ -63,7 +65,7 @@ func TestDC6ContactSheetRejectsNil(t *testing.T) {
 func TestReadPalette(t *testing.T) {
 	data := make([]byte, 256*3)
 	data[3], data[4], data[5] = 10, 20, 30
-	palette, err := readPalette(fstest.MapFS{"pal.dat": {Data: data}}, "pal.dat")
+	palette, err := assetdecode.Palette(fstest.MapFS{"pal.dat": {Data: data}}, "pal.dat")
 	if err != nil {
 		t.Fatal(err)
 	}

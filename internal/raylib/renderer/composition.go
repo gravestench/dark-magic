@@ -5,6 +5,7 @@ import (
 	"image"
 	"sync"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gravestench/dark-magic/internal/rendercore"
 )
 
@@ -102,6 +103,20 @@ func (b *compositionBackend) applyNode(node Renderable, state rendercore.Node) e
 	node.SetPosition(float32(state.X), float32(state.Y))
 	node.SetScale(float32(state.ScaleX))
 	node.SetRotation(float32(state.Rotation))
+	switch state.Blend {
+	case "", "alpha":
+		node.SetBlendMode(rl.BlendAlpha)
+	case "additive":
+		node.SetBlendMode(rl.BlendAdditive)
+	case "multiply":
+		node.SetBlendMode(rl.BlendMultiplied)
+	case "add-colors":
+		node.SetBlendMode(rl.BlendAddColors)
+	case "subtract-colors":
+		node.SetBlendMode(rl.BlendSubtractColors)
+	default:
+		return fmt.Errorf("unsupported blend mode %q", state.Blend)
+	}
 	node.SetZIndex(float32(int(state.Layer)*1_000_000 + state.Z))
 	if state.Visible {
 		node.Enable()
