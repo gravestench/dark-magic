@@ -747,7 +747,9 @@ implementations. The remaining work is tracked explicitly below.
   superior-item modifier rules, animation weapon classes, and scroll/book
   casting economics. MonSeq, MonUMod, UniqueAppellation, UniquePrefix, and
   UniqueSuffix now preserve ordered animation events, special-monster modifier
-  rules, and the authored name-part pools.
+  rules, and the authored name-part pools. TreasureClass and HireDesc now
+  preserve the classic drop graph and hireling voice-selection metadata
+  alongside their expansion-era counterparts.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
