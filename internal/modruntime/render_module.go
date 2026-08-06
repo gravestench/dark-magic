@@ -355,10 +355,25 @@ func luaComponentPaths(state *lua.LState, index int) map[string]string {
 // normalizedDC6Frames places every cropped frame on one shared canvas using
 // the DC6 anchor offsets. The retained node can then animate at a fixed world
 // position without jitter when individual frame bounds change.
-func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string) ([]image.Image, image.Rectangle, error) {
+func dc6AnimationBounds(asset *dc6.DC6, direction int) image.Rectangle {
+	var bounds image.Rectangle
+	for index, frame := range asset.Directions[direction].Frames {
+		frameBounds := image.Rect(int(frame.OffsetX), -int(frame.OffsetY), int(frame.OffsetX+int32(frame.Width)), -int(frame.OffsetY)+int(frame.Height))
+		if index == 0 {
+			bounds = frameBounds
+		} else {
+			bounds = bounds.Union(frameBounds)
+		}
+	}
+	return bounds
+}
+
+func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, sharedBounds ...image.Rectangle) ([]image.Image, image.Rectangle, error) {
 	frames := asset.Directions[direction].Frames
 	var bounds image.Rectangle
-	if anchorMode == "first-frame" && len(frames) > 0 {
+	if len(sharedBounds) > 0 {
+		bounds = sharedBounds[0]
+	} else if anchorMode == "first-frame" && len(frames) > 0 {
 		var width, height int
 		for _, frame := range frames {
 			width = max(width, int(frame.Width))
@@ -367,6 +382,9 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string) ([]im
 		bounds = image.Rect(int(frames[0].OffsetX), -int(frames[0].OffsetY), int(frames[0].OffsetX)+width, -int(frames[0].OffsetY)+height)
 	}
 	for index, frame := range frames {
+		if len(sharedBounds) > 0 {
+			continue
+		}
 		if anchorMode == "first-frame" {
 			continue
 		}
@@ -388,7 +406,7 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string) ([]im
 		}
 		canvas := image.NewRGBA(image.Rectangle{Max: bounds.Size()})
 		position := image.Point{}
-		if anchorMode != "first-frame" {
+		if anchorMode != "first-frame" || len(sharedBounds) > 0 {
 			position = image.Pt(int(frame.OffsetX)-bounds.Min.X, -int(frame.OffsetY)-bounds.Min.Y)
 		}
 		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Src)
@@ -430,6 +448,28 @@ func RenderModuleWithAssets(runtime *Runtime, composer *rendercore.Composer, ass
 			"assets_available": func(state *lua.LState) int {
 				state.Push(lua.LBool(assets != nil))
 				return 1
+			},
+			"dc6_animation_bounds": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				asset, err := cache.loadDC6(assets, state.CheckString(1), state.OptString(2, ""))
+				if err != nil {
+					state.RaiseError("%v", err)
+					return 0
+				}
+				direction := state.OptInt(3, 0)
+				if direction < 0 || direction >= len(asset.Directions) {
+					state.ArgError(3, "direction is out of range")
+					return 0
+				}
+				bounds := dc6AnimationBounds(asset, direction)
+				state.Push(lua.LNumber(bounds.Min.X))
+				state.Push(lua.LNumber(bounds.Min.Y))
+				state.Push(lua.LNumber(bounds.Max.X))
+				state.Push(lua.LNumber(bounds.Max.Y))
+				return 4
 			},
 			"cof_info": func(state *lua.LState) int {
 				if assets == nil {
@@ -689,7 +729,16 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(4, "direction is out of range")
 				return 0
 			}
-			frames, bounds, err := normalizedDC6Frames(asset, direction, anchorMode)
+			var sharedBounds []image.Rectangle
+			if state.GetTop() >= 11 {
+				bounds := image.Rect(state.CheckInt(8), state.CheckInt(9), state.CheckInt(10), state.CheckInt(11))
+				if bounds.Empty() {
+					state.ArgError(8, "shared animation bounds must not be empty")
+					return 0
+				}
+				sharedBounds = append(sharedBounds, bounds)
+			}
+			frames, bounds, err := normalizedDC6Frames(asset, direction, anchorMode, sharedBounds...)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0

@@ -48,6 +48,28 @@ function M.anchored_animation(node, path, palette, anchor_x, anchor_y, frames_pe
     return frames
 end
 
+-- Load independently cropped layers into the same anchor-space canvas. This
+-- keeps a composite immobile while preserving each DC6 frame's authored offset.
+function M.anchored_composite(nodes, paths, palette, anchor_x, anchor_y, frames_per_second, loop)
+    if not render.assets_available() then return 0 end
+    local min_x, min_y, max_x, max_y
+    for index, path in ipairs(paths) do
+        local x1, y1, x2, y2 = render.dc6_animation_bounds(path, palette, 0)
+        min_x = min_x and math.min(min_x, x1) or x1
+        min_y = min_y and math.min(min_y, y1) or y1
+        max_x = max_x and math.max(max_x, x2) or x2
+        max_y = max_y and math.max(max_y, y2) or y2
+    end
+    local count = 0
+    for index, node in ipairs(nodes) do
+        count = node:set_dc6_animation(paths[index], palette, 0, frames_per_second,
+            loop or "loop", "offsets", min_x, min_y, max_x, max_y)
+        node:set_position(anchor_x + min_x + (max_x - min_x) / 2,
+            anchor_y + min_y + (max_y - min_y) / 2)
+    end
+    return count
+end
+
 function M.pause_animations(nodes)
     for _, node in pairs(nodes) do
         node:animation_pause()

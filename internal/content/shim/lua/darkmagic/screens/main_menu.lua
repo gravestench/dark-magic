@@ -57,14 +57,14 @@ return {
     end,
 
     configure_logo = function(self)
-        local function animate(node, path)
-            dc6.anchored_animation(node, path, units_palette, logo.anchor.x, logo.anchor.y,
-                logo.frames_per_second, "loop", "first-frame")
-        end
-        animate(self.logo.black_left, logo.black_left)
-        animate(self.logo.black_right, logo.black_right)
-        animate(self.logo.fire_left, logo.fire_left)
-        animate(self.logo.fire_right, logo.fire_right)
+        dc6.anchored_composite(
+            { self.logo.black_left, self.logo.fire_left },
+            { logo.black_left, logo.fire_left }, units_palette, logo.anchor.x, logo.anchor.y,
+            logo.frames_per_second, "loop")
+        dc6.anchored_composite(
+            { self.logo.black_right, self.logo.fire_right },
+            { logo.black_right, logo.fire_right }, units_palette, logo.anchor.x, logo.anchor.y,
+            logo.frames_per_second, "loop")
         self.logo_elapsed = 0
         dc6.pause_animations(self.logo)
         dc6.synchronize_animations(self.logo, 0)
