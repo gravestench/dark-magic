@@ -33,12 +33,19 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 	codecMu.Lock()
 	err = tsv.Unmarshal(data, &result)
 	codecMu.Unlock()
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), `bare " in non-quoted-field`) {
 		return nil, fmt.Errorf("gamedata: %s: %w", path, err)
 	}
+	useGenericRows := err != nil
 	rows, err := store.Load(path)
 	if err != nil {
 		return nil, err
+	}
+	if useGenericRows || (len(result) == 0 && len(rows) > 0) {
+		// Some shipped tables contain literal quotes in unquoted fields. The
+		// generic store intentionally accepts those bytes with LazyQuotes; bind
+		// its lossless rows rather than changing strict codec behavior globally.
+		return bindRows[T](path, rows)
 	}
 	if len(result) != len(rows) {
 		// The codec intentionally filters malformed-width rows such as shipped
@@ -68,6 +75,31 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 			}
 			if !field.grouped {
 				continue
+			}
+			if err := assign(destination, raw); err != nil {
+				return nil, fmt.Errorf("gamedata: %s row %d column %q field %s: %w", path, rowIndex+2, field.column, field.name, err)
+			}
+		}
+	}
+	return result, nil
+}
+
+func bindRows[T any](path string, rows []map[string]string) ([]T, error) {
+	fields, err := recordFields[T]()
+	if err != nil {
+		return nil, fmt.Errorf("gamedata: %s: %w", path, err)
+	}
+	result := make([]T, len(rows))
+	for rowIndex, row := range rows {
+		value := reflect.ValueOf(&result[rowIndex]).Elem()
+		for _, field := range fields {
+			raw, exists := row[field.column]
+			if !exists {
+				continue
+			}
+			destination := value.Field(field.index)
+			if field.arrayIndex >= 0 {
+				destination = destination.Index(field.arrayIndex)
 			}
 			if err := assign(destination, raw); err != nil {
 				return nil, fmt.Errorf("gamedata: %s row %d column %q field %s: %w", path, rowIndex+2, field.column, field.name, err)

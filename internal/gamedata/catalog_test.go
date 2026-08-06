@@ -58,6 +58,10 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		SkillDescTable:       &fstest.MapFile{Data: []byte("skilldesc\tSkillPage\tstr name\nattack\t1\tstrAttack\n")},
 		SoundEnvironTable:    &fstest.MapFile{Data: []byte("Handle\tSong\nAct1\tlevel_music\n")},
 		AutoMapTable:         &fstest.MapFile{Data: []byte("LevelName\tTileName\tStyle\tCel1\nAct 1 Town\tfl\t1\t10\n")},
+		NPCTable:             &fstest.MapFile{Data: []byte("npc\tbuy mult\nAkara\t1024\n")},
+		ShrinesTable:         &fstest.MapFile{Data: []byte("Shrine Type\tShrine name\tCode\nMana\tMana Shrine\t1\n")},
+		MonsterPresetsTable:  &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
+		GambleTable:          &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -93,6 +97,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.SkillDescByName["attack"].StrName != "strAttack" || first.SoundEnvByHandle["Act1"].Song != "level_music" || len(first.AutoMapEntries) != 1 {
 		t.Fatalf("typed presentation support tables = %#v", first)
+	}
+	if first.NPCTradesByID["Akara"].BuyMult != 1024 || first.ShrinesByType["Mana"].Code != 1 || len(first.MonsterPresets) != 1 || first.GambleItemsByCode["cap"].Name != "Cap" {
+		t.Fatalf("typed world-interaction tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -156,6 +163,10 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		SkillDescTable:       &fstest.MapFile{Data: []byte("skilldesc\tSkillPage\nattack\t1\n")},
 		SoundEnvironTable:    &fstest.MapFile{Data: []byte("Handle\tSong\nAct1\tlevel_music\n")},
 		AutoMapTable:         &fstest.MapFile{Data: []byte("LevelName\tTileName\tStyle\nAct 1 Town\tfl\t1\n")},
+		NPCTable:             &fstest.MapFile{Data: []byte("npc\tbuy mult\nAkara\t1024\n")},
+		ShrinesTable:         &fstest.MapFile{Data: []byte("Shrine Type\tShrine name\tCode\nMana\tMana Shrine\t1\n")},
+		MonsterPresetsTable:  &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
+		GambleTable:          &fstest.MapFile{Data: []byte("name\tcode\nCap\tcap\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

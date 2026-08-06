@@ -74,6 +74,24 @@ func TestLoadRecoversHistoricalArrayCSVTags(t *testing.T) {
 	}
 }
 
+func TestLoadPreservesShippedBareQuotes(t *testing.T) {
+	t.Parallel()
+
+	type record struct {
+		Name   string `csv:"name"`
+		Effect string `csv:"effect"`
+		Code   int    `csv:"code"`
+	}
+	source := fstest.MapFS{"quoted.txt": &fstest.MapFile{Data: []byte("name\teffect\tcode\nShrine\tHero's \"gift\t7\n")}}
+	records, err := Load[record](recordstore.New(source), "quoted.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 || records[0].Effect != `Hero's "gift` || records[0].Code != 7 {
+		t.Fatalf("decoded bare quote = %#v", records)
+	}
+}
+
 func TestLoadReportsSourceRowColumnAndField(t *testing.T) {
 	t.Parallel()
 

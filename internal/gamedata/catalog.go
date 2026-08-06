@@ -90,6 +90,13 @@ type Snapshot struct {
 	SoundEnvironments []models.SoundEnvironment
 	SoundEnvByHandle  map[string]models.SoundEnvironment
 	AutoMapEntries    []models.AutoMapEntry
+	NPCTrades         []models.NPCTrade
+	NPCTradesByID     map[string]models.NPCTrade
+	Shrines           []models.Shrine
+	ShrinesByType     map[string]models.Shrine
+	MonsterPresets    []models.MonsterPreset
+	GambleItems       []models.GambleRecord
+	GambleItemsByCode map[string]models.GambleRecord
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -136,7 +143,7 @@ func (c *Catalog) Invalidate(path string) {
 		return
 	}
 	c.store.Invalidate(path)
-	if path != CharStatsTable && path != LevelsTable && path != ObjectsTable && path != SkillsTable && path != SoundsTable && path != TreasureClassExTable && path != ArmorTable && path != WeaponsTable && path != MiscTable && path != ItemTypesTable && path != ItemRatioTable && path != ItemStatCostTable && path != PropertiesTable && path != UniqueItemsTable && path != SetItemsTable && path != MagicPrefixTable && path != MagicSuffixTable && path != AutoMagicTable && path != RarePrefixTable && path != RareSuffixTable && path != GemsTable && path != RunesTable && path != CubeMainTable && path != SetsTable && path != LevelTypesTable && path != LevelPresetsTable && path != LevelMazeTable && path != LevelWarpTable && path != LevelSubTable && path != MonsterStatsTable && path != MonsterStats2Table && path != MonsterLevelsTable && path != MonsterPropsTable && path != MonsterSoundsTable && path != MonsterEquipTable && path != MissilesTable && path != StatesTable && path != OverlaysTable && path != PetTypesTable && path != ExperienceTable && path != InventoryTable && path != BeltsTable && path != HirelingTable && path != DifficultyTable && path != SkillDescTable && path != SoundEnvironTable && path != AutoMapTable {
+	if !isAdmittedTable(path) {
 		return
 	}
 	c.mu.Lock()
@@ -484,6 +491,37 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	npcTrades, err := Load[models.NPCTrade](c.store, NPCTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	npcTradesByID, found, err := ObservedIndex(NPCTable, npcTrades, func(record models.NPCTrade) string { return record.NPC })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	shrines, err := Load[models.Shrine](c.store, ShrinesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	shrinesByType, found, err := ObservedIndex(ShrinesTable, shrines, func(record models.Shrine) string { return record.ShrineType })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	monsterPresets, err := Load[models.MonsterPreset](c.store, MonsterPresetsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	gambleItems, err := Load[models.GambleRecord](c.store, GambleTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	gambleItemsByCode, found, err := ObservedIndex(GambleTable, gambleItems, func(record models.GambleRecord) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -516,6 +554,8 @@ func (c *Catalog) load() (Snapshot, error) {
 		Belts: belts, BeltsByName: beltsByName, Hirelings: hirelings, Difficulties: difficulties, DifficultyByName: difficultyByName,
 		SkillDescriptions: skillDescriptions, SkillDescByName: skillDescByName,
 		SoundEnvironments: soundEnvironments, SoundEnvByHandle: soundEnvByHandle, AutoMapEntries: autoMapEntries,
+		NPCTrades: npcTrades, NPCTradesByID: npcTradesByID, Shrines: shrines, ShrinesByType: shrinesByType,
+		MonsterPresets: monsterPresets, GambleItems: gambleItems, GambleItemsByCode: gambleItemsByCode,
 	}, nil
 }
 
@@ -599,6 +639,13 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		SoundEnvironments: append([]models.SoundEnvironment(nil), source.SoundEnvironments...),
 		SoundEnvByHandle:  make(map[string]models.SoundEnvironment, len(source.SoundEnvByHandle)),
 		AutoMapEntries:    append([]models.AutoMapEntry(nil), source.AutoMapEntries...),
+		NPCTrades:         append([]models.NPCTrade(nil), source.NPCTrades...),
+		NPCTradesByID:     make(map[string]models.NPCTrade, len(source.NPCTradesByID)),
+		Shrines:           append([]models.Shrine(nil), source.Shrines...),
+		ShrinesByType:     make(map[string]models.Shrine, len(source.ShrinesByType)),
+		MonsterPresets:    append([]models.MonsterPreset(nil), source.MonsterPresets...),
+		GambleItems:       append([]models.GambleRecord(nil), source.GambleItems...),
+		GambleItemsByCode: make(map[string]models.GambleRecord, len(source.GambleItemsByCode)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -689,6 +736,15 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.SoundEnvByHandle {
 		result.SoundEnvByHandle[key] = value
+	}
+	for key, value := range source.NPCTradesByID {
+		result.NPCTradesByID[key] = value
+	}
+	for key, value := range source.ShrinesByType {
+		result.ShrinesByType[key] = value
+	}
+	for key, value := range source.GambleItemsByCode {
+		result.GambleItemsByCode[key] = value
 	}
 	return result
 }

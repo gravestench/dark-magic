@@ -50,4 +50,28 @@ const (
 	SkillDescTable       = "data/global/excel/SkillDesc.txt"
 	SoundEnvironTable    = "data/global/excel/SoundEnviron.txt"
 	AutoMapTable         = "data/global/excel/AutoMap.txt"
+	NPCTable             = "data/global/excel/Npc.txt"
+	ShrinesTable         = "data/global/excel/Shrines.txt"
+	MonsterPresetsTable  = "data/global/excel/MonPreset.txt"
+	GambleTable          = "data/global/excel/Gamble.txt"
 )
+
+func isAdmittedTable(path string) bool {
+	switch path {
+	case CharStatsTable, LevelsTable, ObjectsTable, SkillsTable, SoundsTable,
+		TreasureClassExTable, ArmorTable, WeaponsTable, MiscTable, ItemTypesTable,
+		ItemRatioTable, ItemStatCostTable, PropertiesTable, UniqueItemsTable,
+		SetItemsTable, MagicPrefixTable, MagicSuffixTable, AutoMagicTable,
+		RarePrefixTable, RareSuffixTable, GemsTable, RunesTable, CubeMainTable,
+		SetsTable, LevelTypesTable, LevelPresetsTable, LevelMazeTable,
+		LevelWarpTable, LevelSubTable, MonsterStatsTable, MonsterStats2Table,
+		MonsterLevelsTable, MonsterPropsTable, MonsterSoundsTable,
+		MonsterEquipTable, MissilesTable, StatesTable, OverlaysTable,
+		PetTypesTable, ExperienceTable, InventoryTable, BeltsTable, HirelingTable,
+		DifficultyTable, SkillDescTable, SoundEnvironTable, AutoMapTable, NPCTable,
+		ShrinesTable, MonsterPresetsTable, GambleTable:
+		return true
+	default:
+		return false
+	}
+}
