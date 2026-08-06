@@ -703,6 +703,9 @@ implementations. The remaining work is tracked explicitly below.
   The unused service template and empty service-era package are removed;
   contributor guidance now points to the authoritative architecture rules, and
   acceptance tests reject service-mesh imports.
+  The unreferenced but useful tween curves are preserved under
+  `internal/presentation/easing`; the accidental public package is retired
+  without discarding the historical implementation.
 - [ ] Consolidate duplicate models, caches, paths, inspection helpers, service
   remnants, test applications, and tools around one authoritative implementation
   per concept. Delete superseded code only after callers and preserved historical

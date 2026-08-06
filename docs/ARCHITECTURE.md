@@ -76,7 +76,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `pkg/assetcatalog` | Presentation asset research/catalog output | tools | Stateless | Move to `internal/assets/catalog` |
 | `pkg/assetinspect` | Asset metadata and preview helpers | tools, world | Stateless | Move to `internal/assets/inspect` |
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
-| `pkg/easing` | Tween easing functions | no current importer | Stateless | Audit, then internal/remove |
+| `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
 | `pkg/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Move to `internal/game/loot` |
 | `pkg/models` | Diablo TSV schemas and legacy enums | game data | Application data | Move to `internal/game/data/model` |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
