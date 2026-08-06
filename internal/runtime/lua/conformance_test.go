@@ -32,7 +32,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
 		AppModule("test", func() {}),
-		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, recordstore.New(source)),
+		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), GameDataModule(staticGameData{snapshot: gamedata.Snapshot{}}), LocaleModule(localization.New(source, "English")),
 		LootModule(source), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),

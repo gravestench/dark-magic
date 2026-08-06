@@ -839,9 +839,11 @@ implementations. The remaining work is tracked explicitly below.
   sentinel, so it is admitted without a lossy index. CharTemplate remains
   deferred because it is absent from the supplied classic patch data and has no
   usable guide section or surviving schema. Audio record resolution now consumes
-  the client-owned shared table store instead of constructing and indefinitely
-  caching a second Sounds generation; hot-reload invalidation therefore reaches
-  typed records, generic Lua rows, and audio through the same source generation.
+  an ordered typed `SoundRecords` view from the client-owned catalog instead of
+  reparsing raw TSV column maps or caching a second Sounds generation. The view
+  decodes only its admitted table so partial-content tools remain useful, while
+  hot-reload invalidation still reaches typed records, generic Lua rows, and audio
+  through the same source generation.
   The Lua records capability now uses the typed catalog as its generic-row
   gateway, so script-requested reloads also drop the typed snapshot rather than
   bypassing catalog invalidation through the raw store. The versioned

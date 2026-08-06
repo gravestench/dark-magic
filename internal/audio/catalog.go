@@ -7,10 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/game/data/store"
+	"github.com/gravestench/dark-magic/internal/game/data/model"
 )
-
-const soundsTable = "data/global/excel/Sounds.txt"
 
 // Definition is a resolved Sounds.txt record and its archive asset.
 type Definition struct {
@@ -23,38 +21,44 @@ type Definition struct {
 
 // Catalog resolves stable Sounds.txt identifiers through layered content.
 type Catalog struct {
-	source fs.FS
-	store  *recordstore.Store
+	source  fs.FS
+	records SoundRecords
 }
 
-func NewCatalog(source fs.FS, store *recordstore.Store) *Catalog {
-	return &Catalog{source: source, store: store}
+// SoundRecords is the narrow typed game-data view required by audio. Ordering
+// is significant because redirects are indices and groups are adjacent rows.
+type SoundRecords interface {
+	SoundRecords() ([]models.SoundEntry, error)
+}
+
+func NewCatalog(source fs.FS, records SoundRecords) *Catalog {
+	return &Catalog{source: source, records: records}
 }
 
 // Resolve deterministically selects grouped variants using seed.
 func (c *Catalog) Resolve(name string, seed uint64) (Definition, error) {
-	if c == nil || c.store == nil {
-		return Definition{}, fmt.Errorf("audiocore: no shared record store")
+	if c == nil || c.records == nil {
+		return Definition{}, fmt.Errorf("audio: no sound records")
 	}
-	rows, err := c.store.Load(soundsTable)
+	rows, err := c.records.SoundRecords()
 	if err != nil {
-		return Definition{}, fmt.Errorf("audiocore: load sound records: %w", err)
+		return Definition{}, fmt.Errorf("audio: load sound records: %w", err)
 	}
 	index := -1
 	for candidate, row := range rows {
-		if strings.EqualFold(row["Sound"], name) {
+		if strings.EqualFold(row.Sound, name) {
 			index = candidate
 			break
 		}
 	}
 	if index < 0 {
-		return Definition{}, fmt.Errorf("audiocore: unknown sound record %q", name)
+		return Definition{}, fmt.Errorf("audio: unknown sound record %q", name)
 	}
 	row := rows[index]
-	if redirect, err := strconv.Atoi(row["Redirect"]); err == nil && redirect >= 0 && redirect < len(rows) {
+	if redirect, err := strconv.Atoi(row.Redirect); err == nil && redirect >= 0 && redirect < len(rows) {
 		row = rows[redirect]
 	}
-	groupSize := integer(row, "Group Size")
+	groupSize := row.GroupSize
 	if groupSize > 1 {
 		end := index + groupSize
 		if end > len(rows) {
@@ -62,11 +66,11 @@ func (c *Catalog) Resolve(name string, seed uint64) (Definition, error) {
 		}
 		row = weighted(rows[index:end], seed)
 	}
-	fileName, err := c.find(row["FileName"], integer(row, "IsLocal") != 0, integer(row, "IsMusic") != 0)
+	fileName, err := c.find(row.FileName, row.IsLocal != 0, row.IsMusic != 0)
 	if err != nil {
-		return Definition{}, fmt.Errorf("audiocore: sound %q: %w", name, err)
+		return Definition{}, fmt.Errorf("audio: sound %q: %w", name, err)
 	}
-	minimum, maximum := integer(row, "Volume Min"), integer(row, "Volume Max")
+	minimum, maximum := row.VolumeMin, row.VolumeMax
 	if maximum <= 0 {
 		maximum = 255
 	}
@@ -81,23 +85,23 @@ func (c *Catalog) Resolve(name string, seed uint64) (Definition, error) {
 		volume += int(seed % uint64(maximum-minimum+1))
 	}
 	bus := "sfx"
-	if integer(row, "IsMusic") != 0 {
+	if row.IsMusic != 0 {
 		bus = "music"
-	} else if integer(row, "IsUI") != 0 {
+	} else if row.IsUI != 0 {
 		bus = "ui"
-	} else if integer(row, "IsAmbientScene") != 0 || integer(row, "IsAmbientEvent") != 0 {
+	} else if row.IsAmbientScene != 0 || row.IsAmbientEvent != 0 {
 		bus = "ambience"
-	} else if channel := strings.ToLower(row["Channel"]); strings.Contains(channel, "voice") || strings.Contains(channel, "speech") || strings.Contains(channel, "vocal") {
+	} else if channel := strings.ToLower(row.Channel); strings.Contains(channel, "voice") || strings.Contains(channel, "speech") || strings.Contains(channel, "vocal") {
 		bus = "speech"
 	}
 	data, err := fs.ReadFile(c.source, fileName)
 	if err != nil {
-		return Definition{}, fmt.Errorf("audiocore: read %q: %w", fileName, err)
+		return Definition{}, fmt.Errorf("audio: read %q: %w", fileName, err)
 	}
 	return Definition{
-		Name: row["Sound"], Path: fileName, Format: strings.ToLower(path.Ext(fileName)),
+		Name: row.Sound, Path: fileName, Format: strings.ToLower(path.Ext(fileName)),
 		Data:    data,
-		Options: PlayOptions{Bus: bus, Volume: float32(volume) / 255, Loop: integer(row, "Loop") != 0, Stream: integer(row, "Stream") != 0 || bus == "music", Group: name},
+		Options: PlayOptions{Bus: bus, Volume: float32(volume) / 255, Loop: row.Loop != 0, Stream: row.Stream != 0 || bus == "music", Group: name},
 	}, nil
 }
 
@@ -122,15 +126,10 @@ func (c *Catalog) find(fileName string, local, music bool) (string, error) {
 	return "", fmt.Errorf("asset %q not found", fileName)
 }
 
-func integer(row map[string]string, key string) int {
-	value, _ := strconv.Atoi(strings.TrimSpace(row[key]))
-	return value
-}
-
-func weighted(rows []map[string]string, seed uint64) map[string]string {
+func weighted(rows []models.SoundEntry, seed uint64) models.SoundEntry {
 	total := 0
 	for _, row := range rows {
-		weight := integer(row, "Group Weight")
+		weight := row.GroupWeight
 		if weight <= 0 {
 			weight = 1
 		}
@@ -138,7 +137,7 @@ func weighted(rows []map[string]string, seed uint64) map[string]string {
 	}
 	pick := int(seed % uint64(total))
 	for _, row := range rows {
-		weight := integer(row, "Group Weight")
+		weight := row.GroupWeight
 		if weight <= 0 {
 			weight = 1
 		}

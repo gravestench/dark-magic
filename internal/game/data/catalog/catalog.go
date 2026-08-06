@@ -186,6 +186,17 @@ func (c *Catalog) Loaded(path string) bool {
 	return c != nil && c.store != nil && c.store.Loaded(path)
 }
 
+// SoundRecords returns the ordered typed Sounds.txt generation. Consumers need
+// ordering for redirect indices and adjacent weighted groups. This narrow view
+// decodes only its admitted table, allowing audio tools and tests to operate on
+// partial content layers without requiring an unrelated full game snapshot.
+func (c *Catalog) SoundRecords() ([]models.SoundEntry, error) {
+	if c == nil || c.store == nil {
+		return nil, fmt.Errorf("gamedata: catalog has no record store")
+	}
+	return Load[models.SoundEntry](c.store, SoundsTable)
+}
+
 // Snapshot returns a defensive copy of the current typed game-data generation.
 func (c *Catalog) Snapshot() (Snapshot, error) {
 	if c == nil || c.store == nil {

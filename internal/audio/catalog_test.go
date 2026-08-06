@@ -4,6 +4,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
@@ -16,7 +17,8 @@ func TestCatalogResolvesDeterministicSoundRecord(t *testing.T) {
 		"data/global/music/music/town.wav": &fstest.MapFile{Data: []byte("town")},
 	}
 	records := recordstore.New(source)
-	catalog := NewCatalog(source, records)
+	gameData := gamedata.New(records)
+	catalog := NewCatalog(source, gameData)
 	menu, err := catalog.Resolve("menu", 2)
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +34,7 @@ func TestCatalogResolvesDeterministicSoundRecord(t *testing.T) {
 		t.Fatalf("music = %#v", music)
 	}
 	source["data/global/excel/Sounds.txt"].Data = []byte("Sound\tFileName\tIsUI\tVolume Min\tVolume Max\nmenu\tui/one.wav\t1\t255\t255\n")
-	records.Invalidate(soundsTable)
+	gameData.Invalidate(gamedata.SoundsTable)
 	reloaded, err := catalog.Resolve("menu", 0)
 	if err != nil {
 		t.Fatal(err)

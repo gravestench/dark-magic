@@ -200,7 +200,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS, records)); err != nil {
+	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS, gameData)); err != nil {
 		return err
 	}
 	videoBackend := video.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))

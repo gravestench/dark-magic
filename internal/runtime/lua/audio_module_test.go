@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
@@ -22,7 +23,7 @@ return { id = "sound", start = function(self) audio.set_bus_volume("ui", .8); se
 `)},
 	}
 	runtime := New()
-	if err := runtime.RegisterModule(AudioModule(runtime, &mixer, source, recordstore.New(source))); err != nil {
+	if err := runtime.RegisterModule(AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source)))); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {
@@ -67,7 +68,7 @@ end }
 `)},
 	}
 	runtime := New()
-	if err := runtime.RegisterModule(AudioModule(runtime, &mixer, source, recordstore.New(source))); err != nil {
+	if err := runtime.RegisterModule(AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source)))); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {
