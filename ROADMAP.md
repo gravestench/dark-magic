@@ -753,6 +753,10 @@ implementations. The remaining work is tracked explicitly below.
   The bundled compressed Data File Guide is now the required semantic reference
   for further schema and consumer work, while real layered MPQs remain the
   compatibility authority when documentation and shipped bytes disagree.
+  Guide-reviewed SuperUniques now provides stable encounter and hardcoded-ID
+  indexes plus documented class, modifier, group, transform, and treasure-class
+  relationships; undocumented patch columns remain available through generic
+  rows rather than speculative typed fields.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

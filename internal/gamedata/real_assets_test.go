@@ -102,6 +102,14 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.ClassicTreasureByName) == 0 || len(snapshot.HirelingDescriptionByID) == 0 {
 		t.Fatal("typed classic and hireling support tables are incomplete")
 	}
+	if len(snapshot.SuperUniquesByID) == 0 || len(snapshot.SuperUniquesByHardcodedID) == 0 {
+		t.Fatal("typed super-unique table is incomplete")
+	}
+	if !slices.ContainsFunc(snapshot.SuperUniques, func(record models.SuperUnique) bool {
+		return record.Class != "" && record.MaxGroup >= record.MinGroup && record.TreasureClassNormal != ""
+	}) {
+		t.Fatal("typed super-unique guide fields did not bind representative authored values")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

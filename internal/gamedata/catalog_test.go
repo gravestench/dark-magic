@@ -75,6 +75,7 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		UniqueSuffixesTable:       &fstest.MapFile{Data: []byte("name\nthe Quick\n")},
 		TreasureClassTable:        &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tItem1\tProb1\nAct 1 Classic\t1\tcap\t1\n")},
 		HirelingDescriptionsTable: &fstest.MapFile{Data: []byte("id\talternateVoice\n271\t1\n")},
+		SuperUniquesTable:         &fstest.MapFile{Data: []byte("Superunique\tName\tClass\thcIdx\tMod1\tMinGrp\tMaxGrp\tAutoPos\tTC\nBishibosh\tBishibosh\tfallenshaman1\t0\t8\t2\t2\t1\tAct 1 Super A\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -125,6 +126,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.ClassicTreasureByName["Act 1 Classic"].Item1 != "cap" || !first.HirelingDescriptionByID[271].AlternateVoice {
 		t.Fatalf("typed classic and hireling support tables = %#v", first)
+	}
+	if first.SuperUniquesByID["Bishibosh"].Class != "fallenshaman1" || first.SuperUniquesByHardcodedID[0].Modifier1 != 8 {
+		t.Fatalf("typed super-unique table = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -205,6 +209,7 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		UniqueSuffixesTable:       &fstest.MapFile{Data: []byte("name\nthe Quick\n")},
 		TreasureClassTable:        &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tItem1\tProb1\nAct 1 Classic\t1\tcap\t1\n")},
 		HirelingDescriptionsTable: &fstest.MapFile{Data: []byte("id\talternateVoice\n271\t1\n")},
+		SuperUniquesTable:         &fstest.MapFile{Data: []byte("Superunique\tName\tClass\thcIdx\tMod1\tMinGrp\tMaxGrp\tAutoPos\tTC\nBishibosh\tBishibosh\tfallenshaman1\t0\t8\t2\t2\t1\tAct 1 Super A\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

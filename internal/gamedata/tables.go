@@ -67,6 +67,7 @@ const (
 	UniqueSuffixesTable       = "data/global/excel/UniqueSuffix.txt"
 	TreasureClassTable        = "data/global/excel/TreasureClass.txt"
 	HirelingDescriptionsTable = "data/global/excel/HireDesc.txt"
+	SuperUniquesTable         = "data/global/excel/SuperUniques.txt"
 )
 
 func isAdmittedTable(path string) bool {
@@ -86,7 +87,7 @@ func isAdmittedTable(path string) bool {
 		ObjectGroupsTable, ObjectModesTable, QualityItemsTable, WeaponClassTable,
 		BooksTable, MonsterSequencesTable, MonsterUniqueModsTable,
 		UniqueAppellationsTable, UniquePrefixesTable, UniqueSuffixesTable,
-		TreasureClassTable, HirelingDescriptionsTable:
+		TreasureClassTable, HirelingDescriptionsTable, SuperUniquesTable:
 		return true
 	default:
 		return false
