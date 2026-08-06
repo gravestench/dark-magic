@@ -9,6 +9,7 @@ local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
+local ui_button = require("darkmagic.ui.button")
 local cursor = require("darkmagic.ui.cursor")
 local dc6 = require("darkmagic.ui.dc6")
 local dialog = require("darkmagic.ui.dialog")
@@ -345,37 +346,10 @@ return {
         }
         for _, id in ipairs({ "new", "delete", "exit", "ok" }) do
             local definition = screen.controls[id]
-            local control = {
-                id = id,
-                label = assert(locale.text(definition.label)),
-                x = definition.x,
-                y = definition.y,
-                width = definition.width,
-                height = definition.height,
+            ui_button.create(self.root, self.controls, id, definition, assert(locale.text(definition.label)), {
+                layer = "hud",
                 on_activate = button_actions[id],
-            }
-            if render.assets_available() then
-                local button = render.create("hud", self.root)
-                local label = render.create("hud", self.root)
-                local palette = manifest.palettes[definition.palette]
-                local function draw(frame)
-                    button:set_dc6(definition.sheet, palette, 0, frame)
-                end
-                draw(definition.up_frame)
-                button:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
-                label:set_text(
-                    font.table,
-                    font.sheet,
-                    manifest.palettes[font.palette],
-                    control.label,
-                    { red = 210, green = 180, blue = 110, max_width = definition.width, align = "center" }
-                )
-                label:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
-                control.on_state = function(_, state)
-                    draw((state == "focused" or state == "hover") and definition.down_frame or definition.up_frame)
-                end
-            end
-            self.controls:add(control)
+            })
         end
 
         refresh_page()

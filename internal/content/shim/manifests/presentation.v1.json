@@ -137,14 +137,14 @@
           "label": "darkmagic.menu.single_player",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6",
           "palette": "units",
-          "up_frames": [0, 1],
+          "up_frames": [0, 1], "text_offset": 1,
           "down_frames": [2, 3]
         },
         "multiplayer": {
           "x": 264, "y": 330, "width": 272, "height": 35,
           "label": "darkmagic.menu.multiplayer", "target": "tcpip",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
-          "up_frames": [0, 1], "down_frames": [2, 3]
+          "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
         },
         "credits": {
           "x": 264, "y": 505, "width": 135, "height": 35,
@@ -162,7 +162,7 @@
           "x": 264, "y": 535, "width": 272, "height": 35,
           "label": "darkmagic.menu.exit", "action": "exit",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
-          "up_frames": [0, 1], "down_frames": [2, 3]
+          "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
         }
       },
       "logo": {
@@ -180,8 +180,8 @@
     "tcpip": {
       "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky",
       "controls": {
-        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "darkmagic.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3] },
-        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "darkmagic.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3] }
+        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "darkmagic.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 },
+        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "darkmagic.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 }
       },
       "dialog": {
         "x": 270, "y": 175, "width": 260, "height": 180,
@@ -252,8 +252,8 @@
       "scrollbar": {"x":586,"y":87,"width":20,"height":369,"sheet":"data/global/ui/PANEL/scrollbar.dc6","palette":"sky","up_frame":0,"down_frame":1,"thumb_frame":4},
       "double_activation_seconds": 1.25,
       "controls": {
-        "new": {"x":33,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
-        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "new": {"x":33,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
+        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"darkmagic.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
         "exit": {"x":33,"y":537,"width":135,"height":35,"label":"darkmagic.character_select.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
         "ok": {"x":625,"y":537,"width":135,"height":35,"label":"darkmagic.character_select.ok","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1}
       },

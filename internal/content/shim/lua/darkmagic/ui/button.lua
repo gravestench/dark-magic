@@ -22,13 +22,16 @@ function button.create(root, manager, id, definition, label, options)
     local hover_style = options.hover_style or definition.hover_style or "button_hover"
     local disabled_style = options.disabled_style or definition.disabled_style or "disabled"
     local text_offset = options.text_offset or definition.text_offset or 0
+    local up_frames = definition.up_frames or { assert(definition.up_frame, "button up frame is required") }
+    local down_frames = definition.down_frames or { assert(definition.down_frame, "button down frame is required") }
+    assert(#up_frames == #down_frames, "button state frame counts must match")
     local draw = function() end
     local draw_label = function() end
 
     if render.assets_available() then
         local pieces = {}
         local palette = assert(manifest.palettes[definition.palette], "unknown button palette")
-        for index = 1, #definition.up_frames do
+        for index = 1, #up_frames do
             pieces[index] = render.create(layer, root)
         end
         draw = function(frames)
@@ -48,7 +51,7 @@ function button.create(root, manager, id, definition, label, options)
                 definition.y + definition.height / 2 + text_offset
             )
         end
-        draw(definition.up_frames)
+        draw(up_frames)
         draw_label(normal_style)
     end
 
@@ -71,7 +74,7 @@ function button.create(root, manager, id, definition, label, options)
         end,
         on_state = function(_, state)
             local highlighted = state == "focused" or state == "hover" or state == "pressed"
-            draw(highlighted and definition.down_frames or definition.up_frames)
+            draw(highlighted and down_frames or up_frames)
             if state == "disabled" then
                 draw_label(disabled_style)
             else

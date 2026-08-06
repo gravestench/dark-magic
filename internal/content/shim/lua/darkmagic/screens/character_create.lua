@@ -12,6 +12,7 @@ local audio = require("dm.audio/v1")
 local locale = require("dm.locale/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
+local ui_button = require("darkmagic.ui.button")
 local cursor = require("darkmagic.ui.cursor")
 local dialog = require("darkmagic.ui.dialog")
 
@@ -291,60 +292,13 @@ return {
             }
         end
 
-        -- The Exit button remains available before class selection. Its
-        -- retained art and label follow the same focus-state contract as the
-        -- main-menu controls.
         local exit_definition = screen.controls.exit
-        local exit_control = {
-            id = "exit",
-            label = assert(locale.text(exit_definition.label)),
-            x = exit_definition.x,
-            y = exit_definition.y,
-            width = exit_definition.width,
-            height = exit_definition.height,
+        ui_button.create(self.root, self.controls, "exit", exit_definition, assert(locale.text(exit_definition.label)), {
+            layer = "hud",
             on_activate = function()
                 scenes.replace("main_menu")
             end,
-        }
-        if render.assets_available() then
-            local button = render.create("hud", self.root)
-            local label = render.create("hud", self.root)
-            local palette = manifest.palettes[exit_definition.palette]
-            local function draw(frame)
-                button:set_dc6(exit_definition.sheet, palette, 0, frame)
-            end
-            draw(exit_definition.up_frames[1])
-            button:set_position(
-                exit_definition.x + exit_definition.width / 2,
-                exit_definition.y + exit_definition.height / 2
-            )
-            local font = manifest.fonts.exocet10
-            label:set_text(
-                font.table,
-                font.sheet,
-                manifest.palettes[font.palette],
-                exit_control.label,
-                {
-                    red = 210,
-                    green = 180,
-                    blue = 110,
-                    max_width = exit_definition.width,
-                    align = "center",
-                }
-            )
-            label:set_position(
-                exit_definition.x + exit_definition.width / 2,
-                exit_definition.y + exit_definition.height / 2
-            )
-            exit_control.on_state = function(_, state)
-                draw(
-                    (state == "focused" or state == "hover")
-                        and exit_definition.down_frames[1]
-                        or exit_definition.up_frames[1]
-                )
-            end
-        end
-        self.controls:add(exit_control)
+        })
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
     update = function(self, elapsed)

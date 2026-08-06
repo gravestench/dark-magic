@@ -643,8 +643,9 @@ implementations. The remaining work is tracked explicitly below.
   segment composition, fonts, text offsets, normal/hover/pressed/disabled states,
   keyboard focus, activation sounds, and hit bounds. The shared segmented-button
   and text-only label-button components, pressed-state input, and main-menu,
-  TCP/IP, and cinematics migrations are complete; the remaining button families
-  and screens still need migration.
+  TCP/IP, cinematics, character-select, and character-creation migrations are
+  complete. Both single-frame and segmented definitions are supported with
+  authored family text offsets; dialogs and panel controls still need migration.
 - [ ] Implement label buttons, multiline alignment, inline Diablo color tokens,
   per-run colors, and optional glyph-sized background highlights.
 - [ ] Implement clamped, origin-aware multiline tooltips with centered labels and
