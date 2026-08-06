@@ -116,6 +116,9 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if len(snapshot.PlayerClassesByCode) == 0 || len(snapshot.PlayerModesByToken) == 0 || len(snapshot.PlayerTypesByToken) == 0 || len(snapshot.MonsterModesByToken) == 0 || len(snapshot.MonsterPlaces) == 0 {
 		t.Fatal("typed actor lookup tables are incomplete")
 	}
+	if len(snapshot.TransformColorsByCode) == 0 || len(snapshot.ComponentCodesByCode) == 0 || len(snapshot.ElementTypesByCode) == 0 || len(snapshot.EventsByName) == 0 || len(snapshot.MissileCalculationsByCode) == 0 || len(snapshot.SkillCalculationsByCode) == 0 {
+		t.Fatal("typed calculation lookup tables are incomplete")
+	}
 	if len(snapshot.Issues) == 0 {
 		t.Fatal("expected shipped-data diagnostics for known duplicate/sentinel records")
 	}

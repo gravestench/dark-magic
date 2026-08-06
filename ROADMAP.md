@@ -763,6 +763,9 @@ implementations. The remaining work is tracked explicitly below.
   PlayerClass, PlrMode, PlrType, MonMode, and MonPlace now preserve the actor
   class/type/mode token dictionaries and ordered preset-placement codes cited
   by the guide and dependent tables.
+  Colors, CompCode, ElemTypes, Events, MissCalc, and SkillCalc now expose the
+  guide-referenced transform, component, element, callback-event, and formula
+  dictionaries without embedding those authored descriptions in engine code.
 - [ ] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.

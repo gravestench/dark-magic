@@ -86,6 +86,12 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		PlayerTypesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nAmazon\tAM\n")},
 		MonsterModesTable:         &fstest.MapFile{Data: []byte("Name\tToken\nAttack1\tA1\n")},
 		MonsterPlacesTable:        &fstest.MapFile{Data: []byte("code\nplace_unique_pack\n")},
+		ColorsTable:               &fstest.MapFile{Data: []byte("Transform Color\tCode\nWhite\twhit\n")},
+		ComponentCodesTable:       &fstest.MapFile{Data: []byte("component\tcode\nlight\tlit\n")},
+		ElementTypesTable:         &fstest.MapFile{Data: []byte("Elemental Type\tCode\nFire\tfire\n")},
+		EventsTable:               &fstest.MapFile{Data: []byte("event\t*desc\nhitbymissile\thit by a missile\n")},
+		MissileCalculationsTable:  &fstest.MapFile{Data: []byte("code\t*desc\npar1\tparam1\n")},
+		SkillCalculationsTable:    &fstest.MapFile{Data: []byte("code\t*desc\nln12\ta+lvl*b\n")},
 	}
 	catalog := New(recordstore.New(source))
 	first, err := catalog.Snapshot()
@@ -145,6 +151,9 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	}
 	if first.PlayerClassesByCode["ama"].Name != "Amazon" || first.PlayerModesByToken["WL"].Name != "Walk" || first.PlayerTypesByToken["AM"].Name != "Amazon" || first.MonsterModesByToken["A1"].Name != "Attack1" || len(first.MonsterPlaces) != 1 {
 		t.Fatalf("typed actor lookup tables = %#v", first)
+	}
+	if first.TransformColorsByCode["whit"].Name != "White" || first.ComponentCodesByCode["lit"].Name != "light" || first.ElementTypesByCode["fire"].Name != "Fire" || first.EventsByName["hitbymissile"].Description == "" || first.MissileCalculationsByCode["par1"].Description == "" || first.SkillCalculationsByCode["ln12"].Description == "" {
+		t.Fatalf("typed calculation lookup tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
 	first.CharStats[0].Strength = 1
@@ -236,6 +245,12 @@ func TestCatalogInvalidationAtomicallyRebuildsTypedData(t *testing.T) {
 		PlayerTypesTable:          &fstest.MapFile{Data: []byte("Name\tToken\nAmazon\tAM\n")},
 		MonsterModesTable:         &fstest.MapFile{Data: []byte("Name\tToken\nAttack1\tA1\n")},
 		MonsterPlacesTable:        &fstest.MapFile{Data: []byte("code\nplace_unique_pack\n")},
+		ColorsTable:               &fstest.MapFile{Data: []byte("Transform Color\tCode\nWhite\twhit\n")},
+		ComponentCodesTable:       &fstest.MapFile{Data: []byte("component\tcode\nlight\tlit\n")},
+		ElementTypesTable:         &fstest.MapFile{Data: []byte("Elemental Type\tCode\nFire\tfire\n")},
+		EventsTable:               &fstest.MapFile{Data: []byte("event\t*desc\nhitbymissile\thit by a missile\n")},
+		MissileCalculationsTable:  &fstest.MapFile{Data: []byte("code\t*desc\npar1\tparam1\n")},
+		SkillCalculationsTable:    &fstest.MapFile{Data: []byte("code\t*desc\nln12\ta+lvl*b\n")},
 	}
 	catalog := New(recordstore.New(source))
 	if _, err := catalog.Snapshot(); err != nil {

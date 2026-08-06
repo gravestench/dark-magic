@@ -139,6 +139,18 @@ type Snapshot struct {
 	MonsterModes               []models.MonsterMode
 	MonsterModesByToken        map[string]models.MonsterMode
 	MonsterPlaces              []models.MonsterPlace
+	TransformColors            []models.TransformColor
+	TransformColorsByCode      map[models.ColorCode]models.TransformColor
+	ComponentCodes             []models.ComponentCode
+	ComponentCodesByCode       map[string]models.ComponentCode
+	ElementTypes               []models.ElementType
+	ElementTypesByCode         map[string]models.ElementType
+	Events                     []models.UnitEvent
+	EventsByName               map[string]models.UnitEvent
+	MissileCalculations        []models.MissileCalculation
+	MissileCalculationsByCode  map[string]models.MissileCalculation
+	SkillCalculations          []models.SkillCalculation
+	SkillCalculationsByCode    map[string]models.SkillCalculation
 }
 
 // Catalog owns typed record decoding on top of the shared generic row store.
@@ -750,6 +762,60 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	transformColors, err := Load[models.TransformColor](c.store, ColorsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	transformColorsByCode, found, err := ObservedIndex(ColorsTable, transformColors, func(record models.TransformColor) models.ColorCode { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	componentCodes, err := Load[models.ComponentCode](c.store, ComponentCodesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	componentCodesByCode, found, err := ObservedIndex(ComponentCodesTable, componentCodes, func(record models.ComponentCode) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	elementTypes, err := Load[models.ElementType](c.store, ElementTypesTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	elementTypesByCode, found, err := ObservedIndex(ElementTypesTable, elementTypes, func(record models.ElementType) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	events, err := Load[models.UnitEvent](c.store, EventsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	eventsByName, found, err := ObservedIndex(EventsTable, events, func(record models.UnitEvent) string { return record.Event })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	missileCalculations, err := Load[models.MissileCalculation](c.store, MissileCalculationsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	missileCalculationsByCode, found, err := ObservedIndex(MissileCalculationsTable, missileCalculations, func(record models.MissileCalculation) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
+	skillCalculations, err := Load[models.SkillCalculation](c.store, SkillCalculationsTable)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
+	}
+	skillCalculationsByCode, found, err := ObservedIndex(SkillCalculationsTable, skillCalculations, func(record models.SkillCalculation) string { return record.Code })
+	if err != nil {
+		return Snapshot{}, err
+	}
+	issues = append(issues, found...)
 	return Snapshot{
 		Issues:    issues,
 		CharStats: characters, CharStatsByClass: charactersByClass,
@@ -802,6 +868,11 @@ func (c *Catalog) load() (Snapshot, error) {
 		PlayerModes: playerModes, PlayerModesByToken: playerModesByToken,
 		PlayerTypes: playerTypes, PlayerTypesByToken: playerTypesByToken,
 		MonsterModes: monsterModes, MonsterModesByToken: monsterModesByToken, MonsterPlaces: monsterPlaces,
+		TransformColors: transformColors, TransformColorsByCode: transformColorsByCode,
+		ComponentCodes: componentCodes, ComponentCodesByCode: componentCodesByCode,
+		ElementTypes: elementTypes, ElementTypesByCode: elementTypesByCode, Events: events, EventsByName: eventsByName,
+		MissileCalculations: missileCalculations, MissileCalculationsByCode: missileCalculationsByCode,
+		SkillCalculations: skillCalculations, SkillCalculationsByCode: skillCalculationsByCode,
 	}, nil
 }
 
@@ -934,6 +1005,18 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		MonsterModes:               append([]models.MonsterMode(nil), source.MonsterModes...),
 		MonsterModesByToken:        make(map[string]models.MonsterMode, len(source.MonsterModesByToken)),
 		MonsterPlaces:              append([]models.MonsterPlace(nil), source.MonsterPlaces...),
+		TransformColors:            append([]models.TransformColor(nil), source.TransformColors...),
+		TransformColorsByCode:      make(map[models.ColorCode]models.TransformColor, len(source.TransformColorsByCode)),
+		ComponentCodes:             append([]models.ComponentCode(nil), source.ComponentCodes...),
+		ComponentCodesByCode:       make(map[string]models.ComponentCode, len(source.ComponentCodesByCode)),
+		ElementTypes:               append([]models.ElementType(nil), source.ElementTypes...),
+		ElementTypesByCode:         make(map[string]models.ElementType, len(source.ElementTypesByCode)),
+		Events:                     append([]models.UnitEvent(nil), source.Events...),
+		EventsByName:               make(map[string]models.UnitEvent, len(source.EventsByName)),
+		MissileCalculations:        append([]models.MissileCalculation(nil), source.MissileCalculations...),
+		MissileCalculationsByCode:  make(map[string]models.MissileCalculation, len(source.MissileCalculationsByCode)),
+		SkillCalculations:          append([]models.SkillCalculation(nil), source.SkillCalculations...),
+		SkillCalculationsByCode:    make(map[string]models.SkillCalculation, len(source.SkillCalculationsByCode)),
 	}
 	for key, value := range source.CharStatsByClass {
 		result.CharStatsByClass[key] = value
@@ -1087,6 +1170,24 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.MonsterModesByToken {
 		result.MonsterModesByToken[key] = value
+	}
+	for key, value := range source.TransformColorsByCode {
+		result.TransformColorsByCode[key] = value
+	}
+	for key, value := range source.ComponentCodesByCode {
+		result.ComponentCodesByCode[key] = value
+	}
+	for key, value := range source.ElementTypesByCode {
+		result.ElementTypesByCode[key] = value
+	}
+	for key, value := range source.EventsByName {
+		result.EventsByName[key] = value
+	}
+	for key, value := range source.MissileCalculationsByCode {
+		result.MissileCalculationsByCode[key] = value
+	}
+	for key, value := range source.SkillCalculationsByCode {
+		result.SkillCalculationsByCode[key] = value
 	}
 	return result
 }
