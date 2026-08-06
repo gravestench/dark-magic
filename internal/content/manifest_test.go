@@ -80,3 +80,37 @@ func TestShimAssetFixtureContract(t *testing.T) {
 		t.Fatalf("asset fixture contains %d entries, want 90", len(fixture.Assets))
 	}
 }
+
+func TestCharacterCreationTransitionFacts(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Screens struct {
+			CharacterCreate struct {
+				Classes []struct {
+					Class         string `json:"class"`
+					Forward       string `json:"forward"`
+					ForwardFrames int    `json:"forward_frames"`
+					Back          string `json:"back"`
+					BackFrames    int    `json:"back_frames"`
+				} `json:"classes"`
+			} `json:"character_create"`
+		} `json:"screens"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	classes := manifest.Screens.CharacterCreate.Classes
+	if len(classes) != 7 {
+		t.Fatalf("character creation classes = %d, want 7", len(classes))
+	}
+	for _, class := range classes {
+		if class.Class == "" || class.Forward == "" || class.Back == "" || class.ForwardFrames <= 0 || class.BackFrames <= 0 {
+			t.Errorf("incomplete walk transition for %#v", class)
+		}
+	}
+}

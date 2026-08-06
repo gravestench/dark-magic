@@ -389,8 +389,11 @@ implementations. The remaining work is tracked explicitly below.
   enforces the 2–15 character naming grammar, and rejects duplicate names.
   Verified per-class selection/deselection narration and manifest-backed
   expansion/hardcore checkboxes now feed immutable creation metadata through
-  the save capability. Walk transitions, final calibrated geometry, and visual
-  composition coverage remain.
+  the save capability. Every class now uses manifest-owned forward/back walk
+  paths and verified frame counts: deselection returns to idle after a one-shot
+  back walk, while successful creation defers loading until the selected
+  character's forward walk completes. Headless acceptance verifies that delay.
+  Final calibrated geometry and visual composition coverage remain.
 - [ ] M17.4: Implement saved-character presentation, paging, deletion, composite
   previews, and activation.
 - [ ] M17.5: Implement dependency-driven loading and front-end composition tests

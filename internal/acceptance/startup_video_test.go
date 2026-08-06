@@ -84,6 +84,32 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("created character waits for the forward walk", func(t *testing.T) {
+		harness := newStartupHarness(t)
+		harness.skip(t)
+		harness.skip(t)
+		harness.skip(t) // Leave the trademark scene for the main menu.
+		assertStack(t, harness.navigator, "main_menu")
+
+		harness.action(t, "confirm")
+		assertStack(t, harness.navigator, "character_select")
+		harness.update(t) // Empty save list redirects into character creation.
+		assertStack(t, harness.navigator, "character_create")
+
+		harness.action(t, "confirm") // Select the initially focused Amazon.
+		harness.input.Publish(inputcore.Frame{Text: "Hero"})
+		harness.update(t)
+		harness.input.Publish(inputcore.Frame{})
+		harness.action(t, "down")    // Move dialog focus from the field to OK.
+		harness.action(t, "confirm") // Accept the name and begin forward walk.
+		assertStack(t, harness.navigator, "character_create")
+
+		harness.updateFor(t, 3*time.Second)
+		assertStack(t, harness.navigator, "character_create")
+		harness.updateFor(t, time.Second)
+		assertStack(t, harness.navigator, "game_loading")
+	})
 }
 
 type startupHarness struct {
@@ -166,9 +192,21 @@ func newStartupHarness(t *testing.T) *startupHarness {
 
 func (h *startupHarness) update(t *testing.T) {
 	t.Helper()
-	if err := h.scenes.Update(context.Background(), time.Second/60); err != nil {
+	h.updateFor(t, time.Second/60)
+}
+
+func (h *startupHarness) updateFor(t *testing.T, elapsed time.Duration) {
+	t.Helper()
+	if err := h.scenes.Update(context.Background(), elapsed); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func (h *startupHarness) action(t *testing.T, name string) {
+	t.Helper()
+	publishAction(h.input, name)
+	h.update(t)
+	h.input.Publish(inputcore.Frame{})
 }
 
 func (h *startupHarness) skip(t *testing.T) {

@@ -32,27 +32,52 @@ return {
         self.expansion = true
         self.hardcore = false
         self.classes = {}
+        self.transitions = {}
         -- Each class definition owns its presentation paths, anchor, timing,
         -- narration, and hit rectangle. Adding a class should be a data change.
         for _, definition in ipairs(screen.classes) do
             local class = { definition = definition }
             if render.assets_available() then
                 class.node = render.create("hud", self.root)
-                local function show(state)
-                    local path = definition[state]
-                    dc6.anchored_animation(
+                class.overlay = render.create("hud", self.root)
+            end
+
+            -- A state can have a base DC6 plus an optional synchronized overlay.
+            -- Verified frame counts keep transition timing deterministic even in
+            -- headless tests where renderer assets are intentionally unavailable.
+            class.show = function(state)
+                class.state = state
+                local frames_per_second = definition.frames_per_second or 15
+                local frames = definition[state .. "_frames"] or 0
+                local loop = (state == "forward" or state == "back") and "once" or "loop"
+                if class.node then
+                    frames = dc6.anchored_animation(
                         class.node,
-                        path,
+                        definition[state],
                         manifest.palettes[definition.palette],
                         definition.anchor.x,
                         definition.anchor.y,
-                        definition.frames_per_second or 15,
-                        "loop"
+                        frames_per_second,
+                        loop
                     )
+                    class.node:set_visible(true)
+                    local overlay_path = definition[state .. "_overlay"]
+                    class.overlay:set_visible(overlay_path ~= nil)
+                    if overlay_path then
+                        dc6.anchored_animation(
+                            class.overlay,
+                            overlay_path,
+                            manifest.palettes[definition.palette],
+                            definition.anchor.x,
+                            definition.anchor.y,
+                            frames_per_second,
+                            loop
+                        )
+                    end
                 end
-                class.show = show
-                show("unselected")
+                return frames / frames_per_second
             end
+            class.show("unselected")
             class.control = self.controls:add({
                 id = string.lower(definition.class),
                 label = definition.class,
@@ -61,7 +86,7 @@ return {
                 width = definition.hit.width,
                 height = definition.hit.height,
                 on_state = function(_, state)
-                    if class.show then
+                    if self.selected ~= class and class.state ~= "back" then
                         class.show(
                             (state == "hover" or state == "focused") and "hover" or "unselected"
                         )
@@ -69,18 +94,34 @@ return {
                 end,
                 on_activate = function()
                     if self.selected and self.selected ~= class then
-                        local deselect = self.selected.definition.deselect_sound
+                        local previous = self.selected
+                        local deselect = previous.definition.deselect_sound
                         if deselect and audio.exists(deselect) then
                             audio.play(deselect, { bus = "ui" })
+                        end
+                        local duration = previous.show("back")
+                        if duration > 0 then
+                            self.transitions[#self.transitions + 1] = {
+                                class = previous,
+                                remaining = duration,
+                            }
+                        else
+                            previous.show("unselected")
+                        end
+                    end
+
+                    -- Re-selecting a character cancels any pending return to
+                    -- its unselected pose.
+                    for index = #self.transitions, 1, -1 do
+                        if self.transitions[index].class == class then
+                            table.remove(self.transitions, index)
                         end
                     end
                     self.selected = class
                     if definition.select_sound and audio.exists(definition.select_sound) then
                         audio.play(definition.select_sound, { bus = "ui" })
                     end
-                    if class.show then
-                        class.show("selected")
-                    end
+                    class.show("selected")
 
                     -- The native save capability validates and canonicalizes
                     -- identities. Returning false keeps the dialog open.
@@ -104,7 +145,12 @@ return {
                                 return false
                             end
                             assert(saves.select(id))
-                            scenes.replace("game_loading")
+                            -- The save exists before presentation begins, but
+                            -- navigation waits for the authored forward walk.
+                            self.launch_after = class.show("forward")
+                            if self.launch_after <= 0 then
+                                scenes.replace("game_loading")
+                            end
                             return true
                         end
                     )
@@ -167,8 +213,26 @@ return {
         end
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
     end,
-    update = function(self)
+    update = function(self, elapsed)
         self.cursor:update()
+
+        for index = #self.transitions, 1, -1 do
+            local transition = self.transitions[index]
+            transition.remaining = transition.remaining - elapsed
+            if transition.remaining <= 0 then
+                transition.class.show("unselected")
+                table.remove(self.transitions, index)
+            end
+        end
+
+        if self.launch_after then
+            self.launch_after = self.launch_after - elapsed
+            if self.launch_after <= 0 then
+                self.launch_after = nil
+                scenes.replace("game_loading")
+            end
+            return
+        end
         if self.dialog and self.dialog.open then
             self.dialog:update()
             if input.pressed("cancel") then
