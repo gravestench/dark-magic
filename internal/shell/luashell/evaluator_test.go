@@ -27,8 +27,11 @@ func TestEvaluatorPersistsLocalsFormatsValuesAndCompletesWithoutExecution(t *tes
 	if result, err := evaluator.Evaluate(context.Background(), "answer"); err != nil || result.Text != "42" {
 		t.Fatalf("answer = %#v, %v", result, err)
 	}
-	if result, err := evaluator.Evaluate(context.Background(), `{name="hero", level=2}`); err != nil || !strings.Contains(result.Text, "level=2") {
+	if result, err := evaluator.Evaluate(context.Background(), `{name="hero", level=2}`); err != nil || !strings.Contains(result.Text, "level = 2") {
 		t.Fatalf("table = %#v, %v", result, err)
+	}
+	if result, err := evaluator.Evaluate(context.Background(), `local value={nested={answer=42}}; value.self=value; return value`); err != nil || !strings.Contains(result.Text, "nested = {\n") || !strings.Contains(result.Text, "self = <cycle>") {
+		t.Fatalf("structured table = %#v, %v", result, err)
 	}
 	if result, err := evaluator.Evaluate(context.Background(), `print("visible", 7)`); err != nil || result.Text != "visible\t7" || result.Kind != "output" {
 		t.Fatalf("print = %#v, %v", result, err)

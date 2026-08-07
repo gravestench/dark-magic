@@ -55,7 +55,12 @@ func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS, records aud
 		"set_bus_volume":  commandHelp("dm.audio.set_bus_volume(bus, volume)", "Set the volume of a named mixer bus."),
 		"play_record":     commandHelp("dm.audio.play_record(record [, options])", "Resolve and play an audio game-data record."),
 		"stop_group":      commandHelp("dm.audio.stop_group(group)", "Stop every active sound in a playback group."),
-	}), Loader: func(state *lua.LState) int {
+	}, map[string]TypeHelp{audioSoundType: {Summary: "A scoped active sound handle.", Methods: map[string]CommandHelp{
+		"set_volume": commandHelp("sound:set_volume(volume)", "Set this sound's volume."),
+		"set_pan":    commandHelp("sound:set_pan(pan)", "Set this sound's stereo pan."),
+		"fade_to":    commandHelp("sound:fade_to(volume, milliseconds)", "Fade this sound to a target volume."),
+		"stop":       commandHelp("sound:stop()", "Stop and release this sound."),
+	}}}), Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"diagnostics": func(state *lua.LState) int {

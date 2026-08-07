@@ -42,10 +42,12 @@ type Overlay struct {
 	animationAt     time.Time
 	displayRevision uint64
 	displayColumns  int
+	displayLimit    int
 	displayLines    []transcriptLine
 	displayView     viewMode
 	view            viewMode
 	logOffset       int
+	luaOffset       int
 }
 
 var (
@@ -66,7 +68,7 @@ func New(session *shell.Session, configured ...*shell.Settings) *Overlay {
 		settings = configured[0]
 	}
 	if settings == nil {
-		settings = shell.NewTransientSettings()
+		settings = session.Settings()
 	}
 	return &Overlay{session: session, settings: settings, history: len(session.History()), finished: make(chan shell.Entry, 1)}
 }
@@ -148,6 +150,14 @@ func (o *Overlay) Handle(ctx context.Context, frame inputstate.Frame) bool {
 		}
 		return true
 	}
+	if frame.Actions["page_up"].Pressed {
+		o.luaOffset += 10
+		return true
+	}
+	if frame.Actions["page_down"].Pressed {
+		o.luaOffset = max(0, o.luaOffset-10)
+		return true
+	}
 	if frame.Actions["backspace"].Pressed {
 		o.backspace()
 		o.resetCompletion()
@@ -200,8 +210,11 @@ func (o *Overlay) Draw(width, height int) {
 	if o.progress <= 0 {
 		return
 	}
-	panelHeight := int32(max(220, height*3/5))
+	settings := o.settings.Values()
+	panelHeight := int32(max(220, int(float64(height)*settings.ConsoleHeight)))
+	panelHeight = min(panelHeight, int32(height))
 	positionProgress, opacity := o.presentation()
+	opacity *= settings.Opacity
 	offsetY := int32(-float64(panelHeight) * (1 - positionProgress))
 	rl.DrawRectangle(0, offsetY, int32(width), panelHeight, fade(rl.NewColor(8, 7, 6, 238), opacity))
 	rl.DrawRectangleLinesEx(rl.NewRectangle(0, float32(offsetY), float32(width), float32(panelHeight)), 2, fade(rl.NewColor(176, 119, 38, 255), opacity))
@@ -217,7 +230,7 @@ func (o *Overlay) Draw(width, height int) {
 	transcriptTop := offsetY + 94
 	promptTop := offsetY + panelHeight - 58
 	contentBottom := promptTop
-	fontSize := float32(o.settings.Values().FontSize)
+	fontSize := float32(settings.FontSize)
 	lineHeight := int32(math.Ceil(float64(fontSize) * 1.28))
 	completion := o.completionLines()
 	if o.view == viewLua {
@@ -229,10 +242,12 @@ func (o *Overlay) Draw(width, height int) {
 	available := max(1, int((contentBottom-transcriptTop)/lineHeight)-1)
 	lines := o.timeline(width)
 	end := len(lines)
+	offset := &o.luaOffset
 	if o.view == viewLogs {
-		o.logOffset = min(o.logOffset, max(0, len(lines)-available))
-		end = max(0, len(lines)-o.logOffset)
+		offset = &o.logOffset
 	}
+	*offset = min(*offset, max(0, len(lines)-available))
+	end = max(0, len(lines)-*offset)
 	start := max(0, end-available)
 	if start < end {
 		lines = lines[start:end]
@@ -247,6 +262,10 @@ func (o *Overlay) Draw(width, height int) {
 			color = rl.NewColor(245, 190, 75, 255)
 		} else if line.notice {
 			color = rl.NewColor(224, 183, 92, 255)
+		} else if line.heading {
+			color = rl.NewColor(222, 163, 58, 255)
+		} else if line.code {
+			color = rl.NewColor(130, 190, 225, 255)
 		} else if line.result {
 			color = rl.NewColor(125, 211, 167, 255)
 		} else if line.dim {
@@ -267,7 +286,7 @@ func (o *Overlay) Draw(width, height int) {
 			status = " [evaluating]"
 		}
 		o.drawText("> "+o.inputWithCaret()+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
-		o.drawText("F1 Lua  F2 Logs  ` close  Enter run  Shift+Enter newline  Tab complete", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+		o.drawText("F1 Lua  F2 Logs  PgUp/PgDn scroll  ` close  Enter run  Shift+Enter newline  Tab complete", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
 	} else {
 		o.drawText("F1 Lua  F2 Logs  Up/Down scroll  PgUp/PgDn page  ` or Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
 	}
@@ -312,14 +331,19 @@ func (o *Overlay) timeline(width int) []transcriptLine {
 	fontSize := o.settings.Values().FontSize
 	columns := max(12, int(float64(width-36)/(fontSize*0.61)))
 	revision := o.session.TimelineRevision()
-	if revision != o.displayRevision || columns != o.displayColumns || o.view != o.displayView {
+	limit := o.settings.Values().TranscriptLimit
+	if revision != o.displayRevision || columns != o.displayColumns || limit != o.displayLimit || o.view != o.displayView {
 		events := o.session.TranscriptTimeline()
 		if o.view == viewLogs {
 			events = o.session.LogTimeline()
 		}
 		o.displayLines = wrapTranscript(timelineLines(events), columns)
+		if len(o.displayLines) > limit {
+			o.displayLines = o.displayLines[len(o.displayLines)-limit:]
+		}
 		o.displayRevision = revision
 		o.displayColumns = columns
+		o.displayLimit = limit
 		o.displayView = o.view
 	}
 	return o.displayLines
@@ -349,9 +373,9 @@ func (o *Overlay) updateAnimation(now time.Time) {
 		return
 	}
 	if o.open {
-		o.progress = min(1, o.progress+float64(elapsed)/float64(openDuration))
+		o.progress = min(1, o.progress+float64(elapsed)/float64(openDuration)*o.settings.Values().AnimationSpeed)
 	} else {
-		o.progress = max(0, o.progress-float64(elapsed)/float64(closeDuration))
+		o.progress = max(0, o.progress-float64(elapsed)/float64(closeDuration)*o.settings.Values().AnimationSpeed)
 	}
 }
 
@@ -377,6 +401,7 @@ func (o *Overlay) submit(ctx context.Context) {
 	o.input = ""
 	o.cursor = 0
 	o.resetCompletion()
+	o.luaOffset = 0
 	go func() { o.finished <- o.session.Submit(ctx, source) }()
 }
 
@@ -479,9 +504,9 @@ func completionToken(source string) string {
 }
 
 type transcriptLine struct {
-	text                   string
-	result, error, warning bool
-	dim, notice            bool
+	text                       string
+	result, error, warning     bool
+	dim, notice, heading, code bool
 }
 
 func timelineLines(events []shell.TimelineEvent) []transcriptLine {
@@ -500,6 +525,9 @@ func timelineLines(events []shell.TimelineEvent) []transcriptLine {
 				}
 			case "value":
 				line.result = true
+				trimmed := strings.TrimSpace(line.text)
+				line.heading = strings.HasPrefix(trimmed, "#")
+				line.code = strings.HasPrefix(trimmed, "```") || strings.HasPrefix(line.text, "  ")
 			case "error", "log-error":
 				line.error = true
 			case "log-warn":
@@ -519,12 +547,12 @@ func wrapTranscript(lines []transcriptLine, columns int) []transcriptLine {
 		runes := []rune(line.text)
 		for len(runes) > columns {
 			wrapped = append(wrapped, transcriptLine{
-				text: string(runes[:columns]), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice,
+				text: string(runes[:columns]), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice, heading: line.heading, code: line.code,
 			})
 			runes = runes[columns:]
 		}
 		wrapped = append(wrapped, transcriptLine{
-			text: string(runes), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice,
+			text: string(runes), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice, heading: line.heading, code: line.code,
 		})
 	}
 	return wrapped

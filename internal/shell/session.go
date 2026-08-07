@@ -61,6 +61,7 @@ type Session struct {
 	logs               *LogBuffer
 	transcriptRevision uint64
 	motd               string
+	settings           *Settings
 	closed             bool
 }
 
@@ -72,7 +73,7 @@ func NewSession(id, target string, policy Policy, evaluator Evaluator) (*Session
 		return nil, errors.New("shell: evaluator is required")
 	}
 	policy.Capabilities = append([]string(nil), policy.Capabilities...)
-	return &Session{id: id, target: target, policy: policy, evaluator: evaluator, motd: defaultMOTD(target, policy)}, nil
+	return &Session{id: id, target: target, policy: policy, evaluator: evaluator, motd: defaultMOTD(target, policy), settings: NewTransientSettings()}, nil
 }
 
 func (s *Session) ID() string     { return s.id }
@@ -84,6 +85,21 @@ func (s *Session) Policy() Policy {
 }
 
 func (s *Session) MOTD() string { return s.motd }
+
+func (s *Session) AttachSettings(settings *Settings) {
+	if settings == nil {
+		return
+	}
+	s.mu.Lock()
+	s.settings = settings
+	s.mu.Unlock()
+}
+
+func (s *Session) Settings() *Settings {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.settings
+}
 
 func defaultMOTD(target string, policy Policy) string {
 	capabilities := "none registered for this target"

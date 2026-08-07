@@ -300,6 +300,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	shellSession.AttachLogs(shellLogs)
+	shellSession.AttachSettings(shellSettings)
 	defer shellSession.Close()
 	console := raylibShell.New(shellSession, shellSettings)
 	if err := console.LoadFont(); err != nil {

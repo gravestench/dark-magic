@@ -148,7 +148,7 @@ func (m Model) View() tea.View {
 	header := accentStyle.Render("DARK MAGIC SHELL") + "  " +
 		dimStyle.Render(fmt.Sprintf("target %s  session %s  policy %s (%s)", m.session.Target(), m.session.ID(), policy.Name, mode))
 	capabilities := dimStyle.Render("capabilities: " + strings.Join(policy.Capabilities, ", "))
-	statusText := "F1 Lua  F2 Logs  Ctrl-S run  Enter newline  Tab complete  Ctrl-Q quit"
+	statusText := "F1 Lua  F2 Logs  Ctrl-S run  Enter newline  Tab complete  arrows/PgUp/PgDn scroll  Ctrl-Q quit"
 	if m.view == viewLogs {
 		statusText = "F1 Lua  F2 Logs  arrows/PgUp/PgDn scroll  Ctrl-Q quit"
 	}
@@ -236,7 +236,17 @@ func (m *Model) refreshTranscript() {
 		case "command":
 			lines = append(lines, accentStyle.Render("❯ ")+event.Text)
 		case "value":
-			lines = append(lines, valueStyle.Render(event.Text))
+			for _, line := range strings.Split(event.Text, "\n") {
+				trimmed := strings.TrimSpace(line)
+				switch {
+				case strings.HasPrefix(trimmed, "#"):
+					lines = append(lines, accentStyle.Render(line))
+				case strings.HasPrefix(trimmed, "```") || strings.HasPrefix(line, "  "):
+					lines = append(lines, dimStyle.Render(line))
+				default:
+					lines = append(lines, valueStyle.Render(line))
+				}
+			}
 		case "error", "log-error":
 			lines = append(lines, errorStyle.Render(event.Text))
 		case "log-warn":
@@ -246,6 +256,9 @@ func (m *Model) refreshTranscript() {
 		default:
 			lines = append(lines, event.Text)
 		}
+	}
+	if limit := m.session.Settings().Values().TranscriptLimit; len(lines) > limit {
+		lines = lines[len(lines)-limit:]
 	}
 	m.output.SetContent(strings.Join(lines, "\n"))
 	m.output.GotoBottom()

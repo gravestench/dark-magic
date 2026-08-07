@@ -266,6 +266,17 @@ func (e *Evaluator) apropos(query string) string {
 				matches = append(matches, alias+"."+name+" — "+command.Summary)
 			}
 		}
+		for typeName, typeDoc := range doc.Types {
+			if strings.Contains(strings.ToLower(typeName+" "+typeDoc.Summary), query) {
+				matches = append(matches, typeName+" — "+typeDoc.Summary)
+			}
+			for name, method := range typeDoc.Methods {
+				haystack := typeName + " " + name + " " + method.Usage + " " + method.Summary
+				if strings.Contains(strings.ToLower(haystack), query) {
+					matches = append(matches, method.Usage+" — "+method.Summary)
+				}
+			}
+		}
 	}
 	sort.Strings(matches)
 	if len(matches) == 0 {
@@ -309,7 +320,35 @@ func (e *Evaluator) helpFor(state *glua.LState, value glua.LValue) string {
 			}
 		}
 	}
+	if userData, ok := value.(*glua.LUserData); ok {
+		metatable := state.GetMetatable(userData)
+		for _, module := range e.modules {
+			for typeName, typeDoc := range e.help[module].Types {
+				if state.GetTypeMetatable(typeName) == metatable {
+					return formatTypeHelp(typeName, typeDoc)
+				}
+			}
+		}
+	}
 	return "No help metadata is available for that value. Pass a path such as \"dm.audio.play\"."
+}
+
+func formatTypeHelp(name string, doc modruntime.TypeHelp) string {
+	names := make([]string, 0, len(doc.Methods))
+	for method := range doc.Methods {
+		names = append(names, method)
+	}
+	sort.Strings(names)
+	var output strings.Builder
+	fmt.Fprintf(&output, "%s\n%s", name, doc.Summary)
+	if len(names) > 0 {
+		output.WriteString("\n\nMethods:")
+		for _, name := range names {
+			method := doc.Methods[name]
+			fmt.Fprintf(&output, "\n  %-24s %s", method.Usage, method.Summary)
+		}
+	}
+	return output.String()
 }
 
 func (e *Evaluator) helpPath(path string) (string, string) {
@@ -512,7 +551,13 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 				token = base + "." + member
 			} else if table, detail := rawMemberTable(state, environment.RawGetString(base), state.GetGlobal(base)); table != nil {
 				seen = make(map[string]string)
-				table.ForEach(func(key, _ glua.LValue) { seen[base+"."+key.String()] = detail })
+				value := environment.RawGetString(base)
+				if value == glua.LNil {
+					value = state.GetGlobal(base)
+				}
+				table.ForEach(func(key, _ glua.LValue) {
+					seen[base+"."+key.String()] = e.memberDetail(state, value, key.String(), detail)
+				})
 				token = base + "." + member
 			}
 		}
@@ -525,6 +570,23 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 		return nil
 	})
 	return result, err
+}
+
+func (e *Evaluator) memberDetail(state *glua.LState, value glua.LValue, member, fallback string) string {
+	if _, ok := value.(*glua.LUserData); !ok {
+		return fallback
+	}
+	metatable := state.GetMetatable(value)
+	for _, module := range e.modules {
+		for typeName, typeDoc := range e.help[module].Types {
+			if state.GetTypeMetatable(typeName) == metatable {
+				if method, ok := typeDoc.Methods[member]; ok {
+					return method.Summary
+				}
+			}
+		}
+	}
+	return fallback
 }
 
 func (e *Evaluator) completionModule(base string) (string, bool) {
@@ -617,19 +679,39 @@ func rawMemberTable(state *glua.LState, values ...glua.LValue) (*glua.LTable, st
 }
 
 func formatValue(value glua.LValue, depth int) string {
+	return formatValueSeen(value, depth, make(map[*glua.LTable]bool))
+}
+
+func formatValueSeen(value glua.LValue, depth int, seen map[*glua.LTable]bool) string {
 	switch typed := value.(type) {
 	case *glua.LTable:
-		if depth >= 2 {
+		if seen[typed] {
+			return "<cycle>"
+		}
+		if depth >= 4 {
 			return "{…}"
 		}
-		parts := make([]string, 0, 8)
+		seen[typed] = true
+		defer delete(seen, typed)
+		parts := make([]string, 0, 16)
+		truncated := false
 		typed.ForEach(func(key, item glua.LValue) {
-			if len(parts) < 8 {
-				parts = append(parts, key.String()+"="+formatValue(item, depth+1))
+			if len(parts) < 64 {
+				parts = append(parts, key.String()+" = "+formatValueSeen(item, depth+1, seen))
+			} else {
+				truncated = true
 			}
 		})
 		sort.Strings(parts)
-		return "{" + strings.Join(parts, ", ") + "}"
+		if truncated {
+			parts = append(parts, "…")
+		}
+		if len(parts) == 0 {
+			return "{}"
+		}
+		indent := strings.Repeat("  ", depth+1)
+		closeIndent := strings.Repeat("  ", depth)
+		return "{\n" + indent + strings.Join(parts, ",\n"+indent) + "\n" + closeIndent + "}"
 	case glua.LString:
 		if strings.ContainsAny(string(typed), "\r\n\t") {
 			return string(typed)

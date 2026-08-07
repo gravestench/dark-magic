@@ -11,7 +11,27 @@ func ShellModule(settings *shell.Settings) Module {
 	valuesTable := func(state *lua.LState, values shell.SettingsValues) *lua.LTable {
 		result := state.NewTable()
 		result.RawSetString("font_size", lua.LNumber(values.FontSize))
+		result.RawSetString("console_height", lua.LNumber(values.ConsoleHeight))
+		result.RawSetString("opacity", lua.LNumber(values.Opacity))
+		result.RawSetString("transcript_limit", lua.LNumber(values.TranscriptLimit))
+		result.RawSetString("animation_speed", lua.LNumber(values.AnimationSpeed))
 		return result
+	}
+	setValue := func(state *lua.LState, values *shell.SettingsValues, name string, index int) {
+		switch name {
+		case "font_size":
+			values.FontSize = float64(state.CheckNumber(index))
+		case "console_height":
+			values.ConsoleHeight = float64(state.CheckNumber(index))
+		case "opacity":
+			values.Opacity = float64(state.CheckNumber(index))
+		case "transcript_limit":
+			values.TranscriptLimit = state.CheckInt(index)
+		case "animation_speed":
+			values.AnimationSpeed = float64(state.CheckNumber(index))
+		default:
+			state.RaiseError("unknown shell setting %q", name)
+		}
 	}
 	return Module{Name: "dm.shell/v1", Help: ModuleHelp{
 		Summary: "Inspect and edit interactive shell presentation settings.",
@@ -20,12 +40,14 @@ func ShellModule(settings *shell.Settings) Module {
 			"defaults": {Summary: "Return the built-in default settings.", Usage: "dm.shell.defaults()"},
 			"get":      {Summary: "Read one active setting by name.", Usage: "dm.shell.get(name)"},
 			"set": {Summary: "Change a setting immediately without saving it.", Usage: "dm.shell.set(name, value)", Parameters: []ParameterHelp{
-				{Name: "name", Type: "string", Description: `Currently "font_size".`},
+				{Name: "name", Type: "string", Description: "A key returned by dm.shell.values()."},
 				{Name: "value", Type: "number", Description: "New setting value."},
 			}},
-			"reset":  {Summary: "Reset all runtime settings to defaults without saving.", Usage: "dm.shell.reset()"},
-			"save":   {Summary: "Persist the active settings for future launches.", Usage: "dm.shell.save()"},
-			"status": {Summary: "Return persistence path and unsaved-change state.", Usage: "dm.shell.status()"},
+			"set_many": {Summary: "Validate and apply several settings atomically.", Usage: "dm.shell.set_many(values)"},
+			"reset":    {Summary: "Reset all runtime settings to defaults without saving.", Usage: "dm.shell.reset()"},
+			"reload":   {Summary: "Discard unsaved changes and reload persistent settings.", Usage: "dm.shell.reload()"},
+			"save":     {Summary: "Persist the active settings for future launches.", Usage: "dm.shell.save()"},
+			"status":   {Summary: "Return persistence path and unsaved-change state.", Usage: "dm.shell.status()"},
 		},
 	}, Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -41,24 +63,47 @@ func ShellModule(settings *shell.Settings) Module {
 				switch name := state.CheckString(1); name {
 				case "font_size":
 					state.Push(lua.LNumber(settings.Values().FontSize))
-					return 1
+				case "console_height":
+					state.Push(lua.LNumber(settings.Values().ConsoleHeight))
+				case "opacity":
+					state.Push(lua.LNumber(settings.Values().Opacity))
+				case "transcript_limit":
+					state.Push(lua.LNumber(settings.Values().TranscriptLimit))
+				case "animation_speed":
+					state.Push(lua.LNumber(settings.Values().AnimationSpeed))
 				default:
 					state.RaiseError("unknown shell setting %q", name)
 					return 0
 				}
+				return 1
 			},
 			"set": func(state *lua.LState) int {
-				name := state.CheckString(1)
-				if name != "font_size" {
-					state.RaiseError("unknown shell setting %q", name)
-					return 0
+				values := settings.Values()
+				setValue(state, &values, state.CheckString(1), 2)
+				if err := settings.Update(values); err != nil {
+					state.RaiseError("set shell setting: %v", err)
 				}
-				if err := settings.SetFontSize(float64(state.CheckNumber(2))); err != nil {
-					state.RaiseError("set shell setting %q: %v", name, err)
+				return 0
+			},
+			"set_many": func(state *lua.LState) int {
+				values := settings.Values()
+				state.CheckTable(1).ForEach(func(key, value lua.LValue) {
+					state.Push(value)
+					setValue(state, &values, key.String(), state.GetTop())
+					state.Pop(1)
+				})
+				if err := settings.Update(values); err != nil {
+					state.RaiseError("set shell settings: %v", err)
 				}
 				return 0
 			},
 			"reset": func(*lua.LState) int { settings.Reset(); return 0 },
+			"reload": func(state *lua.LState) int {
+				if err := settings.Reload(); err != nil {
+					state.RaiseError("reload shell settings: %v", err)
+				}
+				return 0
+			},
 			"save": func(state *lua.LState) int {
 				if err := settings.Save(); err != nil {
 					state.RaiseError("save shell settings: %v", err)

@@ -544,6 +544,13 @@ implementations. The remaining work is tracked explicitly below.
   functions now carry authored summaries and usage signatures checked against
   their actual exported Lua tables. Policy-filtered `dm.apropos` searches the
   registry and `dm.docs()` renders Markdown from that same source of truth.
+  Structured table output now uses deterministic multiline formatting with
+  cycle/depth protection. Lua output has retained Page Up/Page Down scrollback
+  and semantic heading/code/value coloring in both adapters. Persistent settings
+  additionally control console height, opacity, transcript retention, and
+  animation speed, with atomic `set_many` and explicit `reload`. Audio sound,
+  video playback, and all render-node userdata methods participate in help,
+  Markdown generation, and metatable-level documentation conformance checks.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

@@ -601,7 +601,31 @@ func (r *RenderCapability) Module() Module {
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
 		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
 		"create":               commandHelp("dm.render.create()", "Create a scoped retained presentation node."),
-	}), Loader: func(state *lua.LState) int {
+	}, map[string]TypeHelp{renderNodeType: {Summary: "A scoped retained presentation node.", Methods: map[string]CommandHelp{
+		"set_position":               commandHelp("node:set_position(x, y)", "Set the node position."),
+		"set_scale":                  commandHelp("node:set_scale(x, y)", "Set the node scale."),
+		"set_z":                      commandHelp("node:set_z(z)", "Set the node draw priority."),
+		"set_rotation":               commandHelp("node:set_rotation(degrees)", "Set the node rotation."),
+		"set_blend":                  commandHelp("node:set_blend(mode)", "Set the node blend mode."),
+		"set_palette_quantization":   commandHelp("node:set_palette_quantization(path)", "Quantize the node through a display palette."),
+		"clear_palette_quantization": commandHelp("node:clear_palette_quantization()", "Disable node palette quantization."),
+		"set_visible":                commandHelp("node:set_visible(visible)", "Show or hide the node."),
+		"set_clip":                   commandHelp("node:set_clip(x, y, width, height)", "Set the node clip rectangle."),
+		"clear_clip":                 commandHelp("node:clear_clip()", "Remove the node clip rectangle."),
+		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
+		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
+		"set_dc6_animation":          commandHelp("node:set_dc6_animation(path [, options])", "Render a DC6 animation."),
+		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
+		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
+		"set_cof":                    commandHelp("node:set_cof(path [, options])", "Render a COF composite."),
+		"set_cof_animation":          commandHelp("node:set_cof_animation(path [, options])", "Render an animated COF composite."),
+		"set_text":                   commandHelp("node:set_text(text [, options])", "Render bitmap-font text."),
+		"animation_pause":            commandHelp("node:animation_pause()", "Pause the node animation."),
+		"animation_resume":           commandHelp("node:animation_resume()", "Resume the node animation."),
+		"animation_seek":             commandHelp("node:animation_seek(frame)", "Seek the node animation."),
+		"fill_rect":                  commandHelp("node:fill_rect(width, height, color)", "Render a filled rectangle."),
+		"destroy":                    commandHelp("node:destroy()", "Destroy and release the node."),
+	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"diagnostics": func(state *lua.LState) int {

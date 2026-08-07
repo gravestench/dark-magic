@@ -87,8 +87,15 @@ Shell presentation settings are live Lua runtime values. For example:
 ```lua
 dm.shell.values()                  -- {font_size=18}
 dm.shell.set("font_size", 22)     -- apply immediately for this process
+dm.shell.set_many({                -- validate and apply atomically
+    console_height = 0.7,
+    opacity = 0.85,
+    transcript_limit = 4000,
+    animation_speed = 1.5,
+})
 dm.shell.defaults()                -- inspect built-in values
 dm.shell.reset()                   -- restore defaults in memory
+dm.shell.reload()                  -- discard edits and reload the saved file
 dm.shell.save()                    -- persist the active values
 dm.shell.status()                  -- persistence path and dirty state
 ```
@@ -102,7 +109,11 @@ Use `dm.apropos("music")` to search the permitted module and command
 descriptions. `dm.docs()` renders Markdown for the session's complete permitted
 Lua API from the same registration metadata used by help and completion.
 Built-in capability conformance tests reject public module functions that do
-not provide an authored summary and usage signature.
+not provide an authored summary and usage signature. Audio, video, and render
+userdata methods are documented and checked the same way. Lua tables render as
+stable, indented structures with bounded depth and cycle detection. Page Up and
+Page Down navigate retained Lua output in the graphical console; the terminal
+viewport provides matching scrollback and basic semantic highlighting.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 

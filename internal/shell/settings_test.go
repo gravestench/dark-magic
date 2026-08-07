@@ -18,12 +18,15 @@ func TestSettingsEditResetSaveAndReload(t *testing.T) {
 		t.Fatalf("save = %v dirty=%v", err, settings.Dirty())
 	}
 	reloaded, err := NewSettings(path)
-	if err != nil || reloaded.Values().FontSize != 22 {
+	if err != nil || reloaded.Values().FontSize != 22 || reloaded.Values().ConsoleHeight != 0.6 {
 		t.Fatalf("reload = %#v, %v", reloaded, err)
 	}
 	reloaded.Reset()
 	if reloaded.Values().FontSize != DefaultFontSize || !reloaded.Dirty() {
 		t.Fatalf("reset = %#v", reloaded.Values())
+	}
+	if err := reloaded.Reload(); err != nil || reloaded.Values().FontSize != 22 || reloaded.Dirty() {
+		t.Fatalf("reload = %#v, %v", reloaded.Values(), err)
 	}
 	if err := reloaded.SetFontSize(7); err == nil {
 		t.Fatal("accepted invalid font size")

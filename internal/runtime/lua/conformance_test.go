@@ -84,6 +84,27 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 					t.Errorf("%s.%s lacks authored help metadata", name, key)
 				}
 			})
+			for typeName, typeDoc := range documentation[name].Types {
+				metatable, ok := state.GetTypeMetatable(typeName).(*lua.LTable)
+				if !ok {
+					t.Errorf("%s does not register documented userdata %s", name, typeName)
+					continue
+				}
+				methods, _ := metatable.RawGetString("__index").(*lua.LTable)
+				if methods == nil {
+					t.Errorf("%s userdata %s has no method table", name, typeName)
+					continue
+				}
+				methods.ForEach(func(key, value lua.LValue) {
+					if value.Type() != lua.LTFunction {
+						return
+					}
+					doc, ok := typeDoc.Methods[key.String()]
+					if !ok || doc.Summary == "" || doc.Usage == "" {
+						t.Errorf("%s %s.%s lacks authored help metadata", name, typeName, key)
+					}
+				})
+			}
 		}
 		return nil
 	}); err != nil {

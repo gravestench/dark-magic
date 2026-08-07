@@ -129,6 +129,21 @@ func TestOverlayUsesLiveFontSizeSetting(t *testing.T) {
 	}
 }
 
+func TestOverlayLuaViewHasIndependentPageScrollback(t *testing.T) {
+	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
+	overlay := New(session)
+	overlay.open = true
+	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"page_up": {Pressed: true}}})
+	if overlay.luaOffset != 10 || overlay.logOffset != 0 {
+		t.Fatalf("offsets lua=%d logs=%d", overlay.luaOffset, overlay.logOffset)
+	}
+	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"shell_logs": {Pressed: true}}})
+	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"page_up": {Pressed: true}}})
+	if overlay.logOffset != 10 || overlay.luaOffset != 10 {
+		t.Fatalf("offsets lua=%d logs=%d", overlay.luaOffset, overlay.logOffset)
+	}
+}
+
 func TestOverlayAnimatesAndCapturesThroughClose(t *testing.T) {
 	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
 	overlay := New(session)

@@ -56,6 +56,7 @@ func Run(ctx context.Context, target string, policy shell.Policy, level slog.Lev
 		return err
 	}
 	session.AttachLogs(logs)
+	session.AttachSettings(settings)
 	defer session.Close()
 	slog.Info("administration shell ready", "target", target)
 	if err := tui.Run(ctx, session, input, output); err != nil && !errors.Is(err, tea.ErrInterrupted) && !errors.Is(err, tea.ErrProgramKilled) {
