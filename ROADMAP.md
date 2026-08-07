@@ -629,7 +629,11 @@ implementations. The remaining work is tracked explicitly below.
   spawning, packs, bosses, pets, hirelings, corpses, and death/respawn.
 - [ ] Materialize player and monster ECS archetypes from validated typed records,
   with character creation expressed as authoritative simulation commands rather
-  than a stateful character/monster generator service.
+  than a stateful character/monster generator service. The privileged,
+  replayable `system.player.enter` command now atomically creates stable player
+  identity, progression, vitals, appearance, ownership, transform, velocity,
+  and bounds components; typed starting-stat resolution, scene handoff, monsters,
+  and persistence synchronization remain.
 - [ ] Implement attacks, hit checks, block, defense, damage types, resistance,
   absorb, leech, regeneration, durability, experience, leveling, and difficulty.
 - [ ] Implement skills, skill trees, missiles, auras, states, procs, charges,
