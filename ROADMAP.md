@@ -974,7 +974,9 @@ implementations. The remaining work is tracked explicitly below.
 - [ ] Import the remaining executable-derived Riiablo datasets as they are
   identified, with provenance, typed schemas, cross-table validation, and
   representative quest/dialogue/audio behavior tests.
-- [ ] Add deterministic RNG streams, replay checksums, snapshot serialization,
+- [x] Add purpose-named deterministic RNG streams plus canonical, versioned ECS
+  snapshot serialization and replay checksums with typed float-bit encoding.
+- [ ] Add replay command/event logs, snapshot restoration, desync diagnostics,
   and server-authoritative command admission.
 
 ## M30: Deferred shell ergonomics

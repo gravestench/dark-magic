@@ -44,8 +44,8 @@ github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d h1:KbPOUXFUDJxwZ04v
 github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d/go.mod h1:5YoVOkjYAQumqlV356Hj3xeYh4BdZuLE0/nRkf2NKkI=
 github.com/google/uuid v1.1.5 h1:kxhtnfFVi+rYdOALN0B3k9UT86zVJKfBimRaciULW4I=
 github.com/google/uuid v1.1.5/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/gravestench/akara v0.1.1 h1:VRJKqMw4kJwcg7LFy2xyGbdCO8Qv+GcXjj9Pv/fVCUs=
-github.com/gravestench/akara v0.1.1/go.mod h1:JBhME9Phc5JyKawR947KC5IG2SAIbJQ4JN2BYPXBJeI=
+github.com/gravestench/akara v0.1.2 h1:VEhEyVQHRIsgU1mjE9QuVJfmuAGd7/qVP4gf8rdEGJ8=
+github.com/gravestench/akara v0.1.2/go.mod h1:JBhME9Phc5JyKawR947KC5IG2SAIbJQ4JN2BYPXBJeI=
 github.com/gravestench/bitstream v0.2.0 h1:Q1OccEw1u5GYNYzPaKXa1JyHuI38cI74AkAQGjPERDI=
 github.com/gravestench/bitstream v0.2.0/go.mod h1:n9EqYA4ZZM9S8wdwSSVVHXzSVFtlxg2OIWRvbEqTxpM=
 github.com/gravestench/cof v0.1.0 h1:7wd8h1lCbw5wOER/ZHj98vJYbt52I1ybq8b8UKkyUV0=
