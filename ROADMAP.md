@@ -83,6 +83,8 @@ their own legally obtained game data.
 - [x] Resolve random class-skill function 36 against Skills records.
 - [x] Add ladder-season eligibility to special-item selection.
 - [x] Connect monster/chest events to deterministic loot seeds.
+- [x] Keep item and loot generation renderer-independent and driven by typed
+  record catalogs rather than a lifecycle-managed generator service.
 
 ## M7: Explicit application host
 
@@ -178,6 +180,8 @@ their own legally obtained game data.
 - [x] Separate asset decoding from GPU upload and make upload/destruction occur on
   the renderer thread.
 - [x] Support deterministic world, HUD, modal, cursor, debug, and transition layers.
+- [x] Provide a backend-neutral retained rendering contract with Raylib isolated
+  as a native platform adapter rather than exposing a global renderer service.
 - [x] Preserve chunking, culling, child-order caching, and allocation-free hot paths
   from the current renderer while replacing its ownership model.
 - [x] Add a headless render-command backend for scene tests and golden composition
@@ -610,6 +614,9 @@ implementations. The remaining work is tracked explicitly below.
   interaction range, line of sight, and movement modes.
 - [ ] Implement deterministic preset, maze, outdoor, substitution, warp, object,
   monster, and waypoint generation for all acts and difficulties.
+- [ ] Materialize generated maps as deterministic session-owned zones from typed
+  level records and decoded DS1/DT1 facts; asset loading and presentation must
+  remain consumers rather than owners of world generation.
 - [ ] Add animated map tiles, doors, breakables, shrines, chests, portals,
   missiles, overlays, selectable bounds, and automap discovery.
 - [ ] Stream and cull zones without changing deterministic simulation results.
@@ -620,12 +627,18 @@ implementations. The remaining work is tracked explicitly below.
   stats, caps, per-level values, state modifiers, and description functions.
 - [ ] Implement player and monster modes, animation events, targeting, AI,
   spawning, packs, bosses, pets, hirelings, corpses, and death/respawn.
+- [ ] Materialize player and monster ECS archetypes from validated typed records,
+  with character creation expressed as authoritative simulation commands rather
+  than a stateful character/monster generator service.
 - [ ] Implement attacks, hit checks, block, defense, damage types, resistance,
   absorb, leech, regeneration, durability, experience, leveling, and difficulty.
 - [ ] Implement skills, skill trees, missiles, auras, states, procs, charges,
   cooldowns, mana, targeting shapes, and server-authoritative validation.
 - [ ] Implement NPC interaction, vendors, gambling, repair, identify, cube,
   shrines, quests, waypoints, acts, difficulties, and end-game transitions.
+- [ ] Integrate deterministic item materialization and treasure-class rolls with
+  authoritative monster/chest events, world drops, inventories, equipment, and
+  persistence without duplicating the completed `internal/game/loot` rules.
 - [ ] Implement record-driven music, ambience, speech, monster, object, item, UI,
   and combat sound selection with deterministic event identity where required.
 

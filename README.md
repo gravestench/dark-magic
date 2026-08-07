@@ -1,39 +1,43 @@
 <h1 align="center">Dark Magic</h1>
 <h3 align="center">An Open-Source Diablo 2 Engine Rewrite</h3>
-<div align="center">
-  <img align="center" src="pkg/dark-magic-logo.png" alt="Dark Magic Logo">
-</div>
 
 The maintenance policy for the standalone OpenDiablo2-derived format
 libraries is documented in [CODECS.md](CODECS.md).
 
-### About
+## About
 
-Dark Magic is a community-driven open-source project that aims to recreate the 
-legendary Diablo 2 gaming experience from scratch. Our mission is to modernize 
-and enhance the game engine while preserving the classic gameplay mechanics and 
-nostalgia that made Diablo 2 a timeless masterpiece.
+Dark Magic is a clean-room, open-source Diablo II engine rewrite. It aims to
+preserve the original game's authored mechanics and presentation while replacing
+the abandoned OpenDiablo2 architecture with deterministic simulation,
+data-driven rules, scriptable gameplay, and explicit native-resource ownership.
 
-Inspired by the passion of the Diablo community, we strive to deliver an 
-authentic and faithful journey into the dark and dangerous world of Sanctuary. 
-Together, we can bring back the magic of this iconic game and shape its future.
+Dark Magic does not distribute Blizzard assets. Running the client or real-asset
+tools requires a legally obtained Diablo II installation or MPQ set.
 
-## Directory Structure
-* `cmd` - contains only product binaries. The product targets are the Dark Magic
-  client and realm.
-* `internal/dev/tools` - repository-private asset inspection, extraction, catalog,
-  and packaging utilities.
-* `internal/dev/testapps` - repository-private interactive and headless manual test
-  harnesses; these are not shipped as Dark Magic products.
-* `pkg/models` - contains all the d2 models, much of them being the structs which represent records loaded from the MPQ excel files.
-* `internal` - application host, layered content, native adapters, runtime capabilities, navigation, and engine-owned implementations.
+## Directory structure
+
+* `cmd` contains the client, game-session server, and realm composition roots.
+  Commands perform wiring and process configuration, not gameplay.
+* `internal/game` owns typed Diablo records, deterministic ECS scheduling,
+  simulation primitives, world decoding, and loot rules.
+* `internal/content` owns the layered directory/MPQ/ZIP VFS and redistributable
+  first-party Lua shim.
+* `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
+  Lua runtimes with disposable resource scopes.
+* `internal/presentation` defines backend-neutral retained rendering and scene
+  navigation; `internal/platform/raylib` owns native Raylib integration.
+* `internal/dev/tools` and `internal/dev/testapps` contain repository-private
+  diagnostics and harnesses. They are not product binaries.
+
+There is intentionally no public Go API under `pkg`. Standalone Diablo file
+codecs remain independently versioned repositories; see [CODECS.md](CODECS.md).
 
 ## Architecture
 
 The executable uses an explicit internal application host for native lifecycle,
 a dynamic manager for native and Lua-defined components, a layered content VFS,
 and versioned Lua capabilities. The Raylib backend remains isolated beneath
-`internal/raylib`; scripts author scenes and overlays through retained rendering,
+`internal/platform/raylib`; scripts author scenes and overlays through retained rendering,
 input, audio, records, locale, save, simulation, and navigation capabilities.
 The `dm.ecs/v1` capability additionally lets trusted scripts define validated
 component schemas and deterministic, scope-owned systems over the shared Akara
@@ -138,29 +142,30 @@ game aspect ratio. `DARK_MAGIC_VIEWPORT_FIT` provides the equivalent environment
 setting. Mouse input is mapped back into logical game coordinates; input in
 letterbox regions is excluded from the game viewport.
 
-# Join the Quest
+## Join the Quest
+
 Are you ready to embark on a journey into the heart of darkness? Unite with 
-fellow adventurers and follow the development of Dark Magic on our and 
+fellow adventurers and follow development on the
 [community Discord server](https://discord.gg/gT9vTKfV8G).
 
 Gather your courage, for a new era of sanctuary awaits. 
 Embrace the magic, rewrite the destiny - with Dark Magic.
 
 
-## Roadmap
+## Project status
 
-The current package ownership rules, dependency direction, and target layout
-are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-The following services need to be implemented:
-* `Character Generator` - uses the record manager to create character instances
-* `Item Generator` - generates items using the record manager
-* `Loot Generator` - uses the record manager to roll loot (generates items)
-* `Map Generator` - uses the record manager and asset loaders to generate maps
-* `Monster Generator` - uses the record manager to create instances of monsters
-* `Renderer` - a wrapper around the rendering backend
-* TBD
+The project is under active architectural reconstruction and is not yet a
+playable Diablo II replacement. The application host, layered content system,
+retained renderer boundary, typed data catalog, deterministic loot foundation,
+Lua-defined Akara ECS, DS1/DT1 world decoding, and developer inspection tools
+are operational. Full world generation, Diablo combat and progression,
+authoritative networking, and end-to-end gameplay remain in progress.
 
-## How to Contribute
+See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package ownership, dependency
+direction, and guidance on where new work belongs.
+
+## How to contribute
 We welcome contributions from developers, artists, designers, and Diablo 
 enthusiasts of all levels of expertise. If you want to be part of this journey, 
 check out our [CONTRIBUTING.md](https://github.com/gravestench/dark-magic/blob/main/CONTRIBUTING.md) guide to get started.

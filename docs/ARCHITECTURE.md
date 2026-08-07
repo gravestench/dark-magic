@@ -4,9 +4,9 @@ Dark Magic is one application, not a collection of independently supported Go
 libraries. `cmd/darkmagic` is the composition root; engine implementation and
 Diablo-specific behavior belong under `internal`. A package remains under `pkg`
 only when the project deliberately promises it as a stable, independently useful
-API. No current Go package has that commitment, so `pkg` contains artwork only;
-an acceptance test rejects accidental public Go source until a deliberate API
-and compatibility policy are documented.
+API. No current Go package has that commitment; an acceptance test rejects
+accidental public Go source until a deliberate API and compatibility policy are
+documented.
 
 ## Dependency and ownership rules
 
