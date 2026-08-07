@@ -60,10 +60,14 @@ return {
         -- capabilities without receiving direct filesystem/native ownership.
         self.content_source = assert(vfs.source("boot.lua"))
         self.town_music_available = audio.exists("data/global/music/Act1/town1.wav")
-        local world_width = self.map_width or 4096
-        local world_height = self.map_height or 4096
-        self.gameplay = self.gameplay_world.create(world_width, world_height)
-        self.initial_camera_x, self.initial_camera_y = self.gameplay_world.position(self.gameplay.camera)
+        local world_width = self.world_dimensions and self.world_dimensions.width_subtiles or 4096
+        local world_height = self.world_dimensions and self.world_dimensions.height_subtiles or 4096
+        self.gameplay = self.gameplay_world.create(world_width, world_height, self.world)
+        local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
+        if self.world then
+            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
+        end
+        self.initial_camera_x, self.initial_camera_y = camera_x, camera_y
     end,
 
     update = function(self, elapsed, focused)
@@ -77,6 +81,10 @@ return {
         end
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
+        if self.world then
+            hero_x, hero_y = self.world:subtile_to_pixel(hero_x, hero_y)
+            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
+        end
         if self.map then
             self.map:set_position(
                 screen.map.screen_x - (camera_x - self.initial_camera_x),

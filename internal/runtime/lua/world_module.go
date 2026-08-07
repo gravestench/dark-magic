@@ -16,10 +16,12 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 	return Module{Name: "dm.world/v1", Help: documentedModule("Decode immutable gameplay facts from authored world assets.", map[string]CommandHelp{
 		"load": commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
-		"dimensions": commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
-		"flags":      commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
-		"blocked":    commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
-		"objects":    commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
+		"dimensions":       commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
+		"flags":            commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
+		"blocked":          commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
+		"objects":          commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
+		"subtile_to_pixel": commandHelp("map:subtile_to_pixel(x, y)", "Project continuous DS1 subtile coordinates into rendered map pixels."),
+		"pixel_to_subtile": commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -80,6 +82,18 @@ func registerWorldMapType(state *lua.LState) {
 			flags, ok := checkWorldMap(state, 1).FlagsAt(state.CheckInt(2), state.CheckInt(3))
 			state.Push(lua.LBool(ok && flags.Blocked()))
 			return 1
+		},
+		"subtile_to_pixel": func(state *lua.LState) int {
+			x, y := checkWorldMap(state, 1).SubtileToPixel(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
+			state.Push(lua.LNumber(x))
+			state.Push(lua.LNumber(y))
+			return 2
+		},
+		"pixel_to_subtile": func(state *lua.LState) int {
+			x, y := checkWorldMap(state, 1).PixelToSubtile(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
+			state.Push(lua.LNumber(x))
+			state.Push(lua.LNumber(y))
+			return 2
 		},
 		"objects": func(state *lua.LState) int {
 			result := state.NewTable()

@@ -962,8 +962,9 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Replace the production compatibility hero/world state with Lua-defined ECS
   components and systems for input intent, transform, bounded movement, camera
   follow, and presentation snapshots.
-- [ ] Admit an explicit isometric pixel/subtile transform, then add ECS collision
-  without mixing presentation pixels with DT1 collision coordinates.
+- [x] Admit a renderer-matched, round-tripped isometric pixel/subtile transform,
+  then use axis-separated DT1 collision in ECS movement without mixing in
+  presentation pixels.
 - [x] Preserve and validate Riiablo's recovered quest and speech tables in the
   shim, including quest prerequisites, stage localization keys, and logical
   sound-to-localization joins exposed through `dm.quest_catalog/v1`.

@@ -1,7 +1,7 @@
 -- ECS-owned world motion used by the game-world scene.
 --
--- Coordinates remain presentation pixels until the DS1 isometric transform is
--- admitted explicitly. Collision must not mix these values with subtile indices.
+-- Coordinates are continuous DS1 subtiles. Presentation projects them through
+-- dm.world/v1, so collision and rendering never share ambiguous pixel values.
 local ecs = require("dm.ecs/v1")
 local input = require("dm.input/v1")
 
@@ -40,7 +40,7 @@ local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
 end
 
-function M.create(width, height)
+function M.create(width, height, collision)
     define_components()
     local hero = ecs.create({
         ["dm.world.position"] = { x = width / 2, y = height / 2 },
@@ -62,10 +62,10 @@ function M.create(width, height)
             for _, entity in ipairs(entities) do
                 local velocity = ecs.get(entity, "dm.world.velocity")
                 local x, y = 0, 0
-                if input.down("left") then x = x - 160 end
-                if input.down("right") then x = x + 160 end
-                if input.down("up") then y = y - 160 end
-                if input.down("down") then y = y + 160 end
+                if input.down("left") then x = x - 10 end
+                if input.down("right") then x = x + 10 end
+                if input.down("up") then y = y - 10 end
+                if input.down("down") then y = y + 10 end
                 velocity:set("x", x)
                 velocity:set("y", y)
             end
@@ -82,8 +82,17 @@ function M.create(width, height)
                 local position = ecs.get(entity, "dm.world.position")
                 local velocity = ecs.get(entity, "dm.world.velocity")
                 local bounds = ecs.get(entity, "dm.world.bounds")
-                position:set("x", clamp(position:get("x") + velocity:get("x") * context.delta_seconds, 0, bounds:get("width")))
-                position:set("y", clamp(position:get("y") + velocity:get("y") * context.delta_seconds, 0, bounds:get("height")))
+                local x, y = position:get("x"), position:get("y")
+                local next_x = clamp(x + velocity:get("x") * context.delta_seconds, 0, bounds:get("width"))
+                if not collision or not collision:blocked(math.floor(next_x), math.floor(y)) then
+                    x = next_x
+                end
+                local next_y = clamp(y + velocity:get("y") * context.delta_seconds, 0, bounds:get("height"))
+                if not collision or not collision:blocked(math.floor(x), math.floor(next_y)) then
+                    y = next_y
+                end
+                position:set("x", x)
+                position:set("y", y)
             end
         end,
     })

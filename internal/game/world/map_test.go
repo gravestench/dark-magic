@@ -66,6 +66,21 @@ func TestFlagsAtRejectsOutsideMap(t *testing.T) {
 	}
 }
 
+func TestSubtilePixelProjectionMatchesRendererAndRoundTrips(t *testing.T) {
+	m := &Map{WidthTiles: 10, HeightTiles: 8}
+	x, y := m.SubtileToPixel(5, 10)
+	if x != 720 || y != 320 {
+		t.Fatalf("projected = %v,%v", x, y)
+	}
+	for _, point := range [][2]float64{{0, 0}, {5, 10}, {13.25, 7.5}} {
+		px, py := m.SubtileToPixel(point[0], point[1])
+		sx, sy := m.PixelToSubtile(px, py)
+		if sx != point[0] || sy != point[1] {
+			t.Fatalf("round trip %v = %v,%v", point, sx, sy)
+		}
+	}
+}
+
 func TestChooseIsDeterministicAndHandlesZeroWeight(t *testing.T) {
 	first := &dt1.Tile{RarityFrameIndex: 0}
 	second := &dt1.Tile{RarityFrameIndex: 0}

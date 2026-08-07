@@ -14,6 +14,12 @@ import (
 const SubtilesPerTile = 5
 
 const (
+	TilePixelWidth  = 160
+	TilePixelHeight = 80
+	PreviewMargin   = 160
+)
+
+const (
 	ObjectTypeDynamic int32 = 1
 	ObjectTypeStatic  int32 = 2
 )
@@ -180,4 +186,23 @@ func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 		return Flags{}, false
 	}
 	return m.flags[y*m.WidthSubtiles+x], true
+}
+
+// SubtileToPixel projects continuous DS1 subtile coordinates into the same
+// image-space diamond centers used by TexturedDS1Preview.
+func (m *Map) SubtileToPixel(x, y float64) (float64, float64) {
+	originX := float64(m.HeightTiles*TilePixelWidth/2 + PreviewMargin)
+	originY := float64(PreviewMargin + TilePixelHeight/2)
+	return originX + (x-y)*TilePixelWidth/(2*SubtilesPerTile),
+		originY + (x+y)*TilePixelHeight/(2*SubtilesPerTile)
+}
+
+// PixelToSubtile reverses SubtileToPixel. Fractional values are preserved so
+// callers can choose their own collision sampling policy.
+func (m *Map) PixelToSubtile(x, y float64) (float64, float64) {
+	originX := float64(m.HeightTiles*TilePixelWidth/2 + PreviewMargin)
+	originY := float64(PreviewMargin + TilePixelHeight/2)
+	difference := (x - originX) * (2 * SubtilesPerTile) / TilePixelWidth
+	sum := (y - originY) * (2 * SubtilesPerTile) / TilePixelHeight
+	return (difference + sum) / 2, (sum - difference) / 2
 }
