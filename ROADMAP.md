@@ -942,7 +942,29 @@ implementations. The remaining work is tracked explicitly below.
   migration notes and verify a newcomer can locate and extend a representative
   renderer, asset, Lua capability, scene, tool, and server feature from the guide.
 
-## M29: Deferred shell ergonomics
+## M29: Scriptable archetype ECS
+
+- [x] Redesign Akara around typed stores, interned archetypes, cached queries,
+  deterministic systems, and explicit lifecycle rather than background ticks.
+- [x] Add VM-neutral runtime component schemas with validated primitive fields,
+  stable names, versions, defaults, and generation-checked references.
+- [x] Add transactional schema migration that preserves the previous world when
+  any entity conversion fails.
+- [x] Add deterministic Dark Magic phases, dependency ordering, stable query
+  snapshots, declared read/write access, and structural command barriers.
+- [x] Expose checked entities and components through `dm.ecs/v1`, including
+  Lua-defined schemas, systems, queries, field mutation, and deferred spawning,
+  addition, removal, and destruction.
+- [x] Tie Lua system registrations to disposable component scopes and prove that
+  teardown removes systems without destroying persistent world state.
+- [x] Advance gameplay at a bounded fixed 25 Hz clock independent of renderer
+  frame duration, with stable tick and delta values exposed to Lua systems.
+- [ ] Replace the compatibility hero/world state with ECS components and systems
+  for input intent, transform, movement, collision, camera, and presentation.
+- [ ] Add deterministic RNG streams, replay checksums, snapshot serialization,
+  and server-authoritative command admission.
+
+## M30: Deferred shell ergonomics
 
 - [ ] Support user-selected font families and safely rebuild native glyph atlases
   when font path, size, DPI, or Unicode coverage changes.

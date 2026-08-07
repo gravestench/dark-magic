@@ -27,6 +27,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -179,6 +180,8 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		}
 	}
 	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
+	entitySimulation := gameecs.New()
+	defer entitySimulation.Close()
 	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {
 			if _, ok := saves.Selected(); !ok {
@@ -252,6 +255,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.SimulationModule(simulation)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.NewECSCapability(scripts, entitySimulation).Module()); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.LoadingModule(loading)); err != nil {
@@ -329,6 +335,10 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
+		if _, err := entitySimulation.Advance(elapsed); err != nil {
+			reportSceneError(fmt.Errorf("updating entity simulation: %w", err))
+			return
+		}
 		if err := scenes.Update(frameContext, elapsed); err != nil {
 			reportSceneError(fmt.Errorf("updating Lua scenes: %w", err))
 			return

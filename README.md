@@ -35,6 +35,10 @@ a dynamic manager for native and Lua-defined components, a layered content VFS,
 and versioned Lua capabilities. The Raylib backend remains isolated beneath
 `internal/raylib`; scripts author scenes and overlays through retained rendering,
 input, audio, records, locale, save, simulation, and navigation capabilities.
+The `dm.ecs/v1` capability additionally lets trusted scripts define validated
+component schemas and deterministic, scope-owned systems over the shared Akara
+world. Systems declare their query and read/write access; structural mutations
+are applied at phase barriers rather than during query iteration.
 
 ### Product binaries
 

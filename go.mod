@@ -11,6 +11,7 @@ require (
 	github.com/asticode/go-astiav v0.41.0
 	github.com/gen2brain/raylib-go/raylib v0.60.0
 	github.com/google/uuid v1.1.5
+	github.com/gravestench/akara v0.1.1
 	github.com/gravestench/cof v0.1.0
 	github.com/gravestench/dc6 v0.1.0
 	github.com/gravestench/dcc v0.1.0

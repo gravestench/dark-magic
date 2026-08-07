@@ -79,6 +79,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
 | `internal/game/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Keep internal |
+| `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
 | `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
@@ -99,7 +100,8 @@ internal/shell             shared sessions, Lua evaluator, terminal adapter
 internal/presentation      navigation, scenes, controls, transitions
 internal/game/data         typed Diablo records and validation
 internal/game/loot         deterministic item generation
-internal/game/simulation   world and gameplay rules
+internal/game/ecs          deterministic entity schedule and structural barriers
+internal/game/simulation   higher-level world and gameplay rules
 internal/persistence       saves and future realm storage contracts
 internal/network           client/session/realm protocols
 internal/dev               profiling, capture, tools, test applications
@@ -119,10 +121,19 @@ startup and shutdown. Keep this file as wiring: capability behavior belongs in
 the package that owns it.
 
 Each frame begins at the Raylib renderer owner thread. Native input is translated
-through `internal/platform/raylib/input`, Lua scene updates run through
-`internal/runtime/lua`, and retained presentation commands cross
+through `internal/platform/raylib/input`, the deterministic ECS advances through
+`internal/game/ecs`, Lua scene updates run through `internal/runtime/lua`, and retained presentation commands cross
 `internal/presentation/render` before `internal/platform/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
+
+Akara owns entity identity, typed and runtime-defined component storage,
+archetypes, and subscriptions. Dark Magic owns named simulation phases, system
+ordering, read/write declarations, command-buffer barriers, and a bounded fixed
+25 Hz clock that is independent of renderer cadence. `dm.ecs/v1`
+adapts Lua schemas and scoped system callbacks to that engine contract; Akara
+does not import Lua or Dark Magic. Lua may mutate declared component fields
+immediately, while entity creation and component add/remove operations are
+deferred until the current system barrier.
 
 Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
 state belongs to `internal/presentation`; and authored screen behavior belongs in
