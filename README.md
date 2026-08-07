@@ -39,6 +39,11 @@ The `dm.ecs/v1` capability additionally lets trusted scripts define validated
 component schemas and deterministic, scope-owned systems over the shared Akara
 world. Systems declare their query and read/write access; structural mutations
 are applied at phase barriers rather than during query iteration.
+The shim also preserves Riiablo's recovered quest hierarchy and speech-to-string
+relationships as validated data exposed through `dm.quest_catalog/v1`; scripts
+do not need to recreate executable-era Diablo II rules as hard-coded branches.
+Recovered DS1 definition and act-local object mappings are available separately
+through `dm.map_catalog/v1`.
 
 ### Product binaries
 

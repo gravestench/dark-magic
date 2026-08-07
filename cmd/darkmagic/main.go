@@ -26,6 +26,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/dev/capture"
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
+	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -163,6 +164,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	records := recordstore.New(contentFS)
 	records.SetLogger(slog.Default().With("component", "records"))
 	gameData := gamedata.New(records)
+	questCatalog := recovered.New(contentFS)
 	presentation, err := content.LoadPresentationBootstrap(contentFS)
 	if err != nil {
 		return err
@@ -172,6 +174,19 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return fmt.Errorf("load typed game data: %w", err)
 	}
 	slog.Info("loaded typed game-data catalog", "issues", len(typedRecords.Issues))
+	recoveredRecords, err := questCatalog.Snapshot()
+	if err != nil {
+		return fmt.Errorf("load recovered game data: %w", err)
+	}
+	soundNames := make(map[string]struct{}, len(typedRecords.Sounds))
+	for _, sound := range typedRecords.Sounds {
+		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
+	}
+	referenceIssues := recovered.ValidateReferences(recoveredRecords, soundNames, locale.Text)
+	slog.Info("loaded recovered game-data catalog",
+		"quests", len(recoveredRecords.Quests), "speech", len(recoveredRecords.Speech),
+		"ds1_types", len(recoveredRecords.DS1Types), "map_objects", len(recoveredRecords.MapObjects),
+		"reference_issues", len(referenceIssues))
 	fixtureEntries := developmentCharacters(fixtureCharacters)
 	saves := persistence.New(fixtureEntries...)
 	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {
@@ -246,6 +261,12 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.GameDataModule(gameData)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.QuestCatalogModule(questCatalog)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.MapCatalogModule(questCatalog)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.LocaleModule(locale)); err != nil {

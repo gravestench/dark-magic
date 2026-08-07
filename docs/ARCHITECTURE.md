@@ -135,6 +135,12 @@ does not import Lua or Dark Magic. Lua may mutate declared component fields
 immediately, while entity creation and component add/remove operations are
 deferred until the current system barrier.
 
+Executable-era relationships recovered by Riiablo live verbatim under
+`internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The
+`internal/game/data/recovered` catalog validates and normalizes those files;
+`dm.quest_catalog/v1` exposes identifiers to Lua while localization and audio
+remain separate capabilities responsible for resolving strings and assets.
+
 Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
 state belongs to `internal/presentation`; and authored screen behavior belongs in
 the shim Lua scripts under `internal/content/shim`. Lua modules expose explicit

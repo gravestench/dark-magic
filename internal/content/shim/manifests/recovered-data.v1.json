@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "origin": {
+    "project": "Riiablo",
+    "repository": "https://github.com/collinsmith/riiablo",
+    "license": "Apache-2.0"
+  },
+  "datasets": [
+    {
+      "name": "quests",
+      "source": "assets/data/quests.txt",
+      "path": "data/recovered/riiablo/quests.txt",
+      "records": 31,
+      "capability": "dm.quest_catalog/v1",
+      "purpose": "Quest ordering, prerequisites, icons, and localization stage keys"
+    },
+    {
+      "name": "speech",
+      "source": "assets/data/speech.txt",
+      "path": "data/recovered/riiablo/speech.txt",
+      "records": 185,
+      "capability": "dm.quest_catalog/v1",
+      "purpose": "Logical Sounds.txt identifiers joined to localization keys"
+    },
+    {
+      "name": "ds1types",
+      "source": "assets/data/ds1types.txt",
+      "path": "data/recovered/riiablo/ds1types.txt",
+      "records": 1091,
+      "capability": "dm.map_catalog/v1",
+      "purpose": "DS1 preset definition names joined to level types"
+    },
+    {
+      "name": "objects",
+      "source": "assets/data/obj.txt",
+      "path": "data/recovered/riiablo/obj.txt",
+      "records": 750,
+      "capability": "dm.map_catalog/v1",
+      "purpose": "Act-local DS1 object identifiers joined to Objects.txt IDs"
+    }
+  ]
+}
