@@ -217,6 +217,11 @@ func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 
 func TestNoAccidentalPublicGoPackages(t *testing.T) {
 	pkgRoot := filepath.Join(repositoryRoot(t), "pkg")
+	if _, err := os.Stat(pkgRoot); errors.Is(err, fs.ErrNotExist) {
+		return
+	} else if err != nil {
+		t.Fatal(err)
+	}
 	err := filepath.WalkDir(pkgRoot, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err

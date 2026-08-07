@@ -989,8 +989,11 @@ implementations. The remaining work is tracked explicitly below.
   representative quest/dialogue/audio behavior tests.
 - [x] Add purpose-named deterministic RNG streams plus canonical, versioned ECS
   snapshot serialization and replay checksums with typed float-bit encoding.
-- [ ] Add replay command/event logs, snapshot restoration, desync diagnostics,
-  and server-authoritative command admission.
+- [x] Define transport-neutral replay commands and checkpoints, exact snapshot
+  restoration, first-field desync diagnostics, and transactional authoritative
+  command admission by tick, player sequence, kind, and payload policy.
+- [ ] Wire admitted command/event logs and replay verification into the shared
+  offline, listen-server, and dedicated game-session host.
 
 ## M30: Deferred shell ergonomics
 

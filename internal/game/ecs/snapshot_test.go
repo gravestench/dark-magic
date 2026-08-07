@@ -75,3 +75,52 @@ func TestSnapshotIsCanonicalAndDetectsStateChanges(t *testing.T) {
 		t.Fatal("state mutation did not change checksum")
 	}
 }
+
+func TestSnapshotRestoresEntityIdentityTickAndAllocator(t *testing.T) {
+	engine := New()
+	defer engine.Close()
+	position, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	destroyed := engine.World().MustCreateEntity()
+	hero := engine.World().MustCreateEntity()
+	if !engine.World().DestroyEntity(destroyed) {
+		t.Fatal("failed to create identity gap")
+	}
+	if _, err := position.Set(hero, map[string]any{"x": 3.5}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Update(40 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := snapshot.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := UnmarshalSnapshot(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := RestoreSnapshot(decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	again, err := restored.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := snapshot.Checksum()
+	got, _ := again.Checksum()
+	if got != want {
+		t.Fatalf("restored checksum = %s, want %s", got, want)
+	}
+	if next := restored.World().MustCreateEntity(); next != hero+1 {
+		t.Fatalf("next entity = %d, want %d", next, hero+1)
+	}
+}

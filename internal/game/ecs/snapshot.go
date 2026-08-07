@@ -1,14 +1,18 @@
 package ecs
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/gravestench/akara"
 )
+
+var ErrSnapshotVersion = fmt.Errorf("game ecs: unsupported snapshot version")
 
 const SnapshotVersion = 1
 
@@ -102,6 +106,75 @@ func (snapshot Snapshot) Checksum() (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
+// UnmarshalSnapshot decodes one snapshot and rejects unknown fields so replay
+// files cannot silently depend on data this engine version ignores.
+func UnmarshalSnapshot(encoded []byte) (Snapshot, error) {
+	var snapshot Snapshot
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&snapshot); err != nil {
+		return Snapshot{}, fmt.Errorf("game ecs: decode snapshot: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			err = fmt.Errorf("trailing value")
+		}
+		return Snapshot{}, fmt.Errorf("game ecs: decode snapshot: %w", err)
+	}
+	if snapshot.Version != SnapshotVersion {
+		return Snapshot{}, fmt.Errorf("%w: %d", ErrSnapshotVersion, snapshot.Version)
+	}
+	return snapshot, nil
+}
+
+// RestoreSnapshot creates an engine containing the exact runtime-defined world
+// state and simulation tick captured by snapshot. Systems are intentionally not
+// serialized; the session composition must register the same trusted systems.
+func RestoreSnapshot(snapshot Snapshot) (_ *Engine, err error) {
+	if snapshot.Version != SnapshotVersion {
+		return nil, fmt.Errorf("%w: %d", ErrSnapshotVersion, snapshot.Version)
+	}
+	engine := New()
+	defer func() {
+		if err != nil {
+			_ = engine.Close()
+		}
+	}()
+	for _, id := range snapshot.Entities {
+		if err := engine.world.CreateEntityWithID(akara.Entity(id)); err != nil {
+			return nil, fmt.Errorf("game ecs: restore entity %d: %w", id, err)
+		}
+	}
+	for _, component := range snapshot.Components {
+		schema := akara.Schema{Name: component.Name, Version: component.Version}
+		for _, field := range component.Fields {
+			schema.Fields = append(schema.Fields, akara.Field{Name: field.Name, Kind: field.Kind})
+		}
+		store, err := akara.RegisterSchema(engine.world, schema)
+		if err != nil {
+			return nil, fmt.Errorf("game ecs: restore schema %q: %w", component.Name, err)
+		}
+		for _, instance := range component.Instances {
+			if len(instance.Values) != len(schema.Fields) {
+				return nil, fmt.Errorf("game ecs: restore %q entity %d: %d values for %d fields", component.Name, instance.Entity, len(instance.Values), len(schema.Fields))
+			}
+			values := make(map[string]any, len(schema.Fields))
+			for index, field := range schema.Fields {
+				value, err := restoreValue(field.Kind, instance.Values[index])
+				if err != nil {
+					return nil, fmt.Errorf("game ecs: restore %q.%s entity %d: %w", component.Name, field.Name, instance.Entity, err)
+				}
+				values[field.Name] = value
+			}
+			if _, err := store.Set(akara.Entity(instance.Entity), values); err != nil {
+				return nil, fmt.Errorf("game ecs: restore %q entity %d: %w", component.Name, instance.Entity, err)
+			}
+		}
+	}
+	engine.tick = snapshot.Tick
+	return engine, nil
+}
+
 func snapshotValue(kind akara.FieldKind, value any) (ValueSnapshot, error) {
 	result := ValueSnapshot{}
 	switch kind {
@@ -147,4 +220,45 @@ func snapshotValue(kind akara.FieldKind, value any) (ValueSnapshot, error) {
 		return result, fmt.Errorf("unsupported field kind %d", kind)
 	}
 	return result, nil
+}
+
+func restoreValue(kind akara.FieldKind, value ValueSnapshot) (any, error) {
+	set := 0
+	for _, present := range []bool{value.Bool != nil, value.Int != nil, value.Uint != nil, value.Float != nil, value.String != nil, value.Entity != nil} {
+		if present {
+			set++
+		}
+	}
+	if set != 1 {
+		return nil, fmt.Errorf("expected exactly one encoded value, got %d", set)
+	}
+	switch kind {
+	case akara.FieldBool:
+		if value.Bool != nil {
+			return *value.Bool, nil
+		}
+	case akara.FieldInt64:
+		if value.Int != nil {
+			return *value.Int, nil
+		}
+	case akara.FieldUint64:
+		if value.Uint != nil {
+			return *value.Uint, nil
+		}
+	case akara.FieldFloat64:
+		if value.Float != nil {
+			return math.Float64frombits(*value.Float), nil
+		}
+	case akara.FieldString:
+		if value.String != nil {
+			return *value.String, nil
+		}
+	case akara.FieldEntity:
+		if value.Entity != nil {
+			return akara.Entity(*value.Entity), nil
+		}
+	default:
+		return nil, fmt.Errorf("unsupported field kind %d", kind)
+	}
+	return nil, fmt.Errorf("missing value for field kind %d", kind)
 }
