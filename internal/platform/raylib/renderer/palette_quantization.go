@@ -148,7 +148,7 @@ func (s *Service) startPaletteQuantizer() error {
 	}
 	location := rl.GetShaderLocation(quantizer.shader, "paletteLUT")
 	quantizer.textureLocation = location
-	if err := s.resizePaletteTarget(rl.GetRenderWidth(), rl.GetRenderHeight()); err != nil {
+	if err := s.resizePaletteTarget(s.config.Resolution.Width, s.config.Resolution.Height); err != nil {
 		rl.UnloadShader(quantizer.shader)
 		rl.UnloadTexture(quantizer.texture)
 		return err
@@ -187,16 +187,7 @@ func (s *Service) resizePaletteTarget(width, height int) error {
 
 func (s *Service) renderQuantizedFrame() error {
 	quantizer := s.paletteQuantizer
-	if err := s.resizePaletteTarget(rl.GetRenderWidth(), rl.GetRenderHeight()); err != nil {
-		return err
-	}
-	rl.BeginTextureMode(quantizer.target)
-	rl.ClearBackground(rl.Black)
-	rl.BeginMode2D(*s.GetDefaultCamera())
-	s.update()
-	s.render()
-	rl.EndMode2D()
-	rl.EndTextureMode()
+	s.renderGameTarget(quantizer.target)
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.Black)
@@ -204,9 +195,7 @@ func (s *Service) renderQuantizedFrame() error {
 	// Raylib clears auxiliary sampler registrations after every render-batch
 	// flush, so the LUT must be rebound for the draw that consumes it.
 	rl.SetShaderValueTexture(quantizer.shader, quantizer.textureLocation, quantizer.texture)
-	source := rl.NewRectangle(0, 0, float32(quantizer.target.Texture.Width), -float32(quantizer.target.Texture.Height))
-	destination := rl.NewRectangle(0, 0, float32(rl.GetRenderWidth()), float32(rl.GetRenderHeight()))
-	rl.DrawTexturePro(quantizer.target.Texture, source, destination, rl.Vector2{}, 0, rl.White)
+	s.presentGameTarget(quantizer.target, nil)
 	rl.EndShaderMode()
 	s.runOverlays()
 	rl.EndDrawing()

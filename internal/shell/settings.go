@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const DefaultFontSize = 18.0
+const DefaultFontSize = 22.0
 
 // SettingsValues contains the user-editable presentation settings shared by
 // shell adapters. Values change immediately; Save explicitly persists them.

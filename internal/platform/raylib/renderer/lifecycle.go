@@ -50,7 +50,14 @@ func (s *Service) Start(context.Context) error {
 	// observes the native close control after Raylib's default Escape binding is
 	// disabled.
 	rl.SetExitKey(rl.KeyNull)
+	if s.paletteQuantizer == nil {
+		if err := s.startGameTarget(); err != nil {
+			rl.CloseWindow()
+			return err
+		}
+	}
 	if err := s.startPaletteQuantizer(); err != nil {
+		s.stopGameTarget()
 		rl.CloseWindow()
 		return err
 	}
@@ -80,12 +87,10 @@ func (s *Service) Run(ctx context.Context) error {
 			s.runPostFrame()
 			continue
 		}
+		s.renderGameTarget(s.gameTarget)
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
-		rl.BeginMode2D(*s.GetDefaultCamera())
-		s.update()
-		s.render()
-		rl.EndMode2D()
+		s.presentGameTarget(s.gameTarget, nil)
 		s.runOverlays()
 		rl.EndDrawing()
 		s.runPostFrame()
@@ -108,6 +113,7 @@ func (s *Service) Stop(context.Context) error {
 		s.compositionBackend.closePaletteEffects()
 	}
 	s.stopPaletteQuantizer()
+	s.stopGameTarget()
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
 	return nil

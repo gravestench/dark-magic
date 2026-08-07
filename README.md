@@ -85,7 +85,7 @@ commands without authored metadata are still listed with fallback help.
 Shell presentation settings are live Lua runtime values. For example:
 
 ```lua
-dm.shell.values()                  -- {font_size=18}
+dm.shell.values()                  -- current native-resolution shell settings
 dm.shell.set("font_size", 22)     -- apply immediately for this process
 dm.shell.set_many({                -- validate and apply atomically
     console_height = 0.7,
@@ -114,6 +114,20 @@ userdata methods are documented and checked the same way. Lua tables render as
 stable, indented structures with bounded depth and cycle detection. Page Up and
 Page Down navigate retained Lua output in the graphical console; the terminal
 viewport provides matching scrollback and basic semantic highlighting.
+
+The game always renders into its configured logical-resolution target while
+the console renders afterward in native window pixels. Consequently, resizing
+the window never makes shell glyphs inherit the game's low-resolution scaling.
+Game presentation defaults to aspect-preserving centered letterboxing:
+
+```shell
+go run -tags ffmpeg ./cmd/darkmagic --viewport-fit contain
+```
+
+Use `--viewport-fit stretch` to fill the entire window without preserving the
+game aspect ratio. `DARK_MAGIC_VIEWPORT_FIT` provides the equivalent environment
+setting. Mouse input is mapped back into logical game coordinates; input in
+letterbox regions is excluded from the game viewport.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 

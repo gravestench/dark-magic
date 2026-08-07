@@ -551,6 +551,11 @@ implementations. The remaining work is tracked explicitly below.
   animation speed, with atomic `set_many` and explicit `reload`. Audio sound,
   video playback, and all render-node userdata methods participate in help,
   Markdown generation, and metatable-level documentation conformance checks.
+  Game composition now renders into a fixed logical-resolution target while
+  shell overlays render afterward in native window pixels. Presentation can
+  either preserve aspect ratio with centered letterboxing (`contain`, default)
+  or fill the window (`stretch`), and pointer input applies the inverse viewport
+  transform while rejecting letterbox regions.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

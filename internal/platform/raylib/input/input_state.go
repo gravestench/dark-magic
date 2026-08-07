@@ -79,7 +79,12 @@ func (s *Service) updateKeyboardModifierState() {
 func (s *Service) updateMouseCursorState() {
 	s.mux.Lock()
 	p := rl.GetMousePosition()
-	s.cursor.X, s.cursor.Y = int(p.X), int(p.Y)
+	x, y, inside := s.renderer.ScreenToGame(int(p.X), int(p.Y))
+	if inside {
+		s.cursor.X, s.cursor.Y = x, y
+	} else {
+		s.cursor.X, s.cursor.Y = -1, -1
+	}
 	s.mux.Unlock()
 }
 

@@ -17,6 +17,7 @@ type Config struct {
 	}
 	Resolution struct {
 		Width, Height int
+		Fit           string
 	}
 	Cache struct {
 		BudgetMB int
@@ -41,6 +42,7 @@ func DefaultConfig() Config {
 	cfg.Window.Resizable = true
 	cfg.Resolution.Width = 800
 	cfg.Resolution.Height = 600
+	cfg.Resolution.Fit = "contain"
 	cfg.Cache.BudgetMB = 100
 	return cfg
 }

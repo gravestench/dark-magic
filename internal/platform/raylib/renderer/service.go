@@ -40,6 +40,7 @@ type Service struct {
 	audioBackend *raylibAudioBackend
 
 	paletteQuantizer *paletteQuantizer
+	gameTarget       rl.RenderTexture2D
 }
 
 // SubscribeOverlay registers owner-thread drawing after scene composition and

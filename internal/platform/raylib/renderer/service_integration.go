@@ -38,6 +38,7 @@ type ManagesWindow interface {
 	SetWindowTitle(string)
 	WindowSize() (width, height int)
 	Resolution() (width, height int)
+	ScreenToGame(x, y int) (gameX, gameY int, inside bool)
 }
 
 type ManagesCameras interface {

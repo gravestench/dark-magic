@@ -13,5 +13,5 @@ func (s *Service) WindowSize() (width, height int) {
 }
 
 func (s *Service) Resolution() (width, height int) {
-	return rl.GetRenderWidth(), rl.GetRenderHeight()
+	return s.config.Resolution.Width, s.config.Resolution.Height
 }
