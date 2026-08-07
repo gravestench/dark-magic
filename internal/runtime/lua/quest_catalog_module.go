@@ -1,6 +1,8 @@
 package modruntime
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
@@ -11,14 +13,23 @@ type questCatalogSnapshotter interface {
 	Snapshot() (recovered.Snapshot, error)
 }
 
+type dialogueTextLookup interface {
+	Text(string) (string, error)
+}
+
 // QuestCatalogModule exposes normalized quest hierarchy and speech metadata
 // recovered by Riiablo. It deliberately exposes string and sound identifiers;
 // localization and audio capabilities remain responsible for resolving assets.
-func QuestCatalogModule(catalog questCatalogSnapshotter) Module {
+func QuestCatalogModule(catalog questCatalogSnapshotter, locale ...dialogueTextLookup) Module {
+	var text dialogueTextLookup
+	if len(locale) > 0 {
+		text = locale[0]
+	}
 	return Module{Name: "dm.quest_catalog/v1", Help: documentedModule("Query recovered Diablo II quest and speech relationships.", map[string]CommandHelp{
 		"quest":  commandHelp("dm.quest_catalog.quest(id)", "Return one normalized quest definition or nil."),
 		"quests": commandHelp("dm.quest_catalog.quests([act])", "Return quests in canonical ID order, optionally filtered by zero-based act."),
 		"speech": commandHelp("dm.quest_catalog.speech(sound)", "Return the localization key associated with a logical sound ID."),
+		"dialog": commandHelp("dm.quest_catalog.dialog(sound)", "Resolve a speech ID into its localization key, timed text payload, and sound ID."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"quest": func(state *lua.LState) int {
@@ -68,11 +79,54 @@ func QuestCatalogModule(catalog questCatalogSnapshotter) Module {
 				state.Push(result)
 				return 1
 			},
+			"dialog": func(state *lua.LState) int {
+				if text == nil {
+					return pushLuaError(state, fmt.Errorf("quest catalog: no localization source"))
+				}
+				snapshot, err := catalog.Snapshot()
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				entry, found := snapshot.SpeechByName[strings.ToLower(state.CheckString(1))]
+				if !found {
+					state.Push(lua.LNil)
+					return 1
+				}
+				localized, err := text.Text(entry.StringKey)
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				rate, body, err := ParseDialogueText(localized)
+				if err != nil {
+					return pushLuaError(state, fmt.Errorf("quest catalog: dialog %q: %w", entry.Sound, err))
+				}
+				result := state.NewTable()
+				result.RawSetString("sound", lua.LString(entry.Sound))
+				result.RawSetString("string_key", lua.LString(entry.StringKey))
+				result.RawSetString("text", lua.LString(body))
+				result.RawSetString("scroll_lines_per_second", lua.LNumber(rate))
+				state.Push(result)
+				return 1
+			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
 		state.Push(module)
 		return 1
 	}}
+}
+
+// ParseDialogueText decodes the executable-era localized speech payload used by
+// Diablo II: a numeric timing line followed by the displayed text.
+func ParseDialogueText(value string) (float64, string, error) {
+	header, body, found := strings.Cut(strings.ReplaceAll(value, "\r\n", "\n"), "\n")
+	if !found || strings.TrimSpace(body) == "" {
+		return 0, "", fmt.Errorf("localized value has no timing line and body")
+	}
+	timing, err := strconv.ParseFloat(strings.TrimSpace(header), 64)
+	if err != nil || timing < 0 {
+		return 0, "", fmt.Errorf("invalid timing value %q", header)
+	}
+	return timing / 60, body, nil
 }
 
 func questToLua(state *lua.LState, quest recovered.Quest) *lua.LTable {

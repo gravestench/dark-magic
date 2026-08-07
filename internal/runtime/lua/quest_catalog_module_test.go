@@ -2,12 +2,23 @@ package modruntime
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	lua "github.com/yuin/gopher-lua"
 )
+
+type dialogueTestLocale map[string]string
+
+func (locale dialogueTestLocale) Text(key string) (string, error) {
+	value, found := locale[key]
+	if !found {
+		return key, fmt.Errorf("missing %s", key)
+	}
+	return value, nil
+}
 
 func TestQuestCatalogModuleExposesHierarchyAndSpeech(t *testing.T) {
 	source := fstest.MapFS{
@@ -18,7 +29,7 @@ func TestQuestCatalogModuleExposesHierarchyAndSpeech(t *testing.T) {
 	}
 	runtime := New()
 	catalog := recovered.New(source)
-	if err := runtime.RegisterModule(QuestCatalogModule(catalog)); err != nil {
+	if err := runtime.RegisterModule(QuestCatalogModule(catalog, dialogueTestLocale{"AkaraIntroGossip1": "90\nWelcome, traveler.\nStay awhile."})); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(MapCatalogModule(catalog)); err != nil {
@@ -36,11 +47,25 @@ local den=catalog.quest(1)
 assert(den.name=="Den" and den.prerequisite_id==0 and den.stages[1].string_key=="s1")
 assert(#catalog.quests(0)==2)
 assert(catalog.speech("AKARA_INTRO").string_key=="AkaraIntroGossip1")
+local dialog=catalog.dialog("akara_intro")
+assert(dialog.sound=="akara_intro" and dialog.text=="Welcome, traveler.\nStay awhile.")
+assert(dialog.scroll_lines_per_second==1.5)
 assert(catalog.quest(99)==nil and catalog.speech("missing")==nil)
 assert(maps.ds1_type(1).name=="Town")
 assert(maps.object(1,0).object_id==12 and maps.object(2,0)==nil)
 `)
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestParseDialogueTextRejectsMalformedPayloads(t *testing.T) {
+	if rate, body, err := ParseDialogueText("120\r\nLine one\r\nLine two"); err != nil || rate != 2 || body != "Line one\nLine two" {
+		t.Fatalf("dialog = %v, %q, %v", rate, body, err)
+	}
+	for _, value := range []string{"missing header", "fast\nText", "-1\nText", "60\n"} {
+		if _, _, err := ParseDialogueText(value); err == nil {
+			t.Errorf("ParseDialogueText(%q) succeeded", value)
+		}
 	}
 }

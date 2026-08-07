@@ -263,7 +263,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.GameDataModule(gameData)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.QuestCatalogModule(questCatalog)); err != nil {
+	if err := scripts.RegisterModule(modruntime.QuestCatalogModule(questCatalog, locale)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.MapCatalogModule(questCatalog)); err != nil {
