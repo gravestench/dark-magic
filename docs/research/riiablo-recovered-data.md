@@ -16,7 +16,9 @@ original bytes and provenance under `internal/content/shim/data/recovered`.
 DS1 object type `2` is static and uses `obj.txt`; type `1` is dynamic and uses
 the mounted `MonPreset.txt` act-local ordering. Dark Magic applies the recovered
 object mapping only to static records and preserves the original type/ID for
-both. Dynamic resolution remains part of the ordinary typed game-data catalog.
+both. A session-owned resolver builds act-local `MonPreset.txt` indices from the
+ordinary typed game-data snapshot for dynamic records. Both lookups are O(1)
+and are created once rather than cloning catalogs for each decoded object.
 
 ## Dialogue behavior supported by evidence
 

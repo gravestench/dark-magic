@@ -6,17 +6,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
-	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
@@ -36,7 +37,8 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	var input inputstate.Store
 	var mixer audio.Mixer
 	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
-	simulation := modruntime.NewSimulation(scene.New(11, 1000, 1000))
+	entitySimulation := gameecs.New()
+	defer entitySimulation.Close()
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
 	defer loading.Close()
@@ -53,7 +55,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
-		modruntime.SimulationModule(simulation),
+		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),
 		scenes.Module(),
 	} {
@@ -318,12 +320,41 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatalf("composer diagnostics after rapid transitions = %#v", diagnostics)
 	}
 
-	before := simulation.Snapshot().Hero.X
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	if err := scenes.Update(ctx, time.Second); err != nil {
+	positions, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.position")
+	if !found {
+		t.Fatal("game world did not register position component")
+	}
+	players, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.player_control")
+	if !found {
+		t.Fatal("game world did not register player-control component")
+	}
+	heroes, err := entitySimulation.World().Subscribe(akara.All(positions, players))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if after := simulation.Snapshot().Hero.X; after <= before {
+	defer heroes.Close()
+	entities := heroes.Entities()
+	if len(entities) != 1 {
+		t.Fatalf("player-controlled entities = %v", entities)
+	}
+	position, found := positions.Get(entities[0])
+	if !found {
+		t.Fatal("hero position is missing")
+	}
+	beforeValue, err := position.Get("x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := beforeValue.(float64)
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
+	if err := entitySimulation.Update(time.Second); err != nil {
+		t.Fatal(err)
+	}
+	afterValue, err := position.Get("x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after := afterValue.(float64); after <= before {
 		t.Fatalf("hero did not move: %v -> %v", before, after)
 	}
 

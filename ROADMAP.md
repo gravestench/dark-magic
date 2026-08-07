@@ -959,11 +959,17 @@ implementations. The remaining work is tracked explicitly below.
   teardown removes systems without destroying persistent world state.
 - [x] Advance gameplay at a bounded fixed 25 Hz clock independent of renderer
   frame duration, with stable tick and delta values exposed to Lua systems.
-- [ ] Replace the compatibility hero/world state with ECS components and systems
-  for input intent, transform, movement, collision, camera, and presentation.
+- [x] Replace the production compatibility hero/world state with Lua-defined ECS
+  components and systems for input intent, transform, bounded movement, camera
+  follow, and presentation snapshots.
+- [ ] Admit an explicit isometric pixel/subtile transform, then add ECS collision
+  without mixing presentation pixels with DT1 collision coordinates.
 - [x] Preserve and validate Riiablo's recovered quest and speech tables in the
   shim, including quest prerequisites, stage localization keys, and logical
   sound-to-localization joins exposed through `dm.quest_catalog/v1`.
+- [x] Resolve DS1 static objects through recovered act-local `obj.txt` mappings
+  and dynamic objects through act-local `MonPreset.txt` ordering before exposing
+  immutable world records to Lua.
 - [ ] Import the remaining executable-derived Riiablo datasets as they are
   identified, with provenance, typed schemas, cross-table validation, and
   representative quest/dialogue/audio behavior tests.

@@ -8,12 +8,20 @@ import (
 
 type testObjectResolver struct{ calls int }
 
-func (resolver *testObjectResolver) ResolveMapObject(act, id int) (int, string, bool) {
+func (resolver *testObjectResolver) ResolveStaticObject(act, id int) (int, string, bool) {
 	resolver.calls++
 	if act == 1 && id == 7 {
 		return 108, "Malus", true
 	}
 	return 0, "", false
+}
+
+func (resolver *testObjectResolver) ResolveDynamicObject(act, id int) (string, bool) {
+	resolver.calls++
+	if act == 1 && id == 7 {
+		return "fallen", true
+	}
+	return "", false
 }
 
 func TestResolveObjectUsesRecoveredMappingOnlyForStaticRecords(t *testing.T) {
@@ -23,7 +31,7 @@ func TestResolveObjectUsesRecoveredMappingOnlyForStaticRecords(t *testing.T) {
 		t.Fatalf("static object = %#v", static)
 	}
 	dynamic := resolveObject(1, ObjectTypeDynamic, 7, 10, 20, 3, resolver)
-	if dynamic.Resolved || resolver.calls != 1 {
+	if !dynamic.Resolved || dynamic.Class != "fallen" || resolver.calls != 2 {
 		t.Fatalf("dynamic object = %#v, resolver calls = %d", dynamic, resolver.calls)
 	}
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
+	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/loading"
@@ -39,7 +40,6 @@ import (
 	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
-	"github.com/gravestench/dark-magic/internal/presentation/scene"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 	"github.com/gravestench/dark-magic/internal/shell/luashell"
@@ -183,6 +183,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
 	}
 	referenceIssues := recovered.ValidateReferences(recoveredRecords, soundNames, locale.Text)
+	worldObjectResolver := worldobjects.New(recoveredRecords, typedRecords)
 	slog.Info("loaded recovered game-data catalog",
 		"quests", len(recoveredRecords.Quests), "speech", len(recoveredRecords.Speech),
 		"ds1_types", len(recoveredRecords.DS1Types), "map_objects", len(recoveredRecords.MapObjects),
@@ -194,7 +195,6 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 			return fmt.Errorf("select development fixture: %w", err)
 		}
 	}
-	simulation := modruntime.NewSimulation(scene.New(1, 4096, 4096))
 	entitySimulation := gameecs.New()
 	defer entitySimulation.Close()
 	loading := loading.New(map[string]loading.Task{
@@ -212,10 +212,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 			}
 			return nil
 		},
-		"world": func(context.Context) error {
-			_ = simulation.Snapshot()
-			return nil
-		},
+		"world": func(context.Context) error { return nil },
 	})
 	defer loading.Close()
 	components := host.NewManager()
@@ -234,7 +231,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.DataModule(contentFS)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.WorldModule(contentFS, questCatalog)); err != nil {
+	if err := scripts.RegisterModule(modruntime.WorldModule(contentFS, worldObjectResolver)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
@@ -273,9 +270,6 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.SaveModule(saves)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.SimulationModule(simulation)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.NewECSCapability(scripts, entitySimulation).Module()); err != nil {

@@ -30,12 +30,14 @@ func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
 type Object struct {
 	Type, ID, X, Y, Flags int32
 	ObjectID              int
+	Class                 string
 	Description           string
 	Resolved              bool
 }
 
 type ObjectResolver interface {
-	ResolveMapObject(act, id int) (objectID int, description string, found bool)
+	ResolveStaticObject(act, id int) (objectID int, description string, found bool)
+	ResolveDynamicObject(act, id int) (class string, found bool)
 }
 
 type Map struct {
@@ -104,8 +106,14 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 
 func resolveObject(act int, objectType, id, x, y, flags int32, resolver ObjectResolver) Object {
 	result := Object{Type: objectType, ID: id, X: x, Y: y, Flags: flags}
-	if objectType == ObjectTypeStatic && resolver != nil {
-		result.ObjectID, result.Description, result.Resolved = resolver.ResolveMapObject(act, int(id))
+	if resolver == nil {
+		return result
+	}
+	switch objectType {
+	case ObjectTypeStatic:
+		result.ObjectID, result.Description, result.Resolved = resolver.ResolveStaticObject(act, int(id))
+	case ObjectTypeDynamic:
+		result.Class, result.Resolved = resolver.ResolveDynamicObject(act, int(id))
 	}
 	return result
 }

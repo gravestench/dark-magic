@@ -91,8 +91,12 @@ func registerWorldMapType(state *lua.LState) {
 				setLuaInteger(item, "y", int(object.Y))
 				setLuaInteger(item, "flags", int(object.Flags))
 				if object.Resolved {
-					setLuaInteger(item, "object_id", object.ObjectID)
-					item.RawSetString("description", lua.LString(object.Description))
+					if object.Type == gameworld.ObjectTypeStatic {
+						setLuaInteger(item, "object_id", object.ObjectID)
+						item.RawSetString("description", lua.LString(object.Description))
+					} else {
+						item.RawSetString("class", lua.LString(object.Class))
+					}
 				}
 				result.Append(item)
 			}

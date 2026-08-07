@@ -1,6 +1,6 @@
 -- Minimal interactive game-world orchestration scene.
 --
--- Lua owns input and presentation flow while dm.simulation/v1 owns persistent,
+-- Lua owns input and presentation flow while Lua-defined Akara components own
 -- deterministic gameplay state. Selected-character appearance and the HUD are
 -- disposable presentation handles owned entirely by this scene.
 local render = require("dm.render/v1")
@@ -8,7 +8,6 @@ local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local vfs = require("dm.vfs/v1")
 local audio = require("dm.audio/v1")
-local simulation = require("dm.simulation/v1")
 local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
@@ -18,6 +17,7 @@ local screen = manifest.screens.game_world
 
 return {
     create = function(self)
+        self.gameplay_world = require("darkmagic.gameplay.world")
         self.root = render.create("world")
         if render.assets_available() and screen.map then
             -- Decode a second, renderer-independent view of the authored map.
@@ -36,8 +36,6 @@ return {
             )
             self.map_width, self.map_height = width, height
             self.map:set_z(screen.map.z)
-            local state = simulation.state()
-            self.initial_camera_x, self.initial_camera_y = state.camera_x, state.camera_y
             self.map:set_position(screen.map.screen_x, screen.map.screen_y)
         end
         self.hero = render.create("world", self.root)
@@ -62,6 +60,10 @@ return {
         -- capabilities without receiving direct filesystem/native ownership.
         self.content_source = assert(vfs.source("boot.lua"))
         self.town_music_available = audio.exists("data/global/music/Act1/town1.wav")
+        local world_width = self.map_width or 4096
+        local world_height = self.map_height or 4096
+        self.gameplay = self.gameplay_world.create(world_width, world_height)
+        self.initial_camera_x, self.initial_camera_y = self.gameplay_world.position(self.gameplay.camera)
     end,
 
     update = function(self, elapsed, focused)
@@ -73,34 +75,17 @@ return {
         if self.hud then
             game_hud.update(self.hud)
         end
-        local speed = 160 * elapsed
-        local dx, dy = 0, 0
-        if input.down("left") then
-            dx = dx - speed
-        end
-        if input.down("right") then
-            dx = dx + speed
-        end
-        if input.down("up") then
-            dy = dy - speed
-        end
-        if input.down("down") then
-            dy = dy + speed
-        end
-        if dx ~= 0 or dy ~= 0 then
-            simulation.move_hero(dx, dy)
-        end
-
-        local state = simulation.state()
+        local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
+        local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
         if self.map then
             self.map:set_position(
-                screen.map.screen_x - (state.camera_x - self.initial_camera_x),
-                screen.map.screen_y - (state.camera_y - self.initial_camera_y)
+                screen.map.screen_x - (camera_x - self.initial_camera_x),
+                screen.map.screen_y - (camera_y - self.initial_camera_y)
             )
         end
         self.hero:set_position(
-            screen.hero.screen_x + state.hero_x - state.camera_x,
-            screen.hero.screen_y + state.hero_y - state.camera_y
+            screen.hero.screen_x + hero_x - camera_x,
+            screen.hero.screen_y + hero_y - camera_y
         )
 
         -- Panels are scene overlays rather than long-lived engine services.
@@ -117,5 +102,9 @@ return {
         elseif input.pressed("pause") or input.pressed("cancel") then
             scenes.push("pause")
         end
+    end,
+
+    destroy = function(self)
+        self.gameplay_world.destroy(self.gameplay)
     end,
 }
