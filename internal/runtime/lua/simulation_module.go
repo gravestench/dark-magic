@@ -29,7 +29,10 @@ func (s *Simulation) Snapshot() scene.State {
 }
 
 func SimulationModule(simulation *Simulation) Module {
-	return Module{Name: "dm.simulation/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.simulation/v1", Help: documentedModule("Inspect and command the deterministic game simulation.", map[string]CommandHelp{
+		"move_hero": commandHelp("dm.simulation.move_hero(dx, dy)", "Move the simulated hero by a relative amount."),
+		"state":     commandHelp("dm.simulation.state()", "Return the current simulation snapshot."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"move_hero": func(state *lua.LState) int {
 				simulation.Move(float64(state.CheckNumber(1)), float64(state.CheckNumber(2)))

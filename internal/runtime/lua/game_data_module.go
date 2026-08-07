@@ -15,7 +15,10 @@ type gameDataSnapshotter interface {
 // records. Lua receives fresh scalar tables rather than Go-owned records or
 // arbitrary columns from the underlying TSV files.
 func GameDataModule(catalog gameDataSnapshotter) Module {
-	return Module{Name: "dm.game_data/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.game_data/v1", Help: documentedModule("Query typed, normalized Diablo II game data.", map[string]CommandHelp{
+		"character_class": commandHelp("dm.game_data.character_class(class)", "Return the typed starting data for a character class."),
+		"unique_titles":   commandHelp("dm.game_data.unique_titles()", "Return the available unique-item titles."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"character_class": func(state *lua.LState) int {
 				name := state.CheckString(1)

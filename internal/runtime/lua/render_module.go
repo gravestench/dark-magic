@@ -595,7 +595,13 @@ func RenderModuleWithAssets(runtime *Runtime, composer *render.Composer, assets 
 // Module returns the versioned Lua render capability.
 func (r *RenderCapability) Module() Module {
 	runtime, composer, assets, cache := r.runtime, r.composer, r.assets, r.cache
-	return Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.render/v1", Help: documentedModule("Create and inspect retained presentation nodes.", map[string]CommandHelp{
+		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
+		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
+		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
+		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
+		"create":               commandHelp("dm.render.create()", "Create a scoped retained presentation node."),
+	}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"diagnostics": func(state *lua.LState) int {

@@ -27,7 +27,10 @@ func VideoModule(runtime *Runtime, backend video.Backend, source fs.FS) Module {
 	if backend == nil {
 		backend = video.Unavailable{}
 	}
-	return Module{Name: "dm.video/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.video/v1", Help: documentedModule("Play cinematics through the configured video backend.", map[string]CommandHelp{
+		"available": commandHelp("dm.video.available()", "Report whether embedded video playback is available."),
+		"play":      commandHelp("dm.video.play(path [, options])", "Begin video playback and return a scoped handle."),
+	}), Loader: func(state *lua.LState) int {
 		registerPlaybackType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"available": func(state *lua.LState) int {

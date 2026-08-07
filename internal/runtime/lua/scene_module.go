@@ -47,7 +47,12 @@ func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
 
 // Module returns the dm.scene/v1 capability.
 func (s *Scenes) Module() Module {
-	return Module{Name: "dm.scene/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.scene/v1", Help: documentedModule("Register Lua scenes and navigate the active scene stack.", map[string]CommandHelp{
+		"register": commandHelp("dm.scene.register(definition)", "Register a Lua-authored scene definition."),
+		"replace":  commandHelp("dm.scene.replace(id [, payload])", "Replace the active scene."),
+		"push":     commandHelp("dm.scene.push(id [, payload])", "Push a scene above the active scene."),
+		"pop":      commandHelp("dm.scene.pop([payload])", "Pop the active scene."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"register": s.luaRegister,
 			"replace":  s.luaRequest("replace"),

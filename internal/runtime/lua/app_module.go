@@ -4,7 +4,10 @@ import lua "github.com/yuin/gopher-lua"
 
 // AppModule exposes narrow client-process information and exit intent.
 func AppModule(version string, requestExit func()) Module {
-	return Module{Name: "dm.app/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.app/v1", Help: documentedModule("Inspect and control the current Dark Magic process.", map[string]CommandHelp{
+		"request_exit": commandHelp("dm.app.request_exit()", "Request an orderly application shutdown."),
+		"version":      commandHelp("dm.app.version()", "Return the engine build version."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"request_exit": func(state *lua.LState) int {
 				if requestExit != nil {

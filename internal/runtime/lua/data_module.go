@@ -15,7 +15,10 @@ import (
 // DataModule exposes immutable JSON shim data as native Lua values. It keeps
 // data ownership in the layered VFS while avoiding a second JSON parser in Lua.
 func DataModule(source fs.FS) Module {
-	return Module{Name: "dm.data/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.data/v1", Help: documentedModule("Load structured data and Lua manifests from mounted content.", map[string]CommandHelp{
+		"load":          commandHelp("dm.data.load(path)", "Decode a structured data asset into Lua values."),
+		"load_manifest": commandHelp("dm.data.load_manifest(path)", "Load and validate a Lua-facing content manifest."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"load": func(state *lua.LState) int {
 				name := state.CheckString(1)

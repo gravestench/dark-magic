@@ -540,7 +540,10 @@ implementations. The remaining work is tracked explicitly below.
   through both adapters. The shared `dm.shell/v1` capability exposes validated
   live presentation settings; font-size edits apply immediately and explicit
   defaults, reset, dirty status, and atomic platform-native persistence are
-  available from client, server, and realm shells.
+  available from client, server, and realm shells. All built-in capability
+  functions now carry authored summaries and usage signatures checked against
+  their actual exported Lua tables. Policy-filtered `dm.apropos` searches the
+  registry and `dm.docs()` renders Markdown from that same source of truth.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

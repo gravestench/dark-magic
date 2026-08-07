@@ -47,7 +47,15 @@ func (s *ownedSound) release() error {
 // AudioModule exposes scoped archive-backed sound playback.
 func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS, records audio.SoundRecords) Module {
 	catalog := audio.NewCatalog(source, records)
-	return Module{Name: "dm.audio/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.audio/v1", Help: documentedModule("Play and control music, speech, ambience, and effects.", map[string]CommandHelp{
+		"diagnostics":     commandHelp("dm.audio.diagnostics()", "Return mixer and playback diagnostics."),
+		"exists":          commandHelp("dm.audio.exists(path)", "Report whether an audio asset exists."),
+		"play":            commandHelp("dm.audio.play(path [, options])", "Play an audio asset in the active scope."),
+		"play_persistent": commandHelp("dm.audio.play_persistent(path [, options])", "Play audio whose handle survives the active scene scope."),
+		"set_bus_volume":  commandHelp("dm.audio.set_bus_volume(bus, volume)", "Set the volume of a named mixer bus."),
+		"play_record":     commandHelp("dm.audio.play_record(record [, options])", "Resolve and play an audio game-data record."),
+		"stop_group":      commandHelp("dm.audio.stop_group(group)", "Stop every active sound in a playback group."),
+	}), Loader: func(state *lua.LState) int {
 		registerSoundType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"diagnostics": func(state *lua.LState) int {

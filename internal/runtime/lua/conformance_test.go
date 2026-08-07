@@ -59,6 +59,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
+	documentation := runtime.ModuleHelp()
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		for name, functions := range expected {
 			if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString(name)); err != nil {
@@ -74,6 +75,15 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 					t.Errorf("%s.%s is not a function", name, function)
 				}
 			}
+			module.ForEach(func(key, value lua.LValue) {
+				if value.Type() != lua.LTFunction {
+					return
+				}
+				doc, ok := documentation[name].Commands[key.String()]
+				if !ok || doc.Summary == "" || doc.Usage == "" {
+					t.Errorf("%s.%s lacks authored help metadata", name, key)
+				}
+			})
 		}
 		return nil
 	}); err != nil {

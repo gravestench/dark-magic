@@ -98,6 +98,12 @@ directory. `DARK_MAGIC_SHELL_CONFIG` selects another host path and supports
 home-directory aliases. Multiline Lua values retain line breaks, indentation,
 and tabular spacing in both graphical and terminal shell views.
 
+Use `dm.apropos("music")` to search the permitted module and command
+descriptions. `dm.docs()` renders Markdown for the session's complete permitted
+Lua API from the same registration metadata used by help and completion.
+Built-in capability conformance tests reject public module functions that do
+not provide an authored summary and usage signature.
+
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
 fellow adventurers and follow the development of Dark Magic on our and 

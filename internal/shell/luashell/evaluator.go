@@ -199,7 +199,7 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 		aliases = append(aliases, alias)
 	}
 	sort.Strings(aliases)
-	help := "Dark Magic shell root\n  dm.<capability>       lazy friendly module access\n  dm.modules[<id>]      exact versioned module access\n  dm.require(<id>)      policy-checked require\n  dm.capabilities()     permitted module IDs\n  dm.help([value])      help for a module or command"
+	help := "Dark Magic shell root\n  dm.<capability>       lazy friendly module access\n  dm.modules[<id>]      exact versioned module access\n  dm.require(<id>)      policy-checked require\n  dm.capabilities()     permitted module IDs\n  dm.help([value])      help for a module or command\n  dm.apropos(query)     search permitted APIs\n  dm.docs()             render permitted API Markdown"
 	if len(aliases) > 0 {
 		help += "\nAvailable aliases: " + strings.Join(aliases, ", ")
 	}
@@ -209,6 +209,14 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 			return 1
 		}
 		current.Push(glua.LString(e.helpFor(current, current.Get(1))))
+		return 1
+	}))
+	root.RawSetString("apropos", state.NewFunction(func(current *glua.LState) int {
+		current.Push(glua.LString(e.apropos(current.CheckString(1))))
+		return 1
+	}))
+	root.RawSetString("docs", state.NewFunction(func(current *glua.LState) int {
+		current.Push(glua.LString(e.runtime.Markdown(e.modules)))
 		return 1
 	}))
 	lazyIndex := func(aliasLookup bool) *glua.LFunction {
@@ -238,6 +246,32 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 	state.SetMetatable(modules, moduleMeta)
 	environment.RawSetString("dm", root)
 	environment.RawSetString("darkmagic", root)
+}
+
+func (e *Evaluator) apropos(query string) string {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return "Usage: dm.apropos(\"search terms\")"
+	}
+	var matches []string
+	for _, module := range e.modules {
+		doc := e.help[module]
+		alias := "dm." + moduleAlias(module)
+		if strings.Contains(strings.ToLower(module+" "+alias+" "+doc.Summary), query) {
+			matches = append(matches, alias+" — "+doc.Summary)
+		}
+		for name, command := range doc.Commands {
+			haystack := name + " " + command.Usage + " " + command.Summary
+			if strings.Contains(strings.ToLower(haystack), query) {
+				matches = append(matches, alias+"."+name+" — "+command.Summary)
+			}
+		}
+	}
+	sort.Strings(matches)
+	if len(matches) == 0 {
+		return fmt.Sprintf("No permitted Dark Magic APIs match %q.", query)
+	}
+	return strings.Join(matches, "\n")
 }
 
 func (e *Evaluator) helpFor(state *glua.LState, value glua.LValue) string {
@@ -451,7 +485,7 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 					}
 					seen[base+"."+alias] = detail
 				}
-				for _, helper := range []string{"help", "capabilities", "require", "modules"} {
+				for _, helper := range []string{"help", "apropos", "docs", "capabilities", "require", "modules"} {
 					seen[base+"."+helper] = "Dark Magic helper"
 				}
 				token = base + "." + member

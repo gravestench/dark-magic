@@ -63,7 +63,7 @@ func TestEvaluatorPersistsLocalsFormatsValuesAndCompletesWithoutExecution(t *tes
 
 func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 	runtime := modruntime.New()
-	if err := runtime.RegisterModule(modruntime.Module{Name: "secret/v1", Loader: func(state *glua.LState) int {
+	if err := runtime.RegisterModule(modruntime.Module{Name: "secret/v1", Help: modruntime.ModuleHelp{Summary: "Top secret capability."}, Loader: func(state *glua.LState) int {
 		state.Push(state.NewTable())
 		return 1
 	}}); err != nil {
@@ -83,6 +83,12 @@ func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 	}
 	if _, err := evaluator.Evaluate(context.Background(), `dm.modules["secret/v1"]`); err == nil || !strings.Contains(err.Error(), "does not permit") {
 		t.Fatalf("dm.modules error = %v", err)
+	}
+	if result, err := evaluator.Evaluate(context.Background(), `dm.docs()`); err != nil || strings.Contains(result.Text, "secret") {
+		t.Fatalf("policy-filtered docs = %#v, %v", result, err)
+	}
+	if result, err := evaluator.Evaluate(context.Background(), `dm.apropos("secret")`); err != nil || !strings.Contains(result.Text, "No permitted") {
+		t.Fatalf("policy-filtered search = %#v, %v", result, err)
 	}
 	candidates, err := evaluator.Complete(context.Background(), "dm.se")
 	if err != nil || len(candidates) != 0 {
@@ -151,6 +157,12 @@ func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
 	}
 	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help("dm.demo.undocumented")`); evaluateErr != nil || !strings.Contains(result.Text, "Lua command provided by dm.demo/v1") {
 		t.Fatalf("fallback command help = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.apropos("adventurer")`); evaluateErr != nil || !strings.Contains(result.Text, "dm.demo.greet") {
+		t.Fatalf("apropos = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.docs()`); evaluateErr != nil || !strings.Contains(result.Text, "# Dark Magic Lua API") || !strings.Contains(result.Text, "dm.demo.greet(name)") {
+		t.Fatalf("docs = %#v, %v", result, evaluateErr)
 	}
 	candidates, err := evaluator.Complete(context.Background(), "dm.de")
 	if err != nil || len(candidates) != 1 || candidates[0].Value != "dm.demo" || candidates[0].Detail != "Demonstrates documented shell APIs." {

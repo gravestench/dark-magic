@@ -11,7 +11,11 @@ import (
 
 // VFSModule exposes read-only layered content access to Lua.
 func VFSModule(source *content.FS) Module {
-	return Module{Name: "dm.vfs/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.vfs/v1", Help: documentedModule("Read assets from the layered virtual filesystem.", map[string]CommandHelp{
+		"read_text": commandHelp("dm.vfs.read_text(path)", "Read an asset as text."),
+		"read":      commandHelp("dm.vfs.read(path)", "Read an asset as binary data."),
+		"source":    commandHelp("dm.vfs.source(path)", "Describe the layer and resolved path supplying an asset."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"read_text": func(state *lua.LState) int {
 				name := state.CheckString(1)

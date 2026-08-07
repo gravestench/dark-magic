@@ -8,7 +8,13 @@ import (
 // InputModule exposes frame-stable logical actions rather than backend key
 // codes or direct Raylib calls.
 func InputModule(input *inputstate.Store) Module {
-	return Module{Name: "dm.input/v1", Loader: func(state *lua.LState) int {
+	return Module{Name: "dm.input/v1", Help: documentedModule("Read the current normalized input frame.", map[string]CommandHelp{
+		"text":     commandHelp("dm.input.text()", "Return text entered during the current frame."),
+		"down":     commandHelp("dm.input.down(action)", "Report whether an action is currently held."),
+		"pressed":  commandHelp("dm.input.pressed(action)", "Report whether an action was pressed this frame."),
+		"released": commandHelp("dm.input.released(action)", "Report whether an action was released this frame."),
+		"cursor":   commandHelp("dm.input.cursor()", "Return the current cursor coordinates."),
+	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {
 				state.Push(lua.LString(input.Text()))
