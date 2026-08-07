@@ -84,7 +84,14 @@ func TestOverlayModalViewsKeepLogsOutOfLua(t *testing.T) {
 	session.Submit(context.Background(), "lua value")
 	overlay := New(session)
 	overlay.open = true
-	if lines := overlay.timeline(800); len(lines) != 2 || strings.Contains(lines[0].text, "visible log") {
+	lines := overlay.timeline(800)
+	var luaValue, motd, processLog bool
+	for _, line := range lines {
+		luaValue = luaValue || strings.Contains(line.text, "lua value")
+		motd = motd || strings.Contains(line.text, "Dark Magic Lua shell")
+		processLog = processLog || strings.Contains(line.text, "visible log")
+	}
+	if !luaValue || !motd || processLog {
 		t.Fatalf("lua lines = %#v", lines)
 	}
 	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"shell_logs": {Pressed: true}}})

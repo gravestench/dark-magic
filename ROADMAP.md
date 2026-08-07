@@ -530,7 +530,10 @@ implementations. The remaining work is tracked explicitly below.
   `slog` tail feed revision-cached F1 Lua and F2 Logs modal views in both the
   Raylib and Charm frontends. The graphical editor also supports a movable
   Unicode cursor, insertion/deletion, Home/End, visible completion candidates,
-  and independent paged log scrollback.
+  and independent paged log scrollback. Each Lua view begins with a shared,
+  target-aware MOTD, and exposes the policy-filtered `dm`/`darkmagic` root with
+  friendly lazy capability aliases, help, discovery, and exact versioned module
+  access.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

@@ -105,7 +105,10 @@ func (s *Session) Timeline() []TimelineEvent {
 // TranscriptTimeline returns only Lua commands, values, prints, and errors.
 func (s *Session) TranscriptTimeline() []TimelineEvent {
 	entries := s.Transcript()
-	events := make([]TimelineEvent, 0, len(entries)*2)
+	events := make([]TimelineEvent, 0, len(entries)*2+1)
+	if s.MOTD() != "" {
+		events = append(events, TimelineEvent{Kind: "motd", Text: s.MOTD()})
+	}
 	for _, entry := range entries {
 		events = append(events, TimelineEvent{At: entry.At, Kind: "command", Text: entry.Source})
 		if entry.Error != "" {

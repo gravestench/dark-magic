@@ -237,6 +237,8 @@ func (o *Overlay) Draw(width, height int) {
 			color = rl.NewColor(255, 104, 88, 255)
 		} else if line.warning {
 			color = rl.NewColor(245, 190, 75, 255)
+		} else if line.notice {
+			color = rl.NewColor(224, 183, 92, 255)
 		} else if line.result {
 			color = rl.NewColor(125, 211, 167, 255)
 		} else if line.dim {
@@ -470,26 +472,33 @@ func completionToken(source string) string {
 type transcriptLine struct {
 	text                   string
 	result, error, warning bool
-	dim                    bool
+	dim, notice            bool
 }
 
 func timelineLines(events []shell.TimelineEvent) []transcriptLine {
 	lines := make([]transcriptLine, 0, len(events))
 	for _, event := range events {
-		line := transcriptLine{text: strings.ReplaceAll(event.Text, "\n", " ")}
-		switch event.Kind {
-		case "command":
-			line.text = "> " + line.text
-		case "value":
-			line.result = true
-		case "error", "log-error":
-			line.error = true
-		case "log-warn":
-			line.warning = true
-		case "log-debug":
-			line.dim = true
+		parts := strings.Split(event.Text, "\n")
+		for index, part := range parts {
+			line := transcriptLine{text: part}
+			switch event.Kind {
+			case "motd":
+				line.notice = true
+			case "command":
+				if index == 0 {
+					line.text = "> " + line.text
+				}
+			case "value":
+				line.result = true
+			case "error", "log-error":
+				line.error = true
+			case "log-warn":
+				line.warning = true
+			case "log-debug":
+				line.dim = true
+			}
+			lines = append(lines, line)
 		}
-		lines = append(lines, line)
 	}
 	return lines
 }
@@ -500,12 +509,12 @@ func wrapTranscript(lines []transcriptLine, columns int) []transcriptLine {
 		runes := []rune(line.text)
 		for len(runes) > columns {
 			wrapped = append(wrapped, transcriptLine{
-				text: string(runes[:columns]), result: line.result, error: line.error, warning: line.warning, dim: line.dim,
+				text: string(runes[:columns]), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice,
 			})
 			runes = runes[columns:]
 		}
 		wrapped = append(wrapped, transcriptLine{
-			text: string(runes), result: line.result, error: line.error, warning: line.warning, dim: line.dim,
+			text: string(runes), result: line.result, error: line.error, warning: line.warning, dim: line.dim, notice: line.notice,
 		})
 	}
 	return wrapped

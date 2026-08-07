@@ -27,6 +27,7 @@ type Evaluator struct {
 	modules    []string
 	registered []string
 	allowed    map[string]struct{}
+	aliases    map[string]string
 	mutable    bool
 }
 
@@ -60,11 +61,14 @@ func NewForPolicy(runtime *modruntime.Runtime, policy shell.Policy) (*Evaluator,
 
 func newEvaluator(runtime *modruntime.Runtime, registered, modules []string, mutable bool) (*Evaluator, error) {
 	allowed := make(map[string]struct{}, len(modules))
+	aliases := make(map[string]string, len(modules))
 	for _, module := range modules {
 		allowed[module] = struct{}{}
+		aliases[moduleAlias(module)] = module
 	}
 	return &Evaluator{
-		runtime: runtime, scope: &modruntime.Scope{}, modules: modules, registered: registered, allowed: allowed, mutable: mutable,
+		runtime: runtime, scope: &modruntime.Scope{}, modules: modules, registered: registered,
+		allowed: allowed, aliases: aliases, mutable: mutable,
 	}, nil
 }
 
@@ -153,20 +157,89 @@ func (e *Evaluator) restrictModules(state *glua.LState) func() {
 func (e *Evaluator) installRequire(state *glua.LState, environment *glua.LTable) {
 	environment.RawSetString("require", state.NewFunction(func(current *glua.LState) int {
 		name := current.CheckString(1)
-		if _, ok := e.allowed[name]; !ok {
-			current.RaiseError("shell policy does not permit module %q", name)
-			return 0
+		return e.requireModule(current, name)
+	}))
+}
+
+func (e *Evaluator) requireModule(state *glua.LState, name string) int {
+	if _, ok := e.allowed[name]; !ok {
+		state.RaiseError("shell policy does not permit module %q", name)
+		return 0
+	}
+	require, ok := state.GetGlobal("require").(*glua.LFunction)
+	if !ok {
+		state.RaiseError("Lua require is unavailable")
+		return 0
+	}
+	state.Push(require)
+	state.Push(glua.LString(name))
+	state.Call(1, 1)
+	return 1
+}
+
+func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.LTable) {
+	root := state.NewTable()
+	modules := state.NewTable()
+	root.RawSetString("modules", modules)
+	root.RawSetString("require", state.NewFunction(func(current *glua.LState) int {
+		return e.requireModule(current, current.CheckString(1))
+	}))
+	root.RawSetString("capabilities", state.NewFunction(func(current *glua.LState) int {
+		values := current.NewTable()
+		for index, module := range e.modules {
+			values.RawSetInt(index+1, glua.LString(module))
 		}
-		require, ok := current.GetGlobal("require").(*glua.LFunction)
-		if !ok {
-			current.RaiseError("Lua require is unavailable")
-			return 0
-		}
-		current.Push(require)
-		current.Push(glua.LString(name))
-		current.Call(1, 1)
+		current.Push(values)
 		return 1
 	}))
+	aliases := make([]string, 0, len(e.aliases))
+	for alias := range e.aliases {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	help := "Dark Magic shell root\n  dm.<capability>       lazy friendly module access\n  dm.modules[<id>]      exact versioned module access\n  dm.require(<id>)      policy-checked require\n  dm.capabilities()     permitted module IDs"
+	if len(aliases) > 0 {
+		help += "\nAvailable aliases: " + strings.Join(aliases, ", ")
+	}
+	root.RawSetString("help", state.NewFunction(func(current *glua.LState) int {
+		current.Push(glua.LString(help))
+		return 1
+	}))
+	lazyIndex := func(aliasLookup bool) *glua.LFunction {
+		return state.NewFunction(func(current *glua.LState) int {
+			name := current.CheckString(2)
+			if aliasLookup {
+				var ok bool
+				name, ok = e.aliases[name]
+				if !ok {
+					current.Push(glua.LNil)
+					return 1
+				}
+			}
+			e.requireModule(current, name)
+			value := current.Get(-1)
+			current.CheckTable(1).RawSetString(current.CheckString(2), value)
+			return 1
+		})
+	}
+	rootMeta := state.NewTable()
+	rootMeta.RawSetString("__index", lazyIndex(true))
+	rootMeta.RawSetString("__metatable", glua.LString("protected Dark Magic root"))
+	state.SetMetatable(root, rootMeta)
+	moduleMeta := state.NewTable()
+	moduleMeta.RawSetString("__index", lazyIndex(false))
+	moduleMeta.RawSetString("__metatable", glua.LString("protected Dark Magic modules"))
+	state.SetMetatable(modules, moduleMeta)
+	environment.RawSetString("dm", root)
+	environment.RawSetString("darkmagic", root)
+}
+
+func moduleAlias(module string) string {
+	module = strings.TrimPrefix(module, "dm.")
+	if separator := strings.IndexByte(module, '/'); separator >= 0 {
+		module = module[:separator]
+	}
+	return strings.ReplaceAll(module, ".", "_")
 }
 
 func installShellOutput(state *glua.LState, environment *glua.LTable, output *[]string) {
@@ -233,7 +306,16 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 		}
 		if dot := strings.LastIndexByte(token, '.'); dot >= 0 {
 			base, member := token[:dot], token[dot+1:]
-			if table, detail := rawMemberTable(state, environment.RawGetString(base), state.GetGlobal(base)); table != nil {
+			if base == "dm" || base == "darkmagic" {
+				seen = make(map[string]string)
+				for alias := range e.aliases {
+					seen[base+"."+alias] = "Dark Magic capability"
+				}
+				for _, helper := range []string{"help", "capabilities", "require", "modules"} {
+					seen[base+"."+helper] = "Dark Magic helper"
+				}
+				token = base + "." + member
+			} else if table, detail := rawMemberTable(state, environment.RawGetString(base), state.GetGlobal(base)); table != nil {
 				seen = make(map[string]string)
 				table.ForEach(func(key, _ glua.LValue) { seen[base+"."+key.String()] = detail })
 				token = base + "." + member
@@ -258,6 +340,7 @@ func (e *Evaluator) environment(state *glua.LState) *glua.LTable {
 	}
 	e.env = state.NewTable()
 	e.env.RawSetString("_G", e.env)
+	e.installDarkMagicRoot(state, e.env)
 	metatable := state.NewTable()
 	global := state.Get(glua.GlobalsIndex).(*glua.LTable)
 	metatable.RawSetString("__index", state.NewFunction(func(current *glua.LState) int {

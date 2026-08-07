@@ -23,7 +23,7 @@ func TestLogBufferIsBoundedAndTimelineIsChronological(t *testing.T) {
 	session.AttachLogs(logs)
 	session.Submit(context.Background(), "command")
 	events := session.Timeline()
-	if len(events) != 4 || !strings.Contains(events[0].Text, "middle") || !strings.Contains(events[1].Text, "later") {
+	if len(events) != 5 || events[0].Kind != "motd" || !strings.Contains(events[1].Text, "middle") || !strings.Contains(events[2].Text, "later") {
 		t.Fatalf("timeline = %#v", events)
 	}
 }

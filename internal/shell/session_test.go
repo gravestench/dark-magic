@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,9 @@ func TestSessionOwnsTranscriptHistoryCompletionAndLifecycle(t *testing.T) {
 	session, err := NewSession("local", "client", Policy{Name: "developer", Mutable: true}, evaluator)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if motd := session.MOTD(); !strings.Contains(motd, "dm (alias: darkmagic)") || !strings.Contains(motd, "client") {
+		t.Fatalf("motd = %q", motd)
 	}
 	if got := session.Submit(context.Background(), "  return 1 "); got.Result.Text != "return 1!" {
 		t.Fatalf("entry = %#v", got)

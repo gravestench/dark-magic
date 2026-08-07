@@ -78,10 +78,54 @@ func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 	if _, err := evaluator.Evaluate(context.Background(), `require("secret/v1")`); err == nil || !strings.Contains(err.Error(), "does not permit") {
 		t.Fatalf("require error = %v", err)
 	}
+	if _, err := evaluator.Evaluate(context.Background(), `dm.modules["secret/v1"]`); err == nil || !strings.Contains(err.Error(), "does not permit") {
+		t.Fatalf("dm.modules error = %v", err)
+	}
+	candidates, err := evaluator.Complete(context.Background(), "dm.se")
+	if err != nil || len(candidates) != 0 {
+		t.Fatalf("denied completion = %#v, %v", candidates, err)
+	}
 	if _, err := evaluator.Evaluate(context.Background(), `answer = 42`); err == nil || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("assignment error = %v", err)
 	}
 	if result, err := evaluator.Evaluate(context.Background(), `getmetatable(_G), package, os`); err != nil || !strings.Contains(result.Text, "protected shell environment") || !strings.Contains(result.Text, "nil") {
 		t.Fatalf("protected globals = %#v, %v", result, err)
+	}
+}
+
+func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
+	runtime := modruntime.New()
+	if err := runtime.RegisterModule(modruntime.Module{Name: "dm.demo/v1", Loader: func(state *glua.LState) int {
+		module := state.NewTable()
+		module.RawSetString("name", glua.LString("demo"))
+		state.Push(module)
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	evaluator, err := NewForPolicy(runtime, shell.Policy{Name: "developer", Mutable: true, Capabilities: []string{"dm.demo/v1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer evaluator.Close()
+
+	for _, source := range []string{`dm.demo.name`, `darkmagic.demo.name`, `dm.modules["dm.demo/v1"].name`} {
+		if result, evaluateErr := evaluator.Evaluate(context.Background(), source); evaluateErr != nil || result.Text != `"demo"` {
+			t.Fatalf("%s = %#v, %v", source, result, evaluateErr)
+		}
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `table.concat(dm.capabilities(), ",")`); evaluateErr != nil || result.Text != `"dm.demo/v1"` {
+		t.Fatalf("capabilities = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help()`); evaluateErr != nil || !strings.Contains(result.Text, "demo") {
+		t.Fatalf("help = %#v, %v", result, evaluateErr)
+	}
+	candidates, err := evaluator.Complete(context.Background(), "dm.de")
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "dm.demo" {
+		t.Fatalf("completion = %#v, %v", candidates, err)
 	}
 }

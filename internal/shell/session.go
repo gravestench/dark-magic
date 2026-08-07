@@ -5,6 +5,7 @@ package shell
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -59,6 +60,7 @@ type Session struct {
 	transcript         []Entry
 	logs               *LogBuffer
 	transcriptRevision uint64
+	motd               string
 	closed             bool
 }
 
@@ -70,7 +72,7 @@ func NewSession(id, target string, policy Policy, evaluator Evaluator) (*Session
 		return nil, errors.New("shell: evaluator is required")
 	}
 	policy.Capabilities = append([]string(nil), policy.Capabilities...)
-	return &Session{id: id, target: target, policy: policy, evaluator: evaluator}, nil
+	return &Session{id: id, target: target, policy: policy, evaluator: evaluator, motd: defaultMOTD(target, policy)}, nil
 }
 
 func (s *Session) ID() string     { return s.id }
@@ -79,6 +81,16 @@ func (s *Session) Policy() Policy {
 	policy := s.policy
 	policy.Capabilities = append([]string(nil), policy.Capabilities...)
 	return policy
+}
+
+func (s *Session) MOTD() string { return s.motd }
+
+func defaultMOTD(target string, policy Policy) string {
+	capabilities := "none registered for this target"
+	if len(policy.Capabilities) > 0 {
+		capabilities = strings.Join(policy.Capabilities, ", ")
+	}
+	return fmt.Sprintf("Welcome to the Dark Magic Lua shell.\nTarget: %s | Policy: %s\nRoot objects: dm (alias: darkmagic)\nCapabilities: %s\nTry dm.help(), dm.capabilities(), print(...), or printregs(). Press F2 for application logs.", target, policy.Name, capabilities)
 }
 
 func (s *Session) Submit(ctx context.Context, source string) Entry {

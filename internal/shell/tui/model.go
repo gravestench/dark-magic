@@ -230,6 +230,8 @@ func (m *Model) refreshTranscript() {
 	}
 	for _, event := range events {
 		switch event.Kind {
+		case "motd":
+			lines = append(lines, accentStyle.Render(event.Text))
 		case "command":
 			lines = append(lines, accentStyle.Render("❯ ")+event.Text)
 		case "value":

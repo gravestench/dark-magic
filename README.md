@@ -71,7 +71,11 @@ arrow/Home/End keys edit or browse history. In Logs, arrows and Page Up/Down
 control independent scrollback.
 Lua `print(...)`, `printregs()`/`_printregs()`, and the bounded structured
 application-log tail appear in their respective modal views; normal process
-log output remains available outside the game window as well.
+log output remains available outside the game window as well. Every Lua view
+opens with a target- and policy-specific message of the day. The `dm` root
+(`darkmagic` is an alias) provides discoverable, policy-filtered capability
+access: use `dm.help()` and `dm.capabilities()`, friendly names such as
+`dm.app`, or `dm.modules["dm.app/v1"]` for an exact versioned module ID.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
