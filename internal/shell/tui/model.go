@@ -26,6 +26,12 @@ var (
 
 type evaluationMsg shell.Entry
 type refreshMsg struct{}
+type viewMode uint8
+
+const (
+	viewLua viewMode = iota
+	viewLogs
+)
 
 // Model is the Charmbracelet adapter for a renderer-independent shell Session.
 type Model struct {
@@ -41,6 +47,7 @@ type Model struct {
 	candidateAt      int
 	status           string
 	timelineRevision uint64
+	view             viewMode
 }
 
 // NewModel prepares an interactive terminal model without starting a terminal.
@@ -75,8 +82,18 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		switch message.String() {
 		case "ctrl+c", "ctrl+q":
 			return m, tea.Quit
+		case "f1":
+			m.view = viewLua
+			m.input.Focus()
+			m.resize()
+			return m, nil
+		case "f2":
+			m.view = viewLogs
+			m.input.Blur()
+			m.resize()
+			return m, nil
 		case "ctrl+s", "alt+enter":
-			if m.busy || strings.TrimSpace(m.input.Value()) == "" {
+			if m.view != viewLua || m.busy || strings.TrimSpace(m.input.Value()) == "" {
 				return m, nil
 			}
 			source := m.input.Value()
@@ -84,6 +101,9 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.candidates = nil
 			return m, func() tea.Msg { return evaluationMsg(m.session.Submit(m.ctx, source)) }
 		case "tab", "shift+tab":
+			if m.view != viewLua {
+				break
+			}
 			m.complete(message.String() == "shift+tab")
 			return m, nil
 		case "alt+up":
@@ -110,8 +130,10 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 	var commands []tea.Cmd
 	var command tea.Cmd
-	m.input, command = m.input.Update(message)
-	commands = append(commands, command)
+	if m.view == viewLua {
+		m.input, command = m.input.Update(message)
+		commands = append(commands, command)
+	}
 	m.output, command = m.output.Update(message)
 	commands = append(commands, command)
 	return m, tea.Batch(commands...)
@@ -126,18 +148,52 @@ func (m Model) View() tea.View {
 	header := accentStyle.Render("DARK MAGIC SHELL") + "  " +
 		dimStyle.Render(fmt.Sprintf("target %s  session %s  policy %s (%s)", m.session.Target(), m.session.ID(), policy.Name, mode))
 	capabilities := dimStyle.Render("capabilities: " + strings.Join(policy.Capabilities, ", "))
-	status := dimStyle.Render("Ctrl-S run  Enter newline  Tab complete  Alt-↑/↓ history  Ctrl-Q quit")
+	statusText := "F1 Lua  F2 Logs  Ctrl-S run  Enter newline  Tab complete  Ctrl-Q quit"
+	if m.view == viewLogs {
+		statusText = "F1 Lua  F2 Logs  arrows/PgUp/PgDn scroll  Ctrl-Q quit"
+	}
+	status := dimStyle.Render(statusText)
 	if m.status != "" {
 		status += "  " + accentStyle.Render(m.status)
 	}
-	content := lipgloss.JoinVertical(lipgloss.Left,
-		header,
-		capabilities,
-		panelStyle.Width(max(1, m.width-2)).Render(m.output.View()),
-		panelStyle.Width(max(1, m.width-2)).Render(m.input.View()),
-		status,
-	)
+	sections := []string{header, capabilities, renderTabs(m.view), panelStyle.Width(max(1, m.width-2)).Render(m.output.View())}
+	if m.view == viewLua {
+		if candidates := m.renderCandidates(); candidates != "" {
+			sections = append(sections, panelStyle.Width(max(1, m.width-2)).Render(candidates))
+		}
+		sections = append(sections, panelStyle.Width(max(1, m.width-2)).Render(m.input.View()))
+	}
+	sections = append(sections, status)
+	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
 	return tea.NewView(content)
+}
+
+func (m Model) renderCandidates() string {
+	if len(m.candidates) == 0 {
+		return ""
+	}
+	limit := min(5, len(m.candidates))
+	lines := make([]string, 0, limit)
+	for index, candidate := range m.candidates[:limit] {
+		line := fmt.Sprintf("  %-28s %s", candidate.Value, candidate.Detail)
+		if index == m.candidateAt {
+			line = accentStyle.Render("› " + strings.TrimSpace(line))
+		} else {
+			line = dimStyle.Render(line)
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderTabs(view viewMode) string {
+	lua, logs := dimStyle.Render("[F1 LUA]"), dimStyle.Render("[F2 LOGS]")
+	if view == viewLua {
+		lua = accentStyle.Render("[F1 LUA]")
+	} else {
+		logs = accentStyle.Render("[F2 LOGS]")
+	}
+	return lua + "  " + logs
 }
 
 // Run owns the terminal lifecycle but not the supplied shell session.
@@ -149,17 +205,28 @@ func Run(ctx context.Context, session *shell.Session, input io.Reader, output io
 func (m *Model) resize() {
 	width := max(20, m.width-6)
 	m.output.SetWidth(width)
-	m.output.SetHeight(max(4, m.height-13))
+	reserved := 20
+	if m.view == viewLogs {
+		reserved = 8
+	}
+	m.output.SetHeight(max(4, m.height-reserved))
 	m.input.SetWidth(width)
 	m.refreshTranscript()
 }
 
 func (m *Model) refreshTranscript() {
-	events := m.session.Timeline()
+	events := m.session.TranscriptTimeline()
+	if m.view == viewLogs {
+		events = m.session.LogTimeline()
+	}
 	m.timelineRevision = m.session.TimelineRevision()
 	lines := make([]string, 0, len(events)+1)
 	if len(events) == 0 {
-		lines = append(lines, dimStyle.Render("No commands have been evaluated in this scope."))
+		empty := "No commands have been evaluated in this scope."
+		if m.view == viewLogs {
+			empty = "No application logs have been captured."
+		}
+		lines = append(lines, dimStyle.Render(empty))
 	}
 	for _, event := range events {
 		switch event.Kind {

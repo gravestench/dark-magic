@@ -2,6 +2,7 @@ package raylibshell
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,14 +54,49 @@ func TestOverlayCompletesAndEditsUTF8(t *testing.T) {
 	overlay := New(session)
 	overlay.open = true
 	overlay.input = "pri"
+	overlay.cursor = 3
 	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"tab": {Pressed: true}}})
 	if overlay.input != "print" {
 		t.Fatalf("completion = %q", overlay.input)
 	}
 	overlay.input = "hé"
+	overlay.cursor = 2
 	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"backspace": {Pressed: true}}})
 	if overlay.input != "h" {
 		t.Fatalf("backspace = %q", overlay.input)
+	}
+	overlay.input, overlay.cursor = "ab", 1
+	overlay.Handle(context.Background(), inputstate.Frame{Text: "X", Actions: map[string]inputstate.ActionState{}})
+	if overlay.input != "aXb" || overlay.cursor != 2 || overlay.inputWithCaret() != "aX|b" {
+		t.Fatalf("mid-line insert = %q cursor=%d", overlay.input, overlay.cursor)
+	}
+	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"delete": {Pressed: true}}})
+	if overlay.input != "aX" {
+		t.Fatalf("mid-line delete = %q", overlay.input)
+	}
+}
+
+func TestOverlayModalViewsKeepLogsOutOfLua(t *testing.T) {
+	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
+	logs := shell.NewLogBuffer(4)
+	logs.Append(shell.LogEntry{At: time.Now(), Level: "info", Message: "visible log"})
+	session.AttachLogs(logs)
+	session.Submit(context.Background(), "lua value")
+	overlay := New(session)
+	overlay.open = true
+	if lines := overlay.timeline(800); len(lines) != 2 || strings.Contains(lines[0].text, "visible log") {
+		t.Fatalf("lua lines = %#v", lines)
+	}
+	overlay.Handle(context.Background(), inputstate.Frame{Actions: map[string]inputstate.ActionState{"shell_logs": {Pressed: true}}})
+	if overlay.view != viewLogs {
+		t.Fatal("F2 did not select logs")
+	}
+	if lines := overlay.timeline(800); len(lines) != 1 || !strings.Contains(lines[0].text, "visible log") {
+		t.Fatalf("log lines = %#v", lines)
+	}
+	overlay.Handle(context.Background(), inputstate.Frame{Text: "ignored", Actions: map[string]inputstate.ActionState{}})
+	if overlay.input != "" {
+		t.Fatalf("log view edited Lua input: %q", overlay.input)
 	}
 }
 

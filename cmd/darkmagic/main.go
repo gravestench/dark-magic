@@ -116,18 +116,7 @@ func environmentDefault(name, fallback string) string {
 }
 
 func parseLogLevel(value string) (slog.Level, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "debug":
-		return slog.LevelDebug, nil
-	case "info", "":
-		return slog.LevelInfo, nil
-	case "warn", "warning":
-		return slog.LevelWarn, nil
-	case "error":
-		return slog.LevelError, nil
-	default:
-		return slog.LevelInfo, fmt.Errorf("invalid log level %q: expected debug, info, warn, or error", value)
-	}
+	return logging.ParseLevel(value)
 }
 
 func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette string, shellLogs *shell.LogBuffer) error {
@@ -286,15 +275,16 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 			stopHost(appHost)
 		}
 	}()
-	shellEvaluator, err := luashell.New(scripts)
-	if err != nil {
-		return err
-	}
-	shellSession, err := shell.NewSession("client-local", "client", shell.Policy{
+	shellPolicy := shell.Policy{
 		Name:         "local-developer",
 		Capabilities: scripts.ModuleNames(),
 		Mutable:      true,
-	}, shellEvaluator)
+	}
+	shellEvaluator, err := luashell.NewForPolicy(scripts, shellPolicy)
+	if err != nil {
+		return err
+	}
+	shellSession, err := shell.NewSession("client-local", "client", shellPolicy, shellEvaluator)
 	if err != nil {
 		return err
 	}

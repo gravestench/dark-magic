@@ -24,6 +24,8 @@ func (s *Service) Snapshot() inputstate.Frame {
 		Text:    string(text),
 		Actions: map[string]inputstate.ActionState{
 			"shell_toggle":    actionState(s.KeyState(rl.KeyGrave)),
+			"shell_lua":       actionState(s.KeyState(rl.KeyF1)),
+			"shell_logs":      actionState(s.KeyState(rl.KeyF2)),
 			"pointer_primary": pointer,
 			"confirm":         confirm,
 			"cancel":          cancel,
@@ -41,6 +43,10 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"backspace":       actionState(s.KeyState(rl.KeyBackspace)),
 			"delete":          actionState(s.KeyState(rl.KeyDelete)),
 			"tab":             actionState(s.KeyState(rl.KeyTab)),
+			"page_up":         actionState(s.KeyState(rl.KeyPageUp)),
+			"page_down":       actionState(s.KeyState(rl.KeyPageDown)),
+			"home":            actionState(s.KeyState(rl.KeyHome)),
+			"end":             actionState(s.KeyState(rl.KeyEnd)),
 			"shift": mergeActionStates(
 				actionState(s.ModifierKeyState(rl.KeyLeftShift)),
 				actionState(s.ModifierKeyState(rl.KeyRightShift)),

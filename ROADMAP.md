@@ -527,25 +527,32 @@ implementations. The remaining work is tracked explicitly below.
   elastically settles from above while opacity fades in; closing slides upward
   on a normalized cubic curve with a quick nonlinear fade and retains input
   focus until gone. Lua print/register diagnostics and a bounded structured
-  `slog` tail now share one chronological, revision-cached timeline in both the
-  Raylib and Charm views.
-- [ ] Provide capability-aware autocompletion for Lua keywords, console-local
+  `slog` tail feed revision-cached F1 Lua and F2 Logs modal views in both the
+  Raylib and Charm frontends. The graphical editor also supports a movable
+  Unicode cursor, insertion/deletion, Home/End, visible completion candidates,
+  and independent paged log scrollback.
+- [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never
   executes code or invokes metamethods with side effects. Keywords, locals,
-  modules, globals, and raw table members are implemented; safe userdata
-  descriptors remain.
+  modules, globals, raw table members, and raw userdata method tables are
+  implemented without invoking completion-time metamethods.
 - [ ] Bind each console tab to an explicit Lua runtime and dedicated disposable
   resource scope; serialize evaluation through the runtime owner and clearly
   display the selected runtime, scope, and capability set. Sessions already own
   the explicit runtime scope and the terminal header exposes target and policy;
   graphical multi-tab presentation remains.
-- [ ] Expose this exact shell/session contract through the graphical client,
+- [x] Expose this exact shell/session contract through the graphical client,
   standalone game server, and realm targets. Headless targets use the shared
-  Charmbracelet TUI; the in-game console supplies only a different view adapter.
+  Charmbracelet modal TUI; the in-game console supplies only a different view
+  adapter. Initial `darkmagic-server` and `darkmagic-realm` composition roots
+  now own that same renderer-free administration surface.
 - [ ] Gate mutation/debug capabilities by session policy: full local developer
   access when enabled, read-only inspection where appropriate, and no path from
   a realm-connected client to server-authoritative state or server-only APIs.
+  Module discovery and `require` now enforce the session allowlist and
+  read-only policies reject shell-global assignment; target-specific
+  read-only capability modules remain to be defined with networking.
 - [ ] Tear down console-created handles, callbacks, subscriptions, and render
   nodes on reset, runtime reload, disconnect, scene change when configured, and
   client shutdown.
@@ -598,6 +605,8 @@ implementations. The remaining work is tracked explicitly below.
   listen/dedicated multiplayer, and realm-connected games.
 - [ ] Run one authoritative deterministic game-session implementation in-process,
   as a listen server, as a standalone self-hosted server, or under a realm.
+  The `cmd/darkmagic-server` composition root and shared administration shell
+  now exist; authoritative simulation hosting remains.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
 - [ ] Preserve offline characters safely and separate trusted server characters
@@ -608,7 +617,9 @@ implementations. The remaining work is tracked explicitly below.
 ## M23: Realm, mod delivery, and trusted persistence
 
 - [ ] Add a first-class `cmd` realm providing accounts, authentication, game
-  creation/discovery, session assignment, and operational administration.
+  creation/discovery, session assignment, and operational administration. The
+  `cmd/darkmagic-realm` composition root and shared administration shell now
+  exist; realm services and capability modules remain.
 - [ ] Define signed/versioned mod manifests containing dependency order, engine
   and capability compatibility, payload identities, hashes, sizes, and trust
   policy.

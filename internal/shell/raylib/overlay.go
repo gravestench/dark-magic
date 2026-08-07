@@ -20,6 +20,13 @@ const (
 	lineHeight = int32(23)
 )
 
+type viewMode uint8
+
+const (
+	viewLua viewMode = iota
+	viewLogs
+)
+
 // Overlay adapts the shared session to Raylib input and immediate-mode debug
 // drawing. Evaluation remains serialized by Session and its Lua runtime.
 type Overlay struct {
@@ -27,6 +34,7 @@ type Overlay struct {
 	open            bool
 	busy            bool
 	input           string
+	cursor          int
 	history         int
 	candidates      []shell.Candidate
 	candidateAt     int
@@ -38,6 +46,9 @@ type Overlay struct {
 	displayRevision uint64
 	displayColumns  int
 	displayLines    []transcriptLine
+	displayView     viewMode
+	view            viewMode
+	logOffset       int
 }
 
 var (
@@ -107,12 +118,52 @@ func (o *Overlay) Handle(ctx context.Context, frame inputstate.Frame) bool {
 		o.setOpen(false, time.Now())
 		return true
 	}
+	if frame.Actions["shell_lua"].Pressed {
+		o.view = viewLua
+		o.resetCompletion()
+		return true
+	}
+	if frame.Actions["shell_logs"].Pressed {
+		o.view = viewLogs
+		o.logOffset = 0
+		o.resetCompletion()
+		return true
+	}
+	if o.view == viewLogs {
+		switch {
+		case frame.Actions["page_up"].Pressed:
+			o.logOffset += 10
+		case frame.Actions["page_down"].Pressed:
+			o.logOffset = max(0, o.logOffset-10)
+		case frame.Actions["up"].Pressed:
+			o.logOffset++
+		case frame.Actions["down"].Pressed:
+			o.logOffset = max(0, o.logOffset-1)
+		}
+		return true
+	}
 	if frame.Actions["backspace"].Pressed {
-		o.input = trimLastRune(o.input)
+		o.backspace()
 		o.resetCompletion()
 	}
 	if frame.Actions["delete"].Pressed {
-		o.input = ""
+		o.delete()
+		o.resetCompletion()
+	}
+	if frame.Actions["left"].Pressed {
+		o.cursor = max(0, o.cursor-1)
+		o.resetCompletion()
+	}
+	if frame.Actions["right"].Pressed {
+		o.cursor = min(utf8.RuneCountInString(o.input), o.cursor+1)
+		o.resetCompletion()
+	}
+	if frame.Actions["home"].Pressed {
+		o.cursor = 0
+		o.resetCompletion()
+	}
+	if frame.Actions["end"].Pressed {
+		o.cursor = utf8.RuneCountInString(o.input)
 		o.resetCompletion()
 	}
 	if frame.Actions["tab"].Pressed {
@@ -125,12 +176,12 @@ func (o *Overlay) Handle(ctx context.Context, frame inputstate.Frame) bool {
 		o.moveHistory(1)
 	}
 	if text := strings.ReplaceAll(strings.ReplaceAll(frame.Text, "`", ""), "~", ""); text != "" {
-		o.input += text
+		o.insert(text)
 		o.resetCompletion()
 	}
 	if frame.Actions["confirm"].Pressed {
 		if frame.Actions["shift"].Down || frame.Actions["shift"].Pressed {
-			o.input += "\n"
+			o.insert("\n")
 		} else {
 			o.submit(ctx)
 		}
@@ -153,15 +204,32 @@ func (o *Overlay) Draw(width, height int) {
 	if policy.Mutable {
 		mode = "mutable"
 	}
-	o.drawText("DARK MAGIC LUA SHELL", 16, offsetY+12, 22, fade(rl.NewColor(222, 163, 58, 255), opacity))
+	o.drawText("DARK MAGIC CONSOLE", 16, offsetY+12, 22, fade(rl.NewColor(222, 163, 58, 255), opacity))
 	o.drawText(fmt.Sprintf("target %s | policy %s (%s)", o.session.Target(), policy.Name, mode), 16, offsetY+40, 16, fade(rl.Gray, opacity))
+	o.drawTabs(offsetY, opacity)
 
-	transcriptTop := offsetY + 68
+	transcriptTop := offsetY + 94
 	promptTop := offsetY + panelHeight - 58
-	available := int((promptTop-transcriptTop)/lineHeight) - 1
+	contentBottom := promptTop
+	completion := o.completionLines()
+	if o.view == viewLua {
+		contentBottom -= int32(len(completion) * 18)
+	}
+	if o.view == viewLogs {
+		contentBottom = offsetY + panelHeight - 34
+	}
+	available := max(1, int((contentBottom-transcriptTop)/lineHeight)-1)
 	lines := o.timeline(width)
-	if len(lines) > available {
-		lines = lines[len(lines)-available:]
+	end := len(lines)
+	if o.view == viewLogs {
+		o.logOffset = min(o.logOffset, max(0, len(lines)-available))
+		end = max(0, len(lines)-o.logOffset)
+	}
+	start := max(0, end-available)
+	if start < end {
+		lines = lines[start:end]
+	} else {
+		lines = nil
 	}
 	for index, line := range lines {
 		color := rl.LightGray
@@ -176,21 +244,72 @@ func (o *Overlay) Draw(width, height int) {
 		}
 		o.drawText(line.text, 18, transcriptTop+int32(index)*lineHeight, fontSize, fade(color, opacity))
 	}
-	status := ""
-	if o.busy {
-		status = " [evaluating]"
+	if o.view == viewLua {
+		for index, line := range completion {
+			color := rl.Gray
+			if line.selected {
+				color = rl.NewColor(222, 163, 58, 255)
+			}
+			o.drawText(line.text, 24, contentBottom+int32(index*18), 14, fade(color, opacity))
+		}
+		status := ""
+		if o.busy {
+			status = " [evaluating]"
+		}
+		o.drawText("> "+o.inputWithCaret()+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
+		o.drawText("F1 Lua  F2 Logs  ` close  Enter run  Shift+Enter newline  Tab complete", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+	} else {
+		o.drawText("F1 Lua  F2 Logs  Up/Down scroll  PgUp/PgDn page  ` or Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
 	}
-	o.drawText("> "+o.input+status, 16, promptTop, fontSize, fade(rl.RayWhite, opacity))
-	o.drawText("` close  Enter run  Shift+Enter newline  Tab complete  Up/Down history  Esc close", 16, offsetY+panelHeight-26, 14, fade(rl.Gray, opacity))
+}
+
+type completionLine struct {
+	text     string
+	selected bool
+}
+
+func (o *Overlay) completionLines() []completionLine {
+	if len(o.candidates) == 0 {
+		return nil
+	}
+	limit := min(5, len(o.candidates))
+	start := 0
+	if o.candidateAt >= limit {
+		start = min(len(o.candidates)-limit, o.candidateAt-limit/2)
+	}
+	lines := make([]completionLine, 0, limit)
+	for index := start; index < start+limit; index++ {
+		candidate := o.candidates[index]
+		lines = append(lines, completionLine{
+			text: fmt.Sprintf("%s  %s", candidate.Value, candidate.Detail), selected: index == o.candidateAt,
+		})
+	}
+	return lines
+}
+
+func (o *Overlay) drawTabs(offsetY int32, opacity float64) {
+	luaColor, logColor := rl.Gray, rl.Gray
+	if o.view == viewLua {
+		luaColor = rl.NewColor(222, 163, 58, 255)
+	} else {
+		logColor = rl.NewColor(222, 163, 58, 255)
+	}
+	o.drawText("[F1 LUA]", 16, offsetY+68, 17, fade(luaColor, opacity))
+	o.drawText("[F2 LOGS]", 116, offsetY+68, 17, fade(logColor, opacity))
 }
 
 func (o *Overlay) timeline(width int) []transcriptLine {
 	columns := max(12, (width-36)/11)
 	revision := o.session.TimelineRevision()
-	if revision != o.displayRevision || columns != o.displayColumns {
-		o.displayLines = wrapTranscript(timelineLines(o.session.Timeline()), columns)
+	if revision != o.displayRevision || columns != o.displayColumns || o.view != o.displayView {
+		events := o.session.TranscriptTimeline()
+		if o.view == viewLogs {
+			events = o.session.LogTimeline()
+		}
+		o.displayLines = wrapTranscript(timelineLines(events), columns)
 		o.displayRevision = revision
 		o.displayColumns = columns
+		o.displayView = o.view
 	}
 	return o.displayLines
 }
@@ -245,23 +364,27 @@ func (o *Overlay) submit(ctx context.Context) {
 	}
 	o.busy = true
 	o.input = ""
+	o.cursor = 0
 	o.resetCompletion()
 	go func() { o.finished <- o.session.Submit(ctx, source) }()
 }
 
 func (o *Overlay) complete(ctx context.Context, reverse bool) {
 	if len(o.candidates) == 0 {
-		original := completionToken(o.input)
-		candidates, err := o.session.Complete(ctx, o.input)
+		runes := []rune(o.input)
+		o.cursor = max(0, min(len(runes), o.cursor))
+		prefix := string(runes[:o.cursor])
+		original := completionToken(prefix)
+		candidates, err := o.session.Complete(ctx, prefix)
 		if err != nil || len(candidates) == 0 {
 			return
 		}
 		o.candidates, o.candidateAt = candidates, -1
-		prefix := shell.SharedPrefix(candidates)
-		if prefix != "" {
-			o.replaceToken(prefix)
+		shared := shell.SharedPrefix(candidates)
+		if shared != "" {
+			o.replaceToken(shared)
 		}
-		if len(candidates) > 1 && prefix != original {
+		if len(candidates) > 1 && shared != original {
 			return
 		}
 	}
@@ -274,8 +397,14 @@ func (o *Overlay) complete(ctx context.Context, reverse bool) {
 }
 
 func (o *Overlay) replaceToken(value string) {
-	token := completionToken(o.input)
-	o.input = strings.TrimSuffix(o.input, token) + value
+	runes := []rune(o.input)
+	o.cursor = max(0, min(len(runes), o.cursor))
+	prefix := string(runes[:o.cursor])
+	token := completionToken(prefix)
+	before := []rune(strings.TrimSuffix(prefix, token))
+	replacement := []rune(value)
+	o.input = string(append(append(before, replacement...), runes[o.cursor:]...))
+	o.cursor = len(before) + len(replacement)
 }
 
 func (o *Overlay) moveHistory(delta int) {
@@ -289,6 +418,7 @@ func (o *Overlay) moveHistory(delta int) {
 	} else {
 		o.input = history[o.history]
 	}
+	o.cursor = utf8.RuneCountInString(o.input)
 	o.resetCompletion()
 }
 
@@ -297,12 +427,37 @@ func (o *Overlay) resetCompletion() {
 	o.candidateAt = -1
 }
 
-func trimLastRune(value string) string {
-	_, size := utf8.DecodeLastRuneInString(value)
-	if size == 0 {
-		return value
+func (o *Overlay) insert(value string) {
+	runes := []rune(o.input)
+	o.cursor = max(0, min(len(runes), o.cursor))
+	inserted := []rune(value)
+	o.input = string(append(append(runes[:o.cursor:o.cursor], inserted...), runes[o.cursor:]...))
+	o.cursor += len(inserted)
+}
+
+func (o *Overlay) backspace() {
+	runes := []rune(o.input)
+	o.cursor = max(0, min(len(runes), o.cursor))
+	if o.cursor == 0 {
+		return
 	}
-	return value[:len(value)-size]
+	o.input = string(append(runes[:o.cursor-1], runes[o.cursor:]...))
+	o.cursor--
+}
+
+func (o *Overlay) delete() {
+	runes := []rune(o.input)
+	o.cursor = max(0, min(len(runes), o.cursor))
+	if o.cursor == len(runes) {
+		return
+	}
+	o.input = string(append(runes[:o.cursor], runes[o.cursor+1:]...))
+}
+
+func (o *Overlay) inputWithCaret() string {
+	runes := []rune(o.input)
+	cursor := max(0, min(len(runes), o.cursor))
+	return string(append(append(runes[:cursor:cursor], '|'), runes[cursor:]...))
 }
 
 func completionToken(source string) string {
@@ -349,7 +504,9 @@ func wrapTranscript(lines []transcriptLine, columns int) []transcriptLine {
 			})
 			runes = runes[columns:]
 		}
-		wrapped = append(wrapped, transcriptLine{text: string(runes), result: line.result, error: line.error})
+		wrapped = append(wrapped, transcriptLine{
+			text: string(runes), result: line.result, error: line.error, warning: line.warning, dim: line.dim,
+		})
 	}
 	return wrapped
 }

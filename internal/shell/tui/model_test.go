@@ -42,3 +42,20 @@ func TestModelShowsAuthorityAndEditsCompletionToken(t *testing.T) {
 		}
 	}
 }
+
+func TestModelSeparatesLuaAndLogViews(t *testing.T) {
+	session, _ := shell.NewSession("test", "realm", shell.Policy{Name: "operator"}, evaluator{})
+	logs := shell.NewLogBuffer(2)
+	logs.Append(shell.LogEntry{Level: "warn", Message: "realm warning"})
+	session.AttachLogs(logs)
+	session.Submit(context.Background(), "lua-only")
+	model := NewModel(session)
+	if strings.Contains(model.output.View(), "realm warning") {
+		t.Fatal("Lua view contains process logs")
+	}
+	model.view = viewLogs
+	model.refreshTranscript()
+	if output := model.output.View(); !strings.Contains(output, "realm warning") || strings.Contains(output, "lua-only") {
+		t.Fatalf("log view = %q", output)
+	}
+}

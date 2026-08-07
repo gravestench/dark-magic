@@ -97,9 +97,15 @@ func (s *Session) Logs() []LogEntry {
 }
 
 func (s *Session) Timeline() []TimelineEvent {
+	events := append(s.TranscriptTimeline(), s.LogTimeline()...)
+	sort.SliceStable(events, func(i, j int) bool { return events[i].At.Before(events[j].At) })
+	return events
+}
+
+// TranscriptTimeline returns only Lua commands, values, prints, and errors.
+func (s *Session) TranscriptTimeline() []TimelineEvent {
 	entries := s.Transcript()
-	logs := s.Logs()
-	events := make([]TimelineEvent, 0, len(entries)*2+len(logs))
+	events := make([]TimelineEvent, 0, len(entries)*2)
 	for _, entry := range entries {
 		events = append(events, TimelineEvent{At: entry.At, Kind: "command", Text: entry.Source})
 		if entry.Error != "" {
@@ -108,6 +114,13 @@ func (s *Session) Timeline() []TimelineEvent {
 			events = append(events, TimelineEvent{At: entry.CompletedAt, Kind: "value", Text: entry.Result.Text})
 		}
 	}
+	return events
+}
+
+// LogTimeline returns only structured process logs.
+func (s *Session) LogTimeline() []TimelineEvent {
+	logs := s.Logs()
+	events := make([]TimelineEvent, 0, len(logs))
 	for _, entry := range logs {
 		text := entry.At.Format("15:04:05.000") + " " + strings.ToUpper(entry.Level) + " " + entry.Message
 		if encoded, err := json.Marshal(entry.Attributes); err == nil && string(encoded) != "null" && string(encoded) != "{}" {
@@ -115,7 +128,6 @@ func (s *Session) Timeline() []TimelineEvent {
 		}
 		events = append(events, TimelineEvent{At: entry.At, Kind: "log-" + strings.ToLower(entry.Level), Text: text})
 	}
-	sort.SliceStable(events, func(i, j int) bool { return events[i].At.Before(events[j].At) })
 	return events
 }
 

@@ -48,6 +48,16 @@ type Record struct {
 // NewHandlerWithObserver preserves terminal logging while also publishing
 // structured records to an optional in-process diagnostic consumer.
 func NewHandlerWithObserver(opts *slog.HandlerOptions, observer func(Record)) *Handler {
+	return newHandler(opts, observer, true)
+}
+
+// NewObserverHandler captures structured records without writing directly to
+// stdout, which would corrupt a full-screen terminal UI.
+func NewObserverHandler(opts *slog.HandlerOptions, observer func(Record)) *Handler {
+	return newHandler(opts, observer, false)
+}
+
+func newHandler(opts *slog.HandlerOptions, observer func(Record), output bool) *Handler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}
@@ -61,6 +71,7 @@ func NewHandlerWithObserver(opts *slog.HandlerOptions, observer func(Record)) *H
 		}),
 		m:        &sync.Mutex{},
 		observer: observer,
+		output:   output,
 	}
 }
 
@@ -73,6 +84,7 @@ type Handler struct {
 	b        *bytes.Buffer
 	m        *sync.Mutex
 	observer func(Record)
+	output   bool
 }
 
 func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -80,11 +92,11 @@ func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &Handler{h: h.h.WithAttrs(attrs), b: h.b, m: h.m, observer: h.observer}
+	return &Handler{h: h.h.WithAttrs(attrs), b: h.b, m: h.m, observer: h.observer, output: h.output}
 }
 
 func (h *Handler) WithGroup(name string) slog.Handler {
-	return &Handler{h: h.h.WithGroup(name), b: h.b, m: h.m, observer: h.observer}
+	return &Handler{h: h.h.WithGroup(name), b: h.b, m: h.m, observer: h.observer, output: h.output}
 }
 
 const (
@@ -112,6 +124,9 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	}
 	if h.observer != nil {
 		h.observer(Record{At: r.Time, Level: r.Level, Message: r.Message, Attributes: cloneAttrs(attrs)})
+	}
+	if !h.output {
+		return nil
 	}
 
 	service := attrs["service"]

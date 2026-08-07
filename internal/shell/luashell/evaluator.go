@@ -21,25 +21,62 @@ var keywords = []string{
 }
 
 type Evaluator struct {
-	runtime *modruntime.Runtime
-	scope   *modruntime.Scope
-	env     *glua.LTable
-	modules []string
+	runtime    *modruntime.Runtime
+	scope      *modruntime.Scope
+	env        *glua.LTable
+	modules    []string
+	registered []string
+	allowed    map[string]struct{}
+	mutable    bool
 }
 
 func New(runtime *modruntime.Runtime) (*Evaluator, error) {
 	if runtime == nil {
 		return nil, fmt.Errorf("lua shell: runtime is required")
 	}
-	return &Evaluator{runtime: runtime, scope: &modruntime.Scope{}, modules: runtime.ModuleNames()}, nil
+	modules := runtime.ModuleNames()
+	return newEvaluator(runtime, modules, modules, true)
+}
+
+// NewForPolicy limits module discovery/require and shell-global assignment to
+// the authority explicitly granted to the session.
+func NewForPolicy(runtime *modruntime.Runtime, policy shell.Policy) (*Evaluator, error) {
+	if runtime == nil {
+		return nil, fmt.Errorf("lua shell: runtime is required")
+	}
+	registered := make(map[string]struct{})
+	for _, module := range runtime.ModuleNames() {
+		registered[module] = struct{}{}
+	}
+	modules := make([]string, 0, len(policy.Capabilities))
+	for _, module := range policy.Capabilities {
+		if _, ok := registered[module]; ok {
+			modules = append(modules, module)
+		}
+	}
+	registeredModules := runtime.ModuleNames()
+	return newEvaluator(runtime, registeredModules, modules, policy.Mutable)
+}
+
+func newEvaluator(runtime *modruntime.Runtime, registered, modules []string, mutable bool) (*Evaluator, error) {
+	allowed := make(map[string]struct{}, len(modules))
+	for _, module := range modules {
+		allowed[module] = struct{}{}
+	}
+	return &Evaluator{
+		runtime: runtime, scope: &modruntime.Scope{}, modules: modules, registered: registered, allowed: allowed, mutable: mutable,
+	}, nil
 }
 
 func (e *Evaluator) Evaluate(ctx context.Context, source string) (shell.Result, error) {
 	var result shell.Result
 	err := e.runtime.RunScoped(ctx, e.scope, func(state *glua.LState) error {
 		environment := e.environment(state)
+		restoreModules := e.restrictModules(state)
+		defer restoreModules()
 		printed := make([]string, 0, 4)
 		installShellOutput(state, environment, &printed)
+		e.installRequire(state, environment)
 		function, expression, err := compile(state, source)
 		if err != nil {
 			return err
@@ -72,6 +109,64 @@ func (e *Evaluator) Evaluate(ctx context.Context, source string) (shell.Result, 
 		return nil
 	})
 	return result, err
+}
+
+func (e *Evaluator) restrictModules(state *glua.LState) func() {
+	packageTable, ok := state.GetGlobal("package").(*glua.LTable)
+	if !ok {
+		return func() {}
+	}
+	preload, _ := packageTable.RawGetString("preload").(*glua.LTable)
+	loaded, _ := packageTable.RawGetString("loaded").(*glua.LTable)
+	type hiddenModule struct {
+		name            string
+		preload, loaded glua.LValue
+	}
+	hidden := make([]hiddenModule, 0)
+	for _, name := range e.registered {
+		if _, allowed := e.allowed[name]; allowed {
+			continue
+		}
+		entry := hiddenModule{name: name}
+		if preload != nil {
+			entry.preload = preload.RawGetString(name)
+			preload.RawSetString(name, glua.LNil)
+		}
+		if loaded != nil {
+			entry.loaded = loaded.RawGetString(name)
+			loaded.RawSetString(name, glua.LNil)
+		}
+		hidden = append(hidden, entry)
+	}
+	return func() {
+		for _, entry := range hidden {
+			if preload != nil {
+				preload.RawSetString(entry.name, entry.preload)
+			}
+			if loaded != nil {
+				loaded.RawSetString(entry.name, entry.loaded)
+			}
+		}
+	}
+}
+
+func (e *Evaluator) installRequire(state *glua.LState, environment *glua.LTable) {
+	environment.RawSetString("require", state.NewFunction(func(current *glua.LState) int {
+		name := current.CheckString(1)
+		if _, ok := e.allowed[name]; !ok {
+			current.RaiseError("shell policy does not permit module %q", name)
+			return 0
+		}
+		require, ok := current.GetGlobal("require").(*glua.LFunction)
+		if !ok {
+			current.RaiseError("Lua require is unavailable")
+			return 0
+		}
+		current.Push(require)
+		current.Push(glua.LString(name))
+		current.Call(1, 1)
+		return 1
+	}))
 }
 
 func installShellOutput(state *glua.LState, environment *glua.LTable, output *[]string) {
@@ -138,9 +233,9 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 		}
 		if dot := strings.LastIndexByte(token, '.'); dot >= 0 {
 			base, member := token[:dot], token[dot+1:]
-			if table := rawTable(environment.RawGetString(base), state.GetGlobal(base)); table != nil {
+			if table, detail := rawMemberTable(state, environment.RawGetString(base), state.GetGlobal(base)); table != nil {
 				seen = make(map[string]string)
-				table.ForEach(func(key, _ glua.LValue) { seen[base+"."+key.String()] = "member" })
+				table.ForEach(func(key, _ glua.LValue) { seen[base+"."+key.String()] = detail })
 				token = base + "." + member
 			}
 		}
@@ -164,7 +259,23 @@ func (e *Evaluator) environment(state *glua.LState) *glua.LTable {
 	e.env = state.NewTable()
 	e.env.RawSetString("_G", e.env)
 	metatable := state.NewTable()
-	metatable.RawSetString("__index", state.Get(glua.GlobalsIndex))
+	global := state.Get(glua.GlobalsIndex).(*glua.LTable)
+	metatable.RawSetString("__index", state.NewFunction(func(current *glua.LState) int {
+		key := current.CheckString(2)
+		if !e.mutable && (key == "package" || key == "debug" || key == "io" || key == "os") {
+			current.Push(glua.LNil)
+			return 1
+		}
+		current.Push(global.RawGetString(key))
+		return 1
+	}))
+	metatable.RawSetString("__metatable", glua.LString("protected shell environment"))
+	if !e.mutable {
+		metatable.RawSetString("__newindex", state.NewFunction(func(current *glua.LState) int {
+			current.RaiseError("shell policy is read-only; cannot assign %q", current.Get(2).String())
+			return 0
+		}))
+	}
 	state.SetMetatable(e.env, metatable)
 	return e.env
 }
@@ -188,12 +299,23 @@ func completionToken(source string) string {
 	return source[index+1:]
 }
 
-func rawTable(primary, fallback glua.LValue) *glua.LTable {
-	if table, ok := primary.(*glua.LTable); ok {
-		return table
+func rawMemberTable(state *glua.LState, values ...glua.LValue) (*glua.LTable, string) {
+	for _, value := range values {
+		if table, ok := value.(*glua.LTable); ok {
+			return table, "member"
+		}
+		if _, ok := value.(*glua.LUserData); !ok {
+			continue
+		}
+		metatable, ok := state.GetMetatable(value).(*glua.LTable)
+		if !ok {
+			continue
+		}
+		if methods, ok := metatable.RawGetString("__index").(*glua.LTable); ok {
+			return methods, "userdata member"
+		}
 	}
-	table, _ := fallback.(*glua.LTable)
-	return table
+	return nil, ""
 }
 
 func formatValue(value glua.LValue, depth int) string {

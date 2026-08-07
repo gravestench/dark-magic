@@ -65,11 +65,13 @@ clients cannot use the console to bypass authoritative simulation or obtain
 server-only capabilities.
 
 Press the grave/backtick key (`` ` ``) to open or close the in-game shell.
-Enter evaluates the current Lua source, Shift+Enter inserts a newline, Tab
-completes names, and the arrow keys browse command history.
+F1 selects the Lua editor and F2 selects structured application logs. In Lua,
+Enter evaluates, Shift+Enter inserts a newline, Tab completes names, and the
+arrow/Home/End keys edit or browse history. In Logs, arrows and Page Up/Down
+control independent scrollback.
 Lua `print(...)`, `printregs()`/`_printregs()`, and the bounded structured
-application-log tail appear directly in the shell timeline; normal process log
-output remains available outside the game window as well.
+application-log tail appear in their respective modal views; normal process
+log output remains available outside the game window as well.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
