@@ -1,6 +1,7 @@
 package modruntime
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -12,11 +13,13 @@ import (
 	_ "image/png"
 	"io"
 	"io/fs"
+	"strings"
 	"sync"
 	"time"
 
 	cof "github.com/gravestench/cof"
 	"github.com/gravestench/dark-magic/internal/assets/decode"
+	assetinspect "github.com/gravestench/dark-magic/internal/assets/inspect"
 	cachepkg "github.com/gravestench/dark-magic/internal/cache"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
@@ -269,6 +272,32 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 		return nil, err
 	}
 	return asset, nil
+}
+
+func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, palette string) (image.Image, error) {
+	key := name + "\x00" + strings.Join(tiles, "\x00") + "\x00" + palette
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.refresh(assets)
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", "ds1\x00"+key, c.generation); ok {
+		return cached.(image.Image), nil
+	}
+	started := time.Now()
+	preview, err := assetinspect.TexturedDS1Preview(assets, name, tiles, palette)
+	if err != nil {
+		return nil, err
+	}
+	decoded, _, err := image.Decode(bytes.NewReader(preview))
+	c.decodeCalls++
+	c.decodeTime += time.Since(started)
+	if err != nil {
+		return nil, err
+	}
+	weight := decoded.Bounds().Dx() * decoded.Bounds().Dy() * 4
+	if err := c.decoded.InsertVersioned("decoded", "ds1\x00"+key, c.generation, decoded, weight); err != nil {
+		return nil, err
+	}
+	return decoded, nil
 }
 
 func (n *ownedRenderNode) release() error {
@@ -613,6 +642,7 @@ func (r *RenderCapability) Module() Module {
 		"set_clip":                   commandHelp("node:set_clip(x, y, width, height)", "Set the node clip rectangle."),
 		"clear_clip":                 commandHelp("node:clear_clip()", "Remove the node clip rectangle."),
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
+		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
 		"set_dc6_animation":          commandHelp("node:set_dc6_animation(path [, options])", "Render a DC6 animation."),
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
@@ -887,6 +917,41 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("updating render node: %v", err)
 			}
 			return 0
+		},
+		"set_ds1": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			mapName := state.CheckString(2)
+			tileTable := state.CheckTable(3)
+			tiles := make([]string, 0, tileTable.Len())
+			for index := 1; index <= tileTable.Len(); index++ {
+				value, ok := tileTable.RawGetInt(index).(lua.LString)
+				if !ok || value == "" {
+					state.RaiseError("DS1 tile %d must be a non-empty path", index)
+					return 0
+				}
+				tiles = append(tiles, string(value))
+			}
+			if len(tiles) == 0 {
+				state.RaiseError("DS1 rendering requires at least one DT1 tile path")
+				return 0
+			}
+			palette := state.CheckString(4)
+			decoded, err := node.cache.loadDS1(node.assets, mapName, tiles, palette)
+			if err != nil {
+				state.RaiseError("rendering DS1 %q: %v", mapName, err)
+				return 0
+			}
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating DS1 render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(decoded.Bounds().Dx()))
+			state.Push(lua.LNumber(decoded.Bounds().Dy()))
+			return 2
 		},
 		"set_dc6": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

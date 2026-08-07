@@ -489,7 +489,11 @@ implementations. The remaining work is tracked explicitly below.
   over real world and character presentation handles. The fake hero rectangle
   is gone: the world scene now binds an optional selected-character COF/DCC
   appearance snapshot and keeps metadata-only characters invisible instead of
-  fabricating world art. The real world-tile handle remains pending M20.
+  fabricating world art. The Lua-authored world now owns an MPQ-backed DS1
+  presentation node decoded from manifest-selected DT1 tiles and an Act palette;
+  it follows deterministic camera displacement without transferring filesystem
+  or native renderer ownership into Lua. Tile semantics, collision, entities,
+  and streaming remain pending M20.
 - [ ] Assemble the 640x480 and 800x600 control panels, globes, stamina and
   experience bars, belt, skill buttons, minipanel, tooltips, and cursor states.
   The supported 800x600 profile now assembles the six authored panel segments,
@@ -934,6 +938,23 @@ implementations. The remaining work is tracked explicitly below.
   race, real-asset, and interactive acceptance suites green; then remove temporary
   migration notes and verify a newcomer can locate and extend a representative
   renderer, asset, Lua capability, scene, tool, and server feature from the guide.
+
+## M29: Deferred shell ergonomics
+
+- [ ] Support user-selected font families and safely rebuild native glyph atlases
+  when font path, size, DPI, or Unicode coverage changes.
+- [ ] Add persistent named color themes shared by the Raylib and Charm adapters,
+  including accessible high-contrast and color-vision-friendly presets.
+- [ ] Add mouse selection, clipboard copy/paste, searchable command history,
+  reverse search, transcript search, and explicit transcript/API-doc export.
+- [ ] Render structured help and Markdown with richer code-block, signature,
+  table, link, and source-location presentation without changing evaluator text.
+- [ ] Add explicit multi-runtime tabs with visible scope/capability identity,
+  per-tab history and settings, reset/reload lifecycle controls, and resource
+  teardown guarantees across scene changes, disconnects, and runtime restarts.
+- [ ] Add optional detachable/remote administration frontends over the same
+  policy-aware shell session contract without exposing server authority to a
+  realm-connected gameplay client.
 
 ## Gameplay acceptance milestone
 

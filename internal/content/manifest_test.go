@@ -328,6 +328,11 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	var manifest struct {
 		Screens struct {
 			GameWorld struct {
+				Map struct {
+					DS1     string   `json:"ds1"`
+					DT1     []string `json:"dt1"`
+					Palette string   `json:"palette"`
+				} `json:"map"`
 				HUD struct {
 					PanelSheet string `json:"panel_sheet"`
 					PanelParts []struct {
@@ -369,6 +374,10 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	hud := manifest.Screens.GameWorld.HUD
+	worldMap := manifest.Screens.GameWorld.Map
+	if worldMap.DS1 == "" || len(worldMap.DT1) == 0 || worldMap.Palette == "" {
+		t.Fatalf("incomplete world-map asset facts: %#v", worldMap)
+	}
 	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
 		t.Fatalf("incomplete HUD asset facts: %#v", hud)
 	}

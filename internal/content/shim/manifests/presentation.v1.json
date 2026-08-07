@@ -332,6 +332,18 @@
       "dependencies": ["selected_character", "loading_assets", "world"]
     },
     "game_world": {
+      "map": {
+        "ds1": "data/global/tiles/Act1/BARRACKS/barE.ds1",
+        "dt1": [
+          "data/global/tiles/Act1/BARRACKS/floor.dt1",
+          "data/global/tiles/Act1/BARRACKS/basewall.dt1",
+          "data/global/tiles/Act1/BARRACKS/barset.dt1"
+        ],
+        "palette": "data/global/palette/ACT1/pal.pl2",
+        "screen_x": 400,
+        "screen_y": 300,
+        "z": -100
+      },
       "hero": {"scale":1.0,"screen_x":400,"screen_y":330},
       "hud": {
         "palette": "sky",

@@ -19,6 +19,19 @@ local screen = manifest.screens.game_world
 return {
     create = function(self)
         self.root = render.create("world")
+        if render.assets_available() and screen.map then
+            self.map = render.create("world", self.root)
+            local width, height = self.map:set_ds1(
+                screen.map.ds1,
+                screen.map.dt1,
+                screen.map.palette
+            )
+            self.map_width, self.map_height = width, height
+            self.map:set_z(screen.map.z)
+            local state = simulation.state()
+            self.initial_camera_x, self.initial_camera_y = state.camera_x, state.camera_y
+            self.map:set_position(screen.map.screen_x, screen.map.screen_y)
+        end
         self.hero = render.create("world", self.root)
         local character = saves.selected()
         if character and character.appearance and render.assets_available() then
@@ -71,6 +84,12 @@ return {
         end
 
         local state = simulation.state()
+        if self.map then
+            self.map:set_position(
+                screen.map.screen_x - (state.camera_x - self.initial_camera_x),
+                screen.map.screen_y - (state.camera_y - self.initial_camera_y)
+            )
+        end
         self.hero:set_position(
             screen.hero.screen_x + state.hero_x - state.camera_x,
             screen.hero.screen_y + state.hero_y - state.camera_y
