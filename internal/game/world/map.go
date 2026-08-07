@@ -1,0 +1,150 @@
+// Package world decodes deterministic gameplay facts from DS1 stamps and DT1
+// tilesets. It does not own presentation textures or native renderer state.
+package world
+
+import (
+	"fmt"
+	"io"
+	"io/fs"
+
+	"github.com/gravestench/ds1"
+	"github.com/gravestench/dt1"
+)
+
+const SubtilesPerTile = 5
+
+type Flags struct {
+	BlockWalk, BlockLOS, BlockJump, BlockPlayerWalk, BlockLight bool
+}
+
+// Blocked reports whether a player-sized point cannot walk through this
+// subtile. BlockWalk is shared terrain collision; BlockPlayerWalk is the
+// additional player-specific restriction encoded by DT1.
+func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
+
+type Object struct {
+	Type, ID, X, Y, Flags int32
+}
+
+type Map struct {
+	WidthTiles, HeightTiles       int
+	WidthSubtiles, HeightSubtiles int
+	Act                           int
+	Objects                       []Object
+	flags                         []Flags
+}
+
+type tileKey struct{ kind, style, sequence int32 }
+
+func Load(source fs.FS, stampPath string, tilePaths []string) (*Map, error) {
+	data, err := read(source, stampPath)
+	if err != nil {
+		return nil, err
+	}
+	stamp, err := ds1.FromBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("world: decode DS1 %q: %w", stampPath, err)
+	}
+	lookup := make(map[tileKey][]*dt1.Tile)
+	for _, path := range tilePaths {
+		data, err := read(source, path)
+		if err != nil {
+			return nil, err
+		}
+		tiles, err := dt1.FromBytes(data)
+		if err != nil {
+			return nil, fmt.Errorf("world: decode DT1 %q: %w", path, err)
+		}
+		for _, tile := range tiles.Tiles {
+			key := tileKey{kind: tile.Type, style: tile.Style, sequence: tile.Sequence}
+			lookup[key] = append(lookup[key], tile)
+		}
+	}
+	result := &Map{
+		WidthTiles: int(stamp.Width), HeightTiles: int(stamp.Height), Act: int(stamp.Act),
+		WidthSubtiles: int(stamp.Width) * SubtilesPerTile, HeightSubtiles: int(stamp.Height) * SubtilesPerTile,
+	}
+	result.flags = make([]Flags, result.WidthSubtiles*result.HeightSubtiles)
+	for _, object := range stamp.Objects {
+		result.Objects = append(result.Objects, Object{Type: object.Type, ID: object.ID, X: object.X, Y: object.Y, Flags: object.Flags})
+	}
+	for tileY, row := range stamp.Tiles {
+		for tileX, record := range row {
+			for _, floor := range record.Floors {
+				if !floor.Hidden && floor.Prop1 != 0 {
+					result.apply(tileX, tileY, choose(lookup[tileKey{style: int32(floor.Style), sequence: int32(floor.Sequence)}], tileX, tileY))
+				}
+			}
+			for _, wall := range record.Walls {
+				if !wall.Hidden && wall.Prop1 != 0 {
+					result.apply(tileX, tileY, choose(lookup[tileKey{kind: int32(wall.Type), style: int32(wall.Style), sequence: int32(wall.Sequence)}], tileX, tileY))
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+func read(source fs.FS, name string) ([]byte, error) {
+	file, err := source.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("world: open %q: %w", name, err)
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("world: read %q: %w", name, err)
+	}
+	return data, nil
+}
+
+func choose(tiles []*dt1.Tile, x, y int) *dt1.Tile {
+	if len(tiles) == 0 {
+		return nil
+	}
+	weight := 0
+	for _, tile := range tiles {
+		weight += int(tile.RarityFrameIndex)
+	}
+	if weight <= 0 {
+		return tiles[0]
+	}
+	seed := uint64(x) * uint64(y)
+	seed ^= seed << 13
+	seed ^= seed >> 17
+	seed ^= seed << 5
+	random, sum := int(seed%uint64(weight)), 0
+	for _, tile := range tiles {
+		sum += int(tile.RarityFrameIndex)
+		if sum >= random {
+			return tile
+		}
+	}
+	return tiles[0]
+}
+
+func (m *Map) apply(tileX, tileY int, tile *dt1.Tile) {
+	if tile == nil {
+		return
+	}
+	for index, source := range tile.SubTileFlags {
+		x := tileX*SubtilesPerTile + index%SubtilesPerTile
+		y := tileY*SubtilesPerTile + index/SubtilesPerTile
+		if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
+			continue
+		}
+		target := &m.flags[y*m.WidthSubtiles+x]
+		target.BlockWalk = target.BlockWalk || source.BlockWalk
+		target.BlockLOS = target.BlockLOS || source.BlockLOS
+		target.BlockJump = target.BlockJump || source.BlockJump
+		target.BlockPlayerWalk = target.BlockPlayerWalk || source.BlockPlayerWalk
+		target.BlockLight = target.BlockLight || source.BlockLight
+	}
+}
+
+func (m *Map) FlagsAt(x, y int) (Flags, bool) {
+	if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
+		return Flags{}, false
+	}
+	return m.flags[y*m.WidthSubtiles+x], true
+}

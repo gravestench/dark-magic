@@ -32,7 +32,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
 		AppModule("test", func() {}),
-		VFSModule(contentFS), DataModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
+		VFSModule(contentFS), DataModule(contentFS), WorldModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), GameDataModule(staticGameData{snapshot: gamedata.Snapshot{}}), LocaleModule(localization.New(source, "English")),
 		LootModule(gamedata.New(recordstore.New(source))), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
@@ -42,6 +42,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.app/v1": {"request_exit", "version"},
 		"dm.vfs/v1": {"read", "read_text", "source"}, "dm.input/v1": {"down", "pressed", "released", "cursor", "text"},
 		"dm.data/v1":  {"load", "load_manifest"},
+		"dm.world/v1": {"load"},
 		"dm.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.video/v1":     {"available", "play"},
 		"dm.game_data/v1": {"character_class", "unique_titles"},

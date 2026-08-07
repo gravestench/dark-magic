@@ -602,7 +602,10 @@ implementations. The remaining work is tracked explicitly below.
 ## M20: World fidelity
 
 - [ ] Import DS1/DT1 collision, orientation, material, warp, object, shadow, roof,
-  and subtile flags into deterministic chunks and zones.
+  and subtile flags into deterministic chunks and zones. DS1 dimensions,
+  authored objects, and combined DT1 subtile collision flags now decode into a
+  renderer-independent immutable map exposed through `dm.world/v1`; remaining
+  orientation/material/warp/roof facts and chunk ownership are pending.
 - [ ] Implement entity-size-aware A* navigation, path smoothing, collision,
   interaction range, line of sight, and movement modes.
 - [ ] Implement deterministic preset, maze, outdoor, substitution, warp, object,

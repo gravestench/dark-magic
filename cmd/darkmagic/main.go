@@ -216,6 +216,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.DataModule(contentFS)); err != nil {
 		return err
 	}
+	if err := scripts.RegisterModule(modruntime.WorldModule(contentFS)); err != nil {
+		return err
+	}
 	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
 		return err
 	}
