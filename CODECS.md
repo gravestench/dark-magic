@@ -80,3 +80,12 @@ Magic's build contract.
 - The TSV codec is restored as Dark Magic's typed tabular format boundary. It
   remains on its historical pseudo-version pending malformed-input,
   concurrency, diagnostics, and tagged-release maintenance.
+
+## Historical reverse-engineering research
+
+Paul Siramy's Phrozen Keep-era documentation and tools are a priority source for
+the next DS1, DT1, DC6, and DCC pass. The maintained source index, evidence
+labels, and regression queue live in
+[`docs/research/paul-siramy.md`](docs/research/paul-siramy.md). Claims recovered
+from archived community material must be verified against legally supplied data
+or synthetic fixtures before they become codec or engine contracts.
