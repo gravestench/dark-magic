@@ -53,7 +53,7 @@ require (
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e
 	github.com/gravestench/wav v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
-	golang.org/x/image v0.0.0-20220302094943-723b81ca9867
+	golang.org/x/image v0.43.0
 )
 
 replace github.com/traefik/yaegi => github.com/switchupcb/yaegi v0.10.1-0.20220810033723-715142863099
