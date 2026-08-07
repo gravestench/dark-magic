@@ -13,6 +13,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/persistence"
@@ -38,7 +39,18 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	var mixer audio.Mixer
 	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	entitySimulation := gameecs.New()
-	defer entitySimulation.Close()
+	authority, err := gamesession.New(entitySimulation, gamesession.Config{Step: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Close()
+	if err := gamesession.RegisterMovement(authority); err != nil {
+		t.Fatal(err)
+	}
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player")
+	if err != nil {
+		t.Fatal(err)
+	}
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
 	defer loading.Close()
@@ -347,7 +359,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	before := beforeValue.(float64)
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	if err := entitySimulation.Update(time.Second); err != nil {
+	if _, err := authority.AdvanceWithSource(time.Second, movementSource.Commands); err != nil {
 		t.Fatal(err)
 	}
 	afterValue, err := position.Get("x")

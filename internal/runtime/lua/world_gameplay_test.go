@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -33,12 +34,23 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	})
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`local world=require("darkmagic.gameplay.world"); gameplay=world.create(100,80)`)
+		return state.DoString(`local world=require("darkmagic.gameplay.world"); gameplay=world.create(100,80,nil,"test-player")`)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	if err := engine.Update(500 * time.Millisecond); err != nil {
+	session, err := gamesession.New(engine, gamesession.Config{Step: 500 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gamesession.RegisterMovement(session); err != nil {
+		t.Fatal(err)
+	}
+	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.AdvanceWithSource(500*time.Millisecond, source.Commands); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
@@ -92,7 +104,7 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 		return state.DoString(`
 local world=require("darkmagic.gameplay.world")
 local collision={blocked=function(_,x,_) return x >= 60 end}
-gameplay=world.create(100,80,collision)
+gameplay=world.create(100,80,collision,"test-player")
 `)
 	}); err != nil {
 		t.Fatal(err)
@@ -101,7 +113,18 @@ gameplay=world.create(100,80,collision)
 		"right": {Down: true},
 		"down":  {Down: true},
 	}})
-	if err := engine.Update(time.Second); err != nil {
+	session, err := gamesession.New(engine, gamesession.Config{Step: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gamesession.RegisterMovement(session); err != nil {
+		t.Fatal(err)
+	}
+	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.AdvanceWithSource(time.Second, source.Commands); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {

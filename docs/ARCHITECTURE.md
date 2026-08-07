@@ -152,9 +152,11 @@ Executable-era relationships recovered by Riiablo live verbatim under
 remain separate capabilities responsible for resolving strings and assets.
 
 The production game-world scene defines hero position, velocity, bounds, player
-control, and camera-follow components in Lua through `dm.ecs/v1`. Its input,
-movement, and camera systems run on the fixed engine clock; the retained scene
-only reads component snapshots to update presentation nodes. The older
+control, and camera-follow components in Lua through `dm.ecs/v1`. Native input
+is normalized into one admitted `player.move` command per active fixed tick;
+the session-owned handler applies velocity before Lua movement, collision, and
+camera systems run. The retained scene only reads component snapshots to update
+presentation nodes. The older
 `dm.simulation/v1` adapter remains available to compatibility tests and shell
 examples but is no longer registered by the client.
 

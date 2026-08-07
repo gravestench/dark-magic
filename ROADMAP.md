@@ -1000,10 +1000,12 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Define transport-neutral replay commands and checkpoints, exact snapshot
   restoration, first-field desync diagnostics, and transactional authoritative
   command admission by tick, player sequence, kind, and payload policy.
-- [ ] Route actual gameplay input through admitted commands and recorded events
-  in the shared offline/dedicated session owner, then add listen-server mode and
-  verify exported client/server replays. Session stepping and diagnostics are
-  now composed in the offline client and standalone server.
+- [x] Route normalized player movement through one validated `player.move`
+  command per active fixed tick; apply velocity through the authoritative
+  session before Lua ECS movement/collision and retain it in replay logs.
+- [ ] Route skills, interactions, inventory, UI-confirmed gameplay actions, and
+  resulting events through admitted commands in the shared session; then add
+  listen-server mode and verify exported client/server replays.
 - [x] Distinguish player, administrator, and system command authority at handler
   registration; reject privilege escalation and retain executed privileged
   commands as a defensive, replay-correlated audit exposed by `dm.session/v1`.

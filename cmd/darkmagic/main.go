@@ -203,6 +203,13 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return fmt.Errorf("create offline game session: %w", err)
 	}
 	defer offlineSession.Close()
+	if err := gamesession.RegisterMovement(offlineSession); err != nil {
+		return fmt.Errorf("register offline movement commands: %w", err)
+	}
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player")
+	if err != nil {
+		return fmt.Errorf("create offline movement source: %w", err)
+	}
 	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {
 			if _, ok := saves.Selected(); !ok {
@@ -356,7 +363,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
-		if _, err := offlineSession.Advance(elapsed); err != nil {
+		if _, err := offlineSession.AdvanceWithSource(elapsed, movementSource.Commands); err != nil {
 			reportSceneError(fmt.Errorf("updating offline game session: %w", err))
 			return
 		}

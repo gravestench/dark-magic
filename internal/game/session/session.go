@@ -34,6 +34,8 @@ type CommandHandler struct {
 	Allowed  []simulation.Authority
 }
 
+type CommandSource func(nextTick uint64) []simulation.Command
+
 // Session serializes command admission, deterministic command ordering, ECS
 // updates, and replay recording behind one authority boundary.
 type Session struct {
@@ -67,6 +69,9 @@ func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	}
 	if config.MaxCatchUp <= 0 {
 		config.MaxCatchUp = gameecs.DefaultMaxCatchUp
+	}
+	if config.MaxCommandLead == 0 {
+		config.MaxCommandLead = 2
 	}
 	if config.CheckpointInterval == 0 {
 		config.CheckpointInterval = 25
@@ -106,6 +111,10 @@ func (session *Session) Register(kind string, handler CommandHandler) error {
 func (session *Session) Submit(command simulation.Command) error {
 	session.mu.Lock()
 	defer session.mu.Unlock()
+	return session.submitLocked(command)
+}
+
+func (session *Session) submitLocked(command simulation.Command) error {
 	if session.closed {
 		return ErrClosed
 	}
@@ -169,6 +178,12 @@ func (session *Session) stepLocked() error {
 
 // Advance converts elapsed host time into bounded fixed simulation steps.
 func (session *Session) Advance(elapsed time.Duration) (int, error) {
+	return session.AdvanceWithSource(elapsed, nil)
+}
+
+// AdvanceWithSource samples local authoritative inputs exactly once for every
+// fixed tick that will execute. Remotely submitted commands use Submit instead.
+func (session *Session) AdvanceWithSource(elapsed time.Duration, source CommandSource) (int, error) {
 	session.mu.Lock()
 	defer session.mu.Unlock()
 	if session.closed {
@@ -181,6 +196,13 @@ func (session *Session) Advance(elapsed time.Duration) (int, error) {
 	session.lag = min(session.lag+elapsed, maximumLag)
 	steps := 0
 	for session.lag >= session.config.Step {
+		if source != nil {
+			for _, command := range source(session.engine.Tick() + 1) {
+				if err := session.submitLocked(command); err != nil {
+					return steps, err
+				}
+			}
+		}
 		if err := session.stepLocked(); err != nil {
 			return steps, err
 		}

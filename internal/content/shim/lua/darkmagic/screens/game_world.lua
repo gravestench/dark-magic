@@ -62,7 +62,7 @@ return {
         self.town_music_available = audio.exists("data/global/music/Act1/town1.wav")
         local world_width = self.world_dimensions and self.world_dimensions.width_subtiles or 4096
         local world_height = self.world_dimensions and self.world_dimensions.height_subtiles or 4096
-        self.gameplay = self.gameplay_world.create(world_width, world_height, self.world)
+        self.gameplay = self.gameplay_world.create(world_width, world_height, self.world, "local-player")
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
         if self.world then
             camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)

@@ -3,7 +3,6 @@
 -- Coordinates are continuous DS1 subtiles. Presentation projects them through
 -- dm.world/v1, so collision and rendering never share ambiguous pixel values.
 local ecs = require("dm.ecs/v1")
-local input = require("dm.input/v1")
 
 local M = {}
 
@@ -22,7 +21,10 @@ local function define_components()
             { name = "y", type = "f64" },
         },
     })
-    ecs.component({ name = "dm.world.player_control", fields = {} })
+    ecs.component({
+        name = "dm.world.player_control",
+        fields = {{ name = "player", type = "string" }},
+    })
     ecs.component({
         name = "dm.world.bounds",
         fields = {
@@ -40,12 +42,13 @@ local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
 end
 
-function M.create(width, height, collision)
+function M.create(width, height, collision, player)
     define_components()
+    player = player or "local-player"
     local hero = ecs.create({
         ["dm.world.position"] = { x = width / 2, y = height / 2 },
         ["dm.world.velocity"] = {},
-        ["dm.world.player_control"] = {},
+        ["dm.world.player_control"] = { player = player },
         ["dm.world.bounds"] = { width = width, height = height },
     })
     local camera = ecs.create({
@@ -53,24 +56,6 @@ function M.create(width, height, collision)
         ["dm.world.camera_follow"] = { target = hero },
     })
 
-    ecs.system({
-        id = "darkmagic.world.player_intent",
-        phase = "input",
-        query = { all = { "dm.world.player_control", "dm.world.velocity" } },
-        write = { "dm.world.velocity" },
-        update = function(_, entities)
-            for _, entity in ipairs(entities) do
-                local velocity = ecs.get(entity, "dm.world.velocity")
-                local x, y = 0, 0
-                if input.down("left") then x = x - 10 end
-                if input.down("right") then x = x + 10 end
-                if input.down("up") then y = y - 10 end
-                if input.down("down") then y = y + 10 end
-                velocity:set("x", x)
-                velocity:set("y", y)
-            end
-        end,
-    })
     ecs.system({
         id = "darkmagic.world.integrate",
         phase = "movement",
