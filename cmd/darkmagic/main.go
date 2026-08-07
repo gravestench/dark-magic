@@ -30,6 +30,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -196,7 +197,12 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		}
 	}
 	entitySimulation := gameecs.New()
-	defer entitySimulation.Close()
+	offlineSession, err := gamesession.New(entitySimulation, gamesession.Config{})
+	if err != nil {
+		_ = entitySimulation.Close()
+		return fmt.Errorf("create offline game session: %w", err)
+	}
+	defer offlineSession.Close()
 	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {
 			if _, ok := saves.Selected(); !ok {
@@ -350,8 +356,8 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
-		if _, err := entitySimulation.Advance(elapsed); err != nil {
-			reportSceneError(fmt.Errorf("updating entity simulation: %w", err))
+		if _, err := offlineSession.Advance(elapsed); err != nil {
+			reportSceneError(fmt.Errorf("updating offline game session: %w", err))
 			return
 		}
 		if err := scenes.Update(frameContext, elapsed); err != nil {

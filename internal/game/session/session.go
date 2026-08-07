@@ -49,6 +49,13 @@ type Session struct {
 	closed      bool
 }
 
+type Status struct {
+	Tick        uint64
+	Pending     int
+	Commands    int
+	Checkpoints int
+}
+
 func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	if engine == nil {
 		return nil, fmt.Errorf("%w: nil engine", ErrHandler)
@@ -238,6 +245,17 @@ func (session *Session) Replay() (simulation.Replay, error) {
 		}
 	}
 	return simulation.Replay{Version: simulation.ReplayVersion, StepNanos: int64(session.config.Step), Initial: initial, Commands: commands, Checkpoints: checkpoints}, nil
+}
+
+// Status returns a compact observational snapshot for administration surfaces.
+func (session *Session) Status() Status {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	pending := 0
+	for _, commands := range session.pending {
+		pending += len(commands)
+	}
+	return Status{Tick: session.engine.Tick(), Pending: pending, Commands: len(session.commands), Checkpoints: len(session.checkpoints)}
 }
 
 func cloneSnapshot(snapshot gameecs.Snapshot) (gameecs.Snapshot, error) {

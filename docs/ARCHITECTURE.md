@@ -123,8 +123,9 @@ startup and shutdown. Keep this file as wiring: capability behavior belongs in
 the package that owns it.
 
 Each frame begins at the Raylib renderer owner thread. Native input is translated
-through `internal/platform/raylib/input`, the deterministic ECS advances through
-`internal/game/ecs`, Lua scene updates run through `internal/runtime/lua`, and retained presentation commands cross
+through `internal/platform/raylib/input`; the transport-neutral authoritative
+owner in `internal/game/session` advances `internal/game/ecs`; Lua scene updates
+run through `internal/runtime/lua`; and retained presentation commands cross
 `internal/presentation/render` before `internal/platform/raylib/renderer` executes them. Game rules
 must remain usable without this native frame loop.
 

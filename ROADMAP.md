@@ -649,14 +649,17 @@ implementations. The remaining work is tracked explicitly below.
   replay verification, and first-field desync diagnostics.
 - [ ] Add bounded, versioned on-disk replay containers and migration policy for
   manifests, initial snapshots, admitted commands, events, and checkpoints.
-- [ ] Add a first-class `cmd` client for offline single-player, self-hosted
-  listen/dedicated multiplayer, and realm-connected games.
+- [x] Keep `cmd/darkmagic` as the first-class client composition root and move
+  its offline fixed-step ECS advancement behind the shared authoritative
+  session owner without coupling that owner to Raylib or Lua.
 - [ ] Run one authoritative deterministic game-session implementation in-process,
   as a listen server, as a standalone self-hosted server, or under a realm.
   The `cmd/darkmagic-server` composition root and shared administration shell
   now exist. `internal/game/session` now owns transport-independent admission,
   fixed stepping, canonical command ordering, checkpointing, and replay export;
-  product-mode composition remains.
+  the client uses it for offline stepping and the standalone server owns its
+  timed lifecycle plus read-only `dm.session/v1` diagnostics. Listen-server,
+  realm orchestration, gameplay-system composition, and transports remain.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
 - [ ] Preserve offline characters safely and separate trusted server characters
@@ -997,8 +1000,10 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Define transport-neutral replay commands and checkpoints, exact snapshot
   restoration, first-field desync diagnostics, and transactional authoritative
   command admission by tick, player sequence, kind, and payload policy.
-- [ ] Wire admitted command/event logs and replay verification into the shared
-  offline, listen-server, and dedicated game-session host.
+- [ ] Route actual gameplay input through admitted commands and recorded events
+  in the shared offline/dedicated session owner, then add listen-server mode and
+  verify exported client/server replays. Session stepping and diagnostics are
+  now composed in the offline client and standalone server.
 
 ## M30: Deferred shell ergonomics
 

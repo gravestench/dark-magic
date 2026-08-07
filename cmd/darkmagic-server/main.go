@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -11,7 +12,10 @@ import (
 	"syscall"
 
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/logging"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
@@ -25,8 +29,25 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	engine := gameecs.New()
+	authority, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		_ = engine.Close()
+		slog.Error("creating authoritative session", "error", err)
+		return
+	}
+	defer authority.Close()
+	sessionContext, stopSession := context.WithCancel(ctx)
+	sessionErrors := make(chan error, 1)
+	go func() { sessionErrors <- authority.Run(sessionContext) }()
 	policy := shell.Policy{Name: "local-server-admin", Mutable: true}
-	if err := headlessshell.Run(ctx, "server", policy, level, os.Stdin, os.Stdout); err != nil {
+	shellErr := headlessshell.Run(ctx, "server", policy, level, os.Stdin, os.Stdout, modruntime.SessionModule(authority))
+	stopSession()
+	sessionErr := <-sessionErrors
+	if errors.Is(sessionErr, context.Canceled) {
+		sessionErr = nil
+	}
+	if err := errors.Join(shellErr, sessionErr); err != nil {
 		slog.Error("running standalone server", "error", err)
 		os.Exit(1)
 	}

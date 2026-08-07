@@ -19,7 +19,7 @@ import (
 )
 
 // Run starts a renderer-free Lua runtime and its modal Charm administration UI.
-func Run(ctx context.Context, target string, policy shell.Policy, level slog.Level, input io.Reader, output io.Writer) error {
+func Run(ctx context.Context, target string, policy shell.Policy, level slog.Level, input io.Reader, output io.Writer, modules ...modruntime.Module) error {
 	logs := shell.NewLogBuffer(1000)
 	handler := logging.NewObserverHandler(&slog.HandlerOptions{Level: level}, func(record logging.Record) {
 		logs.Append(shell.LogEntry{
@@ -31,6 +31,12 @@ func Run(ctx context.Context, target string, policy shell.Policy, level slog.Lev
 	defer slog.SetDefault(previous)
 
 	runtime := modruntime.New()
+	for _, module := range modules {
+		if err := runtime.RegisterModule(module); err != nil {
+			return err
+		}
+		policy.Capabilities = append(policy.Capabilities, module.Name)
+	}
 	settingsPath, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
 	if err != nil {
 		return err
