@@ -29,13 +29,16 @@ func TestSessionModuleReportsStatusAndReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`local s=require("dm.session/v1"); local v=s.status(); tick=v.tick; replay=s.replay()`)
+		return state.DoString(`local s=require("dm.session/v1"); local v=s.status(); tick=v.tick; privileged=v.privileged_commands; replay=s.replay(); audit=s.audit()`)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		if state.GetGlobal("tick") != lua.LNumber(1) {
 			t.Fatalf("tick = %s", state.GetGlobal("tick"))
+		}
+		if state.GetGlobal("privileged") != lua.LNumber(0) || state.GetGlobal("audit") != lua.LString("[]") {
+			t.Fatalf("audit = %s / %s", state.GetGlobal("privileged"), state.GetGlobal("audit"))
 		}
 		if replay := state.GetGlobal("replay").String(); !strings.Contains(replay, `"version":1`) || !strings.Contains(replay, `"tick":1`) {
 			t.Fatalf("replay = %s", replay)

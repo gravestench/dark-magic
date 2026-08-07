@@ -1004,6 +1004,12 @@ implementations. The remaining work is tracked explicitly below.
   in the shared offline/dedicated session owner, then add listen-server mode and
   verify exported client/server replays. Session stepping and diagnostics are
   now composed in the offline client and standalone server.
+- [x] Distinguish player, administrator, and system command authority at handler
+  registration; reject privilege escalation and retain executed privileged
+  commands as a defensive, replay-correlated audit exposed by `dm.session/v1`.
+- [ ] Add explicit audited administrator handlers for item/loot, monster, world,
+  character, and session operations as their authoritative ECS archetypes and
+  validation rules become available; never add arbitrary component mutation.
 
 ## M30: Deferred shell ergonomics
 

@@ -47,3 +47,26 @@ func TestAdmitterEnforcesAuthorityBoundaryTransactionally(t *testing.T) {
 		t.Fatalf("backward player tick error = %v", err)
 	}
 }
+
+func TestAdmitterRequiresHandlerGrantedAdministrativeAuthority(t *testing.T) {
+	admitter := NewAdmitter(1)
+	if err := admitter.Register("move", func(Command) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := admitter.RegisterAuthorities("admin.spawn_item", func(Command) error { return nil }, AuthorityAdmin, AuthoritySystem); err != nil {
+		t.Fatal(err)
+	}
+	admin := Command{Tick: 1, Player: "operator-1", Authority: AuthorityAdmin, Sequence: 1, Payload: []byte(`{}`)}
+	admin.Kind = "move"
+	if err := admitter.Admit(admin, 0); !errors.Is(err, ErrCommandAuthority) {
+		t.Fatalf("admin player-command error = %v", err)
+	}
+	admin.Kind = "admin.spawn_item"
+	if err := admitter.Admit(admin, 0); err != nil {
+		t.Fatal(err)
+	}
+	player := Command{Tick: 1, Player: "player-1", Authority: AuthorityPlayer, Sequence: 1, Kind: "admin.spawn_item", Payload: []byte(`{}`)}
+	if err := admitter.Admit(player, 0); !errors.Is(err, ErrCommandAuthority) {
+		t.Fatalf("player admin-command error = %v", err)
+	}
+}

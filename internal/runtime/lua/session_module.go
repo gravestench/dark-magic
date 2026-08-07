@@ -11,16 +11,27 @@ import (
 // does not admit commands or expose the Akara world to administration scripts.
 func SessionModule(session *gamesession.Session) Module {
 	return Module{Name: "dm.session/v1", Help: documentedModule("Inspect the authoritative game session and export its deterministic replay.", map[string]CommandHelp{
+		"audit":  commandHelp("dm.session.audit()", "Return accepted administrator and system commands as a JSON audit record."),
 		"status": commandHelp("dm.session.status()", "Return the current tick and recorded/pending command and checkpoint counts."),
 		"replay": commandHelp("dm.session.replay()", "Return the current versioned replay as a JSON string."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"audit": func(state *lua.LState) int {
+				encoded, err := json.Marshal(session.Audit())
+				if err != nil {
+					state.RaiseError("encode session audit: %v", err)
+					return 0
+				}
+				state.Push(lua.LString(encoded))
+				return 1
+			},
 			"status": func(state *lua.LState) int {
 				status := session.Status()
 				result := state.NewTable()
 				result.RawSetString("tick", lua.LNumber(status.Tick))
 				result.RawSetString("pending_commands", lua.LNumber(status.Pending))
 				result.RawSetString("recorded_commands", lua.LNumber(status.Commands))
+				result.RawSetString("privileged_commands", lua.LNumber(status.Privileged))
 				result.RawSetString("checkpoints", lua.LNumber(status.Checkpoints))
 				state.Push(result)
 				return 1

@@ -31,6 +31,7 @@ type Config struct {
 type CommandHandler struct {
 	Validate simulation.CommandValidator
 	Apply    func(*gameecs.Engine, simulation.Command) error
+	Allowed  []simulation.Authority
 }
 
 // Session serializes command admission, deterministic command ordering, ECS
@@ -53,6 +54,7 @@ type Status struct {
 	Tick        uint64
 	Pending     int
 	Commands    int
+	Privileged  int
 	Checkpoints int
 }
 
@@ -88,7 +90,11 @@ func (session *Session) Register(kind string, handler CommandHandler) error {
 	if session.closed {
 		return ErrClosed
 	}
-	if err := session.admitter.Register(kind, handler.Validate); err != nil {
+	allowed := handler.Allowed
+	if len(allowed) == 0 {
+		allowed = []simulation.Authority{simulation.AuthorityPlayer}
+	}
+	if err := session.admitter.RegisterAuthorities(kind, handler.Validate, allowed...); err != nil {
 		return err
 	}
 	session.handlers[kind] = handler
@@ -105,6 +111,9 @@ func (session *Session) Submit(command simulation.Command) error {
 	}
 	command.Player = strings.TrimSpace(command.Player)
 	command.Kind = strings.TrimSpace(command.Kind)
+	if command.Authority == "" {
+		command.Authority = simulation.AuthorityPlayer
+	}
 	currentTick := session.engine.Tick()
 	if command.Tick <= currentTick {
 		return fmt.Errorf("%w: current=%d command=%d", simulation.ErrCommandTick, currentTick, command.Tick)
@@ -255,7 +264,28 @@ func (session *Session) Status() Status {
 	for _, commands := range session.pending {
 		pending += len(commands)
 	}
-	return Status{Tick: session.engine.Tick(), Pending: pending, Commands: len(session.commands), Checkpoints: len(session.checkpoints)}
+	privileged := 0
+	for _, command := range session.commands {
+		if command.Authority == simulation.AuthorityAdmin || command.Authority == simulation.AuthoritySystem {
+			privileged++
+		}
+	}
+	return Status{Tick: session.engine.Tick(), Pending: pending, Commands: len(session.commands), Privileged: privileged, Checkpoints: len(session.checkpoints)}
+}
+
+// Audit returns accepted privileged commands in canonical execution order.
+func (session *Session) Audit() []simulation.Command {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	result := make([]simulation.Command, 0)
+	for _, command := range session.commands {
+		if command.Authority != simulation.AuthorityAdmin && command.Authority != simulation.AuthoritySystem {
+			continue
+		}
+		command.Payload = append([]byte(nil), command.Payload...)
+		result = append(result, command)
+	}
+	return result
 }
 
 func cloneSnapshot(snapshot gameecs.Snapshot) (gameecs.Snapshot, error) {

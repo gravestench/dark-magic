@@ -138,6 +138,13 @@ does not import Lua or Dark Magic. Lua may mutate declared component fields
 immediately, while entity creation and component add/remove operations are
 deferred until the current system barrier.
 
+The shared game-session owner admits commands by stable actor identity, target
+tick, per-actor sequence, declared authority class, kind, and payload policy.
+Player, administrator, and system authority must be granted by each trusted
+handler. Administrative Lua may inspect replay and audit records, but concrete
+privileged mutations must remain explicit handlers; no generic ECS mutation
+backdoor is part of the administration contract.
+
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The
 `internal/game/data/recovered` catalog validates and normalizes those files;
