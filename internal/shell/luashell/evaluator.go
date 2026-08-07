@@ -28,6 +28,7 @@ type Evaluator struct {
 	registered []string
 	allowed    map[string]struct{}
 	aliases    map[string]string
+	help       map[string]modruntime.ModuleHelp
 	mutable    bool
 }
 
@@ -69,6 +70,7 @@ func newEvaluator(runtime *modruntime.Runtime, registered, modules []string, mut
 	return &Evaluator{
 		runtime: runtime, scope: &modruntime.Scope{}, modules: modules, registered: registered,
 		allowed: allowed, aliases: aliases, mutable: mutable,
+		help: runtime.ModuleHelp(),
 	}, nil
 }
 
@@ -197,12 +199,16 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 		aliases = append(aliases, alias)
 	}
 	sort.Strings(aliases)
-	help := "Dark Magic shell root\n  dm.<capability>       lazy friendly module access\n  dm.modules[<id>]      exact versioned module access\n  dm.require(<id>)      policy-checked require\n  dm.capabilities()     permitted module IDs"
+	help := "Dark Magic shell root\n  dm.<capability>       lazy friendly module access\n  dm.modules[<id>]      exact versioned module access\n  dm.require(<id>)      policy-checked require\n  dm.capabilities()     permitted module IDs\n  dm.help([value])      help for a module or command"
 	if len(aliases) > 0 {
 		help += "\nAvailable aliases: " + strings.Join(aliases, ", ")
 	}
 	root.RawSetString("help", state.NewFunction(func(current *glua.LState) int {
-		current.Push(glua.LString(help))
+		if current.GetTop() == 0 {
+			current.Push(glua.LString(help))
+			return 1
+		}
+		current.Push(glua.LString(e.helpFor(current, current.Get(1))))
 		return 1
 	}))
 	lazyIndex := func(aliasLookup bool) *glua.LFunction {
@@ -232,6 +238,136 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 	state.SetMetatable(modules, moduleMeta)
 	environment.RawSetString("dm", root)
 	environment.RawSetString("darkmagic", root)
+}
+
+func (e *Evaluator) helpFor(state *glua.LState, value glua.LValue) string {
+	if text, ok := value.(glua.LString); ok {
+		module, command := e.helpPath(string(text))
+		if module == "" {
+			return fmt.Sprintf("No permitted Dark Magic API matches %q.", text)
+		}
+		e.requireModule(state, module)
+		value = state.Get(-1)
+		state.Pop(1)
+		if command != "" {
+			return e.formatCommandHelp(module, command)
+		}
+		return e.formatModuleHelp(module, value)
+	}
+	packageTable, _ := state.GetGlobal("package").(*glua.LTable)
+	loaded, _ := packageTable.RawGetString("loaded").(*glua.LTable)
+	if loaded != nil {
+		for _, module := range e.modules {
+			moduleValue := loaded.RawGetString(module)
+			if moduleValue == value {
+				return e.formatModuleHelp(module, moduleValue)
+			}
+			if table, ok := moduleValue.(*glua.LTable); ok {
+				matched := ""
+				table.ForEach(func(key, member glua.LValue) {
+					if member == value {
+						matched = key.String()
+					}
+				})
+				if matched != "" {
+					return e.formatCommandHelp(module, matched)
+				}
+			}
+		}
+	}
+	return "No help metadata is available for that value. Pass a path such as \"dm.audio.play\"."
+}
+
+func (e *Evaluator) helpPath(path string) (string, string) {
+	path = strings.TrimSpace(path)
+	if _, ok := e.allowed[path]; ok {
+		return path, ""
+	}
+	path = strings.TrimPrefix(path, "darkmagic.")
+	path = strings.TrimPrefix(path, "dm.")
+	parts := strings.SplitN(path, ".", 2)
+	module, ok := e.aliases[parts[0]]
+	if !ok {
+		return "", ""
+	}
+	if len(parts) == 2 {
+		return module, parts[1]
+	}
+	return module, ""
+}
+
+func (e *Evaluator) formatModuleHelp(module string, value glua.LValue) string {
+	doc := e.help[module]
+	alias := moduleAlias(module)
+	summary := doc.Summary
+	if summary == "" {
+		summary = "Dark Magic Lua capability."
+	}
+	commands := make(map[string]struct{}, len(doc.Commands))
+	for name := range doc.Commands {
+		commands[name] = struct{}{}
+	}
+	if table, ok := value.(*glua.LTable); ok {
+		table.ForEach(func(key, member glua.LValue) {
+			if _, ok := member.(*glua.LFunction); ok {
+				commands[key.String()] = struct{}{}
+			}
+		})
+	}
+	names := make([]string, 0, len(commands))
+	for name := range commands {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var output strings.Builder
+	fmt.Fprintf(&output, "dm.%s (%s)\n%s", alias, module, summary)
+	if len(names) > 0 {
+		output.WriteString("\n\nCommands:")
+		for _, name := range names {
+			command := doc.Commands[name]
+			description := command.Summary
+			if description == "" {
+				description = "Lua command provided by " + module + "."
+			}
+			fmt.Fprintf(&output, "\n  %-24s %s", name, description)
+		}
+	}
+	return output.String()
+}
+
+func (e *Evaluator) formatCommandHelp(module, name string) string {
+	doc := e.help[module].Commands[name]
+	path := "dm." + moduleAlias(module) + "." + name
+	usage := doc.Usage
+	if usage == "" {
+		usage = path + "(...)"
+	}
+	summary := doc.Summary
+	if summary == "" {
+		summary = "Lua command provided by " + module + "."
+	}
+	var output strings.Builder
+	fmt.Fprintf(&output, "%s\n\n%s", usage, summary)
+	if len(doc.Parameters) > 0 {
+		output.WriteString("\n\nParameters:")
+		for _, parameter := range doc.Parameters {
+			optional := ""
+			if parameter.Optional {
+				optional = " (optional)"
+			}
+			fmt.Fprintf(&output, "\n  %s  %s%s  %s", parameter.Name, parameter.Type, optional, parameter.Description)
+		}
+	}
+	if len(doc.Returns) > 0 {
+		output.WriteString("\n\nReturns:")
+		for _, result := range doc.Returns {
+			fmt.Fprintf(&output, "\n  %s  %s  %s", result.Name, result.Type, result.Description)
+		}
+	}
+	if len(doc.Examples) > 0 {
+		output.WriteString("\n\nExamples:\n  " + strings.Join(doc.Examples, "\n  "))
+	}
+	return output.String()
 }
 
 func moduleAlias(module string) string {
@@ -308,11 +444,36 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 			base, member := token[:dot], token[dot+1:]
 			if base == "dm" || base == "darkmagic" {
 				seen = make(map[string]string)
-				for alias := range e.aliases {
-					seen[base+"."+alias] = "Dark Magic capability"
+				for alias, module := range e.aliases {
+					detail := e.help[module].Summary
+					if detail == "" {
+						detail = "Dark Magic capability"
+					}
+					seen[base+"."+alias] = detail
 				}
 				for _, helper := range []string{"help", "capabilities", "require", "modules"} {
 					seen[base+"."+helper] = "Dark Magic helper"
+				}
+				token = base + "." + member
+			} else if module, ok := e.completionModule(base); ok {
+				seen = make(map[string]string)
+				for name, command := range e.help[module].Commands {
+					detail := command.Summary
+					if detail == "" {
+						detail = "Lua command"
+					}
+					seen[base+"."+name] = detail
+				}
+				if table := rawPathTable(environment, strings.Split(base, ".")); table != nil {
+					table.ForEach(func(key, value glua.LValue) {
+						if _, ok := value.(*glua.LFunction); !ok {
+							return
+						}
+						name := key.String()
+						if _, exists := seen[base+"."+name]; !exists {
+							seen[base+"."+name] = "Lua command"
+						}
+					})
 				}
 				token = base + "." + member
 			} else if table, detail := rawMemberTable(state, environment.RawGetString(base), state.GetGlobal(base)); table != nil {
@@ -330,6 +491,26 @@ func (e *Evaluator) Complete(ctx context.Context, source string) ([]shell.Candid
 		return nil
 	})
 	return result, err
+}
+
+func (e *Evaluator) completionModule(base string) (string, bool) {
+	base = strings.TrimPrefix(base, "darkmagic.")
+	base = strings.TrimPrefix(base, "dm.")
+	module, ok := e.aliases[base]
+	return module, ok
+}
+
+func rawPathTable(root *glua.LTable, path []string) *glua.LTable {
+	var value glua.LValue = root
+	for _, segment := range path {
+		table, ok := value.(*glua.LTable)
+		if !ok {
+			return nil
+		}
+		value = table.RawGetString(segment)
+	}
+	table, _ := value.(*glua.LTable)
+	return table
 }
 
 func (e *Evaluator) Close() error { return e.scope.Close() }

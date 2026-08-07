@@ -17,6 +17,7 @@ import (
 type Module struct {
 	Name   string
 	Loader lua.LGFunction
+	Help   ModuleHelp
 }
 
 // Installer configures the Lua state before boot code runs, for behavior such
@@ -97,6 +98,17 @@ func (r *Runtime) ModuleNames() []string {
 	return names
 }
 
+// ModuleHelp returns an immutable snapshot of the registered Lua API metadata.
+func (r *Runtime) ModuleHelp() map[string]ModuleHelp {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make(map[string]ModuleHelp, len(r.modules))
+	for _, module := range r.modules {
+		result[module.Name] = cloneModuleHelp(module.Help)
+	}
+	return result
+}
+
 func (r *Runtime) requireActiveScope() (*Scope, error) {
 	if r.activeScope == nil {
 		return nil, errors.New("modruntime: capability requires an active component scope")
@@ -137,6 +149,7 @@ func (r *Runtime) RegisterModule(module Module) error {
 			return fmt.Errorf("modruntime: module %q is already registered", module.Name)
 		}
 	}
+	module.Help = cloneModuleHelp(module.Help)
 	r.modules = append(r.modules, module)
 	return nil
 }

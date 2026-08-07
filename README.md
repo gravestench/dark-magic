@@ -76,6 +76,11 @@ opens with a target- and policy-specific message of the day. The `dm` root
 (`darkmagic` is an alias) provides discoverable, policy-filtered capability
 access: use `dm.help()` and `dm.capabilities()`, friendly names such as
 `dm.app`, or `dm.modules["dm.app/v1"]` for an exact versioned module ID.
+Pass a module, command, or path to help for progressively more detail—for
+example `dm.help(dm.audio)`, `dm.help(dm.audio.play)`, or
+`dm.help("dm.audio.play")`. Lua module registrations own the summaries, usage,
+parameters, returns, and examples used by both help and completion. Existing
+commands without authored metadata are still listed with fallback help.
 
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 

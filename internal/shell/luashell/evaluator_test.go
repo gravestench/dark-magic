@@ -95,9 +95,22 @@ func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 
 func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
 	runtime := modruntime.New()
-	if err := runtime.RegisterModule(modruntime.Module{Name: "dm.demo/v1", Loader: func(state *glua.LState) int {
+	if err := runtime.RegisterModule(modruntime.Module{Name: "dm.demo/v1", Help: modruntime.ModuleHelp{
+		Summary: "Demonstrates documented shell APIs.",
+		Commands: map[string]modruntime.CommandHelp{"greet": {
+			Summary: "Greet a named adventurer.", Usage: "dm.demo.greet(name)",
+			Parameters: []modruntime.ParameterHelp{{Name: "name", Type: "string", Description: "Adventurer name."}},
+			Returns:    []modruntime.ReturnHelp{{Name: "greeting", Type: "string", Description: "Friendly greeting."}},
+			Examples:   []string{`dm.demo.greet("Deckard")`},
+		}},
+	}, Loader: func(state *glua.LState) int {
 		module := state.NewTable()
 		module.RawSetString("name", glua.LString("demo"))
+		module.RawSetString("greet", state.NewFunction(func(current *glua.LState) int {
+			current.Push(glua.LString("Hello, " + current.CheckString(1)))
+			return 1
+		}))
+		module.RawSetString("undocumented", state.NewFunction(func(*glua.LState) int { return 0 }))
 		state.Push(module)
 		return 1
 	}}); err != nil {
@@ -124,8 +137,24 @@ func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
 	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help()`); evaluateErr != nil || !strings.Contains(result.Text, "demo") {
 		t.Fatalf("help = %#v, %v", result, evaluateErr)
 	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help(dm.demo)`); evaluateErr != nil || !strings.Contains(result.Text, "greet") || !strings.Contains(result.Text, "undocumented") || !strings.Contains(result.Text, "documented shell APIs") {
+		t.Fatalf("module help = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help(dm.demo.greet)`); evaluateErr != nil || !strings.Contains(result.Text, "dm.demo.greet(name)") || !strings.Contains(result.Text, "Adventurer name") {
+		t.Fatalf("command help = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help("dm.demo.greet")`); evaluateErr != nil || !strings.Contains(result.Text, "Friendly greeting") {
+		t.Fatalf("string command help = %#v, %v", result, evaluateErr)
+	}
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `dm.help("dm.demo.undocumented")`); evaluateErr != nil || !strings.Contains(result.Text, "Lua command provided by dm.demo/v1") {
+		t.Fatalf("fallback command help = %#v, %v", result, evaluateErr)
+	}
 	candidates, err := evaluator.Complete(context.Background(), "dm.de")
-	if err != nil || len(candidates) != 1 || candidates[0].Value != "dm.demo" {
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "dm.demo" || candidates[0].Detail != "Demonstrates documented shell APIs." {
 		t.Fatalf("completion = %#v, %v", candidates, err)
+	}
+	candidates, err = evaluator.Complete(context.Background(), "dm.demo.gr")
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "dm.demo.greet" || candidates[0].Detail != "Greet a named adventurer." {
+		t.Fatalf("command completion = %#v, %v", candidates, err)
 	}
 }

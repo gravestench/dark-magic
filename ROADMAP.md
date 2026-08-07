@@ -533,7 +533,10 @@ implementations. The remaining work is tracked explicitly below.
   and independent paged log scrollback. Each Lua view begins with a shared,
   target-aware MOTD, and exposes the policy-filtered `dm`/`darkmagic` root with
   friendly lazy capability aliases, help, discovery, and exact versioned module
-  access.
+  access. Versioned module registrations now own structured module and command
+  help (usage, parameters, returns, and examples); `dm.help` accepts module or
+  command values and string paths, while legacy commands receive generated
+  fallback documentation.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never
