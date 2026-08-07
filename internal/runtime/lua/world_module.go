@@ -12,7 +12,7 @@ const worldMapType = "dm.world.map/v1"
 // WorldModule decodes immutable world facts from mounted DS1 and DT1 assets.
 // Rendering remains a separate capability so headless servers can use the same
 // authored collision and object data as clients.
-func WorldModule(source fs.FS) Module {
+func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 	return Module{Name: "dm.world/v1", Help: documentedModule("Decode immutable gameplay facts from authored world assets.", map[string]CommandHelp{
 		"load": commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
@@ -35,7 +35,7 @@ func WorldModule(source fs.FS) Module {
 					}
 					tilePaths = append(tilePaths, string(value))
 				}
-				decoded, err := gameworld.Load(source, stampPath, tilePaths)
+				decoded, err := gameworld.Load(source, stampPath, tilePaths, resolvers...)
 				if err != nil {
 					return pushLuaError(state, err)
 				}
@@ -90,6 +90,10 @@ func registerWorldMapType(state *lua.LState) {
 				setLuaInteger(item, "x", int(object.X))
 				setLuaInteger(item, "y", int(object.Y))
 				setLuaInteger(item, "flags", int(object.Flags))
+				if object.Resolved {
+					setLuaInteger(item, "object_id", object.ObjectID)
+					item.RawSetString("description", lua.LString(object.Description))
+				}
 				result.Append(item)
 			}
 			state.Push(result)

@@ -132,6 +132,17 @@ func (catalog *Catalog) Snapshot() (Snapshot, error) {
 	return clone(catalog.data), nil
 }
 
+// ResolveMapObject joins one act-local DS1 object ID to its global Objects.txt
+// identity. It satisfies the world decoder's narrow resolver contract.
+func (catalog *Catalog) ResolveMapObject(act, id int) (int, string, bool) {
+	snapshot, err := catalog.Snapshot()
+	if err != nil {
+		return 0, "", false
+	}
+	entry, found := snapshot.MapObjectByActID[mapObjectKey(act, id)]
+	return entry.ObjectID, entry.Description, found
+}
+
 func load(source fs.FS) (Snapshot, error) {
 	questsFile, err := source.Open(QuestsPath)
 	if err != nil {

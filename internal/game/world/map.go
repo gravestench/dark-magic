@@ -13,6 +13,11 @@ import (
 
 const SubtilesPerTile = 5
 
+const (
+	ObjectTypeDynamic int32 = 1
+	ObjectTypeStatic  int32 = 2
+)
+
 type Flags struct {
 	BlockWalk, BlockLOS, BlockJump, BlockPlayerWalk, BlockLight bool
 }
@@ -24,6 +29,13 @@ func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
 
 type Object struct {
 	Type, ID, X, Y, Flags int32
+	ObjectID              int
+	Description           string
+	Resolved              bool
+}
+
+type ObjectResolver interface {
+	ResolveMapObject(act, id int) (objectID int, description string, found bool)
 }
 
 type Map struct {
@@ -36,7 +48,7 @@ type Map struct {
 
 type tileKey struct{ kind, style, sequence int32 }
 
-func Load(source fs.FS, stampPath string, tilePaths []string) (*Map, error) {
+func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
 	data, err := read(source, stampPath)
 	if err != nil {
 		return nil, err
@@ -65,8 +77,13 @@ func Load(source fs.FS, stampPath string, tilePaths []string) (*Map, error) {
 		WidthSubtiles: int(stamp.Width) * SubtilesPerTile, HeightSubtiles: int(stamp.Height) * SubtilesPerTile,
 	}
 	result.flags = make([]Flags, result.WidthSubtiles*result.HeightSubtiles)
+	var resolver ObjectResolver
+	if len(resolvers) > 0 {
+		resolver = resolvers[0]
+	}
 	for _, object := range stamp.Objects {
-		result.Objects = append(result.Objects, Object{Type: object.Type, ID: object.ID, X: object.X, Y: object.Y, Flags: object.Flags})
+		decoded := resolveObject(result.Act, object.Type, object.ID, object.X, object.Y, object.Flags, resolver)
+		result.Objects = append(result.Objects, decoded)
 	}
 	for tileY, row := range stamp.Tiles {
 		for tileX, record := range row {
@@ -83,6 +100,14 @@ func Load(source fs.FS, stampPath string, tilePaths []string) (*Map, error) {
 		}
 	}
 	return result, nil
+}
+
+func resolveObject(act int, objectType, id, x, y, flags int32, resolver ObjectResolver) Object {
+	result := Object{Type: objectType, ID: id, X: x, Y: y, Flags: flags}
+	if objectType == ObjectTypeStatic && resolver != nil {
+		result.ObjectID, result.Description, result.Resolved = resolver.ResolveMapObject(act, int(id))
+	}
+	return result
 }
 
 func read(source fs.FS, name string) ([]byte, error) {

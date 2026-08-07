@@ -13,6 +13,11 @@ original bytes and provenance under `internal/content/shim/data/recovered`.
 | `assets/data/ds1types.txt` | DS1 definition ID to descriptive name and level type | `dm.map_catalog/v1` |
 | `assets/data/obj.txt` | Act-local DS1 object ID to global `Objects.txt` ID | `dm.map_catalog/v1` |
 
+DS1 object type `2` is static and uses `obj.txt`; type `1` is dynamic and uses
+the mounted `MonPreset.txt` act-local ordering. Dark Magic applies the recovered
+object mapping only to static records and preserves the original type/ID for
+both. Dynamic resolution remains part of the ordinary typed game-data catalog.
+
 ## Dialogue behavior supported by evidence
 
 `NpcDialogBox` and `DialogScroller` agree on a reusable payload contract:

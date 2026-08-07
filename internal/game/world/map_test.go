@@ -6,6 +6,28 @@ import (
 	"github.com/gravestench/dt1"
 )
 
+type testObjectResolver struct{ calls int }
+
+func (resolver *testObjectResolver) ResolveMapObject(act, id int) (int, string, bool) {
+	resolver.calls++
+	if act == 1 && id == 7 {
+		return 108, "Malus", true
+	}
+	return 0, "", false
+}
+
+func TestResolveObjectUsesRecoveredMappingOnlyForStaticRecords(t *testing.T) {
+	resolver := &testObjectResolver{}
+	static := resolveObject(1, ObjectTypeStatic, 7, 10, 20, 3, resolver)
+	if !static.Resolved || static.ObjectID != 108 || static.Description != "Malus" {
+		t.Fatalf("static object = %#v", static)
+	}
+	dynamic := resolveObject(1, ObjectTypeDynamic, 7, 10, 20, 3, resolver)
+	if dynamic.Resolved || resolver.calls != 1 {
+		t.Fatalf("dynamic object = %#v, resolver calls = %d", dynamic, resolver.calls)
+	}
+}
+
 func TestApplyCombinesSubtileFlags(t *testing.T) {
 	m := &Map{WidthSubtiles: 10, HeightSubtiles: 5, flags: make([]Flags, 50)}
 	first := &dt1.Tile{}
