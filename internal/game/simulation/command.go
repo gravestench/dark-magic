@@ -33,11 +33,12 @@ type Admitter struct {
 	mu         sync.Mutex
 	maxLead    uint64
 	sequences  map[string]uint64
+	ticks      map[string]uint64
 	validators map[string]CommandValidator
 }
 
 func NewAdmitter(maxLead uint64) *Admitter {
-	return &Admitter{maxLead: maxLead, sequences: make(map[string]uint64), validators: make(map[string]CommandValidator)}
+	return &Admitter{maxLead: maxLead, sequences: make(map[string]uint64), ticks: make(map[string]uint64), validators: make(map[string]CommandValidator)}
 }
 
 func (admitter *Admitter) Register(kind string, validator CommandValidator) error {
@@ -76,9 +77,13 @@ func (admitter *Admitter) Admit(command Command, currentTick uint64) error {
 	if command.Sequence != want {
 		return fmt.Errorf("%w: player=%q got=%d want=%d", ErrCommandSequence, command.Player, command.Sequence, want)
 	}
+	if previous, found := admitter.ticks[command.Player]; found && command.Tick < previous {
+		return fmt.Errorf("%w: player=%q previous=%d command=%d", ErrCommandTick, command.Player, previous, command.Tick)
+	}
 	if err := validator(command); err != nil {
 		return fmt.Errorf("%w: %v", ErrCommandPayload, err)
 	}
 	admitter.sequences[command.Player] = command.Sequence
+	admitter.ticks[command.Player] = command.Tick
 	return nil
 }

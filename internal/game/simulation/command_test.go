@@ -36,4 +36,14 @@ func TestAdmitterEnforcesAuthorityBoundaryTransactionally(t *testing.T) {
 	if err := admitter.Admit(valid, 10); !errors.Is(err, ErrCommandTick) {
 		t.Fatalf("future tick error = %v", err)
 	}
+	ordered := NewAdmitter(5)
+	if err := ordered.Register("move", func(Command) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := ordered.Admit(Command{Tick: 12, Player: "p", Sequence: 1, Kind: "move", Payload: []byte(`{}`)}, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := ordered.Admit(Command{Tick: 11, Player: "p", Sequence: 2, Kind: "move", Payload: []byte(`{}`)}, 10); !errors.Is(err, ErrCommandTick) {
+		t.Fatalf("backward player tick error = %v", err)
+	}
 }

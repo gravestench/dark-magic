@@ -118,6 +118,13 @@ func NewWithClock(step time.Duration, maxCatchUp int) *Engine {
 
 func (engine *Engine) World() *akara.World { return engine.world }
 
+// Tick returns the number of completed/started deterministic updates.
+func (engine *Engine) Tick() uint64 {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
+	return engine.tick
+}
+
 // Register validates and atomically adds a system. Failed ordering leaves the
 // existing schedule unchanged.
 func (engine *Engine) Register(definition Definition) error {

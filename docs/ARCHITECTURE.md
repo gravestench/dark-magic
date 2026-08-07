@@ -80,6 +80,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
 | `internal/game/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Keep internal |
 | `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
+| `internal/game/session` | Authoritative command admission, fixed stepping, checkpointing, and replay recording | client/server composition | Game session | Keep transport-neutral |
 | `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
@@ -101,7 +102,8 @@ internal/presentation      navigation, scenes, controls, transitions
 internal/game/data         typed Diablo records and validation
 internal/game/loot         deterministic item generation
 internal/game/ecs          deterministic entity schedule and structural barriers
-internal/game/simulation   higher-level world and gameplay rules
+internal/game/simulation   replay contracts, RNG, and higher-level gameplay rules
+internal/game/session      shared authoritative session owner
 internal/persistence       saves and future realm storage contracts
 internal/network           client/session/realm protocols
 internal/dev               profiling, capture, tools, test applications

@@ -644,14 +644,19 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M22: Client and game-session networking
 
-- [ ] Define deterministic simulation snapshots, commands, event logs, RNG
-  streams, checksums, replay files, and desync diagnostics.
+- [x] Define deterministic simulation snapshots, purpose-named RNG streams,
+  admitted command logs, canonical per-tick execution, checksums, restoration,
+  replay verification, and first-field desync diagnostics.
+- [ ] Add bounded, versioned on-disk replay containers and migration policy for
+  manifests, initial snapshots, admitted commands, events, and checkpoints.
 - [ ] Add a first-class `cmd` client for offline single-player, self-hosted
   listen/dedicated multiplayer, and realm-connected games.
 - [ ] Run one authoritative deterministic game-session implementation in-process,
   as a listen server, as a standalone self-hosted server, or under a realm.
   The `cmd/darkmagic-server` composition root and shared administration shell
-  now exist; authoritative simulation hosting remains.
+  now exist. `internal/game/session` now owns transport-independent admission,
+  fixed stepping, canonical command ordering, checkpointing, and replay export;
+  product-mode composition remains.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
 - [ ] Preserve offline characters safely and separate trusted server characters
