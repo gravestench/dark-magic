@@ -7,9 +7,11 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/gravestench/dark-magic/internal/logging"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 	"github.com/gravestench/dark-magic/internal/shell/luashell"
@@ -29,6 +31,18 @@ func Run(ctx context.Context, target string, policy shell.Policy, level slog.Lev
 	defer slog.SetDefault(previous)
 
 	runtime := modruntime.New()
+	settingsPath, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
+	if err != nil {
+		return err
+	}
+	settings, err := shell.NewSettings(settingsPath)
+	if err != nil {
+		return err
+	}
+	if err := runtime.RegisterModule(modruntime.ShellModule(settings)); err != nil {
+		return err
+	}
+	policy.Capabilities = append(policy.Capabilities, "dm.shell/v1")
 	if err := runtime.Start(ctx); err != nil {
 		return err
 	}

@@ -114,6 +114,21 @@ func TestWrapTranscriptPreservesStyleAndUnicode(t *testing.T) {
 	}
 }
 
+func TestOverlayUsesLiveFontSizeSetting(t *testing.T) {
+	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
+	settings := shell.NewTransientSettings()
+	overlay := New(session, settings)
+	overlay.timeline(800)
+	defaultColumns := overlay.displayColumns
+	if err := settings.SetFontSize(32); err != nil {
+		t.Fatal(err)
+	}
+	overlay.timeline(800)
+	if overlay.displayColumns >= defaultColumns {
+		t.Fatalf("font size did not reduce columns: default=%d large=%d", defaultColumns, overlay.displayColumns)
+	}
+}
+
 func TestOverlayAnimatesAndCapturesThroughClose(t *testing.T) {
 	session, _ := shell.NewSession("test", "client", shell.Policy{Name: "developer"}, evaluator{})
 	overlay := New(session)

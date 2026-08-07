@@ -229,6 +229,7 @@ func (m *Model) refreshTranscript() {
 		lines = append(lines, dimStyle.Render(empty))
 	}
 	for _, event := range events {
+		event.Text = strings.ReplaceAll(event.Text, "\t", "    ")
 		switch event.Kind {
 		case "motd":
 			lines = append(lines, accentStyle.Render(event.Text))

@@ -122,6 +122,14 @@ func parseLogLevel(value string) (slog.Level, error) {
 func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette string, shellLogs *shell.LogBuffer) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
+	shellSettingsPath, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
+	if err != nil {
+		return fmt.Errorf("expand shell settings path: %w", err)
+	}
+	shellSettings, err := shell.NewSettings(shellSettingsPath)
+	if err != nil {
+		return err
+	}
 	sceneErrors := make(chan error, 1)
 	reportSceneError := func(err error) {
 		select {
@@ -195,6 +203,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.AppModule(buildVersion(), stopSignals)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.ShellModule(shellSettings)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
@@ -290,7 +301,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	shellSession.AttachLogs(shellLogs)
 	defer shellSession.Close()
-	console := raylibShell.New(shellSession)
+	console := raylibShell.New(shellSession, shellSettings)
 	if err := console.LoadFont(); err != nil {
 		return err
 	}

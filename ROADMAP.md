@@ -536,7 +536,11 @@ implementations. The remaining work is tracked explicitly below.
   access. Versioned module registrations now own structured module and command
   help (usage, parameters, returns, and examples); `dm.help` accepts module or
   command values and string paths, while legacy commands receive generated
-  fallback documentation.
+  fallback documentation. Multiline values now preserve newlines and indentation
+  through both adapters. The shared `dm.shell/v1` capability exposes validated
+  live presentation settings; font-size edits apply immediately and explicit
+  defaults, reset, dirty status, and atomic platform-native persistence are
+  available from client, server, and realm shells.
 - [x] Provide capability-aware autocompletion for Lua keywords, console-local
   names, permitted modules, and table/userdata members; Tab and Shift-Tab cycle
   candidates, a shared prefix is inserted first, and candidate browsing never

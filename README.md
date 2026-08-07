@@ -82,6 +82,22 @@ example `dm.help(dm.audio)`, `dm.help(dm.audio.play)`, or
 parameters, returns, and examples used by both help and completion. Existing
 commands without authored metadata are still listed with fallback help.
 
+Shell presentation settings are live Lua runtime values. For example:
+
+```lua
+dm.shell.values()                  -- {font_size=18}
+dm.shell.set("font_size", 22)     -- apply immediately for this process
+dm.shell.defaults()                -- inspect built-in values
+dm.shell.reset()                   -- restore defaults in memory
+dm.shell.save()                    -- persist the active values
+dm.shell.status()                  -- persistence path and dirty state
+```
+
+Settings default to `shell.json` under the platform user-configuration
+directory. `DARK_MAGIC_SHELL_CONFIG` selects another host path and supports
+home-directory aliases. Multiline Lua values retain line breaks, indentation,
+and tabular spacing in both graphical and terminal shell views.
+
 # Join the Quest
 Are you ready to embark on a journey into the heart of darkness? Unite with 
 fellow adventurers and follow the development of Dark Magic on our and 

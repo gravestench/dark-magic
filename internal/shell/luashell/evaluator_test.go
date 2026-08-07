@@ -33,6 +33,9 @@ func TestEvaluatorPersistsLocalsFormatsValuesAndCompletesWithoutExecution(t *tes
 	if result, err := evaluator.Evaluate(context.Background(), `print("visible", 7)`); err != nil || result.Text != "visible\t7" || result.Kind != "output" {
 		t.Fatalf("print = %#v, %v", result, err)
 	}
+	if result, err := evaluator.Evaluate(context.Background(), `"heading\n  indented\tvalue"`); err != nil || result.Text != "heading\n  indented\tvalue" {
+		t.Fatalf("multiline string = %#v, %v", result, err)
+	}
 	if result, err := evaluator.Evaluate(context.Background(), `printregs()`); err != nil || !strings.Contains(result.Text, "Lua call frames:") {
 		t.Fatalf("printregs = %#v, %v", result, err)
 	}

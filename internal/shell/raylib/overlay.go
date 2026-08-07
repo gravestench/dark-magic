@@ -4,6 +4,7 @@ package raylibshell
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -13,11 +14,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/easing"
 	"github.com/gravestench/dark-magic/internal/shell"
 	"golang.org/x/image/font/gofont/gomono"
-)
-
-const (
-	fontSize   = float32(18)
-	lineHeight = int32(23)
 )
 
 type viewMode uint8
@@ -31,6 +27,7 @@ const (
 // drawing. Evaluation remains serialized by Session and its Lua runtime.
 type Overlay struct {
 	session         *shell.Session
+	settings        *shell.Settings
 	open            bool
 	busy            bool
 	input           string
@@ -63,8 +60,15 @@ const (
 	closeDuration = 280 * time.Millisecond
 )
 
-func New(session *shell.Session) *Overlay {
-	return &Overlay{session: session, history: len(session.History()), finished: make(chan shell.Entry, 1)}
+func New(session *shell.Session, configured ...*shell.Settings) *Overlay {
+	settings := (*shell.Settings)(nil)
+	if len(configured) > 0 {
+		settings = configured[0]
+	}
+	if settings == nil {
+		settings = shell.NewTransientSettings()
+	}
+	return &Overlay{session: session, settings: settings, history: len(session.History()), finished: make(chan shell.Entry, 1)}
 }
 
 func (o *Overlay) Open() bool { return o.open }
@@ -80,7 +84,9 @@ func (o *Overlay) LoadFont() error {
 	for current := rune(32); current <= 255; current++ {
 		codepoints = append(codepoints, current)
 	}
-	o.font = rl.LoadFontFromMemory(".ttf", gomono.TTF, 36, codepoints)
+	// Rasterize above the largest supported runtime setting so increasing the
+	// shell font remains crisp instead of upscaling a small glyph atlas.
+	o.font = rl.LoadFontFromMemory(".ttf", gomono.TTF, 64, codepoints)
 	if !rl.IsFontValid(o.font) {
 		return fmt.Errorf("raylib shell: load embedded Go Mono font")
 	}
@@ -211,6 +217,8 @@ func (o *Overlay) Draw(width, height int) {
 	transcriptTop := offsetY + 94
 	promptTop := offsetY + panelHeight - 58
 	contentBottom := promptTop
+	fontSize := float32(o.settings.Values().FontSize)
+	lineHeight := int32(math.Ceil(float64(fontSize) * 1.28))
 	completion := o.completionLines()
 	if o.view == viewLua {
 		contentBottom -= int32(len(completion) * 18)
@@ -301,7 +309,8 @@ func (o *Overlay) drawTabs(offsetY int32, opacity float64) {
 }
 
 func (o *Overlay) timeline(width int) []transcriptLine {
-	columns := max(12, (width-36)/11)
+	fontSize := o.settings.Values().FontSize
+	columns := max(12, int(float64(width-36)/(fontSize*0.61)))
 	revision := o.session.TimelineRevision()
 	if revision != o.displayRevision || columns != o.displayColumns || o.view != o.displayView {
 		events := o.session.TranscriptTimeline()
@@ -480,6 +489,7 @@ func timelineLines(events []shell.TimelineEvent) []transcriptLine {
 	for _, event := range events {
 		parts := strings.Split(event.Text, "\n")
 		for index, part := range parts {
+			part = strings.ReplaceAll(part, "\t", "    ")
 			line := transcriptLine{text: part}
 			switch event.Kind {
 			case "motd":

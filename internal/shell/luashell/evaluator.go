@@ -597,6 +597,9 @@ func formatValue(value glua.LValue, depth int) string {
 		sort.Strings(parts)
 		return "{" + strings.Join(parts, ", ") + "}"
 	case glua.LString:
+		if strings.ContainsAny(string(typed), "\r\n\t") {
+			return string(typed)
+		}
 		return strconv.Quote(string(typed))
 	case *glua.LFunction:
 		return "<function>"
