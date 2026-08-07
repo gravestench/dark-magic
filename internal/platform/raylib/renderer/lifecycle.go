@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+
+	"github.com/gravestench/dark-magic/internal/branding"
 )
 
 // Start initializes Raylib on the calling main thread and returns when native
@@ -36,6 +38,14 @@ func (s *Service) Start(context.Context) error {
 		rl.SetConfigFlags(rl.FlagWindowResizable)
 	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
+	iconData := branding.WindowIconPNG()
+	icon := rl.LoadImageFromMemory(".png", iconData, int32(len(iconData)))
+	if icon.Width > 0 && icon.Height > 0 {
+		rl.SetWindowIcon(*icon)
+		rl.UnloadImage(icon)
+	} else {
+		s.logger.Warn("renderer: failed to decode embedded window icon")
+	}
 	// Escape belongs to scene and shell focus routing. WindowShouldClose still
 	// observes the native close control after Raylib's default Escape binding is
 	// disabled.
