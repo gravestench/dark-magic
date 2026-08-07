@@ -71,6 +71,24 @@ ecs.system{
 	}
 }
 
+func TestLuaCanQueryAnOrderedEntitySnapshotOutsideSystems(t *testing.T) {
+	runtime, _ := newECSRuntime(t)
+	err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		return state.DoString(`
+local ecs=require("dm.ecs/v1")
+ecs.component{name="position",fields={}}
+ecs.component{name="hidden",fields={}}
+local first=ecs.create{position={}}
+ecs.create{position={},hidden={}}
+local entities=ecs.query{all={"position"},none={"hidden"}}
+assert(#entities==1 and entities[1]:id()==first:id())
+`)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLuaStructuralCommandsApplyBetweenSystems(t *testing.T) {
 	runtime, engine := newECSRuntime(t)
 	scope := &Scope{}

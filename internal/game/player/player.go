@@ -17,6 +17,8 @@ import (
 
 const EnterCommand = "system.player.enter"
 
+const localEntryActor = "system:local-player-entry"
+
 type Entry struct {
 	CharacterID string  `json:"character_id"`
 	Player      string  `json:"player"`
@@ -37,6 +39,54 @@ type Entry struct {
 	Y           float64 `json:"y"`
 	WorldWidth  float64 `json:"world_width"`
 	WorldHeight float64 `json:"world_height"`
+}
+
+// EntrySource admits the currently selected save into the authoritative world.
+// Selection remains shell state; after admission, ECS components are the live
+// gameplay state and Lua only observes them.
+type EntrySource struct {
+	engine        *gameecs.Engine
+	saves         *persistence.Store
+	player        string
+	width, height float64
+	sequence      uint64
+}
+
+func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64) (*EntrySource, error) {
+	player = strings.TrimSpace(player)
+	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("player: entry source requires engine, saves, player, and positive world bounds")
+	}
+	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height}, nil
+}
+
+func (source *EntrySource) Commands(tick uint64) []simulation.Command {
+	character, selected := source.saves.Selected()
+	if !selected || source.entered(character.ID) {
+		return nil
+	}
+	source.sequence++
+	entry := EntryFromCharacter(character, source.player, source.width/2, source.height/2, source.width, source.height)
+	command, err := Command(entry, localEntryActor, source.sequence, tick, simulation.AuthoritySystem)
+	if err != nil {
+		return nil
+	}
+	return []simulation.Command{command}
+}
+
+func (source *EntrySource) entered(characterID string) bool {
+	identities, found := akara.GetDynamicStore(source.engine.World(), "dm.player.identity")
+	if !found {
+		return false
+	}
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		id, _ := identity.Get("character_id")
+		if id == characterID {
+			return true
+		}
+	}
+	return false
 }
 
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
@@ -127,10 +177,10 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "direction", Kind: akara.FieldInt64}}},
-		{Name: "dm.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.velocity", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
-		{Name: "dm.world.bounds", Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
+		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
+		{Name: "dm.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))
 	for index, schema := range schemas {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/logging"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -37,6 +38,14 @@ func main() {
 		return
 	}
 	defer authority.Close()
+	if err := gameplayer.Register(authority); err != nil {
+		slog.Error("registering authoritative player commands", "error", err)
+		return
+	}
+	if err := gamesession.RegisterMovement(authority); err != nil {
+		slog.Error("registering authoritative movement commands", "error", err)
+		return
+	}
 	sessionContext, stopSession := context.WithCancel(ctx)
 	sessionErrors := make(chan error, 1)
 	go func() { sessionErrors <- authority.Run(sessionContext) }()

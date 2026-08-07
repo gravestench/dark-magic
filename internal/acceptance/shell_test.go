@@ -13,7 +13,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/persistence"
@@ -47,9 +49,19 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		t.Fatal(err)
 	}
+	if err := gameplayer.Register(authority); err != nil {
+		t.Fatal(err)
+	}
 	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player")
 	if err != nil {
 		t.Fatal(err)
+	}
+	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commandSource := func(tick uint64) []simulation.Command {
+		return append(entrySource.Commands(tick), movementSource.Commands(tick)...)
 	}
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
@@ -332,6 +344,9 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatalf("composer diagnostics after rapid transitions = %#v", diagnostics)
 	}
 
+	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
+		t.Fatal(err)
+	}
 	positions, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.position")
 	if !found {
 		t.Fatal("game world did not register position component")
@@ -359,7 +374,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	before := beforeValue.(float64)
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	if _, err := authority.AdvanceWithSource(time.Second, movementSource.Commands); err != nil {
+	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
 	afterValue, err := position.Get("x")

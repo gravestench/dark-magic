@@ -8,6 +8,16 @@ local M = {}
 
 local function define_components()
     ecs.component({
+        name = "dm.player.identity",
+        version = 1,
+        fields = {
+            { name = "character_id", type = "string" },
+            { name = "player", type = "string" },
+            { name = "name", type = "string" },
+            { name = "class", type = "string" },
+        },
+    })
+    ecs.component({
         name = "dm.world.position",
         fields = {
             { name = "x", type = "f64" },
@@ -45,16 +55,6 @@ end
 function M.create(width, height, collision, player)
     define_components()
     player = player or "local-player"
-    local hero = ecs.create({
-        ["dm.world.position"] = { x = width / 2, y = height / 2 },
-        ["dm.world.velocity"] = {},
-        ["dm.world.player_control"] = { player = player },
-        ["dm.world.bounds"] = { width = width, height = height },
-    })
-    local camera = ecs.create({
-        ["dm.world.position"] = { x = width / 2, y = height / 2 },
-        ["dm.world.camera_follow"] = { target = hero },
-    })
 
     ecs.system({
         id = "darkmagic.world.integrate",
@@ -97,7 +97,34 @@ function M.create(width, height, collision, player)
             end
         end,
     })
-    return { hero = hero, camera = camera }
+    local state = { player = player }
+    M.bind(state)
+    return state
+end
+
+-- Bind presentation to a player entity admitted by the authoritative session.
+-- This may return false briefly when a scene transition wins the race with the
+-- next fixed simulation tick; it never manufactures a second player entity.
+function M.bind(state)
+    if state.hero and state.hero:exists() then return true end
+    local entities = ecs.query({
+        all = {
+            "dm.player.identity", "dm.world.position", "dm.world.velocity",
+            "dm.world.player_control", "dm.world.bounds",
+        },
+    })
+    for _, entity in ipairs(entities) do
+        local control = ecs.get(entity, "dm.world.player_control")
+        if control:get("player") == state.player then
+            state.hero = entity
+            state.camera = ecs.create({
+                ["dm.world.position"] = ecs.get(entity, "dm.world.position"):snapshot(),
+                ["dm.world.camera_follow"] = { target = entity },
+            })
+            return true
+        end
+    end
+    return false
 end
 
 function M.position(entity)
@@ -108,7 +135,6 @@ end
 function M.destroy(state)
     if not state then return end
     if state.camera and state.camera:exists() then ecs.destroy(state.camera) end
-    if state.hero and state.hero:exists() then ecs.destroy(state.hero) end
 end
 
 return M

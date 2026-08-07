@@ -2,6 +2,7 @@ package player
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -48,5 +49,35 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	}
 	if audit := session.Audit(); len(audit) != 1 || audit[0].Kind != EnterCommand {
 		t.Fatalf("audit = %#v", audit)
+	}
+}
+
+func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := Register(session); err != nil {
+		t.Fatal(err)
+	}
+	saves := persistence.New(persistence.Character{ID: "amazon-hero", Name: "Hero", Class: "Amazon", Level: 1})
+	if err := saves.Select("amazon-hero"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewEntrySource(engine, saves, "local-player", 100, 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
+		t.Fatal(err)
+	}
+	identities, found := akara.GetDynamicStore(engine.World(), "dm.player.identity")
+	if !found || identities.Len() != 1 {
+		t.Fatalf("identities = %v, %v", identities, found)
 	}
 }

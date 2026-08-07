@@ -7,10 +7,40 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/persistence"
 	lua "github.com/yuin/gopher-lua"
 )
+
+func materializeGameplayPlayer(t *testing.T, engine *gameecs.Engine, step time.Duration) *gamesession.Session {
+	t.Helper()
+	session, err := gamesession.New(engine, gamesession.Config{Step: step})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	if err := gameplayer.Register(session); err != nil {
+		t.Fatal(err)
+	}
+	if err := gamesession.RegisterMovement(session); err != nil {
+		t.Fatal(err)
+	}
+	entry := gameplayer.EntryFromCharacter(persistence.Character{ID: "test-hero", Name: "Hero", Class: "Amazon", Level: 1}, "test-player", 50, 40, 100, 80)
+	command, err := gameplayer.Command(entry, "test-system", 1, 1, simulation.AuthoritySystem)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	return session
+}
 
 func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	var input inputstate.Store
@@ -32,6 +62,7 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 		_ = runtime.Stop(context.Background())
 		_ = engine.Close()
 	})
+	session := materializeGameplayPlayer(t, engine, 500*time.Millisecond)
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`local world=require("darkmagic.gameplay.world"); gameplay=world.create(100,80,nil,"test-player")`)
@@ -39,13 +70,6 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 		t.Fatal(err)
 	}
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	session, err := gamesession.New(engine, gamesession.Config{Step: 500 * time.Millisecond})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := gamesession.RegisterMovement(session); err != nil {
-		t.Fatal(err)
-	}
 	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +123,7 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 		_ = runtime.Stop(context.Background())
 		_ = engine.Close()
 	})
+	session := materializeGameplayPlayer(t, engine, time.Second)
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
@@ -113,13 +138,6 @@ gameplay=world.create(100,80,collision,"test-player")
 		"right": {Down: true},
 		"down":  {Down: true},
 	}})
-	session, err := gamesession.New(engine, gamesession.Config{Step: time.Second})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := gamesession.RegisterMovement(session); err != nil {
-		t.Fatal(err)
-	}
 	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
 	if err != nil {
 		t.Fatal(err)

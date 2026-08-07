@@ -51,6 +51,7 @@ func (capability *ECSCapability) Module() Module {
 		"component": commandHelp("dm.ecs.component(definition)", "Register or migrate a named runtime component schema."),
 		"create":    commandHelp("dm.ecs.create([components])", "Create an entity and optionally attach named components."),
 		"get":       commandHelp("dm.ecs.get(entity, component)", "Return a checked component reference or nil."),
+		"query":     commandHelp("dm.ecs.query(filter)", "Return an ordered snapshot of entities matching all, any, and none component filters."),
 		"set":       commandHelp("dm.ecs.set(entity, component, values)", "Add or replace a component after schema validation."),
 		"remove":    commandHelp("dm.ecs.remove(entity, component)", "Remove a component immediately outside system iteration."),
 		"destroy":   commandHelp("dm.ecs.destroy(entity)", "Destroy an entity immediately outside system iteration."),
@@ -61,6 +62,7 @@ func (capability *ECSCapability) Module() Module {
 			"component": capability.loadComponent,
 			"create":    capability.createEntity,
 			"get":       capability.getComponent,
+			"query":     capability.queryEntities,
 			"set":       capability.setComponent,
 			"remove":    capability.removeComponent,
 			"destroy":   capability.destroyEntity,
@@ -70,6 +72,47 @@ func (capability *ECSCapability) Module() Module {
 		state.Push(module)
 		return 1
 	}}
+}
+
+func (capability *ECSCapability) queryEntities(state *lua.LState) int {
+	if capability.active != nil {
+		state.RaiseError("ecs.query cannot be called inside a system; use the system query entities")
+	}
+	query := state.CheckTable(1)
+	all, err := capability.stores(tableStringList(state, query.RawGetString("all")))
+	if err != nil {
+		state.RaiseError("%v", err)
+	}
+	any, err := capability.stores(tableStringList(state, query.RawGetString("any")))
+	if err != nil {
+		state.RaiseError("%v", err)
+	}
+	none, err := capability.stores(tableStringList(state, query.RawGetString("none")))
+	if err != nil {
+		state.RaiseError("%v", err)
+	}
+	options := make([]akara.FilterOption, 0, 3)
+	if len(all) > 0 {
+		options = append(options, akara.All(componentTypes(all)...))
+	}
+	if len(any) > 0 {
+		options = append(options, akara.Any(componentTypes(any)...))
+	}
+	if len(none) > 0 {
+		options = append(options, akara.None(componentTypes(none)...))
+	}
+	subscription, err := capability.engine.World().Subscribe(options...)
+	if err != nil {
+		state.RaiseError("%v", err)
+	}
+	entities := subscription.Entities()
+	subscription.Close()
+	result := state.NewTable()
+	for _, entity := range entities {
+		result.Append(capability.entityValue(state, entity))
+	}
+	state.Push(result)
+	return 1
 }
 
 func registerECSTypes(state *lua.LState) {

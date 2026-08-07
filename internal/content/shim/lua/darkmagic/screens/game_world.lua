@@ -63,11 +63,7 @@ return {
         local world_width = self.world_dimensions and self.world_dimensions.width_subtiles or 4096
         local world_height = self.world_dimensions and self.world_dimensions.height_subtiles or 4096
         self.gameplay = self.gameplay_world.create(world_width, world_height, self.world, "local-player")
-        local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
-        if self.world then
-            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
-        end
-        self.initial_camera_x, self.initial_camera_y = camera_x, camera_y
+        self.initial_camera_x, self.initial_camera_y = nil, nil
     end,
 
     update = function(self, elapsed, focused)
@@ -79,24 +75,8 @@ return {
         if self.hud then
             game_hud.update(self.hud)
         end
-        local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
-        local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
-        if self.world then
-            hero_x, hero_y = self.world:subtile_to_pixel(hero_x, hero_y)
-            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
-        end
-        if self.map then
-            self.map:set_position(
-                screen.map.screen_x - (camera_x - self.initial_camera_x),
-                screen.map.screen_y - (camera_y - self.initial_camera_y)
-            )
-        end
-        self.hero:set_position(
-            screen.hero.screen_x + hero_x - camera_x,
-            screen.hero.screen_y + hero_y - camera_y
-        )
-
-        -- Panels are scene overlays rather than long-lived engine services.
+        -- Panels remain available while the fixed-step session is admitting
+        -- the selected character; presentation binding must not block UI.
         if input.pressed("inventory") then
             scenes.push("inventory")
         elseif input.pressed("character") then
@@ -110,6 +90,28 @@ return {
         elseif input.pressed("pause") or input.pressed("cancel") then
             scenes.push("pause")
         end
+        if not self.gameplay_world.bind(self.gameplay) then
+            return
+        end
+        local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
+        local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
+        if self.world then
+            hero_x, hero_y = self.world:subtile_to_pixel(hero_x, hero_y)
+            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
+        end
+        if not self.initial_camera_x then
+            self.initial_camera_x, self.initial_camera_y = camera_x, camera_y
+        end
+        if self.map then
+            self.map:set_position(
+                screen.map.screen_x - (camera_x - self.initial_camera_x),
+                screen.map.screen_y - (camera_y - self.initial_camera_y)
+            )
+        end
+        self.hero:set_position(
+            screen.hero.screen_x + hero_x - camera_x,
+            screen.hero.screen_y + hero_y - camera_y
+        )
     end,
 
     destroy = function(self)

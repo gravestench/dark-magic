@@ -30,7 +30,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -206,9 +208,20 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := gamesession.RegisterMovement(offlineSession); err != nil {
 		return fmt.Errorf("register offline movement commands: %w", err)
 	}
+	if err := gameplayer.Register(offlineSession); err != nil {
+		return fmt.Errorf("register offline player commands: %w", err)
+	}
 	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player")
 	if err != nil {
 		return fmt.Errorf("create offline movement source: %w", err)
+	}
+	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
+	if err != nil {
+		return fmt.Errorf("create offline player entry source: %w", err)
+	}
+	commandSource := func(tick uint64) []simulation.Command {
+		commands := entrySource.Commands(tick)
+		return append(commands, movementSource.Commands(tick)...)
 	}
 	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {
@@ -363,7 +376,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
 		lastFrame = now
-		if _, err := offlineSession.AdvanceWithSource(elapsed, movementSource.Commands); err != nil {
+		if _, err := offlineSession.AdvanceWithSource(elapsed, commandSource); err != nil {
 			reportSceneError(fmt.Errorf("updating offline game session: %w", err))
 			return
 		}
