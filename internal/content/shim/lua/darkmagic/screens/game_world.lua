@@ -20,6 +20,14 @@ return {
     create = function(self)
         self.root = render.create("world")
         if render.assets_available() and screen.map then
+            -- Decode a second, renderer-independent view of the authored map.
+            -- This immutable handle is the future source of collision, LOS,
+            -- objects, and navigation facts. The render node below remains
+            -- disposable presentation and never becomes simulation state.
+            local world = require("dm.world/v1")
+            self.world = assert(world.load(screen.map.ds1, screen.map.dt1))
+            self.world_dimensions = self.world:dimensions()
+
             self.map = render.create("world", self.root)
             local width, height = self.map:set_ds1(
                 screen.map.ds1,
