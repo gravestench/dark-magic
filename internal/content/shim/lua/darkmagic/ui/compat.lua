@@ -165,6 +165,128 @@ M.frontend = {
     },
 }
 
+-- In-game Escape menu facts triangulated from OpenDiablo2 and Riiablo. Riiablo
+-- confirms the localized DC6 label art, modal dim, select sound, paired pents,
+-- and reversed left pent; OpenDiablo2 supplies keyboard ordering, default focus,
+-- submenu structure, and the options-value vocabulary. Dark Magic implements
+-- these facts with its own retained controls rather than either reference GUI.
+M.ingame = {
+    escape_menu = {
+        confidence = "high",
+        sources = {
+            "OpenDiablo2/OpenDiablo2:d2game/d2player/escape_menu.go",
+            "OpenDiablo2/OpenDiablo2:d2common/d2resource/resource_paths.go",
+            "collinsmith/riiablo:core/src/main/java/com/riiablo/screen/panel/EscapePanel.java",
+        },
+        dim = { red = 0, green = 0, blue = 0, alpha = 128 },
+        center = { x = 400, y = 300 },
+        menu_width = 500,
+        row_height = 54,
+        label_gutter = 10,
+        label_side_gap = 24,
+        palette = "units",
+        select_sound = "data/global/sfx/cursor/select.wav",
+        pentagram = {
+            sheet = "data/global/ui/CURSOR/pentspin.DC6",
+            width = 54,
+            height = 54,
+            frames_per_second = 15,
+            left_reversed = true,
+            right_reversed = false,
+        },
+        simulation = {
+            pauses_single_player = true,
+            pauses_multiplayer = false,
+        },
+        layouts = {
+            main = {
+                default_focus = "return_to_game",
+                font = "font42",
+                rows = {
+                    { id = "options", label = "OPTIONS", sheet = "data/local/ui/eng/options.dc6", target = "options" },
+                    { id = "save_exit", label = "SAVE AND EXIT GAME", sheet = "data/local/ui/eng/exit.dc6", action = "save_exit" },
+                    { id = "return_to_game", label = "RETURN TO GAME", sheet = "data/local/ui/eng/returntogame.dc6", action = "close" },
+                },
+            },
+            options = {
+                default_focus = "previous_menu",
+                font = "font42",
+                rows = {
+                    { id = "sound_options", label = "SOUND OPTIONS", sheet = "data/local/ui/eng/soundoptions.dc6", target = "sound" },
+                    { id = "video_options", label = "VIDEO OPTIONS", sheet = "data/local/ui/eng/videoOptions.dc6", target = "video" },
+                    { id = "automap_options", label = "AUTOMAP OPTIONS", sheet = "data/local/ui/eng/automapOptions.dc6", target = "automap" },
+                    { id = "configure_controls", label = "CONFIGURE CONTROLS", sheet = "data/local/ui/eng/cfgOptions.dc6", target = "controls" },
+                    { id = "previous_menu", label = "PREVIOUS MENU", sheet = "data/local/ui/eng/previous.dc6", target = "main" },
+                },
+            },
+            sound = {
+                title = "SOUND OPTIONS",
+                default_focus = "previous_menu",
+                font = "font30",
+                rows = {
+                    { id = "sound_volume", label = "SOUND", sheet = "data/local/ui/eng/sound.dc6", values = { "TODO" } },
+                    { id = "music_volume", label = "MUSIC", sheet = "data/local/ui/eng/music.dc6", values = { "TODO" } },
+                    { id = "3d_bias", label = "3D BIAS", sheet = "data/local/ui/eng/3dbias.dc6", values = { "TODO" } },
+                    { id = "hardware_acceleration", label = "HARDWARE ACCELERATION", values = { "ON", "OFF" } },
+                    { id = "environmental_effects", label = "ENVIRONMENTAL EFFECTS", values = { "ON", "OFF" } },
+                    { id = "npc_speech", label = "NPC SPEECH", sheet = "data/local/ui/eng/npcspeech.dc6", values = { "AUDIO AND TEXT", "AUDIO ONLY", "TEXT ONLY" } },
+                    { id = "previous_menu", label = "PREVIOUS MENU", sheet = "data/local/ui/eng/previous.dc6", target = "options" },
+                },
+            },
+            video = {
+                title = "VIDEO OPTIONS",
+                default_focus = "previous_menu",
+                font = "font30",
+                rows = {
+                    { id = "resolution", label = "VIDEO RESOLUTION", sheet = "data/local/ui/eng/resolution.dc6", values = { "800X600", "1024X768" } },
+                    { id = "lighting_quality", label = "LIGHTING QUALITY", sheet = "data/local/ui/eng/lightquality.dc6", values = { "LOW", "HIGH" } },
+                    { id = "blended_shadows", label = "BLENDED SHADOWS", sheet = "data/local/ui/eng/blendshadow.dc6", values = { "ON", "OFF" } },
+                    { id = "perspective", label = "PERSPECTIVE", sheet = "data/local/ui/eng/prespective.dc6", values = { "ON", "OFF" } },
+                    { id = "gamma", label = "GAMMA", sheet = "data/local/ui/eng/gamma.dc6", values = { "TODO" } },
+                    { id = "contrast", label = "CONTRAST", sheet = "data/local/ui/eng/contrast.dc6", values = { "TODO" } },
+                    { id = "previous_menu", label = "PREVIOUS MENU", sheet = "data/local/ui/eng/previous.dc6", target = "options" },
+                },
+            },
+            automap = {
+                title = "AUTOMAP OPTIONS",
+                default_focus = "previous_menu",
+                font = "font30",
+                rows = {
+                    { id = "automap_size", label = "AUTOMAP SIZE", sheet = "data/local/ui/eng/automapmode.dc6", values = { "FULL SCREEN", "MINI MAP" } },
+                    { id = "automap_fade", label = "FADE", sheet = "data/local/ui/eng/automapfade.dc6", values = { "YES", "NO" } },
+                    { id = "automap_center", label = "CENTER WHEN CLEARED", sheet = "data/local/ui/eng/automapcenter.dc6", values = { "YES", "NO" } },
+                    { id = "automap_party", label = "SHOW PARTY", values = { "YES", "NO" } },
+                    { id = "automap_names", label = "SHOW NAMES", sheet = "data/local/ui/eng/automappartynames.dc6", values = { "YES", "NO" } },
+                    { id = "previous_menu", label = "PREVIOUS MENU", sheet = "data/local/ui/eng/previous.dc6", target = "options" },
+                },
+            },
+            controls = {
+                title = "CONFIGURE CONTROLS",
+                default_focus = "previous_menu",
+                font = "font30",
+                -- OpenDiablo2 delegates the editable binding list to a separate
+                -- key-binding menu. Dark Magic records that boundary here until
+                -- an engine settings/keymap write capability is exposed to Lua.
+                rows = {
+                    { id = "previous_menu", label = "PREVIOUS MENU", sheet = "data/local/ui/eng/previous.dc6", target = "options" },
+                },
+            },
+        },
+        option_assets = {
+            on = "data/local/ui/eng/smallon.dc6",
+            off = "data/local/ui/eng/smalloff.dc6",
+            yes = "data/local/ui/eng/smallyes.dc6",
+            no = "data/local/ui/eng/smallno.dc6",
+            full = "data/local/ui/eng/full.dc6",
+            mini = "data/local/ui/eng/mini.dc6",
+            resolution_640 = "data/local/ui/eng/640x480.dc6",
+            resolution_800 = "data/local/ui/eng/800x800.dc6",
+            slider = "data/global/ui/widgets/optbarc.dc6",
+            slider_skull = "data/global/ui/widgets/optskull.dc6",
+        },
+    },
+}
+
 -- Compatibility facts override the manifest without mutating the loaded
 -- manifest table shared by other Lua modules. Behavior/locale/targets remain
 -- in the manifest; only recovered presentation facts are merged here.
