@@ -91,7 +91,11 @@ return {
     configure_controls = function(self)
         self.controls = controls.new()
 
-        local function add_control(id, definition)
+        local function add_control(id)
+            -- The compatibility catalog carries the cross-checked original
+            -- 800x600 geometry/frame facts; navigation/localization remain in
+            -- the presentation manifest so mods can still replace behavior.
+            local definition = compat.screen_control("main_menu", id, assert(screen.controls[id]))
             button.create(self.root, self.controls, id, definition, assert(locale.text(definition.label)), {
                 layer = "hud",
                 on_activate = function()
@@ -105,7 +109,7 @@ return {
         end
 
         for _, id in ipairs({ "single_player", "multiplayer", "credits", "cinematics", "exit" }) do
-            add_control(id, screen.controls[id])
+            add_control(id)
         end
     end,
 
