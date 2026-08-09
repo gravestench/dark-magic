@@ -53,8 +53,15 @@ function M.create(root, manager, id, definition, label, options)
     if render.assets_available() then
         background = render.create(options.layer or "hud", root)
         local decoded_width, decoded_height = background:set_dc6(sheet, palette, 0, definition.frame or 0)
-        width = width or decoded_width
-        height = height or decoded_height
+        -- Character-name entry is a specifically authored frontend control.
+        -- When the real asset exists, its DC6 dimensions are authoritative;
+        -- manifest dimensions remain only as a headless/no-assets fallback.
+        if definition.kind == "name" then
+            width, height = decoded_width, decoded_height
+        else
+            width = width or decoded_width
+            height = height or decoded_height
+        end
         background:set_position(x + decoded_width / 2, y + defaults.background_y + decoded_height / 2)
 
         value_node = render.create(options.layer or "hud", root)
