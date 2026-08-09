@@ -17,6 +17,7 @@ local tcpip = require("darkmagic.screens.tcpip")
 local credits = require("darkmagic.screens.credits")
 local cinematics = require("darkmagic.screens.cinematics")
 local font_lab = require("darkmagic.screens.font_lab")
+local ui_lab = require("darkmagic.screens.ui_lab")
 
 return {
     id = "darkmagic.boot",
@@ -38,6 +39,7 @@ return {
         scenes.register("credits", credits)
         scenes.register("cinematics", cinematics)
         scenes.register("font_lab", font_lab)
+        scenes.register("ui_lab", ui_lab)
         scenes.register("inventory", inventory)
         scenes.register("character", character)
         scenes.register("skills", skills)
