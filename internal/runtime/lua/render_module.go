@@ -947,6 +947,7 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating DS1 render node: %v", err)
+				return 0
 			}
 			state.Push(lua.LNumber(decoded.Bounds().Dx()))
 			state.Push(lua.LNumber(decoded.Bounds().Dy()))
@@ -979,6 +980,7 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating render node: %v", err)
+				return 0
 			}
 			state.Push(lua.LNumber(frame.Width))
 			state.Push(lua.LNumber(frame.Height))
