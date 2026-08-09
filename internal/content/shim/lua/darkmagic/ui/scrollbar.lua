@@ -2,26 +2,28 @@
 --
 -- OpenDiablo2 recovered the TextSlid.dc6 frame meanings used by the original
 -- text scrollbar: hollow arrows 8/9, filled arrows 10/11, inner gutter 13,
--- and slider fill 14. This module preserves those observable asset semantics
--- while using Dark Magic's independent control manager for input behavior.
+-- and slider fill 14. The values live in darkmagic.ui.compat; this module owns
+-- only Dark Magic's independent retained rendering and input behavior.
 local render = require("dm.render/v1")
 local data = require("dm.data/v1")
 local text = require("darkmagic.ui.text")
+local compat = require("darkmagic.ui.compat")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local M = {}
+local recovered = compat.widgets.text_scrollbar
 
 local defaults = {
-    sheet = "data/global/ui/MENU/TextSlid.dc6",
-    palette = "sky",
-    part_width = 12,
-    part_height = 13,
-    frame_down_hollow = 8,
-    frame_up_hollow = 9,
-    frame_down_filled = 10,
-    frame_up_filled = 11,
-    frame_gutter = 13,
-    frame_thumb = 14,
+    sheet = recovered.sheet,
+    palette = recovered.palette,
+    part_width = recovered.part_width,
+    part_height = recovered.part_height,
+    frame_down_hollow = recovered.down_hollow_frame,
+    frame_up_hollow = recovered.up_hollow_frame,
+    frame_down_filled = recovered.down_filled_frame,
+    frame_up_filled = recovered.up_filled_frame,
+    frame_gutter = recovered.gutter_frame,
+    frame_thumb = recovered.thumb_frame,
 }
 
 local function dc6_or_rect(node, sheet, palette, frame, fallback_width, fallback_height, color)
