@@ -109,8 +109,10 @@ function M.wrap(scene, definition, palettes, options)
     end
 
     scene.create = function(self)
+        -- Do not auto-create here. Some existing screens create their authored
+        -- cursor in enter(); navigation always calls Enter after Create, so
+        -- waiting avoids creating an orphan cursor that enter would replace.
         if original_create then original_create(self) end
-        ensure_cursor(self)
     end
 
     scene.enter = function(self)
