@@ -99,8 +99,6 @@ func (b *compositionBackend) Apply(change render.Change) error {
 				continue
 			}
 			node := b.nodes[nodeID]
-			// Streaming video frames retain one native texture. A resize is the
-			// exceptional case that requires replacing its GPU allocation.
 			if previous != next {
 				node.ClearTextures()
 			}
@@ -169,6 +167,10 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 		node.SetBlendMode(rl.BlendAlpha)
 	case "additive":
 		node.SetBlendMode(rl.BlendAdditive)
+	case "screen":
+		// Diablo II draw mode 3: GL_ONE, GL_ONE_MINUS_SRC_COLOR.
+		// renderNode installs the custom factors immediately before drawing.
+		node.SetBlendMode(rl.BlendCustom)
 	case "multiply":
 		node.SetBlendMode(rl.BlendMultiplied)
 	case "add-colors":
@@ -220,8 +222,6 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 			b.nodeResources[state.ID] = state.Resource
 		}
 	}
-	// Resource-less retained nodes are grouping transforms, not drawable
-	// surfaces. Enabling one would make raylib render its default 1x1 texture.
 	if state.Visible && state.Resource != (render.ResourceID{}) {
 		node.Enable()
 	} else {
@@ -240,23 +240,45 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 	return nil
 }
 
+func (b *compositionBackend) drawableImage(resource render.Resource) (image.Image, error) {
+	switch resource.Kind {
+	case render.ResourceTexture:
+		return resource.Payload.(image.Image), nil
+	case render.ResourceAnimation:
+		animation := resource.Payload.(render.AnimationData)
+		if len(animation.Frames) == 0 {
+			return nil, fmt.Errorf("animation resource has no frames")
+		}
+		frame, exists := b.resources[animation.Frames[0]]
+		if !exists || frame.Kind != render.ResourceTexture {
+			return nil, fmt.Errorf("animation frame %v is unavailable", animation.Frames[0])
+		}
+		return frame.Payload.(image.Image), nil
+	default:
+		return nil, fmt.Errorf("resource kind %q is not drawable", resource.Kind)
+	}
+}
+
 func (b *compositionBackend) attachAnimation(id render.NodeID, node Renderable, resource render.Resource) error {
 	animation := resource.Payload.(render.AnimationData)
 	frames := make([]image.Image, len(animation.Frames))
-	for index, id := range animation.Frames {
-		frame, exists := b.resources[id]
-		if !exists {
-			return fmt.Errorf("animation %v frame %d is unavailable", resource.ID, index)
+	for index, frameID := range animation.Frames {
+		frame, exists := b.resources[frameID]
+		if !exists || frame.Kind != render.ResourceTexture {
+			return fmt.Errorf("animation frame %v is unavailable", frameID)
 		}
 		frames[index] = frame.Payload.(image.Image)
 	}
-	player := render.NewAnimationPlayer(animation.Durations, animation.Loop)
+	player, err := render.NewAnimationPlayer(animation)
+	if err != nil {
+		return err
+	}
 	b.playbacks[id] = &animationPlayback{player: player, frames: frames}
-	node.SetAnimationFrame(frames[0], 0)
+	b.setAnimationFrame(node, frames[0], 0)
 	node.OnUpdate(func() {
-		index, changed := player.Advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
+		frame, changed := player.Advance(time.Since(b.renderer.lastFrame))
 		if changed {
-			b.setAnimationFrame(node, frames[index], index)
+			b.setAnimationFrame(node, frames[frame], frame)
 		}
 	})
 	return nil
@@ -264,23 +286,4 @@ func (b *compositionBackend) attachAnimation(id render.NodeID, node Renderable, 
 
 func (b *compositionBackend) setAnimationFrame(node Renderable, frame image.Image, index int) {
 	node.SetAnimationFrame(frame, index)
-}
-
-func (b *compositionBackend) drawableImage(resource render.Resource) (image.Image, error) {
-	switch resource.Kind {
-	case render.ResourceTexture:
-		return resource.Payload.(image.Image), nil
-	case render.ResourceAnimation:
-		animation := resource.Payload.(render.AnimationData)
-		frame, exists := b.resources[animation.Frames[0]]
-		if !exists {
-			return nil, fmt.Errorf("animation %v frame is unavailable", resource.ID)
-		}
-		return frame.Payload.(image.Image), nil
-	case render.ResourceRenderTarget:
-		target := resource.Payload.(render.RenderTargetData)
-		return image.NewRGBA(image.Rect(0, 0, target.Width, target.Height)), nil
-	default:
-		return nil, fmt.Errorf("resource kind %q is not drawable", resource.Kind)
-	}
 }
