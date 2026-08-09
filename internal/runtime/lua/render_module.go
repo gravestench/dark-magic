@@ -831,9 +831,9 @@ func registerRenderNodeType(state *lua.LState) {
 			node := checkRenderNode(state, 1)
 			blend := state.CheckString(2)
 			switch blend {
-			case "alpha", "additive", "multiply", "add-colors", "subtract-colors":
+			case "alpha", "additive", "multiply", "add-colors", "subtract-colors", "screen":
 			default:
-				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, or subtract-colors")
+				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, subtract-colors, or screen")
 				return 0
 			}
 			if err := node.composer.Update(node.id, func(current *render.Node) { current.Blend = blend }); err != nil {
@@ -947,7 +947,6 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating DS1 render node: %v", err)
-				return 0
 			}
 			state.Push(lua.LNumber(decoded.Bounds().Dx()))
 			state.Push(lua.LNumber(decoded.Bounds().Dy()))
@@ -980,7 +979,6 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating render node: %v", err)
-				return 0
 			}
 			state.Push(lua.LNumber(frame.Width))
 			state.Push(lua.LNumber(frame.Height))
