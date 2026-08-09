@@ -100,6 +100,14 @@ function M.wrap(scene, definition, palettes, options)
         self.cursor = create(nil, definition, palettes)
     end
 
+    local function visible_for(self, focused)
+        local visible = focused ~= false and not options.hidden
+        if visible and options.visible_when then
+            visible = options.visible_when(self) == true
+        end
+        return visible
+    end
+
     scene.create = function(self)
         if original_create then original_create(self) end
         ensure_cursor(self)
@@ -108,16 +116,15 @@ function M.wrap(scene, definition, palettes, options)
     scene.enter = function(self)
         if original_enter then original_enter(self) end
         ensure_cursor(self)
+        -- Navigation calls Enter synchronously before the new scene is exposed
+        -- to the next frame. Apply cursor ownership now so a push/replace cannot
+        -- flash the previous scene's pointer for one frame.
+        M.focus(self.cursor, visible_for(self, true))
     end
 
     scene.update = function(self, elapsed, focused)
         if original_update then original_update(self, elapsed, focused) end
-
-        local visible = focused ~= false and not options.hidden
-        if visible and options.visible_when then
-            visible = options.visible_when(self) == true
-        end
-        M.focus(self.cursor, visible)
+        M.focus(self.cursor, visible_for(self, focused))
     end
 
     scene.destroy = function(self)
