@@ -15,9 +15,14 @@ local function eligible(manager, control)
 end
 
 local function contains(control, x, y)
-    return control.visible ~= false and control.enabled ~= false
-        and control.scope == control.manager.active_scope
-        and x >= control.x and y >= control.y
+    if control.visible == false or control.enabled == false
+        or control.scope ~= control.manager.active_scope then
+        return false
+    end
+    if control.hit_test then
+        return control.hit_test(control, x, y) == true
+    end
+    return x >= control.x and y >= control.y
         and x < control.x + control.width and y < control.y + control.height
 end
 
@@ -144,6 +149,21 @@ function Manager:set_enabled(id, enabled)
     if self.pointer_capture == control and not control.enabled then self.pointer_capture = nil end
 end
 
+function Manager:set_visible(id, visible)
+    local control = assert(self.by_id[id], "unknown control: " .. id)
+    control.visible = visible == true
+    if self.focus == control and not control.visible then self:move_focus(1) end
+    if self.pointer_capture == control and not control.visible then self.pointer_capture = nil end
+end
+
+function Manager:set_focus(target)
+    local control = target
+    if type(target) == "string" then control = assert(self.by_id[target], "unknown control: " .. target) end
+    if control ~= nil and not eligible(self, control) then return false end
+    self.focus = control
+    return true
+end
+
 function Manager:set_scope(scope)
     assert(type(scope) == "string" and scope ~= "", "focus scope is required")
     self.active_scope = scope
@@ -229,8 +249,18 @@ function Manager:update()
 
     local x, y = input.cursor()
     local hovered = nil
-    for _, control in ipairs(self.controls) do
-        if contains(control, x, y) then hovered = control end
+    local hovered_priority = -math.huge
+    for index, control in ipairs(self.controls) do
+        if contains(control, x, y) then
+            -- Explicit visual priority lets overlapping character-create actor
+            -- bounds follow their authored draw order. Otherwise preserve the
+            -- historical last-added-wins behavior by using the list index.
+            local priority = control.hit_priority or index
+            if priority >= hovered_priority then
+                hovered = control
+                hovered_priority = priority
+            end
+        end
     end
     if hovered and eligible(self, hovered) then self.focus = hovered end
 
