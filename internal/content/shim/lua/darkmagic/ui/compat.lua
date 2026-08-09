@@ -6,15 +6,16 @@
 local M = {}
 
 -- Legacy D2 draw-mode semantics observed in OpenD2's renderer. Several numeric
--- modes collapse to ordinary alpha blending; mode 3 is the logo/fire screen
--- blend used by the frontend. Mode 4 and 6 are retained as named facts for
--- future nodes that need those exact GPU factors.
+-- modes collapse to ordinary alpha blending. Raylib's predefined multiply mode
+-- is the exact blend equation used by D2 draw mode 4:
+-- GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA. Mode 3 is kept as the custom frontend
+-- screen blend, while mode 6 remains a named future compatibility target.
 M.draw_modes = {
     [0] = "alpha",
     [1] = "alpha",
     [2] = "alpha",
     [3] = "screen",
-    [4] = "d2-dst-color",
+    [4] = "multiply",
     [5] = "alpha",
     [6] = "d2-src-color-add",
     [7] = "alpha",
