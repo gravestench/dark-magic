@@ -192,6 +192,20 @@ function Manager:move_focus(delta)
     for index, control in ipairs(self.controls) do
         if control == self.focus then start = index break end
     end
+
+    if self.wrap_focus == false and start > 0 then
+        local index = start + delta
+        while index >= 1 and index <= #self.controls do
+            local candidate = self.controls[index]
+            if eligible(self, candidate) then
+                self.focus = candidate
+                return candidate
+            end
+            index = index + delta
+        end
+        return self.focus
+    end
+
     for step = 1, #self.controls do
         local index = ((start - 1 + delta * step) % #self.controls) + 1
         local candidate = self.controls[index]
@@ -357,14 +371,16 @@ function Manager:accessibility()
     return result
 end
 
-function M.new()
+function M.new(options)
+    options = options or {}
     return setmetatable({
         controls = {},
         by_id = {},
         focus = nil,
         pressed = nil,
         pointer_capture = nil,
-        active_scope = "default",
+        active_scope = options.active_scope or "default",
+        wrap_focus = options.wrap_focus ~= false,
     }, Manager)
 end
 
