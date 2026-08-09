@@ -53,7 +53,20 @@ return {
         if not render.assets_available() then
             return
         end
-        for id, definition in pairs(screen.labels) do
+        for id, manifest_definition in pairs(screen.labels) do
+            local definition = manifest_definition
+            if id == "legal" then
+                local recovered = compat.frontend.main_menu.disclaimer
+                definition = {
+                    x = recovered.x,
+                    y = recovered.y,
+                    width = recovered.width,
+                    align = recovered.align,
+                    style = recovered.style,
+                    key = manifest_definition.key,
+                }
+            end
+
             local label = render.create("hud", self.root)
             local text_value = assert(locale.text(definition.key))
             if id == "version" then
