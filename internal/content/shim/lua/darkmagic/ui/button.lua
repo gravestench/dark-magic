@@ -29,6 +29,7 @@ end
 function button.create(root, manager, id, definition, label, options)
     options = options or {}
     local layer = options.layer or "hud"
+    local z = options.z or definition.z or 0
 
     -- OpenD2 does not recolor button text on hover/press/disabled; one Exocet
     -- treatment is used for all states and only the label position changes when
@@ -62,6 +63,7 @@ function button.create(root, manager, id, definition, label, options)
         local palette = assert(manifest.palettes[definition.palette], "unknown button palette")
         for index = 1, #up_frames do
             pieces[index] = render.create(layer, root)
+            pieces[index]:set_z(z)
         end
         draw = function(selected_frames)
             local left = definition.x
@@ -87,6 +89,7 @@ function button.create(root, manager, id, definition, label, options)
 
         if options.show_label ~= false then
             local label_node = render.create(layer, root)
+            label_node:set_z(z + 1)
             label_node:set_blend(text_blend)
             draw_label = function(style, dx, dy)
                 text.set(label_node, style, label, button_width, "center")
