@@ -50,7 +50,7 @@ assert(slider.value==50 and a[1].role=="slider" and a[1].focused==true)
 		t.Fatal(err)
 	}
 
-	input.Publish(inputstate.Frame{CursorX: 82, CursorY: 15, Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}})
+	input.Publish(inputstate.Frame{CursorX: 88, CursorY: 15, Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}})
 	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
 		t.Fatal(err)
 	}
