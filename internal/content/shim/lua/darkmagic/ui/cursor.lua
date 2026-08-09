@@ -84,6 +84,9 @@ end
 --   hidden = true                       never show a cursor in this scene
 --   visible_when = function(self) ...  dynamic visibility (e.g. video playing)
 function M.wrap(scene, definition, palettes, options)
+    if scene.__darkmagic_cursor_wrapped then return scene end
+    scene.__darkmagic_cursor_wrapped = true
+
     options = options or {}
     local original_create = scene.create
     local original_enter = scene.enter
