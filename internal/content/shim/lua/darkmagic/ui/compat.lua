@@ -75,8 +75,10 @@ M.frontend = {
             y = 590,
             width = 760,
             align = "center",
-            -- Small Exocet, deliberately quieter than the authored buttons.
-            style = "button_normal",
+            -- Gold Formal 10 is the small legal/disclaimer treatment used by
+            -- the frontend. The existing credits style is exactly that font,
+            -- palette transform, and gold text color.
+            style = "credits",
         },
     },
     character_create = {
@@ -113,11 +115,12 @@ M.frontend = {
             Assassin = { anchor = { x = 232, y = 349 } },
         },
 
-        -- Static buttons are always present. The dynamic form appears only
-        -- while a class is selected.
+        -- Static buttons are always present. OpenD2 renders this entire scene
+        -- under PAL_FECHAR, and MediumSelButtonBlank.dc6 is authored for that
+        -- palette; units makes the button art visibly wrong.
         controls = {
-            exit = { x = 35, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", up_frames = {0}, down_frames = {1} },
-            ok = { x = 630, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", up_frames = {0}, down_frames = {1} },
+            exit = { x = 35, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", palette = "fechar", up_frames = {0}, down_frames = {1} },
+            ok = { x = 630, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", palette = "fechar", up_frames = {0}, down_frames = {1} },
         },
         form = {
             x = 320,
@@ -126,6 +129,15 @@ M.frontend = {
             expansion = { x = 320, y = 525 },
             hardcore = { x = 320, y = 545 },
             minimum_name_length = 2,
+        },
+    },
+    game_loading = {
+        -- Both paths are present and byte-identical in the verified asset
+        -- fixture. Some installations/archive stacks expose only one usable
+        -- copy, so loading tries both before surfacing a decode error.
+        sheets = {
+            "data/global/ui/Loading/loadingscreen.dc6",
+            "data/local/ui/loadingscreen.dc6",
         },
     },
 }
