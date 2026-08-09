@@ -85,8 +85,8 @@ function M.create(root, manager, id, definition, label, options)
         if value_node then
             local value = options.format_value and options.format_value(control.value) or tostring(control.value)
             local value_width = options.value_width or 64
-            local _, value_height = text.set(value_node, options.value_style or "font_lab_caption", value, value_width, "right")
-            value_node:set_position(x + width + value_width / 2 + 8, y + height / 2 - value_height / 2 + value_height / 2)
+            text.set(value_node, options.value_style or "font_lab_caption", value, value_width, "right")
+            value_node:set_position(x + width + value_width / 2 + 8, y + height / 2)
         end
     end
 
