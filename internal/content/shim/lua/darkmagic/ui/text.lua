@@ -19,35 +19,48 @@ local function resolve(style_name)
     return style, font
 end
 
--- Create centered-positioned text. The x coordinate is the center of the
--- requested text box, matching the retained renderer's node positioning.
--- Callers may still select left, center, or right alignment within that box.
-function text.set(node, style_name, value, width, alignment)
-    local style, font = resolve(style_name)
-    local color = style.color or {}
+local function render_font(node, font, value, width, alignment, options)
+    options = options or {}
+    local color = options.color or {}
     value = tostring(value or "")
-    if style.text_color then
-        value = "[" .. style.text_color .. "]" .. value
+    if options.text_color then
+        value = "[" .. options.text_color .. "]" .. value
     end
-    local rendered_width, rendered_height = node:set_text(
+    return node:set_text(
         font.table,
         font.sheet,
-        assert(manifest.palettes[font.palette], "unknown palette for text style: " .. style_name),
+        assert(manifest.palettes[font.palette], "unknown bitmap-font palette"),
         value,
         {
             red = color.red or 255,
             green = color.green or 255,
             blue = color.blue or 255,
             alpha = color.alpha or 255,
-            transform = style.transform and assert(
-                manifest.palette_transforms[style.transform],
-                "unknown palette transform for text style: " .. style_name
+            transform = options.transform and assert(
+                manifest.palette_transforms[options.transform],
+                "unknown bitmap-font palette transform: " .. tostring(options.transform)
             ) or "",
             max_width = width or 0,
-            align = alignment or style.align or "center",
+            align = alignment or options.align or "center",
         }
     )
-    return rendered_width, rendered_height
+end
+
+-- Create centered-positioned text. The x coordinate is the center of the
+-- requested text box, matching the retained renderer's node positioning.
+-- Callers may still select left, center, or right alignment within that box.
+function text.set(node, style_name, value, width, alignment)
+    local style, font = resolve(style_name)
+    return render_font(node, font, value, width, alignment, style)
+end
+
+-- Render one manifest-defined bitmap font without applying a semantic style.
+-- This is useful when a recovered reference specifies an exact font/palette
+-- pairing (for example OpenDiablo2's FontStyle42Units) but no Dark Magic style
+-- exists yet. Asset paths still remain centralized in the presentation manifest.
+function text.set_font(node, font_name, value, width, alignment, options)
+    local font = assert(manifest.fonts[font_name], "unknown bitmap font: " .. tostring(font_name))
+    return render_font(node, font, value, width, alignment, options)
 end
 
 function text.create(root, style_name, value, x, y, width, alignment, layer)
