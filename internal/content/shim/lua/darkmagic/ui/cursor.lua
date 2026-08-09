@@ -77,8 +77,10 @@ end
 
 -- Decorate a scene with default software-cursor ownership/focus semantics.
 -- Existing screens that already construct self.cursor keep that instance;
--- screens/overlays that do not get one automatically. This keeps the helper
--- backwards compatible while making cursor visibility a shell-wide invariant.
+-- screens/overlays that do not get a separate shell-owned cursor automatically.
+-- The automatic cursor deliberately does NOT populate self.cursor: several
+-- existing scenes use that field as part of their own initialization/lifecycle
+-- state, so changing it from the decorator would alter scene behavior.
 --
 -- Options:
 --   hidden = true                       never show a cursor in this scene
@@ -93,11 +95,15 @@ function M.wrap(scene, definition, palettes, options)
     local original_update = scene.update
     local original_destroy = scene.destroy
 
+    local function cursor_for(self)
+        return self.cursor or self.__darkmagic_shell_cursor
+    end
+
     local function ensure_cursor(self)
-        if options.hidden or self.cursor then return end
-        -- Keep the cursor independent of scene-root transforms. The scene scope
-        -- still owns and destroys the render node automatically.
-        self.cursor = create(nil, definition, palettes)
+        if options.hidden or self.cursor or self.__darkmagic_shell_cursor then return end
+        -- Keep the shell cursor independent of scene-root transforms. The scene
+        -- scope still owns and destroys the render node automatically.
+        self.__darkmagic_shell_cursor = create(nil, definition, palettes)
     end
 
     local function visible_for(self, focused)
@@ -121,18 +127,22 @@ function M.wrap(scene, definition, palettes, options)
         -- Navigation calls Enter synchronously before the new scene is exposed
         -- to the next frame. Apply cursor ownership now so a push/replace cannot
         -- flash the previous scene's pointer for one frame.
-        M.focus(self.cursor, visible_for(self, true))
+        M.focus(cursor_for(self), visible_for(self, true))
     end
 
     scene.update = function(self, elapsed, focused)
         if original_update then original_update(self, elapsed, focused) end
-        M.focus(self.cursor, visible_for(self, focused))
+        M.focus(cursor_for(self), visible_for(self, focused))
     end
 
     scene.destroy = function(self)
+        -- An authored scene cursor and the automatic shell cursor are distinct
+        -- ownership paths. Unregister whichever exist without mutating the
+        -- scene's own cursor field or using it as shell lifecycle state.
         unregister(self.cursor)
+        unregister(self.__darkmagic_shell_cursor)
         if original_destroy then original_destroy(self) end
-        self.cursor = nil
+        self.__darkmagic_shell_cursor = nil
     end
 
     return scene
