@@ -141,11 +141,13 @@ function Manager:set_enabled(id, enabled)
     local control = assert(self.by_id[id], "unknown control: " .. id)
     control.enabled = enabled == true
     if self.focus == control and not control.enabled then self:move_focus(1) end
+    if self.pointer_capture == control and not control.enabled then self.pointer_capture = nil end
 end
 
 function Manager:set_scope(scope)
     assert(type(scope) == "string" and scope ~= "", "focus scope is required")
     self.active_scope = scope
+    self.pointer_capture = nil
     if not self.focus or not eligible(self, self.focus) then
         self.focus = nil
         self:move_focus(1)
@@ -172,6 +174,16 @@ local function set_value(control, value)
     if value == control.value then return end
     control.value = value
     if control.on_change then control.on_change(control, value) end
+end
+
+local function set_pointer_value(control, x, y)
+    local fraction
+    if control.orientation == "vertical" then
+        fraction = (y - control.y) / control.height
+    else
+        fraction = (x - control.x) / control.width
+    end
+    set_value(control, control.min + (control.max - control.min) * fraction)
 end
 
 function Manager:activate(control)
@@ -222,26 +234,38 @@ function Manager:update()
     end
     if hovered and eligible(self, hovered) then self.focus = hovered end
 
+    -- Diablo II buttons capture on mouse-down but dispatch their action only on
+    -- mouse-up, and only when the release remains inside the same control. This
+    -- also prevents dragging into a button while already holding the mouse from
+    -- triggering it. The captured control remains visually depressed until up.
+    if input.pressed("pointer_primary") then
+        self.pointer_capture = hovered
+    end
+
+    if self.pointer_capture and self.pointer_capture.role == "scrollbar" and input.down("pointer_primary") then
+        set_pointer_value(self.pointer_capture, x, y)
+    end
+
     self.pressed = nil
-    if hovered and input.down("pointer_primary") then
-        self.pressed = hovered
+    if self.pointer_capture and input.down("pointer_primary") then
+        self.pressed = self.pointer_capture
     elseif self.focus and input.down("confirm") then
         self.pressed = self.focus
     end
 
-    if input.pressed("pointer_primary") then
-        if hovered and hovered.role == "scrollbar" then
-            local fraction
-            if hovered.orientation == "vertical" then
-                fraction = (y - hovered.y) / hovered.height
+    if input.released("pointer_primary") then
+        local captured = self.pointer_capture
+        self.pointer_capture = nil
+        self.pressed = nil
+        if captured and contains(captured, x, y) then
+            if captured.role == "scrollbar" then
+                set_pointer_value(captured, x, y)
             else
-                fraction = (x - hovered.x) / hovered.width
+                self:activate(captured)
             end
-            set_value(hovered, hovered.min + (hovered.max - hovered.min) * fraction)
-        else
-            self:activate(hovered)
         end
     end
+
     if input.pressed("confirm") then self:activate(self.focus) end
 
     if self.focus and self.focus.role == "textbox" then edit_text(self.focus) end
@@ -277,7 +301,14 @@ function Manager:accessibility()
 end
 
 function M.new()
-    return setmetatable({ controls = {}, by_id = {}, focus = nil, active_scope = "default" }, Manager)
+    return setmetatable({
+        controls = {},
+        by_id = {},
+        focus = nil,
+        pressed = nil,
+        pointer_capture = nil,
+        active_scope = "default",
+    }, Manager)
 end
 
 return M
