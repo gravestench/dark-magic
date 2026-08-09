@@ -130,4 +130,20 @@ M.frontend = {
     },
 }
 
+-- Compatibility facts override the manifest without mutating the loaded
+-- manifest table shared by other Lua modules. Behavior/locale/targets remain
+-- in the manifest; only recovered presentation facts are merged here.
+function M.screen_control(screen_id, control_id, fallback)
+    local result = {}
+    for key, value in pairs(assert(fallback, "fallback control is required")) do
+        result[key] = value
+    end
+    local screen = M.frontend[screen_id]
+    local override = screen and screen.controls and screen.controls[control_id]
+    if override then
+        for key, value in pairs(override) do result[key] = value end
+    end
+    return result
+end
+
 return M
