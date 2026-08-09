@@ -229,6 +229,7 @@ return {
                 y = placement.hit.y,
                 width = placement.hit.width,
                 height = placement.hit.height,
+                focusable = false,
                 -- Keep the relative hero ordering while allowing later static
                 -- UI controls to win if a broad actor bound overlaps the form.
                 hit_priority = -1000 + placement.z,
@@ -350,6 +351,7 @@ return {
                 on_change = function(_, checked) self.expansion = checked end,
             }
         )
+        self.expansion_control.focusable = false
         set_form_control_z(self.expansion_control, panel_z)
         self.form_controls[#self.form_controls + 1] = self.expansion_control
 
@@ -371,6 +373,7 @@ return {
                 on_change = function(_, checked) self.hardcore = checked end,
             }
         )
+        self.hardcore_control.focusable = false
         set_form_control_z(self.hardcore_control, panel_z)
         self.form_controls[#self.form_controls + 1] = self.hardcore_control
 
@@ -398,6 +401,7 @@ return {
                 on_activate = function() scenes.replace("character_select") end,
             }
         )
+        self.exit_button.focusable = false
 
         local ok_fallback = {
             x = 630,
@@ -440,6 +444,7 @@ return {
                 end,
             }
         )
+        self.ok_button.focusable = false
 
         self.update_ok_state = function(current)
             local valid = current.selected ~= nil
@@ -480,6 +485,9 @@ return {
         if self.selection_transition then return end
 
         self.controls:update()
+        if self.form_visible and input.pressed("confirm") and self.ok_button.enabled then
+            self.controls:activate(self.ok_button)
+        end
         if input.pressed("cancel") then
             scenes.replace("character_select")
         end
