@@ -35,6 +35,10 @@ local function state_of(manager, control, x, y)
     return "normal"
 end
 
+local function is_range(control)
+    return control and (control.role == "scrollbar" or control.role == "slider")
+end
+
 function Manager:add(control)
     assert(type(control.id) == "string" and control.id ~= "", "control id is required")
     assert(type(control.x) == "number" and type(control.y) == "number", "control position is required")
@@ -128,16 +132,24 @@ function Manager:add_text_field(control)
     return self:add(control)
 end
 
-function Manager:add_scrollbar(control)
-    control.role = "scrollbar"
+local function prepare_range(control, role)
+    control.role = role
     control.min = control.min or 0
     control.max = control.max or 1
-    assert(control.max >= control.min, "scrollbar max must be at least min")
+    assert(control.max >= control.min, role .. " max must be at least min")
     control.step = control.step or 1
     control.orientation = control.orientation or "horizontal"
-    assert(control.orientation == "horizontal" or control.orientation == "vertical", "invalid scrollbar orientation")
+    assert(control.orientation == "horizontal" or control.orientation == "vertical", "invalid " .. role .. " orientation")
     control.value = math.max(control.min, math.min(control.max, control.value or control.min))
-    return self:add(control)
+    return control
+end
+
+function Manager:add_scrollbar(control)
+    return self:add(prepare_range(control, "scrollbar"))
+end
+
+function Manager:add_slider(control)
+    return self:add(prepare_range(control, "slider"))
 end
 
 function Manager:get(id) return self.by_id[id] end
@@ -191,12 +203,20 @@ end
 
 local function set_value(control, value)
     value = math.max(control.min, math.min(control.max, value))
+    if control.step and control.step > 0 then
+        local steps = math.floor(((value - control.min) / control.step) + 0.5)
+        value = math.min(control.max, control.min + steps * control.step)
+    end
     if value == control.value then return end
     control.value = value
     if control.on_change then control.on_change(control, value) end
 end
 
 local function set_pointer_value(control, x, y)
+    if control.pointer_to_value then
+        set_value(control, control.pointer_to_value(control, x, y))
+        return
+    end
     local fraction
     if control.orientation == "vertical" then
         fraction = (y - control.y) / control.height
@@ -236,13 +256,19 @@ local function edit_text(control)
 end
 
 function Manager:update()
-    if input.pressed("down") then self:move_focus(1) end
-    if input.pressed("up") then self:move_focus(-1) end
+    local focused_range = is_range(self.focus)
+    if focused_range and self.focus.orientation == "vertical" then
+        if input.pressed("down") then set_value(self.focus, self.focus.value + self.focus.step) end
+        if input.pressed("up") then set_value(self.focus, self.focus.value - self.focus.step) end
+    else
+        if input.pressed("down") then self:move_focus(1) end
+        if input.pressed("up") then self:move_focus(-1) end
+    end
 
-    if self.focus and self.focus.role == "scrollbar" then
+    if focused_range and self.focus.orientation == "horizontal" then
         if input.pressed("right") then set_value(self.focus, self.focus.value + self.focus.step) end
         if input.pressed("left") then set_value(self.focus, self.focus.value - self.focus.step) end
-    elseif self.focus and self.focus.role ~= "textbox" then
+    elseif self.focus and self.focus.role ~= "textbox" and not focused_range then
         if input.pressed("right") then self:move_focus(1) end
         if input.pressed("left") then self:move_focus(-1) end
     end
@@ -265,14 +291,13 @@ function Manager:update()
     if hovered and eligible(self, hovered) then self.focus = hovered end
 
     -- Diablo II buttons capture on mouse-down but dispatch their action only on
-    -- mouse-up, and only when the release remains inside the same control. This
-    -- also prevents dragging into a button while already holding the mouse from
-    -- triggering it. The captured control remains visually depressed until up.
+    -- mouse-up, and only when the release remains inside the same control. Range
+    -- controls retain capture while dragging so their thumb can track the mouse.
     if input.pressed("pointer_primary") then
         self.pointer_capture = hovered
     end
 
-    if self.pointer_capture and self.pointer_capture.role == "scrollbar" and input.down("pointer_primary") then
+    if self.pointer_capture and is_range(self.pointer_capture) and input.down("pointer_primary") then
         set_pointer_value(self.pointer_capture, x, y)
     end
 
@@ -288,7 +313,7 @@ function Manager:update()
         self.pointer_capture = nil
         self.pressed = nil
         if captured and contains(captured, x, y) then
-            if captured.role == "scrollbar" then
+            if is_range(captured) then
                 set_pointer_value(captured, x, y)
             else
                 self:activate(captured)
