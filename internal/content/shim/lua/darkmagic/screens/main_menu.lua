@@ -12,6 +12,7 @@ local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
 local button = require("darkmagic.ui.button")
 local text = require("darkmagic.ui.text")
+local compat = require("darkmagic.ui.compat")
 local app = require("dm.app/v1")
 local cursor = require("darkmagic.ui.cursor")
 
@@ -31,16 +32,16 @@ return {
             manifest.layouts.frontend_tiles
         )
         if render.assets_available() then
-            -- The logo is four independently decoded resources sharing one
-            -- authored anchor and one deterministic animation clock.
             self.logo = {
                 black_left = render.create("hud", self.root),
                 black_right = render.create("hud", self.root),
                 fire_left = render.create("hud", self.root),
                 fire_right = render.create("hud", self.root),
             }
-            self.logo.fire_left:set_blend(logo.fire_blend)
-            self.logo.fire_right:set_blend(logo.fire_blend)
+            -- Diablo II draw mode 3 is screen blending (ONE,
+            -- ONE_MINUS_SRC_COLOR), not ordinary additive blending.
+            self.logo.fire_left:set_blend(compat.draw_mode(3))
+            self.logo.fire_right:set_blend(compat.draw_mode(3))
             self:configure_logo()
         end
         self:configure_controls()
@@ -63,8 +64,6 @@ return {
         end
     end,
 
-    -- Compose each half separately because its black and flame layers share
-    -- bounds with each other, while both halves share the same world anchor.
     configure_logo = function(self)
         dc6.anchored_composite(
             { self.logo.black_left, self.logo.fire_left },
