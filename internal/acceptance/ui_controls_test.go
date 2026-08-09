@@ -36,16 +36,52 @@ manager:add({id="two", label="Second", x=30, y=0, width=20, height=20,
     on_state=function(_, state) visual_state=state end})
 `)},
 		"update.lua": &fstest.MapFile{Data: []byte(`manager:update()`)},
-		"assert.lua": &fstest.MapFile{Data: []byte(`local a=manager:accessibility(); assert(activated=="two" and visual_state=="pressed" and a[2].focused and a[2].role=="button")`)},
+		"assert_down.lua": &fstest.MapFile{Data: []byte(`
+local a=manager:accessibility()
+assert(activated=="" and visual_state=="pressed" and a[2].focused and a[2].role=="button")
+`)},
+		"assert_up.lua": &fstest.MapFile{Data: []byte(`
+local a=manager:accessibility()
+assert(activated=="two" and visual_state=="hover" and a[2].focused)
+`)},
+		"clear.lua": &fstest.MapFile{Data: []byte(`activated=""`)},
+		"assert_cancelled.lua": &fstest.MapFile{Data: []byte(`assert(activated=="")`)},
 	}
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pressing inside captures/depresses the control but does not activate it.
+	input.Publish(inputstate.Frame{CursorX: 35, CursorY: 5, Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true}}})
+	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Execute(ctx, scripts, "assert_down.lua"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Releasing inside the same captured control activates it.
+	input.Publish(inputstate.Frame{CursorX: 35, CursorY: 5, Actions: map[string]inputstate.ActionState{"pointer_primary": {Released: true}}})
+	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Execute(ctx, scripts, "assert_up.lua"); err != nil {
+		t.Fatal(err)
+	}
+
+	// A press that begins inside but releases outside is cancelled.
+	if err := runtime.Execute(ctx, scripts, "clear.lua"); err != nil {
 		t.Fatal(err)
 	}
 	input.Publish(inputstate.Frame{CursorX: 35, CursorY: 5, Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true}}})
 	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.Execute(ctx, scripts, "assert.lua"); err != nil {
+	input.Publish(inputstate.Frame{CursorX: 100, CursorY: 100, Actions: map[string]inputstate.ActionState{"pointer_primary": {Released: true}}})
+	if err := runtime.Execute(ctx, scripts, "update.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Execute(ctx, scripts, "assert_cancelled.lua"); err != nil {
 		t.Fatal(err)
 	}
 }
