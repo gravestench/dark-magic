@@ -13,6 +13,28 @@ local function sheet_for(defaults, kind)
     return defaults.generic_sheet
 end
 
+local function name_filter(value)
+    local result = {}
+    for index = 1, #value do
+        local character = value:sub(index, index)
+        if character:match("[A-Za-z0-9_-]") then result[#result + 1] = character end
+    end
+    return table.concat(result)
+end
+
+local function marker_at(value, cursor)
+    if cursor <= 0 then return "_" .. value end
+    local seen = 0
+    for index = 1, #value do
+        local byte = value:byte(index)
+        if byte < 128 or byte >= 192 then
+            if seen == cursor then return value:sub(1, index - 1) .. "_" .. value:sub(index) end
+            seen = seen + 1
+        end
+    end
+    return value .. "_"
+end
+
 function M.create(root, manager, id, definition, label, options)
     definition = definition or {}
     options = options or {}
@@ -49,9 +71,10 @@ function M.create(root, manager, id, definition, label, options)
 
     local function draw_value(current)
         if not value_node then return end
-        local suffix = current.state == "focused" and "_" or ""
+        local shown = current.value
+        if current.state == "focused" then shown = marker_at(current.value, current.cursor or 0) end
         local value_width = math.max(1, width - defaults.text_x - 4)
-        local _, text_height = text.set(value_node, options.text_style or defaults.text_style, current.value .. suffix, value_width, "left")
+        local _, text_height = text.set(value_node, options.text_style or defaults.text_style, shown, value_width, "left")
         value_node:set_position(x + defaults.text_x + value_width / 2, y + defaults.text_y + text_height / 2)
     end
 
@@ -65,7 +88,7 @@ function M.create(root, manager, id, definition, label, options)
         height = height,
         value = definition.value or "",
         max_length = definition.max_length,
-        filter = definition.filter,
+        filter = definition.filter or (definition.kind == "name" and name_filter or nil),
         enabled = options.enabled,
         scope = options.scope or definition.scope,
         on_change = function(current, value)
