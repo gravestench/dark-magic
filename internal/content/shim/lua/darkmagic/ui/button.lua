@@ -24,8 +24,6 @@ local function frames(definition, plural, singular)
     return nil
 end
 
--- Create, render, and register an authored button. Options may override the
--- semantic text styles, render layer, pressed-label offset, or callback.
 function button.create(root, manager, id, definition, label, options)
     options = options or {}
     local layer = options.layer or "hud"
@@ -72,8 +70,6 @@ function button.create(root, manager, id, definition, label, options)
                 )
             end
         end
-        draw(up_frames)
-        draw_label(normal_style, 0, 0)
         if options.tooltip then
             help = tooltips.create(
                 root,
@@ -126,6 +122,10 @@ function button.create(root, manager, id, definition, label, options)
     control.tooltip = help
 
     manager:add(control)
+    -- Manager:add establishes the initial state but intentionally does not call
+    -- presentation callbacks. Render it once here so disabled controls and
+    -- other non-normal initial states are correct before the first input tick.
+    control.on_state(control, control.state)
     return control
 end
 
