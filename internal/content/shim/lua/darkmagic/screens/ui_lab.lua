@@ -15,9 +15,18 @@ local text = require("darkmagic.ui.text")
 local cursor = require("darkmagic.ui.cursor")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
-local lab = manifest.screens.ui_lab
 
 local ui_lab = {}
+
+local function copy_at(source, x, y)
+    local result = {}
+    for key, value in pairs(source) do
+        result[key] = value
+    end
+    result.x = x
+    result.y = y
+    return result
+end
 
 local function put(root, style, value, left, top, width, alignment)
     local node = render.create("hud", root)
@@ -40,15 +49,10 @@ local function make_checkbox(self, definition)
     put(self.root, "font_lab_caption", definition.label, definition.x + definition.height + 10, definition.y + 2, 220, "left")
 
     local function refresh(control, state)
-        mark:set_visible(control.checked)
         local active = state == "hover" or state == "focused" or state == "pressed"
         outer:set_visible(true)
         inner:set_visible(true)
-        if active then
-            mark:set_visible(true)
-        elseif not control.checked then
-            mark:set_visible(false)
-        end
+        mark:set_visible(control.checked or active)
     end
 
     local control = self.controls:add_checkbox({
@@ -81,7 +85,8 @@ local function make_text_field(self, definition)
         value = definition.value,
         max_length = definition.max_length,
         on_change = function(current)
-            text.set(value, "font_lab_caption", current.value .. "_", definition.width - 16, "left")
+            local suffix = current.state == "focused" and "_" or ""
+            text.set(value, "font_lab_caption", current.value .. suffix, definition.width - 16, "left")
         end,
         on_state = function(current, state)
             local suffix = state == "focused" and "_" or ""
@@ -132,7 +137,9 @@ function ui_lab.create(self)
 
     self.controls = controls.new()
 
-    local authored = lab.authored_button
+    -- Reuse the verified shipping button definitions so ui_lab exercises the
+    -- exact same DC6/palette/frame mappings as the frontend rather than lab art.
+    local authored = copy_at(manifest.screens.main_menu.controls.single_player, 70, 120)
     self.primary = button.create(self.root, self.controls, "authored_button", authored, "AUTHORED BUTTON", {
         tooltip = "DC6 up/down states; down art only while pressed; label shifts -2,+2",
         on_activate = function(current)
@@ -141,27 +148,27 @@ function ui_lab.create(self)
         end,
     })
 
-    local disabled = lab.disabled_button
+    local disabled = copy_at(manifest.screens.main_menu.controls.credits, 420, 120)
     self.disabled = button.create(self.root, self.controls, "disabled_button", disabled, "DISABLED", {
         enabled = false,
         tooltip = "Disabled controls remain inspectable but cannot receive focus",
     })
 
     put(self.root, "font_lab_caption", "CHECKBOX", 70, 210, 180, "left")
-    make_checkbox(self, lab.checkbox)
+    make_checkbox(self, { id = "checkbox", label = "Expansion character", x = 70, y = 238, width = 250, height = 24, checked = true })
 
     put(self.root, "font_lab_caption", "TEXT FIELD", 70, 290, 180, "left")
-    make_text_field(self, lab.text_field)
+    make_text_field(self, { id = "text_field", label = "Character name", x = 70, y = 318, width = 272, height = 32, value = "DarkMagic", max_length = 15 })
 
     put(self.root, "font_lab_caption", "SCROLLBAR / SLIDER", 70, 380, 220, "left")
-    make_scrollbar(self, lab.scrollbar)
+    make_scrollbar(self, { id = "scrollbar", label = "Value", x = 70, y = 410, width = 272, height = 18, min = 0, max = 100, step = 10, value = 40, thumb_width = 20 })
 
     self.activation = put(self.root, "font_lab_caption", "activated", 520, 168, 200, "center")
     self.activation:set_visible(false)
 
     put(self.root, "font_lab_caption", "Focus order and hit testing are owned by darkmagic.ui.controls.", 420, 250, 310, "left")
-    put(self.root, "font_lab_caption", "The authored button uses the same DC6 component used by main_menu/tcpip screens.", 420, 300, 310, "left")
-    put(self.root, "font_lab_caption", "This scene intentionally keeps state and rendering in Lua to verify mod hooks.", 420, 350, 310, "left")
+    put(self.root, "font_lab_caption", "The authored button is the same WideButtonBlank mapping used by main_menu.", 420, 300, 310, "left")
+    put(self.root, "font_lab_caption", "State and rendering remain in Lua, so this scene also exercises mod UI hooks.", 420, 350, 310, "left")
 
     self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
 end
