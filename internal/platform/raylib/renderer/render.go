@@ -55,26 +55,15 @@ func (s *Service) renderNode(node Renderable) {
 		}
 	}
 
-	//rl.DrawTextureEx(
-	//	tx,
-	//	rl.Vector2{X: float32(x), Y: float32(y)},
-	//	node.Rotation(),
-	//	node.Scale(),
-	//	rl.NewColor(255, 255, 255, uint8(node.Opacity()*255)))
-
 	origin := node.Origin()
 	scale := node.Scale()
 
-	// src rect is at 0,0 and dimension of src texture
 	srcWidth, srcHeight := float32(tx.Width), float32(tx.Height)
 	srcRect := rl.NewRectangle(0, 0, srcWidth, srcHeight)
 
-	// dst rect is at position of node, with scaled dimension of texture
 	dstWidth, dstHeight := float32(tx.Width)*scale, float32(tx.Height)*scale
 	dstRect := rl.NewRectangle(float32(x), float32(y), dstWidth, dstHeight)
 
-	// node origin uses normalized value, applied to scaled dimension of texture
-	// to provide relative offset, regardless of texture dimensions
 	originX, originY := dstWidth*origin.X, dstHeight*origin.Y
 	dstOrigin := rl.Vector2{X: originX, Y: originY}
 
@@ -82,13 +71,17 @@ func (s *Service) renderNode(node Renderable) {
 	if shader := node.Shader(); shader != nil {
 		rl.BeginShaderMode(*shader)
 		if texture := node.ShaderTexture(); texture != nil {
-			// Auxiliary sampler registrations live for one Raylib batch only.
 			rl.SetShaderValueTexture(*shader, node.ShaderTextureLocation(), *texture)
 		}
 		defer rl.EndShaderMode()
 	}
 
 	if node.BlendMode() != rl.BlendAlpha {
+		if node.BlendMode() == rl.BlendCustom {
+			// Diablo II UI draw mode 3 uses screen-like blending:
+			// GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_FUNC_ADD.
+			rl.SetBlendFactors(rl.One, rl.OneMinusSrcColor, rl.FuncAdd)
+		}
 		rl.BeginBlendMode(node.BlendMode())
 		defer rl.EndBlendMode()
 	}
@@ -116,12 +109,10 @@ func contiguousRGBA(img image.Image) ([]byte, bool) {
 }
 
 func getAllPixelData(img image.Image) []color.RGBA {
-	// Get the dimensions of the image
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// Convert the RGBA image to a slice of color.RGBA
 	pixels := make([]color.RGBA, width*height)
 	index := 0
 
