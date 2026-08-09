@@ -51,6 +51,8 @@ function button.create(root, manager, id, definition, label, options)
         assert(#up_frames == #disabled_frames, "button disabled frame counts must match")
     end
 
+    local button_width = assert(definition.width, "button width is required")
+    local button_height = assert(definition.height, "button height is required")
     local draw = function() end
     local draw_label = function() end
     local help
@@ -63,21 +65,34 @@ function button.create(root, manager, id, definition, label, options)
         end
         draw = function(selected_frames)
             local left = definition.x
+            local decoded_width = 0
+            local decoded_height = 0
             for index, node in ipairs(pieces) do
                 local width, height = node:set_dc6(definition.sheet, palette, 0, assert(selected_frames[index]))
                 node:set_position(left + width / 2, definition.y + height / 2)
                 left = left + width
+                decoded_width = decoded_width + width
+                decoded_height = math.max(decoded_height, height)
             end
+            -- Interaction geometry follows the decoded authored art rather than
+            -- a duplicated guessed rectangle. Manifest dimensions remain the
+            -- headless fallback when no game assets are mounted.
+            button_width = decoded_width > 0 and decoded_width or button_width
+            button_height = decoded_height > 0 and decoded_height or button_height
         end
+
+        -- Decode the normal state before registering the control so its hitbox,
+        -- label centering, and tooltip anchor use the real DC6 dimensions.
+        draw(up_frames)
 
         if options.show_label ~= false then
             local label_node = render.create(layer, root)
             label_node:set_blend(text_blend)
             draw_label = function(style, dx, dy)
-                text.set(label_node, style, label, definition.width, "center")
+                text.set(label_node, style, label, button_width, "center")
                 label_node:set_position(
-                    definition.x + definition.width / 2 + (dx or 0),
-                    definition.y + definition.height / 2 + base_text_offset + (dy or 0)
+                    definition.x + button_width / 2 + (dx or 0),
+                    definition.y + button_height / 2 + base_text_offset + (dy or 0)
                 )
             end
         end
@@ -85,7 +100,7 @@ function button.create(root, manager, id, definition, label, options)
             help = tooltips.create(
                 root,
                 options.tooltip,
-                definition.x + definition.width / 2,
+                definition.x + button_width / 2,
                 definition.y - (options.tooltip_gap or 2),
                 { layer = options.tooltip_layer or "modal", style = options.tooltip_style or "tooltip" }
             )
@@ -97,14 +112,21 @@ function button.create(root, manager, id, definition, label, options)
         label = label,
         x = definition.x,
         y = definition.y,
-        width = definition.width,
-        height = definition.height,
+        width = button_width,
+        height = button_height,
         enabled = options.enabled,
         scope = options.scope or definition.scope,
         on_activate = function(current)
-            local sound = options.sound or manifest.sounds.button or manifest.sounds.select
+            local sound = options.sound or definition.sound
+                or compat.widgets.button.click_sound or manifest.sounds.button or manifest.sounds.select
             if sound and audio.exists(sound) then
-                audio.play(sound, { bus = "ui" })
+                -- Scene replacement tears down scoped audio immediately. A UI
+                -- click is a one-shot that must survive that transition, so use
+                -- a dedicated persistent group; a subsequent click replaces it.
+                audio.play_persistent(sound, {
+                    bus = "ui",
+                    group = options.sound_group or definition.sound_group or "ui_button_click",
+                })
             end
             if options.on_activate then
                 options.on_activate(current)
