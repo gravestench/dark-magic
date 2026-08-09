@@ -3,12 +3,14 @@
 -- This module intentionally models recovered presentation behavior rather than
 -- any reference engine's widget implementation. Diablo II buttons keep their
 -- normal artwork while merely focused/hovered, switch to the down artwork only
--- while pressed, and offset their label -2,+2 while depressed.
+-- while pressed, offset their label -2,+2 while depressed, and render Exocet
+-- button text with legacy draw mode 4 (destination-color modulation).
 local render = require("dm.render/v1")
 local audio = require("dm.audio/v1")
 local data = require("dm.data/v1")
 local text = require("darkmagic.ui.text")
 local tooltips = require("darkmagic.ui.tooltip")
+local compat = require("darkmagic.ui.compat")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 
@@ -27,11 +29,19 @@ end
 function button.create(root, manager, id, definition, label, options)
     options = options or {}
     local layer = options.layer or "hud"
-    local normal_style = options.normal_style or definition.normal_style or "button_normal"
-    local hover_style = options.hover_style or definition.hover_style or "button_hover"
-    local disabled_style = options.disabled_style or definition.disabled_style or "disabled"
-    local pressed_dx = options.pressed_dx or definition.pressed_dx or -2
-    local pressed_dy = options.pressed_dy or definition.pressed_dy or 2
+
+    -- OpenD2 does not recolor button text on hover/press/disabled; one Exocet
+    -- treatment is used for all states and only the label position changes when
+    -- depressed. button_hover is the existing unmodulated/white Exocet style,
+    -- whereas button_normal's grey tint was an older approximation of draw mode 4.
+    local normal_style = options.normal_style or definition.normal_style or "button_hover"
+    local hover_style = options.hover_style or definition.hover_style or normal_style
+    local disabled_style = options.disabled_style or definition.disabled_style or normal_style
+    local text_blend = options.text_blend or definition.text_blend
+        or compat.draw_mode(compat.widgets.button.text_draw_mode)
+
+    local pressed_dx = options.pressed_dx or definition.pressed_dx or compat.widgets.button.pressed_dx
+    local pressed_dy = options.pressed_dy or definition.pressed_dy or compat.widgets.button.pressed_dy
     local base_text_offset = options.text_offset or definition.text_offset or 0
     local up_frames = assert(frames(definition, "up_frames", "up_frame"), "button up frame is required")
     local down_frames = assert(frames(definition, "down_frames", "down_frame"), "button down frame is required")
@@ -62,6 +72,7 @@ function button.create(root, manager, id, definition, label, options)
 
         if options.show_label ~= false then
             local label_node = render.create(layer, root)
+            label_node:set_blend(text_blend)
             draw_label = function(style, dx, dy)
                 text.set(label_node, style, label, definition.width, "center")
                 label_node:set_position(
