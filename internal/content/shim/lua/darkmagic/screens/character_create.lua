@@ -229,9 +229,9 @@ return {
                 y = placement.hit.y,
                 width = placement.hit.width,
                 height = placement.hit.height,
-                focusable = false,
-                -- Keep the relative hero ordering while allowing later static
-                -- UI controls to win if a broad actor bound overlaps the form.
+                -- Pointer behavior follows the recovered actor hit regions,
+                -- while keyboard/controller focus remains available as a Dark
+                -- Magic accessibility/compatibility extension.
                 hit_priority = -1000 + placement.z,
                 on_state = function(_, state)
                     if state == "hover" or state == "focused" then
@@ -444,7 +444,6 @@ return {
                 end,
             }
         )
-        self.ok_button.focusable = false
 
         self.update_ok_state = function(current)
             local valid = current.selected ~= nil
@@ -485,11 +484,16 @@ return {
         if self.selection_transition then return end
 
         self.controls:update()
-        if self.form_visible and input.pressed("confirm") and self.ok_button.enabled then
+        if self.form_visible and input.pressed("confirm") and self.ok_button.enabled
+            and self.controls.focus ~= self.ok_button then
             self.controls:activate(self.ok_button)
         end
         if input.pressed("cancel") then
-            scenes.replace("character_select")
+            if self.form_visible and self.selected and self.controls.focus ~= self.selected.control then
+                self.controls:set_focus(self.selected.control)
+            else
+                scenes.replace("character_select")
+            end
         end
     end,
 }
