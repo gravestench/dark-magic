@@ -201,20 +201,21 @@ function Manager:move_focus(delta)
     return nil
 end
 
-local function set_value(control, value)
+local function set_value(control, value, snap)
     value = math.max(control.min, math.min(control.max, value))
-    if control.step and control.step > 0 then
+    if snap and control.step and control.step > 0 then
         local steps = math.floor(((value - control.min) / control.step) + 0.5)
         value = math.min(control.max, control.min + steps * control.step)
     end
-    if value == control.value then return end
+    if value == control.value then return false end
     control.value = value
     if control.on_change then control.on_change(control, value) end
+    return true
 end
 
 local function set_pointer_value(control, x, y)
     if control.pointer_to_value then
-        set_value(control, control.pointer_to_value(control, x, y))
+        set_value(control, control.pointer_to_value(control, x, y), true)
         return
     end
     local fraction
@@ -223,7 +224,7 @@ local function set_pointer_value(control, x, y)
     else
         fraction = (x - control.x) / control.width
     end
-    set_value(control, control.min + (control.max - control.min) * fraction)
+    set_value(control, control.min + (control.max - control.min) * fraction, true)
 end
 
 function Manager:activate(control)
@@ -257,7 +258,8 @@ end
 
 function Manager:update()
     local focused_range = is_range(self.focus)
-    if focused_range and self.focus.orientation == "vertical" then
+    local adjustable_range = focused_range and self.focus.max > self.focus.min
+    if adjustable_range and self.focus.orientation == "vertical" then
         if input.pressed("down") then set_value(self.focus, self.focus.value + self.focus.step) end
         if input.pressed("up") then set_value(self.focus, self.focus.value - self.focus.step) end
     else
@@ -265,10 +267,10 @@ function Manager:update()
         if input.pressed("up") then self:move_focus(-1) end
     end
 
-    if focused_range and self.focus.orientation == "horizontal" then
+    if adjustable_range and self.focus.orientation == "horizontal" then
         if input.pressed("right") then set_value(self.focus, self.focus.value + self.focus.step) end
         if input.pressed("left") then set_value(self.focus, self.focus.value - self.focus.step) end
-    elseif self.focus and self.focus.role ~= "textbox" and not focused_range then
+    elseif self.focus and self.focus.role ~= "textbox" and (not focused_range or not adjustable_range) then
         if input.pressed("right") then self:move_focus(1) end
         if input.pressed("left") then self:move_focus(-1) end
     end
