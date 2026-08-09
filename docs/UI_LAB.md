@@ -10,21 +10,37 @@ Launch it directly with a directory containing supported game archives:
 MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run -tags ffmpeg ./cmd/darkmagic --start-scene ui_lab
 ```
 
-The scene currently covers every control-manager role plus the shared visual
-helpers they depend on:
+The scene now covers the reusable UI surface rather than only the original four
+control-manager roles:
 
 - authored DC6 button, including normal/focused/pressed behavior and tooltip;
 - disabled button and focus exclusion;
+- text-only / label button;
 - authored `clickbox.dc6` checkbox frames;
 - authored character-name `textbox.dc6` text field;
-- bounded scrollbar/slider interaction;
-- bitmap text and tooltip rendering;
-- mouse hit testing, keyboard/controller focus, activation callbacks, text input,
-  and the regular Diablo II cursor.
+- semantic slider with keyboard adjustment, step snapping, pointer capture, and
+  drag updates;
+- authored Diablo text scrollbar using recovered `TextSlid.dc6` arrow, gutter,
+  and thumb frames;
+- selectable/paged list with distinct selection and repeated-activation hooks;
+- mutually-exclusive tab / selection group;
+- panel/container for grouped retained presentation;
+- progress bar driven by the slider value;
+- standalone tooltip with viewport clamping;
+- focus-isolated modal confirmation dialog;
+- bitmap text and the regular Diablo II software cursor.
 
-Recovered presentation values live in `darkmagic.ui.compat` and reusable widget
-modules rather than in this lab. Shipping scenes and mods therefore exercise the
-same implementation that the lab displays.
+The shared `darkmagic.ui.controls` manager owns focus, accessibility roles,
+pointer capture, mouse-up activation, range dragging, text editing, and keyboard
+behavior. Widget modules own presentation and widget-specific composition, so
+shipping screens and mods use the same semantics shown by the lab.
+
+Recovered presentation values live in `darkmagic.ui.compat`. In particular, the
+text scrollbar uses the recovered `TextSlid.dc6` frame mapping: down/up hollow
+arrows `8/9`, down/up filled arrows `10/11`, gutter `13`, and thumb/fill `14`.
+The original executable also references `OptBar.dc6` and `OptBarC.dc6` for
+options sliders; those paths are recorded as candidates but are not used as the
+default slider skin until their frame semantics are verified to the same level.
 
 The frontend logo is also a useful draw-mode regression target: Diablo II draw
 mode 3 uses `GL_ONE, GL_ONE_MINUS_SRC_COLOR`, represented by the retained
