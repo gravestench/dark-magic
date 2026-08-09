@@ -188,24 +188,30 @@ end
 
 function Manager:move_focus(delta)
     if #self.controls == 0 then self.focus = nil return nil end
+
+    if self.wrap_focus == false then
+        local focusable = {}
+        local current = 0
+        for _, control in ipairs(self.controls) do
+            if eligible(self, control) then
+                focusable[#focusable + 1] = control
+                if control == self.focus then current = #focusable end
+            end
+        end
+        if #focusable == 0 then self.focus = nil return nil end
+        if current == 0 then
+            current = delta < 0 and #focusable or 1
+        else
+            current = math.max(1, math.min(#focusable, current + delta))
+        end
+        self.focus = focusable[current]
+        return self.focus
+    end
+
     local start = 0
     for index, control in ipairs(self.controls) do
         if control == self.focus then start = index break end
     end
-
-    if self.wrap_focus == false and start > 0 then
-        local index = start + delta
-        while index >= 1 and index <= #self.controls do
-            local candidate = self.controls[index]
-            if eligible(self, candidate) then
-                self.focus = candidate
-                return candidate
-            end
-            index = index + delta
-        end
-        return self.focus
-    end
-
     for step = 1, #self.controls do
         local index = ((start - 1 + delta * step) % #self.controls) + 1
         local candidate = self.controls[index]
