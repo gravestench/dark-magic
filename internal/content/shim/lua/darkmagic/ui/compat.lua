@@ -57,4 +57,66 @@ M.widgets = {
     },
 }
 
+-- OpenD2 preserves the original 800x600 expansion menu geometry, including
+-- the gaps occupied by the closed-Battle.net/gateway controls. Riiablo also
+-- identifies 3WideButtonBlank.dc6 as the large frontend button artwork. Dark
+-- Magic currently exposes the supported subset of controls, but positions that
+-- subset at the authored locations instead of compacting the menu vertically.
+M.screens = {
+    main_menu = {
+        controls = {
+            single_player = {
+                x = 265, y = 290, width = 272, height = 35,
+                sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6",
+                palette = "units",
+                up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5},
+                text_offset = 0,
+            },
+            multiplayer = {
+                x = 265, y = 400, width = 272, height = 35,
+                sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6",
+                palette = "units",
+                up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5},
+                text_offset = 0,
+            },
+            credits = {
+                x = 265, y = 495, width = 135, height = 35,
+                sheet = "data/global/ui/FrontEnd/MediumButtonBlank.dc6",
+                palette = "units",
+                up_frames = {0}, down_frames = {1},
+                text_offset = 0,
+            },
+            cinematics = {
+                x = 410, y = 495, width = 135, height = 35,
+                sheet = "data/global/ui/FrontEnd/MediumButtonBlank.dc6",
+                palette = "units",
+                up_frames = {0}, down_frames = {1},
+                text_offset = 0,
+            },
+            exit = {
+                x = 265, y = 535, width = 272, height = 35,
+                sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6",
+                palette = "units",
+                up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5},
+                text_offset = 0,
+            },
+        },
+    },
+}
+
+-- Return a copy so compatibility facts can override recovered/legacy values
+-- without mutating the loaded manifest table shared by other Lua modules.
+function M.screen_control(screen_id, control_id, fallback)
+    local result = {}
+    for key, value in pairs(assert(fallback, "fallback control is required")) do
+        result[key] = value
+    end
+    local screen = M.screens[screen_id]
+    local override = screen and screen.controls and screen.controls[control_id]
+    if override then
+        for key, value in pairs(override) do result[key] = value end
+    end
+    return result
+end
+
 return M
