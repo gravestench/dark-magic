@@ -1,21 +1,19 @@
 -- Interactive Diablo II UI/widget laboratory.
 --
 -- ui_lab exercises the same retained render nodes and Lua control hooks used by
--- shipping screens. It is intentionally not a second GUI implementation: each
--- sample is built from darkmagic.ui.controls and darkmagic.ui.button so input,
--- focus, text entry, authored DC6 states, tooltip behavior, and accessibility
--- can be inspected in one deterministic development scene.
+-- shipping screens. It is intentionally not a second GUI implementation.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local controls = require("darkmagic.ui.controls")
 local button = require("darkmagic.ui.button")
+local checkbox = require("darkmagic.ui.checkbox")
+local text_field = require("darkmagic.ui.text_field")
 local text = require("darkmagic.ui.text")
 local cursor = require("darkmagic.ui.cursor")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
-
 local ui_lab = {}
 
 local function copy_at(source, x, y)
@@ -40,60 +38,6 @@ local function box(root, x, y, width, height, r, g, b, a)
     node:fill_rect(width, height, r, g, b, a or 255)
     node:set_position(x + width / 2, y + height / 2)
     return node
-end
-
-local function make_checkbox(self, definition)
-    local outer = box(self.root, definition.x, definition.y, definition.height, definition.height, 104, 88, 57, 255)
-    local inner = box(self.root, definition.x + 3, definition.y + 3, definition.height - 6, definition.height - 6, 18, 15, 13, 255)
-    local mark = box(self.root, definition.x + 6, definition.y + 6, definition.height - 12, definition.height - 12, 197, 164, 92, 255)
-    put(self.root, "font_lab_caption", definition.label, definition.x + definition.height + 10, definition.y + 2, 220, "left")
-
-    local function refresh(control, state)
-        local active = state == "hover" or state == "focused" or state == "pressed"
-        outer:set_visible(true)
-        inner:set_visible(true)
-        mark:set_visible(control.checked or active)
-    end
-
-    local control = self.controls:add_checkbox({
-        id = definition.id,
-        label = definition.label,
-        x = definition.x,
-        y = definition.y,
-        width = definition.width,
-        height = definition.height,
-        checked = definition.checked,
-        on_change = function(current)
-            refresh(current, current.state)
-        end,
-        on_state = refresh,
-    })
-    refresh(control, "normal")
-end
-
-local function make_text_field(self, definition)
-    box(self.root, definition.x, definition.y, definition.width, definition.height, 104, 88, 57, 255)
-    box(self.root, definition.x + 2, definition.y + 2, definition.width - 4, definition.height - 4, 12, 10, 9, 255)
-    local value = put(self.root, "font_lab_caption", definition.value, definition.x + 8, definition.y + 6, definition.width - 16, "left")
-    local control = self.controls:add_text_field({
-        id = definition.id,
-        label = definition.label,
-        x = definition.x,
-        y = definition.y,
-        width = definition.width,
-        height = definition.height,
-        value = definition.value,
-        max_length = definition.max_length,
-        on_change = function(current)
-            local suffix = current.state == "focused" and "_" or ""
-            text.set(value, "font_lab_caption", current.value .. suffix, definition.width - 16, "left")
-        end,
-        on_state = function(current, state)
-            local suffix = state == "focused" and "_" or ""
-            text.set(value, "font_lab_caption", current.value .. suffix, definition.width - 16, "left")
-        end,
-    })
-    return control
 end
 
 local function make_scrollbar(self, definition)
@@ -125,7 +69,6 @@ local function make_scrollbar(self, definition)
         on_state = function(current) refresh(current) end,
     })
     refresh(control)
-    return control
 end
 
 function ui_lab.create(self)
@@ -137,38 +80,41 @@ function ui_lab.create(self)
 
     self.controls = controls.new()
 
-    -- Reuse the verified shipping button definitions so ui_lab exercises the
-    -- exact same DC6/palette/frame mappings as the frontend rather than lab art.
+    -- BUTTON + TOOLTIP: same verified WideButtonBlank mapping as main_menu.
     local authored = copy_at(manifest.screens.main_menu.controls.single_player, 70, 120)
     self.primary = button.create(self.root, self.controls, "authored_button", authored, "AUTHORED BUTTON", {
-        tooltip = "DC6 up/down states; down art only while pressed; label shifts -2,+2",
-        on_activate = function(current)
-            current.lab_count = (current.lab_count or 0) + 1
+        tooltip = "Up art stays visible on hover/focus; down art is only pressed; label moves -2,+2",
+        on_activate = function()
             self.activation:set_visible(true)
         end,
     })
 
+    -- DISABLED BUTTON: verifies focus exclusion and semantic disabled text.
     local disabled = copy_at(manifest.screens.main_menu.controls.credits, 420, 120)
-    self.disabled = button.create(self.root, self.controls, "disabled_button", disabled, "DISABLED", {
-        enabled = false,
-        tooltip = "Disabled controls remain inspectable but cannot receive focus",
+    self.disabled = button.create(self.root, self.controls, "disabled_button", disabled, "DISABLED", { enabled = false })
+
+    put(self.root, "font_lab_caption", "CHECKBOX (clickbox.dc6 frames 0/1)", 70, 205, 300, "left")
+    self.checkbox = checkbox.create(self.root, self.controls, "checkbox", {
+        x = 70, y = 238, checked = true, palette = "fechar",
+    }, "Expansion character")
+
+    put(self.root, "font_lab_caption", "TEXT FIELD (textbox.dc6 + Formal12)", 70, 285, 300, "left")
+    self.text_field = text_field.create(self.root, self.controls, "text_field", {
+        x = 70, y = 320, kind = "name", value = "DarkMagic", max_length = 15, palette = "fechar",
+    }, "Character Name")
+
+    put(self.root, "font_lab_caption", "SCROLLBAR / SLIDER (control-manager primitive)", 70, 395, 330, "left")
+    make_scrollbar(self, {
+        id = "scrollbar", label = "Value", x = 70, y = 430, width = 272, height = 18,
+        min = 0, max = 100, step = 10, value = 40, thumb_width = 20,
     })
 
-    put(self.root, "font_lab_caption", "CHECKBOX", 70, 210, 180, "left")
-    make_checkbox(self, { id = "checkbox", label = "Expansion character", x = 70, y = 238, width = 250, height = 24, checked = true })
-
-    put(self.root, "font_lab_caption", "TEXT FIELD", 70, 290, 180, "left")
-    make_text_field(self, { id = "text_field", label = "Character name", x = 70, y = 318, width = 272, height = 32, value = "DarkMagic", max_length = 15 })
-
-    put(self.root, "font_lab_caption", "SCROLLBAR / SLIDER", 70, 380, 220, "left")
-    make_scrollbar(self, { id = "scrollbar", label = "Value", x = 70, y = 410, width = 272, height = 18, min = 0, max = 100, step = 10, value = 40, thumb_width = 20 })
-
-    self.activation = put(self.root, "font_lab_caption", "activated", 520, 168, 200, "center")
+    self.activation = put(self.root, "font_lab_caption", "button callback fired", 520, 168, 200, "center")
     self.activation:set_visible(false)
 
-    put(self.root, "font_lab_caption", "Focus order and hit testing are owned by darkmagic.ui.controls.", 420, 250, 310, "left")
-    put(self.root, "font_lab_caption", "The authored button is the same WideButtonBlank mapping used by main_menu.", 420, 300, 310, "left")
-    put(self.root, "font_lab_caption", "State and rendering remain in Lua, so this scene also exercises mod UI hooks.", 420, 350, 310, "left")
+    put(self.root, "font_lab_caption", "Button, checkbox, textbox and scrollbar all register through darkmagic.ui.controls.", 420, 245, 320, "left")
+    put(self.root, "font_lab_caption", "Tooltip and bitmap text are rendered through the same shipping Lua helpers.", 420, 305, 320, "left")
+    put(self.root, "font_lab_caption", "This scene therefore catches broken render, input, focus and Lua callback hooks together.", 420, 365, 320, "left")
 
     self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
 end
