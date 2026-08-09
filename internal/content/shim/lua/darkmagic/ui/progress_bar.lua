@@ -52,8 +52,8 @@ function M.create(root, definition, label, options)
         if result.value_node then
             local value = options.format_value and options.format_value(result.value, fraction)
                 or string.format("%d%%", math.floor(fraction * 100 + 0.5))
-            local _, value_height = text.set(result.value_node, options.value_style or "font_lab_caption", value, width, "center")
-            result.value_node:set_position(x + width / 2, y + height / 2 - value_height / 2)
+            text.set(result.value_node, options.value_style or "font_lab_caption", value, width, "center")
+            result.value_node:set_position(x + width / 2, y + height / 2)
         end
     end
 
