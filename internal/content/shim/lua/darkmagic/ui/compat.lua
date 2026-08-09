@@ -55,6 +55,29 @@ M.widgets = {
         disabled_alpha = 0.5,
         click_sound = "data/global/sfx/cursor/button.wav",
     },
+    -- OpenDiablo2 recovered these TextSlid.dc6 frame meanings while rebuilding
+    -- the original text/layout scrollbar. Keep the facts here so the visual
+    -- widget does not own reverse-engineered magic numbers.
+    text_scrollbar = {
+        sheet = "data/global/ui/MENU/TextSlid.dc6",
+        palette = "sky",
+        part_width = 12,
+        part_height = 13,
+        down_hollow_frame = 8,
+        up_hollow_frame = 9,
+        down_filled_frame = 10,
+        up_filled_frame = 11,
+        gutter_frame = 13,
+        thumb_frame = 14,
+    },
+    -- Original binaries reference the options-bar pair below. Frame semantics
+    -- still need the same level of verification as TextSlid before Dark Magic
+    -- uses them as the default slider skin.
+    option_slider = {
+        track_sheet = "data/global/ui/Widgets/OptBar.dc6",
+        thumb_sheet = "data/global/ui/Widgets/OptBarC.dc6",
+        confidence = "candidate",
+    },
 }
 
 -- Original 800x600 frontend placement recovered from OpenD2 and corroborated
