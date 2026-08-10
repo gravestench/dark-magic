@@ -213,7 +213,7 @@ func (state *State) validateEquipment(candidate Item, destination Placement) err
 	if err := state.validateEquipmentEligibility(candidate, destination); err != nil {
 		return err
 	}
-	return state.requireEmpty(candidate.ID, ContainerEquipment, destination.Slot)
+	return state.requireEmpty(candidate.ID, destination.Container, destination.Slot)
 }
 
 func (state *State) validateEquipmentEligibility(candidate Item, destination Placement) error {
