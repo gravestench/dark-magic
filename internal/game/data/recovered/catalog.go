@@ -14,18 +14,25 @@ import (
 )
 
 const (
-	QuestsPath   = "data/recovered/riiablo/quests.txt"
-	SpeechPath   = "data/recovered/riiablo/speech.txt"
+	// QuestsPath is the provenance-preserving recovered quest hierarchy.
+	QuestsPath = "data/recovered/riiablo/quests.txt"
+	// SpeechPath joins logical speech sounds to localization keys.
+	SpeechPath = "data/recovered/riiablo/speech.txt"
+	// DS1TypesPath maps executable-era DS1 definitions to level types.
 	DS1TypesPath = "data/recovered/riiablo/ds1types.txt"
-	ObjectsPath  = "data/recovered/riiablo/obj.txt"
+	// ObjectsPath maps act-local DS1 object IDs to Objects.txt identities.
+	ObjectsPath = "data/recovered/riiablo/obj.txt"
 )
 
+// QuestStage is one ordered localized stage plus recovered alternate keys.
 type QuestStage struct {
 	Index      int
 	StringKey  string
 	Alternates []string
 }
 
+// Quest preserves recovered hierarchy and localization identities without
+// embedding executable behavior in the catalog.
 type Quest struct {
 	ID             int
 	Name           string
@@ -38,17 +45,20 @@ type Quest struct {
 	Stages         []QuestStage
 }
 
+// Speech is the recovered logical-sound to localized-string join.
 type Speech struct {
 	Sound     string
 	StringKey string
 }
 
+// DS1Type resolves one DS1 definition number within the recovered table.
 type DS1Type struct {
 	Name       string
 	Definition int
 	LevelType  int
 }
 
+// MapObject resolves an act-local static map object to Objects.txt.
 type MapObject struct {
 	Act         int
 	ID          int
@@ -56,6 +66,7 @@ type MapObject struct {
 	ObjectID    int
 }
 
+// Snapshot is an immutable generation with ordered rows and lookup indexes.
 type Snapshot struct {
 	Quests           []Quest
 	QuestsByID       map[int]Quest
@@ -67,6 +78,8 @@ type Snapshot struct {
 	MapObjectByActID map[string]MapObject
 }
 
+// ReferenceIssue is a non-fatal cross-catalog diagnostic. Different editions
+// and language packs legitimately omit some recovered references.
 type ReferenceIssue struct {
 	Kind       string
 	Identifier string
@@ -112,6 +125,8 @@ func ValidateReferences(snapshot Snapshot, soundNames map[string]struct{}, text 
 	return issues
 }
 
+// Catalog loads the provenance-backed recovered family once and returns deep
+// copies. Unlike mod-authored TSV data, these relationships ship with the shim.
 type Catalog struct {
 	source fs.FS
 	once   sync.Once
@@ -119,8 +134,11 @@ type Catalog struct {
 	err    error
 }
 
+// New creates a lazy recovered-data catalog over layered content.
 func New(source fs.FS) *Catalog { return &Catalog{source: source} }
 
+// Snapshot loads and validates the recovered family once, then returns a copy
+// so runtime adapters cannot mutate shared provenance data.
 func (catalog *Catalog) Snapshot() (Snapshot, error) {
 	if catalog == nil || catalog.source == nil {
 		return Snapshot{}, fmt.Errorf("recovered data: no content source")

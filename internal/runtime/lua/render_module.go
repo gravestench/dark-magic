@@ -78,6 +78,9 @@ type RenderCapability struct {
 	preloads *assetPreloader
 }
 
+// NewRenderCapability creates the shared decode/preload cache used by every Lua
+// render module instance. The composer still owns semantic retained resources,
+// and the platform backend alone owns native uploads.
 func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.FS) *RenderCapability {
 	// Character-creation animations expand into hundreds of RGBA frames. A
 	// 64 MiB cache discarded the first prepared states before preload finished,
@@ -112,6 +115,8 @@ func (c *renderAssetCache) loadImage(assets fs.FS, name string) (image.Image, er
 	return value.(image.Image), nil
 }
 
+// Diagnostics returns copied cache/composer counters without exposing mutable
+// resource tables to scripts or developer tooling.
 func (r *RenderCapability) Diagnostics() RenderDiagnostics {
 	r.cache.mu.Lock()
 	defer r.cache.mu.Unlock()

@@ -64,6 +64,8 @@ type entry struct {
 }
 
 const (
+	// Overlay view values describe which logical half remains available to world
+	// presentation and routed pointer input.
 	OverlayLeft  = "left"
 	OverlayRight = "right"
 	OverlayFull  = "full"

@@ -6,16 +6,23 @@ import (
 	"io/fs"
 )
 
+// ErrUnavailable reports an intentionally absent or unsupported playback
+// backend; callers may apply authored skip/fallback policy rather than treating
+// it as a corrupted cinematic.
 var ErrUnavailable = errors.New("video playback is unavailable")
 
 // State is the observable lifecycle of a playback session.
 type State string
 
 const (
-	Playing  State = "playing"
+	// Playing means decoding or presentation is still active.
+	Playing State = "playing"
+	// Complete means the media reached its natural end.
 	Complete State = "complete"
-	Failed   State = "failed"
-	Stopped  State = "stopped"
+	// Failed means playback stopped because of a retained error.
+	Failed State = "failed"
+	// Stopped means the owner explicitly cancelled playback.
+	Stopped State = "stopped"
 )
 
 // Snapshot is safe to poll from the engine update thread.

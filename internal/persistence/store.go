@@ -13,6 +13,9 @@ var characterClasses = map[string]string{
 	"paladin": "Paladin", "barbarian": "Barbarian", "assassin": "Assassin", "druid": "Druid",
 }
 
+// Character is the current engine-side character selection record. It is not a
+// Diablo II save-file schema: future importers translate durable saves into this
+// validated value boundary and preserve unsupported bytes separately.
 type Character struct {
 	ID         string
 	Name       string
@@ -131,12 +134,16 @@ func validateCharacterName(name string) error {
 	return nil
 }
 
+// Store owns the selectable character roster and returns defensive copies.
+// Selection is application state; authoritative in-session player state is
+// materialized by the game session rather than mutated through this store.
 type Store struct {
 	mu       sync.RWMutex
 	entries  []Character
 	selected string
 }
 
+// New creates a roster from the supplied fixtures or imported characters.
 func New(entries ...Character) *Store {
 	copyEntries := make([]Character, len(entries))
 	for index, entry := range entries {

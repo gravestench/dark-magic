@@ -16,8 +16,12 @@ type Authority struct {
 	services ServiceCatalog
 }
 
+// NewAuthority creates an empty owner registry. Rule catalogs and initial owner
+// states must be installed before command registration captures replay state.
 func NewAuthority() *Authority { return &Authority{players: make(map[string]*State)} }
 
+// SetTradeCatalog replaces server-owned vendor pricing rules with a defensive
+// copy. Clients submit vendor identity and item intent, never price results.
 func (authority *Authority) SetTradeCatalog(catalog TradeCatalog) {
 	copyCatalog := make(TradeCatalog, len(catalog))
 	for vendor, terms := range catalog {
@@ -28,6 +32,7 @@ func (authority *Authority) SetTradeCatalog(catalog TradeCatalog) {
 	authority.mu.Unlock()
 }
 
+// SetServiceCatalog replaces server-owned item-service recipes defensively.
 func (authority *Authority) SetServiceCatalog(catalog ServiceCatalog) {
 	copyCatalog := make(ServiceCatalog, len(catalog))
 	for id, rule := range catalog {
@@ -40,6 +45,8 @@ func (authority *Authority) SetServiceCatalog(catalog ServiceCatalog) {
 	authority.mu.Unlock()
 }
 
+// Register installs a validated copy of one owner's initial item state. Sharing
+// the caller's State pointer would create a mutation path around session commands.
 func (authority *Authority) Register(owner string, state *State) error {
 	owner = strings.TrimSpace(owner)
 	if owner == "" || state == nil {
@@ -132,6 +139,8 @@ func (authority *Authority) completeService(owner, service string) error {
 	return err
 }
 
+// Snapshot returns copied facts for presentation, persistence, and networking.
+// Mutating the returned maps or layout never changes authority.
 func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map[string]Placement, error) {
 	authority.mu.RLock()
 	defer authority.mu.RUnlock()

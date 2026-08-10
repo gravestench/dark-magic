@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// ParseLevel converts the user-facing CLI/environment spelling into slog's
+// ordered level. Empty input intentionally selects info so callers can pass an
+// unset environment value without duplicating defaulting logic.
 func ParseLevel(value string) (slog.Level, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "debug":

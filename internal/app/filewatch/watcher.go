@@ -17,8 +17,11 @@ type fingerprint struct {
 	modified time.Time
 }
 
+// Handler receives one changed path at a time in deterministic lexical order.
 type Handler func(context.Context, string) error
 
+// Watcher polls one host directory for development reload. It observes files
+// only; the handler decides how virtual content generations change.
 type Watcher struct {
 	root     string
 	interval time.Duration
@@ -31,6 +34,7 @@ type Watcher struct {
 	err    error
 }
 
+// New creates a stopped watcher; no goroutine exists until Start.
 func New(root string, interval time.Duration, handler Handler) *Watcher {
 	if interval <= 0 {
 		interval = 250 * time.Millisecond
@@ -38,6 +42,8 @@ func New(root string, interval time.Duration, handler Handler) *Watcher {
 	return &Watcher{root: root, interval: interval, handler: handler}
 }
 
+// Start captures the baseline before polling so existing files are not reported
+// as edits. Repeated starts are idempotent.
 func (w *Watcher) Start(ctx context.Context) error {
 	if w.root == "" || w.handler == nil {
 		return errors.New("filewatch: root and handler are required")
@@ -75,6 +81,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop cancels polling, waits within ctx, and returns the last scan error.
 func (w *Watcher) Stop(ctx context.Context) error {
 	w.mu.Lock()
 	cancel, done := w.cancel, w.done

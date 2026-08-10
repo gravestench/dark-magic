@@ -788,7 +788,7 @@ complete until its actions are driven by authoritative game state and commands.
   independent `rarm`/`larm` occupancy, a replayable fixed-tick selection
   command, Lua snapshot/intent bindings, and the canonical W-key presentation
   path; armor and jewelry remain shared across both sets. Container authority
-  now exports deterministic, checksummed version-1 archives and restores them
+  now exports deterministic, checksummed versioned archives and restores them
   atomically through the ordinary placement validators, preserving held items,
   belt contents, escrow, and the active alternate-weapon set across reconnect
   or realm handoff. Vendor stock now uses authority-owned category/page grids:
@@ -805,6 +805,10 @@ complete until its actions are driven by authoritative game state and commands.
   applied operation on the surviving item atomically. Rich socket/imbue/repair
   stat materialization remains coupled to M19.2 item properties, and service
   presentation remains an M18 dependency; those keep this checkpoint open.
+  Session checkpoints now hash item authority together with ECS state, restore
+  initial item archives for verification, and reject mismatched trade/service
+  rule identities, so replay coverage verifies transaction results rather than
+  merely retaining the submitted commands.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

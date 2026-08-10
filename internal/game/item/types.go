@@ -6,16 +6,26 @@ package item
 type Container string
 
 const (
-	ContainerWorld     Container = "world"
+	// ContainerWorld places an item in authoritative world state.
+	ContainerWorld Container = "world"
+	// ContainerInventory is the player's backpack grid.
 	ContainerInventory Container = "inventory"
-	ContainerStash     Container = "stash"
-	ContainerCube      Container = "cube"
+	// ContainerStash is durable personal storage.
+	ContainerStash Container = "stash"
+	// ContainerCube is the Horadric Cube grid.
+	ContainerCube Container = "cube"
+	// ContainerEquipment contains player body slots.
 	ContainerEquipment Container = "equipment"
-	ContainerHireling  Container = "hireling"
-	ContainerBelt      Container = "belt"
-	ContainerHeld      Container = "held"
-	ContainerVendor    Container = "vendor"
-	ContainerQuest     Container = "quest_service"
+	// ContainerHireling contains the hireling's independent body slots.
+	ContainerHireling Container = "hireling"
+	// ContainerBelt contains indexed quick-use slots.
+	ContainerBelt Container = "belt"
+	// ContainerHeld is persistent in-hand authority, not transient cursor UI.
+	ContainerHeld Container = "held"
+	// ContainerVendor contains authority-arranged paged stock.
+	ContainerVendor Container = "vendor"
+	// ContainerQuest contains named quest or service escrow sockets.
+	ContainerQuest Container = "quest_service"
 )
 
 // Item contains only facts needed to decide where an item can go. Rich loot
@@ -52,8 +62,10 @@ type Placement struct {
 	Page      int
 }
 
+// Grid is a container's cell dimensions, independent of presentation pixels.
 type Grid struct{ Width, Height int }
 
+// Layout contains container rules and balances that must move with owner state.
 type Layout struct {
 	Grids           map[Container]Grid
 	BeltCapacity    int

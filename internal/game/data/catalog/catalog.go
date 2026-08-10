@@ -167,6 +167,8 @@ type Catalog struct {
 	data  *Snapshot
 }
 
+// New creates a lazy typed catalog over the generic record store. Construction
+// performs no I/O; the first snapshot builds a complete generation atomically.
 func New(store *recordstore.Store) *Catalog {
 	return &Catalog{store: store}
 }

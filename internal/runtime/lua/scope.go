@@ -9,7 +9,11 @@ import (
 // ReleaseFunc releases one script-owned resource.
 type ReleaseFunc func() error
 
-// Scope owns all resources acquired by one script component.
+// Scope owns all resources acquired by one script component or invocation.
+//
+// A scope is the bridge between disposable Lua code and longer-lived native
+// capabilities: callbacks, nodes, handles, and subscriptions register releases
+// here so reload or failure cannot strand them in their owning subsystem.
 type Scope struct {
 	mu       sync.Mutex
 	closed   bool

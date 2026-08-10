@@ -17,10 +17,13 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
+// Invalidator is the narrow generic-record cache seam used after VFS changes.
 type Invalidator interface {
 	Invalidate(string)
 }
 
+// Coordinator translates one changed virtual path into ordered invalidation and
+// transactional component replacement. It never edits source files itself.
 type Coordinator struct {
 	content *content.FS
 	source  fs.FS
@@ -32,6 +35,7 @@ type Coordinator struct {
 	definitions map[string]string
 }
 
+// New indexes known definitions without starting watchers or reload work.
 func New(contentFS *content.FS, runtime *modruntime.Runtime, manager *host.Manager, records Invalidator, definitions []modruntime.Definition) *Coordinator {
 	sources := make(map[string]string, len(definitions))
 	for _, definition := range definitions {

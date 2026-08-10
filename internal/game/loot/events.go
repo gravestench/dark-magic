@@ -2,11 +2,14 @@ package loot
 
 import "fmt"
 
+// EventKind separates RNG domains that may otherwise share entity identities.
 type EventKind string
 
 const (
+	// EventMonster is a monster-owned drop opportunity.
 	EventMonster EventKind = "monster"
-	EventChest   EventKind = "chest"
+	// EventChest is an interactable-container drop opportunity.
+	EventChest EventKind = "chest"
 )
 
 // Event identifies one deterministic gameplay drop opportunity.
@@ -37,6 +40,8 @@ func EventSeed(worldSeed uint64, event Event) (uint64, error) {
 	return rng.next(), nil
 }
 
+// RollEvent derives a purpose-specific seed, then runs ordinary treasure-class
+// selection. Presentation timing and global RNG order cannot affect the result.
 func RollEvent(catalog Catalog, class string, worldSeed uint64, event Event) ([]Drop, error) {
 	seed, err := EventSeed(worldSeed, event)
 	if err != nil {

@@ -1,3 +1,6 @@
+// Command darkmagic is the native client composition root. It parses process
+// policy, constructs owned capabilities, and translates final errors to exit
+// status; game rules and reusable behavior belong under internal packages.
 package main
 
 import (

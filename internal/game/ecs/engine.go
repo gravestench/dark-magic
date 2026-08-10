@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	// Registration errors are explicit so script adapters can distinguish bad
+	// definitions from runtime system failures.
 	ErrSystemID       = errors.New("game ecs: system ID is required")
 	ErrSystemExists   = errors.New("game ecs: system already exists")
 	ErrSystemNotFound = errors.New("game ecs: system dependency does not exist")
@@ -21,7 +23,9 @@ var (
 )
 
 const (
-	DefaultStep       = 40 * time.Millisecond
+	// DefaultStep is Diablo II's authoritative 25 Hz simulation cadence.
+	DefaultStep = 40 * time.Millisecond
+	// DefaultMaxCatchUp bounds recovery after a slow host frame.
 	DefaultMaxCatchUp = 5
 )
 
@@ -29,6 +33,8 @@ const (
 type Phase string
 
 const (
+	// Phases make cross-system ordering semantic and stable across registration
+	// order. Structural command buffers flush at each phase barrier.
 	PhaseInput        Phase = "input"
 	PhaseIntent       Phase = "intent"
 	PhasePreSimulate  Phase = "pre_simulation"
@@ -96,6 +102,7 @@ type Engine struct {
 	updateMu sync.Mutex
 }
 
+// New creates an owned Akara world with the production fixed-step policy.
 func New() *Engine {
 	return NewWithClock(DefaultStep, DefaultMaxCatchUp)
 }
@@ -116,6 +123,8 @@ func NewWithClock(step time.Duration, maxCatchUp int) *Engine {
 	}
 }
 
+// World exposes component storage to trusted game systems and capability
+// adapters. It does not transfer engine lifetime or scheduling ownership.
 func (engine *Engine) World() *akara.World { return engine.world }
 
 // Tick returns the number of completed/started deterministic updates.

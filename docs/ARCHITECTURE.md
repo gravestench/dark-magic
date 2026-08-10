@@ -147,6 +147,14 @@ handler. Administrative Lua may inspect replay and audit records, but concrete
 privileged mutations must remain explicit handlers; no generic ECS mutation
 backdoor is part of the administration contract.
 
+The authoritative session checksum covers both the ECS snapshot and registered,
+stable-ID state participants. A subsystem whose command handlers mutate state
+outside Akara must provide deterministic snapshot and atomic restore operations
+and register before the first command or tick. Item authority uses its versioned
+container archives for this boundary and includes the identity of server-owned
+trade and service rules, so replay rejects configuration drift rather than
+silently accepting different transaction results.
+
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The
 `internal/game/data/recovered` catalog validates and normalizes those files;

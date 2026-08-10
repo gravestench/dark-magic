@@ -1,12 +1,139 @@
 package item
 
 import (
+	"bytes"
+	"errors"
 	"testing"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
+
+func TestItemCommandsReplayCompleteAuthorityAndDetectConfigurationAndStateDesync(t *testing.T) {
+	buildAuthority := func(multiplier int64) *Authority {
+		state, err := NewState(Layout{Grids: map[Container]Grid{ContainerInventory: {Width: 4, Height: 4}}, VendorGrid: Grid{Width: 4, Height: 4}, Gold: GoldBalance{Carried: 1000}}, []Item{
+			{ID: "sale", Code: "ssd", Width: 1, Height: 2, BaseCost: 100},
+			{ID: "stock", Code: "cap", Width: 1, Height: 1, BaseCost: 200},
+			{ID: "target", Code: "rin", Width: 1, Height: 1},
+			{ID: "material", Code: "gem", Width: 1, Height: 1},
+		}, map[string]Placement{
+			"sale": {Container: ContainerInventory}, "stock": {Container: ContainerVendor, Slot: "armor"},
+			"target": {Container: ContainerQuest, Slot: "target"}, "material": {Container: ContainerQuest, Slot: "material"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		authority := NewAuthority()
+		authority.SetTradeCatalog(TradeCatalog{"akara": {BuyMultiplier: multiplier, SellMultiplier: 1024, MaxBuy: 1000}})
+		authority.SetServiceCatalog(ServiceCatalog{"imbue": {ID: "imbue", TargetSlot: "target", ConsumeSlots: []string{"material"}, GoldCost: 25}})
+		if err := authority.Register("alice", state); err != nil {
+			t.Fatal(err)
+		}
+		return authority
+	}
+	apply := func(authority *Authority, command simulation.Command) error {
+		switch command.Kind {
+		case MoveCommand:
+			payload, err := decodeMove(command.Payload)
+			if err != nil {
+				return err
+			}
+			_, err = authority.move(command.Player, payload.ItemID, payload.Destination, payload.PlaceHeld)
+			return err
+		case VendorSellCommand, VendorBuyCommand:
+			payload, err := decodeVendor(command, command.Kind == VendorSellCommand)
+			if err != nil {
+				return err
+			}
+			if command.Kind == VendorSellCommand {
+				return authority.sellHeld(command.Player, payload.ItemID, payload.Vendor, payload.Category)
+			}
+			return authority.buyToHeld(command.Player, payload.ItemID, payload.Vendor)
+		case ServiceCommand:
+			payload, err := decodeService(command.Payload)
+			if err != nil {
+				return err
+			}
+			return authority.completeService(command.Player, payload.Service)
+		case WeaponSetCommand:
+			payload, err := decodeWeaponSet(command.Payload)
+			if err != nil {
+				return err
+			}
+			return authority.selectWeaponSet(command.Player, payload.Set)
+		default:
+			return errors.New("unknown item command")
+		}
+	}
+
+	original := buildAuthority(512)
+	session, err := gamesession.New(gameecs.New(), gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := RegisterCommands(session, original); err != nil {
+		t.Fatal(err)
+	}
+	commands := []simulation.Command{}
+	move, _ := Command(MovePayload{ItemID: "sale", Destination: Placement{Container: ContainerHeld}}, "alice", 1, 1, simulation.AuthorityPlayer)
+	sell, _ := VendorCommand(VendorSellCommand, VendorPayload{ItemID: "sale", Vendor: "akara", Category: "weapons"}, "alice", 2, 2, simulation.AuthorityPlayer)
+	buy, _ := VendorCommand(VendorBuyCommand, VendorPayload{ItemID: "stock", Vendor: "akara"}, "alice", 3, 3, simulation.AuthorityPlayer)
+	service, _ := ServiceCompletionCommand(ServicePayload{Service: "imbue"}, "alice", 4, 4, simulation.AuthorityPlayer)
+	weapons, _ := WeaponSetSelectionCommand(WeaponSetPayload{Set: 1}, "alice", 5, 5, simulation.AuthorityPlayer)
+	commands = append(commands, move, sell, buy, service, weapons)
+	for _, command := range commands {
+		if err := session.Submit(command); err != nil {
+			t.Fatal(err)
+		}
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := original.SnapshotState()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	restored := buildAuthority(512)
+	if err := simulation.VerifyReplay(replay, nil, func(_ *gameecs.Engine, command simulation.Command) error {
+		return apply(restored, command)
+	}, restored); err != nil {
+		t.Fatal(err)
+	}
+	got, err := restored.SnapshotState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatal("verified replay did not reconstruct final item authority")
+	}
+
+	mismatched := buildAuthority(513)
+	if err := simulation.VerifyReplay(replay, nil, func(_ *gameecs.Engine, command simulation.Command) error {
+		return apply(mismatched, command)
+	}, mismatched); err == nil || !errors.Is(err, simulation.ErrReplay) {
+		t.Fatalf("configuration mismatch = %v", err)
+	}
+
+	tampered := replay
+	tampered.Commands = append([]simulation.Command(nil), replay.Commands...)
+	tampered.Commands[4] = weapons
+	tampered.Commands[4].Payload = []byte(`{"set":0}`)
+	desynced := buildAuthority(512)
+	var desync *simulation.DesyncError
+	err = simulation.VerifyReplay(tampered, nil, func(_ *gameecs.Engine, command simulation.Command) error {
+		return apply(desynced, command)
+	}, desynced)
+	if !errors.As(err, &desync) || desync.Detail != `participant "dm.items/v1" state differs` {
+		t.Fatalf("participant desync = %#v, %v", desync, err)
+	}
+}
 
 func TestMoveCommandIsValidatedAppliedAndAudited(t *testing.T) {
 	state := testCommandState(t)

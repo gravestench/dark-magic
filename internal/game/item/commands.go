@@ -13,11 +13,16 @@ import (
 )
 
 const (
-	MoveCommand       = "item.move"
-	WeaponSetCommand  = "item.weapon_set"
+	// MoveCommand transfers an item between authoritative locations.
+	MoveCommand = "item.move"
+	// WeaponSetCommand changes which equipped hand pair is active.
+	WeaponSetCommand = "item.weapon_set"
+	// VendorSellCommand sells the held item using server-owned terms.
 	VendorSellCommand = "item.vendor_sell"
-	VendorBuyCommand  = "item.vendor_buy"
-	ServiceCommand    = "item.service_complete"
+	// VendorBuyCommand buys vendor stock into the held location.
+	VendorBuyCommand = "item.vendor_buy"
+	// ServiceCommand completes a server-authored item service recipe.
+	ServiceCommand = "item.service_complete"
 )
 
 // MovePayload describes intent, not trusted results. In particular, Displaced
@@ -29,11 +34,14 @@ type MovePayload struct {
 	PlaceHeld   bool      `json:"place_held,omitempty"`
 }
 
+// WeaponSetPayload requests selection; it does not move equipped items.
 type WeaponSetPayload struct {
 	Owner string `json:"owner,omitempty"`
 	Set   int    `json:"set"`
 }
 
+// VendorPayload names transaction intent. Coordinates and prices are omitted
+// because stock layout and pricing are authoritative results.
 type VendorPayload struct {
 	Owner    string `json:"owner,omitempty"`
 	ItemID   string `json:"item_id"`
@@ -41,14 +49,21 @@ type VendorPayload struct {
 	Category string `json:"category,omitempty"`
 }
 
+// ServicePayload names a server-authored recipe whose sockets and costs are
+// resolved only after admission.
 type ServicePayload struct {
 	Owner   string `json:"owner,omitempty"`
 	Service string `json:"service"`
 }
 
+// RegisterCommands joins item state and mutation policy to one session. State
+// participation is registered first so every successful command is checksummed.
 func RegisterCommands(session *gamesession.Session, authority *Authority) error {
 	if session == nil || authority == nil {
 		return fmt.Errorf("item: session and authority are required")
+	}
+	if err := session.RegisterStateParticipant(authority); err != nil {
+		return fmt.Errorf("item: register authoritative state: %w", err)
 	}
 	if err := session.Register(MoveCommand, gamesession.CommandHandler{
 		Validate: validateMoveCommand,

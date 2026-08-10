@@ -15,6 +15,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 )
 
+// Server is an optional local administration adapter. Host.Manager remains the
+// sole lifecycle reconciler; HTTP requests express desired transitions only.
 type Server struct {
 	address string
 	manager *host.Manager
@@ -22,12 +24,14 @@ type Server struct {
 	listen  net.Listener
 }
 
+// New constructs a stopped server. An empty address intentionally disables it.
 func New(address string, manager *host.Manager) *Server {
 	server := &Server{address: address, manager: manager}
 	server.server = &http.Server{Addr: address, Handler: server.Handler(), ReadHeaderTimeout: 5 * time.Second}
 	return server
 }
 
+// Handler exposes the versioned management surface for tests and embedding.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/components", s.list)
@@ -35,6 +39,7 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
+// Start begins background serving after the host has started dependencies.
 func (s *Server) Start(context.Context) error {
 	if strings.TrimSpace(s.address) == "" {
 		return nil
@@ -54,6 +59,7 @@ func (s *Server) Start(context.Context) error {
 	return nil
 }
 
+// Stop performs bounded HTTP shutdown through the host lifecycle context.
 func (s *Server) Stop(ctx context.Context) error {
 	if s.listen == nil {
 		return nil

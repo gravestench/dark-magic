@@ -32,6 +32,9 @@ const (
 	white        = 97
 )
 
+// NewHandler creates the colorized terminal handler used by normal process
+// logging. Diagnostic frontends should use an observer constructor instead of
+// scraping this human-oriented output.
 func NewHandler(opts *slog.HandlerOptions) *Handler {
 	return NewHandlerWithObserver(opts, nil)
 }
@@ -79,6 +82,9 @@ func colorize(colorCode int, v string) string {
 	return fmt.Sprintf("\033[%sm%s%s", strconv.Itoa(colorCode), v, reset)
 }
 
+// Handler preserves slog's immutable WithAttrs/WithGroup semantics while
+// serializing terminal output and optional observer delivery. Derived handlers
+// share the same mutex because they still write to one process stream.
 type Handler struct {
 	h        slog.Handler
 	b        *bytes.Buffer
