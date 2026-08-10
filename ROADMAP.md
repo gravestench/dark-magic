@@ -856,6 +856,17 @@ complete until its actions are driven by authoritative game state and commands.
   cooldowns, mana, targeting shapes, and server-authoritative validation.
 - [ ] Implement NPC interaction, vendors, gambling, repair, identify, cube,
   shrines, quests, waypoints, acts, difficulties, and end-game transitions.
+  The first NPC interaction boundary is now fixed-tick and replayable: clients
+  request a known target ID, while session authority resolves the NPC, vendor,
+  allowed catalog categories, and service names. Item commerce and services
+  reject requests outside that active context, and Lua receives only copied
+  facts plus open/close intent functions. The Akara development fixture now
+  drives a real MPQ-backed vendor catalog panel with the four legacy category tabs,
+  Monster `Inventory.txt` grid geometry, authority-arranged stock, carried item
+  cursor state, gold display, and command-backed purchases. Riiablo's recovered
+  tab frames and `gridLeft - invLeft` placement corroborate the implementation.
+  Spatial NPC targeting/range, record-built target catalogs, sell/repair modes,
+  price tooltips, gambling refresh, and the remaining NPC services stay open.
 - [ ] Integrate deterministic item materialization and treasure-class rolls with
   authoritative monster/chest events, world drops, inventories, equipment, and
   persistence without duplicating the completed `internal/game/loot` rules.
@@ -934,6 +945,12 @@ authority, persistence separation, and resilience acceptance remain open.
   compromising gapless looping, synchronization, or shutdown behavior.
 - [x] Add repeatable profiling acceptance runs and budgets for startup, title,
   main menu, character selection, character creation, and in-game scenes.
+- [ ] Add residency-aware capture readiness and warm-queue backpressure. A
+  real-asset vendor probe can reach the 1,000-texture ceiling while hundreds of
+  startup warm requests remain queued, causing small late-created bitmap text
+  to miss a fixed settle-frame capture even though the scene itself is stable.
+  Captures should wait for their required assets, not an arbitrary frame count,
+  and background warming must yield capacity to the active scene.
 
 ## M26: Native frame-path profiling follow-up
 

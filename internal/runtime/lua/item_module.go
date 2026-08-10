@@ -131,6 +131,7 @@ func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[stri
 		entry.RawSetString("belt_slot", lua.LNumber(placement.BeltSlot))
 		entry.RawSetString("weapon_set", lua.LNumber(placement.WeaponSet))
 		entry.RawSetString("page", lua.LNumber(placement.Page))
+		entry.RawSetString("category", lua.LString(placement.Slot))
 		services := state.NewTable()
 		for _, service := range candidate.AppliedServices {
 			services.Append(lua.LString(service))

@@ -10,15 +10,29 @@ import (
 // Authority owns each player's container state. Session commands are the only
 // writers; snapshots are copies for presentation, persistence, and networking.
 type Authority struct {
-	mu       sync.RWMutex
-	players  map[string]*State
-	trades   TradeCatalog
-	services ServiceCatalog
+	mu           sync.RWMutex
+	players      map[string]*State
+	trades       TradeCatalog
+	services     ServiceCatalog
+	interactions InteractionPolicy
+}
+
+// InteractionPolicy binds commerce/service commands to an active authoritative
+// world interaction without importing the interaction implementation package.
+type InteractionPolicy interface {
+	CanTrade(owner, vendor string) bool
+	CanService(owner, service string) bool
 }
 
 // NewAuthority creates an empty owner registry. Rule catalogs and initial owner
 // states must be installed before command registration captures replay state.
 func NewAuthority() *Authority { return &Authority{players: make(map[string]*State)} }
+
+func (authority *Authority) SetInteractionPolicy(policy InteractionPolicy) {
+	authority.mu.Lock()
+	authority.interactions = policy
+	authority.mu.Unlock()
+}
 
 // SetTradeCatalog replaces server-owned vendor pricing rules with a defensive
 // copy. Clients submit vendor identity and item intent, never price results.
@@ -101,6 +115,9 @@ func (authority *Authority) sellHeld(owner, itemID, vendor, category string) err
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
+	if authority.interactions != nil && !authority.interactions.CanTrade(owner, vendor) {
+		return fmt.Errorf("item: vendor %q is not active for owner %q", vendor, owner)
+	}
 	terms, err := authority.trades.Terms(vendor)
 	if err != nil {
 		return err
@@ -116,6 +133,9 @@ func (authority *Authority) buyToHeld(owner, itemID, vendor string) error {
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
+	if authority.interactions != nil && !authority.interactions.CanTrade(owner, vendor) {
+		return fmt.Errorf("item: vendor %q is not active for owner %q", vendor, owner)
+	}
 	terms, err := authority.trades.Terms(vendor)
 	if err != nil {
 		return err
@@ -130,6 +150,9 @@ func (authority *Authority) completeService(owner, service string) error {
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
+	}
+	if authority.interactions != nil && !authority.interactions.CanService(owner, service) {
+		return fmt.Errorf("item: service %q is not active for owner %q", service, owner)
 	}
 	rule, err := authority.services.Rule(service)
 	if err != nil {

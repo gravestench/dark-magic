@@ -262,8 +262,8 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 99 {
-		t.Fatalf("asset fixture contains %d entries, want 99", len(fixture.Assets))
+	if len(fixture.Assets) != 100 {
+		t.Fatalf("asset fixture contains %d entries, want 100", len(fixture.Assets))
 	}
 }
 
@@ -293,7 +293,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "c89be5f860097f21402af4a2d21fcc50886f4d18722fcc1292141b4a9694c90b"
+	const auditedFingerprint = "9c884e4bdc9a33cdbff3a4d5479ef37637e77c92ffbff217c1f2f57f6ae5d854"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

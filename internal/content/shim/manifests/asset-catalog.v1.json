@@ -301,6 +301,17 @@
       ]
     },
     {
+      "id": "vendor-tabs",
+      "screen": "vendor",
+      "path": "data/global/ui/PANEL/buyselltabs.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "legacy armor, two-page weapon, and miscellaneous vendor tabs",
+      "references": [
+        "Riiablo",
+        "OpenDiablo2"
+      ]
+    },
+    {
       "id": "quest-background",
       "screen": "quest-log",
       "path": "data/global/ui/MENU/questbackground.dc6",
