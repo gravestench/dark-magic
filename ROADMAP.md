@@ -655,6 +655,12 @@ complete until its actions are driven by authoritative game state and commands.
   Inventory, character, skills, automap, help, quests, and party overlays now
   explicitly declare whether gameplay passes beneath them and whether the
   visible world frames the player in the left, right, or centered region.
+  The health/mana globes and stamina/experience bars now consume a frame-stable
+  value snapshot: live vitals and progression come from the admitted player ECS
+  entity, while fields not yet modeled by the simulation fall back to immutable
+  selected-save metadata. Hover tooltips report the same values. Belt contents,
+  authoritative skill selection, cursor modes, and remaining minipanel behavior
+  remain subsequent checkpoints.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

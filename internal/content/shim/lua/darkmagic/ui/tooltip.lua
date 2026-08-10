@@ -24,29 +24,34 @@ function tooltip.create(root, value, x, y, options)
         background = render.create(layer, root),
         label = render.create(layer, root),
     }
-    local text_width, text_height = text.set(
-        result.label,
-        options.style or "tooltip",
-        value,
-        options.max_width or 0,
-        "center"
-    )
     local padding_x, padding_y = options.padding_x or 4, options.padding_y or 2
-    local width, height = text_width + padding_x * 2, text_height + padding_y * 2
-    local left = anchored_start(x, width, options.origin_x or "center")
-    local top = anchored_start(y, height, options.origin_y or "bottom")
-    left = math.max(0, math.min(manifest.resolution.width - width, left))
-    top = math.max(0, math.min(manifest.resolution.height - height, top))
+    function result:set_text(next_value)
+        if self.value == next_value then return end
+        self.value = next_value
+        local text_width, text_height = text.set(
+            self.label,
+            options.style or "tooltip",
+            next_value,
+            options.max_width or 0,
+            "center"
+        )
+        local width, height = text_width + padding_x * 2, text_height + padding_y * 2
+        local left = anchored_start(x, width, options.origin_x or "center")
+        local top = anchored_start(y, height, options.origin_y or "bottom")
+        left = math.max(0, math.min(manifest.resolution.width - width, left))
+        top = math.max(0, math.min(manifest.resolution.height - height, top))
 
-    result.background:fill_rect(width, height, 0, 0, 0, options.alpha or 200)
-    result.background:set_position(left + width / 2, top + height / 2)
-    result.label:set_position(left + width / 2, top + padding_y + text_height / 2)
+        self.background:fill_rect(width, height, 0, 0, 0, options.alpha or 200)
+        self.background:set_position(left + width / 2, top + height / 2)
+        self.label:set_position(left + width / 2, top + padding_y + text_height / 2)
+    end
 
     function result:set_visible(visible)
         self.background:set_visible(visible)
         self.label:set_visible(visible)
     end
 
+    result:set_text(value)
     result:set_visible(false)
     return result
 end

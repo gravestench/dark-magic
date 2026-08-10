@@ -18,6 +18,24 @@ local function define_components()
         },
     })
     ecs.component({
+        name = "dm.player.progress",
+        version = 1,
+        fields = {
+            { name = "level", type = "i64" },
+            { name = "experience", type = "i64" },
+        },
+    })
+    ecs.component({
+        name = "dm.player.vitals",
+        version = 1,
+        fields = {
+            { name = "health", type = "i64" },
+            { name = "max_health", type = "i64" },
+            { name = "mana", type = "i64" },
+            { name = "max_mana", type = "i64" },
+        },
+    })
+    ecs.component({
         name = "dm.world.position",
         fields = {
             { name = "x", type = "f64" },
@@ -130,6 +148,25 @@ end
 function M.position(entity)
     local position = assert(ecs.get(entity, "dm.world.position"))
     return position:get("x"), position:get("y")
+end
+
+-- Build one value-only HUD snapshot. Live vitals and progression always come
+-- from the authoritative ECS entity; save metadata fills only fields that the
+-- current simulation schema does not own yet.
+function M.hud_snapshot(entity, saved)
+    saved = saved or {}
+    local progress = assert(ecs.get(entity, "dm.player.progress"))
+    local vitals = assert(ecs.get(entity, "dm.player.vitals"))
+    return {
+        health = vitals:get("health"),
+        max_health = vitals:get("max_health"),
+        mana = vitals:get("mana"),
+        max_mana = vitals:get("max_mana"),
+        experience = progress:get("experience"),
+        next_level_experience = saved.next_level_experience or 0,
+        stamina = saved.stamina or 0,
+        max_stamina = saved.max_stamina or 0,
+    }
 end
 
 function M.destroy(state)
