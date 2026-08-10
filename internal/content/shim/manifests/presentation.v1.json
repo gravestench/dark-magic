@@ -122,7 +122,10 @@
     "font_lab_color": {"font":"font16","transform":"sky","text_color":"white"},
     "font_lab_gold_sky": {"font":"font16","transform":"sky","text_color":"gold"},
     "font_lab_gold_fechar": {"font":"font16","transform":"fechar","text_color":"gold"},
-    "font_lab_gold_act1": {"font":"font16","transform":"act1","text_color":"gold"}
+    "font_lab_gold_act1": {"font":"font16","transform":"act1","text_color":"gold"},
+    "ui_lab_control_idle": {"font":"font16","transform":"sky","text_color":"white"},
+    "ui_lab_control_hover": {"font":"font16","transform":"sky","text_color":"blue"},
+    "ui_lab_control_active": {"font":"font16","transform":"sky","text_color":"green"}
   },
   "sounds": {
     "button": "data/global/sfx/cursor/button.wav",

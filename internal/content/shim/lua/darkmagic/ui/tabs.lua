@@ -28,7 +28,9 @@ function M.create(root, manager, id, definition, tabs, options)
         local style
         if selected then
             style = options.selected_style or "character_create_option"
-        elseif state == "hover" or state == "focused" or state == "pressed" then
+        elseif state == "pressed" then
+            style = options.pressed_style or options.selected_style or "character_create_option"
+        elseif state == "hover" or state == "focused" then
             style = options.hover_style or "label_button_hover"
         else
             style = options.normal_style or "label_button_normal"

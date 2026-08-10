@@ -25,8 +25,9 @@ local compat = require("darkmagic.ui.compat")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local ui_lab = {}
-local lab_control_normal = "font_lab_caption"
-local lab_control_hover = "font_lab_gold_sky"
+local lab_control_normal = "ui_lab_control_idle"
+local lab_control_hover = "ui_lab_control_hover"
+local lab_control_active = "ui_lab_control_active"
 
 local function copy_at(source, x, y)
     local result = {}
@@ -85,6 +86,7 @@ function ui_lab.create(self)
     }, "TEXT-ONLY ACTION", {
         normal_style = lab_control_normal,
         hover_style = lab_control_hover,
+        pressed_style = lab_control_active,
         on_activate = function() status("label button activated") end,
     })
 
@@ -150,13 +152,13 @@ function ui_lab.create(self)
     self.previous_page = label_button.create(self.root, self.controls, {
         id = "list_previous", x = 405, y = 236, width = 80, height = 24,
     }, "< PREV", {
-        normal_style = lab_control_normal, hover_style = lab_control_hover,
+        normal_style = lab_control_normal, hover_style = lab_control_hover, pressed_style = lab_control_active,
         on_activate = function() self.list:previous_page(); status("list page " .. (self.list_page or "")) end,
     })
     self.next_page = label_button.create(self.root, self.controls, {
         id = "list_next", x = 585, y = 236, width = 80, height = 24,
     }, "NEXT >", {
-        normal_style = lab_control_normal, hover_style = lab_control_hover,
+        normal_style = lab_control_normal, hover_style = lab_control_hover, pressed_style = lab_control_active,
         on_activate = function() self.list:next_page(); status("list page " .. (self.list_page or "")) end,
     })
 
@@ -181,7 +183,8 @@ function ui_lab.create(self)
     }, {
         normal_style = lab_control_normal,
         hover_style = lab_control_hover,
-        selected_style = lab_control_normal,
+        pressed_style = lab_control_active,
+        selected_style = lab_control_active,
         on_change = function(id) status("tab = " .. id) end,
     })
 
@@ -205,7 +208,17 @@ function ui_lab.create(self)
     self.tooltip_target = self.controls:add({
         id = "tooltip_target", role = "button", label = "Tooltip target",
         x = 550, y = 460, width = 200, height = 25,
-        on_state = function(_, state) self.tip:set_visible(state == "hover" or state == "focused") end,
+        on_state = function(_, state)
+            local active = state == "hover" or state == "focused" or state == "pressed"
+            self.tip:set_visible(active)
+            text.set(
+                self.tooltip_label,
+                state == "pressed" and lab_control_active or (active and lab_control_hover or lab_control_normal),
+                "HOVER FOR TOOLTIP",
+                200,
+                "center"
+            )
+        end,
     })
     self.tooltip_label = put(self.root, lab_control_normal, "HOVER FOR TOOLTIP", 550, 460, 200, "center")
 
@@ -214,6 +227,7 @@ function ui_lab.create(self)
     }, "OPEN MODAL", {
         normal_style = lab_control_normal,
         hover_style = lab_control_hover,
+        pressed_style = lab_control_active,
         on_activate = function()
             if self.modal and self.modal.open then return end
             local definition = manifest.screens.character_select.delete_dialog
