@@ -1,0 +1,39 @@
+local scenes = require("dm.scene/v1")
+local cursor = require("darkmagic.ui.cursor")
+local overlay_shell = require("darkmagic.ui.overlay_shell")
+local routing = require("darkmagic.bootstrap.overlay_routing")
+
+local registry = {}
+
+-- Shells are useful empty containers for UI that has not been implemented yet.
+-- Keeping this table data-only makes positions easy to compare with D2 sources.
+local definitions = {
+    quick_skills={title="darkmagic.shell.quick_skills",x=470,y=220,width=250,height=270},
+    belt={title="darkmagic.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
+    messages={title="darkmagic.shell.messages",x=120,y=100,width=560,height=380,blocks_update_below=false,passes_input_below=true,world_view="center",layer="hud",slot="full"},
+    move_gold={title="darkmagic.shell.move_gold",sheet="data/global/ui/MENU/dialogbackground.DC6",x=270,y=175},
+    npc_interaction={title="darkmagic.shell.npc_interaction",x=250,y=180,width=300,height=260},
+    npc_dialogue={title="darkmagic.shell.npc_dialogue",x=100,y=390,width=600,height=130,blocks_update_below=false},
+    item_tooltip={title="darkmagic.shell.item_tooltip",x=250,y=140,width=300,height=320,blocks_update_below=false},
+    ground_items={title="darkmagic.shell.ground_items",x=170,y=120,width=460,height=340,blocks_update_below=false,layer="hud"},
+    confirmation_dialog={title="darkmagic.shell.confirmation_dialog",sheet="data/global/ui/FrontEnd/PopUpOkCancel.dc6",palette="fechar",x=270,y=175},
+    area_transition={title="darkmagic.shell.area_transition",x=100,y=180,width=600,height=220},
+    player_trade={title="darkmagic.shell.player_trade",x=80,y=64,width=640,height=432},
+    gambling={title="darkmagic.shell.gambling",sheet="data/global/ui/PANEL/buysell.dc6",x=80,y=64},
+    npc_services={title="darkmagic.shell.npc_services",x=200,y=160,width=400,height=300},
+    hireling_hire={title="darkmagic.shell.hireling_hire",x=160,y=100,width=480,height=380},
+    chat={title="darkmagic.shell.chat",x=80,y=430,width=640,height=100,blocks_update_below=false},
+    overhead_labels={title="darkmagic.shell.overhead_labels",x=120,y=100,width=560,height=380,blocks_update_below=false,layer="hud"},
+}
+
+function registry.register_all(manifest)
+    for name, definition in pairs(definitions) do
+        local scene = overlay_shell.new(definition)
+        if definition.slot then
+            scene = routing.wrap(scene, name, definition.slot, definition.world_view, definition.passes_input_below)
+        end
+        scenes.register(name, cursor.wrap(scene, manifest.cursor, manifest.palettes))
+    end
+end
+
+return registry
