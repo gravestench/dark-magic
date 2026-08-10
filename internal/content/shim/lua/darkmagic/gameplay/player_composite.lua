@@ -9,12 +9,24 @@ local render = require("dm.render/v1")
 
 local M = {}
 
-local default_appearance = {
-    HD = "LIT", TR = "LIT", LG = "LIT", RA = "LIT", LA = "LIT",
-}
-
 local function upper(value)
     return string.upper(assert(value))
+end
+
+-- Simulation uses a readable clockwise eight-way direction. Legacy DC/COF
+-- files store directions in a peculiar interleaved order. Riiablo performs
+-- this same conversion before both selecting a component direction and reading
+-- its COF priority row; skipping it can pair a visible facing with the wrong
+-- arm/head ordering table.
+local encoded_directions = {
+    [8] = {1, 3, 5, 7, 0, 2, 4, 6},
+    [16] = {2, 6, 10, 14, 0, 4, 8, 12},
+}
+
+local function encoded_direction(logical, count)
+    local lookup = encoded_directions[count]
+    if not lookup then return logical end
+    return assert(lookup[logical + 1], "logical direction is out of range")
 end
 
 local function cof_path(token, mode, weapon_class)
@@ -31,10 +43,10 @@ local function component_path(token, component, appearance, mode, weapon_class)
     )
 end
 
--- Resolve the deliberately small first slice: an unequipped player whose body
--- pieces use Diablo II's default "lit" appearance. Hands and shields are absent.
--- The COF layer supplies each component's own weapon-class suffix; those suffixes
--- are not always the same as the HTH selector in the COF filename.
+-- Resolve equipment overrides. For every remaining COF layer, the resolver
+-- later probes Diablo II's default "lit" appearance. The COF layer supplies
+-- each component's own weapon-class suffix; those suffixes are not always the
+-- same as the HTH selector in the COF filename.
 local function equipped_appearance(items)
     local appearance, hand_classes = {}, {}
     if not items then return appearance, nil end
@@ -67,7 +79,7 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
 
     for _, layer in ipairs(info.layers) do
         local component = upper(layer.type)
-        local appearance = equipped[component] or default_appearance[component]
+        local appearance = equipped[component]
         if appearance then
             components[component] = component_path(
                 token,
@@ -76,13 +88,22 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
                 mode,
                 upper(layer.weapon_class)
             )
+        else
+            -- OpenDiablo2 tries the default LIT variant for every authored COF
+            -- layer. This matters for class-specific body pieces: Necromancer
+            -- S1/S2 are real forearm/overlay DCCs, while his empty SH layer has
+            -- no file and must simply be skipped.
+            local candidate = component_path(token, component, "LIT", mode, upper(layer.weapon_class))
+            if render.asset_exists(candidate) then components[component] = candidate end
         end
     end
+
+    local direction = encoded_direction(authority.direction, info.directions)
 
     return {
         cof = cof,
         palette = authority.palette,
-        direction = authority.direction,
+        direction = direction,
         components = components,
         -- AnimData.d2, not the COF header, owns player timing and frame events.
         -- The fallback only keeps modded archives with a missing record usable.
@@ -92,7 +113,7 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
         mode = mode,
         -- A value-only change key prevents rebuilding the retained animation on
         -- every presentation frame. Position updates remain independent.
-        key = table.concat({token, mode, weapon_class, tostring(authority.direction), cof}, ":")
+        key = table.concat({token, mode, weapon_class, tostring(direction), cof}, ":")
             .. ":" .. table.concat((function()
                 local values = {}
                 for component, path in pairs(components) do values[#values + 1] = component .. "=" .. path end
