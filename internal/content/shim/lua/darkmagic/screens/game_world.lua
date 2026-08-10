@@ -58,6 +58,7 @@ return {
             self.game_data = require("dm.game_data/v1")
             self.hud = game_hud.create(self.root, screen.hud, manifest.palettes, {
                 request_running = player.request_running,
+                assign_skill = player.assign_skill,
             })
         end
 
@@ -113,6 +114,13 @@ return {
             end
             snapshot.left_skill_detail = self.left_skill
             snapshot.right_skill_detail = self.right_skill
+            for _, skill in ipairs(snapshot.learned_skills) do
+                local detail = self.game_data.skill(skill.skill_id)
+                if detail then
+                    for key, value in pairs(detail) do skill[key] = value end
+                    skill.level = skill.level or 1
+                end
+            end
             game_hud.update(
                 self.hud,
                 snapshot

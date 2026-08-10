@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/audio"
@@ -153,7 +155,11 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("create offline skill source", err)
 	}
-	entry, err := gameplayer.NewEntrySource(app.entitySimulation, app.saves, "local-player", 4096, 4096)
+	skillProvider, err := app.skillProvider()
+	if err != nil {
+		return wrap("build starting skill provider", err)
+	}
+	entry, err := gameplayer.NewEntrySource(app.entitySimulation, app.saves, "local-player", 4096, 4096, skillProvider)
 	if err != nil {
 		return wrap("create offline player entry source", err)
 	}
@@ -164,6 +170,43 @@ func (app *application) registerOfflineCommands() error {
 	}
 	app.playerControl = movement
 	return nil
+}
+
+// learnedSkills translates character records into the small authoritative
+// loadout admitted with a player. Generic actions and the class starting skill
+// are available; the later save importer will add actually purchased skills.
+func (app *application) skillProvider() (gameplayer.SkillProvider, error) {
+	snapshot, err := app.gameData.Snapshot()
+	if err != nil {
+		return nil, err
+	}
+	return func(character persistence.Character) []gameplayer.Skill {
+		return learnedSkills(snapshot, character)
+	}, nil
+}
+
+func learnedSkills(snapshot gamedata.Snapshot, character persistence.Character) []gameplayer.Skill {
+	start := ""
+	for class, record := range snapshot.CharStatsByClass {
+		if strings.EqualFold(class, character.Class) {
+			start = record.StartSkill
+			break
+		}
+	}
+	result := make([]gameplayer.Skill, 0, 8)
+	for _, skill := range snapshot.Skills {
+		if strings.TrimSpace(skill.General) != "1" && !strings.EqualFold(skill.SkillName, start) {
+			continue
+		}
+		description, found := snapshot.SkillDescByName[skill.SkillDesc]
+		id, parseErr := strconv.ParseInt(strings.TrimSpace(skill.ID), 10, 64)
+		if !found || parseErr != nil || description.ListRow < 0 || strings.TrimSpace(skill.Passive) == "1" {
+			continue
+		}
+		result = append(result, gameplayer.Skill{ID: id, Level: 1, ListRow: int64(description.ListRow), LeftAllowed: strings.TrimSpace(skill.LeftSkill) == "1", RightAllowed: true})
+	}
+	sort.Slice(result, func(left, right int) bool { return result[left].ID < result[right].ID })
+	return result
 }
 
 func (app *application) buildLoadingCoordinator() error {

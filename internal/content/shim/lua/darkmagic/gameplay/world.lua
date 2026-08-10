@@ -54,6 +54,18 @@ local function define_components()
     end
     ecs.component({ name = "dm.player.belt", version = 1, fields = belt_fields })
     ecs.component({
+        name = "dm.player.learned_skill",
+        version = 1,
+        fields = {
+            { name = "owner", type = "entity" },
+            { name = "skill_id", type = "i64" },
+            { name = "level", type = "i64" },
+            { name = "list_row", type = "i64" },
+            { name = "left_allowed", type = "bool" },
+            { name = "right_allowed", type = "bool" },
+        },
+    })
+    ecs.component({
         name = "dm.world.position",
         fields = {
             { name = "x", type = "f64" },
@@ -180,6 +192,13 @@ function M.hud_snapshot(entity, saved)
     local belt = assert(ecs.get(entity, "dm.player.belt"))
     local belt_slots = {}
     for slot = 1, 16 do belt_slots[slot] = belt:get("slot_" .. slot) end
+    local learned_skills = {}
+    for _, learned in ipairs(ecs.query({ all = { "dm.player.learned_skill" } })) do
+        local skill = ecs.get(learned, "dm.player.learned_skill")
+        if skill:get("owner") == entity then
+            learned_skills[#learned_skills + 1] = skill:snapshot()
+        end
+    end
     return {
         health = vitals:get("health"),
         max_health = vitals:get("max_health"),
@@ -194,6 +213,7 @@ function M.hud_snapshot(entity, saved)
         right_skill = skills:get("right"),
         belt_capacity = belt:get("capacity"),
         belt_slots = belt_slots,
+        learned_skills = learned_skills,
     }
 end
 

@@ -677,9 +677,13 @@ complete until its actions are driven by authoritative game state and commands.
   Left/right skill wells now use the original 48px desktop geometry recovered
   from OpenDiablo2 and corroborated by riiablo, resolve generic or class skill
   sheets through typed Skills/SkillDesc records, and display localized hover
-  tooltips. Assignments pass through a replayable command into the player ECS;
-  learned-skill ownership and the upward-opening selector remain before this
-  checkpoint can be marked complete. Riiablo's mobile controls were explicitly
+  tooltips. Assignments pass through a replayable command into the player ECS.
+  The desktop selector opens upward in the five recovered logical rows, applies
+  left/right eligibility and passive filtering, and closes its opposite side.
+  Choices come from session-owned `dm.player.learned_skill` entities seeded by
+  typed general/start-skill records; Lua only arranges and describes them.
+  Save-imported purchased skills and charged item skills remain M19 work.
+  Riiablo's mobile controls were explicitly
   excluded from the fixed 800x600 profile; the local AbyssEngine checkout has
   no corresponding skill-well implementation, and OpenD2 is not present.
   The belt now has an authoritative 16-slot identity component with a four-slot
