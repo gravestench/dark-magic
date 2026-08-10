@@ -54,6 +54,27 @@ func TestHeldAndBodySlotsAreExclusive(t *testing.T) {
 	}
 }
 
+func TestPlayerAndHirelingEquipmentHaveIndependentOccupancy(t *testing.T) {
+	items := []Item{
+		{ID: "player-helm", Code: "cap", Width: 2, Height: 2, BodySlots: []string{"head"}},
+		{ID: "hireling-helm", Code: "cap", Width: 2, Height: 2, BodySlots: []string{"head"}},
+		{ID: "second-hireling-helm", Code: "cap", Width: 2, Height: 2, BodySlots: []string{"head"}},
+	}
+	state, err := NewState(Layout{}, items, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("player-helm", Placement{Container: ContainerEquipment, Slot: "head"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("hireling-helm", Placement{Container: ContainerHireling, Slot: "head"}); err != nil {
+		t.Fatalf("player equipment incorrectly occupied hireling slot: %v", err)
+	}
+	if err := state.Move("second-hireling-helm", Placement{Container: ContainerHireling, Slot: "head"}); err == nil {
+		t.Fatal("occupied hireling slot accepted a second item")
+	}
+}
+
 func TestPlaceHeldSwapsEquipmentAndBeltSlots(t *testing.T) {
 	items := []Item{
 		{ID: "held-ring", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring"}},
