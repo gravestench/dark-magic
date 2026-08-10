@@ -47,6 +47,14 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if x, _ := transform.Get("x"); x != float64(5) {
 		t.Fatalf("x = %v", x)
 	}
+	modes, found := akara.GetDynamicStore(engine.World(), "dm.player.movement_mode")
+	if !found {
+		t.Fatal("movement mode store was not materialized")
+	}
+	mode, _ := modes.Get(entity)
+	if running, _ := mode.Get("running"); running != false {
+		t.Fatalf("initial movement mode = %v, want walking", running)
+	}
 	if audit := session.Audit(); len(audit) != 1 || audit[0].Kind != EnterCommand {
 		t.Fatalf("audit = %#v", audit)
 	}

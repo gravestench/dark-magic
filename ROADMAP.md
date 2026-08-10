@@ -661,6 +661,10 @@ complete until its actions are driven by authoritative game state and commands.
   selected-save metadata. Hover tooltips report the same values. Belt contents,
   authoritative skill selection, cursor modes, and remaining minipanel behavior
   remain subsequent checkpoints.
+  Run/walk is no longer a Lua-local visual toggle: the HUD and R shortcut queue
+  local intent into the fixed-tick movement source, the replayable movement
+  command applies speed and movement mode, and the button plus tooltip update
+  only from the resulting ECS snapshot.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

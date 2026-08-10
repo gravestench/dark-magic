@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/persistence"
@@ -37,7 +38,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), GameDataModule(staticGameData{snapshot: gamedata.Snapshot{}}), LocaleModule(localization.New(source, "English")),
-		LootModule(gamedata.New(recordstore.New(source))), SaveModule(persistence.New()), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		LootModule(gamedata.New(recordstore.New(source))), SaveModule(persistence.New()), PlayerControlModule(&gamesession.MovementController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
@@ -51,6 +52,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.game_data/v1": {"character_class", "unique_titles"},
 		"dm.locale/v1":    {"text"}, "dm.loot/v1": {"event_seed", "roll"},
 		"dm.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
+		"dm.player/v1":     {"request_running"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create", "diagnostics"},
 		"dm.scene/v1": {"register", "replace", "push", "pop"},
 	}

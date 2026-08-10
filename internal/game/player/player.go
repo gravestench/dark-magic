@@ -155,6 +155,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.appearance, map[string]any{"cof": entry.COF, "palette": entry.Palette, "direction": entry.Direction}},
 		{stores.position, map[string]any{"x": entry.X, "y": entry.Y}},
 		{stores.velocity, nil},
+		{stores.movementMode, map[string]any{"running": false}},
 		{stores.control, map[string]any{"player": entry.Player}},
 		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
 	}
@@ -167,8 +168,8 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 }
 
 type stores struct {
-	identity, progress, vitals, appearance *akara.DynamicStore
-	position, velocity, control, bounds    *akara.DynamicStore
+	identity, progress, vitals, appearance            *akara.DynamicStore
+	position, velocity, movementMode, control, bounds *akara.DynamicStore
 }
 
 func registerStores(world *akara.World) (stores, error) {
@@ -179,6 +180,7 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "direction", Kind: akara.FieldInt64}}},
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
 		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "dm.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}},
 		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
 		{Name: "dm.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
 	}
@@ -190,7 +192,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], position: registered[4], velocity: registered[5], control: registered[6], bounds: registered[7]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], position: registered[4], velocity: registered[5], movementMode: registered[6], control: registered[7], bounds: registered[8]}, nil
 }
 
 func decodeEntry(encoded []byte) (Entry, error) {

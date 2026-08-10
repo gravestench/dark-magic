@@ -66,7 +66,8 @@ local function add_status_control(hud, id, definition, label, tip)
     })
 end
 
-function M.create(root, definition, palettes)
+function M.create(root, definition, palettes, commands)
+    commands = commands or {}
     local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false, definition = definition }
     local palette = palettes[definition.palette]
 
@@ -102,6 +103,10 @@ function M.create(root, definition, palettes)
 
     local run = definition.run
     local run_node = dc6_at(hud.root, run.sheet, palette, run.walk_frame, run.x, run.y)
+    local run_tip = tooltip.create(hud.root, assert(locale.text("darkmagic.hud.walk")), run.x + run.width / 2, run.y, {})
+    hud.run_node = run_node
+    hud.run_tip = run_tip
+    hud.palette = palette
     hud.controls:add({
         id = "run",
         label = "Run/Walk",
@@ -110,9 +115,9 @@ function M.create(root, definition, palettes)
         width = run.width,
         height = run.height,
         on_activate = function()
-            hud.running = not hud.running
-            run_node:set_dc6(run.sheet, palette, 0, hud.running and run.run_frame or run.walk_frame)
+            if commands.request_running then commands.request_running(not hud.running) end
         end,
+        on_state = function(_, state) run_tip:set_visible(state == "hover") end,
     })
 
     local minipanel = definition.minipanel
@@ -187,6 +192,12 @@ function M.snapshot(hud, stats)
     local mana, max_mana = stats.mana or 0, stats.max_mana or 0
     local stamina, max_stamina = stats.stamina or 0, stats.max_stamina or 0
     local experience, next_experience = stats.experience or 0, stats.next_level_experience or 0
+    local running = stats.running == true
+    if hud.running ~= running then
+        hud.running = running
+        hud.run_node:set_dc6(hud.definition.run.sheet, hud.palette, 0, running and hud.definition.run.run_frame or hud.definition.run.walk_frame)
+        hud.run_tip:set_text(assert(locale.text(running and "darkmagic.hud.run" or "darkmagic.hud.walk")))
+    end
     local health_fill, mana_fill = ratio(health, max_health), ratio(mana, max_mana)
     if hud.health_fill ~= health_fill then
         hud.health_fill = health_fill

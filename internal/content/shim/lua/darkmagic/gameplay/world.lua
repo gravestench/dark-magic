@@ -36,6 +36,11 @@ local function define_components()
         },
     })
     ecs.component({
+        name = "dm.player.movement_mode",
+        version = 1,
+        fields = {{ name = "running", type = "bool" }},
+    })
+    ecs.component({
         name = "dm.world.position",
         fields = {
             { name = "x", type = "f64" },
@@ -157,6 +162,7 @@ function M.hud_snapshot(entity, saved)
     saved = saved or {}
     local progress = assert(ecs.get(entity, "dm.player.progress"))
     local vitals = assert(ecs.get(entity, "dm.player.vitals"))
+    local movement_mode = assert(ecs.get(entity, "dm.player.movement_mode"))
     return {
         health = vitals:get("health"),
         max_health = vitals:get("max_health"),
@@ -166,6 +172,7 @@ function M.hud_snapshot(entity, saved)
         next_level_experience = saved.next_level_experience or 0,
         stamina = saved.stamina or 0,
         max_stamina = saved.max_stamina or 0,
+        running = movement_mode:get("running"),
     }
 end
 
