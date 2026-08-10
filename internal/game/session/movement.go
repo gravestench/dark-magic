@@ -139,8 +139,10 @@ func RegisterMovement(session *Session) error {
 }
 
 // movementDirection converts the eight normalized world-space input vectors to
-// the encoded direction order used by player COF/DCC assets. Stopping does not
-// call this function, so an idle player keeps looking the way they last moved.
+// a readable logical direction order. The presentation adapter converts this
+// authoritative value to each legacy asset's encoded 8/16-direction order.
+// Stopping does not call this function, so an idle player keeps looking the way
+// they last moved.
 func movementDirection(x, y int) int64 {
 	directions := map[[2]int]int64{
 		{0, 1}: 0, {-1, 0}: 1, {0, -1}: 2, {1, 0}: 3,

@@ -35,7 +35,7 @@ function M.register()
         name = "dm.player.animation",
         version = 1,
         fields = {
-            { name = "direction", type = "i64" }, -- Encoded eight-way direction.
+            { name = "direction", type = "i64" }, -- Logical eight-way direction; presentation maps legacy storage order.
             { name = "mode", type = "string" },   -- NU, WL, RN, and future modes.
         },
     })

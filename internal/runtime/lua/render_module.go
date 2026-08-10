@@ -951,6 +951,7 @@ func (r *RenderCapability) Module() Module {
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
 		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
+		"asset_exists":         commandHelp("dm.render.asset_exists(path)", "Report whether a render asset exists."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
 		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
 		"animdata_info":        commandHelp("dm.render.animdata_info(key)", "Read typed rate and frame-event metadata from AnimData.d2."),
@@ -1036,6 +1037,15 @@ func (r *RenderCapability) Module() Module {
 			},
 			"assets_available": func(state *lua.LState) int {
 				state.Push(lua.LBool(assets != nil))
+				return 1
+			},
+			"asset_exists": func(state *lua.LState) int {
+				if assets == nil {
+					state.Push(lua.LFalse)
+					return 1
+				}
+				_, err := fs.Stat(assets, state.CheckString(1))
+				state.Push(lua.LBool(err == nil))
 				return 1
 			},
 			"dc6_animation_bounds": func(state *lua.LState) int {
