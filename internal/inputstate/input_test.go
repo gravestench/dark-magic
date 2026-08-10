@@ -99,6 +99,22 @@ func TestStoreGameplayOnlyGatesPointerActionToVisibleWorldHalf(t *testing.T) {
 	}
 }
 
+func TestStoreGameplayOnlyUsesProfileWorldSplit(t *testing.T) {
+	var store Store
+	store.Publish(Frame{
+		Actions: map[string]ActionState{"pointer_primary": {Pressed: true}},
+		CursorX: 350, WorldView: "left", WorldSplit: 320,
+	})
+	if err := store.GameplayOnly(func() error {
+		if store.Action("pointer_primary").Pressed {
+			t.Fatal("640x480 covered half accepted world pointer")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestStorePointerOnlyExposesNoKeyboardOrText(t *testing.T) {
 	var store Store
 	store.Publish(Frame{

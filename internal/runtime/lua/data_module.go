@@ -9,12 +9,17 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gravestench/dark-magic/internal/content"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // DataModule exposes immutable JSON shim data as native Lua values. It keeps
 // data ownership in the layered VFS while avoiding a second JSON parser in Lua.
-func DataModule(source fs.FS) Module {
+func DataModule(source fs.FS, presentationProfiles ...string) Module {
+	presentationProfile := ""
+	if len(presentationProfiles) > 0 {
+		presentationProfile = presentationProfiles[0]
+	}
 	return Module{Name: "dm.data/v1", Help: documentedModule("Load structured data and Lua manifests from mounted content.", map[string]CommandHelp{
 		"load":          commandHelp("dm.data.load(path)", "Decode a structured data asset into Lua values."),
 		"load_manifest": commandHelp("dm.data.load_manifest(path)", "Load and validate a Lua-facing content manifest."),
@@ -38,6 +43,10 @@ func DataModule(source fs.FS) Module {
 				decoded, err := readDataJSON(source, name)
 				if err == nil {
 					err = validateManifest(decoded, expectedSchema)
+				}
+				if err == nil && expectedSchema == "darkmagic.presentation/v1" {
+					document := decoded.(map[string]any)
+					decoded, _, err = content.ApplyPresentationProfile(document, presentationProfile)
 				}
 				if err != nil {
 					return pushLuaError(state, err)
@@ -119,6 +128,22 @@ func validateManifest(decoded any, expectedSchema string) error {
 			profileResolution, ok := profile["resolution"].(map[string]any)
 			if !ok || !positiveJSONNumber(profileResolution["width"]) || !positiveJSONNumber(profileResolution["height"]) {
 				return fmt.Errorf("dm.data/v1: supported_profiles[%d] resolution requires positive width and height", index)
+			}
+			if scope, exists := profile["screens"]; exists {
+				screens, ok := scope.([]any)
+				if !ok || len(screens) == 0 {
+					return fmt.Errorf("dm.data/v1: supported_profiles[%d].screens must be a non-empty array", index)
+				}
+				for _, value := range screens {
+					if name, ok := value.(string); !ok || strings.TrimSpace(name) == "" {
+						return fmt.Errorf("dm.data/v1: supported_profiles[%d].screens contains an invalid ID", index)
+					}
+				}
+			}
+			if overrides, exists := profile["overrides"]; exists {
+				if _, ok := overrides.(map[string]any); !ok {
+					return fmt.Errorf("dm.data/v1: supported_profiles[%d].overrides must be an object", index)
+				}
 			}
 		}
 	}

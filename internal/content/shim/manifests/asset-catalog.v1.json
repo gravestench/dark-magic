@@ -188,6 +188,17 @@
       ]
     },
     {
+      "id": "hud-control-panel-640",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/ctrlpnl7.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "640x480 control panel pieces",
+      "references": [
+        "Riiablo",
+        "User-supplied archive verification"
+      ]
+    },
+    {
       "id": "hud-pop-belt",
       "screen": "game-hud",
       "path": "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",

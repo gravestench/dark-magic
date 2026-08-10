@@ -255,6 +255,20 @@
       "frames_sha256": "8e33ae9a0f903082c4045261c876067899f6c3852f526953d9547d6e6ec9e6aa"
     },
     {
+      "id": "hud-control-panel-640",
+      "path": "data/global/ui/PANEL/ctrlpnl7.dc6",
+      "sha256": "e503bd2057ceeab700ffe8520f313118eb5cc28029931fb0f1914164c2ab60e6",
+      "bytes": 34138,
+      "type": "dc6",
+      "directions": 1,
+      "frame_count": 6,
+      "min_width": 54,
+      "max_width": 128,
+      "min_height": 55,
+      "max_height": 104,
+      "frames_sha256": "603fd9e85c5155bf768d29a479de6d01fae67de56a5f86ac5c66f411a23f7a8f"
+    },
+    {
       "id": "hud-pop-belt",
       "path": "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",
       "sha256": "a9f08b7847f3d89477ad2a130f642b5fc5ade7e60147481121c723215e47957f",

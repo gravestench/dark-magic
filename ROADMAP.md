@@ -707,6 +707,12 @@ complete until its actions are driven by authoritative game state and commands.
   regression coverage exercises opposite-side coexistence, same-side replacement,
   non-top closure, full-panel eviction, and persistent HUD pointer delivery.
 - [ ] M18.4: Complete data-driven panel geometry and the supported 640x480 profile.
+  Manifest profiles now select the native logical render target and deep-merge
+  sparse Lua-facing presentation overrides. A scoped 640x480 gameplay profile
+  uses the archive-verified six-frame `ctrlpnl7.dc6` panel, recovered desktop
+  HUD placements, and a profile-relative world-input split. It remains scoped
+  to `game_world` until frontend and overlay geometry are independently verified;
+  the roadmap does not yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 
