@@ -57,23 +57,50 @@ type Map struct {
 type tileKey struct{ kind, style, sequence int32 }
 
 func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
-	data, err := read(source, stampPath)
+	stampFile, err := source.Open(stampPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("world: open %q: %w", stampPath, err)
 	}
-	stamp, err := ds1.FromBytes(data)
+	stamp, err := ds1.FromReader(stampFile)
+	closeErr := stampFile.Close()
 	if err != nil {
 		return nil, fmt.Errorf("world: decode DS1 %q: %w", stampPath, err)
 	}
+	if closeErr != nil {
+		return nil, fmt.Errorf("world: close DS1 %q: %w", stampPath, closeErr)
+	}
 	lookup := make(map[tileKey][]*dt1.Tile)
 	for _, path := range tilePaths {
-		data, err := read(source, path)
+		file, err := source.Open(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("world: open %q: %w", path, err)
 		}
-		tiles, err := dt1.FromBytes(data)
+		var tiles *dt1.DT1
+		if reader, ok := file.(io.ReaderAt); ok {
+			info, statErr := file.Stat()
+			if statErr == nil {
+				opened, openErr := dt1.Open(reader, info.Size())
+				if openErr == nil {
+					tiles, err = opened.Decode()
+				} else {
+					err = openErr
+				}
+			}
+		}
+		if tiles == nil && err == nil {
+			data, readErr := io.ReadAll(file)
+			if readErr != nil {
+				err = readErr
+			} else {
+				tiles, err = dt1.FromBytes(data)
+			}
+		}
+		closeErr := file.Close()
 		if err != nil {
 			return nil, fmt.Errorf("world: decode DT1 %q: %w", path, err)
+		}
+		if closeErr != nil {
+			return nil, fmt.Errorf("world: close DT1 %q: %w", path, closeErr)
 		}
 		for _, tile := range tiles.Tiles {
 			key := tileKey{kind: tile.Type, style: tile.Style, sequence: tile.Sequence}
@@ -122,19 +149,6 @@ func resolveObject(act int, objectType, id, x, y, flags int32, resolver ObjectRe
 		result.Class, result.Resolved = resolver.ResolveDynamicObject(act, int(id))
 	}
 	return result
-}
-
-func read(source fs.FS, name string) ([]byte, error) {
-	file, err := source.Open(name)
-	if err != nil {
-		return nil, fmt.Errorf("world: open %q: %w", name, err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("world: read %q: %w", name, err)
-	}
-	return data, nil
 }
 
 func choose(tiles []*dt1.Tile, x, y int) *dt1.Tile {

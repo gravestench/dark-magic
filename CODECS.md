@@ -81,6 +81,30 @@ Magic's build contract.
   remains on its historical pseudo-version pending malformed-input,
   concurrency, diagnostics, and tagged-release maintenance.
 
+## Completed streaming-I/O pass (2026-08-10)
+
+- `bitstream` now has incremental readers and writers that retain at most the
+  current partial byte instead of copying the complete source.
+- Sequential formats consume `io.Reader` and emit to `io.Writer`: COF, DS1,
+  GPL, PL2, and WAV/Huffman. Existing byte-slice entry points remain wrappers
+  for compatibility.
+- Offset-oriented formats expose lazy `io.ReaderAt` files: DC6 frames, DCC
+  directions, DT1 tiles, and TBL tables. Opening reads only bounded metadata;
+  callers choose when to materialize payloads.
+- MPQ archive metadata and sectors use positional reads. Separate entry streams
+  and `MpqDataStream.ReadAt` are safe for concurrent use without a shared seek
+  cursor. The optional real-archive race test passes against an owned English
+  `d2data.mpq` containing 10,814 listed files.
+- Dark Magic consumes the new module revisions directly. Directory and MPQ
+  assets take the random-access path; ZIP and minimal test files retain a
+  compatibility buffer fallback. COF, DS1, PL2, palette, and localization
+  loaders consume streams directly.
+
+The next performance step is selective residency in the engine caches: retain
+lazy DC6/DCC/DT1 file handles long enough to decode only requested frames,
+directions, and tiles. The codec boundary no longer requires another redesign
+for that work.
+
 ## Historical reverse-engineering research
 
 Paul Siramy's Phrozen Keep-era documentation and tools are a priority source for

@@ -1,8 +1,13 @@
 # Legacy codec follow-up work
 
-This is the handoff for future Codex work in Dark Magic's independent codec repositories.
+This is the handoff for continuing work in Dark Magic's independent codec repositories.
+Keep codecs headless and use user-supplied Diablo II assets only for optional
+probes and smoke tests.
 
-The current PR is intentionally documentation-only in `gravestench/dark-magic`. Do **not** implement these tasks as part of this documentation PR. Plan them in the owning codec repository, keep the codecs headless, and use user-supplied Diablo II assets only for optional probes/smoke tests.
+The general streaming-I/O boundary was completed on 2026-08-10: sequential
+formats accept readers/writers, offset formats expose lazy `ReaderAt` views,
+and MPQ entry reads are positional and concurrent. The format-semantic,
+inspection, and encoder tasks below remain intentionally open.
 
 ## General rules for all codec repos
 
