@@ -48,6 +48,7 @@ type Service struct {
 	textureUploads      atomic.Uint64
 	textureUploadBytes  atomic.Uint64
 	textureUploadBudget atomic.Uint64
+	textureCacheBudget  atomic.Uint64
 	residencyDebug      atomic.Bool
 }
 

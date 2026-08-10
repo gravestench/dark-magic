@@ -131,7 +131,8 @@ be controlled directly from the Lua shell:
 local settings = require("dm.settings/v1")
 settings.set("debug_texture_residency", true) -- native-resolution cache overlay
 settings.set("texture_upload_budget_mb", 4)   -- optional warm uploads per frame
-settings.save()                               -- retain both across launches
+settings.set("texture_cache_budget_mb", 512) -- retained native texture capacity
+settings.save()                               -- retain these across launches
 
 local render = require("dm.render/v1")
 render.diagnostics() -- decoded cache plus pending CPU/GPU warm work

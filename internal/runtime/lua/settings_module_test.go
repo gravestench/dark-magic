@@ -12,10 +12,12 @@ import (
 type recordingRenderSettings struct {
 	debug  bool
 	budget uint64
+	cache  uint64
 }
 
 func (r *recordingRenderSettings) SetResidencyDebug(value bool)        { r.debug = value }
 func (r *recordingRenderSettings) SetTextureUploadBudget(value uint64) { r.budget = value }
+func (r *recordingRenderSettings) SetTextureCacheBudget(value uint64)  { r.cache = value }
 
 func TestSettingsModuleAppliesAudioPreferences(t *testing.T) {
 	runtime := New()
@@ -53,18 +55,18 @@ func TestSettingsModuleAppliesPersistentRenderDiagnosticsPreferences(t *testing.
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local s=require("dm.settings/v1"); s.set("debug_texture_residency",true); s.set("texture_upload_budget_mb",8); s.save(); assert(s.get("debug_texture_residency") and s.get("texture_upload_budget_mb")==8)`
+	script := `local s=require("dm.settings/v1"); s.set("debug_texture_residency",true); s.set("texture_upload_budget_mb",8); s.set("texture_cache_budget_mb",768); s.save(); assert(s.get("debug_texture_residency") and s.get("texture_upload_budget_mb")==8 and s.get("texture_cache_budget_mb")==768)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"script.lua": {Data: []byte(script)}}, "script.lua"); err != nil {
 		t.Fatal(err)
 	}
-	if !target.debug || target.budget != 8*1024*1024 {
+	if !target.debug || target.budget != 8*1024*1024 || target.cache != 768*1024*1024 {
 		t.Fatalf("render settings = %#v", target)
 	}
 	reloaded, err := preferences.New(settings.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if values := reloaded.Values(); !values.DebugTextureResidency || values.TextureUploadBudgetMB != 8 {
+	if values := reloaded.Values(); !values.DebugTextureResidency || values.TextureUploadBudgetMB != 8 || values.TextureCacheBudgetMB != 768 {
 		t.Fatalf("persisted values = %#v", values)
 	}
 }
