@@ -38,3 +38,28 @@ func TestCaptureAllCatalogMatchesRegisteredScenes(t *testing.T) {
 		t.Fatalf("capture scenes do not match boot registrations\ncapture: %s\nregistered: %s", strings.Join(captured, ","), strings.Join(registered, ","))
 	}
 }
+
+func TestMessagesShellLeavesGameplayLive(t *testing.T) {
+	t.Parallel()
+
+	root := repositoryRoot(t)
+	boot, err := os.ReadFile(filepath.Join(root, "internal/content/shim/boot.lua"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition := regexp.MustCompile(`messages=\{[^\n]+\}`).Find(boot)
+	if definition == nil {
+		t.Fatal("boot.lua has no messages shell definition")
+	}
+	want := []string{
+		"blocks_update_below=false",
+		"passes_input_below=true",
+		`world_view="center"`,
+		`layer="hud"`,
+	}
+	for _, fact := range want {
+		if !strings.Contains(string(definition), fact) {
+			t.Errorf("messages shell definition %q does not contain %q", definition, fact)
+		}
+	}
+}

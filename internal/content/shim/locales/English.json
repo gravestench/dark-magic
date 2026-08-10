@@ -54,6 +54,8 @@
   "darkmagic.minipanel.messages": "MESSAGES",
   "darkmagic.minipanel.quests": "QUEST LOG",
   "darkmagic.minipanel.options": "OPTIONS",
+  "darkmagic.minipanel.open": "OPEN MINI-PANEL",
+  "darkmagic.minipanel.close": "CLOSE MINI-PANEL",
   "darkmagic.hud.health": "LIFE",
   "darkmagic.hud.mana": "MANA",
   "darkmagic.hud.stamina": "STAMINA",

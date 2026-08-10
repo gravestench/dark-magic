@@ -550,10 +550,12 @@ complete until its actions are driven by authoritative game state and commands.
   two 48px skill wells, clipped health/mana liquids and overlays, generic skill
   icons, and value-driven stamina/experience fills from manifest-owned facts.
   The authored Run/Walk and mini-panel toggle states are interactive through the
-  shared focus manager; the seven-button single-player mini-panel routes implemented
-  Character, Inventory, Skill Tree, Automap, and Options overlays while retaining
-  unavailable Messages and Quest Log controls as disabled. Belt contents,
-  tooltips, cursor states, and the 640x480 profile remain.
+  shared focus manager; the seven-button single-player mini-panel routes Character,
+  Inventory, Skill Tree, Automap, Messages, Quest Log, and Options overlays with
+  verified up/down states and localized tooltips. The belt exposes authoritative
+  capacity and cursor presentation covers the interaction states currently admitted
+  by game authority. Item contents and transfers remain M19 dependencies, learned
+  skill selection remains an M21 dependency, and the 640x480 profile remains.
 - [ ] Implement interactive inventory/equipment, character stats, skill trees,
   automap, quest log, waypoint, party, hireling, vendor, stash, cube, options,
   help, chat, pause, and escape panels from verified assets and records. The
@@ -682,6 +684,10 @@ complete until its actions are driven by authoritative game state and commands.
   pointer from static normal, pressed, and interaction-hand modes. OpenDiablo2,
   riiablo, and AbyssEngine provenance is retained in the asset catalog; item and
   vendor cursor modes remain gated by their authoritative M19/M21 interactions.
+  The single-player mini-panel now uses every verified even/odd up/down frame,
+  localized hover/focus tooltips, stateful open/close feedback, and a live
+  non-pausing Messages shell. Party remains correctly absent from the compact
+  single-player panel instead of adopting riiablo's multiplayer-width layout.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

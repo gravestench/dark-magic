@@ -387,7 +387,7 @@
             {"id":"inventory","label":"darkmagic.minipanel.inventory","frame":2,"scene":"inventory","enabled":true},
             {"id":"skills","label":"darkmagic.minipanel.skills","frame":4,"scene":"skills","enabled":true},
             {"id":"automap","label":"darkmagic.minipanel.automap","frame":8,"scene":"automap","enabled":true},
-            {"id":"messages","label":"darkmagic.minipanel.messages","frame":10,"enabled":false},
+            {"id":"messages","label":"darkmagic.minipanel.messages","frame":10,"scene":"messages","enabled":true},
             {"id":"quests","label":"darkmagic.minipanel.quests","frame":12,"scene":"quests","enabled":true},
             {"id":"options","label":"darkmagic.minipanel.options","frame":14,"scene":"options","enabled":true}
           ]

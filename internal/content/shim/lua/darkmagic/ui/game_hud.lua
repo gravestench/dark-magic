@@ -176,19 +176,22 @@ function M.create(root, definition, palettes, commands)
     minipanel_node:set_visible(false)
     for index, button in ipairs(minipanel.buttons) do
         local button_definition = button
+        local button_x = minipanel.button_x + (index - 1) * minipanel.button_step
+        local label = assert(locale.text(button_definition.label))
         local node = dc6_at(
             hud.root,
             minipanel.button_sheet,
             palette,
             button_definition.frame,
-            minipanel.button_x + (index - 1) * minipanel.button_step,
+            button_x,
             minipanel.button_y
         )
         node:set_visible(false)
+        local tip = tooltip.create(hud.root, label, button_x + minipanel.button_width / 2, minipanel.button_y, {})
         local control = hud.controls:add({
             id = "minipanel_" .. button_definition.id,
-            label = assert(locale.text(button_definition.label)),
-            x = minipanel.button_x + (index - 1) * minipanel.button_step,
+            label = label,
+            x = button_x,
             y = minipanel.button_y,
             width = minipanel.button_width,
             height = minipanel.button_height,
@@ -199,12 +202,22 @@ function M.create(root, definition, palettes, commands)
                     scenes.push(button_definition.scene)
                 end
             end,
+            on_state = function(_, state)
+                node:set_dc6(minipanel.button_sheet, palette, 0, state == "pressed" and button_definition.frame + 1 or button_definition.frame)
+                tip:set_visible(state == "hover" or state == "focused" or state == "pressed")
+            end,
         })
         control.node = node
+        control.tip = tip
     end
 
     local menu = definition.menu
     local menu_node = dc6_at(hud.root, menu.sheet, palette, menu.closed_frame, menu.x, menu.y)
+    local menu_tip = tooltip.create(hud.root, assert(locale.text("darkmagic.minipanel.open")), menu.x + menu.width / 2, menu.y, {})
+    local function update_menu_frame(pressed)
+        local frame = hud.menu_open and menu.open_frame or menu.closed_frame
+        menu_node:set_dc6(menu.sheet, palette, 0, pressed and frame + 1 or frame)
+    end
     hud.controls:add({
         id = "minipanel_toggle",
         label = "Open/Close Mini-panel",
@@ -214,13 +227,19 @@ function M.create(root, definition, palettes, commands)
         height = menu.height,
         on_activate = function()
             hud.menu_open = not hud.menu_open
-            menu_node:set_dc6(menu.sheet, palette, 0, hud.menu_open and menu.open_frame or menu.closed_frame)
+            update_menu_frame(false)
+            menu_tip:set_text(assert(locale.text(hud.menu_open and "darkmagic.minipanel.close" or "darkmagic.minipanel.open")))
             minipanel_node:set_visible(hud.menu_open)
             for _, button in ipairs(minipanel.buttons) do
                 local control = hud.controls:get("minipanel_" .. button.id)
                 control.visible = hud.menu_open
                 control.node:set_visible(hud.menu_open)
+                if not hud.menu_open then control.tip:set_visible(false) end
             end
+        end,
+        on_state = function(_, state)
+            update_menu_frame(state == "pressed")
+            menu_tip:set_visible(state == "hover" or state == "focused" or state == "pressed")
         end,
     })
     M.snapshot(hud, nil)
