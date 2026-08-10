@@ -11,8 +11,10 @@ import (
 )
 
 type Values struct {
-	SoundVolume float64 `json:"sound_volume"`
-	MusicVolume float64 `json:"music_volume"`
+	SoundVolume           float64 `json:"sound_volume"`
+	MusicVolume           float64 `json:"music_volume"`
+	DebugTextureResidency bool    `json:"debug_texture_residency"`
+	TextureUploadBudgetMB float64 `json:"texture_upload_budget_mb"`
 }
 
 type Settings struct {
@@ -22,7 +24,7 @@ type Settings struct {
 	dirty  bool
 }
 
-func Defaults() Values { return Values{SoundVolume: .5, MusicVolume: .5} }
+func Defaults() Values { return Values{SoundVolume: .5, MusicVolume: .5, TextureUploadBudgetMB: 4} }
 
 func NewTransient() *Settings { return &Settings{values: Defaults()} }
 
@@ -45,6 +47,9 @@ func New(path string) (*Settings, error) {
 	if err := json.Unmarshal(data, &settings.values); err != nil {
 		return nil, fmt.Errorf("preferences: decode %q: %w", path, err)
 	}
+	if settings.values.TextureUploadBudgetMB == 0 {
+		settings.values.TextureUploadBudgetMB = Defaults().TextureUploadBudgetMB
+	}
 	if err := validate(settings.values); err != nil {
 		return nil, fmt.Errorf("preferences: %q: %w", path, err)
 	}
@@ -57,6 +62,9 @@ func validate(values Values) error {
 	}
 	if values.MusicVolume < 0 || values.MusicVolume > 1 {
 		return fmt.Errorf("music_volume must be between 0 and 1 (got %g)", values.MusicVolume)
+	}
+	if values.TextureUploadBudgetMB < .25 || values.TextureUploadBudgetMB > 64 {
+		return fmt.Errorf("texture_upload_budget_mb must be between 0.25 and 64 (got %g)", values.TextureUploadBudgetMB)
 	}
 	return nil
 }

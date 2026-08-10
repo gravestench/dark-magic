@@ -38,13 +38,17 @@ type Service struct {
 	audioMu      sync.Mutex
 	audioBackend *raylibAudioBackend
 
-	paletteQuantizer *paletteQuantizer
-	gameTarget       rl.RenderTexture2D
-	frames           atomic.Uint64
-	drawCalls        atomic.Uint64
-	nodesVisited     atomic.Uint64
-	subtreesCulled   atomic.Uint64
-	textureUpdates   atomic.Uint64
+	paletteQuantizer    *paletteQuantizer
+	gameTarget          rl.RenderTexture2D
+	frames              atomic.Uint64
+	drawCalls           atomic.Uint64
+	nodesVisited        atomic.Uint64
+	subtreesCulled      atomic.Uint64
+	textureUpdates      atomic.Uint64
+	textureUploads      atomic.Uint64
+	textureUploadBytes  atomic.Uint64
+	textureUploadBudget atomic.Uint64
+	residencyDebug      atomic.Bool
 }
 
 // BackendDiagnostics reports native-adapter work without exposing Raylib

@@ -2,6 +2,7 @@
 package render
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"image"
@@ -52,6 +53,9 @@ type Resource struct {
 	ID      ResourceID
 	Kind    ResourceKind
 	Payload any
+	// TextureKey identifies immutable pixels across nodes and scene lifetimes.
+	// Backends may retain the native texture after semantic resource teardown.
+	TextureKey string
 }
 
 // FontData is decoded font input; native font creation remains a backend task.
@@ -126,6 +130,8 @@ type Composer struct {
 	slots            []slot
 	free             []uint32
 	pending          []Change
+	warmPending      []Change
+	warmKeys         map[string]struct{}
 	resources        []resourceSlot
 	freeResources    []uint32
 	textureUploads   uint64
@@ -136,17 +142,21 @@ type Composer struct {
 
 // Diagnostics summarizes retained and queued renderer state for leak checks.
 type Diagnostics struct {
-	ActiveNodes, ActiveResources, Pending, NodeSlots, ResourceSlots int
-	RetainedTextureBytes                                            uint64
-	TextureUploads, TextureUploadBytes                              uint64
-	ResourceCreates, ResourceDestroys                               uint64
+	ActiveNodes, ActiveResources, Pending, WarmPending, NodeSlots, ResourceSlots int
+	WarmPendingBytes                                                             uint64
+	RetainedTextureBytes                                                         uint64
+	TextureUploads, TextureUploadBytes                                           uint64
+	ResourceCreates, ResourceDestroys                                            uint64
 }
 
 // Diagnostics returns a consistent composer snapshot without exposing payloads.
 func (c *Composer) Diagnostics() Diagnostics {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	result := Diagnostics{Pending: len(c.pending), NodeSlots: len(c.slots), ResourceSlots: len(c.resources)}
+	result := Diagnostics{Pending: len(c.pending), WarmPending: len(c.warmPending), NodeSlots: len(c.slots), ResourceSlots: len(c.resources)}
+	for _, change := range c.warmPending {
+		result.WarmPendingBytes += resourceTextureBytes(change.Resource)
+	}
 	for _, entry := range c.slots {
 		if entry.node != nil {
 			result.ActiveNodes++
@@ -185,6 +195,9 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	}
 	id := ResourceID{Slot: index, Generation: c.resources[index].generation}
 	resource := &Resource{ID: id, Kind: kind, Payload: payload}
+	if kind == ResourceTexture {
+		resource.TextureKey = TextureKey(payload.(image.Image))
+	}
 	c.resources[index].resource = resource
 	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
 	c.resourceCreates++
@@ -193,6 +206,53 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 		c.textureBytes += bytes
 	}
 	return id, nil
+}
+
+// TextureKey returns a stable identity for immutable RGBA presentation data.
+// It deliberately includes dimensions so equal byte sequences with different
+// row geometry cannot alias one native texture.
+func TextureKey(pixels image.Image) string {
+	if pixels == nil {
+		return ""
+	}
+	bounds := pixels.Bounds()
+	hash := sha256.New()
+	_, _ = fmt.Fprintf(hash, "%d:%d:", bounds.Dx(), bounds.Dy())
+	if rgba, ok := pixels.(*image.RGBA); ok {
+		width := bounds.Dx() * 4
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			start := rgba.PixOffset(bounds.Min.X, y)
+			_, _ = hash.Write(rgba.Pix[start : start+width])
+		}
+		return fmt.Sprintf("rgba:%x", hash.Sum(nil))
+	}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			r, g, b, a := pixels.At(x, y).RGBA()
+			hash.Write([]byte{byte(r >> 8), byte(g >> 8), byte(b >> 8), byte(a >> 8)})
+		}
+	}
+	return fmt.Sprintf("rgba:%x", hash.Sum(nil))
+}
+
+// WarmTexture queues optional native residency work. Scene correctness never
+// depends on this queue: a node can still demand-upload a missing texture.
+func (c *Composer) WarmTexture(pixels image.Image) string {
+	key := TextureKey(pixels)
+	if key == "" {
+		return ""
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.warmKeys == nil {
+		c.warmKeys = make(map[string]struct{})
+	}
+	if _, exists := c.warmKeys[key]; exists {
+		return key
+	}
+	c.warmKeys[key] = struct{}{}
+	c.warmPending = append(c.warmPending, Change{Kind: "texture-warm", Resource: Resource{Kind: ResourceTexture, Payload: pixels, TextureKey: key}})
+	return key
 }
 
 func (c *Composer) validateResource(kind ResourceKind, payload any) error {
@@ -414,6 +474,35 @@ func (c *Composer) Drain(backend Backend) error {
 		}
 	}
 	c.pending = nil
+	return nil
+}
+
+// DrainWarm uploads optional texture residency work up to a byte budget. At
+// least one queued texture is processed so an oversized image cannot starve.
+func (c *Composer) DrainWarm(backend Backend, byteBudget uint64) error {
+	if backend == nil {
+		return errors.New("rendercore: nil backend")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	used, count := uint64(0), 0
+	for count < len(c.warmPending) {
+		change := c.warmPending[count]
+		weight := resourceTextureBytes(change.Resource)
+		if count > 0 && byteBudget > 0 && used+weight > byteBudget {
+			break
+		}
+		if err := backend.Apply(change); err != nil {
+			c.warmPending = append([]Change(nil), c.warmPending[count:]...)
+			return fmt.Errorf("rendercore: warm texture: %w", err)
+		}
+		delete(c.warmKeys, change.Resource.TextureKey)
+		used += weight
+		count++
+	}
+	if count > 0 {
+		c.warmPending = append([]Change(nil), c.warmPending[count:]...)
+	}
 	return nil
 }
 

@@ -124,6 +124,23 @@ in-game sound and music sliders update mixer buses immediately through
 user-configuration directory when the overlay closes. Set
 `DARK_MAGIC_PREFERENCES` to use another file.
 
+Renderer residency diagnostics use the same persistent preference path and can
+be controlled directly from the Lua shell:
+
+```lua
+local settings = require("dm.settings/v1")
+settings.set("debug_texture_residency", true) -- native-resolution cache overlay
+settings.set("texture_upload_budget_mb", 4)   -- optional warm uploads per frame
+settings.save()                               -- retain both across launches
+
+local render = require("dm.render/v1")
+render.diagnostics() -- decoded cache plus pending CPU/GPU warm work
+```
+
+Texture creation remains on the graphics-owner thread. Asset reads and bitmap
+preparation run in bounded workers; immutable textures are then uploaded within
+the configured frame budget and retained by content identity across scenes.
+
 Use `dm.apropos("music")` to search the permitted module and command
 descriptions. `dm.docs()` renders Markdown for the session's complete permitted
 Lua API from the same registration metadata used by help and completion.

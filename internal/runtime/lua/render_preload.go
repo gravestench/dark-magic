@@ -2,10 +2,12 @@ package modruntime
 
 import (
 	"fmt"
+	"image"
 	"io/fs"
 	"runtime"
 	"sync"
 
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -40,8 +42,9 @@ type assetPreloadJob struct {
 }
 
 type assetPreloader struct {
-	assets fs.FS
-	cache  *renderAssetCache
+	assets   fs.FS
+	cache    *renderAssetCache
+	composer *render.Composer
 
 	mu     sync.Mutex
 	nextID uint64
@@ -49,7 +52,7 @@ type assetPreloader struct {
 	work   chan struct{}
 }
 
-func newAssetPreloader(assets fs.FS, cache *renderAssetCache) *assetPreloader {
+func newAssetPreloader(assets fs.FS, cache *renderAssetCache, composer *render.Composer) *assetPreloader {
 	workers := runtime.GOMAXPROCS(0)
 	if workers > 4 {
 		workers = 4
@@ -57,7 +60,16 @@ func newAssetPreloader(assets fs.FS, cache *renderAssetCache) *assetPreloader {
 	if workers < 1 {
 		workers = 1
 	}
-	return &assetPreloader{assets: assets, cache: cache, jobs: make(map[uint64]*assetPreloadJob), work: make(chan struct{}, workers)}
+	return &assetPreloader{assets: assets, cache: cache, composer: composer, jobs: make(map[uint64]*assetPreloadJob), work: make(chan struct{}, workers)}
+}
+
+func (p *assetPreloader) warm(images ...image.Image) {
+	if p.composer == nil {
+		return
+	}
+	for _, pixels := range images {
+		p.composer.WarmTexture(pixels)
+	}
 }
 
 func (p *assetPreloader) Start(requests []AssetPreloadRequest) uint64 {
@@ -115,19 +127,31 @@ func (p *assetPreloader) Status(id uint64) (AssetPreloadStatus, bool) {
 func (p *assetPreloader) load(request AssetPreloadRequest) error {
 	switch request.Kind {
 	case "image":
-		_, err := p.cache.loadImage(p.assets, request.Path)
+		pixels, err := p.cache.loadImage(p.assets, request.Path)
+		if err == nil {
+			p.warm(pixels)
+		}
 		return err
 	case "dc6":
 		_, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
 		return err
 	case "dc6_frame":
-		_, err := p.cache.loadDC6Frame(p.assets, request.Path, request.Palette, request.Direction, request.Frame)
+		frame, err := p.cache.loadDC6Frame(p.assets, request.Path, request.Palette, request.Direction, request.Frame)
+		if err == nil {
+			p.warm(frame.image)
+		}
 		return err
 	case "dc6_combined":
-		_, err := p.cache.loadDC6Combined(p.assets, request.Path, request.Palette, request.Direction)
+		pages, err := p.cache.loadDC6Combined(p.assets, request.Path, request.Palette, request.Direction)
+		if err == nil {
+			p.warm(pages...)
+		}
 		return err
 	case "dc6_animation":
-		_, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor)
+		animation, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor)
+		if err == nil {
+			p.warm(animation.frames...)
+		}
 		return err
 	case "dc6_composite":
 		first, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
@@ -139,10 +163,14 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 			return err
 		}
 		bounds := dc6AnimationBounds(first, request.Direction).Union(dc6AnimationBounds(second, request.Direction))
-		if _, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor, bounds); err != nil {
+		firstAnimation, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor, bounds)
+		if err != nil {
 			return err
 		}
-		_, err = p.cache.loadDC6Animation(p.assets, request.Secondary, request.Palette, request.Direction, request.Anchor, bounds)
+		secondAnimation, err := p.cache.loadDC6Animation(p.assets, request.Secondary, request.Palette, request.Direction, request.Anchor, bounds)
+		if err == nil {
+			p.warm(append(firstAnimation.frames, secondAnimation.frames...)...)
+		}
 		return err
 	case "dcc":
 		_, err := p.cache.loadDCC(p.assets, request.Path, request.Palette)
@@ -154,7 +182,10 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		_, err := p.cache.loadFont(p.assets, request.Table, request.Sheet, request.Palette, request.Transform)
 		return err
 	case "ds1":
-		_, err := p.cache.loadDS1(p.assets, request.Path, request.Tiles, request.Palette)
+		pixels, err := p.cache.loadDS1(p.assets, request.Path, request.Tiles, request.Palette)
+		if err == nil {
+			p.warm(pixels)
+		}
 		return err
 	default:
 		return fmt.Errorf("unsupported asset kind %q", request.Kind)

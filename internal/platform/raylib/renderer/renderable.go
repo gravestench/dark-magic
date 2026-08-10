@@ -38,6 +38,8 @@ type node struct {
 	visible               bool
 	origin                rl.Vector2
 	textureVariant        string
+	textureKey            string
+	sharedTexture         bool
 	textureKeys           map[string]struct{}
 	clip                  *rl.Rectangle
 	shader                *rl.Shader
@@ -219,6 +221,9 @@ func (n *node) SetClip(clip *rl.Rectangle) { n.clip = clip }
 
 func (n *node) Texture() rl.Texture2D {
 	key := n.uuid.String() + n.textureVariant
+	if n.textureKey != "" {
+		key = n.textureKey
+	}
 	tx, isNew := n.renderer.getTexture(key, n.Image())
 
 	if isNew {
@@ -254,12 +259,35 @@ func (n *node) SetImage(image image.Image) {
 	n.isDirty = true
 	n.image = image
 	n.textureVariant = ""
+	n.textureKey = ""
+	n.sharedTexture = false
 }
 
-func (n *node) SetAnimationFrame(frame image.Image, index int) {
+func (n *node) SetImageResource(image image.Image, key string) {
+	n.isDirty = false
+	n.image = image
+	n.textureVariant = ""
+	n.textureKey = key
+	n.sharedTexture = key != ""
+}
+
+func (n *node) UpdateImageResource(image image.Image, key string) {
+	n.isDirty = true
+	n.image = image
+	n.textureVariant = ""
+	n.textureKey = key
+	n.sharedTexture = key != ""
+}
+
+func (n *node) SetAnimationFrame(frame image.Image, key string, index int) {
 	n.image = frame
 	n.isDirty = false
 	n.textureVariant = fmt.Sprintf("/animation/%d", index)
+	n.textureKey = key
+	n.sharedTexture = key != ""
+	if n.sharedTexture {
+		return
+	}
 	if n.textureKeys == nil {
 		n.textureKeys = make(map[string]struct{})
 	}
@@ -270,12 +298,16 @@ func (n *node) ClearTextures() {
 	if n.renderer.cache == nil {
 		return
 	}
-	n.renderer.cache.Remove(n.uuid.String())
-	for key := range n.textureKeys {
-		n.renderer.cache.Remove(key)
+	if !n.sharedTexture {
+		n.renderer.cache.Remove(n.uuid.String())
+		for key := range n.textureKeys {
+			n.renderer.cache.Remove(key)
+		}
 	}
 	n.textureKeys = nil
 	n.textureVariant = ""
+	n.textureKey = ""
+	n.sharedTexture = false
 }
 
 func (n *node) Enable() {

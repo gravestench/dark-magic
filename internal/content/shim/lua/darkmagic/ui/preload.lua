@@ -77,8 +77,36 @@ function preload.frontend()
         if status and not status.done then return frontend_job end
     end
     local requests, seen = {}, {}
+    local title = manifest.screens.title
+    local menu = manifest.screens.main_menu
     local select = manifest.screens.character_select
     local create = manifest.screens.character_create
+
+    -- Queue every pre-gameworld screen while startup videos are playing. The
+    -- order follows the common player path so a short/skipped movie still
+    -- makes the next screen resident first.
+    add_frontend_background(requests, seen, title)
+    for _, side in ipairs({"left", "right"}) do
+        add_dc6_composite(requests, seen, title.logo["black_" .. side], title.logo["fire_" .. side], title.logo.palette)
+    end
+    add_frontend_background(requests, seen, menu)
+    for _, side in ipairs({"left", "right"}) do
+        add_dc6_composite(requests, seen, menu.logo["black_" .. side], menu.logo["fire_" .. side], menu.logo.palette)
+    end
+    add_control_assets(requests, seen, menu.controls)
+    add_frontend_background(requests, seen, manifest.screens.tcpip)
+    add_control_assets(requests, seen, manifest.screens.tcpip.controls)
+    add_frontend_background(requests, seen, manifest.screens.credits)
+    add(requests, seen, "cinematics-background", {
+        kind = "dc6_combined", path = manifest.screens.cinematics.background,
+        palette = assert(manifest.palettes[manifest.screens.cinematics.palette]), direction = 0,
+    })
+    add_dc6_animation(requests, seen, manifest.screens.game_loading.sheet, manifest.screens.game_loading.palette)
+    add_dc6_animation(requests, seen, manifest.cursor.modes.default.sheet, manifest.cursor.palette)
+    for _, mode in ipairs({"normal", "pressed", "hand"}) do
+        local definition = manifest.cursor.modes[mode]
+        add_dc6_frame(requests, seen, definition.sheet, manifest.cursor.palette, definition.frame)
+    end
 
     add_frontend_background(requests, seen, select)
     for frame = 0, 1 do add_dc6_frame(requests, seen, select.selection, select.selection_palette, frame) end

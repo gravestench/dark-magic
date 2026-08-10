@@ -8,6 +8,7 @@ local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local video = require("dm.video/v1")
 local data = require("dm.data/v1")
+local preload = require("darkmagic.ui.preload")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local startup = manifest.startup
@@ -15,6 +16,9 @@ local screen = assert(manifest.screens.loading)
 
 return {
     enter = function(self)
+        -- Startup movies provide an ideal upload window: prepare and progressively
+        -- make the complete frontend texture set resident before interaction.
+        preload.frontend()
         self.root = render.create("transition")
         -- Keep the letterbox backdrop below the embedded presenter, which
         -- occupies z=0 on the transition layer.

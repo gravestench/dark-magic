@@ -57,4 +57,7 @@ func (s *Service) Configure(config Config) {
 		}
 	})
 	s.FlushCache(textureCache)
+	if s.textureUploadBudget.Load() == 0 {
+		s.textureUploadBudget.Store(4 * 1024 * 1024)
+	}
 }
