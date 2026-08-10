@@ -44,6 +44,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"left":            actionState(s.KeyState(rl.KeyLeft)),
 			"right":           actionState(s.KeyState(rl.KeyRight)),
 			"toggle_run":      actionState(s.KeyState(rl.KeyR)),
+			"swap_weapons":    actionState(s.KeyState(rl.KeyW)),
 			"backspace":       actionState(s.KeyState(rl.KeyBackspace)),
 			"delete":          actionState(s.KeyState(rl.KeyDelete)),
 			"tab":             actionState(s.KeyState(rl.KeyTab)),

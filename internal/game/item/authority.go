@@ -53,6 +53,16 @@ func (authority *Authority) move(owner, itemID string, destination Placement, pl
 	return "", state.Move(itemID, destination)
 }
 
+func (authority *Authority) selectWeaponSet(owner string, set int) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	state, found := authority.players[owner]
+	if !found {
+		return fmt.Errorf("item: unknown owner %q", owner)
+	}
+	return state.SelectWeaponSet(set)
+}
+
 func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map[string]Placement, error) {
 	authority.mu.RLock()
 	defer authority.mu.RUnlock()

@@ -81,10 +81,20 @@ local function held_item(snapshot)
     end
 end
 
+local function uses_weapon_set(body_loc)
+    return body_loc == "rarm" or body_loc == "larm"
+end
+
 local function equipment_item(snapshot, body_loc)
     for _, item in ipairs(snapshot.items) do
-        if item.container == "equipment" and item.slot == body_loc then return item end
+        local active = not uses_weapon_set(body_loc) or item.weapon_set == snapshot.active_weapon_set
+        if item.container == "equipment" and item.slot == body_loc and active then return item end
     end
+end
+
+local function select_other_weapon_set(self)
+    local snapshot = assert(self.items.snapshot())
+    self.items.select_weapon_set(snapshot.active_weapon_set == 0 and 1 or 0)
 end
 
 local function refresh_items(self)
@@ -114,6 +124,10 @@ local function refresh_items(self)
         if drawing ~= nil then
             -- Compact conditional: only equipment items have named well geometry.
             local equipment = item.container == "equipment" and self.equipment_slots[item.slot] or nil
+            if equipment ~= nil and uses_weapon_set(item.slot)
+                and item.weapon_set ~= snapshot.active_weapon_set then
+                equipment = nil
+            end
 
             -- This inventory overlay displays backpack items, held items, and the
             -- equipment slots it knows how to position. Other containers remain hidden.
@@ -150,7 +164,11 @@ local function activate_equipment(self, body_loc)
     if held ~= nil then
         -- Submit intent: "try to put held item in this equipment body location."
         -- `true` asks authority for the allowed atomic swap behavior if occupied.
-        self.items.move(held.id, { container = "equipment", slot = body_loc }, true)
+        local destination = { container = "equipment", slot = body_loc }
+        if uses_weapon_set(body_loc) then
+            destination.weapon_set = self.item_snapshot.active_weapon_set
+        end
+        self.items.move(held.id, destination, true)
         return
     end
 
@@ -298,6 +316,10 @@ return {
         -- do not touch item nodes after control dispatch if close may have run.
         if self.items ~= nil then refresh_items(self) end
         self.controls:update()
+
+        if self.items ~= nil and input.pressed("swap_weapons") then
+            select_other_weapon_set(self)
+        end
 
         if input.pressed("inventory") or input.pressed("cancel") then
             scenes.pop()

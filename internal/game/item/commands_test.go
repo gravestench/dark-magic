@@ -101,6 +101,49 @@ func TestAdministratorMoveNamesOwnerAndAppearsInAudit(t *testing.T) {
 	}
 }
 
+func TestWeaponSetCommandIsAppliedAndReplayed(t *testing.T) {
+	authority := NewAuthority()
+	if err := authority.Register("alice", testCommandState(t)); err != nil {
+		t.Fatal(err)
+	}
+	session, err := gamesession.New(gameecs.New(), gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := RegisterCommands(session, authority); err != nil {
+		t.Fatal(err)
+	}
+	command, err := WeaponSetSelectionCommand(WeaponSetPayload{Set: 1}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	layout, _, _, err := authority.Snapshot("alice")
+	if err != nil || layout.ActiveWeaponSet != 1 {
+		t.Fatalf("active set = %d, %v", layout.ActiveWeaponSet, err)
+	}
+	replay, err := session.Replay()
+	if err != nil || len(replay.Commands) != 1 || replay.Commands[0].Kind != WeaponSetCommand {
+		t.Fatalf("replay = %#v, %v", replay, err)
+	}
+}
+
+func TestPlayerCannotSelectAnotherOwnersWeaponSet(t *testing.T) {
+	command, err := WeaponSetSelectionCommand(WeaponSetPayload{Owner: "bob", Set: 1}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateWeaponSetCommand(command); err == nil {
+		t.Fatal("cross-owner weapon selection was accepted")
+	}
+}
+
 func testCommandState(t *testing.T) *State {
 	t.Helper()
 	state, err := NewState(Layout{Grids: map[Container]Grid{ContainerInventory: {Width: 10, Height: 4}}, BeltCapacity: 4}, []Item{{ID: "potion", Code: "hp1", Width: 1, Height: 1, BeltEligible: true}}, map[string]Placement{"potion": {Container: ContainerInventory}})

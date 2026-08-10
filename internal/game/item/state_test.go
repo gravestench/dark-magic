@@ -75,6 +75,41 @@ func TestPlayerAndHirelingEquipmentHaveIndependentOccupancy(t *testing.T) {
 	}
 }
 
+func TestAlternateWeaponSetsHaveIndependentHandSlots(t *testing.T) {
+	items := []Item{
+		{ID: "primary", Code: "ssd", Width: 1, Height: 3, BodySlots: []string{"rarm"}},
+		{ID: "alternate", Code: "axe", Width: 2, Height: 3, BodySlots: []string{"rarm"}},
+		{ID: "conflict", Code: "wnd", Width: 1, Height: 2, BodySlots: []string{"rarm"}},
+		{ID: "helm", Code: "cap", Width: 2, Height: 2, BodySlots: []string{"head"}},
+	}
+	state, err := NewState(Layout{}, items, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("primary", Placement{Container: ContainerEquipment, Slot: "rarm", WeaponSet: 0}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("alternate", Placement{Container: ContainerEquipment, Slot: "rarm", WeaponSet: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("conflict", Placement{Container: ContainerEquipment, Slot: "rarm", WeaponSet: 1}); err == nil {
+		t.Fatal("occupied alternate hand slot accepted another item")
+	}
+	if err := state.Move("helm", Placement{Container: ContainerEquipment, Slot: "head", WeaponSet: 1}); err == nil {
+		t.Fatal("shared equipment slot accepted a weapon-set index")
+	}
+	if err := state.SelectWeaponSet(1); err != nil {
+		t.Fatal(err)
+	}
+	layout, _, _ := state.Snapshot()
+	if layout.ActiveWeaponSet != 1 {
+		t.Fatalf("active weapon set = %d", layout.ActiveWeaponSet)
+	}
+	if err := state.SelectWeaponSet(2); err == nil {
+		t.Fatal("invalid weapon set was accepted")
+	}
+}
+
 func TestPlaceHeldSwapsEquipmentAndBeltSlots(t *testing.T) {
 	items := []Item{
 		{ID: "held-ring", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring"}},

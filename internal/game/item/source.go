@@ -12,8 +12,13 @@ import (
 // clock. Lua can post intent, but it cannot mutate item authority directly.
 type Controller struct {
 	mu       sync.Mutex
-	requests []MovePayload
+	requests []request
 	sequence uint64
+}
+
+type request struct {
+	move      *MovePayload
+	weaponSet *WeaponSetPayload
 }
 
 func (controller *Controller) Move(payload MovePayload) error {
@@ -23,11 +28,22 @@ func (controller *Controller) Move(payload MovePayload) error {
 	}
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
-	controller.requests = append(controller.requests, payload)
+	controller.requests = append(controller.requests, request{move: &payload})
 	return nil
 }
 
-func (controller *Controller) drain() []MovePayload {
+func (controller *Controller) SelectWeaponSet(set int) error {
+	if !validWeaponSet(set) {
+		return fmt.Errorf("item: weapon set must be 0 or 1")
+	}
+	payload := WeaponSetPayload{Set: set}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	controller.requests = append(controller.requests, request{weaponSet: &payload})
+	return nil
+}
+
+func (controller *Controller) drain() []request {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 	requests := controller.requests
@@ -53,7 +69,13 @@ func (source *Source) Commands(tick uint64) []simulation.Command {
 	commands := make([]simulation.Command, 0, len(requests))
 	for _, request := range requests {
 		source.controller.sequence++
-		command, err := Command(request, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
+		var command simulation.Command
+		var err error
+		if request.move != nil {
+			command, err = Command(*request.move, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
+		} else {
+			command, err = WeaponSetSelectionCommand(*request.weaponSet, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
+		}
 		if err == nil {
 			commands = append(commands, command)
 		}

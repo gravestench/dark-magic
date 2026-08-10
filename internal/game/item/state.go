@@ -18,6 +18,9 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 	if layout.BeltCapacity < 0 {
 		return nil, fmt.Errorf("item: belt capacity cannot be negative")
 	}
+	if !validWeaponSet(layout.ActiveWeaponSet) {
+		return nil, fmt.Errorf("item: active weapon set must be 0 or 1")
+	}
 	for container, grid := range layout.Grids {
 		if !isGrid(container) || grid.Width <= 0 || grid.Height <= 0 {
 			return nil, fmt.Errorf("item: %q requires positive grid dimensions", container)
@@ -67,6 +70,17 @@ func (state *State) Move(id string, destination Placement) error {
 func (state *State) Placement(id string) (Placement, bool) {
 	placement, found := state.placements[id]
 	return placement, found
+}
+
+// SelectWeaponSet atomically changes which hand-slot pair is active. Both sets
+// remain equipped in authority; presentation and combat snapshots choose the
+// active pair instead of moving item identities between containers.
+func (state *State) SelectWeaponSet(set int) error {
+	if !validWeaponSet(set) {
+		return fmt.Errorf("item: weapon set must be 0 or 1")
+	}
+	state.layout.ActiveWeaponSet = set
+	return nil
 }
 
 // Snapshot returns copies suitable for UI, persistence, or network snapshots.
@@ -232,12 +246,22 @@ func (state *State) validateEquipment(candidate Item, destination Placement) err
 	if err := state.validateEquipmentEligibility(candidate, destination); err != nil {
 		return err
 	}
-	return state.requireEmpty(candidate.ID, destination.Container, destination.Slot)
+	if occupied := state.slotOccupant(candidate.ID, destination); occupied != "" {
+		return fmt.Errorf("item: %s slot %q is occupied by %q", destination.Container, destination.Slot, occupied)
+	}
+	return nil
 }
 
 func (state *State) validateEquipmentEligibility(candidate Item, destination Placement) error {
 	if destination.Slot == "" || !slices.Contains(candidate.BodySlots, destination.Slot) {
 		return fmt.Errorf("item: %q cannot use body slot %q", candidate.ID, destination.Slot)
+	}
+	if usesWeaponSet(destination.Container, destination.Slot) {
+		if !validWeaponSet(destination.WeaponSet) {
+			return fmt.Errorf("item: weapon set must be 0 or 1")
+		}
+	} else if destination.WeaponSet != 0 {
+		return fmt.Errorf("item: body slot %q is shared and cannot use weapon set %d", destination.Slot, destination.WeaponSet)
 	}
 	return nil
 }
@@ -267,7 +291,8 @@ func (state *State) slotOccupant(candidateID string, destination Placement) stri
 		if destination.Container == ContainerBelt && placement.BeltSlot == destination.BeltSlot {
 			return id
 		}
-		if destination.Container != ContainerBelt && placement.Slot == destination.Slot {
+		if destination.Container != ContainerBelt && placement.Slot == destination.Slot &&
+			(!usesWeaponSet(destination.Container, destination.Slot) || placement.WeaponSet == destination.WeaponSet) {
 			return id
 		}
 	}
@@ -288,6 +313,12 @@ func (state *State) requireEmpty(candidateID string, container Container, slot s
 		}
 	}
 	return nil
+}
+
+func validWeaponSet(set int) bool { return set == 0 || set == 1 }
+
+func usesWeaponSet(container Container, slot string) bool {
+	return container == ContainerEquipment && (slot == "rarm" || slot == "larm")
 }
 
 func rectanglesOverlap(ax, ay, aw, ah, bx, by, bw, bh int) bool {

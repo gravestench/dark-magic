@@ -91,6 +91,7 @@ return {
             -- path that actually needs them.
             local player = require("dm.player/v1")
             local items = require("dm.items/v1")
+            self.items = items
             self.game_data = require("dm.game_data/v1")
 
             -- Instead of giving game_hud raw capabilities, pass the small
@@ -153,6 +154,15 @@ return {
             scenes.toggle_overlay("options", "full")
         elseif input.pressed("pause") or input.pressed("cancel") then
             scenes.toggle_overlay("pause", "full")
+        end
+
+
+        -- W submits a fixed-tick selection command. Equipment does not move
+        -- between fake presentation containers: authority merely changes which
+        -- pair of hand slots is active, replayable, and visible.
+        if self.items and input.pressed("swap_weapons") then
+            local item_snapshot = assert(self.items.snapshot())
+            self.items.select_weapon_set(item_snapshot.active_weapon_set == 0 and 1 or 0)
         end
 
         -- Authoritative session may not have admitted the player yet. Bind tries
