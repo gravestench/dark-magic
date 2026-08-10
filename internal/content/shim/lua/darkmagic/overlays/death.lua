@@ -5,6 +5,10 @@ local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local locale = require("dm.locale/v1")
 local text = require("darkmagic.ui.text")
+local data = require("dm.data/v1")
+
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local screen = assert(manifest.screens.death)
 
 return {
     blocks_update_below = true,
@@ -17,9 +21,9 @@ return {
         -- message. The hardcore epitaph uses the visibly smaller Font16.
         -- Both use Sky/Pal.pl2's red text slot so glyph shading and outlines
         -- remain palette-authored instead of becoming flat RGB modulation.
-        text.create(self.root, "death_primary", assert(locale.text("darkmagic.death.died")), 400, 145, 760)
-        text.create(self.root, "death_primary", assert(locale.text("darkmagic.death.continue")), 400, 195, 760)
-        text.create(self.root, "death_secondary", assert(locale.text("darkmagic.death.hardcore")), 400, 255, 760)
+        text.create(self.root, "death_primary", assert(locale.text("darkmagic.death.died")), screen.x, screen.died_y, screen.width)
+        text.create(self.root, "death_primary", assert(locale.text("darkmagic.death.continue")), screen.x, screen.continue_y, screen.width)
+        text.create(self.root, "death_secondary", assert(locale.text("darkmagic.death.hardcore")), screen.x, screen.hardcore_y, screen.width)
     end,
 
     update = function()

@@ -16,7 +16,7 @@
       "game_version": "diablo-ii-lod",
       "language": "English",
       "resolution": { "width": 640, "height": 480 },
-      "screens": ["game_world","inventory","character","skills","quests","party","help","stash","cube","hireling","vendor","waypoint","pause","options"],
+      "screens": ["game_world","inventory","character","skills","quests","party","help","stash","cube","hireling","vendor","waypoint","pause","options","automap","death"],
       "overrides": {
         "screens": {
           "game_world": {
@@ -67,7 +67,9 @@
           "cube":{"x":0,"y":4},
           "hireling":{"x":0,"y":4},
           "vendor":{"x":0,"y":4},
-          "waypoint":{"x":0,"y":4}
+          "waypoint":{"x":0,"y":4},
+          "automap":{"x":320,"y":240,"width":540,"height":380},
+          "death":{"x":320,"width":600}
         }
       }
     }
@@ -542,6 +544,14 @@
       "sheet":"data/global/ui/MENU/waygatebackground.dc6","palette":"sky","x":80,"y":64,
       "close":{"x":272,"bottom_inset":14,"label":"darkmagic.waypoint.close"},
       "labels":[{"key":"darkmagic.waypoint.unavailable","x":160,"y":385,"width":250}]
+    },
+    "automap": {
+      "x":400,"y":300,"width":700,"height":500,
+      "fill":{"red":40,"green":36,"blue":28,"alpha":120}
+    },
+    "death": {
+      "x":400,"width":760,
+      "died_y":145,"continue_y":195,"hardcore_y":255
     },
     "credits": {
       "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
