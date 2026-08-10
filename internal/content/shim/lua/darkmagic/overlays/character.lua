@@ -11,6 +11,7 @@ local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.character
+local offset_x, offset_y = screen.offset_x or 0, screen.offset_y or 0
 
 local function dc6_at(root, sheet, palette, frame, x, y)
     local node = render.create("modal", root)
@@ -47,8 +48,8 @@ return {
         local panel = screen.panel
         local palette = manifest.palettes[panel.palette]
         local positions = {
-            { x = panel.x, y = panel.y }, { x = panel.x + 256, y = panel.y },
-            { x = panel.x + 256, y = panel.y + 256 }, { x = panel.x, y = panel.y + 256 },
+            { x = panel.x + offset_x, y = panel.y + offset_y }, { x = panel.x + offset_x + 256, y = panel.y + offset_y },
+            { x = panel.x + offset_x + 256, y = panel.y + offset_y + 256 }, { x = panel.x + offset_x, y = panel.y + offset_y + 256 },
         }
         for index, frame in ipairs(panel.frames) do
             dc6_at(self.root, panel.sheet, palette, frame, positions[index].x, positions[index].y)
@@ -56,20 +57,24 @@ return {
 
         local heading_values = { name = character.name, class = character.class }
         for _, heading in ipairs(screen.headings) do
-            text.create(self.root, screen.heading_style, heading_values[heading.field], heading.x, heading.y, 150)
+            text.create(self.root, screen.heading_style, heading_values[heading.field], heading.x + offset_x, heading.y + offset_y, 150)
         end
         for _, value in ipairs(screen.values) do
-            text.create(self.root, screen.label_style, assert(locale.text(value.label)), value.label_x, value.label_y, 130)
-            text.create(self.root, screen.value_style, displayed_value(character, value.field), value.x, value.y, 100)
+            text.create(self.root, screen.label_style, assert(locale.text(value.label)), value.label_x + offset_x, value.label_y + offset_y, 130)
+            text.create(self.root, screen.value_style, displayed_value(character, value.field), value.x + offset_x, value.y + offset_y, 100)
         end
 
         local close = screen.close
-        button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
+        local close_placement = {
+            sheet=close.sheet, palette=close.palette, up_frame=close.up_frame, down_frame=close.down_frame,
+            x=close.x + offset_x, y=close.y + offset_y, width=close.width, height=close.height, label=close.label,
+        }
+        button.create(self.root, self.controls, "close", close_placement, assert(locale.text(close.label)), {
             layer = "modal",
             show_label = false,
             sound = manifest.sounds.button,
             tooltip = assert(locale.text(close.label)),
-            on_activate = function() scenes.pop() end,
+            on_activate = function() scenes.toggle_overlay("character", "left") end,
         })
     end,
 
