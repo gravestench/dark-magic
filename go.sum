@@ -60,8 +60,8 @@ github.com/gravestench/dt1 v0.1.0 h1:L0+p4BVAORvn5ZJ17V1rKtPO+htggLhZbWYJqdaLIP8
 github.com/gravestench/dt1 v0.1.0/go.mod h1:eC7SwOWMcf0EeEeuCvs8MnFFHGOVMbVgJnpjnaddgb0=
 github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e h1:/vTh+8tKvHy2lNPPgAjlNNBFOPlOM8ObOSI8mgIgbSA=
 github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e/go.mod h1:vJAc9hlwEWypZBGynn0tycP77gmybyMaoSxJeK4tLZ0=
-github.com/gravestench/mpq v0.1.0 h1:L+xafTRWPa9VwZ5zdxcX1u9cHRkOSbhWbYqVAW/3hi8=
-github.com/gravestench/mpq v0.1.0/go.mod h1:WvjrGNJt/5dSSsd8PtSVKVNtGnfthvgOgx23QClA3SM=
+github.com/gravestench/mpq v0.1.1-0.20260810081350-4b25d79dc0df h1:3IUNDtn5uBfofSj2sxQULyJyH+WYcwWx4Xv+V8Z2RWQ=
+github.com/gravestench/mpq v0.1.1-0.20260810081350-4b25d79dc0df/go.mod h1:tstJmDzVcu9zTxvX2BaBq6nTTMmRklOEw9jc1mHv1FQ=
 github.com/gravestench/pl2 v0.1.0 h1:1whYtjZI4Tzi+KakEV3AtwrAESs5YEpsd/Vkp4gw8Y4=
 github.com/gravestench/pl2 v0.1.0/go.mod h1:qEHIaarIiqhu+MoAW7U8gvxKNc04cRg/gzKySWFzNJw=
 github.com/gravestench/tbl_text v0.1.0 h1:Vgo13thKVspnEl1EbX6UXKEvQmSYayKh+TQgoEFtWGc=

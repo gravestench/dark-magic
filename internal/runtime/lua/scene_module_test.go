@@ -251,3 +251,52 @@ end}`)}}
 		t.Fatalf("replacement retained both scenes: nodes = %d", got)
 	}
 }
+
+func TestLuaSceneReentryDoesNotShareMutableDefinitionState(t *testing.T) {
+	runtime := New()
+	manager := navigation.New()
+	scenes := NewScenes(runtime, manager)
+	var composer render.Composer
+	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
+		if err := runtime.RegisterModule(module); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	source := fstest.MapFS{"boot.lua": {Data: []byte(`
+local render=require("dm.render/v1"); local scenes=require("dm.scene/v1")
+local screen={
+  create=function(self) self.root=render.create("hud") end,
+  update=function(self) self.root:set_position(10,20) end,
+  destroy=function(self) self.root:destroy() end,
+}
+return {id="boot",api=1,start=function(self)
+  scenes.register("screen",screen); scenes.replace("screen")
+end}`)}}
+	definition, err := LoadDefinition(context.Background(), runtime, source, "boot.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	components := host.NewManager()
+	if err := components.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := components.Enable(context.Background(), definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := scenes.Flush(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Replace(context.Background(), "screen"); err != nil {
+		t.Fatal(err)
+	}
+	if err := scenes.Update(context.Background(), time.Second/60); err != nil {
+		t.Fatalf("re-entered scene retained a stale render handle: %v", err)
+	}
+	if got := composer.Diagnostics().ActiveNodes; got != 1 {
+		t.Fatalf("active nodes = %d, want 1", got)
+	}
+}

@@ -217,6 +217,7 @@ type luaScene struct {
 	id         string
 	runtime    *Runtime
 	definition luaSceneDefinition
+	instance   *lua.LTable
 	scope      *Scope
 	profiler   SceneProfiler
 	input      *inputstate.Store
@@ -262,7 +263,7 @@ func (s *luaScene) UpdateRoutedInput(ctx context.Context, elapsed time.Duration,
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		invoke := func() error {
 			return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(mode != "none"), lua.LString(worldView))
+				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.instanceTable(state), lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(mode != "none"), lua.LString(worldView))
 			})
 		}
 		if mode == "none" && s.input != nil {
@@ -294,7 +295,7 @@ func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction) e
 	var result error
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		result = s.runtime.runScopedWithBudget(ctx, s.scope, sceneLifecycleBudget, func(state *lua.LState) error {
-			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.definition.table)
+			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.instanceTable(state))
 		})
 	})
 	return result
@@ -307,10 +308,25 @@ func (s *luaScene) call(ctx context.Context, function *lua.LFunction) error {
 	var result error
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		result = s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.definition.table)
+			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.instanceTable(state))
 		})
 	})
 	return result
+}
+
+// instanceTable gives every navigation entry private mutable Lua state. Scene
+// definitions are reusable blueprints; sharing their table meant transactional
+// replacement could let the old scene's destroy callback erase or destroy the
+// newly-entered scene's fields and render handles.
+func (s *luaScene) instanceTable(state *lua.LState) *lua.LTable {
+	if s.instance != nil {
+		return s.instance
+	}
+	s.instance = state.NewTable()
+	s.definition.table.ForEach(func(key, value lua.LValue) {
+		s.instance.RawSet(key, value)
+	})
+	return s.instance
 }
 
 func errorsJoin(errs ...error) error {

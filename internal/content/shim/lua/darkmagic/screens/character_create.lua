@@ -19,6 +19,7 @@ local ui_text_field = require("darkmagic.ui.text_field")
 local cursor = require("darkmagic.ui.cursor")
 local text = require("darkmagic.ui.text")
 local compat = require("darkmagic.ui.compat")
+local preload = require("darkmagic.ui.preload")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.character_create
@@ -454,6 +455,7 @@ return {
         self:set_form_visible(false)
         self:update_ok_state()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+        preload.character_create_interactions()
     end,
 
     update = function(self, elapsed)
