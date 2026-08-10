@@ -678,6 +678,10 @@ complete until its actions are driven by authoritative game state and commands.
   geometry and `ctrlpnl_popbelt.DC6`, revealing only capacity granted by the
   equipped belt. Item entities, cursor transfers, and consumption remain M19
   dependencies and are not simulated with presentation-owned placeholders.
+  Cursor presentation now distinguishes the original animated five-FPS in-game
+  pointer from static normal, pressed, and interaction-hand modes. OpenDiablo2,
+  riiablo, and AbyssEngine provenance is retained in the asset catalog; item and
+  vendor cursor modes remain gated by their authoritative M19/M21 interactions.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

@@ -20,23 +20,60 @@ local function unregister(cursor)
 end
 
 local function create(parent, definition, palettes)
+    local legacy_mode = {
+        sheet = definition.sheet,
+        frame = definition.frame,
+        hotspot = definition.hotspot,
+    }
+    local modes = definition.modes or { default = legacy_mode }
+    local default_mode = definition.default_mode or "default"
     local cursor = {
         node = nil,
         width = 0,
         height = 0,
         definition = definition,
         visible = true,
+        requested_mode = default_mode,
+        mode = nil,
+        offset_x = 0,
+        offset_y = 0,
     }
 
     if render.assets_available() then
         cursor.node = render.create("cursor", parent)
         cursor.node:set_z(1000)
-        cursor.width, cursor.height = cursor.node:set_dc6(
-            definition.sheet,
-            palettes[definition.palette],
-            definition.direction,
-            definition.frame
-        )
+    end
+
+    local function apply_mode(self, name)
+        if self.mode == name then return end
+        local mode = assert(modes[name], "unknown cursor mode: " .. tostring(name))
+        self.mode = name
+        self.hotspot = mode.hotspot or { x = 0, y = 0 }
+        if not self.node then return end
+        if mode.fps then
+            local _
+            _, self.width, self.height, self.offset_x, self.offset_y = self.node:set_dc6_animation(
+                mode.sheet,
+                palettes[definition.palette],
+                definition.direction,
+                mode.fps,
+                mode.loop or "loop",
+                "offsets"
+            )
+        else
+            self.width, self.height, self.offset_x, self.offset_y = self.node:set_dc6(
+                mode.sheet,
+                palettes[definition.palette],
+                definition.direction,
+                mode.frame or 0
+            )
+        end
+    end
+
+    function cursor:set_mode(name)
+        assert(modes[name], "unknown cursor mode: " .. tostring(name))
+        self.requested_mode = name
+        apply_mode(self, name)
     end
 
     function cursor:set_visible(visible)
@@ -45,16 +82,19 @@ local function create(parent, definition, palettes)
     end
 
     function cursor:update()
+        local mode = input.down("pointer_primary") and modes.pressed and "pressed" or self.requested_mode
+        apply_mode(self, mode)
         if not self.node then return end
         local x, y = input.cursor()
         self.node:set_position(
-            x - definition.hotspot.x + self.width / 2,
-            y - definition.hotspot.y + self.height / 2
+            x - self.hotspot.x + self.offset_x + self.width / 2,
+            y - self.hotspot.y + self.offset_y + self.height / 2
         )
     end
 
     -- Position immediately so the cursor never flashes at the retained-node
     -- origin before the first scene update.
+    apply_mode(cursor, default_mode)
     cursor:update()
     register(cursor)
     return cursor

@@ -135,11 +135,15 @@
     "title_music": "data/global/music/introedit.wav"
   },
   "cursor": {
-    "sheet": "data/global/ui/CURSOR/ohand.DC6",
     "palette": "units",
     "direction": 0,
-    "frame": 0,
-    "hotspot": { "x": 0, "y": 0 }
+    "default_mode": "default",
+    "modes": {
+      "default": {"sheet":"data/global/ui/CURSOR/protate.DC6","fps":5,"loop":"loop","hotspot":{"x":0,"y":0}},
+      "normal": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":0,"hotspot":{"x":0,"y":0}},
+      "pressed": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":5,"hotspot":{"x":0,"y":-2}},
+      "hand": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":6,"hotspot":{"x":0,"y":-2}}
+    }
   },
   "startup": {
     "sequence": [

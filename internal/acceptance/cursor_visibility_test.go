@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
+	glua "github.com/yuin/gopher-lua"
 )
 
 func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
@@ -34,17 +35,23 @@ func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 		"cursor.lua": &fstest.MapFile{Data: []byte(`
 local cursor = require("darkmagic.ui.cursor")
 local definition = {
-    sheet = "unused.dc6",
     palette = "units",
     direction = 0,
-    frame = 0,
-    hotspot = { x = 0, y = 0 },
+    default_mode = "default",
+    modes = {
+        default = { sheet = "unused.dc6", frame = 0, hotspot = { x = 0, y = 0 } },
+        pressed = { sheet = "unused.dc6", frame = 5, hotspot = { x = 0, y = -2 } },
+        hand = { sheet = "unused.dc6", frame = 6, hotspot = { x = 0, y = -2 } },
+    },
 }
 local palettes = { units = "unused.dat" }
 
 -- Only the focused cursor remains visible.
 local first = cursor.new(nil, definition, palettes)
 local second = cursor.new(nil, definition, palettes)
+assert(first.mode == "default")
+first:set_mode("hand")
+assert(first.mode == "hand" and first.requested_mode == "hand")
 cursor.focus(first, true)
 assert(first.visible == true)
 assert(second.visible == false)
@@ -104,9 +111,19 @@ assert(guarded.__darkmagic_shell_cursor.visible == false)
 scene:destroy()
 guarded:destroy()
 hidden:destroy()
+pressed_cursor = cursor.new(nil, definition, palettes)
 `)},
 	}
 	if err := runtime.Execute(ctx, scripts, "cursor.lua"); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputstate.Frame{
+		Actions: map[string]inputstate.ActionState{"pointer_primary": {Down: true}},
+		Owner:   inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "cursor-test"},
+	})
+	if err := runtime.Run(ctx, func(state *glua.LState) error {
+		return state.DoString(`pressed_cursor:update(); assert(pressed_cursor.mode == "pressed")`)
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
