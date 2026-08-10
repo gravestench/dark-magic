@@ -27,6 +27,8 @@ func (s *Service) Start(context.Context) error {
 	s.keyStates = make(map[int32]InputState)
 	s.keyModStates = make(map[int32]InputState)
 	s.mouseButtonStates = make(map[int32]InputState)
+	width, height := s.renderer.Resolution()
+	s.cursor.X, s.cursor.Y = width/2, height/2
 	s.stopFrames = s.renderer.SubscribeFrame(s.update)
 	return nil
 }
