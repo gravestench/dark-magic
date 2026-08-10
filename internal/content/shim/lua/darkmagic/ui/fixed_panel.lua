@@ -70,15 +70,8 @@ function M.overlay(id, slot)
             -- Optional labels are data-driven. The loop does not know whether a
             -- particular panel has zero labels or ten.
             for _, label in ipairs(definition.labels or {}) do
-                text.create(
-                    self.root,
-                    label.style or "disabled",
-                    assert(locale.text(label.key)),
-                    definition.x + label.x,
-                    definition.y + label.y,
-                    label.width or width - 20,
-                    label.align
-                )
+                text.create(self.root, label.style or "disabled", assert(locale.text(label.key)),
+                    definition.x + label.x, definition.y + label.y, label.width or width - 20, label.align)
             end
 
             if definition.item_grid then
@@ -116,13 +109,13 @@ function M.overlay(id, slot)
                 -- Inventory.txt names equipment-well coordinates with field
                 -- prefixes such as HeadLeft/HeadTop/etc. Convert those records to
                 -- a semantic body-location -> rectangle table for item_slots.lua.
-                for _, slot_definition in ipairs(slots.slots) do
-                    geometry[slot_definition.body_loc] = {
-                        x = definition.x + number(record, slot_definition.prefix .. "Left"),
-                        y = definition.y + number(record, slot_definition.prefix .. "Top"),
-                        width = number(record, slot_definition.prefix .. "Width"),
-                        height = number(record, slot_definition.prefix .. "Height"),
-                        placeholder = slot_definition.placeholder,
+                for _, slot in ipairs(slots.slots) do
+                    geometry[slot.body_loc] = {
+                        x = definition.x + number(record, slot.prefix .. "Left"),
+                        y = definition.y + number(record, slot.prefix .. "Top"),
+                        width = number(record, slot.prefix .. "Width"),
+                        height = number(record, slot.prefix .. "Height"),
+                        placeholder = slot.placeholder,
                     }
                 end
 
@@ -137,25 +130,17 @@ function M.overlay(id, slot)
             -- Build the tiny X button definition from common art plus this
             -- panel's authored placement facts.
             local close = {
-                sheet="data/global/ui/PANEL/buysellbtn.DC6",
-                palette="sky",
-                up_frame=10,
-                down_frame=11,
+                sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky",
+                up_frame=10, down_frame=11,
                 x=definition.x + definition.close.x,
                 -- `bottom_inset` is measured upward from the decoded panel bottom.
                 y=definition.y + height - definition.close.bottom_inset - 32,
-                width=32,
-                height=32,
-                label=definition.close.label,
+                width=32, height=32, label=definition.close.label,
             }
 
             button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
-                layer="modal",
-                show_label=false,
-                sound=manifest.sounds.button,
-                tooltip=assert(locale.text(close.label)),
-                -- Use the same ID/slot pair that opened this generated overlay.
-                on_activate=function() scenes.toggle_overlay(id, slot) end,
+                layer="modal", show_label=false, sound=manifest.sounds.button,
+                tooltip=assert(locale.text(close.label)), on_activate=function() scenes.toggle_overlay(id, slot) end,
             })
         end,
 
