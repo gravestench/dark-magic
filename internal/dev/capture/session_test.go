@@ -84,3 +84,19 @@ func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
 		t.Fatalf("capture results = %#v", session.results)
 	}
 }
+
+func TestDeathSceneAllowsSparseTextButRejectsBlankFrame(t *testing.T) {
+	canvas := image.NewRGBA(image.Rect(0, 0, 800, 600))
+	if hasVisiblePixels(canvas, "death") {
+		t.Fatal("blank death frame was accepted")
+	}
+	for pixel := 0; pixel < 480; pixel++ {
+		canvas.Set(pixel%800, pixel/800, color.RGBA{R: 180, A: 255})
+	}
+	if !hasVisiblePixels(canvas, "death") {
+		t.Fatal("sparse death text was rejected")
+	}
+	if hasVisiblePixels(canvas, "title") {
+		t.Fatal("sparse threshold leaked into ordinary scene capture")
+	}
+}
