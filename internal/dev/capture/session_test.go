@@ -14,6 +14,29 @@ type fakeScreenshotter struct {
 	blankCalls int
 }
 
+func TestDefaults(t *testing.T) {
+	tests := []struct {
+		name          string
+		directory     string
+		scenes        string
+		wantDirectory string
+		wantScenes    string
+	}{
+		{name: "disabled"},
+		{name: "directory enables default scenes", directory: "./captures/custom", wantDirectory: "./captures/custom", wantScenes: "loading,title"},
+		{name: "scenes enable default directory", scenes: "death", wantDirectory: "./captures/frontend", wantScenes: "death"},
+		{name: "explicit", directory: "./captures/custom", scenes: "death", wantDirectory: "./captures/custom", wantScenes: "death"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			directory, scenes := Defaults(test.directory, test.scenes)
+			if directory != test.wantDirectory || scenes != test.wantScenes {
+				t.Fatalf("Defaults(%q, %q) = %q, %q; want %q, %q", test.directory, test.scenes, directory, scenes, test.wantDirectory, test.wantScenes)
+			}
+		})
+	}
+}
+
 func (f *fakeScreenshotter) CaptureScreenshot(name string) error {
 	f.calls++
 	file, err := os.Create(name)

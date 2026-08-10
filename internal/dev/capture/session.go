@@ -17,6 +17,19 @@ import (
 
 var errBlankFrame = errors.New("framebuffer contains no visible pixels")
 
+// Defaults makes either capture flag sufficient to opt into capture mode.
+func Defaults(directory, scenes string) (string, string) {
+	directory = strings.TrimSpace(directory)
+	scenes = strings.TrimSpace(scenes)
+	if directory == "" && scenes != "" {
+		directory = "./captures/frontend"
+	}
+	if directory != "" && scenes == "" {
+		scenes = "loading,title"
+	}
+	return directory, scenes
+}
+
 type Screenshotter interface {
 	CaptureScreenshot(string) error
 }

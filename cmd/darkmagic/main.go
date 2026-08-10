@@ -102,13 +102,11 @@ func main() {
 		slog.Error("validating client content", "error", err)
 		return
 	}
+	*captureDirectoryFlag, *captureScenes = capture.Defaults(*captureDirectoryFlag, *captureScenes)
 	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
 	if err != nil {
 		slog.Error("expanding capture directory", "error", err)
 		return
-	}
-	if captureDirectory != "" && *captureScenes == "" {
-		*captureScenes = "loading,title"
 	}
 	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, shellLogs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
