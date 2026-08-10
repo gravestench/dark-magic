@@ -27,6 +27,7 @@ type Item struct {
 	Height       int
 	BodySlots    []string
 	BeltEligible bool
+	BaseCost     int64
 	Presentation Presentation
 }
 
@@ -57,4 +58,8 @@ type Layout struct {
 	BeltCapacity    int
 	ActiveWeaponSet int
 	VendorGrid      Grid
+	Gold            GoldBalance
 }
+
+// GoldBalance mirrors Diablo II's distinct carried and stash-bank stats.
+type GoldBalance struct{ Carried, Stashed int64 }

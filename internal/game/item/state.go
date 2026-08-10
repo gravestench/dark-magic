@@ -18,6 +18,9 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 	if layout.BeltCapacity < 0 {
 		return nil, fmt.Errorf("item: belt capacity cannot be negative")
 	}
+	if layout.Gold.Carried < 0 || layout.Gold.Stashed < 0 {
+		return nil, fmt.Errorf("item: gold balances cannot be negative")
+	}
 	if !validWeaponSet(layout.ActiveWeaponSet) {
 		return nil, fmt.Errorf("item: active weapon set must be 0 or 1")
 	}
@@ -33,8 +36,8 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 	state := &State{layout: layout, items: make(map[string]Item, len(items)), placements: make(map[string]Placement, len(placements))}
 	for _, candidate := range items {
 		candidate.ID, candidate.Code = strings.TrimSpace(candidate.ID), strings.TrimSpace(candidate.Code)
-		if candidate.ID == "" || candidate.Code == "" || candidate.Width <= 0 || candidate.Height <= 0 {
-			return nil, fmt.Errorf("item: identity, code, width, and height are required")
+		if candidate.ID == "" || candidate.Code == "" || candidate.Width <= 0 || candidate.Height <= 0 || candidate.BaseCost < 0 {
+			return nil, fmt.Errorf("item: identity, code, positive dimensions, and nonnegative base cost are required")
 		}
 		if _, exists := state.items[candidate.ID]; exists {
 			return nil, fmt.Errorf("item: duplicate identity %q", candidate.ID)

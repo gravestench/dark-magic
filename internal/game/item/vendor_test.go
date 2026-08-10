@@ -13,7 +13,7 @@ func TestSellHeldSortsAndPacksVendorFootprints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	destination, err := state.SellHeld("a-sold", "weapons")
+	destination, err := state.sellHeld("a-sold", "weapons")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestVendorPackingCreatesPagesAndBuyRequiresEmptyHand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	destination, err := state.SellHeld("sold", "misc")
+	destination, err := state.sellHeld("sold", "misc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestVendorPackingCreatesPagesAndBuyRequiresEmptyHand(t *testing.T) {
 	if err := state.Move("held", Placement{Container: ContainerHeld}); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.BuyToHeld("stock"); err == nil {
+	if err := state.buyToHeld("stock"); err == nil {
 		t.Fatal("purchase replaced an occupied hand")
 	}
 	if placement, _ := state.Placement("stock"); placement.Container != ContainerVendor {
@@ -57,7 +57,7 @@ func TestVendorPackingCreatesPagesAndBuyRequiresEmptyHand(t *testing.T) {
 	if err := state.Move("held", Placement{Container: ContainerWorld}); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.BuyToHeld("stock"); err != nil {
+	if err := state.buyToHeld("stock"); err != nil {
 		t.Fatal(err)
 	}
 	if placement, _ := state.Placement("sold"); placement.Page != 0 {
@@ -70,7 +70,7 @@ func TestOversizedVendorSaleIsAtomic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := state.SellHeld("large", "misc"); err == nil {
+	if _, err := state.sellHeld("large", "misc"); err == nil {
 		t.Fatal("oversized sale was accepted")
 	}
 	if placement, _ := state.Placement("large"); placement.Container != ContainerHeld {

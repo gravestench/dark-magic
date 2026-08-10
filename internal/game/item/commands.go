@@ -36,6 +36,7 @@ type WeaponSetPayload struct {
 type VendorPayload struct {
 	Owner    string `json:"owner,omitempty"`
 	ItemID   string `json:"item_id"`
+	Vendor   string `json:"vendor"`
 	Category string `json:"category,omitempty"`
 }
 
@@ -102,9 +103,9 @@ func registerVendorCommands(session *gamesession.Session, authority *Authority) 
 					owner = command.Player
 				}
 				if isSell {
-					return authority.sellHeld(owner, payload.ItemID, payload.Category)
+					return authority.sellHeld(owner, payload.ItemID, payload.Vendor, payload.Category)
 				}
-				return authority.buyToHeld(owner, payload.ItemID)
+				return authority.buyToHeld(owner, payload.ItemID, payload.Vendor)
 			},
 			Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
 		}); err != nil {
@@ -126,9 +127,10 @@ func decodeVendor(command simulation.Command, sell bool) (VendorPayload, error) 
 	}
 	payload.Owner = strings.TrimSpace(payload.Owner)
 	payload.ItemID = strings.TrimSpace(payload.ItemID)
+	payload.Vendor = strings.TrimSpace(payload.Vendor)
 	payload.Category = strings.TrimSpace(payload.Category)
-	if payload.ItemID == "" {
-		return VendorPayload{}, fmt.Errorf("item: item identity is required")
+	if payload.ItemID == "" || payload.Vendor == "" {
+		return VendorPayload{}, fmt.Errorf("item: item identity and vendor are required")
 	}
 	if sell && (payload.Category == "" || strings.Contains(payload.Category, "/")) {
 		return VendorPayload{}, fmt.Errorf("item: valid vendor category is required")

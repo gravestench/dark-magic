@@ -8,7 +8,7 @@ import (
 
 // SellHeld moves a cursor item into an authority-chosen vendor page position.
 // The client names only the semantic category; it cannot forge page coordinates.
-func (state *State) SellHeld(id, category string) (Placement, error) {
+func (state *State) sellHeld(id, category string) (Placement, error) {
 	category = strings.TrimSpace(category)
 	if category == "" {
 		return Placement{}, fmt.Errorf("item: vendor category is required")
@@ -33,7 +33,7 @@ func (state *State) SellHeld(id, category string) (Placement, error) {
 
 // BuyToHeld removes one vendor item from its catalog and puts it in the single
 // authoritative hand. Pricing/ledger authority wraps this transfer separately.
-func (state *State) BuyToHeld(id string) error {
+func (state *State) buyToHeld(id string) error {
 	placement, found := state.placements[id]
 	if !found || placement.Container != ContainerVendor {
 		return fmt.Errorf("item: %q is not vendor stock", id)

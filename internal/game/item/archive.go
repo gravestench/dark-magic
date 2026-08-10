@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const ArchiveVersion = 2
+const ArchiveVersion = 3
 
 // archiveEnvelope is the durable boundary for one player's item authority.
 // The checksum catches truncated or accidentally modified handoff data before
@@ -34,6 +34,12 @@ type archivedLayout struct {
 	BeltCapacity    int                `json:"belt_capacity"`
 	ActiveWeaponSet int                `json:"active_weapon_set"`
 	VendorGrid      archivedDimensions `json:"vendor_grid"`
+	Gold            archivedGold       `json:"gold"`
+}
+
+type archivedGold struct {
+	Carried int64 `json:"carried"`
+	Stashed int64 `json:"stashed"`
 }
 
 type archivedDimensions struct {
@@ -54,6 +60,7 @@ type archivedItem struct {
 	Height       int                  `json:"height"`
 	BodySlots    []string             `json:"body_slots,omitempty"`
 	BeltEligible bool                 `json:"belt_eligible,omitempty"`
+	BaseCost     int64                `json:"base_cost,omitempty"`
 	Presentation archivedPresentation `json:"presentation"`
 }
 
@@ -91,7 +98,7 @@ func MarshalArchive(state *State) ([]byte, error) {
 		candidate := items[id]
 		payload.Items = append(payload.Items, archivedItem{
 			ID: candidate.ID, Code: candidate.Code, Width: candidate.Width, Height: candidate.Height,
-			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible,
+			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible, BaseCost: candidate.BaseCost,
 			Presentation: archivePresentation(candidate.Presentation),
 		})
 		if placement, found := placements[id]; found {
@@ -141,7 +148,7 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 	for _, candidate := range payload.Items {
 		items = append(items, Item{
 			ID: candidate.ID, Code: candidate.Code, Width: candidate.Width, Height: candidate.Height,
-			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible,
+			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible, BaseCost: candidate.BaseCost,
 			Presentation: restorePresentation(candidate.Presentation),
 		})
 	}
@@ -160,7 +167,7 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 }
 
 func archiveLayout(layout Layout) archivedLayout {
-	result := archivedLayout{BeltCapacity: layout.BeltCapacity, ActiveWeaponSet: layout.ActiveWeaponSet, VendorGrid: archivedDimensions{Width: layout.VendorGrid.Width, Height: layout.VendorGrid.Height}}
+	result := archivedLayout{BeltCapacity: layout.BeltCapacity, ActiveWeaponSet: layout.ActiveWeaponSet, VendorGrid: archivedDimensions{Width: layout.VendorGrid.Width, Height: layout.VendorGrid.Height}, Gold: archivedGold{Carried: layout.Gold.Carried, Stashed: layout.Gold.Stashed}}
 	containers := make([]string, 0, len(layout.Grids))
 	for container := range layout.Grids {
 		containers = append(containers, string(container))
@@ -174,7 +181,7 @@ func archiveLayout(layout Layout) archivedLayout {
 }
 
 func restoreLayout(archived archivedLayout) (Layout, error) {
-	layout := Layout{Grids: make(map[Container]Grid, len(archived.Grids)), BeltCapacity: archived.BeltCapacity, ActiveWeaponSet: archived.ActiveWeaponSet, VendorGrid: Grid{Width: archived.VendorGrid.Width, Height: archived.VendorGrid.Height}}
+	layout := Layout{Grids: make(map[Container]Grid, len(archived.Grids)), BeltCapacity: archived.BeltCapacity, ActiveWeaponSet: archived.ActiveWeaponSet, VendorGrid: Grid{Width: archived.VendorGrid.Width, Height: archived.VendorGrid.Height}, Gold: GoldBalance{Carried: archived.Gold.Carried, Stashed: archived.Gold.Stashed}}
 	for _, entry := range archived.Grids {
 		if _, exists := layout.Grids[entry.Container]; exists {
 			return Layout{}, fmt.Errorf("item: duplicate archived grid %q", entry.Container)

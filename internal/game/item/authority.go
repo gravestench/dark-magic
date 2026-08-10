@@ -12,9 +12,20 @@ import (
 type Authority struct {
 	mu      sync.RWMutex
 	players map[string]*State
+	trades  TradeCatalog
 }
 
 func NewAuthority() *Authority { return &Authority{players: make(map[string]*State)} }
+
+func (authority *Authority) SetTradeCatalog(catalog TradeCatalog) {
+	copyCatalog := make(TradeCatalog, len(catalog))
+	for vendor, terms := range catalog {
+		copyCatalog[strings.ToLower(strings.TrimSpace(vendor))] = terms
+	}
+	authority.mu.Lock()
+	authority.trades = copyCatalog
+	authority.mu.Unlock()
+}
 
 func (authority *Authority) Register(owner string, state *State) error {
 	owner = strings.TrimSpace(owner)
@@ -63,25 +74,34 @@ func (authority *Authority) selectWeaponSet(owner string, set int) error {
 	return state.SelectWeaponSet(set)
 }
 
-func (authority *Authority) sellHeld(owner, itemID, category string) error {
+func (authority *Authority) sellHeld(owner, itemID, vendor, category string) error {
 	authority.mu.Lock()
 	defer authority.mu.Unlock()
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
-	_, err := state.SellHeld(itemID, category)
+	terms, err := authority.trades.Terms(vendor)
+	if err != nil {
+		return err
+	}
+	_, err = state.sellHeldForGold(itemID, category, terms)
 	return err
 }
 
-func (authority *Authority) buyToHeld(owner, itemID string) error {
+func (authority *Authority) buyToHeld(owner, itemID, vendor string) error {
 	authority.mu.Lock()
 	defer authority.mu.Unlock()
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
-	return state.BuyToHeld(itemID)
+	terms, err := authority.trades.Terms(vendor)
+	if err != nil {
+		return err
+	}
+	_, err = state.buyToHeldForGold(itemID, terms)
+	return err
 }
 
 func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map[string]Placement, error) {
