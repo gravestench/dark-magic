@@ -717,8 +717,10 @@ complete until its actions are driven by authoritative game state and commands.
   Help now selects and composes the archive-verified eight-frame 640x480 border;
   stash, cube, hireling, vendor, and waypoint now share manifest-owned fixed-panel
   geometry with archive-verified structural fixtures and classic `(0,4)` origins.
-  Other frontend and asset-specific full-screen overlays remain to be independently
-  verified. The roadmap does not yet claim complete 640x480 application support.
+  Pause and options derive their dim surface, menu center, retained visuals, and
+  pointer hit regions from the selected logical viewport. Other frontend and
+  asset-specific full-screen overlays remain to be independently verified. The
+  roadmap does not yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 

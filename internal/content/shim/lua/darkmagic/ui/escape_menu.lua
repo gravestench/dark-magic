@@ -100,11 +100,11 @@ function EscapeMenu:place_pents(item)
     local gap = definition.label_side_gap
     local center_y = item.y + item.height / 2
     self.left_pent.node:set_position(
-        definition.center.x - half_width - gap - self.left_pent.width / 2,
+        self.center.x - half_width - gap - self.left_pent.width / 2,
         center_y
     )
     self.right_pent.node:set_position(
-        definition.center.x + half_width + gap + self.right_pent.width / 2,
+        self.center.x + half_width + gap + self.right_pent.width / 2,
         center_y
     )
     self.left_pent.node:set_visible(true)
@@ -137,7 +137,7 @@ function EscapeMenu:update_value_visual(item)
     -- spacer, intrinsic-width value. A max width here causes long values such
     -- as AUDIO AND TEXT to wrap and overlap adjacent rows.
     local width, height = set_text_node(item.value_node, "font30", value, 0, "right")
-    local right = definition.center.x + definition.menu_width / 2
+    local right = self.center.x + definition.menu_width / 2
     item.value_node:set_position(right - width / 2, item.y + item.height / 2)
     item.value_width = width
     item.value_height = height
@@ -194,7 +194,7 @@ function EscapeMenu:create_image_item(layout_id, layout, row, y)
             item.art = node
             item.focus_width = math.max(width, 1)
             item.height = math.max(height, definition.pentagram.height)
-            node:set_position(definition.center.x, y + item.height / 2)
+            node:set_position(self.center.x, y + item.height / 2)
         else
             node:set_visible(false)
         end
@@ -208,7 +208,7 @@ function EscapeMenu:create_image_item(layout_id, layout, row, y)
             item.label_node = node
             item.focus_width = math.max(width, 200)
             item.height = math.max(height, definition.pentagram.height)
-            node:set_position(definition.center.x, y + item.height / 2)
+            node:set_position(self.center.x, y + item.height / 2)
         end
     end
 
@@ -218,7 +218,7 @@ function EscapeMenu:create_image_item(layout_id, layout, row, y)
         role = "menuitem",
         scope = layout_id,
         visible = false,
-        x = definition.center.x - item.focus_width / 2,
+        x = self.center.x - item.focus_width / 2,
         y = y,
         width = item.focus_width,
         height = item.height,
@@ -249,7 +249,7 @@ function EscapeMenu:create_enum_item(layout_id, row, y)
         item.label_node = render.create("modal", self.root)
         item.label_node:set_z(30)
         local width = set_text_node(item.label_node, "font30", row.label, 0, "left")
-        local left = definition.center.x - definition.menu_width / 2
+        local left = self.center.x - definition.menu_width / 2
         item.label_node:set_position(left + width / 2, y + item.height / 2)
 
         if item.values then
@@ -265,7 +265,7 @@ function EscapeMenu:create_enum_item(layout_id, row, y)
         role = item.values and "option" or "menuitem",
         scope = layout_id,
         visible = false,
-        x = definition.center.x - definition.menu_width / 2,
+        x = self.center.x - definition.menu_width / 2,
         y = y,
         width = definition.menu_width,
         height = item.height,
@@ -293,11 +293,11 @@ function EscapeMenu:create_range_item(layout_id, row, y)
         item.label_node = render.create("modal", self.root)
         item.label_node:set_z(30)
         local width, height = set_text_node(item.label_node, "font30", row.label, 190, "left")
-        item.label_node:set_position(definition.center.x - 155, y + item.height / 2)
+        item.label_node:set_position(self.center.x - 155, y + item.height / 2)
         item.label_width, item.label_height = width, height
     end
     item.control = slider.create(self.root, self.manager, layout_id .. ":" .. row.id, {
-        x = definition.center.x - 10,
+        x = self.center.x - 10,
         y = y + 1,
         width = definition.option_assets.range_width,
         height = definition.option_assets.range_height,
@@ -329,14 +329,14 @@ function EscapeMenu:create_layout(layout_id, layout)
     local row_height = layout.font == "font42" and definition.row_height or 40
     local title_height = layout.title and 50 or 0
     local total_height = title_height + (#layout.rows * row_height)
-    local y = definition.center.y - total_height / 2
+    local y = self.center.y - total_height / 2
     local items = {}
 
     if layout.title and render.assets_available() then
         local title_node = render.create("modal", self.root)
         title_node:set_z(30)
         local _, height = set_text_node(title_node, "font42", layout.title, definition.menu_width, "center")
-        title_node:set_position(definition.center.x, y + height / 2)
+        title_node:set_position(self.center.x, y + height / 2)
         title_node:set_visible(false)
         self.titles[layout_id] = title_node
         y = y + title_height
@@ -402,6 +402,7 @@ function M.new(root, options)
     options = options or {}
     local self = setmetatable({
         root = root,
+        center = options.center or definition.center,
         manager = controls.new({ active_scope = options.start_layout or "main", wrap_focus = false }),
         start_layout = options.start_layout or "main",
         current_layout = nil,

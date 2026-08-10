@@ -8,30 +8,35 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local settings = require("dm.settings/v1")
+local data = require("dm.data/v1")
 local compat = require("darkmagic.ui.compat")
 local escape_menu = require("darkmagic.ui.escape_menu")
 
 local recovered = compat.ingame.escape_menu
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local viewport = manifest.resolution
+local center = { x = viewport.width / 2, y = viewport.height / 2 }
 
 return {
     blocks_update_below = recovered.simulation.pauses_single_player,
 
     create = function(self)
         self.root = render.create("modal")
-        -- Menu definitions use absolute 800x600 viewport coordinates. Keep the
-        -- owning root at the origin so retained rendering and absolute input
-        -- hit regions share one coordinate space; only center the backdrop.
+        -- Keep the owning root at the origin so retained rendering and input
+        -- hit regions share one coordinate space; center the authored menu in
+        -- the selected presentation profile's logical viewport.
         self.backdrop = render.create("modal", self.root)
-        self.backdrop:set_position(recovered.center.x, recovered.center.y)
+        self.backdrop:set_position(center.x, center.y)
         self.backdrop:fill_rect(
-            800,
-            600,
+            viewport.width,
+            viewport.height,
             recovered.dim.red,
             recovered.dim.green,
             recovered.dim.blue,
             recovered.dim.alpha
         )
         self.menu = escape_menu.new(self.root, {
+            center = center,
             start_layout = "main",
             on_close = function()
                 scenes.pop()
