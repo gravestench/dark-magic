@@ -48,6 +48,19 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 local render = require("dm.render/v1")
 local escape_menu = require("darkmagic.ui.escape_menu")
 
+local function value(value)
+  if value == nil then return "<nil>" end
+  return tostring(value)
+end
+
+local function expect(actual, expected, label)
+  assert(actual == expected, label .. ": got " .. value(actual) .. ", want " .. value(expected))
+end
+
+local function focus_id(menu)
+  return menu.manager.focus and menu.manager.focus.id or "<nil>"
+end
+
 local root = render.create("modal")
 local closed = false
 local saved = false
@@ -56,48 +69,48 @@ local menu = escape_menu.new(root, {
   start_layout = "main",
   on_close = function() closed = true end,
   on_save_exit = function() saved = true end,
-  on_option_change = function(layout, id, value)
-    changed = layout .. ":" .. id .. "=" .. value
+  on_option_change = function(layout, id, selected)
+    changed = layout .. ":" .. id .. "=" .. selected
   end,
 })
 
-assert(menu.current_layout == "main")
-assert(menu.manager.focus.id == "main:return_to_game")
+expect(menu.current_layout, "main", "initial layout")
+expect(focus_id(menu), "main:return_to_game", "initial focus")
 
 -- OpenDiablo2 stops at the ends of the list rather than wrapping.
 menu.manager:move_focus(1)
-assert(menu.manager.focus.id == "main:return_to_game")
+expect(focus_id(menu), "main:return_to_game", "focus stays at bottom")
 menu.manager:move_focus(-1)
-assert(menu.manager.focus.id == "main:save_exit")
+expect(focus_id(menu), "main:save_exit", "focus moves to save/exit")
 menu.manager:move_focus(-1)
-assert(menu.manager.focus.id == "main:options")
+expect(focus_id(menu), "main:options", "focus moves to options")
 menu.manager:move_focus(-1)
-assert(menu.manager.focus.id == "main:options")
+expect(focus_id(menu), "main:options", "focus stays at top")
 
 menu.manager:activate(menu.manager.focus)
-assert(menu.current_layout == "options")
-assert(menu.manager.focus.id == "options:previous_menu")
+expect(menu.current_layout, "options", "options activation layout")
+expect(focus_id(menu), "options:previous_menu", "options default focus")
 
 menu.manager:set_focus("options:sound_options")
 menu.manager:activate(menu.manager.focus)
-assert(menu.current_layout == "sound")
-assert(menu.manager.focus.id == "sound:previous_menu")
+expect(menu.current_layout, "sound", "sound activation layout")
+expect(focus_id(menu), "sound:previous_menu", "sound default focus")
 
 menu.manager:set_focus("sound:hardware_acceleration")
 local hardware = assert(menu.items_by_id["sound:hardware_acceleration"])
-assert(hardware.values[hardware.value_index] == "ON")
+expect(hardware.values[hardware.value_index], "ON", "hardware initial value")
 menu.manager:activate(menu.manager.focus)
-assert(hardware.values[hardware.value_index] == "OFF")
-assert(changed == "sound:hardware_acceleration=OFF")
+expect(hardware.values[hardware.value_index], "OFF", "hardware next value")
+expect(changed, "sound:hardware_acceleration=OFF", "option callback")
 
 menu:set_layout("main")
 menu.manager:set_focus("main:save_exit")
 menu.manager:activate(menu.manager.focus)
-assert(saved)
+expect(saved, true, "save/exit callback")
 
 menu.manager:set_focus("main:return_to_game")
 menu.manager:activate(menu.manager.focus)
-assert(closed)
+expect(closed, true, "return callback")
 `)},
 	}
 	if err := runtime.Execute(ctx, scripts, "assert.lua"); err != nil {
