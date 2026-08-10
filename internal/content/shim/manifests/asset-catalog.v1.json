@@ -341,6 +341,38 @@
       ]
     },
     {
+      "id": "stash-panel",
+      "screen": "stash",
+      "path": "data/global/ui/PANEL/TradeStash.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "stash panel background",
+      "references": ["Diablo II archive inspection", "OpenDiablo2"]
+    },
+    {
+      "id": "cube-panel",
+      "screen": "cube",
+      "path": "data/global/ui/PANEL/supertransmogrifier.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "Horadric Cube panel background",
+      "references": ["Diablo II archive inspection", "OpenDiablo2"]
+    },
+    {
+      "id": "hireling-panel",
+      "screen": "hireling",
+      "path": "data/global/ui/PANEL/NpcInv.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "hireling inventory panel background",
+      "references": ["Diablo II archive inspection", "OpenDiablo2"]
+    },
+    {
+      "id": "vendor-panel",
+      "screen": "vendor",
+      "path": "data/global/ui/PANEL/buysell.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "vendor inventory panel background",
+      "references": ["Diablo II archive inspection", "OpenDiablo2"]
+    },
+    {
       "id": "waypoint-tabs-exp",
       "screen": "waypoint",
       "path": "data/global/ui/MENU/expwaygatetabs.dc6",

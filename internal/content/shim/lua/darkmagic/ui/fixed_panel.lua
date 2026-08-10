@@ -1,4 +1,4 @@
--- Shared fixed-resolution panel shell for original 800x600 game overlays.
+-- Shared profile-selected shell for fixed gameplay panels.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -11,7 +11,8 @@ local text = require("darkmagic.ui.text")
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local M = {}
 
-function M.overlay(definition)
+function M.overlay(id, slot)
+    local definition = assert(manifest.screens[id], "missing presentation screen: " .. id)
     return {
         blocks_update_below = true,
         enter = function(self)
@@ -30,13 +31,13 @@ function M.overlay(definition)
             local close = {
                 sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky",
                 up_frame=10, down_frame=11,
-                x=definition.x + definition.close_x,
-                y=definition.y + height - definition.close_y - 32,
-                width=32, height=32, label=definition.close_label,
+                x=definition.x + definition.close.x,
+                y=definition.y + height - definition.close.bottom_inset - 32,
+                width=32, height=32, label=definition.close.label,
             }
             button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
                 layer="modal", show_label=false, sound=manifest.sounds.button,
-                tooltip=assert(locale.text(close.label)), on_activate=function() scenes.pop() end,
+                tooltip=assert(locale.text(close.label)), on_activate=function() scenes.toggle_overlay(id, slot) end,
             })
         end,
         update = function(self)
