@@ -199,7 +199,7 @@ function M.create(root, definition, palettes, commands)
             visible = false,
             on_activate = function()
                 if button_definition.scene then
-                    scenes.push(button_definition.scene)
+                    scenes.toggle_overlay(button_definition.scene, assert(button_definition.slot))
                 end
             end,
             on_state = function(_, state)

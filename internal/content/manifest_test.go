@@ -406,6 +406,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 							Frame   int    `json:"frame"`
 							Enabled bool   `json:"enabled"`
 							Scene   string `json:"scene"`
+							Slot    string `json:"slot"`
 						} `json:"buttons"`
 					} `json:"minipanel"`
 				} `json:"hud"`
@@ -442,6 +443,9 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 		}
 		if button.ID == "messages" && (!button.Enabled || button.Scene != "messages") {
 			t.Errorf("messages minipanel route = %#v, want enabled messages scene", button)
+		}
+		if button.Slot != "left" && button.Slot != "right" && button.Slot != "full" {
+			t.Errorf("minipanel button %q has invalid overlay slot %q", button.ID, button.Slot)
 		}
 	}
 	wantX := []int{0, 165, 293, 421, 549, 683}

@@ -122,10 +122,105 @@ func TestFocusedReportsTopScene(t *testing.T) {
 	}
 }
 
+func TestOverlaySlotsToggleReplaceAndExclude(t *testing.T) {
+	t.Parallel()
+
+	var calls []string
+	manager := New()
+	for _, id := range []string{"world", "inventory", "skills", "character", "help"} {
+		registerScene(t, manager, id, false, nil, &calls)
+	}
+	ctx := context.Background()
+	if err := manager.Replace(ctx, "world"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ToggleOverlay(ctx, "inventory", OverlayRight); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ToggleOverlay(ctx, "character", OverlayLeft); err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world", "inventory", "character"}) {
+		t.Fatalf("coexisting side overlays = %v", got)
+	}
+	if err := manager.ToggleOverlay(ctx, "skills", OverlayRight); err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world", "character", "skills"}) {
+		t.Fatalf("same-slot replacement = %v", got)
+	}
+	if err := manager.ToggleOverlay(ctx, "skills", OverlayRight); err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world", "character"}) {
+		t.Fatalf("same-overlay toggle close = %v", got)
+	}
+	if err := manager.ToggleOverlay(ctx, "help", OverlayFull); err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world", "help"}) {
+		t.Fatalf("full overlay did not evict side slots = %v", got)
+	}
+	if err := manager.ToggleOverlay(ctx, "inventory", OverlayRight); err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world", "inventory"}) {
+		t.Fatalf("side overlay did not evict full slot = %v", got)
+	}
+}
+
 type passthroughScene struct {
 	*testScene
 	view         string
 	receivedView *string
+}
+
+type routedScene struct {
+	*testScene
+	passes bool
+	modes  map[string]string
+}
+
+func (s *routedScene) PassesInputBelow() bool { return s.passes }
+func (s *routedScene) UpdateRoutedInput(_ context.Context, _ time.Duration, _ bool, mode, view string) error {
+	s.modes[s.id] = mode + ":" + view
+	return nil
+}
+
+func TestSpatialOverlayInputRoutesHUDAndBothSidePanels(t *testing.T) {
+	t.Parallel()
+
+	var calls []string
+	modes := make(map[string]string)
+	manager := New()
+	for _, id := range []string{"world", "inventory", "character"} {
+		id := id
+		if err := manager.Register(id, func(context.Context) (Scene, error) {
+			return &routedScene{testScene: &testScene{id: id, calls: &calls}, passes: id != "world", modes: modes}, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx := context.Background()
+	if err := manager.Replace(ctx, "world"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ToggleOverlay(ctx, "inventory", OverlayRight); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ToggleOverlay(ctx, "character", OverlayLeft); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	if modes["world"] != "gameplay_pointer:none" || modes["inventory"] != "pointer:none" || modes["character"] != "focused:none" {
+		t.Fatalf("spatial input modes = %#v", modes)
+	}
+	allowed, view := manager.InputPolicy("world")
+	if !allowed || view != "none" {
+		t.Fatalf("world policy with both halves covered = %v,%q", allowed, view)
+	}
 }
 
 func (s *passthroughScene) PassesInputBelow() bool { return true }

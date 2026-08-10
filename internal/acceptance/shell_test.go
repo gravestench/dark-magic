@@ -313,6 +313,53 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatalf("selected character = %#v, %v", selected, ok)
 	}
 
+	// Side-panel hotkeys share the same slot-aware operation as mini-panel
+	// buttons: opposite sides coexist, same-side panels replace, a non-top side
+	// can toggle closed, and a full overlay evicts both sides.
+	for _, action := range []string{"inventory", "character"} {
+		publishAction(&input, action)
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		input.Publish(inputstate.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertStack(t, navigator, "game_world", "inventory", "character")
+	publishAction(&input, "skills")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "game_world", "character", "skills")
+	input.Publish(inputstate.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "character")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "game_world", "skills")
+	input.Publish(inputstate.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "help")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "game_world", "help")
+	input.Publish(inputstate.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "help")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	assertStack(t, navigator, "game_world")
+
 	for _, overlay := range []string{"inventory", "character", "skills", "automap", "options", "pause"} {
 		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
@@ -359,7 +406,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 3 || diagnostics.NodeSlots > 5 {
+	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 3 || diagnostics.NodeSlots > 6 {
 		t.Fatalf("composer diagnostics after rapid transitions = %#v", diagnostics)
 	}
 
