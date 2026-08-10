@@ -495,6 +495,26 @@ If GLB export loses required semantic sockets, typed events, collision/selection
 metadata, or material regions, store those in the same versioned companion
 manifest evaluated by M31-M32 rather than inventing a Dust3D-specific runtime.
 
+## Candidate tool radar
+
+These are optional processors or authoring frontends to prototype behind the
+same GLB/semantic-manifest boundary. Listing one is not an adoption decision.
+
+| Candidate | Potential role | Required evaluation before integration |
+| --- | --- | --- |
+| [Blockbench](https://github.com/JannisX11/blockbench) | Accessible manual low-poly modeling, pixel-texture work, animation, and glTF export | Confirm generic-mesh/armature fidelity, headless or plugin automation stability, GPL boundary, axes/units, and whether it adds value beyond Dust3D for non-block creatures. |
+| [Mesh2Motion](https://github.com/Mesh2Motion) | Browser-based human/animal rig placement, reusable animation assignment, and GLB export | Pin code and asset licenses independently (project states MIT code and CC0 art/animations), validate skeleton naming/rest pose/weights, and prove exported clips survive golden-pose and event-authoring workflows. |
+| [TripoSR](https://github.com/VAST-AI-Research/TripoSR) | Fast local single-image reconstruction for rough mesh seeds and concept blocking | Treat output as editable source, not game-ready truth; audit model/code licenses and source-image rights, then measure topology, watertightness, UV/material quality, scale, reproducibility, retopology cost, and non-humanoid usefulness. |
+| [Microsoft TRELLIS](https://github.com/microsoft/TRELLIS) | Higher-fidelity image/text-conditioned meshes and alternative 3D representations | Benchmark GPU/VRAM and dependency cost; audit model plus differently licensed submodules; require deterministic seeds, mesh cleanup/retopology, provenance, and conversion to the canonical GLB import contract. |
+| [Khronos glTF Validator](https://github.com/KhronosGroup/glTF-Validator) | Standards-level validation before Dark Magic semantic validation | Pin a version, preserve stable machine-readable diagnostics, run offline in CI, and keep Dark Magic-specific skeleton/socket/event rules in `dm-asset`. |
+
+The first comparison should use one licensed creature concept and a fixed rubric:
+authoring time, source provenance, polygon count, manifold/topology defects, UVs,
+materials, skeleton/rest pose, weights, clip quality, semantic metadata gaps,
+deterministic rebuilds, manual cleanup time, and eight-direction sprite quality.
+Generated tools may accelerate ideation, but no generated mesh or texture enters a
+redistributable fixture until its input rights and output license are recorded.
+
 ## Future possibilities
 
 Preserve extension points for procedural animation, IK, foot placement, aim/look

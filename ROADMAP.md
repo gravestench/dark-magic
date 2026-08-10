@@ -41,7 +41,9 @@ active queue below closes bounded earlier gaps before item/gameplay work:
 The creature-authoring program in M31-M43 is a parallel, reusable asset track.
 It may begin with research and synthetic fixtures without displacing the active
 gameplay queue. Its dependency order and complete per-milestone contracts live
-in [docs/CREATURE_ASSET_ROADMAP.md](docs/CREATURE_ASSET_ROADMAP.md).
+in [docs/CREATURE_ASSET_ROADMAP.md](docs/CREATURE_ASSET_ROADMAP.md), including a
+candidate-tool radar for manual authoring, rigging, validation, and image-to-3D
+experiments behind the same canonical import boundary.
 
 ## M0: Recovery and inventory
 
