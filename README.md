@@ -321,6 +321,22 @@ the resolved COF, palette, direction, and component DCC paths. Character
 selection renders that equipment-aware composite when available and falls back
 to the class presentation for legacy metadata-only records.
 
+Open the integrated composite animation laboratory against mounted MPQs with:
+
+```shell
+MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
+  --start-scene=composite_lab \
+  --composite-token=AM --composite-mode=WL --composite-weapon=1HS \
+  --composite-direction=3 --composite-components=RH=SSD --composite-frame=0
+```
+
+Use Left/Right for encoded direction, Up/Down for NU/WL/RN mode, Page Up/Down
+for player class, Space to pause/play, Home/End to step frames, and Enter to cycle deterministic coherent
+recipes. `--composite-random` selects from that verified recipe set at startup;
+it deliberately does not fabricate arbitrary archive names. The corresponding
+`DARK_MAGIC_COMPOSITE_TOKEN`, `MODE`, `WEAPON`, and `COMPONENTS` environment
+variables make repeatable local captures convenient.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell

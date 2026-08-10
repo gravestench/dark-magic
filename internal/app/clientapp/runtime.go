@@ -39,6 +39,12 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.DataModule(app.options.Content, app.profile.ID),
 		modruntime.WorldModule(app.options.Content, app.worldObjectResolver),
 		modruntime.InputModule(app.inputState),
+		modruntime.DevModule(map[string]any{
+			"composite_token": app.options.CompositeLab.Token, "composite_mode": app.options.CompositeLab.Mode,
+			"composite_weapon": app.options.CompositeLab.WeaponClass, "composite_direction": app.options.CompositeLab.Direction,
+			"composite_frame": app.options.CompositeLab.Frame, "composite_components": app.options.CompositeLab.Components,
+			"composite_random": app.options.CompositeLab.Random,
+		}),
 		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
 		modruntime.RecordsModule(app.gameData),

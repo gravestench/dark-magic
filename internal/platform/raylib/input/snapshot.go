@@ -30,6 +30,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"confirm":         confirm,
 			"cancel":          cancel,
 			"skip":            mergeActionStates(pointer, confirm, cancel, space),
+			"space":           space,
 			"inventory":       actionState(s.KeyState(rl.KeyI)),
 			"character":       actionState(s.KeyState(rl.KeyC)),
 			"skills":          actionState(s.KeyState(rl.KeyT)),

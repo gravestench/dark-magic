@@ -42,6 +42,13 @@ func main() {
 	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
 	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
+	compositeToken := flag.String("composite-token", environmentDefault("DARK_MAGIC_COMPOSITE_TOKEN", "AM"), "composite lab character token")
+	compositeMode := flag.String("composite-mode", environmentDefault("DARK_MAGIC_COMPOSITE_MODE", "NU"), "composite lab animation mode")
+	compositeWeapon := flag.String("composite-weapon", environmentDefault("DARK_MAGIC_COMPOSITE_WEAPON", "HTH"), "composite lab COF weapon class")
+	compositeDirection := flag.Int("composite-direction", 0, "composite lab encoded direction (0-7)")
+	compositeFrame := flag.Int("composite-frame", -1, "composite lab frame to display paused; -1 plays the animation")
+	compositeComponents := flag.String("composite-components", os.Getenv("DARK_MAGIC_COMPOSITE_COMPONENTS"), "composite lab appearance recipe, for example RH=SSD,HD=CAP")
+	compositeRandom := flag.Bool("composite-random", false, "start the composite lab with a deterministic coherent random recipe")
 	flag.Parse()
 
 	logLevel, err := parseLogLevel(*logLevelFlag)
@@ -89,7 +96,8 @@ func main() {
 		exitCode = 1
 		return
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, logs); err != nil {
+	lab := clientapp.CompositeLabOptions{Token: *compositeToken, Mode: *compositeMode, WeaponClass: *compositeWeapon, Direction: *compositeDirection, Frame: *compositeFrame, Components: *compositeComponents, Random: *compositeRandom}
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, lab, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -106,7 +114,7 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, logs *shell.LogBuffer) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, lab clientapp.CompositeLabOptions, logs *shell.LogBuffer) error {
 	options := clientapp.Options{
 		Content: contentFS, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
@@ -114,6 +122,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene,
 		FixtureCharacters: fixtureCharacters, OutputPalette: outputPalette,
 		ViewportFit: viewportFit, PresentationProfileID: presentationProfileID, Logs: logs,
+		CompositeLab: lab,
 	}
 	// A nil pointer stored inside an interface looks non-nil. Only put the
 	// profiler in the box when one was really started.

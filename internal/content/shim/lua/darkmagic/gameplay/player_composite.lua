@@ -56,10 +56,9 @@ local function equipped_appearance(items)
     return appearance, hand_classes.rarm or hand_classes.larm
 end
 
-function M.resolve(authority, items)
+local function resolve_appearance(authority, equipped, equipped_weapon_class)
     local token = upper(authority.token)
     local mode = upper(authority.mode)
-    local equipped, equipped_weapon_class = equipped_appearance(items)
     local weapon_class = equipped_weapon_class or upper(authority.weapon_class)
     local cof = cof_path(token, mode, weapon_class)
     local info = assert(render.cof_info(cof))
@@ -101,6 +100,18 @@ function M.resolve(authority, items)
                 return values
             end)(), ":"),
     }
+end
+
+function M.resolve(authority, items)
+    local equipped, equipped_weapon_class = equipped_appearance(items)
+    return resolve_appearance(authority, equipped, equipped_weapon_class)
+end
+
+-- Development/probe entry point. The caller supplies the same validated recipe
+-- shape item authority normally publishes, without pretending those values are
+-- authoritative gameplay state.
+function M.recipe(authority, appearance, weapon_class)
+    return resolve_appearance(authority, appearance or {}, weapon_class)
 end
 
 -- Compatibility name for callers that deliberately want the empty-equipment recipe.
