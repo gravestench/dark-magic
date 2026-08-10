@@ -106,6 +106,9 @@ hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_s
 		if hud.RawGetString("running") != lua.LFalse {
 			t.Fatalf("HUD running = %s, want false", hud.RawGetString("running"))
 		}
+		if hud.RawGetString("left_skill") != lua.LNumber(0) || hud.RawGetString("right_skill") != lua.LNumber(0) {
+			t.Fatalf("HUD skills = %s/%s, want 0/0", hud.RawGetString("left_skill"), hud.RawGetString("right_skill"))
+		}
 		return nil
 	}); err != nil {
 		t.Fatal(err)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/gravestench/akara"
@@ -24,10 +25,37 @@ type MovePayload struct {
 
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
-type MovementController struct{ running atomic.Bool }
+type MovementController struct {
+	running  atomic.Bool
+	sequence atomic.Uint64
+	mu       sync.Mutex
+	skills   map[string]int64
+}
 
 func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
 func (controller *MovementController) Running() bool           { return controller.running.Load() }
+func (controller *MovementController) nextSequence() uint64    { return controller.sequence.Add(1) }
+
+func (controller *MovementController) AssignSkill(slot string, skillID int64) error {
+	if slot != "left" && slot != "right" || skillID < 0 {
+		return fmt.Errorf("game session: skill assignment requires left/right slot and non-negative skill ID")
+	}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.skills == nil {
+		controller.skills = make(map[string]int64)
+	}
+	controller.skills[slot] = skillID
+	return nil
+}
+
+func (controller *MovementController) drainSkills() map[string]int64 {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	result := controller.skills
+	controller.skills = nil
+	return result
+}
 
 // RegisterMovement installs the authoritative adapter from normalized movement
 // intent to Lua-defined world velocity components.
@@ -93,12 +121,11 @@ func RegisterMovement(session *Session) error {
 // MovementSource turns the latest native input snapshot into one replayable
 // command per active gameplay tick.
 type MovementSource struct {
-	engine   *gameecs.Engine
-	input    *inputstate.Store
-	player   string
-	focusID  string
-	sequence uint64
-	control  *MovementController
+	engine  *gameecs.Engine
+	input   *inputstate.Store
+	player  string
+	focusID string
+	control *MovementController
 }
 
 func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string, controllers ...*MovementController) (*MovementSource, error) {
@@ -138,9 +165,8 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 			y++
 		}
 	}
-	source.sequence++
 	payload, _ := json.Marshal(MovePayload{X: x, Y: y, Running: source.control.Running()})
-	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.sequence, Kind: MoveCommand, Payload: payload}}
+	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.control.nextSequence(), Kind: MoveCommand, Payload: payload}}
 }
 
 func decodeMove(encoded []byte) (MovePayload, error) {

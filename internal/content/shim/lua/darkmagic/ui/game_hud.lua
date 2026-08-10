@@ -97,8 +97,26 @@ function M.create(root, definition, palettes, commands)
     add_status_control(hud, "experience", definition.experience, assert(locale.text("darkmagic.hud.experience")), hud.tips.experience)
 
     local skills = definition.skills
-    for _, placement in ipairs({ skills.left, skills.right }) do
-        dc6_at(hud.root, skills.sheet, palette, skills.frame, placement.x, placement.y)
+    hud.skills = {}
+    for _, skill in ipairs({
+        { side = "left", placement = skills.left },
+        { side = "right", placement = skills.right },
+    }) do
+        local side = skill.side
+        local placement = skill.placement
+        local node = dc6_at(hud.root, skills.sheet, palette, skills.frame, placement.x, placement.y)
+        local tip = tooltip.create(hud.root, "", placement.x + skills.width / 2, placement.y, {})
+        hud.skills[side] = { node = node, tip = tip, id = -1 }
+        hud.controls:add({
+            id = side .. "_skill",
+            label = side .. " skill",
+            x = placement.x,
+            y = placement.y,
+            width = skills.width,
+            height = skills.height,
+            focusable = false,
+            on_state = function(_, state) tip:set_visible(state == "hover") end,
+        })
     end
 
     local run = definition.run
@@ -186,6 +204,22 @@ local function update_bar(bar, fill)
     bar.node:set_position(bar.definition.x + pixels / 2, bar.definition.y + bar.definition.height / 2)
 end
 
+local function update_skill(hud, side, detail, skill_id)
+    local well = hud.skills[side]
+    if well.id == skill_id then return end
+    well.id = skill_id
+    detail = detail or {
+        id = skill_id,
+        icon = hud.definition.skills.frame,
+        sheet = hud.definition.skills.sheet,
+    }
+    well.node:set_dc6(detail.sheet, hud.palette, 0, detail.icon)
+    local name = detail.name_key and locale.text(detail.name_key) or nil
+    local short = detail.short_key and locale.text(detail.short_key) or nil
+    name = name or string.format("%s SKILL %d", string.upper(side), skill_id)
+    well.tip:set_text(short and short ~= name and name .. "\n" .. short or name)
+end
+
 function M.snapshot(hud, stats)
     stats = stats or {}
     local health, max_health = stats.health or 0, stats.max_health or 0
@@ -193,6 +227,8 @@ function M.snapshot(hud, stats)
     local stamina, max_stamina = stats.stamina or 0, stats.max_stamina or 0
     local experience, next_experience = stats.experience or 0, stats.next_level_experience or 0
     local running = stats.running == true
+    update_skill(hud, "left", stats.left_skill_detail, stats.left_skill or 0)
+    update_skill(hud, "right", stats.right_skill_detail, stats.right_skill or 0)
     if hud.running ~= running then
         hud.running = running
         hud.run_node:set_dc6(hud.definition.run.sheet, hud.palette, 0, running and hud.definition.run.run_frame or hud.definition.run.walk_frame)

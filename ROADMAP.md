@@ -665,6 +665,14 @@ complete until its actions are driven by authoritative game state and commands.
   local intent into the fixed-tick movement source, the replayable movement
   command applies speed and movement mode, and the button plus tooltip update
   only from the resulting ECS snapshot.
+  Left/right skill wells now use the original 48px desktop geometry recovered
+  from OpenDiablo2 and corroborated by riiablo, resolve generic or class skill
+  sheets through typed Skills/SkillDesc records, and display localized hover
+  tooltips. Assignments pass through a replayable command into the player ECS;
+  learned-skill ownership and the upward-opening selector remain before this
+  checkpoint can be marked complete. Riiablo's mobile controls were explicitly
+  excluded from the fixed 800x600 profile; the local AbyssEngine checkout has
+  no corresponding skill-well implementation, and OpenD2 is not present.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

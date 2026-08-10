@@ -51,6 +51,9 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		t.Fatal(err)
 	}
+	if err := gamesession.RegisterSkillAssignments(authority); err != nil {
+		t.Fatal(err)
+	}
 	if err := gameplayer.Register(authority); err != nil {
 		t.Fatal(err)
 	}
@@ -59,12 +62,17 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	skillSource, err := gamesession.NewSkillSource(movementController, "local-player")
+	if err != nil {
+		t.Fatal(err)
+	}
 	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
 	if err != nil {
 		t.Fatal(err)
 	}
 	commandSource := func(tick uint64) []simulation.Command {
-		return append(entrySource.Commands(tick), movementSource.Commands(tick)...)
+		commands := append(entrySource.Commands(tick), movementSource.Commands(tick)...)
+		return append(commands, skillSource.Commands(tick)...)
 	}
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
@@ -405,6 +413,24 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	if running, err := mode.Get("running"); err != nil || running != true {
 		t.Fatalf("authoritative movement mode = %v, %v", running, err)
+	}
+	if err := movementController.AssignSkill("right", 42); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputstate.Frame{Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
+		t.Fatal(err)
+	}
+	assignments, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.skill_assignment")
+	if !found {
+		t.Fatal("game world did not register skill-assignment component")
+	}
+	assignment, found := assignments.Get(entities[0])
+	if !found {
+		t.Fatal("hero skill assignment is missing")
+	}
+	if right, err := assignment.Get("right"); err != nil || right != int64(42) {
+		t.Fatalf("authoritative right skill = %v, %v", right, err)
 	}
 
 	if err := scenes.Close(ctx); err != nil {
