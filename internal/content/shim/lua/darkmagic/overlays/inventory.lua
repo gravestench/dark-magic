@@ -13,6 +13,7 @@ local button = require("darkmagic.ui.button")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.inventory
+local offset_x, offset_y = screen.offset_x or 0, screen.offset_y or 0
 
 local function number(record, key)
     return assert(tonumber(record[key]), "Inventory.txt field is not numeric: " .. key)
@@ -100,13 +101,17 @@ return {
         end
 
         local close = screen.close
-        button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
+        local close_placement = {
+            sheet=close.sheet, palette=close.palette, up_frame=close.up_frame, down_frame=close.down_frame,
+            x=close.x + offset_x, y=close.y + offset_y, width=close.width, height=close.height, label=close.label,
+        }
+        button.create(self.root, self.controls, "close", close_placement, assert(locale.text(close.label)), {
             layer = "modal",
             show_label = false,
             sound = manifest.sounds.button,
             tooltip = assert(locale.text(close.label)),
             on_activate = function()
-                scenes.pop()
+                scenes.toggle_overlay("inventory", "right")
             end,
         })
     end,

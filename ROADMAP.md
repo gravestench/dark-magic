@@ -710,9 +710,12 @@ complete until its actions are driven by authoritative game state and commands.
   Manifest profiles now select the native logical render target and deep-merge
   sparse Lua-facing presentation overrides. A scoped 640x480 gameplay profile
   uses the archive-verified six-frame `ctrlpnl7.dc6` panel, recovered desktop
-  HUD placements, and a profile-relative world-input split. It remains scoped
-  to `game_world` until frontend and overlay geometry are independently verified;
-  the roadmap does not yet claim complete 640x480 application support.
+  HUD placements, and a profile-relative world-input split. Inventory now selects
+  the unsuffixed 640x480 `Inventory.txt` records, while character, skill, quest,
+  and party panels apply profile-owned classic origins. Their close controls use
+  named overlay-slot transactions so either visible side can close independently.
+  Frontend and asset-specific full-screen overlays remain to be independently
+  verified; the roadmap does not yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 

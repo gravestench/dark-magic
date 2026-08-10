@@ -1,4 +1,4 @@
--- Fixed 800x600 party panel. Network roster state remains engine-owned.
+-- Fixed-profile party panel. Network roster state remains engine-owned.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -11,6 +11,7 @@ local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.party
+local offset_x, offset_y = screen.offset_x or 0, screen.offset_y or 0
 
 local function panel_frame(root, panel, frame_index, x, y)
     local node = render.create("modal", root)
@@ -25,17 +26,21 @@ return {
         self.controls = controls.new()
         if not render.assets_available() then return end
         local panel = screen.panel
-        panel_frame(self.root, panel, panel.frames[1], panel.x, panel.y)
-        panel_frame(self.root, panel, panel.frames[2], panel.x + 256, panel.y)
-        panel_frame(self.root, panel, panel.frames[3], panel.x, panel.y + 256)
-        panel_frame(self.root, panel, panel.frames[4], panel.x + 256, panel.y + 256)
+        panel_frame(self.root, panel, panel.frames[1], panel.x + offset_x, panel.y + offset_y)
+        panel_frame(self.root, panel, panel.frames[2], panel.x + offset_x + 256, panel.y + offset_y)
+        panel_frame(self.root, panel, panel.frames[3], panel.x + offset_x, panel.y + offset_y + 256)
+        panel_frame(self.root, panel, panel.frames[4], panel.x + offset_x + 256, panel.y + offset_y + 256)
         local hero = saves.selected()
-        text.create(self.root, "panel_heading", hero and hero.name or "", 180, 80, 180)
-        text.create(self.root, "disabled", assert(locale.text("darkmagic.party.unavailable")), 240, 145, 280)
+        text.create(self.root, "panel_heading", hero and hero.name or "", screen.heading.x + offset_x, screen.heading.y + offset_y, screen.heading.width)
+        text.create(self.root, "disabled", assert(locale.text("darkmagic.party.unavailable")), screen.unavailable.x + offset_x, screen.unavailable.y + offset_y, screen.unavailable.width)
         local close = screen.close
-        button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
+        local close_placement = {
+            sheet=close.sheet, palette=close.palette, up_frame=close.up_frame, down_frame=close.down_frame,
+            x=close.x + offset_x, y=close.y + offset_y, width=close.width, height=close.height, label=close.label,
+        }
+        button.create(self.root, self.controls, "close", close_placement, assert(locale.text(close.label)), {
             layer="modal", show_label=false, sound=manifest.sounds.button,
-            tooltip=assert(locale.text(close.label)), on_activate=function() scenes.pop() end,
+            tooltip=assert(locale.text(close.label)), on_activate=function() scenes.toggle_overlay("party", "full") end,
         })
     end,
     update = function(self)

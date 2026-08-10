@@ -72,7 +72,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world"}) {
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party"}) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
@@ -521,5 +521,38 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 		if slot.ID == "" || slot.Prefix == "" {
 			t.Errorf("incomplete inventory slot = %#v", slot)
 		}
+	}
+}
+
+func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document map[string]any
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	selected, _, err := ApplyPresentationProfile(document, "lod-english-640x480-gameplay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	screens := selected["screens"].(map[string]any)
+	inventory := screens["inventory"].(map[string]any)
+	panel := inventory["panel"].(map[string]any)
+	if inventory["record_suffix"] != "" || panel["origin_y_correction"] != float64(4) || inventory["offset_x"] != float64(-80) || inventory["offset_y"] != float64(-60) {
+		t.Fatalf("classic inventory geometry = %#v", inventory)
+	}
+	for _, id := range []string{"character", "quests", "party"} {
+		screen := screens[id].(map[string]any)
+		if screen["offset_x"] != float64(-80) || screen["offset_y"] != float64(-60) {
+			t.Errorf("classic %s offset = %v,%v", id, screen["offset_x"], screen["offset_y"])
+		}
+	}
+	skills := screens["skills"].(map[string]any)
+	if skills["x"] != float64(320) || skills["y"] != float64(4) {
+		t.Fatalf("classic skill-tree origin = %v,%v", skills["x"], skills["y"])
 	}
 }
