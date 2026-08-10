@@ -714,8 +714,9 @@ complete until its actions are driven by authoritative game state and commands.
   the unsuffixed 640x480 `Inventory.txt` records, while character, skill, quest,
   and party panels apply profile-owned classic origins. Their close controls use
   named overlay-slot transactions so either visible side can close independently.
-  Frontend and asset-specific full-screen overlays remain to be independently
-  verified; the roadmap does not yet claim complete 640x480 application support.
+  Help now selects and composes the archive-verified eight-frame 640x480 border;
+  other frontend and asset-specific full-screen overlays remain to be independently
+  verified. The roadmap does not yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 

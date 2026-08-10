@@ -199,6 +199,17 @@
       ]
     },
     {
+      "id": "help-border-640",
+      "screen": "help",
+      "path": "data/global/ui/MENU/helpborder.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "640x480 eight-piece help overlay border",
+      "references": [
+        "Diablo II archive inspection",
+        "OpenDiablo2"
+      ]
+    },
+    {
       "id": "hud-pop-belt",
       "screen": "game-hud",
       "path": "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",

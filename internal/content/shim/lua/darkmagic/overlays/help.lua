@@ -1,4 +1,5 @@
--- Canonical 800x600 in-game help overlay recovered from OpenDiablo2.
+-- Profile-selected in-game help overlay recovered from the shipped DC6 assets
+-- and OpenDiablo2's documented 800x600 composition.
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -26,29 +27,37 @@ return {
         self.controls = controls.new()
         if not render.assets_available() then return end
 
-        -- The source sheet is irregular: the first two frames form the left
-        -- edge, frames 2-5 form the top, and frame 6 is the lower-right edge.
         local border = screen.border
-        local w0, h0 = frame(self.root, border, 0, 0, 0)
-        frame(self.root, border, 1, 0, h0)
-        local x = w0
-        local w2, h2 = frame(self.root, border, 2, x, 0)
-        x = x + w2 - border.middle_overlap
-        local w3 = select(1, frame(self.root, border, 3, x, 0))
-        x = x + w3
-        local w4 = select(1, frame(self.root, border, 4, x, 0))
-        x = x + w4
-        frame(self.root, border, 5, x, 0)
-        frame(self.root, border, 6, x, h2)
+        if border.placements then
+            for _, placement in ipairs(border.placements) do
+                frame(self.root, border, placement.frame, placement.x, placement.y)
+            end
+        else
+            -- The expansion sheet is irregular: the first two frames form the
+            -- left edge, frames 2-5 form the top, and frame 6 is the lower-right.
+            local w0, h0 = frame(self.root, border, 0, 0, 0)
+            frame(self.root, border, 1, 0, h0)
+            local x = w0
+            local w2, h2 = frame(self.root, border, 2, x, 0)
+            x = x + w2 - border.middle_overlap
+            local w3 = select(1, frame(self.root, border, 3, x, 0))
+            x = x + w3
+            local w4 = select(1, frame(self.root, border, 4, x, 0))
+            x = x + w4
+            frame(self.root, border, 5, x, 0)
+            frame(self.root, border, 6, x, h2)
+        end
 
-        text.create(self.root, "panel_heading", assert(locale.text("darkmagic.help.title")), 363, 2, 260)
+        local heading = screen.heading
+        local content = screen.content
+        text.create(self.root, "panel_heading", assert(locale.text("darkmagic.help.title")), heading.x, heading.y, heading.width)
         local bullets = {"run", "items", "stand", "map", "menu", "chat", "skills", "help"}
         for index, key in ipairs(bullets) do
             local y = 59 + (index - 1) * 20
             local dot = render.create("modal", self.root)
             local dw, dh = dot:set_dc6(screen.yellow_bullet, manifest.palettes.sky, 0, 0)
             dot:set_position(88 + dw / 2, y + 4 + dh / 2)
-            text.create(self.root, "formal_large", assert(locale.text("darkmagic.help." .. key)), 100, y, 600, "left")
+            text.create(self.root, "formal_large", assert(locale.text("darkmagic.help." .. key)), 100, y, content.text_width, "left")
         end
 
         local callouts = {
@@ -58,13 +67,15 @@ return {
             {"Left Mouse Button Skill",135,382},{"Right Mouse Button Skill",675,381},
         }
         for _, label in ipairs(callouts) do
-            text.create(self.root, "formal_large", label[1], label[2], label[3], 180)
+            local x = label[2] * content.scale_x
+            local y = label[3] + content.hud_offset_y
+            text.create(self.root, "formal_large", label[1], x, y, 180)
         end
 
         local close = screen.close
         button.create(self.root, self.controls, "close", close, assert(locale.text(close.label)), {
             layer="modal", show_label=false, sound=manifest.sounds.button,
-            tooltip=assert(locale.text(close.label)), on_activate=function() scenes.pop() end,
+            tooltip=assert(locale.text(close.label)), on_activate=function() scenes.toggle_overlay("help", "full") end,
         })
     end,
 

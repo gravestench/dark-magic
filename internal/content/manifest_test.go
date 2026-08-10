@@ -72,7 +72,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party"}) {
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help"}) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
@@ -262,8 +262,8 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 94 {
-		t.Fatalf("asset fixture contains %d entries, want 94", len(fixture.Assets))
+	if len(fixture.Assets) != 95 {
+		t.Fatalf("asset fixture contains %d entries, want 95", len(fixture.Assets))
 	}
 }
 
@@ -293,7 +293,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "3f7d62d3d944e800ec3a3661319a5ac18761f3a2323d9ac192196b7c375eb7d5"
+	const auditedFingerprint = "2cdc54472125d43629b22ee0365c8e808c8e954903bfbccf323e199d7d1a5d00"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
@@ -554,5 +554,15 @@ func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	skills := screens["skills"].(map[string]any)
 	if skills["x"] != float64(320) || skills["y"] != float64(4) {
 		t.Fatalf("classic skill-tree origin = %v,%v", skills["x"], skills["y"])
+	}
+	help := screens["help"].(map[string]any)
+	helpBorder := help["border"].(map[string]any)
+	placements := helpBorder["placements"].([]any)
+	if helpBorder["sheet"] != "data/global/ui/MENU/helpborder.DC6" || len(placements) != 8 {
+		t.Fatalf("classic help border = %#v", helpBorder)
+	}
+	last := placements[7].(map[string]any)
+	if last["frame"] != float64(7) || last["x"] != float64(576) || last["y"] != float64(256) {
+		t.Fatalf("classic help lower-right placement = %#v", last)
 	}
 }
