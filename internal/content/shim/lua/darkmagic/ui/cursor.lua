@@ -147,7 +147,11 @@ function M.wrap(scene, definition, palettes, options)
     end
 
     local function visible_for(self, focused)
+        -- A held item is the pointer in Diablo II. Scenes set this small flag
+        -- from copied item authority; hiding the hand here keeps ownership in
+        -- one place and prevents a hand-plus-item double cursor.
         local visible = focused ~= false and not options.hidden
+            and self.__darkmagic_item_held ~= true
         if visible and options.visible_when then
             visible = options.visible_when(self) == true
         end

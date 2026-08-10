@@ -208,7 +208,7 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	if err != nil {
 		return nil, nil
 	}
-	items := make([]gameitem.Item, 0, 3)
+	items := make([]gameitem.Item, 0, 5)
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
 		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
@@ -223,6 +223,20 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 			} else {
 				placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
 			}
+		}
+	}
+	for _, fixture := range []struct {
+		code         string
+		container    gameitem.Container
+		beltEligible bool
+	}{
+		{code: "rvs", container: gameitem.ContainerStash, beltEligible: true},
+		{code: "tsc", container: gameitem.ContainerCube},
+	} {
+		if misc, found := snapshot.MiscByCode[fixture.code]; found {
+			id := "fixture-" + fixture.code
+			items = append(items, gameitem.Item{ID: id, Code: fixture.code, Width: misc.InvWidth, Height: misc.InvHeight, BeltEligible: fixture.beltEligible, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+			placements[id] = gameitem.Placement{Container: fixture.container, X: 0, Y: 0}
 		}
 	}
 	return items, placements

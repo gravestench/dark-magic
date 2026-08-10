@@ -531,12 +531,12 @@
     "stash": {
       "sheet":"data/global/ui/PANEL/TradeStash.DC6","palette":"sky","x":80,"y":64,
       "close":{"x":272,"bottom_inset":15,"label":"darkmagic.stash.close"},
-      "labels":[{"key":"darkmagic.overlay.state_unavailable","x":160,"y":390,"width":250}]
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Big Bank Page 1","container":"stash"}
     },
     "cube": {
       "sheet":"data/global/ui/PANEL/supertransmogrifier.dc6","palette":"sky","x":80,"y":64,
       "close":{"x":275,"bottom_inset":15,"label":"darkmagic.cube.close"},
-      "labels":[{"key":"darkmagic.overlay.state_unavailable","x":160,"y":370,"width":250}]
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Transmogrify Box Page 1","container":"cube"}
     },
     "hireling": {
       "sheet":"data/global/ui/PANEL/NpcInv.dc6","palette":"sky","x":80,"y":64,

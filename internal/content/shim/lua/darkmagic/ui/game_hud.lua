@@ -42,6 +42,7 @@ local function refresh_hud_items(hud)
     local belt = hud.definition.belt
     local cursor_x, cursor_y = input.cursor()
     hud.item_snapshot = snapshot
+    hud.item_held = held_item(snapshot) ~= nil
     for _, item in ipairs(snapshot.items) do
         local drawing = hud.item_nodes[item.id] or {}
         hud.item_nodes[item.id] = drawing
@@ -65,7 +66,7 @@ local function refresh_hud_items(hud)
                     belt.y - row * belt.cell_height + belt.cell_height / 2
                 )
             elseif item.container == "held" then
-                drawing.held_node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+                drawing.held_node:set_position(cursor_x, cursor_y)
             end
         end
     end
