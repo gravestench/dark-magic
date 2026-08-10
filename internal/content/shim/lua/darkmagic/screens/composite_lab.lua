@@ -74,21 +74,24 @@ function lab:create()
     self.token_index = index_of(tokens, upper(dev.option("composite_token"), "AM"))
     self.mode_index = index_of(modes, upper(dev.option("composite_mode"), "NU"))
     self.weapon = upper(dev.option("composite_weapon"), "HTH")
-    self.direction = math.max(0, math.min(7, tonumber(dev.option("composite_direction")) or 0))
+    -- Lab-facing direction is deliberately a plain spatial index. Asset-facing
+    -- direction codes stay hidden behind the lookup below.
+    self.direction = math.max(0, math.min(15, tonumber(dev.option("composite_direction")) or 0))
     self.appearance = parse_components(dev.option("composite_components"))
     self.frame = tonumber(dev.option("composite_frame")) or -1
     self.playing, self.dirty = self.frame < 0, true
+    self.playback_seconds = 0
     if dev.option("composite_random") then self:choose_random() end
 end
 
 function lab:rebuild()
     local authority = {token=tokens[self.token_index], mode=modes[self.mode_index], weapon_class=self.weapon,
-        direction=self.direction, palette="data/global/palette/ACT1/pal.dat"}
+        direction=self.direction, direction_space="logical", palette="data/global/palette/ACT1/pal.dat"}
     local ok, resolved = pcall(composite.recipe, authority, self.appearance, self.weapon)
     if ok then
         ok, resolved = pcall(function()
             self.actor:set_cof_animation(resolved.cof, resolved.palette, resolved.direction,
-                resolved.components, "loop", resolved.rate)
+                resolved.components, "loop", resolved.rate, self.playback_seconds)
             return resolved
         end)
     end
@@ -97,11 +100,12 @@ function lab:rebuild()
         self.resolved = resolved
         if not self.playing then
             self.frame = math.max(0, math.min(resolved.frames - 1, self.frame))
+            self.playback_seconds = self.frame * 256 / (resolved.rate * 25)
             self.actor:animation_pause()
-            self.actor:animation_seek(self.frame * 256 / (resolved.rate * 25))
+            self.actor:animation_seek(self.playback_seconds)
         end
-        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  direction %d  rate %d  frames %d%s",
-            authority.token, authority.mode, self.weapon, self.direction, resolved.rate, resolved.frames,
+        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical/COF %d  DCC %d  rate %d  frames %d%s",
+            authority.token, authority.mode, self.weapon, self.direction, resolved.dcc_direction, resolved.rate, resolved.frames,
             self.playing and "" or ("  showing " .. self.frame)), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. resolved.cof, 760, "center")
     else
@@ -111,9 +115,13 @@ function lab:rebuild()
     self.dirty = false
 end
 
-function lab:update()
-    if input.pressed("left") then self.direction = (self.direction + 7) % 8; self.dirty = true end
-    if input.pressed("right") then self.direction = (self.direction + 1) % 8; self.dirty = true end
+function lab:update(elapsed)
+    -- Facing changes select another direction resource, not another animation.
+    -- Keep one lab-owned clock so rebuilding the retained animation can seek to
+    -- the same point instead of visibly restarting at frame zero.
+    if self.playing then self.playback_seconds = self.playback_seconds + (elapsed or 0) end
+    if input.pressed("left") then self.direction = (self.direction + 15) % 16; self.dirty = true end
+    if input.pressed("right") then self.direction = (self.direction + 1) % 16; self.dirty = true end
     if input.pressed("up") then self.mode_index = ((self.mode_index - 2) % #modes) + 1; self.dirty = true end
     if input.pressed("down") then self.mode_index = (self.mode_index % #modes) + 1; self.dirty = true end
     if input.pressed("page_up") then self.token_index = ((self.token_index - 2) % #tokens) + 1; self.weapon="HTH"; self.appearance={}; self.dirty=true end
