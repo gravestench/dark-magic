@@ -11,6 +11,7 @@ import (
 type RenderSettingsTarget interface {
 	SetResidencyDebug(bool)
 	SetTextureUploadBudget(uint64)
+	SetTextureCacheBudget(uint64)
 }
 
 // SettingsModule exposes validated client preferences. Runtime effects are
@@ -28,6 +29,7 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 		for _, target := range renderTargets {
 			target.SetResidencyDebug(values.DebugTextureResidency)
 			target.SetTextureUploadBudget(uint64(values.TextureUploadBudgetMB * 1024 * 1024))
+			target.SetTextureCacheBudget(uint64(values.TextureCacheBudgetMB * 1024 * 1024))
 		}
 		return nil
 	}
@@ -50,6 +52,8 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 					state.Push(lua.LBool(values.DebugTextureResidency))
 				case "texture_upload_budget_mb":
 					state.Push(lua.LNumber(values.TextureUploadBudgetMB))
+				case "texture_cache_budget_mb":
+					state.Push(lua.LNumber(values.TextureCacheBudgetMB))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}
@@ -66,6 +70,8 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 					values.DebugTextureResidency = state.CheckBool(2)
 				case "texture_upload_budget_mb":
 					values.TextureUploadBudgetMB = float64(state.CheckNumber(2))
+				case "texture_cache_budget_mb":
+					values.TextureCacheBudgetMB = float64(state.CheckNumber(2))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}

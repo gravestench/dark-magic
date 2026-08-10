@@ -26,6 +26,9 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
+		if err := s.applyTextureCacheBudget(); err != nil && s.logger != nil {
+			s.logger.Error("applying texture cache budget", "error", err)
+		}
 		if err := composer.Drain(backend); err != nil && s.logger != nil {
 			s.logger.Error("draining render composition", "error", err)
 		}

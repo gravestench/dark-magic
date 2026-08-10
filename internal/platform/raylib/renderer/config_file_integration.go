@@ -43,7 +43,7 @@ func DefaultConfig() Config {
 	cfg.Resolution.Width = 800
 	cfg.Resolution.Height = 600
 	cfg.Resolution.Fit = "contain"
-	cfg.Cache.BudgetMB = 100
+	cfg.Cache.BudgetMB = 512
 	return cfg
 }
 
@@ -57,6 +57,7 @@ func (s *Service) Configure(config Config) {
 		}
 	})
 	s.FlushCache(textureCache)
+	s.textureCacheBudget.Store(uint64(s.CacheBudget()))
 	if s.textureUploadBudget.Load() == 0 {
 		s.textureUploadBudget.Store(4 * 1024 * 1024)
 	}

@@ -19,6 +19,26 @@ func (s *Service) SetTextureUploadBudget(bytes uint64) {
 	s.textureUploadBudget.Store(bytes)
 }
 
+// SetTextureCacheBudget requests a resident-texture budget change. The cache
+// applies it on the graphics-owner thread because evictions unload GPU handles.
+func (s *Service) SetTextureCacheBudget(bytes uint64) {
+	if bytes == 0 {
+		bytes = 1
+	}
+	s.textureCacheBudget.Store(bytes)
+}
+
+func (s *Service) applyTextureCacheBudget() error {
+	if s.cache == nil {
+		return nil
+	}
+	wanted := s.textureCacheBudget.Load()
+	if wanted == 0 || uint64(s.cache.GetBudget()) == wanted {
+		return nil
+	}
+	return s.cache.SetBudget(int(wanted))
+}
+
 type ResidencyDiagnostics struct {
 	Entries, Weight, Budget            int
 	Hits, Misses, Evictions            uint64
@@ -52,7 +72,7 @@ func (s *Service) drawResidencyDebug(composer *render.Composer) {
 	lines := []string{
 		fmt.Sprintf("GPU textures  resident=%d  %.1f/%.1f MiB", stats.Entries, float64(stats.Weight)/(1024*1024), float64(stats.Budget)/(1024*1024)),
 		fmt.Sprintf("cache hits=%d  misses=%d  evictions=%d", stats.Hits, stats.Misses, stats.Evictions),
-		fmt.Sprintf("uploads=%d  total=%.1f MiB  budget=%.1f MiB/frame", stats.Uploads, float64(stats.UploadBytes)/(1024*1024), float64(stats.UploadBudget)/(1024*1024)),
+		fmt.Sprintf("lifetime uploads=%d  traffic=%.1f MiB  warm budget=%.1f MiB/frame", stats.Uploads, float64(stats.UploadBytes)/(1024*1024), float64(stats.UploadBudget)/(1024*1024)),
 		fmt.Sprintf("warm queue=%d  %.1f MiB", stats.WarmPending, float64(stats.WarmPendingBytes)/(1024*1024)),
 	}
 	rl.DrawRectangle(8, 8, 510, int32(18*len(lines)+12), rl.Fade(rl.Black, 0.82))
