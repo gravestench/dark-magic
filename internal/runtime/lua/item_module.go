@@ -16,6 +16,7 @@ func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, 
 		"select_weapon_set": commandHelp("dm.items.select_weapon_set(set)", "Queue selection of alternate hand-equipment set 0 or 1."),
 		"sell_held":         commandHelp("dm.items.sell_held(item_id, vendor, category)", "Queue priced sale and authority-owned vendor catalog arrangement."),
 		"buy_to_held":       commandHelp("dm.items.buy_to_held(item_id, vendor)", "Queue priced purchase of vendor stock into the authoritative held container."),
+		"complete_service":  commandHelp("dm.items.complete_service(service)", "Queue a server-defined quest or vendor service transaction."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"snapshot": func(state *lua.LState) int {
@@ -47,6 +48,12 @@ func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, 
 			},
 			"buy_to_held": func(state *lua.LState) int {
 				if err := controller.BuyToHeld(state.CheckString(1), state.CheckString(2)); err != nil {
+					state.RaiseError("%v", err)
+				}
+				return 0
+			},
+			"complete_service": func(state *lua.LState) int {
+				if err := controller.CompleteService(state.CheckString(1)); err != nil {
 					state.RaiseError("%v", err)
 				}
 				return 0
@@ -124,6 +131,11 @@ func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[stri
 		entry.RawSetString("belt_slot", lua.LNumber(placement.BeltSlot))
 		entry.RawSetString("weapon_set", lua.LNumber(placement.WeaponSet))
 		entry.RawSetString("page", lua.LNumber(placement.Page))
+		services := state.NewTable()
+		for _, service := range candidate.AppliedServices {
+			services.Append(lua.LString(service))
+		}
+		entry.RawSetString("applied_services", services)
 		entries.Append(entry)
 	}
 	result.RawSetString("items", entries)

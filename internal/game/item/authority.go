@@ -10,9 +10,10 @@ import (
 // Authority owns each player's container state. Session commands are the only
 // writers; snapshots are copies for presentation, persistence, and networking.
 type Authority struct {
-	mu      sync.RWMutex
-	players map[string]*State
-	trades  TradeCatalog
+	mu       sync.RWMutex
+	players  map[string]*State
+	trades   TradeCatalog
+	services ServiceCatalog
 }
 
 func NewAuthority() *Authority { return &Authority{players: make(map[string]*State)} }
@@ -24,6 +25,18 @@ func (authority *Authority) SetTradeCatalog(catalog TradeCatalog) {
 	}
 	authority.mu.Lock()
 	authority.trades = copyCatalog
+	authority.mu.Unlock()
+}
+
+func (authority *Authority) SetServiceCatalog(catalog ServiceCatalog) {
+	copyCatalog := make(ServiceCatalog, len(catalog))
+	for id, rule := range catalog {
+		rule.ID = strings.TrimSpace(rule.ID)
+		rule.ConsumeSlots = append([]string(nil), rule.ConsumeSlots...)
+		copyCatalog[strings.ToLower(strings.TrimSpace(id))] = rule
+	}
+	authority.mu.Lock()
+	authority.services = copyCatalog
 	authority.mu.Unlock()
 }
 
@@ -101,6 +114,21 @@ func (authority *Authority) buyToHeld(owner, itemID, vendor string) error {
 		return err
 	}
 	_, err = state.buyToHeldForGold(itemID, terms)
+	return err
+}
+
+func (authority *Authority) completeService(owner, service string) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	state, found := authority.players[owner]
+	if !found {
+		return fmt.Errorf("item: unknown owner %q", owner)
+	}
+	rule, err := authority.services.Rule(service)
+	if err != nil {
+		return err
+	}
+	_, err = state.completeService(rule)
 	return err
 }
 

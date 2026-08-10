@@ -17,6 +17,7 @@ const (
 	WeaponSetCommand  = "item.weapon_set"
 	VendorSellCommand = "item.vendor_sell"
 	VendorBuyCommand  = "item.vendor_buy"
+	ServiceCommand    = "item.service_complete"
 )
 
 // MovePayload describes intent, not trusted results. In particular, Displaced
@@ -38,6 +39,11 @@ type VendorPayload struct {
 	ItemID   string `json:"item_id"`
 	Vendor   string `json:"vendor"`
 	Category string `json:"category,omitempty"`
+}
+
+type ServicePayload struct {
+	Owner   string `json:"owner,omitempty"`
+	Service string `json:"service"`
 }
 
 func RegisterCommands(session *gamesession.Session, authority *Authority) error {
@@ -79,7 +85,52 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 	}); err != nil {
 		return err
 	}
-	return registerVendorCommands(session, authority)
+	if err := registerVendorCommands(session, authority); err != nil {
+		return err
+	}
+	return session.Register(ServiceCommand, gamesession.CommandHandler{
+		Validate: validateServiceCommand,
+		Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+			payload, err := decodeService(command.Payload)
+			if err != nil {
+				return err
+			}
+			owner := payload.Owner
+			if owner == "" {
+				owner = command.Player
+			}
+			return authority.completeService(owner, payload.Service)
+		},
+		Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
+	})
+}
+
+func validateServiceCommand(command simulation.Command) error {
+	payload, err := decodeService(command.Payload)
+	if err != nil {
+		return err
+	}
+	if command.Authority == simulation.AuthorityPlayer && payload.Owner != "" && payload.Owner != command.Player {
+		return fmt.Errorf("item: player cannot complete another owner's service")
+	}
+	return nil
+}
+
+func decodeService(encoded []byte) (ServicePayload, error) {
+	var payload ServicePayload
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		return ServicePayload{}, err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return ServicePayload{}, fmt.Errorf("item: service payload has trailing data")
+	}
+	payload.Owner, payload.Service = strings.TrimSpace(payload.Owner), strings.TrimSpace(payload.Service)
+	if payload.Service == "" {
+		return ServicePayload{}, fmt.Errorf("item: service identity is required")
+	}
+	return payload, nil
 }
 
 func registerVendorCommands(session *gamesession.Session, authority *Authority) error {
@@ -236,4 +287,12 @@ func VendorCommand(kind string, payload VendorPayload, actor string, sequence, t
 		return simulation.Command{}, err
 	}
 	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: kind, Payload: encoded}, nil
+}
+
+func ServiceCompletionCommand(payload ServicePayload, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: ServiceCommand, Payload: encoded}, nil
 }

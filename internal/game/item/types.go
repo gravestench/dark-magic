@@ -21,14 +21,15 @@ const (
 // Item contains only facts needed to decide where an item can go. Rich loot
 // properties remain attached to the item identity elsewhere.
 type Item struct {
-	ID           string
-	Code         string
-	Width        int
-	Height       int
-	BodySlots    []string
-	BeltEligible bool
-	BaseCost     int64
-	Presentation Presentation
+	ID              string
+	Code            string
+	Width           int
+	Height          int
+	BodySlots       []string
+	BeltEligible    bool
+	BaseCost        int64
+	AppliedServices []string
+	Presentation    Presentation
 }
 
 // Presentation keeps the two original views explicit. World drops may animate
