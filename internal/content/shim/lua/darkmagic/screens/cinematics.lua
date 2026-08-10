@@ -12,7 +12,6 @@ local video = require("dm.video/v1")
 local controls = require("darkmagic.ui.controls")
 local label_button = require("darkmagic.ui.label_button")
 local cursor = require("darkmagic.ui.cursor")
-local dc6 = require("darkmagic.ui.dc6")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.cinematics
@@ -20,13 +19,17 @@ local screen = manifest.screens.cinematics
 return {
     create = function(self)
         self.root = render.create("hud")
-        self.background = dc6.frontend_background(
-            self.root,
-            "hud",
-            screen.background,
-            manifest.palettes[screen.palette],
-            manifest.layouts.frontend_tiles
-        )
+        self.background = render.create("hud", self.root)
+        if render.assets_available() then
+            local width, height = self.background:set_dc6_combined(
+                screen.background,
+                manifest.palettes[screen.palette],
+                0,
+                0
+            )
+            self.background:set_position(screen.x + width / 2, screen.y + height / 2)
+            self.background:set_z(-100)
+        end
         self.controls = controls.new()
         self.entries = {}
         for index, definition in ipairs(screen.entries) do

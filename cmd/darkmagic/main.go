@@ -52,6 +52,11 @@ import (
 )
 
 func main() {
+	exitCode := 0
+	// Register this first so it runs after every later cleanup defer. Capture and
+	// startup failures must be observable by Make and CI without skipping profiler
+	// shutdown or other orderly teardown.
+	defer func() { os.Exit(exitCode) }()
 	// Cocoa and GLFW must be initialized and pumped from the process's original
 	// main thread. Keep the entire renderer lifecycle on that thread.
 	runtime.LockOSThread()
@@ -69,6 +74,7 @@ func main() {
 	logLevel, err := parseLogLevel(*logLevelFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		exitCode = 1
 		return
 	}
 	shellLogs := shell.NewLogBuffer(1000)
@@ -84,6 +90,7 @@ func main() {
 		profile, err = profiling.Start(*profileDirectory, true)
 		if err != nil {
 			slog.Error("starting profiler", "error", err)
+			exitCode = 1
 			return
 		}
 		profile.ConfigureScenes(*profileScenes)
@@ -96,20 +103,24 @@ func main() {
 	contentFS, err := content.FromEnvironment()
 	if err != nil {
 		slog.Error("constructing content filesystem", "error", err)
+		exitCode = 1
 		return
 	}
 	if err := content.ValidateClientAssets(contentFS); err != nil {
 		slog.Error("validating client content", "error", err)
+		exitCode = 1
 		return
 	}
 	*captureDirectoryFlag, *captureScenes = capture.Defaults(*captureDirectoryFlag, *captureScenes)
 	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
 	if err != nil {
 		slog.Error("expanding capture directory", "error", err)
+		exitCode = 1
 		return
 	}
 	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, shellLogs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
+		exitCode = 1
 	}
 }
 
@@ -196,7 +207,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		"reference_issues", len(referenceIssues))
 	fixtureEntries := developmentCharacters(fixtureCharacters)
 	saves := persistence.New(fixtureEntries...)
-	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "inventory" || startScene == "character") {
+	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "game_loading" || startScene == "inventory" || startScene == "character" || startScene == "skills") {
 		if err := saves.Select(fixtureEntries[0].ID); err != nil {
 			return fmt.Errorf("select development fixture: %w", err)
 		}

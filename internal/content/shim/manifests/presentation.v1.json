@@ -319,6 +319,8 @@
     "cinematics": {
       "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6",
       "palette": "sky",
+      "x": 240,
+      "y": 90,
       "entries": [
         { "id": "act1", "label": "darkmagic.cinematics.act1", "path": "data/local/Video/ENG/d2intro640x292.bik" },
         { "id": "act2", "label": "darkmagic.cinematics.act2", "path": "data/local/Video/ENG/Act02start640x292.bik" },

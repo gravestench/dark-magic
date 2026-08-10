@@ -93,6 +93,18 @@ func TestSessionCloseRejectsIncompleteCapture(t *testing.T) {
 	}
 }
 
+func TestObserveReportsRequestedSceneThatTransitionsBeforeCapture(t *testing.T) {
+	session, err := New(t.TempDir(), "loading", 2, &fakeScreenshotter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Observe([]string{"loading"})
+	session.Observe([]string{"title"})
+	if session.err == nil || !strings.Contains(session.err.Error(), "transitioned before") {
+		t.Fatalf("expected transition error, got %v", session.err)
+	}
+}
+
 func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
 	directory := t.TempDir()
 	capturer := &fakeScreenshotter{}

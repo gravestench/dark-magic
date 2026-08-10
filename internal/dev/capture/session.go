@@ -90,6 +90,10 @@ func (s *Session) Observe(stack []string) {
 	}
 	scene := stack[len(stack)-1]
 	if scene != s.current {
+		if s.wanted[s.current] && !s.captured[s.current] {
+			s.err = fmt.Errorf("scene %q transitioned before a visible frame could be captured", s.current)
+			return
+		}
 		s.current, s.frames = scene, 0
 	}
 	s.frames++
@@ -171,12 +175,11 @@ func inspect(path, scene, name string) (Result, error) {
 func hasVisiblePixels(frame image.Image, scene string) bool {
 	bounds := frame.Bounds()
 	required := (bounds.Dx()*bounds.Dy() + 49) / 50
-	// The authentic death overlay is only three lines of bitmap text over the
-	// world. When booted directly for capture there is no world below it, so the
-	// normal 2% threshold incorrectly classifies the valid sparse frame as blank.
-	// Keep the stricter threshold for every other scene; death still requires a
-	// meaningful number of lit pixels and an actually blank framebuffer retries.
-	if scene == "death" {
+	// These authentic overlays contain only text or a small transitional image
+	// over the world. When booted directly there is no world below them, so the
+	// normal 2% threshold incorrectly classifies valid sparse frames as blank.
+	// They still require hundreds of lit pixels; a black framebuffer retries.
+	if scene == "death" || scene == "game_loading" || scene == "npc_dialogue" || scene == "ground_items" || scene == "chat" || scene == "overhead_labels" {
 		required = (bounds.Dx()*bounds.Dy() + 999) / 1000
 	}
 	visible := 0
