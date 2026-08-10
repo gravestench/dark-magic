@@ -61,6 +61,21 @@ func (c *Cache) GetBudget() int {
 	return c.budget
 }
 
+// CanInsertWithoutEviction reports whether key is already resident or adding
+// weight fits in currently unused capacity. Optional background work uses this
+// to avoid evicting resources that foreground work may still need.
+func (c *Cache) CanInsertWithoutEviction(key string, weight int) bool {
+	if key == "" || weight < 0 {
+		return false
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if _, exists := c.lookup[versionedKey("", key)]; exists {
+		return true
+	}
+	return weight <= c.budget-c.weight
+}
+
 // SetEvictionHandler installs a callback invoked after values leave the cache.
 func (c *Cache) SetEvictionHandler(handler func(interface{})) {
 	c.mutex.Lock()

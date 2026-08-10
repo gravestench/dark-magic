@@ -62,14 +62,14 @@ func TestSessionRetriesBlankFramebuffer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"})
+	session.Observe([]string{"loading"}, 1)
 	if len(session.results) != 0 {
 		t.Fatalf("blank frame was captured: %#v", session.results)
 	}
 	if session.Complete() {
 		t.Fatal("session completed after a rejected blank frame")
 	}
-	session.Observe([]string{"loading"})
+	session.Observe([]string{"loading"}, 1)
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestSessionCloseRejectsIncompleteCapture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"death"})
+	session.Observe([]string{"death"}, 1)
 	err = session.Close()
 	if err == nil || !strings.Contains(err.Error(), "missing scenes: title") {
 		t.Fatalf("Close error = %v, want missing title", err)
@@ -98,8 +98,8 @@ func TestObserveReportsRequestedSceneThatTransitionsBeforeCapture(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"})
-	session.Observe([]string{"title"})
+	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"title"}, 2)
 	if session.err == nil || !strings.Contains(session.err.Error(), "transitioned before") {
 		t.Fatalf("expected transition error, got %v", session.err)
 	}
@@ -112,11 +112,11 @@ func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"})
-	session.Observe([]string{"loading"})
-	session.Observe([]string{"loading"})
-	session.Observe([]string{"title"})
-	session.Observe([]string{"title"})
+	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"title"}, 2)
+	session.Observe([]string{"title"}, 2)
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -130,6 +130,23 @@ func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
 	}
 	if len(session.results) != 2 || session.results[0].Width != 8 || session.results[0].Height != 6 || len(session.results[0].SHA256) != 64 {
 		t.Fatalf("capture results = %#v", session.results)
+	}
+}
+
+func TestSessionRestartsSettleWindowAfterStructuralChange(t *testing.T) {
+	capturer := &fakeScreenshotter{}
+	session, err := New(t.TempDir(), "vendor", 2, capturer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Observe([]string{"vendor"}, 10)
+	session.Observe([]string{"vendor"}, 11)
+	if capturer.calls != 0 {
+		t.Fatal("captured immediately after a late structural change")
+	}
+	session.Observe([]string{"vendor"}, 11)
+	if capturer.calls != 1 || !session.Complete() {
+		t.Fatalf("stable revised scene was not captured: calls=%d", capturer.calls)
 	}
 }
 

@@ -17,7 +17,7 @@ func (app *application) startCapture() error {
 		return wrap("start scene capture", err)
 	}
 	app.stopCapture = app.renderer.SubscribePostFrame(func() {
-		app.capture.Observe(app.navigator.Stack())
+		app.capture.Observe(app.navigator.Stack(), app.composer.Diagnostics().StructuralRevision)
 		if app.capture.Complete() {
 			app.stop()
 		}

@@ -359,3 +359,43 @@ func TestWarmTextureQueueDeduplicatesAndRespectsBudget(t *testing.T) {
 		t.Fatalf("warm pending after drain = %d", got)
 	}
 }
+
+type refusingWarmBackend struct{ recordingBackend }
+
+func (*refusingWarmBackend) CanWarmTexture(string, uint64) bool { return false }
+
+func TestWarmTextureQueuePreservesWorkRejectedByResidencyPolicy(t *testing.T) {
+	composer := &Composer{}
+	composer.WarmTexture(image.NewRGBA(image.Rect(0, 0, 4, 4)))
+	backend := &refusingWarmBackend{}
+	if err := composer.DrainWarm(backend, 1024); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.changes) != 0 || composer.Diagnostics().WarmPending != 1 {
+		t.Fatalf("rejected warm work was applied or discarded: changes=%d diagnostics=%#v", len(backend.changes), composer.Diagnostics())
+	}
+}
+
+func TestStructuralRevisionIgnoresOrdinaryNodeUpdates(t *testing.T) {
+	composer := &Composer{}
+	id, err := composer.Create(NodeID{}, LayerModal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := composer.Diagnostics().StructuralRevision
+	if created == 0 {
+		t.Fatal("node creation did not advance structural revision")
+	}
+	if err := composer.Update(id, func(node *Node) { node.X = 12 }); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().StructuralRevision; got != created {
+		t.Fatalf("ordinary update changed structural revision: got %d, want %d", got, created)
+	}
+	if err := composer.Destroy(id); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().StructuralRevision; got != created+1 {
+		t.Fatalf("destroy revision = %d, want %d", got, created+1)
+	}
+}
