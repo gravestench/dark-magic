@@ -47,7 +47,37 @@ func TestLegacyPreferencesGainTextureBudgetDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if values := settings.Values(); values.TextureUploadBudgetMB != 4 || values.TextureCacheBudgetMB != 512 {
+	if values := settings.Values(); values.TextureUploadBudgetMB != 16 || values.TextureCacheBudgetMB != 512 {
 		t.Fatalf("migrated values = %#v", values)
+	}
+}
+
+func TestLegacyDefaultUploadBudgetMigratesOnlyOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "preferences.json")
+	legacy := `{"sound_volume":0.5,"music_volume":0.5,"texture_upload_budget_mb":4,"texture_cache_budget_mb":512}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := settings.Values().TextureUploadBudgetMB; got != 16 {
+		t.Fatalf("migrated upload budget = %g", got)
+	}
+	values := settings.Values()
+	values.TextureUploadBudgetMB = 4
+	if err := settings.Update(values); err != nil {
+		t.Fatal(err)
+	}
+	if err := settings.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := reloaded.Values().TextureUploadBudgetMB; got != 4 {
+		t.Fatalf("explicit upload budget changed after reload: %g", got)
 	}
 }

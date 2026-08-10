@@ -11,6 +11,7 @@ import (
 )
 
 type Values struct {
+	Version               int     `json:"version"`
 	SoundVolume           float64 `json:"sound_volume"`
 	MusicVolume           float64 `json:"music_volume"`
 	DebugTextureResidency bool    `json:"debug_texture_residency"`
@@ -26,7 +27,7 @@ type Settings struct {
 }
 
 func Defaults() Values {
-	return Values{SoundVolume: .5, MusicVolume: .5, TextureUploadBudgetMB: 4, TextureCacheBudgetMB: 512}
+	return Values{Version: 1, SoundVolume: .5, MusicVolume: .5, TextureUploadBudgetMB: 16, TextureCacheBudgetMB: 512}
 }
 
 func NewTransient() *Settings { return &Settings{values: Defaults()} }
@@ -50,6 +51,16 @@ func New(path string) (*Settings, error) {
 	if err := json.Unmarshal(data, &settings.values); err != nil {
 		return nil, fmt.Errorf("preferences: decode %q: %w", path, err)
 	}
+	var schema struct {
+		Version *int `json:"version"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		return nil, fmt.Errorf("preferences: decode schema %q: %w", path, err)
+	}
+	if schema.Version == nil && settings.values.TextureUploadBudgetMB == 4 {
+		settings.values.TextureUploadBudgetMB = Defaults().TextureUploadBudgetMB
+	}
+	settings.values.Version = Defaults().Version
 	if settings.values.TextureUploadBudgetMB == 0 {
 		settings.values.TextureUploadBudgetMB = Defaults().TextureUploadBudgetMB
 	}

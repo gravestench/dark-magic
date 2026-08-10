@@ -79,7 +79,10 @@ type RenderCapability struct {
 }
 
 func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.FS) *RenderCapability {
-	const decodedAssetBudget = 64 * 1024 * 1024
+	// Character-creation animations expand into hundreds of RGBA frames. A
+	// 64 MiB cache discarded the first prepared states before preload finished,
+	// forcing the Lua interaction path to decode them again on first hover.
+	const decodedAssetBudget = 512 * 1024 * 1024
 	cache := &renderAssetCache{
 		decoded:  cachepkg.New(decodedAssetBudget),
 		inflight: make(map[string]*assetDecodeFlight),

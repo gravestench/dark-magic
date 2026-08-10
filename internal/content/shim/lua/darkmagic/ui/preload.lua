@@ -68,6 +68,17 @@ local function add_control_assets(requests, seen, controls)
     end
 end
 
+local function add_character_states(requests, seen, create, states)
+    for _, class in ipairs(create.classes) do
+        for _, state in ipairs(states) do
+            add_dc6_composite(
+                requests, seen, class[state], class[state .. "_overlay"],
+                create.class_palette
+            )
+        end
+    end
+end
+
 -- Start warming both destinations reachable through Single Player. Calling
 -- this more than once returns the original job instead of scheduling copies.
 function preload.frontend()
@@ -94,6 +105,21 @@ function preload.frontend()
         add_dc6_composite(requests, seen, menu.logo["black_" .. side], menu.logo["fire_" .. side], menu.logo.palette)
     end
     add_control_assets(requests, seen, menu.controls)
+
+    -- Character creation is the first expensive interactive destination for a
+    -- new profile. Queue its visible actors and pointer-triggered states before
+    -- secondary menu pages so hover and selection cannot outrun the warmer.
+    add_frontend_background(requests, seen, create)
+    add_dc6_animation(requests, seen, create.campfire.sheet, create.campfire.palette)
+    add_dc6(requests, seen, create.dialog.sheet, create.dialog.palette)
+    add_control_assets(requests, seen, create.controls)
+    add_control_assets(requests, seen, create.options)
+    for _, class in ipairs(create.classes) do
+        add_dc6_animation(requests, seen, class.unselected, create.class_palette)
+    end
+    add_character_states(requests, seen, create, {"hover", "forward"})
+    add_character_states(requests, seen, create, {"selected", "back"})
+
     add_frontend_background(requests, seen, manifest.screens.tcpip)
     add_control_assets(requests, seen, manifest.screens.tcpip.controls)
     add_frontend_background(requests, seen, manifest.screens.credits)
@@ -115,15 +141,6 @@ function preload.frontend()
     end
     add_dc6(requests, seen, select.delete_dialog.sheet, select.delete_dialog.palette)
     add_control_assets(requests, seen, select.controls)
-
-    add_frontend_background(requests, seen, create)
-    add_dc6_animation(requests, seen, create.campfire.sheet, create.campfire.palette)
-    add_dc6(requests, seen, create.dialog.sheet, create.dialog.palette)
-    add_control_assets(requests, seen, create.controls)
-    add_control_assets(requests, seen, create.options)
-    for _, class in ipairs(create.classes) do
-        add_dc6_animation(requests, seen, class.unselected, create.class_palette)
-    end
 
     -- Fonts are cached with their palette transform because applying PL2 data
     -- is part of CPU-side font construction.
@@ -154,19 +171,17 @@ end
 -- (hover, selection walks, and overlays) without delaying the transition.
 function preload.character_create_interactions()
     if not render.assets_available() then return nil end
+    -- frontend() owns these states now and starts them during startup videos.
+    -- Reusing its job also prevents a completed bundle from being requeued when
+    -- the character-creation scene is constructed.
+    if frontend_job then return frontend_job end
     if character_interaction_job then
         local status = render.preload_status(character_interaction_job)
         if status and not status.done then return character_interaction_job end
     end
     local requests, seen = {}, {}
-    for _, class in ipairs(manifest.screens.character_create.classes) do
-        for _, state in ipairs({"hover", "selected", "forward", "back"}) do
-            add_dc6_composite(
-                requests, seen, class[state], class[state .. "_overlay"],
-                manifest.screens.character_create.class_palette
-            )
-        end
-    end
+    local create = manifest.screens.character_create
+    add_character_states(requests, seen, create, {"hover", "forward", "selected", "back"})
     character_interaction_job = render.preload(requests)
     return character_interaction_job
 end
