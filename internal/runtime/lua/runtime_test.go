@@ -31,6 +31,37 @@ func TestRuntimeExecutionBudgetInterruptsLuaAndRecovers(t *testing.T) {
 	}
 }
 
+func TestRuntimeSupportsASeparateBoundedLifecycleBudget(t *testing.T) {
+	runtime := New()
+	if err := runtime.SetExecutionBudget(5 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+
+	installPause := func(state *lua.LState) error {
+		state.SetGlobal("pause_for_cold_asset", state.NewFunction(func(*lua.LState) int {
+			time.Sleep(25 * time.Millisecond)
+			return 0
+		}))
+		return nil
+	}
+	if err := runtime.runWithBudget(context.Background(), time.Second, installPause); err != nil {
+		t.Fatal(err)
+	}
+	invoke := func(state *lua.LState) error {
+		return state.DoString(`pause_for_cold_asset(); lifecycle_finished = true`)
+	}
+	if err := runtime.Run(context.Background(), invoke); err == nil || !strings.Contains(err.Error(), "deadline exceeded") {
+		t.Fatalf("normal invocation escaped its tight budget: %v", err)
+	}
+	if err := runtime.runWithBudget(context.Background(), 100*time.Millisecond, invoke); err != nil {
+		t.Fatalf("bounded lifecycle invocation failed: %v", err)
+	}
+}
+
 func TestRuntimeReturnsSourceAwareTraceback(t *testing.T) {
 	runtime := New()
 	if err := runtime.Start(context.Background()); err != nil {

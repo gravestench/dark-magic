@@ -69,7 +69,11 @@ func (r *Runtime) RegisterInstaller(installer Installer) error {
 }
 
 func (r *Runtime) runScoped(ctx context.Context, scope *Scope, fn func(*lua.LState) error) error {
-	return r.Run(ctx, func(state *lua.LState) error {
+	return r.runScopedWithBudget(ctx, scope, r.executionBudget, fn)
+}
+
+func (r *Runtime) runScopedWithBudget(ctx context.Context, scope *Scope, budget time.Duration, fn func(*lua.LState) error) error {
+	return r.runWithBudget(ctx, budget, func(state *lua.LState) error {
 		previous := r.activeScope
 		r.activeScope = scope
 		defer func() { r.activeScope = previous }()
@@ -208,6 +212,10 @@ func (r *Runtime) Stop(ctx context.Context) error {
 
 // Run executes fn on the Lua owner goroutine.
 func (r *Runtime) Run(ctx context.Context, fn func(*lua.LState) error) error {
+	return r.runWithBudget(ctx, r.executionBudget, fn)
+}
+
+func (r *Runtime) runWithBudget(ctx context.Context, budget time.Duration, fn func(*lua.LState) error) error {
 	if fn == nil {
 		return errors.New("modruntime: nil invocation")
 	}
@@ -218,8 +226,8 @@ func (r *Runtime) Run(ctx context.Context, fn func(*lua.LState) error) error {
 	}
 	requestContext := ctx
 	cancel := func() {}
-	if r.executionBudget > 0 {
-		requestContext, cancel = context.WithTimeout(ctx, r.executionBudget)
+	if budget > 0 {
+		requestContext, cancel = context.WithTimeout(ctx, budget)
 	}
 	defer cancel()
 	response := make(chan error, 1)
