@@ -20,7 +20,7 @@ require (
 	github.com/gravestench/mpq v0.2.0
 	github.com/gravestench/pl2 v0.2.0
 	github.com/gravestench/tbl_text v0.2.0
-	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
+	github.com/gravestench/tsv v0.2.1
 	github.com/yuin/gopher-lua v1.1.0
 )
 

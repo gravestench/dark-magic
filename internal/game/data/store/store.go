@@ -45,6 +45,19 @@ func (s *Store) Read(path string) ([]byte, error) {
 	return bytes.Clone(data), nil
 }
 
+// Open returns the original layered table as a stream for format codecs.
+// The caller owns the returned file and must close it.
+func (s *Store) Open(path string) (fs.File, error) {
+	if s == nil || s.source == nil {
+		return nil, fmt.Errorf("recordstore: no content source")
+	}
+	file, err := s.source.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("recordstore: open %q: %w", path, err)
+	}
+	return file, nil
+}
+
 // Load returns a defensive copy of a TSV table.
 func (s *Store) Load(path string) ([]map[string]string, error) {
 	s.mu.RLock()

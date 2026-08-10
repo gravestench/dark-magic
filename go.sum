@@ -104,6 +104,10 @@ github.com/gravestench/tbl_text v0.2.0 h1:57df54UHF/hpKwGEEOWS/9PGIlh8iBQYi1KHay
 github.com/gravestench/tbl_text v0.2.0/go.mod h1:Cw33p5B3pzxOu5oaj4p+nglMo6J+UUMo7NSE9tFNJhk=
 github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988 h1:UFbntCBaqCMOlx2JZ8hcaP0yEOewAZpBswOkqI7Ydxg=
 github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988/go.mod h1:Y/9agPFwBUEniuqNLKbbIOyhPlZSUloA0mk4/Of4HKU=
+github.com/gravestench/tsv v0.2.0 h1:Q2oIAvYZaWELTzZYJcOX00W0JgDcpt7d2fc+mZbfXio=
+github.com/gravestench/tsv v0.2.0/go.mod h1:Y/9agPFwBUEniuqNLKbbIOyhPlZSUloA0mk4/Of4HKU=
+github.com/gravestench/tsv v0.2.1 h1:nwBmXdS5CD6sI3oFdpvtar3ZwzvTYVUuZl2gnqR9WR0=
+github.com/gravestench/tsv v0.2.1/go.mod h1:Y/9agPFwBUEniuqNLKbbIOyhPlZSUloA0mk4/Of4HKU=
 github.com/gravestench/wav v0.1.0 h1:LBfyzhVYHz8M3bHqx7CCXa5wUqyuT6LXNGuH4hw1Tow=
 github.com/gravestench/wav v0.1.0/go.mod h1:dICul72I5bCcY2kThu3OjmDBlrn/PYTmAoWGvilZgPU=
 github.com/jupiterrider/ffi v0.7.0 h1:RKsl6Ascal+3kyAqR5Qcbp83LceQMLc1VZbPfHWoNzs=
