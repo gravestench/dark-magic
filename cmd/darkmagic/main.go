@@ -226,7 +226,8 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := gameplayer.Register(offlineSession); err != nil {
 		return fmt.Errorf("register offline player commands: %w", err)
 	}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player", "game_world")
+	movementController := &gamesession.MovementController{}
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player", "game_world", movementController)
 	if err != nil {
 		return fmt.Errorf("create offline movement source: %w", err)
 	}
@@ -314,6 +315,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.SaveModule(saves)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.PlayerControlModule(movementController)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.NewECSCapability(scripts, entitySimulation).Module()); err != nil {

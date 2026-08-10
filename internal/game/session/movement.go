@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -16,9 +17,17 @@ import (
 const MoveCommand = "player.move"
 
 type MovePayload struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X       int  `json:"x"`
+	Y       int  `json:"y"`
+	Running bool `json:"running"`
 }
+
+// MovementController is the thread-safe local intent mailbox shared by Lua UI
+// and the fixed-tick movement command source. It never mutates ECS state.
+type MovementController struct{ running atomic.Bool }
+
+func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
+func (controller *MovementController) Running() bool           { return controller.running.Load() }
 
 // RegisterMovement installs the authoritative adapter from normalized movement
 // intent to Lua-defined world velocity components.
@@ -41,6 +50,7 @@ func RegisterMovement(session *Session) error {
 			if !present {
 				return nil
 			}
+			modes, modesPresent := akara.GetDynamicStore(engine.World(), "dm.player.movement_mode")
 			for _, entity := range controls.Entities() {
 				control, found := controls.Get(entity)
 				if !found {
@@ -57,11 +67,22 @@ func RegisterMovement(session *Session) error {
 				if !found {
 					continue
 				}
-				if err := velocity.Set("x", float64(payload.X)*10); err != nil {
+				speed := 10.0
+				if payload.Running {
+					speed = 15
+				}
+				if err := velocity.Set("x", float64(payload.X)*speed); err != nil {
 					return err
 				}
-				if err := velocity.Set("y", float64(payload.Y)*10); err != nil {
+				if err := velocity.Set("y", float64(payload.Y)*speed); err != nil {
 					return err
+				}
+				if modesPresent {
+					if mode, found := modes.Get(entity); found {
+						if err := mode.Set("running", payload.Running); err != nil {
+							return err
+						}
+					}
 				}
 			}
 			return nil
@@ -77,15 +98,20 @@ type MovementSource struct {
 	player   string
 	focusID  string
 	sequence uint64
+	control  *MovementController
 }
 
-func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string) (*MovementSource, error) {
+func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string, controllers ...*MovementController) (*MovementSource, error) {
 	player = strings.TrimSpace(player)
 	focusID = strings.TrimSpace(focusID)
 	if engine == nil || input == nil || player == "" || focusID == "" {
 		return nil, fmt.Errorf("game session: movement source requires engine, input, player, and focus owner")
 	}
-	return &MovementSource{engine: engine, input: input, player: player, focusID: focusID}, nil
+	control := &MovementController{}
+	if len(controllers) > 0 && controllers[0] != nil {
+		control = controllers[0]
+	}
+	return &MovementSource{engine: engine, input: input, player: player, focusID: focusID, control: control}, nil
 }
 
 func (source *MovementSource) Commands(tick uint64) []simulation.Command {
@@ -96,6 +122,9 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 	x, y := 0, 0
 	owner := source.input.Owner()
 	if owner.Domain == inputstate.FocusScene && (owner.ID == source.focusID || source.input.Gameplay()) {
+		if source.input.Action("toggle_run").Pressed {
+			source.control.SetRunning(!source.control.Running())
+		}
 		if action := source.input.Action("left"); action.Down || action.Pressed {
 			x--
 		}
@@ -110,7 +139,7 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 		}
 	}
 	source.sequence++
-	payload, _ := json.Marshal(MovePayload{X: x, Y: y})
+	payload, _ := json.Marshal(MovePayload{X: x, Y: y, Running: source.control.Running()})
 	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.sequence, Kind: MoveCommand, Payload: payload}}
 }
 

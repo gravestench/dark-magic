@@ -54,7 +54,8 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := gameplayer.Register(authority); err != nil {
 		t.Fatal(err)
 	}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world")
+	movementController := &gamesession.MovementController{}
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,6 +83,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.SaveModule(saves),
+		modruntime.PlayerControlModule(movementController),
 		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),
 		scenes.Module(),
@@ -382,7 +384,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := beforeValue.(float64)
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}, "toggle_run": {Pressed: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
@@ -392,6 +394,17 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	}
 	if after := afterValue.(float64); after <= before {
 		t.Fatalf("hero did not move: %v -> %v", before, after)
+	}
+	modes, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.movement_mode")
+	if !found {
+		t.Fatal("game world did not register movement-mode component")
+	}
+	mode, found := modes.Get(entities[0])
+	if !found {
+		t.Fatal("hero movement mode is missing")
+	}
+	if running, err := mode.Get("running"); err != nil || running != true {
+		t.Fatalf("authoritative movement mode = %v, %v", running, err)
 	}
 
 	if err := scenes.Close(ctx); err != nil {

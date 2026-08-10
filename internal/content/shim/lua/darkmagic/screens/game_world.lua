@@ -54,7 +54,10 @@ return {
             self.hero:set_visible(false)
         end
         if render.assets_available() then
-            self.hud = game_hud.create(self.root, screen.hud, manifest.palettes)
+            local player = require("dm.player/v1")
+            self.hud = game_hud.create(self.root, screen.hud, manifest.palettes, {
+                request_running = player.request_running,
+            })
         end
 
         -- VFS provenance and optional asset checks are examples of querying

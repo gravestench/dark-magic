@@ -103,6 +103,9 @@ hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_s
 				t.Fatalf("HUD %s = %s, want %s", name, got, want)
 			}
 		}
+		if hud.RawGetString("running") != lua.LFalse {
+			t.Fatalf("HUD running = %s, want false", hud.RawGetString("running"))
+		}
 		return nil
 	}); err != nil {
 		t.Fatal(err)

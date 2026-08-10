@@ -58,6 +58,8 @@
   "darkmagic.hud.mana": "MANA",
   "darkmagic.hud.stamina": "STAMINA",
   "darkmagic.hud.experience": "EXPERIENCE",
+  "darkmagic.hud.run": "RUNNING",
+  "darkmagic.hud.walk": "WALKING",
   "darkmagic.inventory.close": "CLOSE INVENTORY",
   "darkmagic.inventory.slot.head": "HEAD",
   "darkmagic.inventory.slot.neck": "AMULET",

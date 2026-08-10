@@ -162,7 +162,7 @@ func (s *Store) GameplayOnly(callback func() error) error {
 
 func isGameplayAction(name string) bool {
 	switch name {
-	case "left", "right", "up", "down", "pointer_primary", "interact", "skill_primary", "skill_secondary":
+	case "left", "right", "up", "down", "pointer_primary", "interact", "skill_primary", "skill_secondary", "toggle_run":
 		return true
 	default:
 		return false
