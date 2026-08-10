@@ -56,6 +56,7 @@ type Session struct {
 	settle    int
 	current   string
 	frames    int
+	revision  uint64
 	results   []Result
 	capturer  Screenshotter
 	err       error
@@ -84,7 +85,7 @@ func New(directory, scenes string, settleFrames int, capturer Screenshotter) (*S
 	return &Session{directory: directory, wanted: wanted, captured: make(map[string]bool), settle: settleFrames, capturer: capturer}, nil
 }
 
-func (s *Session) Observe(stack []string) {
+func (s *Session) Observe(stack []string, structuralRevision uint64) {
 	if s.err != nil || len(stack) == 0 {
 		return
 	}
@@ -94,7 +95,12 @@ func (s *Session) Observe(stack []string) {
 			s.err = fmt.Errorf("scene %q transitioned before a visible frame could be captured", s.current)
 			return
 		}
-		s.current, s.frames = scene, 0
+		s.current, s.frames, s.revision = scene, 0, structuralRevision
+	}
+	if structuralRevision != s.revision {
+		// A late decode may create text or art after the scene first appears.
+		// Begin the stability window again instead of capturing a partial scene.
+		s.revision, s.frames = structuralRevision, 0
 	}
 	s.frames++
 	if !s.wanted[scene] || s.captured[scene] || s.frames < s.settle {

@@ -32,10 +32,15 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 		if err := composer.Drain(backend); err != nil && s.logger != nil {
 			s.logger.Error("draining render composition", "error", err)
 		}
+		backend.advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
+	})
+	// Warm optional textures only after the current frame has drawn. Every
+	// texture the visible scene actually used is now newer in the LRU than
+	// speculative work, so background warming cannot steal its priority.
+	s.SubscribePostFrame(func() {
 		if err := composer.DrainWarm(backend, s.textureUploadBudget.Load()); err != nil && s.logger != nil {
 			s.logger.Error("warming texture residency", "error", err)
 		}
-		backend.advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
 	})
 	s.SubscribeOverlay(func() { s.drawResidencyDebug(composer) })
 	return nil
@@ -49,6 +54,13 @@ type compositionBackend struct {
 	nodeResources  map[render.NodeID]render.ResourceID
 	playbacks      map[render.NodeID]*animationPlayback
 	paletteEffects map[render.ResourceID]*gpuPaletteEffect
+}
+
+func (b *compositionBackend) CanWarmTexture(key string, weight uint64) bool {
+	if b == nil || b.renderer == nil || b.renderer.cache == nil || weight > uint64(^uint(0)>>1) {
+		return false
+	}
+	return b.renderer.cache.CanInsertWithoutEviction(key, int(weight))
 }
 
 // close releases every backend-owned node while the native graphics context is

@@ -117,6 +117,13 @@ type Backend interface {
 	Apply(Change) error
 }
 
+// WarmAdmission is an optional backend policy. Demand resources never consult
+// it; it exists solely to prevent speculative warming from evicting residency
+// that the visible scene established.
+type WarmAdmission interface {
+	CanWarmTexture(key string, weight uint64) bool
+}
+
 type slot struct {
 	generation uint32
 	node       *Node
@@ -130,18 +137,19 @@ type resourceSlot struct {
 // Composer accepts thread-safe retained-state mutations and queues backend
 // changes. Drain must be called by the renderer owner thread.
 type Composer struct {
-	mu               sync.Mutex
-	slots            []slot
-	free             []uint32
-	pending          []Change
-	warmPending      []Change
-	warmKeys         map[string]struct{}
-	resources        []resourceSlot
-	freeResources    []uint32
-	textureUploads   uint64
-	textureBytes     uint64
-	resourceCreates  uint64
-	resourceDestroys uint64
+	mu                 sync.Mutex
+	slots              []slot
+	free               []uint32
+	pending            []Change
+	warmPending        []Change
+	warmKeys           map[string]struct{}
+	resources          []resourceSlot
+	freeResources      []uint32
+	textureUploads     uint64
+	textureBytes       uint64
+	resourceCreates    uint64
+	resourceDestroys   uint64
+	structuralRevision uint64
 }
 
 // Diagnostics summarizes retained and queued renderer state for leak checks.
@@ -151,6 +159,7 @@ type Diagnostics struct {
 	RetainedTextureBytes                                                         uint64
 	TextureUploads, TextureUploadBytes                                           uint64
 	ResourceCreates, ResourceDestroys                                            uint64
+	StructuralRevision                                                           uint64
 }
 
 // Diagnostics returns a consistent composer snapshot without exposing payloads.
@@ -176,6 +185,7 @@ func (c *Composer) Diagnostics() Diagnostics {
 	result.TextureUploadBytes = c.textureBytes
 	result.ResourceCreates = c.resourceCreates
 	result.ResourceDestroys = c.resourceDestroys
+	result.StructuralRevision = c.structuralRevision
 	return result
 }
 
@@ -205,6 +215,7 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	c.resources[index].resource = resource
 	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
 	c.resourceCreates++
+	c.structuralRevision++
 	if bytes := resourceTextureBytes(*resource); bytes > 0 {
 		c.textureUploads++
 		c.textureBytes += bytes
@@ -363,6 +374,7 @@ func (c *Composer) DestroyResource(id ResourceID) error {
 	c.freeResources = append(c.freeResources, id.Slot)
 	c.pending = append(c.pending, Change{Kind: "resource-destroy", ResourceID: id})
 	c.resourceDestroys++
+	c.structuralRevision++
 	return nil
 }
 
@@ -402,6 +414,7 @@ func (c *Composer) Create(parent NodeID, layer Layer) (NodeID, error) {
 	node := &Node{ID: id, Parent: parent, Layer: layer, ScaleX: 1, ScaleY: 1, Visible: true, Blend: "alpha"}
 	c.slots[index].node = node
 	c.pending = append(c.pending, Change{Kind: "create", Node: *node, ID: id})
+	c.structuralRevision++
 	return id, nil
 }
 
@@ -460,6 +473,7 @@ func (c *Composer) Destroy(id NodeID) error {
 		return err
 	}
 	c.destroy(id)
+	c.structuralRevision++
 	return nil
 }
 
@@ -493,6 +507,9 @@ func (c *Composer) DrainWarm(backend Backend, byteBudget uint64) error {
 	for count < len(c.warmPending) {
 		change := c.warmPending[count]
 		weight := resourceTextureBytes(change.Resource)
+		if admission, ok := backend.(WarmAdmission); ok && !admission.CanWarmTexture(change.Resource.TextureKey, weight) {
+			break
+		}
 		if count > 0 && byteBudget > 0 && used+weight > byteBudget {
 			break
 		}

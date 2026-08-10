@@ -136,3 +136,22 @@ func TestVersionMismatchEvictsStaleEntry(t *testing.T) {
 		t.Fatal("stale entry was not evicted")
 	}
 }
+
+func TestCanInsertWithoutEvictionDoesNotTouchResidency(t *testing.T) {
+	cache := New(10)
+	if err := cache.Insert("active", "scene", 7); err != nil {
+		t.Fatal(err)
+	}
+	if !cache.CanInsertWithoutEviction("active", 100) {
+		t.Fatal("resident key was rejected")
+	}
+	if cache.CanInsertWithoutEviction("warm", 4) {
+		t.Fatal("speculative insertion that requires eviction was admitted")
+	}
+	if !cache.CanInsertWithoutEviction("warm", 3) {
+		t.Fatal("speculative insertion that fits was rejected")
+	}
+	if stats := cache.Diagnostics(); stats.Entries != 1 || stats.Weight != 7 || stats.Hits != 0 || stats.Misses != 0 {
+		t.Fatalf("admission changed cache state: %#v", stats)
+	}
+}

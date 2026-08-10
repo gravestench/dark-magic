@@ -945,12 +945,14 @@ authority, persistence separation, and resilience acceptance remain open.
   compromising gapless looping, synchronization, or shutdown behavior.
 - [x] Add repeatable profiling acceptance runs and budgets for startup, title,
   main menu, character selection, character creation, and in-game scenes.
-- [ ] Add residency-aware capture readiness and warm-queue backpressure. A
-  real-asset vendor probe can reach the 1,000-texture ceiling while hundreds of
-  startup warm requests remain queued, causing small late-created bitmap text
-  to miss a fixed settle-frame capture even though the scene itself is stable.
-  Captures should wait for their required assets, not an arbitrary frame count,
-  and background warming must yield capacity to the active scene.
+- [x] Add residency-aware capture readiness and warm-queue backpressure. The
+  vendor probe observed a burst of roughly 1,000 resident entries—not a hard
+  entry ceiling—while hundreds of startup warm requests remained queued.
+  Captures now restart their settle window when the scene's retained structure
+  changes, so late-created text and art cannot produce a partial capture.
+  Optional warming runs after presentation and is admitted only while it fits
+  without eviction; demand uploads remain unrestricted and therefore retain
+  priority over speculative residency.
 
 ## M26: Native frame-path profiling follow-up
 

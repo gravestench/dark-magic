@@ -61,7 +61,7 @@ type Profile interface {
 
 // Capture observes completed frames and writes the requested screenshots.
 type Capture interface {
-	Observe([]string)
+	Observe([]string, uint64)
 	Complete() bool
 	Close() error
 }
