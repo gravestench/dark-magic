@@ -45,7 +45,9 @@ type ownedRenderNode struct {
 type renderAssetCache struct {
 	mu          sync.Mutex
 	generation  uint64
+	encoded     *cachepkg.Cache
 	decoded     *cachepkg.Cache
+	composed    *cachepkg.Cache
 	inflight    map[string]*assetDecodeFlight
 	decodeCalls uint64
 	decodeTime  time.Duration
@@ -66,6 +68,8 @@ type assetDecodeFlight struct {
 // texture bytes estimates expanded RGBA residency.
 type RenderDiagnostics struct {
 	Decoded     cachepkg.Stats
+	Encoded     cachepkg.Stats
+	Composed    cachepkg.Stats
 	Retained    render.Diagnostics
 	DecodeCalls uint64
 	DecodeTime  time.Duration
@@ -96,9 +100,15 @@ func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.
 	// Character-creation animations expand into hundreds of RGBA frames. A
 	// 64 MiB cache discarded the first prepared states before preload finished,
 	// forcing the Lua interaction path to decode them again on first hover.
-	const decodedAssetBudget = 512 * 1024 * 1024
+	const (
+		encodedAssetBudget  = 32 * 1024 * 1024
+		decodedAssetBudget  = 128 * 1024 * 1024
+		composedAssetBudget = 352 * 1024 * 1024
+	)
 	cache := &renderAssetCache{
+		encoded:  cachepkg.New(encodedAssetBudget),
 		decoded:  cachepkg.New(decodedAssetBudget),
+		composed: cachepkg.New(composedAssetBudget),
 		inflight: make(map[string]*assetDecodeFlight),
 		stages:   make(map[string]DecodeStageDiagnostics),
 	}
@@ -136,7 +146,21 @@ func (r *RenderCapability) Diagnostics() RenderDiagnostics {
 	for name, stage := range r.cache.stages {
 		stages[name] = stage
 	}
-	return RenderDiagnostics{Decoded: r.cache.decoded.Diagnostics(), Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime, Stages: stages}
+	encoded, decoded, composed := r.cache.encoded.Diagnostics(), r.cache.decoded.Diagnostics(), r.cache.composed.Diagnostics()
+	return RenderDiagnostics{Decoded: combinedCacheStats(encoded, decoded, composed), Encoded: encoded, Composed: composed, Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime, Stages: stages}
+}
+
+func combinedCacheStats(stats ...cachepkg.Stats) cachepkg.Stats {
+	var result cachepkg.Stats
+	for _, current := range stats {
+		result.Entries += current.Entries
+		result.Weight += current.Weight
+		result.Budget += current.Budget
+		result.Hits += current.Hits
+		result.Misses += current.Misses
+		result.Evictions += current.Evictions
+	}
+	return result
 }
 
 type generationSource interface{ Generation() uint64 }
@@ -372,7 +396,20 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 		return
 	}
 	c.generation = source.Generation()
+	c.encoded.InvalidateNamespace("encoded", c.generation)
 	c.decoded.InvalidateNamespace("decoded", c.generation)
+	c.composed.InvalidateNamespace("composed", c.generation)
+}
+
+func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
+	switch {
+	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
+		return c.encoded, "encoded"
+	case strings.HasPrefix(key, "cof-animation\x00"):
+		return c.composed, "composed"
+	default:
+		return c.decoded, "decoded"
+	}
 }
 
 func assetWeight(assets fs.FS, names ...string) int {
@@ -419,7 +456,8 @@ func (c *renderAssetCache) load(assets fs.FS, key string, decode func() (any, in
 	c.mu.Lock()
 	c.refresh(assets)
 	generation := c.generation
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", key, generation); ok {
+	tier, namespace := c.tier(key)
+	if cached, ok := tier.RetrieveVersioned(namespace, key, generation); ok {
 		c.mu.Unlock()
 		return cached, nil
 	}
@@ -449,7 +487,7 @@ func (c *renderAssetCache) load(assets fs.FS, key string, decode func() (any, in
 	stage.Time += elapsed
 	c.stages[stageName] = stage
 	if err == nil && generation == c.generation {
-		err = c.decoded.InsertVersioned("decoded", key, generation, value, weight)
+		err = tier.InsertVersioned(namespace, key, generation, value, weight)
 	}
 	flight.value, flight.err = value, err
 	delete(c.inflight, flightKey)
@@ -1188,7 +1226,10 @@ func (r *RenderCapability) Module() Module {
 			},
 			"diagnostics": func(state *lua.LState) int {
 				cache.mu.Lock()
-				decoded := cache.decoded.Diagnostics()
+				encoded := cache.encoded.Diagnostics()
+				decodedTier := cache.decoded.Diagnostics()
+				composed := cache.composed.Diagnostics()
+				decoded := combinedCacheStats(encoded, decodedTier, composed)
 				decodeCalls, decodeTime := cache.decodeCalls, cache.decodeTime
 				stages := make(map[string]DecodeStageDiagnostics, len(cache.stages))
 				for name, stage := range cache.stages {
@@ -1203,6 +1244,12 @@ func (r *RenderCapability) Module() Module {
 				result.RawSetString("cache_hits", lua.LNumber(decoded.Hits))
 				result.RawSetString("cache_misses", lua.LNumber(decoded.Misses))
 				result.RawSetString("cache_evictions", lua.LNumber(decoded.Evictions))
+				result.RawSetString("encoded_weight", lua.LNumber(encoded.Weight))
+				result.RawSetString("direction_weight", lua.LNumber(decodedTier.Weight))
+				result.RawSetString("composed_weight", lua.LNumber(composed.Weight))
+				result.RawSetString("encoded_evictions", lua.LNumber(encoded.Evictions))
+				result.RawSetString("direction_evictions", lua.LNumber(decodedTier.Evictions))
+				result.RawSetString("composed_evictions", lua.LNumber(composed.Evictions))
 				result.RawSetString("active_nodes", lua.LNumber(retained.ActiveNodes))
 				result.RawSetString("active_resources", lua.LNumber(retained.ActiveResources))
 				result.RawSetString("pending_commands", lua.LNumber(retained.Pending))
