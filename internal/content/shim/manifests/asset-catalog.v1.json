@@ -188,6 +188,17 @@
       ]
     },
     {
+      "id": "hud-pop-belt",
+      "screen": "game-hud",
+      "path": "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "expanded belt row background",
+      "references": [
+        "OpenDiablo2",
+        "Riiablo"
+      ]
+    },
+    {
       "id": "hud-overlap",
       "screen": "game-hud",
       "path": "data/global/ui/PANEL/overlap.DC6",

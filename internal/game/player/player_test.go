@@ -55,6 +55,17 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if running, _ := mode.Get("running"); running != false {
 		t.Fatalf("initial movement mode = %v, want walking", running)
 	}
+	beltStore, found := akara.GetDynamicStore(engine.World(), "dm.player.belt")
+	if !found {
+		t.Fatal("belt store was not materialized")
+	}
+	belt, _ := beltStore.Get(entity)
+	if capacity, _ := belt.Get("capacity"); capacity != int64(4) {
+		t.Fatalf("initial belt capacity = %v, want 4", capacity)
+	}
+	if item, _ := belt.Get("slot_16"); item != "" {
+		t.Fatalf("initial belt slot 16 = %v, want empty", item)
+	}
 	if audit := session.Audit(); len(audit) != 1 || audit[0].Kind != EnterCommand {
 		t.Fatalf("audit = %#v", audit)
 	}

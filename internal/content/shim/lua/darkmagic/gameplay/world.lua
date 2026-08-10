@@ -48,6 +48,11 @@ local function define_components()
             { name = "right", type = "i64" },
         },
     })
+    local belt_fields = {{ name = "capacity", type = "i64" }}
+    for slot = 1, 16 do
+        table.insert(belt_fields, { name = "slot_" .. slot, type = "string" })
+    end
+    ecs.component({ name = "dm.player.belt", version = 1, fields = belt_fields })
     ecs.component({
         name = "dm.world.position",
         fields = {
@@ -172,6 +177,9 @@ function M.hud_snapshot(entity, saved)
     local vitals = assert(ecs.get(entity, "dm.player.vitals"))
     local movement_mode = assert(ecs.get(entity, "dm.player.movement_mode"))
     local skills = assert(ecs.get(entity, "dm.player.skill_assignment"))
+    local belt = assert(ecs.get(entity, "dm.player.belt"))
+    local belt_slots = {}
+    for slot = 1, 16 do belt_slots[slot] = belt:get("slot_" .. slot) end
     return {
         health = vitals:get("health"),
         max_health = vitals:get("max_health"),
@@ -184,6 +192,8 @@ function M.hud_snapshot(entity, saved)
         running = movement_mode:get("running"),
         left_skill = skills:get("left"),
         right_skill = skills:get("right"),
+        belt_capacity = belt:get("capacity"),
+        belt_slots = belt_slots,
     }
 end
 

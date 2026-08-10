@@ -96,6 +96,39 @@ function M.create(root, definition, palettes, commands)
     add_status_control(hud, "stamina", definition.stamina, assert(locale.text("darkmagic.hud.stamina")), hud.tips.stamina)
     add_status_control(hud, "experience", definition.experience, assert(locale.text("darkmagic.hud.experience")), hud.tips.experience)
 
+    local belt = definition.belt
+    hud.belt = { rows = {}, expanded = false, hovered = false, capacity = 4 }
+    for row = 2, belt.rows do
+        local node = dc6_at(hud.root, belt.sheet, palette, 0, belt.x - 1, belt.y - (row - 1) * belt.cell_height)
+        node:set_visible(false)
+        hud.belt.rows[row] = node
+    end
+    local belt_control
+    local function refresh_belt()
+        local expanded = hud.belt.hovered == true and hud.belt.capacity > belt.columns
+        local visible_rows = math.ceil(hud.belt.capacity / belt.columns)
+        hud.belt.expanded = expanded
+        for row = 2, belt.rows do
+            hud.belt.rows[row]:set_visible(expanded and row <= visible_rows)
+        end
+        belt_control.y = expanded and belt.y - (visible_rows - 1) * belt.cell_height or belt.y
+        belt_control.height = expanded and visible_rows * belt.cell_height or belt.cell_height
+    end
+    belt_control = hud.controls:add({
+        id = "belt",
+        label = "Belt",
+        x = belt.x,
+        y = belt.y,
+        width = belt.columns * belt.cell_width,
+        height = belt.cell_height,
+        focusable = false,
+        on_state = function(_, state)
+            hud.belt.hovered = state == "hover" or state == "pressed"
+            refresh_belt()
+        end,
+    })
+    hud.belt.refresh = refresh_belt
+
     local skills = definition.skills
     hud.skills = {}
     for _, skill in ipairs({
@@ -227,6 +260,8 @@ function M.snapshot(hud, stats)
     local stamina, max_stamina = stats.stamina or 0, stats.max_stamina or 0
     local experience, next_experience = stats.experience or 0, stats.next_level_experience or 0
     local running = stats.running == true
+    hud.belt.capacity = math.max(4, math.min(16, stats.belt_capacity or 4))
+    hud.belt.refresh()
     update_skill(hud, "left", stats.left_skill_detail, stats.left_skill or 0)
     update_skill(hud, "right", stats.right_skill_detail, stats.right_skill or 0)
     if hud.running ~= running then
