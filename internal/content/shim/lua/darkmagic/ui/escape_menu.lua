@@ -185,7 +185,7 @@ function EscapeMenu:create_image_item(layout_id, layout, row, y)
         node:set_z(30)
         -- Large localized labels are split into spatial DC6 tiles (commonly a
         -- 256px first frame plus a remainder), not animation frames.
-        local ok, width, height = pcall(node.set_dc6_strip, node, row.sheet, palette, 0)
+        local ok, width, height = pcall(node.set_dc6_combined, node, row.sheet, palette, 0, 0)
         if ok then
             item.art = node
             item.focus_width = math.max(width, 1)
@@ -294,7 +294,7 @@ function EscapeMenu:create_range_item(layout_id, row, y)
     item.control = slider.create(self.root, self.manager, layout_id .. ":" .. row.id, {
         x = definition.center.x - 10,
         y = y + 1,
-        width = 255,
+        width = definition.option_assets.range_width,
         height = 37,
         thumb_size = 28,
         min = range.min,

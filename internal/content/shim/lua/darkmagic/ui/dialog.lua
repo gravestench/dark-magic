@@ -21,7 +21,7 @@ function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, 
     dialog.root = render.create("modal", parent)
     dialog.root:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
     if render.assets_available() then
-        dialog.root:set_dc6(definition.sheet, popup_palette, 0, 0)
+        dialog.root:set_dc6_combined(definition.sheet, popup_palette, 0, 0)
     else
         dialog.root:fill_rect(definition.width, definition.height, 20, 15, 10, 245)
     end
@@ -108,7 +108,7 @@ function M.confirm(parent, definition, _, popup_palette, _, message, yes_label, 
     dialog.root = render.create("modal", parent)
     dialog.root:set_position(definition.x + definition.width / 2, definition.y + definition.height / 2)
     if render.assets_available() then
-        dialog.root:set_dc6(definition.sheet, popup_palette, 0, 0)
+        dialog.root:set_dc6_combined(definition.sheet, popup_palette, 0, 0)
     else
         dialog.root:fill_rect(definition.width, definition.height, 20, 15, 10, 245)
     end

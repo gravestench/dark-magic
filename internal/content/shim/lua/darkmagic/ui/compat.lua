@@ -280,6 +280,7 @@ M.ingame = {
         option_assets = {
             range_track = "data/global/ui/widgets/optbarc.dc6",
             range_thumb = "data/global/ui/widgets/optskull.dc6",
+            range_width = 290,
             on = "data/local/ui/eng/smallon.dc6",
             off = "data/local/ui/eng/smalloff.dc6",
             yes = "data/local/ui/eng/smallyes.dc6",

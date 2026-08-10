@@ -1,6 +1,7 @@
 package modruntime
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"image"
@@ -57,10 +58,10 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	}
 }
 
-func TestHorizontalDC6StripJoinsFrameTiles(t *testing.T) {
+func TestCombinedDC6PagesJoinsFrameTiles(t *testing.T) {
 	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
-		{Width: 2, Height: 1, OffsetX: 0, OffsetY: 0, IndexData: []byte{1, 1}},
-		{Width: 1, Height: 1, OffsetX: 2, OffsetY: 0, IndexData: []byte{2}},
+		{Width: 256, Height: 1, OffsetX: 0, OffsetY: 0, IndexData: bytes.Repeat([]byte{1}, 256)},
+		{Width: 1, Height: 1, OffsetX: 0, OffsetY: 0, IndexData: []byte{2}},
 	}}}}
 	asset.SetPalette(color.Palette{
 		color.RGBA{},
@@ -68,18 +69,44 @@ func TestHorizontalDC6StripJoinsFrameTiles(t *testing.T) {
 		color.RGBA{G: 255, A: 255},
 	})
 
-	composite, err := horizontalDC6Strip(asset, 0)
+	pages, err := combinedDC6Pages(asset, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if composite.Bounds() != image.Rect(0, 0, 3, 1) {
+	if len(pages) != 1 {
+		t.Fatalf("combined pages = %d, want 1", len(pages))
+	}
+	composite := pages[0]
+	if composite.Bounds() != image.Rect(0, 0, 257, 1) {
 		t.Fatalf("composite bounds = %v", composite.Bounds())
 	}
-	if got := color.RGBAModel.Convert(composite.At(1, 0)).(color.RGBA); got.R != 255 {
+	if got := color.RGBAModel.Convert(composite.At(255, 0)).(color.RGBA); got.R != 255 {
 		t.Fatalf("first tile pixel = %#v", got)
 	}
-	if got := color.RGBAModel.Convert(composite.At(2, 0)).(color.RGBA); got.G != 255 {
+	if got := color.RGBAModel.Convert(composite.At(256, 0)).(color.RGBA); got.G != 255 {
 		t.Fatalf("second tile pixel = %#v", got)
+	}
+}
+
+func TestHorizontalDC6StripPreservesExplicitRightCap(t *testing.T) {
+	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
+		{Width: 2, Height: 1, IndexData: []byte{1, 1}},
+		{Width: 1, Height: 1, IndexData: []byte{2}},
+	}}}}
+	asset.SetPalette(color.Palette{
+		color.RGBA{},
+		color.RGBA{R: 255, A: 255},
+		color.RGBA{G: 255, A: 255},
+	})
+	strip, err := horizontalDC6Strip(asset, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strip.Bounds() != image.Rect(0, 0, 3, 1) {
+		t.Fatalf("strip bounds = %v", strip.Bounds())
+	}
+	if got := color.RGBAModel.Convert(strip.At(2, 0)).(color.RGBA); got.G != 255 {
+		t.Fatalf("right cap pixel = %#v", got)
 	}
 }
 

@@ -34,7 +34,7 @@ function M.create(root, manager, id, definition, label, options)
         thumb = render.create(options.layer or "hud", root)
 
         if authored then
-            track:set_dc6(options.track_sheet, assert(options.palette), 0, options.track_frame or 0)
+            track:set_dc6_strip(options.track_sheet, assert(options.palette), 0)
             thumb:set_dc6(options.thumb_sheet, assert(options.palette), 0, options.thumb_frame or 0)
             track:set_position(x + width / 2, y + height / 2)
         else
