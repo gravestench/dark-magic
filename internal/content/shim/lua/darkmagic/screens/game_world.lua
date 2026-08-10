@@ -85,6 +85,12 @@ return {
             scenes.push("skills")
         elseif input.pressed("automap") then
             scenes.push("automap")
+		elseif input.pressed("help") then
+			scenes.push("help")
+		elseif input.pressed("quests") then
+			scenes.push("quests")
+		elseif input.pressed("party") then
+			scenes.push("party")
         elseif input.pressed("options") then
             scenes.push("options")
         elseif input.pressed("pause") or input.pressed("cancel") then
