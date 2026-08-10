@@ -15,6 +15,28 @@ The current PR is intentionally documentation-only in `gravestench/dark-magic`. 
 7. Distinguish a binary-format validity constraint from an original Diablo II renderer/tool limit.
 8. When research sources disagree, expose enough raw data to probe the disagreement rather than choosing one interpretation inside the codec.
 
+## M40 creature-generation prerequisites
+
+The creature asset program in `docs/CREATURE_ASSET_ROADMAP.md` adds an eventual
+modern-to-legacy export consumer. Keep this work separate from the Dark Magic
+planning change and deliver/tag it in the owning repositories before M40:
+
+- `gravestench/dc6`: deterministic encoder/marshal API accepting indexed frames,
+  signed offsets, directions, transparency index, and trailer policy; add
+  synthetic round trips and stable structural inspection.
+- `gravestench/dcc`: research and specify a deterministic encoder boundary only
+  after the direction/cell trace work below is complete; reject unsupported
+  inputs explicitly rather than producing plausible corrupt files.
+- `gravestench/cof`: construction and strict validation for layers, directions,
+  frames, per-frame order, and events, with deterministic marshal round trips.
+- `gravestench/pl2`: reusable palette/transform lookup helpers and structural
+  validation; Dark Magic still owns material regions and quantizer policy.
+
+Binary layout, compression, and validation stay in codecs. Pose sampling,
+component alignment/common origins, quantization policy, modern semantic loss
+reports, and exporter orchestration stay in Dark Magic. No codec implementation
+belongs in the Blender addon.
+
 ## `gravestench/dt1`
 
 ### P0: expose complete tile semantics
