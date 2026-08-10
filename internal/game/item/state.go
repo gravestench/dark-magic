@@ -36,7 +36,13 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 	}
 	// Add placements one at a time. Each item sees everything admitted before it,
 	// which catches overlap and duplicate-slot mistakes in an imported snapshot.
-	for id, placement := range placements {
+	placementIDs := make([]string, 0, len(placements))
+	for id := range placements {
+		placementIDs = append(placementIDs, id)
+	}
+	slices.Sort(placementIDs)
+	for _, id := range placementIDs {
+		placement := placements[id]
 		if err := state.Move(id, placement); err != nil {
 			return nil, err
 		}
@@ -61,6 +67,26 @@ func (state *State) Move(id string, destination Placement) error {
 func (state *State) Placement(id string) (Placement, bool) {
 	placement, found := state.placements[id]
 	return placement, found
+}
+
+// Snapshot returns copies suitable for UI, persistence, or network snapshots.
+// Callers may edit the returned maps without changing authority.
+func (state *State) Snapshot() (Layout, map[string]Item, map[string]Placement) {
+	layout := state.layout
+	layout.Grids = make(map[Container]Grid, len(state.layout.Grids))
+	for container, grid := range state.layout.Grids {
+		layout.Grids[container] = grid
+	}
+	items := make(map[string]Item, len(state.items))
+	for id, candidate := range state.items {
+		candidate.BodySlots = slices.Clone(candidate.BodySlots)
+		items[id] = candidate
+	}
+	placements := make(map[string]Placement, len(state.placements))
+	for id, placement := range state.placements {
+		placements[id] = placement
+	}
+	return layout, items, placements
 }
 
 // PlaceHeld applies Diablo II's grid-drop rule. An empty footprint accepts the
