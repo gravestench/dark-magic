@@ -80,6 +80,7 @@ function lab:create()
     self.appearance = parse_components(dev.option("composite_components"))
     self.frame = tonumber(dev.option("composite_frame")) or -1
     self.playing, self.dirty = self.frame < 0, true
+    self.playback_seconds = 0
     if dev.option("composite_random") then self:choose_random() end
 end
 
@@ -90,7 +91,7 @@ function lab:rebuild()
     if ok then
         ok, resolved = pcall(function()
             self.actor:set_cof_animation(resolved.cof, resolved.palette, resolved.direction,
-                resolved.components, "loop", resolved.rate)
+                resolved.components, "loop", resolved.rate, self.playback_seconds)
             return resolved
         end)
     end
@@ -99,8 +100,9 @@ function lab:rebuild()
         self.resolved = resolved
         if not self.playing then
             self.frame = math.max(0, math.min(resolved.frames - 1, self.frame))
+            self.playback_seconds = self.frame * 256 / (resolved.rate * 25)
             self.actor:animation_pause()
-            self.actor:animation_seek(self.frame * 256 / (resolved.rate * 25))
+            self.actor:animation_seek(self.playback_seconds)
         end
         text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical/COF %d  DCC %d  rate %d  frames %d%s",
             authority.token, authority.mode, self.weapon, self.direction, resolved.dcc_direction, resolved.rate, resolved.frames,
@@ -113,7 +115,11 @@ function lab:rebuild()
     self.dirty = false
 end
 
-function lab:update()
+function lab:update(elapsed)
+    -- Facing changes select another direction resource, not another animation.
+    -- Keep one lab-owned clock so rebuilding the retained animation can seek to
+    -- the same point instead of visibly restarting at frame zero.
+    if self.playing then self.playback_seconds = self.playback_seconds + (elapsed or 0) end
     if input.pressed("left") then self.direction = (self.direction + 15) % 16; self.dirty = true end
     if input.pressed("right") then self.direction = (self.direction + 1) % 16; self.dirty = true end
     if input.pressed("up") then self.mode_index = ((self.mode_index - 2) % #modes) + 1; self.dirty = true end
