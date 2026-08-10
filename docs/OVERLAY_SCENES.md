@@ -25,3 +25,15 @@ go run -tags ffmpeg ./cmd/darkmagic --start-scene <name>
 Or capture it with the existing `START_SCENE=<name> make capture` workflow.
 Riiablo is used only as a source for fixed panel-local facts; its mobile controls
 and dynamic stage/aspect-ratio placement are not part of these desktop scenes.
+
+Capture every registered frontend, lab, gameplay, and overlay scene in isolated
+application runs with:
+
+```sh
+MPQ_DIRECTORY=/path/to/diablo-ii make capture-all
+```
+
+Artifacts are grouped under `captures/all-scenes/<scene>/`. Override
+`CAPTURE_ALL_DIR` to choose another root, or
+`CAPTURE_ALL_FIXTURE_CHARACTERS` to change the deterministic character fixture
+count used by character-dependent scenes.
