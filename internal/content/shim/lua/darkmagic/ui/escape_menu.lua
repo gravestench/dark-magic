@@ -133,8 +133,12 @@ end
 function EscapeMenu:update_value_visual(item)
     if not item.value_node or not item.values then return end
     local value = item.values[item.value_index]
-    local width, height = set_text_node(item.value_node, "font30", value, 190, "right")
-    item.value_node:set_position(definition.center.x + definition.menu_width / 2 - 95, item.y + item.height / 2)
+    -- OpenDiablo2 lays each option row out as intrinsic-width label, dynamic
+    -- spacer, intrinsic-width value. A max width here causes long values such
+    -- as AUDIO AND TEXT to wrap and overlap adjacent rows.
+    local width, height = set_text_node(item.value_node, "font30", value, 0, "right")
+    local right = definition.center.x + definition.menu_width / 2
+    item.value_node:set_position(right - width / 2, item.y + item.height / 2)
     item.value_width = width
     item.value_height = height
 end
@@ -244,8 +248,9 @@ function EscapeMenu:create_enum_item(layout_id, row, y)
     if render.assets_available() then
         item.label_node = render.create("modal", self.root)
         item.label_node:set_z(30)
-        set_text_node(item.label_node, "font30", row.label, definition.menu_width * 0.62, "left")
-        item.label_node:set_position(definition.center.x - definition.menu_width * 0.19, y + item.height / 2)
+        local width = set_text_node(item.label_node, "font30", row.label, 0, "left")
+        local left = definition.center.x - definition.menu_width / 2
+        item.label_node:set_position(left + width / 2, y + item.height / 2)
 
         if item.values then
             item.value_node = render.create("modal", self.root)
