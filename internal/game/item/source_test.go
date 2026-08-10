@@ -58,3 +58,18 @@ func TestControllerQueuesVendorTransactionsInOrder(t *testing.T) {
 		t.Fatalf("commands = %#v", commands)
 	}
 }
+
+func TestControllerQueuesServiceCompletion(t *testing.T) {
+	controller := &Controller{}
+	if err := controller.CompleteService("socket"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewSource(controller, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands := source.Commands(4)
+	if len(commands) != 1 || commands[0].Kind != ServiceCommand {
+		t.Fatalf("commands = %#v", commands)
+	}
+}

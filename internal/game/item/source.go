@@ -21,6 +21,19 @@ type request struct {
 	weaponSet  *WeaponSetPayload
 	vendorKind string
 	vendor     *VendorPayload
+	service    *ServicePayload
+}
+
+func (controller *Controller) CompleteService(service string) error {
+	service = strings.TrimSpace(service)
+	if service == "" {
+		return fmt.Errorf("item: service identity is required")
+	}
+	payload := ServicePayload{Service: service}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	controller.requests = append(controller.requests, request{service: &payload})
+	return nil
 }
 
 func (controller *Controller) SellHeld(itemID, vendor, category string) error {
@@ -99,8 +112,10 @@ func (source *Source) Commands(tick uint64) []simulation.Command {
 			command, err = Command(*request.move, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
 		} else if request.weaponSet != nil {
 			command, err = WeaponSetSelectionCommand(*request.weaponSet, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
-		} else {
+		} else if request.vendor != nil {
 			command, err = VendorCommand(request.vendorKind, *request.vendor, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
+		} else {
+			command, err = ServiceCompletionCommand(*request.service, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
 		}
 		if err == nil {
 			commands = append(commands, command)

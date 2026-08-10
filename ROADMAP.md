@@ -799,8 +799,12 @@ complete until its actions are driven by authoritative game state and commands.
   derive server-side prices from item base cost plus authoritative
   NPC.txt 1024-based buy/sell multipliers and sale caps, and commit gold with
   item movement atomically; command payloads cannot provide prices. Durable
-  Diablo II save integration and quest-service transactions/presentation keep
-  this checkpoint open.
+  Diablo II save integration remains M19.3 work. Quest/vendor service commands
+  now resolve server-authored target/material sockets and costs, validate every
+  input before mutation, consume materials, debit carried gold, and record the
+  applied operation on the surviving item atomically. Rich socket/imbue/repair
+  stat materialization remains coupled to M19.2 item properties, and service
+  presentation remains an M18 dependency; those keep this checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

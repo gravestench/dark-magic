@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const ArchiveVersion = 3
+const ArchiveVersion = 4
 
 // archiveEnvelope is the durable boundary for one player's item authority.
 // The checksum catches truncated or accidentally modified handoff data before
@@ -54,14 +54,15 @@ type archivedGrid struct {
 }
 
 type archivedItem struct {
-	ID           string               `json:"id"`
-	Code         string               `json:"code"`
-	Width        int                  `json:"width"`
-	Height       int                  `json:"height"`
-	BodySlots    []string             `json:"body_slots,omitempty"`
-	BeltEligible bool                 `json:"belt_eligible,omitempty"`
-	BaseCost     int64                `json:"base_cost,omitempty"`
-	Presentation archivedPresentation `json:"presentation"`
+	ID              string               `json:"id"`
+	Code            string               `json:"code"`
+	Width           int                  `json:"width"`
+	Height          int                  `json:"height"`
+	BodySlots       []string             `json:"body_slots,omitempty"`
+	BeltEligible    bool                 `json:"belt_eligible,omitempty"`
+	BaseCost        int64                `json:"base_cost,omitempty"`
+	AppliedServices []string             `json:"applied_services,omitempty"`
+	Presentation    archivedPresentation `json:"presentation"`
 }
 
 type archivedPresentation struct {
@@ -99,7 +100,8 @@ func MarshalArchive(state *State) ([]byte, error) {
 		payload.Items = append(payload.Items, archivedItem{
 			ID: candidate.ID, Code: candidate.Code, Width: candidate.Width, Height: candidate.Height,
 			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible, BaseCost: candidate.BaseCost,
-			Presentation: archivePresentation(candidate.Presentation),
+			AppliedServices: append([]string(nil), candidate.AppliedServices...),
+			Presentation:    archivePresentation(candidate.Presentation),
 		})
 		if placement, found := placements[id]; found {
 			payload.Placements = append(payload.Placements, archivePlacement(id, placement))
@@ -149,7 +151,8 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 		items = append(items, Item{
 			ID: candidate.ID, Code: candidate.Code, Width: candidate.Width, Height: candidate.Height,
 			BodySlots: append([]string(nil), candidate.BodySlots...), BeltEligible: candidate.BeltEligible, BaseCost: candidate.BaseCost,
-			Presentation: restorePresentation(candidate.Presentation),
+			AppliedServices: append([]string(nil), candidate.AppliedServices...),
+			Presentation:    restorePresentation(candidate.Presentation),
 		})
 	}
 	placements := make(map[string]Placement, len(payload.Placements))

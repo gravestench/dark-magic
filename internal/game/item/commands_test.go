@@ -206,6 +206,41 @@ func TestVendorCommandRejectsClientCoordinatesAndCrossOwner(t *testing.T) {
 	}
 }
 
+func TestServiceCommandResolvesServerOwnedSocketsAndReplays(t *testing.T) {
+	state, err := NewState(Layout{Gold: GoldBalance{Carried: 50}}, []Item{{ID: "target", Code: "ssd", Width: 1, Height: 3}}, map[string]Placement{"target": {Container: ContainerQuest, Slot: "target"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority := NewAuthority()
+	authority.SetServiceCatalog(ServiceCatalog{"imbue": {ID: "imbue", TargetSlot: "target", GoldCost: 25}})
+	if err := authority.Register("alice", state); err != nil {
+		t.Fatal(err)
+	}
+	session, err := gamesession.New(gameecs.New(), gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := RegisterCommands(session, authority); err != nil {
+		t.Fatal(err)
+	}
+	command, _ := ServiceCompletionCommand(ServicePayload{Service: "imbue"}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if err := session.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	layout, items, _, err := authority.Snapshot("alice")
+	if err != nil || layout.Gold.Carried != 25 || items["target"].AppliedServices[0] != "imbue" {
+		t.Fatalf("snapshot = %#v %#v %v", layout, items, err)
+	}
+	replay, err := session.Replay()
+	if err != nil || len(replay.Commands) != 1 || replay.Commands[0].Kind != ServiceCommand {
+		t.Fatalf("replay = %#v, %v", replay, err)
+	}
+}
+
 func testCommandState(t *testing.T) *State {
 	t.Helper()
 	state, err := NewState(Layout{Grids: map[Container]Grid{ContainerInventory: {Width: 10, Height: 4}}, BeltCapacity: 4}, []Item{{ID: "potion", Code: "hp1", Width: 1, Height: 1, BeltEligible: true}}, map[string]Placement{"potion": {Container: ContainerInventory}})

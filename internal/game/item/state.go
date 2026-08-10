@@ -42,7 +42,7 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 		if _, exists := state.items[candidate.ID]; exists {
 			return nil, fmt.Errorf("item: duplicate identity %q", candidate.ID)
 		}
-		state.items[candidate.ID] = candidate
+		state.items[candidate.ID] = cloneItem(candidate)
 	}
 	// Add placements one at a time. Each item sees everything admitted before it,
 	// which catches overlap and duplicate-slot mistakes in an imported snapshot.
@@ -100,14 +100,19 @@ func (state *State) Snapshot() (Layout, map[string]Item, map[string]Placement) {
 	}
 	items := make(map[string]Item, len(state.items))
 	for id, candidate := range state.items {
-		candidate.BodySlots = slices.Clone(candidate.BodySlots)
-		items[id] = candidate
+		items[id] = cloneItem(candidate)
 	}
 	placements := make(map[string]Placement, len(state.placements))
 	for id, placement := range state.placements {
 		placements[id] = placement
 	}
 	return layout, items, placements
+}
+
+func cloneItem(candidate Item) Item {
+	candidate.BodySlots = append([]string(nil), candidate.BodySlots...)
+	candidate.AppliedServices = append([]string(nil), candidate.AppliedServices...)
+	return candidate
 }
 
 // PlaceHeld applies Diablo II's cursor-item rule. Grid footprints use overlap
