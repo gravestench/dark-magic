@@ -89,6 +89,8 @@
   "darkmagic.vendor.unavailable": "No vendor inventory is bound to this session",
   "darkmagic.waypoint.close": "CLOSE WAYPOINT PANEL",
   "darkmagic.waypoint.unavailable": "Waypoint state is not available yet",
+  "darkmagic.skills.close": "CLOSE SKILL TREE",
+  "darkmagic.skills.unavailable": "Skill allocation state is not available yet",
   "darkmagic.character_panel.level": "LEVEL",
   "darkmagic.character_panel.experience": "EXPERIENCE",
   "darkmagic.character_panel.next_level": "NEXT LEVEL",
