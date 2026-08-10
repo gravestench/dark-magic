@@ -38,6 +38,11 @@ active queue below closes bounded earlier gaps before item/gameplay work:
 5. Resume M18/M19 vertically per overlay; schedule independent M26 native-path
    work when it does not destabilize gameplay PRs.
 
+The creature-authoring program in M31-M43 is a parallel, reusable asset track.
+It may begin with research and synthetic fixtures without displacing the active
+gameplay queue. Its dependency order and complete per-milestone contracts live
+in [docs/CREATURE_ASSET_ROADMAP.md](docs/CREATURE_ASSET_ROADMAP.md).
+
 ## M0: Recovery and inventory
 
 - [x] Inventory the active branch, working tree, and stashes.
@@ -1201,6 +1206,59 @@ replay verification, and narrow audited administrator handlers.
   policy-aware shell session contract without exposing server authority to a
   realm-connected gameplay client.
 
+## M31-M43: Creature authoring, animation, and generated representations
+
+This is a dependency-aware program rather than one undifferentiated "3D
+support" milestone. The canonical plan, package ownership, diagrams, synthetic
+fixtures, risks, prototype gates, Blender migration findings, and objective
+acceptance criteria are in
+[docs/CREATURE_ASSET_ROADMAP.md](docs/CREATURE_ASSET_ROADMAP.md).
+
+- [ ] **M31 — evidence, boundaries, and executable schemas:** reconcile the
+  existing DCC/DC6/COF/PL2 research and historical Blender 2.80 addon, publish
+  versioned semantic schemas, and make `dm-asset validate/inspect --json` useful.
+- [ ] **M32 — glTF import and golden poses:** import a redistributable humanoid
+  and non-humanoid GLB, including a measured Dust3D-authored fixture, without
+  making glTF or any authoring tool the runtime creature abstraction.
+- [ ] **M33 — creature laboratory and reference 3D playback:** load, play, pause,
+  scrub, inspect bones, and visualize bounds/sockets through a backend-neutral
+  creature runtime with an initial Raylib adapter.
+- [ ] **M34 — components, sockets, variants, and equipment:** share one skeleton
+  and primary clock across arbitrary components; preserve normalized animation
+  time across visual swaps.
+- [ ] **M35 — semantic animation:** add time-based clips, skipped-interval-safe
+  typed events, facing, root-motion policy, masks/layers extension points, and a
+  deliberately small data-driven state model.
+- [ ] **M36 — modern Blender addon:** provide supported-version authoring,
+  validation, preview, and package export as a frontend over shared contracts;
+  do not embed codecs or make `.blend` files runtime assets.
+- [ ] **M37 — materials and palette parameters:** validate instance-local tint,
+  alpha, emissive, region/mask, palette, and PL2-compatible transform behavior
+  after prototype evidence selects the first 3D palette technique.
+- [ ] **M38 — deterministic directional sprite generation:** sample an explicit
+  timeline/camera/light profile into aligned RGBA component and flattened
+  frames, preserving common origin, bounds, events, and reproducibility data.
+- [ ] **M39 — modern sprite composition:** load a human-readable semantic
+  composite representation with arbitrary layers, directions, timing, ordering,
+  palette parameters, attachments, and representation comparison in the lab.
+- [ ] **M40 — quantization and legacy exporters:** make palette conversion an
+  explicit stage and export representable DC6/DCC/COF through independent codec
+  APIs, with documented loss reports and no private Blender codecs.
+- [ ] **M41 — retargeting:** validate semantic skeleton maps, rest-pose and root
+  conversion, proportions, missing bones, masks, and actionable incompatibility
+  diagnostics without requiring one universal or humanoid rig.
+- [ ] **M42 — build graph, cache, and live iteration:** add incremental,
+  content-addressed builds, file invalidation, on-demand development rendering,
+  hot reload, and deterministic Blender-to-engine CI metadata.
+- [ ] **M43 — measured advanced runtime:** profile before admitting GPU skinning,
+  instancing, LOD/alternate representations, advanced animation, or parallel
+  generation; production cache-miss generation remains separately gated.
+
+The smallest convincing vertical proof spans M31-M38: a synthetic GLB with a
+skeleton, body, replaceable weapon, idle/attack clips, socket, and `attack.hit`
+event plays in the creature lab, swaps the weapon at 42% normalized time without
+restarting, and emits aligned eight-direction sprites carrying the same event.
+
 ## Gameplay acceptance milestone
 
 - [ ] Starting from legally supplied MPQs, watch/skip startup, navigate the real
@@ -1238,7 +1296,9 @@ remain independent rather than being copied into this engine.
 The architectural acceptance path and M0–M14, M17, M25, and the foundational
 portion of M29 are implemented. M15 and M16 retain bounded catalog/composition
 gaps; M18–M24, M26–M27, the typed-data tail of M28, and M29's gameplay-command
-integration remain open as described above. The repository builds against
+integration remain open as described above. M31–M43 now define the independent
+creature-authoring and generated-representation program; none of that program is
+claimed implemented. The repository builds against
 tagged codec releases, boots through the internal host and layered shim, runs
 the Lua-authored shell and world orchestration, and passes the complete package
 suite under race detection. Historical stashes remain preserved and documented
