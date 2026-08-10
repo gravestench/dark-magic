@@ -9,7 +9,7 @@ import (
 )
 
 func TestInteractionModuleExposesCopiesAndQueuesIntent(t *testing.T) {
-	authority, err := gameinteraction.NewAuthority(gameinteraction.Target{ID: "act1-akara", NPC: "Akara", Vendor: "Akara", Categories: []string{"misc", "armo"}})
+	authority, err := gameinteraction.NewAuthority(gameinteraction.Target{ID: "act1-akara", NPC: "Akara", Vendor: "Akara", Categories: []string{"misc", "armo"}, Radius: 5})
 	if err != nil {
 		t.Fatal(err)
 	}

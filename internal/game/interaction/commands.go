@@ -36,7 +36,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 		kind, opens := definition.kind, definition.open
 		if err := session.Register(kind, gamesession.CommandHandler{
 			Validate: func(command simulation.Command) error { _, err := decode(command, opens); return err },
-			Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+			Apply: func(engine *gameecs.Engine, command simulation.Command) error {
 				payload, err := decode(command, opens)
 				if err != nil {
 					return err
@@ -46,7 +46,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 					owner = command.Player
 				}
 				if opens {
-					return authority.open(owner, payload.Target)
+					return authority.openSpatial(engine, owner, payload.Target)
 				}
 				return authority.close(owner)
 			},

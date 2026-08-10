@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 )
 
 // Authority owns each player's container state. Session commands are the only
@@ -20,8 +22,8 @@ type Authority struct {
 // InteractionPolicy binds commerce/service commands to an active authoritative
 // world interaction without importing the interaction implementation package.
 type InteractionPolicy interface {
-	CanTrade(owner, vendor string) bool
-	CanService(owner, service string) bool
+	CanTradeAt(*gameecs.Engine, string, string) bool
+	CanServiceAt(*gameecs.Engine, string, string) bool
 }
 
 // NewAuthority creates an empty owner registry. Rule catalogs and initial owner
@@ -108,14 +110,14 @@ func (authority *Authority) selectWeaponSet(owner string, set int) error {
 	return state.SelectWeaponSet(set)
 }
 
-func (authority *Authority) sellHeld(owner, itemID, vendor, category string) error {
+func (authority *Authority) sellHeld(engine *gameecs.Engine, owner, itemID, vendor, category string) error {
 	authority.mu.Lock()
 	defer authority.mu.Unlock()
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
-	if authority.interactions != nil && !authority.interactions.CanTrade(owner, vendor) {
+	if authority.interactions != nil && !authority.interactions.CanTradeAt(engine, owner, vendor) {
 		return fmt.Errorf("item: vendor %q is not active for owner %q", vendor, owner)
 	}
 	terms, err := authority.trades.Terms(vendor)
@@ -126,14 +128,14 @@ func (authority *Authority) sellHeld(owner, itemID, vendor, category string) err
 	return err
 }
 
-func (authority *Authority) buyToHeld(owner, itemID, vendor string) error {
+func (authority *Authority) buyToHeld(engine *gameecs.Engine, owner, itemID, vendor string) error {
 	authority.mu.Lock()
 	defer authority.mu.Unlock()
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
-	if authority.interactions != nil && !authority.interactions.CanTrade(owner, vendor) {
+	if authority.interactions != nil && !authority.interactions.CanTradeAt(engine, owner, vendor) {
 		return fmt.Errorf("item: vendor %q is not active for owner %q", vendor, owner)
 	}
 	terms, err := authority.trades.Terms(vendor)
@@ -144,14 +146,14 @@ func (authority *Authority) buyToHeld(owner, itemID, vendor string) error {
 	return err
 }
 
-func (authority *Authority) completeService(owner, service string) error {
+func (authority *Authority) completeService(engine *gameecs.Engine, owner, service string) error {
 	authority.mu.Lock()
 	defer authority.mu.Unlock()
 	state, found := authority.players[owner]
 	if !found {
 		return fmt.Errorf("item: unknown owner %q", owner)
 	}
-	if authority.interactions != nil && !authority.interactions.CanService(owner, service) {
+	if authority.interactions != nil && !authority.interactions.CanServiceAt(engine, owner, service) {
 		return fmt.Errorf("item: service %q is not active for owner %q", service, owner)
 	}
 	rule, err := authority.services.Rule(service)

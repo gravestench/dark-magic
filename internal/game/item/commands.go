@@ -67,7 +67,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 	}
 	if err := session.Register(MoveCommand, gamesession.CommandHandler{
 		Validate: validateMoveCommand,
-		Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+		Apply: func(engine *gameecs.Engine, command simulation.Command) error {
 			payload, err := decodeMove(command.Payload)
 			if err != nil {
 				return err
@@ -85,7 +85,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 	}
 	if err := session.Register(WeaponSetCommand, gamesession.CommandHandler{
 		Validate: validateWeaponSetCommand,
-		Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+		Apply: func(engine *gameecs.Engine, command simulation.Command) error {
 			payload, err := decodeWeaponSet(command.Payload)
 			if err != nil {
 				return err
@@ -105,7 +105,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 	}
 	return session.Register(ServiceCommand, gamesession.CommandHandler{
 		Validate: validateServiceCommand,
-		Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+		Apply: func(engine *gameecs.Engine, command simulation.Command) error {
 			payload, err := decodeService(command.Payload)
 			if err != nil {
 				return err
@@ -114,7 +114,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 			if owner == "" {
 				owner = command.Player
 			}
-			return authority.completeService(owner, payload.Service)
+			return authority.completeService(engine, owner, payload.Service)
 		},
 		Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
 	})
@@ -159,7 +159,7 @@ func registerVendorCommands(session *gamesession.Session, authority *Authority) 
 				_, err := decodeVendor(command, isSell)
 				return err
 			},
-			Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+			Apply: func(engine *gameecs.Engine, command simulation.Command) error {
 				payload, err := decodeVendor(command, isSell)
 				if err != nil {
 					return err
@@ -169,9 +169,9 @@ func registerVendorCommands(session *gamesession.Session, authority *Authority) 
 					owner = command.Player
 				}
 				if isSell {
-					return authority.sellHeld(owner, payload.ItemID, payload.Vendor, payload.Category)
+					return authority.sellHeld(engine, owner, payload.ItemID, payload.Vendor, payload.Category)
 				}
-				return authority.buyToHeld(owner, payload.ItemID, payload.Vendor)
+				return authority.buyToHeld(engine, owner, payload.ItemID, payload.Vendor)
 			},
 			Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
 		}); err != nil {

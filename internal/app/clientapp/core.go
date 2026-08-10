@@ -195,6 +195,7 @@ func (app *application) buildInteractionAuthority() error {
 	app.interactionAuthority, err = gameinteraction.NewAuthority(gameinteraction.Target{
 		ID: "act1-akara", NPC: "Akara", Vendor: "Akara",
 		Categories: []string{"armo", "weap", "misc"},
+		X:          4096, Y: 4096, Radius: 160,
 	})
 	if err != nil {
 		return wrap("create interaction authority", err)
@@ -364,7 +365,7 @@ func (app *application) buildLoadingCoordinator() error {
 
 func fixtureNeedsSelection(scene string) bool {
 	switch scene {
-	case "game_world", "game_loading", "inventory", "character", "skills":
+	case "game_world", "game_loading", "inventory", "character", "skills", "vendor":
 		return true
 	default:
 		return false

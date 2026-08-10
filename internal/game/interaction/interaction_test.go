@@ -3,6 +3,7 @@ package interaction
 import (
 	"testing"
 
+	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -10,7 +11,7 @@ import (
 
 func testAuthority(t *testing.T) *Authority {
 	t.Helper()
-	authority, err := NewAuthority(Target{ID: "act1-akara", NPC: "Akara", Vendor: "Akara", Categories: []string{"misc", "weap", "misc"}, Services: []string{"identify"}})
+	authority, err := NewAuthority(Target{ID: "act1-akara", NPC: "Akara", Vendor: "Akara", Categories: []string{"misc", "weap", "misc"}, Services: []string{"identify"}, X: 10, Y: 10, Radius: 5})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +23,9 @@ func testAuthority(t *testing.T) *Authority {
 
 func TestInteractionCommandsOpenCloseAndReplayState(t *testing.T) {
 	authority := testAuthority(t)
-	session, err := gamesession.New(gameecs.New(), gamesession.Config{CheckpointInterval: 1})
+	engine := gameecs.New()
+	materializeControlledPosition(t, engine, "alice", 13, 14)
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,12 +79,70 @@ func TestSessionStateRestoresContextAndRejectsOtherConfiguration(t *testing.T) {
 	if !restored.CanTrade("alice", "Akara") {
 		t.Fatal("restored context lost vendor")
 	}
-	other, err := NewAuthority(Target{ID: "act1-charsi", NPC: "Charsi", Vendor: "Charsi"})
+	other, err := NewAuthority(Target{ID: "act1-charsi", NPC: "Charsi", Vendor: "Charsi", Radius: 5})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := other.RestoreState(encoded); err == nil {
 		t.Fatal("mismatched target configuration was accepted")
+	}
+}
+
+func TestOpenRejectsMissingOrOutOfRangeControlledPlayer(t *testing.T) {
+	authority := testAuthority(t)
+	if err := authority.openSpatial(gameecs.New(), "alice", "act1-akara"); err == nil {
+		t.Fatal("interaction without a controlled player was accepted")
+	}
+	engine := gameecs.New()
+	materializeControlledPosition(t, engine, "alice", 100, 100)
+	if err := authority.openSpatial(engine, "alice", "act1-akara"); err == nil {
+		t.Fatal("out-of-range interaction was accepted")
+	}
+	context, err := authority.Snapshot("alice")
+	if err != nil || context.TargetID != "" {
+		t.Fatalf("rejected interaction mutated context: %#v, %v", context, err)
+	}
+}
+
+func TestActiveCommercePermissionExpiresWhenPlayerWalksAway(t *testing.T) {
+	authority := testAuthority(t)
+	engine := gameecs.New()
+	materializeControlledPosition(t, engine, "alice", 10, 10)
+	if err := authority.openSpatial(engine, "alice", "act1-akara"); err != nil {
+		t.Fatal(err)
+	}
+	if !authority.CanTradeAt(engine, "alice", "Akara") || !authority.CanServiceAt(engine, "alice", "identify") {
+		t.Fatal("in-range active interaction did not admit declared actions")
+	}
+	positions, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	position, _ := positions.Get(positions.Entities()[0])
+	if err := position.Set("x", float64(100)); err != nil {
+		t.Fatal(err)
+	}
+	if authority.CanTradeAt(engine, "alice", "Akara") || authority.CanServiceAt(engine, "alice", "identify") {
+		t.Fatal("walking out of range retained commerce or service permission")
+	}
+}
+
+func materializeControlledPosition(t *testing.T, engine *gameecs.Engine, player string, x, y float64) {
+	t.Helper()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity, err := engine.World().CreateEntity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := controls.Set(entity, map[string]any{"player": player}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := positions.Set(entity, map[string]any{"x": x, "y": y}); err != nil {
+		t.Fatal(err)
 	}
 }
 

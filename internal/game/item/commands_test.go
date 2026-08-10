@@ -47,15 +47,15 @@ func TestItemCommandsReplayCompleteAuthorityAndDetectConfigurationAndStateDesync
 				return err
 			}
 			if command.Kind == VendorSellCommand {
-				return authority.sellHeld(command.Player, payload.ItemID, payload.Vendor, payload.Category)
+				return authority.sellHeld(nil, command.Player, payload.ItemID, payload.Vendor, payload.Category)
 			}
-			return authority.buyToHeld(command.Player, payload.ItemID, payload.Vendor)
+			return authority.buyToHeld(nil, command.Player, payload.ItemID, payload.Vendor)
 		case ServiceCommand:
 			payload, err := decodeService(command.Payload)
 			if err != nil {
 				return err
 			}
-			return authority.completeService(command.Player, payload.Service)
+			return authority.completeService(nil, command.Player, payload.Service)
 		case WeaponSetCommand:
 			payload, err := decodeWeaponSet(command.Payload)
 			if err != nil {
