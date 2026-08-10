@@ -101,17 +101,25 @@ function ui_lab.create(self)
     -- PROGRESS is driven by the slider below to prove non-interactive UI values
     -- can share the same retained update path.
     self.progress = progress_bar.create(self.root, {
-        x = 60, y = 468, width = 272, height = 12, min = 0, max = 100, value = 40,
+        x = 60, y = 492, width = 272, height = 12, min = 0, max = 100, value = 40,
     }, "PROGRESS BAR", { show_value = true })
 
-    put(self.root, "font_lab_caption", "SLIDER", 60, 405, 280, "left")
+    local settings_slider = compat.widgets.option_slider
+    put(self.root, "font_lab_caption", "SETTINGS SLIDER", 60, 397, 290, "left")
     self.slider = slider.create(self.root, self.controls, "slider", {
-        x = 60, y = 432, width = 220, height = 18,
-        min = 0, max = 100, step = 5, value = 40,
+        x = 60, y = 424,
+        width = settings_slider.width,
+        height = settings_slider.height,
+        thumb_size = settings_slider.thumb_size,
+        min = 0, max = 1, step = 0.05, value = 0.4,
     }, "Volume", {
-        show_value = true,
+        palette = assert(manifest.palettes[settings_slider.palette]),
+        track_sheet = settings_slider.track_sheet,
+        thumb_sheet = settings_slider.thumb_sheet,
+        show_label = false,
+        show_value = false,
         on_change = function(_, value)
-            self.progress:set_value(value)
+            self.progress:set_value(value * 100)
             status("slider = " .. tostring(value))
         end,
     })

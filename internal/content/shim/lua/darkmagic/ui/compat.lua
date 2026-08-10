@@ -70,13 +70,17 @@ M.widgets = {
         gutter_frame = 13,
         thumb_frame = 14,
     },
-    -- Original binaries reference the options-bar pair below. Frame semantics
-    -- still need the same level of verification as TextSlid before Dark Magic
-    -- uses them as the default slider skin.
+    -- Verified in the shipped archive and exercised by the in-game sound and
+    -- music settings. OptBarC's 255px body and 35px right cap form a 290px
+    -- track; OptSkull is the independently positioned 28px thumb.
     option_slider = {
-        track_sheet = "data/global/ui/Widgets/OptBar.dc6",
-        thumb_sheet = "data/global/ui/Widgets/OptBarC.dc6",
-        confidence = "candidate",
+        track_sheet = "data/global/ui/Widgets/OptBarC.dc6",
+        thumb_sheet = "data/global/ui/Widgets/OptSkull.dc6",
+        palette = "units",
+        width = 290,
+        height = 37,
+        thumb_size = 28,
+        confidence = "verified",
     },
 }
 
@@ -278,9 +282,11 @@ M.ingame = {
             },
         },
         option_assets = {
-            range_track = "data/global/ui/widgets/optbarc.dc6",
-            range_thumb = "data/global/ui/widgets/optskull.dc6",
-            range_width = 290,
+            range_track = M.widgets.option_slider.track_sheet,
+            range_thumb = M.widgets.option_slider.thumb_sheet,
+            range_width = M.widgets.option_slider.width,
+            range_height = M.widgets.option_slider.height,
+            range_thumb_size = M.widgets.option_slider.thumb_size,
             on = "data/local/ui/eng/smallon.dc6",
             off = "data/local/ui/eng/smalloff.dc6",
             yes = "data/local/ui/eng/smallyes.dc6",
