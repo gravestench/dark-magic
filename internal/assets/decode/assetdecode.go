@@ -57,6 +57,22 @@ func COF(source fs.FS, name string) (*cof.COF, error) {
 	return asset, nil
 }
 
+// AnimationData reads the global typed timing/event catalog used by composite
+// units. The codec consumes the stream directly; callers never need to buffer
+// the complete binary file or know its 256-block layout.
+func AnimationData(source fs.FS, name string) (*cof.AnimationData, error) {
+	file, err := source.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("animation data %q: %w", name, err)
+	}
+	defer file.Close()
+	asset, err := cof.LoadReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("animation data %q: %w", name, err)
+	}
+	return asset, nil
+}
+
 // DCC reads and decodes a palette-aware character or monster animation.
 func DCC(source fs.FS, name, paletteName string) (*dcc.DCC, error) {
 	file, err := source.Open(name)

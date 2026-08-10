@@ -349,12 +349,16 @@ Codex should plan these in `gravestench/dark-magic`, after the codec probes abov
 - DT1 rarity-weighted tile choice using room seed;
 - subtile collision assembly;
 - warp and automap semantic tile processing;
-- composite token/mode/weapon-class resolver;
-- equipment/component appearance resolver;
-- direction mapping;
-- synchronized composite playback/events;
+- composite token/mode/weapon-class resolver (playable-character path shipped;
+  monster/object families remain);
+- equipment/component appearance resolver (typed item recipe boundary shipped;
+  complete imported item recipes remain);
+- direction mapping (playable-character eight-way path shipped);
+- synchronized composite playback/events (typed `AnimData.d2` path shipped;
+  authoritative gameplay consumers remain);
 - indexed shader path for PL2/component transforms;
-- shadow, selection, and final composite bounds.
+- shadow, selection, and final composite bounds (COF-flag shadow pass shipped;
+  exact legacy projection, selection, and bounds probes remain).
 
 ## Suggested sequencing for Codex
 

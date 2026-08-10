@@ -12,7 +12,7 @@ import (
 )
 
 // ArchiveVersion identifies the durable per-owner container-state schema.
-const ArchiveVersion = 4
+const ArchiveVersion = 5
 
 // archiveEnvelope is the durable boundary for one player's item authority.
 // The checksum catches truncated or accidentally modified handoff data before
@@ -67,9 +67,11 @@ type archivedItem struct {
 }
 
 type archivedPresentation struct {
-	InventoryDC6  string `json:"inventory_dc6,omitempty"`
-	WorldDC6      string `json:"world_dc6,omitempty"`
-	WorldAnimated bool   `json:"world_animated,omitempty"`
+	InventoryDC6  string            `json:"inventory_dc6,omitempty"`
+	WorldDC6      string            `json:"world_dc6,omitempty"`
+	WorldAnimated bool              `json:"world_animated,omitempty"`
+	Composite     map[string]string `json:"composite,omitempty"`
+	WeaponClass   string            `json:"weapon_class,omitempty"`
 }
 
 type archivedPlacement struct {
@@ -200,11 +202,11 @@ func archivePlacement(id string, placement Placement) archivedPlacement {
 }
 
 func archivePresentation(presentation Presentation) archivedPresentation {
-	return archivedPresentation{InventoryDC6: presentation.InventoryDC6, WorldDC6: presentation.WorldDC6, WorldAnimated: presentation.WorldAnimated}
+	return archivedPresentation{InventoryDC6: presentation.InventoryDC6, WorldDC6: presentation.WorldDC6, WorldAnimated: presentation.WorldAnimated, Composite: presentation.Composite, WeaponClass: presentation.WeaponClass}
 }
 
 func restorePresentation(presentation archivedPresentation) Presentation {
-	return Presentation{InventoryDC6: presentation.InventoryDC6, WorldDC6: presentation.WorldDC6, WorldAnimated: presentation.WorldAnimated}
+	return Presentation{InventoryDC6: presentation.InventoryDC6, WorldDC6: presentation.WorldDC6, WorldAnimated: presentation.WorldAnimated, Composite: presentation.Composite, WeaponClass: presentation.WeaponClass}
 }
 
 func decodeStrict(encoded []byte, destination any) error {

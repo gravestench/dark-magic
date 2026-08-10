@@ -58,6 +58,8 @@ github.com/gravestench/cof v0.1.1-0.20260810100540-737cbaf5991a h1:CVWsE48tE0e2G
 github.com/gravestench/cof v0.1.1-0.20260810100540-737cbaf5991a/go.mod h1:PKxpczoqAXuwGwWVfLuHqwq99yMXNTgf9jDHnxU3qMY=
 github.com/gravestench/cof v0.2.0 h1:SniPISH4Nkq9SKsQ11MPLJddw9+Kv58LJqZj1a0Gtq4=
 github.com/gravestench/cof v0.2.0/go.mod h1:PKxpczoqAXuwGwWVfLuHqwq99yMXNTgf9jDHnxU3qMY=
+github.com/gravestench/cof v0.2.1 h1:zpqGQ+QQ++gHZ6WmCinGSCBosDuZK1cbkvbfowYaGko=
+github.com/gravestench/cof v0.2.1/go.mod h1:PKxpczoqAXuwGwWVfLuHqwq99yMXNTgf9jDHnxU3qMY=
 github.com/gravestench/dc6 v0.1.0 h1:cZphAnFagBsqO3CKyMTgvBnmX+0y3BBJ5B3Z5ApSOHc=
 github.com/gravestench/dc6 v0.1.0/go.mod h1:FSBaEhaZUrnjdUMDWkDrXyTzxZYl0KlJRZc1h4OpOfI=
 github.com/gravestench/dc6 v0.1.1-0.20260810102015-38c8ee6b8328 h1:eaWJgQ8WALkbNZgxSVpVQzGPRnHYyQhSeDAoXu4MzyU=

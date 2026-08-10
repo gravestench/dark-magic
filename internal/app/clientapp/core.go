@@ -253,15 +253,17 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	items := make([]gameitem.Item, 0, 6)
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
-		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
+		weaponPresentation := gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
+		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
+		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation})
 		placements["fixture-vendor-short-sword"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "weap", Page: 0}
 	}
 	if armor, found := snapshot.ArmorByCode["cap"]; found {
-		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
+		armorPresentation := gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(strconv.Itoa(armor.Component), armor.AlternateGfx)}
+		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
 		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
+		items = append(items, gameitem.Item{ID: "fixture-vendor-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
 		placements["fixture-vendor-cap"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "armo", Page: 0}
 	}
 	for index, code := range []string{"hp1", "mp1"} {
@@ -295,6 +297,25 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 		}
 	}
 	return items, placements
+}
+
+func compositeRecipe(component, appearance string) map[string]string {
+	tokens := []string{"HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"}
+	component = strings.ToUpper(strings.TrimSpace(component))
+	appearance = strings.ToUpper(strings.TrimSpace(appearance))
+	if appearance == "" {
+		return nil
+	}
+	for _, token := range tokens {
+		if component == token {
+			return map[string]string{token: appearance}
+		}
+	}
+	index, err := strconv.Atoi(component)
+	if err != nil || index < 0 || index >= len(tokens) {
+		return nil
+	}
+	return map[string]string{tokens[index]: appearance}
 }
 
 func itemAsset(name string) string {

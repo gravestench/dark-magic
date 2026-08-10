@@ -163,7 +163,12 @@ return {
 
         if render.assets_available() then
             local authority = self.gameplay_world.composite_snapshot(self.gameplay.hero)
-            local composite = player_composite.unarmed(authority)
+            local item_snapshot = self.items and self.items.snapshot() or nil
+            local composite = player_composite.resolve(authority, item_snapshot)
+            if not self.hero_playback or self.hero_playback.mode ~= composite.mode then
+                self.hero_playback = player_composite.new_playback(composite)
+            end
+            self.hero_animation_events = player_composite.advance(self.hero_playback, composite, elapsed)
             if composite.key ~= self.hero_composite_key then
                 self.hero:set_cof_animation(
                     composite.cof,
@@ -171,7 +176,8 @@ return {
                     composite.direction,
                     composite.components,
                     "loop",
-                    composite.rate
+                    composite.rate,
+                    self.hero_playback.seconds
                 )
                 self.hero:set_scale(screen.hero.scale, screen.hero.scale)
                 self.hero:set_visible(true)

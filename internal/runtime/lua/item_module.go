@@ -124,6 +124,12 @@ func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[stri
 		entry.RawSetString("height", lua.LNumber(candidate.Height))
 		entry.RawSetString("inventory_dc6", lua.LString(candidate.Presentation.InventoryDC6))
 		entry.RawSetString("world_dc6", lua.LString(candidate.Presentation.WorldDC6))
+		entry.RawSetString("weapon_class", lua.LString(candidate.Presentation.WeaponClass))
+		composite := state.NewTable()
+		for component, appearance := range candidate.Presentation.Composite {
+			composite.RawSetString(component, lua.LString(appearance))
+		}
+		entry.RawSetString("composite", composite)
 		entry.RawSetString("container", lua.LString(placement.Container))
 		entry.RawSetString("x", lua.LNumber(placement.X))
 		entry.RawSetString("y", lua.LNumber(placement.Y))
