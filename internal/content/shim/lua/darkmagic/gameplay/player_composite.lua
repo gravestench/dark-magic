@@ -117,6 +117,20 @@ end
 -- Compatibility name for callers that deliberately want the empty-equipment recipe.
 function M.unarmed(authority) return M.resolve(authority, nil) end
 
+-- Describe the expensive, CPU-side half of a composite update. The generic
+-- preloader can execute this away from the Lua/render thread and queue complete
+-- frames for bounded texture upload. Callers keep their previous animation
+-- visible until this request reports ready.
+function M.preload_request(composite)
+    return {
+        kind = "cof_animation",
+        path = composite.cof,
+        palette = composite.palette,
+        direction = composite.direction,
+        components = composite.components,
+    }
+end
+
 -- Create presentation playback state for one authoritative animation mode.
 -- Facing and equipment changes reuse this object, so they do not restart time.
 function M.new_playback(composite)

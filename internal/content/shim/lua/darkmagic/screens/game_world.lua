@@ -169,19 +169,36 @@ return {
                 self.hero_playback = player_composite.new_playback(composite)
             end
             self.hero_animation_events = player_composite.advance(self.hero_playback, composite, elapsed)
-            if composite.key ~= self.hero_composite_key then
-                self.hero:set_cof_animation(
-                    composite.cof,
-                    composite.palette,
-                    composite.direction,
-                    composite.components,
-                    "loop",
-                    composite.rate,
-                    self.hero_playback.seconds
-                )
-                self.hero:set_scale(screen.hero.scale, screen.hero.scale)
-                self.hero:set_visible(true)
-                self.hero_composite_key = composite.key
+            if composite.key ~= self.hero_composite_key and not self.hero_pending_job then
+                -- Never decode a cold multi-layer character during this frame.
+                -- Keep the previous complete character visible while workers
+                -- prepare the newest authoritative appearance/facing request.
+                self.hero_pending_job = render.preload({player_composite.preload_request(composite)})
+                self.hero_pending_key = composite.key
+                self.hero_pending_composite = composite
+            end
+            if self.hero_pending_job then
+                local status = render.preload_status(self.hero_pending_job)
+                if status.done then
+                    local pending = self.hero_pending_composite
+                    if status.failed == 0 and pending.key == composite.key then
+                        self.hero:set_cof_animation(
+                            pending.cof,
+                            pending.palette,
+                            pending.direction,
+                            pending.components,
+                            "loop",
+                            pending.rate,
+                            self.hero_playback.seconds
+                        )
+                        self.hero:set_scale(screen.hero.scale, screen.hero.scale)
+                        self.hero:set_visible(true)
+                        self.hero_composite_key = pending.key
+                    end
+                    self.hero_pending_job = nil
+                    self.hero_pending_key = nil
+                    self.hero_pending_composite = nil
+                end
             end
         end
 

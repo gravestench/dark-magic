@@ -167,6 +167,36 @@ func imagesWeight(values []image.Image) int {
 	return max(weight, 1)
 }
 
+// rgbaDCCFrame expands palette indexes with tight slice writes. Using
+// image/draw against dcc.Frame would call the image.Image interface once per
+// pixel (Bounds, At, ColorIndexAt, palette conversion). Character composites
+// perform this operation for every layer and frame, so that generic path makes
+// cold preparation needlessly expensive.
+func rgbaDCCFrame(frame *dcc.Frame, palette *color.Palette) *image.RGBA {
+	bounds := frame.Bounds()
+	result := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	if palette == nil {
+		return result
+	}
+	var colors [256]color.RGBA
+	for index, value := range *palette {
+		if index >= len(colors) {
+			break
+		}
+		colors[index] = color.RGBAModel.Convert(value).(color.RGBA)
+	}
+	for pixel, paletteIndex := range frame.PixelData {
+		if pixel*4+3 >= len(result.Pix) {
+			break
+		}
+		value := colors[paletteIndex]
+		offset := pixel * 4
+		result.Pix[offset], result.Pix[offset+1] = value.R, value.G
+		result.Pix[offset+2], result.Pix[offset+3] = value.B, value.A
+	}
+	return result
+}
+
 func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame, animationBounds ...image.Rectangle) (image.Image, error) {
 	if direction < 0 || direction >= len(asset.Priority) {
 		return nil, fmt.Errorf("COF direction %d is out of range", direction)
@@ -660,8 +690,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
 			}
 			frame := directionFrames[frameIndex]
-			normalized := image.NewRGBA(image.Rect(0, 0, frame.Bounds().Dx(), frame.Bounds().Dy()))
-			draw.Draw(normalized, normalized.Bounds(), frame, frame.Bounds().Min, draw.Src)
+			normalized := rgbaDCCFrame(frame, component.Palette())
 			components[componentType] = compositeFrame{image: normalized, bounds: frame.Bounds(), layer: layers[componentType]}
 		}
 		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components, animationBounds)

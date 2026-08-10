@@ -15,17 +15,18 @@ import (
 // from the renderer thread. Texture creation is deliberately not represented:
 // the renderer adapter remains the sole owner of native graphics resources.
 type AssetPreloadRequest struct {
-	Kind      string
-	Path      string
-	Secondary string
-	Palette   string
-	Table     string
-	Sheet     string
-	Transform string
-	Tiles     []string
-	Direction int
-	Frame     int
-	Anchor    string
+	Kind       string
+	Path       string
+	Secondary  string
+	Palette    string
+	Table      string
+	Sheet      string
+	Transform  string
+	Tiles      []string
+	Components map[string]string
+	Direction  int
+	Frame      int
+	Anchor     string
 }
 
 // AssetPreloadStatus is an immutable snapshot suitable for loading screens,
@@ -178,6 +179,16 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 	case "cof":
 		_, err := p.cache.loadCOF(p.assets, request.Path)
 		return err
+	case "cof_animation":
+		// Composite construction is CPU-only: it reads COF/DCC data and builds
+		// immutable RGBA frames. A temporary owner gives us the same cache-backed
+		// composition path used by Lua without creating or mutating a render node.
+		node := &ownedRenderNode{assets: p.assets, cache: p.cache}
+		animation, err := node.cachedCOFAnimation(request.Path, request.Palette, request.Direction, request.Components)
+		if err == nil {
+			p.warm(animation.frames...)
+		}
+		return err
 	case "font":
 		_, err := p.cache.loadFont(p.assets, request.Table, request.Sheet, request.Palette, request.Transform)
 		return err
@@ -229,6 +240,14 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 				}
 				request.Tiles = append(request.Tiles, string(value))
 			}
+		}
+		if componentTable, ok := definition.RawGetString("components").(*lua.LTable); ok {
+			request.Components = make(map[string]string)
+			componentTable.ForEach(func(key, value lua.LValue) {
+				if key.Type() == lua.LTString && value.Type() == lua.LTString {
+					request.Components[key.String()] = value.String()
+				}
+			})
 		}
 		if request.Kind == "" {
 			return nil, fmt.Errorf("request %d kind is required", item)
