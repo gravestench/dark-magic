@@ -405,6 +405,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 							ID      string `json:"id"`
 							Frame   int    `json:"frame"`
 							Enabled bool   `json:"enabled"`
+							Scene   string `json:"scene"`
 						} `json:"buttons"`
 					} `json:"minipanel"`
 				} `json:"hud"`
@@ -438,6 +439,9 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	for index, button := range hud.Minipanel.Buttons {
 		if button.ID == "" || button.Frame != wantFrames[index] {
 			t.Errorf("minipanel button %d = %#v", index, button)
+		}
+		if button.ID == "messages" && (!button.Enabled || button.Scene != "messages") {
+			t.Errorf("messages minipanel route = %#v, want enabled messages scene", button)
 		}
 	}
 	wantX := []int{0, 165, 293, 421, 549, 683}

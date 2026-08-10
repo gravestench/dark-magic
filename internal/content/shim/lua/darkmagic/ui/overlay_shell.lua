@@ -16,6 +16,8 @@ local M = {}
 function M.new(definition)
     return {
         blocks_update_below = definition.blocks_update_below ~= false,
+        passes_input_below = definition.passes_input_below == true,
+        world_view = definition.world_view,
         enter = function(self)
             self.root = render.create(definition.layer or "modal")
             self.controls = controls.new()

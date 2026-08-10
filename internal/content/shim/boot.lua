@@ -91,7 +91,7 @@ return {
         local shells = {
             quick_skills={title="darkmagic.shell.quick_skills",x=470,y=220,width=250,height=270},
             belt={title="darkmagic.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
-            messages={title="darkmagic.shell.messages",x=120,y=100,width=560,height=380},
+            messages={title="darkmagic.shell.messages",x=120,y=100,width=560,height=380,blocks_update_below=false,passes_input_below=true,world_view="center",layer="hud"},
             move_gold={title="darkmagic.shell.move_gold",sheet="data/global/ui/MENU/dialogbackground.DC6",x=270,y=175},
             npc_interaction={title="darkmagic.shell.npc_interaction",x=250,y=180,width=300,height=260},
             npc_dialogue={title="darkmagic.shell.npc_dialogue",x=100,y=390,width=600,height=130,blocks_update_below=false},
