@@ -303,6 +303,25 @@ func TestCOFCompositionUsesFramePriorityAndPlacement(t *testing.T) {
 	}
 }
 
+func TestCOFCompositionDrawsOnlyShadowEnabledLayers(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 1
+	head := cof.CompositeType(0)
+	asset.CofLayers = []cof.CofLayer{{Type: head, Shadow: 1, DrawEffect: cof.DrawEffect(8)}}
+	asset.Priority = [][][]cof.CompositeType{{{head}}}
+	source := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	source.Set(0, 0, color.RGBA{R: 255, A: 255})
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		head: {image: source, bounds: source.Bounds(), layer: asset.CofLayers[0]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, alpha := composed.At(2, 2).RGBA(); alpha == 0 {
+		t.Fatal("shadow-enabled COF layer produced no offset shadow pixel")
+	}
+}
+
 func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	t.Parallel()
 

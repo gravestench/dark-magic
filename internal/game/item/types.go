@@ -48,6 +48,11 @@ type Presentation struct {
 	WorldDC6      string
 	InventoryDC6  string
 	WorldAnimated bool
+	// Composite maps COF component tokens (HD, RH, SH...) to equipped
+	// appearance codes such as cap or ssd. It is a validated item recipe, not a
+	// renderer path; mode and per-layer weapon suffix remain runtime concerns.
+	Composite   map[string]string
+	WeaponClass string
 }
 
 // Placement says where one item currently lives. X and Y are inventory cells;

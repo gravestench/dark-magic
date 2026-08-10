@@ -751,6 +751,13 @@ complete until its actions are driven by authoritative game state and commands.
 
 - [ ] Implement COF/DCC composite animation with equipment components, weapon
   classes, directions, modes, layer order, transforms, shadows, and events.
+  The playable-character path now resolves typed item-owned component and weapon
+  class recipes, preserves one playback clock across direction/equipment changes,
+  reads rates and frame events from `AnimData.d2`, caches complete composed
+  direction/mode resources, and emits crossed events even when one update skips
+  multiple frames. Its first shadow pass honors COF shadow flags. Exact legacy
+  shadow projection, PL2 transforms, non-player families, and complete imported
+  equipment recipes keep the broader milestone open.
 - [ ] Replace placeholder character storage with versioned Diablo II save parsing,
   validation, creation, migration, and non-destructive writing.
 - [ ] Implement authoritative inventory grids, body slots, belt, cursor item,
@@ -849,14 +856,17 @@ the fixed tick, and drive a real legacy composite from authoritative state.
   animation components, maps normalized movement commands to authoritative
   NU/WL/RN modes and legacy eight-way facing, projects the ECS position through
   the map camera, and resolves an unarmed HTH COF plus default body DCC layers.
-  Remaining acceptance is live input/capture coverage, collision/pathing
-  refinement, animation-resource reuse while direction changes, shadows/events,
-  and then equipment-derived component codes and weapon-class selection under
-  M19.4. Continue NPC/quest/vendor interaction breadth only after this slice is
-  comfortable to control and visually stable.
-  Resolve NU and other non-locomotion rates/events from typed `AnimData.d2`;
-  the first slice uses the recovered velocity-coupled WL/RN rates and a bounded
-  idle fallback so zero-speed player COFs remain renderable.
+  Complete since that increment: composed direction/mode resources are cached;
+  direction and equipment changes retain animation progress; typed
+  `AnimData.d2` records supply rates and frame events; crossed events propagate
+  through the presentation controller; COF shadow flags produce a distinct
+  shadow pass; and authoritative equipment slots select component appearance
+  codes and active-hand weapon classes. The item snapshot carries only validated
+  presentation recipes, never renderer paths. Remaining acceptance is live
+  input/capture coverage, collision/pathing refinement, exact legacy shadow
+  projection probes, richer imported equipment recipes under M19.4, and enough
+  play testing to make the slice comfortable and visually stable. Continue
+  NPC/quest/vendor interaction breadth only after that point.
 
 - [ ] Implement the complete stat/value system, ItemStatCost encoding, derived
   stats, caps, per-level values, state modifiers, and description functions.

@@ -21,7 +21,7 @@ func TestArchiveRoundTripPreservesEveryContainerAndActiveWeapons(t *testing.T) {
 		{ID: "alternate", Code: "axe", Width: 2, Height: 3, BodySlots: []string{"rarm"}},
 		{ID: "hireling", Code: "cap", Width: 2, Height: 2, BodySlots: []string{"head"}},
 		{ID: "belt", Code: "hp1", Width: 1, Height: 1, BeltEligible: true},
-		{ID: "held", Code: "rin", Width: 1, Height: 1, BaseCost: 777, AppliedServices: []string{"imbue"}, Presentation: Presentation{InventoryDC6: "inv.dc6", WorldDC6: "drop.dc6", WorldAnimated: true}},
+		{ID: "held", Code: "rin", Width: 1, Height: 1, BaseCost: 777, AppliedServices: []string{"imbue"}, Presentation: Presentation{InventoryDC6: "inv.dc6", WorldDC6: "drop.dc6", WorldAnimated: true, Composite: map[string]string{"RH": "ssd"}, WeaponClass: "1HS"}},
 		{ID: "quest", Code: "gem", Width: 1, Height: 1},
 		{ID: "vendor", Code: "wnd", Width: 1, Height: 2},
 		{ID: "world", Code: "gld", Width: 1, Height: 1},

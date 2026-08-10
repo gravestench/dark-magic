@@ -18,7 +18,8 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 	if err := runtime.RegisterModule(Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
 		module := state.NewTable()
 		state.SetField(module, "cof_info", state.NewFunction(func(state *lua.LState) int {
-			if got := state.CheckString(1); got != "data/global/chars/AM/COF/AMWLHTH.cof" {
+			got := state.CheckString(1)
+			if got != "data/global/chars/AM/COF/AMWLHTH.cof" && got != "data/global/chars/AM/COF/AMWL1HS.cof" {
 				state.RaiseError("unexpected COF %q", got)
 			}
 			info := state.NewTable()
@@ -30,6 +31,18 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 				layers.Append(entry)
 			}
 			info.RawSetString("layers", layers)
+			state.Push(info)
+			return 1
+		}))
+		state.SetField(module, "animdata_info", state.NewFunction(func(state *lua.LState) int {
+			got := state.CheckString(1)
+			if got != "AMWLHTH" && got != "AMWL1HS" {
+				state.RaiseError("unexpected animation key %q", got)
+			}
+			info := state.NewTable()
+			info.RawSetString("speed", lua.LNumber(333))
+			info.RawSetString("frames", lua.LNumber(8))
+			info.RawSetString("events", state.NewTable())
 			state.Push(info)
 			return 1
 		}))
@@ -47,10 +60,19 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 local composite=require("darkmagic.gameplay.player_composite").unarmed({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
 })
-assert(composite.key=="AM:WL:HTH:3")
+assert(string.sub(composite.key,1,11)=="AM:WL:HTH:3")
 assert(composite.components.HD=="data/global/chars/AM/HD/AMHDLITWL1HT.dcc")
 assert(composite.components.RA=="data/global/chars/AM/RA/AMRALITWLHTH.dcc")
 assert(composite.components.RH==nil)
+assert(composite.rate==333 and composite.frames==8)
+local equipped=require("darkmagic.gameplay.player_composite").resolve({
+  token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
+},{active_weapon_set=0,items={{container="equipment",slot="rarm",weapon_set=0,weapon_class="1hs",composite={RH="ssd"}}}})
+assert(equipped.cof=="data/global/chars/AM/COF/AMWL1HS.cof")
+assert(equipped.components.RH=="data/global/chars/AM/RH/AMRHSSDWLHTH.dcc")
+local playback=require("darkmagic.gameplay.player_composite").new_playback({mode="A"})
+local crossed=require("darkmagic.gameplay.player_composite").advance(playback,{rate=256,frames=4,events={[2]=1,[3]=3},mode="A"},0.09)
+assert(playback.frame==3 and #crossed==2 and crossed[1].event==1 and crossed[2].event==3)
 `
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
@@ -77,7 +99,8 @@ func TestRealArchivesComposeUnarmedPlayerModes(t *testing.T) {
 	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.RegisterModule(NewRenderCapability(runtime, &composer, assets).Module()); err != nil {
+	capability := NewRenderCapability(runtime, &composer, assets)
+	if err := runtime.RegisterModule(capability.Module()); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {
@@ -100,6 +123,15 @@ for _,token in ipairs({"AM","SO","NE","PA","BA","AI","DZ"}) do
     assert(ok,token..mode..": "..tostring(err))
   end
 end
+for _,mode in ipairs({"NU","WL","RN"}) do
+  local composite=adapter.resolve({token="AM",mode=mode,weapon_class="HTH",palette="data/global/Palette/units/pal.dat",direction=3},{
+    active_weapon_set=0,
+    items={{container="equipment",slot="rarm",weapon_set=0,weapon_class="1HS",composite={RH="SSD"}}},
+  })
+  local node=render.create("world")
+  assert(node:set_cof_animation(composite.cof,composite.palette,composite.direction,composite.components,"loop",composite.rate) > 0)
+  node:destroy()
+end
 `
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
@@ -107,5 +139,16 @@ end
 	}
 	if err := scope.Close(); err != nil {
 		t.Fatal(err)
+	}
+	before := capability.Diagnostics().DecodeCalls
+	secondScope := &Scope{}
+	if err := runtime.RunScoped(context.Background(), secondScope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := secondScope.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if after := capability.Diagnostics().DecodeCalls; after != before {
+		t.Fatalf("warm composite recipes decoded again: before=%d after=%d", before, after)
 	}
 }

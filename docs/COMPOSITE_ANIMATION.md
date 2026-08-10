@@ -412,12 +412,30 @@ CompositeRenderer
 
 This architecture supports a future modern animation system while retaining an adapter that resolves legacy COF/DCC assets to the same high-level component/timeline interface.
 
-## Open questions before implementation
+## Implemented playable-character boundary
+
+The first Dark Magic adapter now follows the split above:
+
+- immutable COF, DCC, and fully composed direction/mode results are cached;
+- `AnimData.d2` supplies typed frame counts, rates, and sparse event bytes;
+- one Lua-owned playback clock survives facing and equipment changes, while an
+  authoritative mode change starts a new timeline;
+- skipped-frame-safe advancement publishes every crossed animation event;
+- authoritative equipment slots publish validated component appearance codes
+  and active-hand weapon classes, without publishing archive paths;
+- COF shadow flags produce a separate tinted shadow draw before their layer.
+
+This is the legacy adapter, not simulation authority. Frame events are facts for
+presentation consumers; attacks, missiles, sounds, and other gameplay effects
+must still become fixed-tick commands or systems before they can affect state.
+
+## Open questions after the first implementation
 
 - exact weapon-class fallback chain used by original Diablo II when a COF is absent;
 - exact COF transparency-byte semantics and blend precedence;
 - exact shadow transform and alpha;
-- whether all equipment-only visual changes preserve original animation progress;
+- which exceptional mode transitions should retain progress rather than starting
+  a new authoritative timeline;
 - monster/object component appearance lookup rules across all data-table families;
 - selection semantics for non-selectable COF layers;
 - missile timing/loop rules by `Missiles.txt` fields.

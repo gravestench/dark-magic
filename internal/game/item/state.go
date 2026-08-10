@@ -112,6 +112,11 @@ func (state *State) Snapshot() (Layout, map[string]Item, map[string]Placement) {
 func cloneItem(candidate Item) Item {
 	candidate.BodySlots = append([]string(nil), candidate.BodySlots...)
 	candidate.AppliedServices = append([]string(nil), candidate.AppliedServices...)
+	composite := candidate.Presentation.Composite
+	candidate.Presentation.Composite = make(map[string]string, len(composite))
+	for component, appearance := range composite {
+		candidate.Presentation.Composite[component] = appearance
+	}
 	return candidate
 }
 

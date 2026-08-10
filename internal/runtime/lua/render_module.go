@@ -13,6 +13,7 @@ import (
 	_ "image/png"
 	"io"
 	"io/fs"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -144,6 +145,11 @@ type preparedDC6Frame struct {
 type preparedDC6Animation struct {
 	frames []image.Image
 	bounds image.Rectangle
+}
+
+type preparedCOFAnimation struct {
+	frames []image.Image
+	asset  *cof.COF
 }
 
 func imageWeight(value image.Image) int {
@@ -317,6 +323,17 @@ func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) 
 		return nil, err
 	}
 	return value.(*cof.COF), nil
+}
+
+func (c *renderAssetCache) loadAnimationData(assets fs.FS, name string) (*cof.AnimationData, error) {
+	value, err := c.load(assets, "animdata\x00"+name, func() (any, int, error) {
+		asset, err := assetdecode.AnimationData(assets, name)
+		return asset, assetWeight(assets, name), err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(*cof.AnimationData), nil
 }
 
 func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC, error) {
@@ -497,7 +514,7 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 	return err
 }
 
-func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string) error {
+func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string, initialSeek ...time.Duration) error {
 	textures := make([]render.ResourceID, 0, len(frames))
 	owned := make([]render.ResourceID, 0, len(frames))
 	duplicates := make(map[rgbaFrameDigest]render.ResourceID)
@@ -535,10 +552,14 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 		return err
 	}
 	previous, previousOwned := n.resource, n.owned
+	seek := time.Duration(0)
+	if len(initialSeek) > 0 && initialSeek[0] > 0 {
+		seek = initialSeek[0]
+	}
 	if err := n.composer.Update(n.id, func(current *render.Node) {
 		current.Resource = animation
 		current.AnimationPaused = false
-		current.AnimationSeek = 0
+		current.AnimationSeek = seek
 		current.AnimationSeekRevision++
 	}); err != nil {
 		_ = n.composer.DestroyResource(animation)
@@ -626,6 +647,30 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		}
 	}
 	return frames, asset, nil
+}
+
+func compositeCacheKey(cofName, palette string, direction int, paths map[string]string) string {
+	components := make([]string, 0, len(paths))
+	for component, path := range paths {
+		components = append(components, component+"="+path)
+	}
+	sort.Strings(components)
+	return fmt.Sprintf("cof-animation\x00%s\x00%s\x00%d\x00%s", cofName, palette, direction, strings.Join(components, "\x00"))
+}
+
+// cachedCOFAnimation retains the expensive decoded-and-composed RGBA frames.
+// Changing direction may still replace a tiny semantic animation resource, but
+// it no longer decodes DCCs or recomposites every layer on the input path.
+func (n *ownedRenderNode) cachedCOFAnimation(cofName, palette string, direction int, paths map[string]string) (preparedCOFAnimation, error) {
+	key := compositeCacheKey(cofName, palette, direction, paths)
+	value, err := n.cache.load(n.assets, key, func() (any, int, error) {
+		frames, asset, err := n.cofFrames(cofName, palette, direction, paths)
+		return preparedCOFAnimation{frames: frames, asset: asset}, imagesWeight(frames), err
+	})
+	if err != nil {
+		return preparedCOFAnimation{}, err
+	}
+	return value.(preparedCOFAnimation), nil
 }
 
 func luaComponentPaths(state *lua.LState, index int) map[string]string {
@@ -843,6 +888,7 @@ func (r *RenderCapability) Module() Module {
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
 		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
+		"animdata_info":        commandHelp("dm.render.animdata_info(key)", "Read typed rate and frame-event metadata from AnimData.d2."),
 		"create":               commandHelp("dm.render.create()", "Create a scoped retained presentation node."),
 	}, map[string]TypeHelp{renderNodeType: {Summary: "A scoped retained presentation node.", Methods: map[string]CommandHelp{
 		"set_position":               commandHelp("node:set_position(x, y)", "Set the node position."),
@@ -864,7 +910,7 @@ func (r *RenderCapability) Module() Module {
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
 		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
 		"set_cof":                    commandHelp("node:set_cof(path [, options])", "Render a COF composite."),
-		"set_cof_animation":          commandHelp("node:set_cof_animation(path, palette, direction, components [, loop, rate])", "Render an animated COF composite with an optional resolved 1/256-rate override."),
+		"set_cof_animation":          commandHelp("node:set_cof_animation(path, palette, direction, components [, loop, rate, seek_seconds])", "Render a cached COF composite with resolved rate and optional preserved playback position."),
 		"set_text":                   commandHelp("node:set_text(text [, options])", "Render bitmap-font text."),
 		"animation_pause":            commandHelp("node:animation_pause()", "Pause the node animation."),
 		"animation_resume":           commandHelp("node:animation_resume()", "Resume the node animation."),
@@ -1000,6 +1046,35 @@ func (r *RenderCapability) Module() Module {
 					priority.Append(directionTable)
 				}
 				result.RawSetString("priority", priority)
+				state.Push(result)
+				return 1
+			},
+			"animdata_info": func(state *lua.LState) int {
+				if assets == nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString("render asset filesystem is unavailable"))
+					return 2
+				}
+				catalog, err := cache.loadAnimationData(assets, "data/global/AnimData.d2")
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				record := catalog.GetRecord(strings.ToUpper(state.CheckString(1)))
+				if record == nil {
+					state.Push(lua.LNil)
+					return 1
+				}
+				result := state.NewTable()
+				result.RawSetString("name", lua.LString(record.Name()))
+				result.RawSetString("frames", lua.LNumber(record.FramesPerDirection()))
+				result.RawSetString("speed", lua.LNumber(record.Speed()))
+				events := state.NewTable()
+				for frame, event := range record.Events() {
+					events.RawSetInt(frame+1, lua.LNumber(event))
+				}
+				result.RawSetString("events", events)
 				state.Push(result)
 				return 1
 			},
@@ -1430,7 +1505,7 @@ func registerRenderNodeType(state *lua.LState) {
 			direction := state.OptInt(4, 0)
 			paths := luaComponentPaths(state, 5)
 			loop := state.OptString(6, "loop")
-			frames, asset, err := node.cofFrames(cofName, palette, direction, paths)
+			prepared, err := node.cachedCOFAnimation(cofName, palette, direction, paths)
 			if err != nil {
 				state.RaiseError("composing COF animation: %v", err)
 				return 0
@@ -1438,21 +1513,22 @@ func registerRenderNodeType(state *lua.LState) {
 			// Player COFs commonly leave speed at zero because AnimData.d2 owns the
 			// runtime rate. Callers that already resolved that authority may supply
 			// the classic 1/256-rate value without teaching the renderer gameplay.
-			rate := state.OptInt(7, asset.Speed)
+			rate := state.OptInt(7, prepared.asset.Speed)
 			if rate <= 0 {
 				state.RaiseError("COF speed must be positive")
 				return 0
 			}
 			duration := time.Duration(float64(time.Second) * 256 / (float64(rate) * 25))
-			if err := node.setAnimation(frames, duration, loop); err != nil {
+			seek := time.Duration(float64(time.Second) * float64(state.OptNumber(8, 0)))
+			if err := node.setAnimation(prepared.frames, duration, loop, seek); err != nil {
 				state.RaiseError("updating COF animation: %v", err)
 				return 0
 			}
 			events := state.NewTable()
-			for _, event := range asset.AnimationFrames {
+			for _, event := range prepared.asset.AnimationFrames {
 				events.Append(lua.LNumber(event))
 			}
-			state.Push(lua.LNumber(len(frames)))
+			state.Push(lua.LNumber(len(prepared.frames)))
 			state.Push(events)
 			return 2
 		},
