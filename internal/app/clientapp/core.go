@@ -186,7 +186,8 @@ func (app *application) buildItemAuthority() error {
 		gameitem.ContainerStash:     {Width: 6, Height: 8},
 		gameitem.ContainerCube:      {Width: 3, Height: 4},
 	}, BeltCapacity: 4}
-	state, err := gameitem.NewState(layout, nil, nil)
+	items, placements := app.developmentItems()
+	state, err := gameitem.NewState(layout, items, placements)
 	if err != nil {
 		return wrap("create local item state", err)
 	}
@@ -197,6 +198,38 @@ func (app *application) buildItemAuthority() error {
 	app.itemControl = &gameitem.Controller{}
 	app.itemSource, err = gameitem.NewSource(app.itemControl, "local-player")
 	return wrap("create local item command source", err)
+}
+
+func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem.Placement) {
+	if app.options.FixtureCharacters <= 0 {
+		return nil, nil
+	}
+	snapshot, err := app.gameData.Snapshot()
+	if err != nil {
+		return nil, nil
+	}
+	items := make([]gameitem.Item, 0, 3)
+	placements := make(map[string]gameitem.Placement)
+	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
+		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
+		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
+	}
+	for index, code := range []string{"hp1", "mp1"} {
+		if misc, found := snapshot.MiscByCode[code]; found {
+			id := "fixture-" + code
+			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+			placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+		}
+	}
+	return items, placements
+}
+
+func itemAsset(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	return "data/global/items/" + name + ".dc6"
 }
 
 // learnedSkills translates character records into the small authoritative
