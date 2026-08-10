@@ -715,7 +715,9 @@ complete until its actions are driven by authoritative game state and commands.
   and party panels apply profile-owned classic origins. Their close controls use
   named overlay-slot transactions so either visible side can close independently.
   Help now selects and composes the archive-verified eight-frame 640x480 border;
-  other frontend and asset-specific full-screen overlays remain to be independently
+  stash, cube, hireling, vendor, and waypoint now share manifest-owned fixed-panel
+  geometry with archive-verified structural fixtures and classic `(0,4)` origins.
+  Other frontend and asset-specific full-screen overlays remain to be independently
   verified. The roadmap does not yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.

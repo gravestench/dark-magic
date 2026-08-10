@@ -72,7 +72,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help"}) {
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint"}) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
@@ -262,8 +262,8 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 95 {
-		t.Fatalf("asset fixture contains %d entries, want 95", len(fixture.Assets))
+	if len(fixture.Assets) != 99 {
+		t.Fatalf("asset fixture contains %d entries, want 99", len(fixture.Assets))
 	}
 }
 
@@ -293,7 +293,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "2cdc54472125d43629b22ee0365c8e808c8e954903bfbccf323e199d7d1a5d00"
+	const auditedFingerprint = "3bb10ee8ee75c1c7e9b547da8df7c4bc40d4fc3eeaa3ea8c1d63c3cc9c7eb2c9"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
@@ -564,5 +564,14 @@ func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	last := placements[7].(map[string]any)
 	if last["frame"] != float64(7) || last["x"] != float64(576) || last["y"] != float64(256) {
 		t.Fatalf("classic help lower-right placement = %#v", last)
+	}
+	for _, id := range []string{"stash", "cube", "hireling", "vendor", "waypoint"} {
+		screen := screens[id].(map[string]any)
+		if screen["x"] != float64(0) || screen["y"] != float64(4) {
+			t.Errorf("classic fixed panel %s origin = %v,%v", id, screen["x"], screen["y"])
+		}
+		if screen["sheet"] == "" || screen["close"] == nil {
+			t.Errorf("incomplete fixed panel %s = %#v", id, screen)
+		}
 	}
 }
