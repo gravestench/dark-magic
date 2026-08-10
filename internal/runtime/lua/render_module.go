@@ -167,7 +167,7 @@ func imagesWeight(values []image.Image) int {
 	return max(weight, 1)
 }
 
-func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame) (image.Image, error) {
+func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame, animationBounds ...image.Rectangle) (image.Image, error) {
 	if direction < 0 || direction >= len(asset.Priority) {
 		return nil, fmt.Errorf("COF direction %d is out of range", direction)
 	}
@@ -175,11 +175,15 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		return nil, fmt.Errorf("COF frame %d is out of range", frame)
 	}
 	var bounds image.Rectangle
-	for _, component := range components {
-		if bounds.Empty() {
-			bounds = component.bounds
-		} else {
-			bounds = bounds.Union(component.bounds)
+	if len(animationBounds) > 0 {
+		bounds = animationBounds[0]
+	} else {
+		for _, component := range components {
+			if bounds.Empty() {
+				bounds = component.bounds
+			} else {
+				bounds = bounds.Union(component.bounds)
+			}
 		}
 	}
 	if bounds.Empty() {
@@ -628,6 +632,25 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		}
 		layers[layer.Type], decoded[layer.Type] = layer, component
 	}
+	// A retained animation node has one anchor and native quad. Every composite
+	// frame must therefore use one shared canvas even though individual DCC
+	// frame rectangles move and change size. Per-frame canvases make the quad
+	// resize around its center (visible jitter) and are unsafe for backends that
+	// retain texture geometry from the first animation frame.
+	var animationBounds image.Rectangle
+	for _, component := range decoded {
+		for _, frame := range component.Direction(direction).Frames() {
+			if animationBounds.Empty() {
+				animationBounds = frame.Bounds()
+			} else {
+				animationBounds = animationBounds.Union(frame.Bounds())
+			}
+		}
+	}
+	if animationBounds.Empty() {
+		return nil, nil, errors.New("COF composition has no component animation bounds")
+	}
+
 	frames := make([]image.Image, asset.FramesPerDirection)
 	for frameIndex := range frames {
 		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
@@ -641,7 +664,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 			draw.Draw(normalized, normalized.Bounds(), frame, frame.Bounds().Min, draw.Src)
 			components[componentType] = compositeFrame{image: normalized, bounds: frame.Bounds(), layer: layers[componentType]}
 		}
-		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components)
+		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components, animationBounds)
 		if err != nil {
 			return nil, nil, err
 		}

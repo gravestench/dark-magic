@@ -322,6 +322,38 @@ func TestCOFCompositionDrawsOnlyShadowEnabledLayers(t *testing.T) {
 	}
 }
 
+func TestCOFAnimationFramesShareCanvasButKeepDistinctPixels(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 2, 1
+	head := cof.CompositeType(0)
+	asset.CofLayers = []cof.CofLayer{{Type: head, DrawEffect: cof.DrawEffect(8)}}
+	asset.Priority = [][][]cof.CompositeType{{{head}, {head}}}
+	first := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	first.Set(0, 0, color.RGBA{R: 255, A: 255})
+	second := image.NewRGBA(image.Rect(0, 0, 3, 1))
+	second.Set(2, 0, color.RGBA{G: 255, A: 255})
+	shared := image.Rect(-2, -1, 4, 3)
+	frame0, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		head: {image: first, bounds: image.Rect(-2, -1, 0, 1), layer: asset.CofLayers[0]},
+	}, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame1, err := composeCOFFrame(asset, 0, 1, map[cof.CompositeType]compositeFrame{
+		head: {image: second, bounds: image.Rect(1, 2, 4, 3), layer: asset.CofLayers[0]},
+	}, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frame0.Bounds() != frame1.Bounds() {
+		t.Fatalf("animation canvases differ: %v and %v", frame0.Bounds(), frame1.Bounds())
+	}
+	firstKey, secondKey := render.TextureKey(frame0), render.TextureKey(frame1)
+	if firstKey == secondKey {
+		t.Fatal("visually distinct composite frames share a texture identity")
+	}
+}
+
 func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	t.Parallel()
 
