@@ -6,6 +6,7 @@ local render = require("dm.render/v1")
 local scenes = require("dm.scene/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
+local tooltip = require("darkmagic.ui.tooltip")
 
 local M = {}
 
@@ -25,13 +26,6 @@ end
 
 local function add_globe(root, definition, sheet, overlap_sheet, palette)
     local liquid = dc6_at(root, sheet, palette, definition.frame, definition.x, definition.y)
-    local visible_height = math.floor(definition.height * definition.fill + 0.5)
-    liquid:set_clip(
-        definition.x,
-        definition.y + definition.height - visible_height,
-        definition.width,
-        visible_height
-    )
     dc6_at(
         root,
         overlap_sheet,
@@ -40,10 +34,40 @@ local function add_globe(root, definition, sheet, overlap_sheet, palette)
         definition.overlap_x,
         definition.overlap_y
     )
+    return liquid
+end
+
+local function ratio(value, maximum)
+    if type(value) ~= "number" or type(maximum) ~= "number" or maximum <= 0 then return 0 end
+    return math.max(0, math.min(1, value / maximum))
+end
+
+local function clip_globe(node, definition, fill)
+    local visible_height = math.floor(definition.height * fill + 0.5)
+    node:set_visible(visible_height > 0)
+    node:set_clip(
+        definition.x,
+        definition.y + definition.height - visible_height,
+        definition.width,
+        math.max(1, visible_height)
+    )
+end
+
+local function add_status_control(hud, id, definition, label, tip)
+    hud.controls:add({
+        id = id,
+        label = label,
+        x = definition.x,
+        y = definition.y,
+        width = definition.width,
+        height = definition.height,
+        focusable = false,
+        on_state = function(_, state) tip:set_visible(state == "hover") end,
+    })
 end
 
 function M.create(root, definition, palettes)
-    local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false }
+    local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false, definition = definition }
     local palette = palettes[definition.palette]
 
     for _, part in ipairs(definition.panel_parts) do
@@ -51,25 +75,25 @@ function M.create(root, definition, palettes)
     end
 
     local globes = definition.globes
-    add_globe(hud.root, globes.health, globes.sheet, globes.overlap_sheet, palette)
-    add_globe(hud.root, globes.mana, globes.sheet, globes.overlap_sheet, palette)
+    hud.health_liquid = add_globe(hud.root, globes.health, globes.sheet, globes.overlap_sheet, palette)
+    hud.mana_liquid = add_globe(hud.root, globes.mana, globes.sheet, globes.overlap_sheet, palette)
 
-    for _, bar in ipairs({ definition.stamina, definition.experience }) do
+    hud.bars = {}
+    for name, bar in pairs({ stamina = definition.stamina, experience = definition.experience }) do
         local node = render.create("hud", hud.root)
-        local color = bar.color
-        node:fill_rect(
-            math.floor(bar.width * bar.fill + 0.5),
-            bar.height,
-            color.red,
-            color.green,
-            color.blue,
-            color.alpha
-        )
-        node:set_position(
-            bar.x + math.floor(bar.width * bar.fill + 0.5) / 2,
-            bar.y + bar.height / 2
-        )
+        hud.bars[name] = { node = node, definition = bar, pixels = -1 }
     end
+
+    hud.tips = {
+        health = tooltip.create(hud.root, "", globes.health.x + globes.health.width / 2, globes.health.y, {}),
+        mana = tooltip.create(hud.root, "", globes.mana.x + globes.mana.width / 2, globes.mana.y, {}),
+        stamina = tooltip.create(hud.root, "", definition.stamina.x + definition.stamina.width / 2, definition.stamina.y, {}),
+        experience = tooltip.create(hud.root, "", definition.experience.x + definition.experience.width / 2, definition.experience.y, {}),
+    }
+    add_status_control(hud, "health", globes.health, assert(locale.text("darkmagic.hud.health")), hud.tips.health)
+    add_status_control(hud, "mana", globes.mana, assert(locale.text("darkmagic.hud.mana")), hud.tips.mana)
+    add_status_control(hud, "stamina", definition.stamina, assert(locale.text("darkmagic.hud.stamina")), hud.tips.stamina)
+    add_status_control(hud, "experience", definition.experience, assert(locale.text("darkmagic.hud.experience")), hud.tips.experience)
 
     local skills = definition.skills
     for _, placement in ipairs({ skills.left, skills.right }) do
@@ -143,10 +167,45 @@ function M.create(root, definition, palettes)
             end
         end,
     })
+    M.snapshot(hud, nil)
     return hud
 end
 
-function M.update(hud)
+local function update_bar(bar, fill)
+    local pixels = math.floor(bar.definition.width * fill + 0.5)
+    if pixels == bar.pixels then return end
+    bar.pixels = pixels
+    local color = bar.definition.color
+    bar.node:fill_rect(math.max(1, pixels), bar.definition.height, color.red, color.green, color.blue, color.alpha)
+    bar.node:set_visible(pixels > 0)
+    bar.node:set_position(bar.definition.x + pixels / 2, bar.definition.y + bar.definition.height / 2)
+end
+
+function M.snapshot(hud, stats)
+    stats = stats or {}
+    local health, max_health = stats.health or 0, stats.max_health or 0
+    local mana, max_mana = stats.mana or 0, stats.max_mana or 0
+    local stamina, max_stamina = stats.stamina or 0, stats.max_stamina or 0
+    local experience, next_experience = stats.experience or 0, stats.next_level_experience or 0
+    local health_fill, mana_fill = ratio(health, max_health), ratio(mana, max_mana)
+    if hud.health_fill ~= health_fill then
+        hud.health_fill = health_fill
+        clip_globe(hud.health_liquid, hud.definition.globes.health, health_fill)
+    end
+    if hud.mana_fill ~= mana_fill then
+        hud.mana_fill = mana_fill
+        clip_globe(hud.mana_liquid, hud.definition.globes.mana, mana_fill)
+    end
+    update_bar(hud.bars.stamina, ratio(stamina, max_stamina))
+    update_bar(hud.bars.experience, ratio(experience, next_experience))
+    hud.tips.health:set_text(string.format("%s: %d / %d", assert(locale.text("darkmagic.hud.health")), health, max_health))
+    hud.tips.mana:set_text(string.format("%s: %d / %d", assert(locale.text("darkmagic.hud.mana")), mana, max_mana))
+    hud.tips.stamina:set_text(string.format("%s: %d / %d", assert(locale.text("darkmagic.hud.stamina")), stamina, max_stamina))
+    hud.tips.experience:set_text(string.format("%s: %d / %d", assert(locale.text("darkmagic.hud.experience")), experience, next_experience))
+end
+
+function M.update(hud, stats)
+    M.snapshot(hud, stats)
     hud.controls:update()
 end
 

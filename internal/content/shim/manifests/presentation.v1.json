@@ -366,11 +366,11 @@
         "globes": {
           "sheet": "data/global/ui/PANEL/hlthmana.DC6",
           "overlap_sheet": "data/global/ui/PANEL/overlap.DC6",
-          "health": {"frame":0,"overlap_frame":0,"x":30,"y":507,"width":80,"height":80,"fill":0.75,"overlap_x":28,"overlap_y":507},
-          "mana": {"frame":1,"overlap_frame":1,"x":690,"y":508,"width":80,"height":80,"fill":0.6,"overlap_x":691,"overlap_y":504}
+          "health": {"frame":0,"overlap_frame":0,"x":30,"y":507,"width":80,"height":80,"overlap_x":28,"overlap_y":507},
+          "mana": {"frame":1,"overlap_frame":1,"x":690,"y":508,"width":80,"height":80,"overlap_x":691,"overlap_y":504}
         },
-        "stamina": {"x":273,"y":572,"width":102,"height":19,"fill":0.8,"color":{"red":175,"green":136,"blue":72,"alpha":200}},
-        "experience": {"x":256,"y":561,"width":120,"height":4,"fill":0.15,"color":{"red":92,"green":72,"blue":180,"alpha":220}},
+        "stamina": {"x":273,"y":572,"width":102,"height":19,"color":{"red":175,"green":136,"blue":72,"alpha":200}},
+        "experience": {"x":256,"y":561,"width":120,"height":4,"color":{"red":92,"green":72,"blue":180,"alpha":220}},
         "skills": {"sheet":"data/global/ui/SPELLS/Skillicon.DC6","frame":2,"left":{"x":117,"y":552},"right":{"x":635,"y":552}},
         "run": {"sheet":"data/global/ui/PANEL/runbutton.dc6","x":255,"y":570,"width":16,"height":20,"walk_frame":0,"run_frame":2},
         "menu": {"sheet":"data/global/ui/PANEL/menubutton.dc6","x":392,"y":562,"width":15,"height":24,"closed_frame":0,"open_frame":2},

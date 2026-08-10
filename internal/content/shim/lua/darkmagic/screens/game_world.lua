@@ -40,6 +40,7 @@ return {
         end
         self.hero = render.create("world", self.root)
         local character = saves.selected()
+        self.character_stats = character and character.stats or nil
         if character and character.appearance and render.assets_available() then
             self.hero:set_cof_animation(
                 character.appearance.cof,
@@ -72,9 +73,6 @@ return {
         if not input_allowed then
             return
         end
-        if self.hud then
-            game_hud.update(self.hud)
-        end
         -- Panels remain available while the fixed-step session is admitting
         -- the selected character; presentation binding must not block UI.
         if input.pressed("inventory") then
@@ -98,6 +96,12 @@ return {
         end
         if not self.gameplay_world.bind(self.gameplay) then
             return
+        end
+        if self.hud then
+            game_hud.update(
+                self.hud,
+                self.gameplay_world.hud_snapshot(self.gameplay.hero, self.character_stats)
+            )
         end
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)

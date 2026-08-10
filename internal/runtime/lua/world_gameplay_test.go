@@ -28,7 +28,10 @@ func materializeGameplayPlayer(t *testing.T, engine *gameecs.Engine, step time.D
 	if err := gamesession.RegisterMovement(session); err != nil {
 		t.Fatal(err)
 	}
-	entry := gameplayer.EntryFromCharacter(persistence.Character{ID: "test-hero", Name: "Hero", Class: "Amazon", Level: 1}, "test-player", 50, 40, 100, 80)
+	entry := gameplayer.EntryFromCharacter(persistence.Character{
+		ID: "test-hero", Name: "Hero", Class: "Amazon", Level: 2,
+		Stats: &persistence.Stats{Experience: 125, Health: 70, MaxHealth: 80, Mana: 30, MaxMana: 40},
+	}, "test-player", 50, 40, 100, 80)
 	command, err := gameplayer.Command(entry, "test-system", 1, 1, simulation.AuthoritySystem)
 	if err != nil {
 		t.Fatal(err)
@@ -78,13 +81,27 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`local world=require("darkmagic.gameplay.world"); hero_x,hero_y=world.position(gameplay.hero); camera_x,camera_y=world.position(gameplay.camera)`)
+		return state.DoString(`
+local world=require("darkmagic.gameplay.world")
+hero_x,hero_y=world.position(gameplay.hero)
+camera_x,camera_y=world.position(gameplay.camera)
+hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_stamina=60})
+`)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		if state.GetGlobal("hero_x") != lua.LNumber(55) || state.GetGlobal("hero_y") != lua.LNumber(40) || state.GetGlobal("camera_x") != lua.LNumber(55) || state.GetGlobal("camera_y") != lua.LNumber(40) {
 			t.Fatalf("hero/camera = %s,%s / %s,%s", state.GetGlobal("hero_x"), state.GetGlobal("hero_y"), state.GetGlobal("camera_x"), state.GetGlobal("camera_y"))
+		}
+		hud := state.GetGlobal("hud").(*lua.LTable)
+		for name, want := range map[string]lua.LNumber{
+			"health": 70, "max_health": 80, "mana": 30, "max_mana": 40,
+			"experience": 125, "next_level_experience": 250, "stamina": 44, "max_stamina": 60,
+		} {
+			if got := hud.RawGetString(name); got != want {
+				t.Fatalf("HUD %s = %s, want %s", name, got, want)
+			}
 		}
 		return nil
 	}); err != nil {
