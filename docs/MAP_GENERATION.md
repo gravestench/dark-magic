@@ -1,6 +1,11 @@
 # Diablo II map composition and procedural generation
 
-Status: research architecture/specification. This document describes Diablo II 1.10f behavior where D2MOO provides reverse-engineered runtime evidence and separates that behavior from third-party engine architecture.
+Status: research architecture/specification. This document describes Diablo II
+1.10f behavior where D2MOO provides reverse-engineered runtime evidence and
+separates that behavior from third-party engine architecture. The clean-room
+1.14d [libd2](https://github.com/jaenster/libd2) implementation is an additional
+high-value source for DRLG rules, call order, and deterministic verification;
+version differences and implementation choices must remain explicit.
 
 ## Pipeline
 
@@ -355,3 +360,11 @@ The raw `ds1` and `dt1` modules should not import DRLG or rendering packages.
 - version differences after 1.10f, especially 1.13d compatibility.
 
 These should be validated with deterministic probes and D2MOO traces before Dark Magic replaces large map subsystems.
+
+libd2 adds a particularly useful comparison oracle because it reports
+cell-for-cell checks against retail-engine captures across all five acts and
+keeps blind holdout seeds. Dark Magic should use its verification structure and
+observable outputs to design independent tests, not copy embedded fixtures or
+assume that every 1.14d behavior is identical to D2MOO's 1.10f reconstruction.
+See [`research/libd2.md`](research/libd2.md) for the source boundary and audit
+queue.

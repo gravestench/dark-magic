@@ -20,6 +20,7 @@ The goal is to recover observable format and runtime behavior, not to translate 
 | Paul Siramy MergeDCC / animation extractor material | historical | source distribution; verify per archive | reverse-engineering evidence | DCC/DC6 decoding edge cases and animation composition history. |
 | The Phrozen Keep | historical forum corpus | per-post copyright | historical corroboration | old file-format discussions, COF/composite behavior, level TXT semantics, renderer limitations. Forum claims are never treated as authoritative without corroboration. |
 | ThePhrozenKeep/D2MOO | `3b21043b99e987bad41cf0f7b49f1f246db52d5c` | MIT | strongest reverse-engineered original runtime source | 1.10f DRLG, tile lookup/rarity, packed DS1 cell semantics, collision, level TXT structures, coordinate transforms, RNG. |
+| jaenster/libd2 | `e6cdc4927c6180be8dd309b0423b470f64f1fc6c` inspected 2026-08-10 | MIT for clean-room source; embedded Blizzard-derived blobs/maps are explicitly excluded | clean-room 1.14d implementation and high-value independent corroboration | Deterministic DRLG for all acts and difficulties, maze/outdoor/preset rules, RNG/call order, room/tile materialization, collision, warps, objects/monsters, DS1/DT1 parsing, pathfinding, and verification methodology. Treat source behavior as implementation evidence; reproduce claims with owned-asset/original-runtime probes before making them Dark Magic contracts. |
 | collinsmith/riiablo | `59aa8d5021c457e8d2891bb23c9e3a0ef724c6b3` | Apache-2.0 | independent implementation / corroboration | raw DT1/DS1/DC6/DCC/COF parsing, DCC cell reconstruction, composite resource resolution, component updates, palette transforms. |
 | OpenDiablo2/OpenDiablo2 | current `master` inspected 2026-08-09 | GPL-3.0 | independent implementation / corroboration only | COF parsing, composite path construction, timing model, direction mapping, DC6 parsing. No code, comments, or mechanically translated algorithms may be copied into Dark Magic. |
 | eezstreet/OpenD2 | current `master` inspected 2026-08-09 | GPL-3.0 | historical corroboration only | additional independent renderer/UI/file-format behavior where useful. No implementation code may be copied. |
@@ -72,6 +73,22 @@ The goal is to recover observable format and runtime behavior, not to translate 
 - `d2common/d2fileformats/d2dc6/dc6.go`
 - `d2core/d2asset/composite.go`
 
+### libd2
+
+- `docs/VERIFICATION.md`
+- `packages/drlg/src/drlg/rng.zig`
+- `packages/drlg/src/drlg/DrlgLogic.zig`
+- `packages/drlg/src/drlg/DrlgRoom.zig`
+- `packages/drlg/src/drlg/preset.zig`
+- `packages/drlg/src/drlg/maze/`
+- `packages/drlg/src/drlg/outdoors/`
+- `packages/drlg/src/drlg/tilegen.zig`
+- `packages/drlg/src/drlg/materialize.zig`
+- `packages/drlg/src/collision.zig`
+- `packages/drlg/src/objects.zig`
+- `packages/formats/src/ds1.zig`
+- `packages/formats/src/dt1.zig`
+
 ## Conflict policy
 
 When sources disagree, use this order:
@@ -79,9 +96,10 @@ When sources disagree, use this order:
 1. lawful observation of original assets;
 2. Paul Siramy / contemporary format research;
 3. D2MOO reverse-engineered 1.10f runtime behavior;
-4. agreement among multiple independent implementations;
-5. one implementation;
-6. inference.
+4. libd2 behavior backed by its documented retail-engine verification;
+5. agreement among multiple independent implementations;
+6. one implementation;
+7. inference.
 
 Do not hide disagreements. Mark them in the relevant format document and add a probe in `CODEC_FOLLOWUPS.md` when a binary-level fact needs confirmation.
 

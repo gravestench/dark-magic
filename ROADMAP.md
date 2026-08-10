@@ -804,7 +804,10 @@ complete until its actions are driven by authoritative game state and commands.
 - [ ] Implement entity-size-aware A* navigation, path smoothing, collision,
   interaction range, line of sight, and movement modes.
 - [ ] Implement deterministic preset, maze, outdoor, substitution, warp, object,
-  monster, and waypoint generation for all acts and difficulties.
+  monster, and waypoint generation for all acts and difficulties. Use D2MOO as
+  the reverse-engineered 1.10f runtime baseline and jaenster/libd2 as a
+  clean-room 1.14d implementation/verification source; record version conflicts
+  and reproduce claims with independent deterministic probes.
 - [ ] Materialize generated maps as deterministic session-owned zones from typed
   level records and decoded DS1/DT1 facts; asset loading and presentation must
   remain consumers rather than owners of world generation.
