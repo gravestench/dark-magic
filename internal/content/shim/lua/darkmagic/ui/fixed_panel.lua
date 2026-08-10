@@ -57,6 +57,7 @@ function M.overlay(id, slot)
                     cell_height = number(record, "gridBoxHeight"),
                     palette = manifest.palettes.units,
                 })
+                self.__darkmagic_item_held = self.item_grid.held
             end
             local close = {
                 sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky",
@@ -72,7 +73,10 @@ function M.overlay(id, slot)
         end,
         update = function(self)
             self.controls:update()
-            if self.item_grid then item_grid.update(self.item_grid) end
+            if self.item_grid then
+                item_grid.update(self.item_grid)
+                self.__darkmagic_item_held = self.item_grid.held
+            end
             if input.pressed("cancel") then scenes.pop() end
         end,
     }

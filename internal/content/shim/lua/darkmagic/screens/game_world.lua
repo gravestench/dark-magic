@@ -129,6 +129,7 @@ return {
                 self.hud,
                 snapshot
             )
+            self.__darkmagic_item_held = self.hud.item_held
         end
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)

@@ -74,6 +74,7 @@ function M.update(grid)
     local snapshot = assert(grid.items.snapshot())
     local cursor_x, cursor_y = input.cursor()
     grid.snapshot = snapshot
+    grid.held = held_item(snapshot) ~= nil
     for _, item in ipairs(snapshot.items) do
         local drawing = grid.nodes[item.id]
         if drawing == nil and item.inventory_dc6 ~= ""
@@ -92,7 +93,7 @@ function M.update(grid)
                     grid.top + item.y * grid.cell_height + drawing.height / 2
                 )
             elseif item.container == "held" then
-                drawing.node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+                drawing.node:set_position(cursor_x, cursor_y)
             end
         end
     end

@@ -66,6 +66,7 @@ local function refresh_items(self)
     local snapshot = assert(self.items.snapshot())
     local cursor_x, cursor_y = input.cursor()
     self.item_snapshot = snapshot
+    self.__darkmagic_item_held = held_item(snapshot) ~= nil
     for _, item in ipairs(snapshot.items) do
         local drawing = self.item_nodes[item.id]
         if drawing == nil and item.inventory_dc6 ~= "" then
@@ -86,7 +87,7 @@ local function refresh_items(self)
             elseif item.container == "held" then
                 -- The held container is authoritative even though its picture
                 -- follows the local pointer. Reconnecting does not lose it.
-                drawing.node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+                drawing.node:set_position(cursor_x, cursor_y)
             elseif equipment ~= nil then
                 -- Inventory.txt gives the whole well. Diablo II centers the
                 -- item's front-facing DC6 inside it instead of stretching it.
