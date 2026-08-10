@@ -27,3 +27,12 @@ and character renderer prototype. Adoption should be reconsidered when DCC/COF
 composition moves onto the GPU, and accepted only when captured profiles show a
 meaningful residency reduction without changing palette, blend, or headless
 composition results.
+
+The August 2026 composite-path measurement reinforced that order of work.
+Direction-scoped DCC decoding and direct indexed-to-final-RGBA composition cut
+the real unarmed-player preparation fixture from roughly 1.4 seconds to about
+0.7 seconds without introducing a second rendering model. Direct raylib RGBA
+upload then removed the per-pixel cgo converter from native texture creation.
+An R8 shader remains promising for uncomposited sprites, but it is not a remedy
+for codec over-decoding or inefficient upload plumbing and must not duplicate
+COF ordering, shadows, and blend semantics in an ad-hoc backend path.

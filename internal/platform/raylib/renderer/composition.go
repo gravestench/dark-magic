@@ -38,7 +38,9 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 	// texture the visible scene actually used is now newer in the LRU than
 	// speculative work, so background warming cannot steal its priority.
 	s.SubscribePostFrame(func() {
-		if err := composer.DrainWarm(backend, s.textureUploadBudget.Load()); err != nil && s.logger != nil {
+		// Byte limits control traffic; the short wall-clock limit controls visible
+		// frame pacing on drivers where one upload is disproportionately slow.
+		if err := composer.DrainWarmWithin(backend, s.textureUploadBudget.Load(), 2*time.Millisecond); err != nil && s.logger != nil {
 			s.logger.Error("warming texture residency", "error", err)
 		}
 	})

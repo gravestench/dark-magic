@@ -45,10 +45,13 @@ type ownedRenderNode struct {
 type renderAssetCache struct {
 	mu          sync.Mutex
 	generation  uint64
+	encoded     *cachepkg.Cache
 	decoded     *cachepkg.Cache
+	composed    *cachepkg.Cache
 	inflight    map[string]*assetDecodeFlight
 	decodeCalls uint64
 	decodeTime  time.Duration
+	stages      map[string]DecodeStageDiagnostics
 }
 
 // assetDecodeFlight lets every caller interested in the same cold asset share
@@ -65,9 +68,20 @@ type assetDecodeFlight struct {
 // texture bytes estimates expanded RGBA residency.
 type RenderDiagnostics struct {
 	Decoded     cachepkg.Stats
+	Encoded     cachepkg.Stats
+	Composed    cachepkg.Stats
 	Retained    render.Diagnostics
 	DecodeCalls uint64
 	DecodeTime  time.Duration
+	Stages      map[string]DecodeStageDiagnostics
+}
+
+// DecodeStageDiagnostics separates file parsing, direction decoding, and
+// composition. Without this split, a single cumulative number cannot tell us
+// whether a codec, the compositor, or native upload deserves attention.
+type DecodeStageDiagnostics struct {
+	Calls uint64
+	Time  time.Duration
 }
 
 // RenderCapability owns the shared asset cache behind dm.render/v1.
@@ -86,10 +100,17 @@ func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.
 	// Character-creation animations expand into hundreds of RGBA frames. A
 	// 64 MiB cache discarded the first prepared states before preload finished,
 	// forcing the Lua interaction path to decode them again on first hover.
-	const decodedAssetBudget = 512 * 1024 * 1024
+	const (
+		encodedAssetBudget  = 32 * 1024 * 1024
+		decodedAssetBudget  = 128 * 1024 * 1024
+		composedAssetBudget = 352 * 1024 * 1024
+	)
 	cache := &renderAssetCache{
+		encoded:  cachepkg.New(encodedAssetBudget),
 		decoded:  cachepkg.New(decodedAssetBudget),
+		composed: cachepkg.New(composedAssetBudget),
 		inflight: make(map[string]*assetDecodeFlight),
+		stages:   make(map[string]DecodeStageDiagnostics),
 	}
 	return &RenderCapability{
 		runtime: runtime, composer: composer, assets: assets, cache: cache,
@@ -121,15 +142,35 @@ func (c *renderAssetCache) loadImage(assets fs.FS, name string) (image.Image, er
 func (r *RenderCapability) Diagnostics() RenderDiagnostics {
 	r.cache.mu.Lock()
 	defer r.cache.mu.Unlock()
-	return RenderDiagnostics{Decoded: r.cache.decoded.Diagnostics(), Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime}
+	stages := make(map[string]DecodeStageDiagnostics, len(r.cache.stages))
+	for name, stage := range r.cache.stages {
+		stages[name] = stage
+	}
+	encoded, decoded, composed := r.cache.encoded.Diagnostics(), r.cache.decoded.Diagnostics(), r.cache.composed.Diagnostics()
+	return RenderDiagnostics{Decoded: combinedCacheStats(encoded, decoded, composed), Encoded: encoded, Composed: composed, Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime, Stages: stages}
+}
+
+func combinedCacheStats(stats ...cachepkg.Stats) cachepkg.Stats {
+	var result cachepkg.Stats
+	for _, current := range stats {
+		result.Entries += current.Entries
+		result.Weight += current.Weight
+		result.Budget += current.Budget
+		result.Hits += current.Hits
+		result.Misses += current.Misses
+		result.Evictions += current.Evictions
+	}
+	return result
 }
 
 type generationSource interface{ Generation() uint64 }
 
 type compositeFrame struct {
-	image  image.Image
-	bounds image.Rectangle
-	layer  cof.CofLayer
+	image   image.Image
+	indices []byte
+	palette color.Palette
+	bounds  image.Rectangle
+	layer   cof.CofLayer
 }
 
 type rgbaFrameDigest struct {
@@ -149,7 +190,18 @@ type preparedDC6Animation struct {
 
 type preparedCOFAnimation struct {
 	frames []image.Image
+	keys   []string
 	asset  *cof.COF
+}
+
+type preparedDCCFile struct {
+	file    *dcc.File
+	palette color.Palette
+}
+
+type preparedDCCDirection struct {
+	direction *dcc.Direction
+	palette   color.Palette
 }
 
 func imageWeight(value image.Image) int {
@@ -165,6 +217,62 @@ func imagesWeight(values []image.Image) int {
 		weight += imageWeight(value)
 	}
 	return max(weight, 1)
+}
+
+func blendRGBA(destination *image.RGBA, x, y int, source color.RGBA, opacity uint8) {
+	if !image.Pt(x, y).In(destination.Bounds()) || source.A == 0 || opacity == 0 {
+		return
+	}
+	alpha := uint32(source.A) * uint32(opacity) / 255
+	offset := destination.PixOffset(x, y)
+	if alpha == 255 {
+		destination.Pix[offset], destination.Pix[offset+1] = source.R, source.G
+		destination.Pix[offset+2], destination.Pix[offset+3] = source.B, 255
+		return
+	}
+	inverse := 255 - alpha
+	destination.Pix[offset] = uint8((uint32(source.R)*alpha + uint32(destination.Pix[offset])*inverse) / 255)
+	destination.Pix[offset+1] = uint8((uint32(source.G)*alpha + uint32(destination.Pix[offset+1])*inverse) / 255)
+	destination.Pix[offset+2] = uint8((uint32(source.B)*alpha + uint32(destination.Pix[offset+2])*inverse) / 255)
+	destination.Pix[offset+3] = uint8(alpha + uint32(destination.Pix[offset+3])*inverse/255)
+}
+
+// drawCompositeComponent consumes DCC palette indexes directly. This avoids a
+// temporary RGBA allocation and palette expansion for every layer/frame before
+// immediately copying those pixels into the final composite.
+func drawCompositeComponent(output *image.RGBA, component compositeFrame, destination image.Point, shadow bool, opacity uint8) {
+	if len(component.indices) > 0 && len(component.palette) > 0 {
+		width, height := component.bounds.Dx(), component.bounds.Dy()
+		for y := 0; y < height; y++ {
+			row := y * width
+			for x := 0; x < width && row+x < len(component.indices); x++ {
+				index := int(component.indices[row+x])
+				if index == 0 || index >= len(component.palette) {
+					continue
+				}
+				value := color.RGBAModel.Convert(component.palette[index]).(color.RGBA)
+				if shadow {
+					value = color.RGBA{A: value.A}
+				}
+				blendRGBA(output, destination.X+x, destination.Y+y, value, opacity)
+			}
+		}
+		return
+	}
+	if component.image == nil {
+		return
+	}
+	if shadow {
+		mask := image.NewUniform(color.RGBA{A: opacity})
+		draw.DrawMask(output, component.image.Bounds().Add(destination), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
+		return
+	}
+	if opacity == 255 {
+		draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
+		return
+	}
+	mask := image.NewUniform(color.Alpha{A: opacity})
+	draw.DrawMask(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, mask, image.Point{}, draw.Over)
 }
 
 // rgbaDCCFrame expands palette indexes with tight slice writes. Using
@@ -253,8 +361,7 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 			continue
 		}
 		destination := component.bounds.Min.Sub(bounds.Min)
-		mask := image.NewUniform(color.RGBA{A: 96})
-		draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
+		drawCompositeComponent(output, component, destination.Add(image.Pt(2, 2)), true, 96)
 	}
 	for _, componentType := range priority {
 		component, ok := components[componentType]
@@ -278,12 +385,7 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 				alpha = 128
 			}
 		}
-		if alpha == 255 {
-			draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
-		} else {
-			mask := image.NewUniform(color.Alpha{A: alpha})
-			draw.DrawMask(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, mask, image.Point{}, draw.Over)
-		}
+		drawCompositeComponent(output, component, destination, false, alpha)
 	}
 	return output, nil
 }
@@ -294,7 +396,20 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 		return
 	}
 	c.generation = source.Generation()
+	c.encoded.InvalidateNamespace("encoded", c.generation)
 	c.decoded.InvalidateNamespace("decoded", c.generation)
+	c.composed.InvalidateNamespace("composed", c.generation)
+}
+
+func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
+	switch {
+	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
+		return c.encoded, "encoded"
+	case strings.HasPrefix(key, "cof-animation\x00"):
+		return c.composed, "composed"
+	default:
+		return c.decoded, "decoded"
+	}
 }
 
 func assetWeight(assets fs.FS, names ...string) int {
@@ -326,13 +441,13 @@ func dc6DecodedWeight(asset *dc6.DC6) int {
 	return max(weight, 1)
 }
 
-func dccDecodedWeight(asset *dcc.DCC) int {
-	weight := 0
-	for _, direction := range asset.Directions() {
-		weight += len(direction.PixelData)
-		for _, frame := range direction.Frames() {
-			weight += len(frame.PixelData)
-		}
+func dccDirectionWeight(direction *dcc.Direction) int {
+	if direction == nil {
+		return 1
+	}
+	weight := len(direction.PixelData)
+	for _, frame := range direction.Frames() {
+		weight += len(frame.PixelData)
 	}
 	return max(weight, 1)
 }
@@ -341,7 +456,8 @@ func (c *renderAssetCache) load(assets fs.FS, key string, decode func() (any, in
 	c.mu.Lock()
 	c.refresh(assets)
 	generation := c.generation
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", key, generation); ok {
+	tier, namespace := c.tier(key)
+	if cached, ok := tier.RetrieveVersioned(namespace, key, generation); ok {
 		c.mu.Unlock()
 		return cached, nil
 	}
@@ -362,14 +478,29 @@ func (c *renderAssetCache) load(assets fs.FS, key string, decode func() (any, in
 	c.mu.Lock()
 	c.decodeCalls++
 	c.decodeTime += elapsed
+	stageName := key
+	if separator := strings.IndexByte(stageName, 0); separator >= 0 {
+		stageName = stageName[:separator]
+	}
+	stage := c.stages[stageName]
+	stage.Calls++
+	stage.Time += elapsed
+	c.stages[stageName] = stage
 	if err == nil && generation == c.generation {
-		err = c.decoded.InsertVersioned("decoded", key, generation, value, weight)
+		err = tier.InsertVersioned(namespace, key, generation, value, weight)
 	}
 	flight.value, flight.err = value, err
 	delete(c.inflight, flightKey)
 	close(flight.done)
 	c.mu.Unlock()
 	return value, err
+}
+
+func (c *renderAssetCache) currentGeneration(assets fs.FS) uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.refresh(assets)
+	return c.generation
 }
 
 func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette, transform string) (*assetdecode.BitmapFont, error) {
@@ -406,19 +537,55 @@ func (c *renderAssetCache) loadAnimationData(assets fs.FS, name string) (*cof.An
 	return value.(*cof.AnimationData), nil
 }
 
-func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC, error) {
+func (c *renderAssetCache) loadDCCFile(assets fs.FS, name, palette string) (preparedDCCFile, error) {
 	key := name + "\x00" + palette
-	value, err := c.load(assets, "dcc\x00"+key, func() (any, int, error) {
-		asset, err := assetdecode.DCC(assets, name, palette)
+	value, err := c.load(assets, "dcc-file\x00"+key, func() (any, int, error) {
+		asset, err := assets.Open(name)
 		if err != nil {
 			return nil, 0, err
 		}
-		return asset, dccDecodedWeight(asset), nil
+		defer asset.Close()
+		encoded, err := io.ReadAll(asset)
+		if err != nil {
+			return nil, 0, err
+		}
+		opened, err := dcc.OpenBytes(encoded)
+		if err != nil {
+			return nil, 0, err
+		}
+		colors := append(color.Palette(nil), (*dcc.DefaultPalette())...)
+		if palette != "" {
+			colors, err = assetdecode.Palette(assets, palette)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+		opened.SetPalette(colors)
+		return preparedDCCFile{file: opened, palette: colors}, max(len(encoded)+len(colors)*4, 1), nil
 	})
 	if err != nil {
-		return nil, err
+		return preparedDCCFile{}, err
 	}
-	return value.(*dcc.DCC), nil
+	return value.(preparedDCCFile), nil
+}
+
+func (c *renderAssetCache) loadDCCDirection(assets fs.FS, name, palette string, direction int) (preparedDCCDirection, error) {
+	key := fmt.Sprintf("dcc-direction\x00%s\x00%s\x00%d", name, palette, direction)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		opened, err := c.loadDCCFile(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		decoded, err := opened.file.DecodeDirection(direction)
+		if err != nil {
+			return nil, 0, err
+		}
+		return preparedDCCDirection{direction: decoded, palette: opened.palette}, dccDirectionWeight(decoded), nil
+	})
+	if err != nil {
+		return preparedDCCDirection{}, err
+	}
+	return value.(preparedDCCDirection), nil
 }
 
 func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6, error) {
@@ -585,6 +752,10 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 }
 
 func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Duration, loop string, initialSeek ...time.Duration) error {
+	return n.setAnimationKeyed(frames, nil, duration, loop, initialSeek...)
+}
+
+func (n *ownedRenderNode) setAnimationKeyed(frames []image.Image, textureKeys []string, duration time.Duration, loop string, initialSeek ...time.Duration) error {
 	textures := make([]render.ResourceID, 0, len(frames))
 	owned := make([]render.ResourceID, 0, len(frames))
 	duplicates := make(map[rgbaFrameDigest]render.ResourceID)
@@ -593,7 +764,7 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 			_ = n.composer.DestroyResource(texture)
 		}
 	}
-	for _, frame := range frames {
+	for frameIndex, frame := range frames {
 		key, shareable := rgbaFrameKey(frame)
 		if shareable {
 			if texture, exists := duplicates[key]; exists {
@@ -601,7 +772,13 @@ func (n *ownedRenderNode) setAnimation(frames []image.Image, duration time.Durat
 				continue
 			}
 		}
-		texture, err := n.composer.CreateResource(render.ResourceTexture, frame)
+		var texture render.ResourceID
+		var err error
+		if frameIndex < len(textureKeys) && textureKeys[frameIndex] != "" {
+			texture, err = n.composer.CreateTexture(frame, textureKeys[frameIndex])
+		} else {
+			texture, err = n.composer.CreateResource(render.ResourceTexture, frame)
+		}
 		if err != nil {
 			cleanup()
 			return err
@@ -687,18 +864,15 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		return nil, nil, err
 	}
 	layers := make(map[cof.CompositeType]cof.CofLayer, len(asset.CofLayers))
-	decoded := make(map[cof.CompositeType]*dcc.DCC)
+	decoded := make(map[cof.CompositeType]preparedDCCDirection)
 	for _, layer := range asset.CofLayers {
 		name, ok := paths[layer.Type.String()]
 		if !ok || name == "" {
 			continue
 		}
-		component, err := n.cache.loadDCC(n.assets, name, palette)
+		component, err := n.cache.loadDCCDirection(n.assets, name, palette, dccDirection)
 		if err != nil {
 			return nil, nil, fmt.Errorf("COF layer %s: %w", layer.Type, err)
-		}
-		if dccDirection >= len(component.Directions()) {
-			return nil, nil, fmt.Errorf("COF layer %s lacks DCC direction %d", layer.Type, dccDirection)
 		}
 		layers[layer.Type], decoded[layer.Type] = layer, component
 	}
@@ -709,7 +883,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 	// retain texture geometry from the first animation frame.
 	var animationBounds image.Rectangle
 	for _, component := range decoded {
-		for _, frame := range component.Direction(dccDirection).Frames() {
+		for _, frame := range component.direction.Frames() {
 			if animationBounds.Empty() {
 				animationBounds = frame.Bounds()
 			} else {
@@ -725,13 +899,12 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 	for frameIndex := range frames {
 		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
 		for componentType, component := range decoded {
-			directionFrames := component.Direction(dccDirection).Frames()
+			directionFrames := component.direction.Frames()
 			if frameIndex >= len(directionFrames) {
 				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
 			}
 			frame := directionFrames[frameIndex]
-			normalized := rgbaDCCFrame(frame, component.Palette())
-			components[componentType] = compositeFrame{image: normalized, bounds: frame.Bounds(), layer: layers[componentType]}
+			components[componentType] = compositeFrame{indices: frame.PixelData, palette: component.palette, bounds: frame.Bounds(), layer: layers[componentType]}
 		}
 		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components, animationBounds)
 		if err != nil {
@@ -762,7 +935,13 @@ func (n *ownedRenderNode) cachedCOFAnimation(cofName, palette string, direction 
 	if err != nil {
 		return preparedCOFAnimation{}, err
 	}
-	return value.(preparedCOFAnimation), nil
+	prepared := value.(preparedCOFAnimation)
+	prepared.keys = make([]string, len(prepared.frames))
+	generation := n.cache.currentGeneration(n.assets)
+	for index := range prepared.keys {
+		prepared.keys[index] = fmt.Sprintf("cof:%d:%s:frame:%d", generation, key, index)
+	}
+	return prepared, nil
 }
 
 func luaComponentPaths(state *lua.LState, index int) map[string]string {
@@ -1046,7 +1225,18 @@ func (r *RenderCapability) Module() Module {
 				return 1
 			},
 			"diagnostics": func(state *lua.LState) int {
-				decoded, retained := cache.decoded.Diagnostics(), composer.Diagnostics()
+				cache.mu.Lock()
+				encoded := cache.encoded.Diagnostics()
+				decodedTier := cache.decoded.Diagnostics()
+				composed := cache.composed.Diagnostics()
+				decoded := combinedCacheStats(encoded, decodedTier, composed)
+				decodeCalls, decodeTime := cache.decodeCalls, cache.decodeTime
+				stages := make(map[string]DecodeStageDiagnostics, len(cache.stages))
+				for name, stage := range cache.stages {
+					stages[name] = stage
+				}
+				cache.mu.Unlock()
+				retained := composer.Diagnostics()
 				result := state.NewTable()
 				result.RawSetString("decoded_entries", lua.LNumber(decoded.Entries))
 				result.RawSetString("decoded_weight", lua.LNumber(decoded.Weight))
@@ -1054,11 +1244,27 @@ func (r *RenderCapability) Module() Module {
 				result.RawSetString("cache_hits", lua.LNumber(decoded.Hits))
 				result.RawSetString("cache_misses", lua.LNumber(decoded.Misses))
 				result.RawSetString("cache_evictions", lua.LNumber(decoded.Evictions))
+				result.RawSetString("encoded_weight", lua.LNumber(encoded.Weight))
+				result.RawSetString("direction_weight", lua.LNumber(decodedTier.Weight))
+				result.RawSetString("composed_weight", lua.LNumber(composed.Weight))
+				result.RawSetString("encoded_evictions", lua.LNumber(encoded.Evictions))
+				result.RawSetString("direction_evictions", lua.LNumber(decodedTier.Evictions))
+				result.RawSetString("composed_evictions", lua.LNumber(composed.Evictions))
 				result.RawSetString("active_nodes", lua.LNumber(retained.ActiveNodes))
 				result.RawSetString("active_resources", lua.LNumber(retained.ActiveResources))
 				result.RawSetString("pending_commands", lua.LNumber(retained.Pending))
 				result.RawSetString("pending_warm_textures", lua.LNumber(retained.WarmPending))
 				result.RawSetString("pending_warm_bytes", lua.LNumber(retained.WarmPendingBytes))
+				result.RawSetString("decode_calls", lua.LNumber(decodeCalls))
+				result.RawSetString("decode_time_ms", lua.LNumber(float64(decodeTime)/float64(time.Millisecond)))
+				stageTable := state.NewTable()
+				for name, stage := range stages {
+					values := state.NewTable()
+					values.RawSetString("calls", lua.LNumber(stage.Calls))
+					values.RawSetString("time_ms", lua.LNumber(float64(stage.Time)/float64(time.Millisecond)))
+					stageTable.RawSetString(name, values)
+				}
+				result.RawSetString("decode_stages", stageTable)
 				state.Push(result)
 				return 1
 			},
@@ -1512,15 +1718,15 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			fileName, paletteName := state.CheckString(2), state.OptString(3, "")
 			direction, frameIndex := state.OptInt(4, 0), state.OptInt(5, 0)
-			asset, err := node.cache.loadDCC(node.assets, fileName, paletteName)
+			asset, err := node.cache.loadDCCDirection(node.assets, fileName, paletteName, direction)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			frames, err := assetdecode.DCCFrames(asset, direction)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
+			directionFrames := asset.direction.Frames()
+			frames := make([]image.Image, len(directionFrames))
+			for index, frame := range directionFrames {
+				frames[index] = rgbaDCCFrame(frame, &asset.palette)
 			}
 			if frameIndex < 0 || frameIndex >= len(frames) {
 				state.ArgError(5, "frame is out of range")
@@ -1529,7 +1735,7 @@ func registerRenderNodeType(state *lua.LState) {
 			if err := node.setImage(frames[frameIndex]); err != nil {
 				state.RaiseError("updating DCC render node: %v", err)
 			}
-			bounds := asset.Direction(direction).Frames()[frameIndex].Bounds()
+			bounds := asset.direction.Frames()[frameIndex].Bounds()
 			state.Push(lua.LNumber(bounds.Dx()))
 			state.Push(lua.LNumber(bounds.Dy()))
 			state.Push(lua.LNumber(bounds.Min.X))
@@ -1554,15 +1760,15 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(6, "loop mode must be loop, once, or ping-pong")
 				return 0
 			}
-			asset, err := node.cache.loadDCC(node.assets, fileName, paletteName)
+			asset, err := node.cache.loadDCCDirection(node.assets, fileName, paletteName, direction)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			frames, err := assetdecode.DCCFrames(asset, direction)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
+			directionFrames := asset.direction.Frames()
+			frames := make([]image.Image, len(directionFrames))
+			for index, frame := range directionFrames {
+				frames[index] = rgbaDCCFrame(frame, &asset.palette)
 			}
 			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
 				state.RaiseError("updating DCC animation: %v", err)
@@ -1622,7 +1828,7 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			duration := time.Duration(float64(time.Second) * 256 / (float64(rate) * 25))
 			seek := time.Duration(float64(time.Second) * float64(state.OptNumber(8, 0)))
-			if err := node.setAnimation(prepared.frames, duration, loop, seek); err != nil {
+			if err := node.setAnimationKeyed(prepared.frames, prepared.keys, duration, loop, seek); err != nil {
 				state.RaiseError("updating COF animation: %v", err)
 				return 0
 			}

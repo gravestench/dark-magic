@@ -544,6 +544,10 @@ func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
 	if after := capability.Diagnostics().DecodeCalls; after != before {
 		t.Fatalf("warm asset decoded again: before=%d after=%d", before, after)
 	}
+	stage := capability.Diagnostics().Stages["dc6-animation"]
+	if stage.Calls != 1 || stage.Time <= 0 {
+		t.Fatalf("dc6 animation stage diagnostics = %#v", stage)
+	}
 }
 
 func TestRenderCapabilityRequiresComponentScope(t *testing.T) {

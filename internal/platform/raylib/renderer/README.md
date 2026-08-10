@@ -25,3 +25,17 @@ private native state required to draw those changes.
 
 `BackendDiagnostics` exposes cumulative work counters without leaking native
 handles. Profiling records these beside composer and texture-cache diagnostics.
+
+## Texture upload policy
+
+Raylib remains the native backend. Engine-produced contiguous `image.RGBA`
+surfaces are wrapped as `UncompressedR8g8b8a8` and uploaded in one call. Do not
+send these through raylib-go's generic `NewImageFromImage`: that helper crosses
+the cgo boundary once per pixel. Non-contiguous or unusual Go images use the
+generic conversion fallback, whose temporary native image is released
+immediately after upload.
+
+Background residency is optional and drains after visible presentation. It has
+both byte and wall-clock budgets, whereas a texture demanded by a visible node
+is never denied. Known immutable asset frames use generation-qualified semantic
+keys so scene re-entry does not rescan all pixels merely to identify a texture.

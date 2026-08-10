@@ -973,6 +973,9 @@ authority, persistence separation, and resilience acceptance remain open.
   retaining timing entries for every source frame.
 - [x] Replace per-pixel `image.Image` conversion in texture upload with cached or
   directly decoded GPU-ready buffers and benchmark the loading/front-end path.
+  The Raylib adapter now wraps contiguous engine RGBA storage directly instead
+  of using raylib-go's per-pixel cgo converter, and releases fallback conversion
+  images immediately after upload.
 - [x] Evaluate indexed GPU textures with palette lookup for DC6/DCC assets after
   the simpler lifetime and upload improvements are measured.
 - [x] Stream long-lived frontend music when doing so reduces residency without
@@ -988,6 +991,11 @@ authority, persistence separation, and resilience acceptance remain open.
   Optional warming runs after presentation and is admitted only while it fits
   without eviction; demand uploads remain unrestricted and therefore retain
   priority over speculative residency.
+- [x] Decode only the requested DCC direction, composite palette indexes directly
+  into the final RGBA surface, give known frames generation-qualified semantic
+  texture identities, split encoded/direction/composed CPU cache budgets, and
+  report cold work by stage. The real unarmed-player fixture fell from roughly
+  1.4 seconds to about 0.7 seconds on the development machine.
 
 ## M26: Native frame-path profiling follow-up
 
@@ -1412,9 +1420,10 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 - [x] Make MPQ archive and entry access positional and concurrency-safe, verify
   it under the race detector against an owned real archive, and adopt the new
   APIs at Dark Magic's content/decode boundary.
-- [ ] Retain lazy codec files in scene/world caches so only requested DC6
-  frames, DCC directions, and DT1 tiles become resident; measure the reduction
-  against the M25 cache and warmup diagnostics.
+- [ ] Retain lazy codec files in scene/world caches so only requested DC6 frames
+  and DT1 tiles become resident. DCC now retains encoded metadata separately and
+  decodes only the requested direction; finish the same adoption for DC6/DT1 and
+  measure each tier against the M25 cache and warmup diagnostics.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.
