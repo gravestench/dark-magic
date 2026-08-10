@@ -8,31 +8,10 @@ local data = require("dm.data/v1")
 local audio = require("dm.audio/v1")
 local loading = require("dm.loading/v1")
 local compat = require("darkmagic.ui.compat")
+local loading_graphic = require("darkmagic.ui.loading_graphic")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_loading
-
-local function attach_loading_animation(node)
-    local candidates = compat.frontend.game_loading.sheets or { screen.sheet }
-    local errors = {}
-    for _, path in ipairs(candidates) do
-        local ok, frames_or_error = pcall(function()
-            return node:set_dc6_animation(
-                path,
-                manifest.palettes[screen.palette],
-                0,
-                10,
-                "once",
-                "offsets"
-            )
-        end)
-        if ok then
-            return frames_or_error, path
-        end
-        errors[#errors + 1] = path .. ": " .. tostring(frames_or_error)
-    end
-    error("unable to decode a verified Diablo II loading screen:\n" .. table.concat(errors, "\n"))
-end
 
 return {
     enter = function(self)
@@ -46,10 +25,12 @@ return {
             screen.fill.red, screen.fill.green, screen.fill.blue, screen.fill.alpha)
         if render.assets_available() then
             self.animation = render.create("transition", self.root)
-            self.frames, self.loading_sheet = attach_loading_animation(self.animation)
+            self.frames, self.loading_sheet = loading_graphic.attach(
+                self.animation,
+                compat.frontend.game_loading.sheets or { screen.sheet },
+                manifest.palettes[screen.palette]
+            )
             self.animation:set_position(0, 0)
-            self.animation:animation_pause()
-            self.animation:animation_seek(0)
         end
     end,
 
@@ -63,7 +44,7 @@ return {
         if self.animation then
             -- set_dc6_animation is authored at 10 FPS above, so seek directly
             -- across the progressive loading frames as dependency progress rises.
-            self.animation:animation_seek(self.displayed_progress * (self.frames - 1) / 10)
+            loading_graphic.seek(self.animation, self.frames, self.displayed_progress)
         end
         if status.state == "complete" and self.displayed_progress >= 1 then
             scenes.replace("game_world")
