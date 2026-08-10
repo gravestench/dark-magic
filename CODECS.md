@@ -99,6 +99,9 @@ Magic's build contract.
   assets take the random-access path; ZIP and minimal test files retain a
   compatibility buffer fallback. COF, DS1, PL2, palette, and localization
   loaders consume streams directly.
+- The pass is published as `bitstream` v0.3.0 and v0.2.0 for COF, DC6, DCC,
+  DS1, DT1, GPL, MPQ, PL2, TBL, and WAV. Dark Magic depends on the stable tags,
+  not checkout paths or pseudo-versions.
 
 The next performance step is selective residency in the engine caches: retain
 lazy DC6/DCC/DT1 file handles long enough to decode only requested frames,
