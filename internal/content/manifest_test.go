@@ -72,7 +72,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint", "pause", "options", "automap", "death"}) {
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint", "pause", "options", "automap", "death", "loading", "game_loading"}) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
@@ -581,5 +581,11 @@ func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	death := screens["death"].(map[string]any)
 	if death["x"] != float64(320) || death["width"] != float64(600) || death["died_y"] != float64(145) {
 		t.Fatalf("classic death presentation = %#v", death)
+	}
+	for _, id := range []string{"loading", "game_loading"} {
+		screen := screens[id].(map[string]any)
+		if screen["x"] != float64(320) || screen["y"] != float64(240) || screen["width"] != float64(640) || screen["height"] != float64(480) {
+			t.Errorf("classic %s viewport = %#v", id, screen)
+		}
 	}
 }

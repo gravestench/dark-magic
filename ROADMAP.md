@@ -721,9 +721,11 @@ complete until its actions are driven by authoritative game state and commands.
   pointer hit regions from the selected logical viewport. Automap placeholder
   bounds and the archive-matched death typography are now profile-owned, with
   the classic death copy centered at 320 while retaining its recovered vertical
-  rhythm. Other frontend and asset-specific full-screen overlays remain to be
-  independently verified. The roadmap does not yet claim complete 640x480
-  application support.
+  rhythm. Startup and game-loading backdrops now follow the selected logical
+  viewport around their independently managed movie/loading presenters. The
+  expansion frontend remains deliberately excluded because its backgrounds and
+  interaction geometry are authored for the 800x600 shell; the roadmap does not
+  yet claim complete 640x480 application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 

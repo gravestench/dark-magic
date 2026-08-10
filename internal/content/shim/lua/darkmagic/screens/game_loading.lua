@@ -41,8 +41,9 @@ return {
         self.displayed_progress = 0
         loading.begin(screen.dependencies)
         self.root = render.create("transition")
-        self.root:set_position(400, 300)
-        self.root:fill_rect(800, 600, 0, 0, 0, 255)
+        self.root:set_position(screen.x, screen.y)
+        self.root:fill_rect(screen.width, screen.height,
+            screen.fill.red, screen.fill.green, screen.fill.blue, screen.fill.alpha)
         if render.assets_available() then
             self.animation = render.create("transition", self.root)
             self.frames, self.loading_sheet = attach_loading_animation(self.animation)
