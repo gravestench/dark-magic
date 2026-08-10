@@ -16,7 +16,7 @@
       "game_version": "diablo-ii-lod",
       "language": "English",
       "resolution": { "width": 640, "height": 480 },
-      "screens": ["game_world","inventory","character","skills","quests","party"],
+      "screens": ["game_world","inventory","character","skills","quests","party","help"],
       "overrides": {
         "screens": {
           "game_world": {
@@ -48,7 +48,21 @@
           "character": {"offset_x":-80,"offset_y":-60},
           "skills": {"x":320,"y":4},
           "quests": {"offset_x":-80,"offset_y":-60},
-          "party": {"offset_x":-80,"offset_y":-60}
+          "party": {"offset_x":-80,"offset_y":-60},
+          "help": {
+            "border": {
+              "sheet":"data/global/ui/MENU/helpborder.DC6",
+              "placements":[
+                {"frame":0,"x":0,"y":0},{"frame":1,"x":256,"y":0},
+                {"frame":2,"x":0,"y":256},{"frame":3,"x":256,"y":256},
+                {"frame":4,"x":320,"y":0},{"frame":5,"x":576,"y":0},
+                {"frame":6,"x":320,"y":256},{"frame":7,"x":576,"y":256}
+              ]
+            },
+            "heading":{"x":283,"y":2,"width":260},
+            "content":{"scale_x":0.8,"hud_offset_y":-120,"text_width":500},
+            "close":{"x":525,"y":25}
+          }
         }
       }
     }
@@ -482,6 +496,8 @@
       "border":{"sheet":"data/global/ui/MENU/800helpborder.DC6","palette":"sky","frame_order":[0,1,2,3,4,5,6],"middle_overlap":40},
       "yellow_bullet":"data/global/ui/MENU/helpyellowbullet.DC6",
       "white_bullet":"data/global/ui/MENU/helpwhitebullet.DC6",
+      "heading":{"x":363,"y":2,"width":260},
+      "content":{"scale_x":1,"hud_offset_y":0,"text_width":600},
       "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":685,"y":25,"width":32,"height":32,"label":"darkmagic.help.close"}
     },
     "quests": {

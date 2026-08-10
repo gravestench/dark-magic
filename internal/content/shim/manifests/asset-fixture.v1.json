@@ -269,6 +269,20 @@
       "frames_sha256": "603fd9e85c5155bf768d29a479de6d01fae67de56a5f86ac5c66f411a23f7a8f"
     },
     {
+      "id": "help-border-640",
+      "path": "data/global/ui/MENU/helpborder.dc6",
+      "sha256": "0789b4d58764c1f3d695a5c742001b773b484765296de7d7e4226e36bf1546a2",
+      "bytes": 15813,
+      "type": "dc6",
+      "directions": 1,
+      "frame_count": 8,
+      "min_width": 64,
+      "max_width": 256,
+      "min_height": 176,
+      "max_height": 256,
+      "frames_sha256": "668a1266a817ae631fb13d63f4b7e30e20bab92cbe8baed30d9739612b790dd9"
+    },
+    {
       "id": "hud-pop-belt",
       "path": "data/global/ui/PANEL/ctrlpnl_popbelt.DC6",
       "sha256": "a9f08b7847f3d89477ad2a130f642b5fc5ade7e60147481121c723215e47957f",
