@@ -787,9 +787,12 @@ complete until its actions are driven by authoritative game state and commands.
   buying remain distinct transactions. Alternate hand-equipment sets now have
   independent `rarm`/`larm` occupancy, a replayable fixed-tick selection
   command, Lua snapshot/intent bindings, and the canonical W-key presentation
-  path; armor and jewelry remain shared across both sets. Save/realm handoff
-  persistence and service presentation and transaction rules keep this
-  checkpoint open.
+  path; armor and jewelry remain shared across both sets. Container authority
+  now exports deterministic, checksummed version-1 archives and restores them
+  atomically through the ordinary placement validators, preserving held items,
+  belt contents, escrow, and the active alternate-weapon set across reconnect
+  or realm handoff. Durable Diablo II save integration and service presentation
+  and transaction rules keep this checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

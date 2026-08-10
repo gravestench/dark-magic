@@ -73,3 +73,36 @@ func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map
 	layout, items, placements := state.Snapshot()
 	return layout, items, placements, nil
 }
+
+// Export creates a self-contained archive suitable for disconnect recovery,
+// durable saves, or transfer to another realm process.
+func (authority *Authority) Export(owner string) ([]byte, error) {
+	owner, err := normalizeOwner(owner)
+	if err != nil {
+		return nil, err
+	}
+	authority.mu.RLock()
+	defer authority.mu.RUnlock()
+	state, found := authority.players[owner]
+	if !found {
+		return nil, fmt.Errorf("item: unknown owner %q", owner)
+	}
+	return MarshalArchive(state)
+}
+
+// Restore validates a complete archive before atomically installing it. The
+// old owner state remains untouched if verification or reconstruction fails.
+func (authority *Authority) Restore(owner string, encoded []byte) error {
+	owner, err := normalizeOwner(owner)
+	if err != nil {
+		return err
+	}
+	state, err := UnmarshalArchive(encoded)
+	if err != nil {
+		return err
+	}
+	authority.mu.Lock()
+	authority.players[owner] = state
+	authority.mu.Unlock()
+	return nil
+}
