@@ -191,6 +191,21 @@ func (c *Composer) Diagnostics() Diagnostics {
 
 // CreateResource queues decoded input for renderer-thread native creation.
 func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, error) {
+	return c.createResource(kind, payload, "")
+}
+
+// CreateTexture creates an immutable texture with an identity already known by
+// the caller. Asset pipelines should use this when their cache key uniquely
+// identifies the pixels; doing so avoids hashing a large image on every scene
+// activation. Ad-hoc images should keep using CreateResource.
+func (c *Composer) CreateTexture(pixels image.Image, key string) (ResourceID, error) {
+	if key == "" {
+		return ResourceID{}, errors.New("rendercore: semantic texture key is required")
+	}
+	return c.createResource(ResourceTexture, pixels, key)
+}
+
+func (c *Composer) createResource(kind ResourceKind, payload any, textureKey string) (ResourceID, error) {
 	if kind == "" || payload == nil {
 		return ResourceID{}, errors.New("rendercore: resource kind and payload are required")
 	}
@@ -210,7 +225,10 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	id := ResourceID{Slot: index, Generation: c.resources[index].generation}
 	resource := &Resource{ID: id, Kind: kind, Payload: payload}
 	if kind == ResourceTexture {
-		resource.TextureKey = TextureKey(payload.(image.Image))
+		resource.TextureKey = textureKey
+		if resource.TextureKey == "" {
+			resource.TextureKey = TextureKey(payload.(image.Image))
+		}
 	}
 	c.resources[index].resource = resource
 	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
@@ -252,7 +270,13 @@ func TextureKey(pixels image.Image) string {
 // WarmTexture queues optional native residency work. Scene correctness never
 // depends on this queue: a node can still demand-upload a missing texture.
 func (c *Composer) WarmTexture(pixels image.Image) string {
-	key := TextureKey(pixels)
+	return c.WarmTextureKey(TextureKey(pixels), pixels)
+}
+
+// WarmTextureKey is the preload counterpart to CreateTexture. The semantic key
+// lets decoded assets enter native residency without another complete pixel
+// scan on a worker goroutine.
+func (c *Composer) WarmTextureKey(key string, pixels image.Image) string {
 	if key == "" {
 		return ""
 	}
@@ -496,13 +520,24 @@ func (c *Composer) Drain(backend Backend) error {
 // DrainWarm uploads optional texture residency work up to a byte budget. At
 // least one queued texture is processed so an oversized image cannot starve.
 func (c *Composer) DrainWarm(backend Backend, byteBudget uint64) error {
+	return c.DrainWarmWithin(backend, byteBudget, 0)
+}
+
+// DrainWarmWithin also caps optional residency work by wall time. A zero time
+// budget preserves the byte-only behavior. The first texture is still allowed
+// through so a single oversized upload cannot starve forever.
+func (c *Composer) DrainWarmWithin(backend Backend, byteBudget uint64, timeBudget time.Duration) error {
 	if backend == nil {
 		return errors.New("rendercore: nil backend")
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	started := time.Now()
 	used, count := uint64(0), 0
 	for count < len(c.warmPending) {
+		if count > 0 && timeBudget > 0 && time.Since(started) >= timeBudget {
+			break
+		}
 		change := c.warmPending[count]
 		weight := resourceTextureBytes(change.Resource)
 		if admission, ok := backend.(WarmAdmission); ok && !admission.CanWarmTexture(change.Resource.TextureKey, weight) {

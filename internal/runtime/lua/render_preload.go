@@ -73,6 +73,19 @@ func (p *assetPreloader) warm(images ...image.Image) {
 	}
 }
 
+func (p *assetPreloader) warmKeyed(keys []string, images []image.Image) {
+	if p.composer == nil {
+		return
+	}
+	for index, pixels := range images {
+		if index < len(keys) {
+			p.composer.WarmTextureKey(keys[index], pixels)
+		} else {
+			p.composer.WarmTexture(pixels)
+		}
+	}
+}
+
 func (p *assetPreloader) Start(requests []AssetPreloadRequest) uint64 {
 	p.mu.Lock()
 	p.nextID++
@@ -174,7 +187,7 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		return err
 	case "dcc":
-		_, err := p.cache.loadDCC(p.assets, request.Path, request.Palette)
+		_, err := p.cache.loadDCCDirection(p.assets, request.Path, request.Palette, request.Direction)
 		return err
 	case "cof":
 		_, err := p.cache.loadCOF(p.assets, request.Path)
@@ -186,7 +199,7 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		node := &ownedRenderNode{assets: p.assets, cache: p.cache}
 		animation, err := node.cachedCOFAnimation(request.Path, request.Palette, request.Direction, request.Components)
 		if err == nil {
-			p.warm(animation.frames...)
+			p.warmKeyed(animation.keys, animation.frames)
 		}
 		return err
 	case "font":

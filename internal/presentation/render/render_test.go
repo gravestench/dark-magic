@@ -52,6 +52,22 @@ func TestAllManagedResourceKindsUseCheckedHandles(t *testing.T) {
 	}
 }
 
+func TestCreateTextureUsesSemanticIdentityWithoutPixelHashing(t *testing.T) {
+	var composer Composer
+	pixels := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	texture, err := composer.CreateTexture(pixels, "player:run:direction-3:frame-7")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resource, err := composer.resource(texture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := resource.TextureKey, "player:run:direction-3:frame-7"; got != want {
+		t.Fatalf("texture key = %q, want %q", got, want)
+	}
+}
+
 func TestManagedResourcePayloadValidation(t *testing.T) {
 	var composer Composer
 	for _, input := range []struct {
