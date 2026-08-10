@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
+	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
@@ -124,6 +125,70 @@ return {
 	}
 	if !reflect.DeepEqual(profiler.scenes, []string{"world"}) {
 		t.Fatalf("profiled scenes = %v", profiler.scenes)
+	}
+}
+
+func TestNonfocusedLuaSceneCannotReadFocusedOverlayInput(t *testing.T) {
+	ctx := context.Background()
+	runtime := New()
+	observed := make(map[string]bool)
+	if err := runtime.RegisterModule(Module{Name: "test.focus/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"record": func(state *lua.LState) int {
+			observed[state.CheckString(1)] = state.CheckBool(2)
+			return 0
+		}}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	manager := navigation.New()
+	scenes := NewScenes(runtime, manager)
+	var input inputstate.Store
+	scenes.SetInputStore(&input)
+	for _, module := range []Module{InputModule(&input), scenes.Module()} {
+		if err := runtime.RegisterModule(module); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runtime.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(ctx)
+	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
+local input=require("dm.input/v1")
+local scenes=require("dm.scene/v1")
+local focus=require("test.focus/v1")
+return {id="boot",api=1,start=function(self)
+  scenes.register("world",{update=function(self,elapsed,focused)
+    focus.record("world",input.pressed("confirm"))
+  end})
+  scenes.register("overlay",{blocks_update_below=false,update=function(self,elapsed,focused)
+    focus.record("overlay",input.pressed("confirm"))
+  end})
+  scenes.replace("world")
+  scenes.push("overlay")
+end}
+`)}}
+	definition, err := LoadDefinition(ctx, runtime, source, "boot.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	components := host.NewManager()
+	if err := components.Register(definition.Managed()); err != nil {
+		t.Fatal(err)
+	}
+	if err := components.Enable(ctx, definition.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := scenes.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"confirm": {Pressed: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "overlay"}})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	if observed["world"] || !observed["overlay"] {
+		t.Fatalf("input visibility = %#v", observed)
 	}
 }
 

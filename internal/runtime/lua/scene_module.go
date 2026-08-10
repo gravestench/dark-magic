@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -24,11 +25,16 @@ type Scenes struct {
 	mu       sync.Mutex
 	pending  []navigationRequest
 	profiler SceneProfiler
+	input    *inputstate.Store
 }
 
 type SceneProfiler interface{ CaptureSceneHeap(string) error }
 
 func (s *Scenes) SetProfiler(profiler SceneProfiler) { s.profiler = profiler }
+
+// SetInputStore applies capability-level suppression while nonfocused scenes
+// continue simulation beneath transparent overlays.
+func (s *Scenes) SetInputStore(input *inputstate.Store) { s.input = input }
 
 // FrameContext labels work performed after Lua scene callbacks, including
 // deferred renderer uploads and native drawing, with the focused scene.
@@ -117,7 +123,7 @@ func (s *Scenes) luaRegister(state *lua.LState) int {
 		return 0
 	}
 	if err := s.manager.Register(id, func(context.Context) (navigation.Scene, error) {
-		return &luaScene{id: id, runtime: s.runtime, definition: definition, scope: &Scope{}, profiler: s.profiler}, nil
+		return &luaScene{id: id, runtime: s.runtime, definition: definition, scope: &Scope{}, profiler: s.profiler, input: s.input}, nil
 	}); err != nil {
 		state.RaiseError("registering scene %q: %v", id, err)
 		return 0
@@ -182,6 +188,7 @@ type luaScene struct {
 	definition luaSceneDefinition
 	scope      *Scope
 	profiler   SceneProfiler
+	input      *inputstate.Store
 }
 
 func (s *luaScene) Create(ctx context.Context) error { return s.call(ctx, s.definition.create) }
@@ -199,9 +206,16 @@ func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, foc
 	}
 	var result error
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
-		result = s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-			return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
-		})
+		invoke := func() error {
+			return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
+				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
+			})
+		}
+		if !focused && s.input != nil {
+			result = s.input.Suppress(invoke)
+		} else {
+			result = invoke()
+		}
 	})
 	return result
 }
