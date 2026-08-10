@@ -4,6 +4,40 @@ This roadmap favors complete, testable vertical slices over adding more isolated
 services. Diablo II data is never distributed with Dark Magic; users must supply
 their own legally obtained game data.
 
+## Milestone status and delivery policy
+
+Checkboxes describe repository evidence, not aspiration. A milestone remains
+open while any unchecked acceptance item remains, even when its underlying
+architecture is already usable. Long notes under an unchecked item record
+partial delivery; they do not make the item complete.
+
+Milestone work uses a dedicated branch and pull request for each independently
+reviewable checkpoint:
+
+1. Branch from a clean, current `main` as `codex/mNN-checkpoint-name`.
+2. Keep one behavioral objective and its tests, documentation, and migration in
+   that pull request. Do not combine unrelated later-milestone cleanup.
+3. Require `make test`, `make architecture`, and `make test-race`. Add the
+   relevant real-asset capture/profile matrix when presentation or native media
+   changes.
+4. Record the completed checkpoint here in the same pull request. Merge before
+   branching the next dependent checkpoint.
+
+The milestone-number order is historical, not a strict dependency graph. The
+active queue below closes bounded earlier gaps before item/gameplay work:
+
+1. **M15.5 — presentation catalog coverage:** inventory every runtime-consumed
+   presentation asset/dependency and report manifest or fixture gaps.
+2. **M18.1 — authoritative overlay input routing:** make world/HUD/overlay/modal/
+   cursor/debug focus ownership explicit and acceptance-tested.
+3. **M18.2 + M27 — functional 800x600 HUD controls:** finish belt, skill, tooltip,
+   cursor, and shared styling needed by item interaction.
+4. **M19.1 + M29 gameplay-command integration — authoritative item containers:**
+   implement inventory/body/belt/cursor commands and connect the Lua presentation
+   without client authority.
+5. Resume M18/M19 vertically per overlay; schedule independent M26 native-path
+   work when it does not destabilize gameplay PRs.
+
 ## M0: Recovery and inventory
 
 - [x] Inventory the active branch, working tree, and stashes.
@@ -250,7 +284,7 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Move verified screen facts from Go literals into versioned shim manifests
   with confidence, game-version, language, and resolution fields.
 - [ ] Catalog every front-end screen, HUD/panel sheet, cursor, font, cinematic,
-  sound cue, and relevant TXT/TBL dependency.
+  sound cue, and relevant TXT/TBL dependency (M15.5).
 - [x] Add comparison fixtures that verify expected dimensions, frame counts,
   offsets, and hashes without distributing original asset bytes.
 
@@ -270,6 +304,10 @@ implementations. The remaining work is tracked explicitly below.
   source hashes, byte sizes, decoder types, direction/frame counts, dimension
   ranges, and deterministic full-frame-metadata hashes. The catalog tool can
   generate or compare the fixture and reports every mismatch in one pass.
+- [ ] M15.5: Generate a deterministic coverage report joining runtime-consumed
+  asset paths, presentation-manifest entries, and verified fixture entries.
+  Classify deliberate dynamic paths separately, fail CI for unexplained static
+  gaps, and document the remaining screen/HUD/font/audio/TXT/TBL inventory.
 
 ## M16: MPQ-backed presentation primitives
 
@@ -279,16 +317,16 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Support DC6 frame/direction selection, placement offsets, anchoring,
   front-end tiling, deterministic layer order, and alpha/additive/multiply blend
   modes.
-- [ ] Support native animation timing, loop modes, clipping, general tiling,
-  and nine-slice composition.
-- [ ] Decode Diablo font TBL/DC6 pairs and render localized, colored, aligned,
+- [x] Support native animation timing, loop modes, and clipping.
+- [ ] Support reusable general tiling and nine-slice composition.
+- [x] Decode Diablo font TBL/DC6 pairs and render localized, colored, aligned,
   wrapped text.
-- [ ] Add Lua-authored buttons, text fields, checkboxes, scrollbars, focus order,
+- [x] Add Lua-authored buttons, text fields, checkboxes, scrollbars, focus order,
   controller navigation, hit testing, hover/pressed/disabled states, and cursor
   sounds.
-- [ ] Add music/SFX/UI/ambience/speech buses, looping and streaming, sound-record
+- [x] Add music/SFX/UI/ambience/speech buses, looping and streaming, sound-record
   lookup, grouped variants, fades, pan, and scope-owned playback.
-- [ ] Cache decoded CPU assets separately from renderer/audio resources and
+- [x] Cache decoded CPU assets separately from renderer/audio resources and
   invalidate them by VFS generation without leaking owner-thread resources.
 - [x] Add palette quantization to either the final display or individual
   retained textures and animations. A CPU-built 32³ nearest-color lookup cube
@@ -489,6 +527,10 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M18: Authentic in-game shell
 
+M18 is partially implemented, not complete. The merged UI compatibility work
+establishes reusable controls and visually reviewable shells; an overlay is not
+complete until its actions are driven by authoritative game state and commands.
+
 - [ ] Replace the compatibility HUD and placeholder hero with Lua orchestration
   over real world and character presentation handles. The fake hero rectangle
   is gone: the world scene now binds an optional selected-character COF/DCC
@@ -595,6 +637,19 @@ implementations. The remaining work is tracked explicitly below.
   nodes on reset, runtime reload, disconnect, scene change when configured, and
   client shutdown.
 
+### M18 execution checkpoints
+
+- [ ] M18.1: Define and test one focus owner across world, HUD, overlay, modal,
+  cursor, transition, and debug layers, including cancellation and scene change.
+- [ ] M18.2: Complete the functional 800x600 control panel, belt, skill wells,
+  tooltips, cursor states, and minipanel behavior using authoritative snapshots.
+- [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
+  from visual shells to command-backed interfaces; continue with character,
+  skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.
+- [ ] M18.4: Complete data-driven panel geometry and the supported 640x480 profile.
+- [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
+  teardown of console-created resources.
+
 ## M19: Character, item, and save fidelity
 
 - [ ] Implement COF/DCC composite animation with equipment components, weapon
@@ -607,6 +662,18 @@ implementations. The remaining work is tracked explicitly below.
   requirements, durability, sockets, runewords, set state, and tooltip stats.
 - [ ] Recalculate character attributes and presentation after every equipment,
   skill, level, state, and difficulty change.
+
+### M19 execution checkpoints
+
+- [ ] M19.1: Define authoritative inventory, body, belt, and cursor-item state;
+  admit deterministic pickup/place/move/equip/drop commands with validation,
+  replay coverage, and audited administrator equivalents.
+- [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
+  Lua UI snapshots to M19.1 without making presentation authoritative.
+- [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for
+  character identity, progression, equipment, and item containers.
+- [ ] M19.4: Complete equipment-driven COF/DCC appearance and derived-stat
+  recalculation, including durability, sockets, sets, and runewords.
 
 ## M20: World fidelity
 
@@ -652,6 +719,9 @@ implementations. The remaining work is tracked explicitly below.
   and combat sound selection with deterministic event identity where required.
 
 ## M22: Client and game-session networking
+
+M22 has a working deterministic session/replay foundation; transport, remote
+authority, persistence separation, and resilience acceptance remain open.
 
 - [x] Define deterministic simulation snapshots, purpose-named RNG streams,
   admitted command logs, canonical per-tick execution, checksums, restoration,
@@ -723,6 +793,10 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M26: Native frame-path profiling follow-up
 
+M26 is independent performance/lifecycle debt. Its shutdown-order checkpoint is
+safety-sensitive; the remaining upload and accounting work should stay in
+separate profiling PRs unless a measured gameplay budget requires it sooner.
+
 - [ ] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
   layout is already compatible with raylib, retaining conversion for genuinely
   incompatible color models and padded subimages.
@@ -776,6 +850,10 @@ implementations. The remaining work is tracked explicitly below.
   fixtures and the remaining component migrations are still outstanding.
 
 ## M28: Repository architecture and legacy cleanup
+
+M28's structural package migration is complete. The milestone remains open only
+for the remaining typed-record admissions/consumers and final migration
+acceptance/documentation cleanup; it is no longer a general refactor mandate.
 
 - [x] Inventory every package, its responsibility, importers, lifecycle owner,
   stability, and whether it is engine infrastructure, game/shim implementation,
@@ -974,6 +1052,10 @@ implementations. The remaining work is tracked explicitly below.
 
 ## M29: Scriptable archetype ECS
 
+M29's ECS/runtime foundation is complete. The remaining work is integration:
+recovered executable datasets, command-backed gameplay actions, listen-server
+replay verification, and narrow audited administrator handlers.
+
 - [x] Redesign Akara around typed stores, interned archetypes, cached queries,
   deterministic systems, and explicit lifecycle rather than background ticks.
 - [x] Add VM-neutral runtime component schemas with validated primitive fields,
@@ -1073,9 +1155,11 @@ remain independent rather than being copied into this engine.
 
 ## Current handoff
 
-All restart milestones and the architectural acceptance path are implemented.
-The repository builds against tagged codec releases, boots through the internal
-host and layered shim, runs the Lua-authored shell and world orchestration, and
-passes the complete package suite under race detection. Historical stashes
-remain preserved and documented in `STASHES.md`; do not apply or drop them
-without a separate comparison task.
+The architectural acceptance path and M0–M14, M17, M25, and the foundational
+portion of M29 are implemented. M15 and M16 retain bounded catalog/composition
+gaps; M18–M24, M26–M27, the typed-data tail of M28, and M29's gameplay-command
+integration remain open as described above. The repository builds against
+tagged codec releases, boots through the internal host and layered shim, runs
+the Lua-authored shell and world orchestration, and passes the complete package
+suite under race detection. Historical stashes remain preserved and documented
+in `STASHES.md`; do not apply or drop them without a separate comparison task.
