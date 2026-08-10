@@ -48,6 +48,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.LocaleModule(app.locale),
 		modruntime.SaveModule(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
+		modruntime.ItemModule(app.itemAuthority, app.itemControl, "local-player"),
 		modruntime.NewECSCapability(app.scripts, app.entitySimulation).Module(),
 		modruntime.LoadingModule(app.loading),
 	}

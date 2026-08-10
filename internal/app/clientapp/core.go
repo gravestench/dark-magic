@@ -18,6 +18,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -130,6 +131,9 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create offline game session", err)
 	}
 	app.offlineSession = session
+	if err := app.buildItemAuthority(); err != nil {
+		return err
+	}
 	if err := app.registerOfflineCommands(); err != nil {
 		return err
 	}
@@ -145,6 +149,9 @@ func (app *application) registerOfflineCommands() error {
 		if err := register(app.offlineSession); err != nil {
 			return wrap("register "+name, err)
 		}
+	}
+	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
+		return wrap("register item commands", err)
 	}
 	movement := &gamesession.MovementController{}
 	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
@@ -166,10 +173,30 @@ func (app *application) registerOfflineCommands() error {
 	app.commandSource = func(tick uint64) []simulation.Command {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
-		return append(commands, skills.Commands(tick)...)
+		commands = append(commands, skills.Commands(tick)...)
+		return append(commands, app.itemSource.Commands(tick)...)
 	}
 	app.playerControl = movement
 	return nil
+}
+
+func (app *application) buildItemAuthority() error {
+	layout := gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{
+		gameitem.ContainerInventory: {Width: 10, Height: 4},
+		gameitem.ContainerStash:     {Width: 6, Height: 8},
+		gameitem.ContainerCube:      {Width: 3, Height: 4},
+	}, BeltCapacity: 4}
+	state, err := gameitem.NewState(layout, nil, nil)
+	if err != nil {
+		return wrap("create local item state", err)
+	}
+	app.itemAuthority = gameitem.NewAuthority()
+	if err := app.itemAuthority.Register("local-player", state); err != nil {
+		return wrap("register local item state", err)
+	}
+	app.itemControl = &gameitem.Controller{}
+	app.itemSource, err = gameitem.NewSource(app.itemControl, "local-player")
+	return wrap("create local item command source", err)
 }
 
 // learnedSkills translates character records into the small authoritative

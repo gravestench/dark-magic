@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -100,6 +101,9 @@ type application struct {
 	entitySimulation    *gameecs.Engine
 	offlineSession      *gamesession.Session
 	playerControl       *gamesession.MovementController
+	itemAuthority       *gameitem.Authority
+	itemControl         *gameitem.Controller
+	itemSource          *gameitem.Source
 	commandSource       func(uint64) []simulation.Command
 	loading             *loadcore.Coordinator
 
