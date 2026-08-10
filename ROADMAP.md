@@ -768,7 +768,11 @@ complete until its actions are driven by authoritative game state and commands.
   the complete item footprint: no overlap places normally, exactly one
   overlapping item performs an atomic held-item swap, and multiple overlaps
   reject without mutation. Vendor stock is non-spatial and does not use grid
-  overlap rules.
+  overlap rules. Current progress: fixed-tick authority, copied Lua snapshots,
+  backpack interaction, canonical body-location interaction, four-slot belt
+  interaction, and MPQ-backed item presentation are implemented. Alternate
+  weapon sets, save/realm handoff persistence, and the remaining container
+  overlays keep this checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

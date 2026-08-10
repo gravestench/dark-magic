@@ -101,8 +101,11 @@ func (state *State) PlaceHeld(id string, destination Placement) (string, error) 
 	if !found || current.Container != ContainerHeld {
 		return "", fmt.Errorf("item: %q is not held", id)
 	}
+	if destination.Container == ContainerEquipment || destination.Container == ContainerHireling || destination.Container == ContainerBelt {
+		return state.placeHeldSlot(candidate, destination)
+	}
 	if !isGrid(destination.Container) {
-		return "", fmt.Errorf("item: held grid placement requires inventory, stash, or cube")
+		return "", fmt.Errorf("item: held placement requires a grid, equipment, hireling, or belt destination")
 	}
 	if err := state.validateGridBounds(candidate, destination); err != nil {
 		return "", err
@@ -120,6 +123,26 @@ func (state *State) PlaceHeld(id string, destination Placement) (string, error) 
 	// see two held items or a half-completed swap.
 	state.placements[id] = destination
 	state.placements[displaced] = Placement{Container: ContainerHeld}
+	return displaced, nil
+}
+
+func (state *State) placeHeldSlot(candidate Item, destination Placement) (string, error) {
+	// Check what the item is allowed to wear before looking at occupancy. This
+	// keeps a rejected drop completely motionless, even when a slot has an item.
+	var err error
+	if destination.Container == ContainerBelt {
+		err = state.validateBeltEligibility(candidate, destination)
+	} else {
+		err = state.validateEquipmentEligibility(candidate, destination)
+	}
+	if err != nil {
+		return "", err
+	}
+	displaced := state.slotOccupant(candidate.ID, destination)
+	state.placements[candidate.ID] = destination
+	if displaced != "" {
+		state.placements[displaced] = Placement{Container: ContainerHeld}
+	}
 	return displaced, nil
 }
 
@@ -187,20 +210,49 @@ func isGrid(container Container) bool {
 }
 
 func (state *State) validateEquipment(candidate Item, destination Placement) error {
-	if destination.Slot == "" || !slices.Contains(candidate.BodySlots, destination.Slot) {
-		return fmt.Errorf("item: %q cannot use body slot %q", candidate.ID, destination.Slot)
+	if err := state.validateEquipmentEligibility(candidate, destination); err != nil {
+		return err
 	}
 	return state.requireEmpty(candidate.ID, ContainerEquipment, destination.Slot)
 }
 
+func (state *State) validateEquipmentEligibility(candidate Item, destination Placement) error {
+	if destination.Slot == "" || !slices.Contains(candidate.BodySlots, destination.Slot) {
+		return fmt.Errorf("item: %q cannot use body slot %q", candidate.ID, destination.Slot)
+	}
+	return nil
+}
+
 func (state *State) validateBelt(candidate Item, destination Placement) error {
+	if err := state.validateBeltEligibility(candidate, destination); err != nil {
+		return err
+	}
+	return state.requireEmpty(candidate.ID, ContainerBelt, fmt.Sprint(destination.BeltSlot))
+}
+
+func (state *State) validateBeltEligibility(candidate Item, destination Placement) error {
 	if !candidate.BeltEligible {
 		return fmt.Errorf("item: %q is not belt eligible", candidate.ID)
 	}
 	if destination.BeltSlot < 0 || destination.BeltSlot >= state.layout.BeltCapacity {
 		return fmt.Errorf("item: belt slot %d is outside capacity %d", destination.BeltSlot, state.layout.BeltCapacity)
 	}
-	return state.requireEmpty(candidate.ID, ContainerBelt, fmt.Sprint(destination.BeltSlot))
+	return nil
+}
+
+func (state *State) slotOccupant(candidateID string, destination Placement) string {
+	for id, placement := range state.placements {
+		if id == candidateID || placement.Container != destination.Container {
+			continue
+		}
+		if destination.Container == ContainerBelt && placement.BeltSlot == destination.BeltSlot {
+			return id
+		}
+		if destination.Container != ContainerBelt && placement.Slot == destination.Slot {
+			return id
+		}
+	}
+	return ""
 }
 
 func (state *State) requireEmpty(candidateID string, container Container, slot string) error {

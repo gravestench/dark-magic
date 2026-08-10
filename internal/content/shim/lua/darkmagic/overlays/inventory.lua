@@ -56,6 +56,12 @@ local function held_item(snapshot)
     end
 end
 
+local function equipment_item(snapshot, body_loc)
+    for _, item in ipairs(snapshot.items) do
+        if item.container == "equipment" and item.slot == body_loc then return item end
+    end
+end
+
 local function refresh_items(self)
     local snapshot = assert(self.items.snapshot())
     local cursor_x, cursor_y = input.cursor()
@@ -69,7 +75,8 @@ local function refresh_items(self)
             self.item_nodes[item.id] = drawing
         end
         if drawing ~= nil then
-            local visible = item.container == "inventory" or item.container == "held"
+            local equipment = item.container == "equipment" and self.equipment_slots[item.slot] or nil
+            local visible = item.container == "inventory" or item.container == "held" or equipment ~= nil
             drawing.node:set_visible(visible)
             if item.container == "inventory" then
                 drawing.node:set_position(
@@ -80,9 +87,27 @@ local function refresh_items(self)
                 -- The held container is authoritative even though its picture
                 -- follows the local pointer. Reconnecting does not lose it.
                 drawing.node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+            elseif equipment ~= nil then
+                -- Inventory.txt gives the whole well. Diablo II centers the
+                -- item's front-facing DC6 inside it instead of stretching it.
+                drawing.node:set_position(
+                    equipment.x + equipment.width / 2,
+                    equipment.y + equipment.height / 2
+                )
             end
         end
     end
+end
+
+
+local function activate_equipment(self, body_loc)
+    local held = held_item(self.item_snapshot)
+    if held ~= nil then
+        self.items.move(held.id, { container = "equipment", slot = body_loc }, true)
+        return
+    end
+    local item = equipment_item(self.item_snapshot, body_loc)
+    if item ~= nil then self.items.move(item.id, { container = "held" }) end
 end
 
 local function activate_cell(self, column, row)
@@ -128,14 +153,24 @@ return {
         end
 
         -- Equipment hit regions come directly from the selected class record.
+        self.equipment_slots = {}
         for _, slot in ipairs(screen.slots) do
-            self.controls:add({
-                id = "equipment_" .. slot.id,
-                label = assert(locale.text(slot.label)),
+            local body_loc = assert(slot.body_loc, "inventory slot requires body_loc")
+            local geometry = {
                 x = number(self.record, slot.prefix .. "Left"),
                 y = number(self.record, slot.prefix .. "Top"),
                 width = number(self.record, slot.prefix .. "Width"),
                 height = number(self.record, slot.prefix .. "Height"),
+            }
+            self.equipment_slots[body_loc] = geometry
+            self.controls:add({
+                id = "equipment_" .. slot.id,
+                label = assert(locale.text(slot.label)),
+                x = geometry.x,
+                y = geometry.y,
+                width = geometry.width,
+                height = geometry.height,
+                on_activate = function() activate_equipment(self, body_loc) end,
             })
         end
 

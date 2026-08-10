@@ -55,10 +55,13 @@ return {
         end
         if render.assets_available() then
             local player = require("dm.player/v1")
+            local items = require("dm.items/v1")
             self.game_data = require("dm.game_data/v1")
             self.hud = game_hud.create(self.root, screen.hud, manifest.palettes, {
                 request_running = player.request_running,
                 assign_skill = player.assign_skill,
+                item_snapshot = items.snapshot,
+                move_item = items.move,
             })
         end
 
@@ -75,6 +78,7 @@ return {
     update = function(self, elapsed, focused, input_allowed, world_view)
         -- Transparent overlays may allow updates below them, but only the top
         -- scene receives input focus.
+        if self.hud then game_hud.set_item_cursor_visible(self.hud, input_allowed) end
         if not input_allowed then
             return
         end

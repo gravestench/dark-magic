@@ -218,7 +218,11 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 		if misc, found := snapshot.MiscByCode[code]; found {
 			id := "fixture-" + code
 			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-			placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+			if code == "mp1" {
+				placements[id] = gameitem.Placement{Container: gameitem.ContainerBelt, BeltSlot: 0}
+			} else {
+				placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+			}
 		}
 	}
 	return items, placements
