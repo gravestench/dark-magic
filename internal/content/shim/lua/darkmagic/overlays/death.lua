@@ -1,5 +1,13 @@
--- Diablo II player-death presentation. The world remains visible beneath this
--- transparent overlay; death/respawn authority belongs to the game session.
+-- Diablo II player-death PRESENTATION overlay.
+--
+-- This file is intentionally NOT a death/respawn system. It draws the message
+-- and reacts to presentation input. Whether a character is dead, whether they
+-- may respawn, where they respawn, hardcore permanence, save/network changes,
+-- etc. belong to authoritative game/session code.
+--
+-- That boundary is important for mods: a panel saying "You have died" should
+-- never secretly become the authority that decides the player is dead.
+
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -11,10 +19,15 @@ local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "da
 local screen = assert(manifest.screens.death)
 
 return {
+    -- Current shell behavior blocks the world below while the death surface owns
+    -- the interaction. The real authoritative death transition can refine this.
     blocks_update_below = true,
 
     enter = function(self)
+        -- HUD layer keeps the world visually available beneath transparent text.
         self.root = render.create("hud")
+
+        -- Headless tests can still exercise scene lifecycle without bitmap assets.
         if not render.assets_available() then return end
 
         -- Font30 matches the tall display lettering in the original death
@@ -29,7 +42,8 @@ return {
     update = function()
         if input.pressed("cancel") or input.pressed("confirm") then
             -- This is presentation-shell behavior only. A bound game session
-            -- will replace this pop with its authoritative death transition.
+            -- will replace this simple pop with its authoritative death/continue
+            -- command or transition. Lua does not mutate player life state here.
             scenes.pop()
         end
     end,

@@ -1,15 +1,34 @@
 -- Recovered Diablo II UI presentation facts shared by shim screens.
 --
+-- THIS FILE IS MOSTLY DATA ON PURPOSE.
+--
+-- When reverse-engineering an old game's presentation, it is very tempting to
+-- scatter magic numbers such as `265`, frame `14`, or draw mode `4` directly
+-- through widget code. Dark Magic keeps cross-checked historical facts here so a
+-- reader can tell the difference between:
+--
+--   "Diablo II appears to have used this value"
+-- and
+--   "Dark Magic chose this Lua implementation."
+--
+-- That distinction matters for clean-room work and for mods. A mod may replace
+-- presentation facts without having to replace the reusable control/widget logic.
+--
 -- Values here are behavioral observations cross-checked against the reference
 -- engine audit and original assets. This is intentionally data, not a port of
 -- any reference project's widget/rendering implementation.
+
 local M = {}
 
--- Legacy D2 draw-mode semantics observed in OpenD2's renderer. Several numeric
--- modes collapse to ordinary alpha blending. Raylib's predefined multiply mode
--- is the exact blend equation used by D2 draw mode 4:
--- GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA. Mode 3 is kept as the custom frontend
--- screen blend, while mode 6 remains a named future compatibility target.
+-- DRAW MODES ---------------------------------------------------------------
+-- Old D2 rendering APIs identify blend behavior with small numeric mode IDs.
+-- Screens should not have to remember what "4" means, so translate those legacy
+-- numbers once into descriptive Dark Magic renderer blend names.
+--
+-- Several observed numeric modes collapse to ordinary alpha blending. Raylib's
+-- predefined multiply mode is the exact blend equation used by D2 draw mode 4:
+-- GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA. Mode 3 is the custom frontend screen
+-- blend, while mode 6 remains a named future compatibility target.
 M.draw_modes = {
     [0] = "alpha",
     [1] = "alpha",
@@ -23,10 +42,15 @@ M.draw_modes = {
 
 function M.draw_mode(value)
     local result = M.draw_modes[value]
+    -- Fail loudly for an unknown recovered number instead of silently guessing.
     assert(result ~= nil, "unknown Diablo II draw mode: " .. tostring(value))
     return result
 end
 
+-- SHARED WIDGET FACTS ------------------------------------------------------
+-- These are recovered/verified facts used by reusable widget implementations.
+-- Keeping them here means checkbox.lua, scrollbar.lua, etc. can talk in semantic
+-- names such as `checked_frame` instead of unexplained numeric literals.
 M.widgets = {
     checkbox = {
         sheet = "data/global/ui/FrontEnd/clickbox.dc6",
@@ -84,13 +108,16 @@ M.widgets = {
     },
 }
 
--- Original 800x600 frontend placement recovered from OpenD2 and corroborated
--- by Riiablo's authored asset choices. Gaps on the main menu intentionally
--- preserve the original Battle.net/gateway rows even when Dark Magic does not
--- expose those controls.
+-- FRONTEND FACTS -----------------------------------------------------------
+-- Original 800x600 placement recovered from OpenD2 and corroborated by Riiablo's
+-- authored asset choices. These tables intentionally look like configuration,
+-- because that is exactly what they are.
 M.frontend = {
     main_menu = {
         controls = {
+            -- Each row says: top-left position, source sheet, and which spatial
+            -- frames represent up/down/disabled states. Multi-frame buttons are
+            -- arrays because their art is assembled side by side.
             single_player = { x = 265, y = 290, sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5} },
             multiplayer = { x = 265, y = 400, sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5} },
             credits = { x = 265, y = 495, sheet = "data/global/ui/FrontEnd/MediumButtonBlank.dc6", up_frames = {0}, down_frames = {1} },
@@ -109,20 +136,21 @@ M.frontend = {
         },
     },
     character_create = {
-        -- OpenD2 supplies top coordinates for these labels. Dark Magic's text
-        -- helper converts the recovered top edge to retained-node center space.
+        -- These are TOP-based text boxes. darkmagic.ui.text converts them to
+        -- retained center coordinates after measuring the actual bitmap text.
         heading = { x = 400, y = 25, width = 800 },
         class_name = { x = 400, y = 75, width = 800 },
         description = { x = 400, y = 105, width = 800 },
 
-        -- OpenD2's animated renderer adds 400 to the supplied frontend Y and
-        -- then applies the DC6 offset. Dark Magic's normalized frame top has a
-        -- +1 term, so the equivalent anchor is sourceY + 399.
+        -- OpenD2's animated renderer adds 400 to supplied frontend Y and then
+        -- applies the DC6 offset. Dark Magic's normalized frame top has a +1
+        -- term, so the equivalent common anchor is sourceY + 399.
         campfire = { anchor = { x = 375, y = 319 }, draw_mode = 3 },
         idle_back_frames_per_second = 8,
         idle_front_frames_per_second = 25,
         transition_frames_per_second = 25,
 
+        -- Overlapping class actors need deterministic front-to-back hit/render order.
         draw_order = {
             Barbarian = 20,
             Necromancer = 30,
@@ -142,9 +170,8 @@ M.frontend = {
             Assassin = { anchor = { x = 232, y = 349 } },
         },
 
-        -- Static buttons are always present. OpenD2 renders this entire scene
-        -- under PAL_FECHAR, and MediumSelButtonBlank.dc6 is authored for that
-        -- palette; units makes the button art visibly wrong.
+        -- Static buttons are always present. The original scene uses PAL_FECHAR,
+        -- and MediumSelButtonBlank is authored for that palette.
         controls = {
             exit = { x = 35, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", palette = "fechar", up_frames = {0}, down_frames = {1} },
             ok = { x = 630, y = 535, sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6", palette = "fechar", up_frames = {0}, down_frames = {1} },
@@ -169,14 +196,20 @@ M.frontend = {
     },
 }
 
--- In-game Escape menu facts triangulated from OpenDiablo2 and Riiablo. Riiablo
--- confirms the localized DC6 label art, modal dim, select sound, paired pents,
--- and reversed left pent; OpenDiablo2 supplies keyboard ordering, default focus,
--- submenu structure, and the options-value vocabulary. Dark Magic implements
--- these facts with its own retained controls rather than either reference GUI.
+-- IN-GAME ESCAPE MENU FACTS -----------------------------------------------
+-- This large nested table is the DATA MODEL consumed by escape_menu.lua.
+-- `target` means "navigate to another menu layout"; `action` means "report a
+-- semantic action to owning scene"; `values` means cycle through a fixed list;
+-- `range` means bind a numeric slider to a real setting.
+--
+-- Riiablo confirms localized DC6 label art, modal dim, select sound, paired
+-- pents, and reversed left pent; OpenDiablo2 supplies keyboard ordering, default
+-- focus, submenu structure, and options vocabulary. Dark Magic implements these
+-- facts with its own retained controls.
 M.ingame = {
     escape_menu = {
         confidence = "high",
+        -- Source strings are provenance notes for future maintainers, not runtime imports.
         sources = {
             "OpenDiablo2/OpenDiablo2:d2game/d2player/escape_menu.go",
             "OpenDiablo2/OpenDiablo2:d2common/d2resource/resource_paths.go",
@@ -199,6 +232,8 @@ M.ingame = {
             right_reversed = false,
         },
         simulation = {
+            -- These are compatibility/policy facts, not something escape_menu.lua
+            -- infers from graphics.
             pauses_single_player = true,
             pauses_multiplayer = false,
         },
@@ -233,8 +268,11 @@ M.ingame = {
                 -- 0..1 music/effects ranges. OpenD2 corroborates panel/input
                 -- ordering but has no implemented options surface.
                 rows = {
+                    -- `range` rows become slider controls tied to named settings.
                     { id = "sound_volume", label = "SOUND", sheet = "data/local/ui/eng/sound.dc6", range = { setting = "sound_volume", min = 0, max = 1, step = 0.05 } },
                     { id = "music_volume", label = "MUSIC", sheet = "data/local/ui/eng/music.dc6", range = { setting = "music_volume", min = 0, max = 1, step = 0.05 } },
+                    -- `unavailable=true` intentionally leaves recovered rows visible
+                    -- but disabled until Dark Magic exposes the required capability.
                     { id = "3d_bias", label = "3D BIAS", sheet = "data/local/ui/eng/3dbias.dc6", unavailable = true },
                     { id = "hardware_acceleration", label = "HARDWARE ACCELERATION", values = { "ON", "OFF" }, unavailable = true },
                     { id = "environmental_effects", label = "ENVIRONMENTAL EFFECTS", values = { "ON", "OFF" }, unavailable = true },
@@ -282,6 +320,8 @@ M.ingame = {
             },
         },
         option_assets = {
+            -- Reuse the shared recovered slider facts rather than repeating the
+            -- same paths/dimensions in a second data section.
             range_track = M.widgets.option_slider.track_sheet,
             range_thumb = M.widgets.option_slider.thumb_sheet,
             range_width = M.widgets.option_slider.width,
@@ -301,19 +341,29 @@ M.ingame = {
     },
 }
 
--- Compatibility facts override the manifest without mutating the loaded
--- manifest table shared by other Lua modules. Behavior/locale/targets remain
--- in the manifest; only recovered presentation facts are merged here.
+-- MERGING COMPAT FACTS WITH MOD MANIFEST BEHAVIOR -------------------------
+--
+-- The manifest still owns semantic behavior/localization/targets. This helper
+-- makes a fresh copy of that fallback definition, then overlays ONLY recovered
+-- presentation facts from this catalog. It never mutates the shared manifest.
 function M.screen_control(screen_id, control_id, fallback)
     local result = {}
+
+    -- Shallow-copy caller's manifest definition first.
     for key, value in pairs(assert(fallback, "fallback control is required")) do
         result[key] = value
     end
+
+    -- These chained `and` operations safely walk optional nested tables:
+    -- if screen is nil, override becomes nil without indexing through nil.
     local screen = M.frontend[screen_id]
     local override = screen and screen.controls and screen.controls[control_id]
+
     if override then
+        -- Recovered presentation facts win when present.
         for key, value in pairs(override) do result[key] = value end
     end
+
     return result
 end
 

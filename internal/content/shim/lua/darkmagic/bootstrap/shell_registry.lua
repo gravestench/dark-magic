@@ -1,3 +1,11 @@
+-- Registry for simple placeholder/shell interfaces.
+--
+-- Not every Diablo II panel needs a custom implementation on day one. A shell
+-- gives a scene a name, rectangle, lifecycle, cursor, and close behavior while
+-- the real feature is still being built. This is useful for engine development
+-- and for mods: you can reserve the interaction surface first, then replace the
+-- shell with a richer module later without changing every caller.
+
 local scenes = require("dm.scene/v1")
 local cursor = require("darkmagic.ui.cursor")
 local overlay_shell = require("darkmagic.ui.overlay_shell")
@@ -5,8 +13,19 @@ local routing = require("darkmagic.bootstrap.overlay_routing")
 
 local registry = {}
 
--- Shells are useful empty containers for UI that has not been implemented yet.
--- Keeping this table data-only makes positions easy to compare with D2 sources.
+-- Shells are deliberately DATA-DRIVEN. The table below is easier to compare
+-- with recovered Diablo II geometry than sixteen separate nearly-identical Lua
+-- files would be.
+--
+-- Common fields:
+--   title               localization key shown by the generic shell
+--   x/y/width/height    logical 800x600 placement
+--   sheet/palette       optional authored DC6 background
+--   blocks_update_below whether the scene under this shell keeps updating
+--   passes_input_below  whether routed input may continue below
+--   world_view          how the world frames around the overlay
+--   layer               retained render layer (modal/hud/etc.)
+--   slot                overlay-routing lane when one is needed
 local definitions = {
     quick_skills={title="darkmagic.shell.quick_skills",x=470,y=220,width=250,height=270},
     belt={title="darkmagic.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
@@ -27,11 +46,20 @@ local definitions = {
 }
 
 function registry.register_all(manifest)
+    -- Registration order does not matter, so `pairs` is the simple fit here.
     for name, definition in pairs(definitions) do
+        -- Convert one data record into an actual scene definition using a
+        -- reusable factory. This is composition: data + generic behavior.
         local scene = overlay_shell.new(definition)
+
         if definition.slot then
+            -- Only shells participating in the gameplay overlay lanes need the
+            -- shared hotkey/cancel routing decorator.
             scene = routing.wrap(scene, name, definition.slot, definition.world_view, definition.passes_input_below)
         end
+
+        -- Every shell still gets the normal software-cursor ownership decorator,
+        -- then is published under its friendly scene ID.
         scenes.register(name, cursor.wrap(scene, manifest.cursor, manifest.palettes))
     end
 end
