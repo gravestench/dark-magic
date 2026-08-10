@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"sync"
 
@@ -60,7 +61,7 @@ func (l *Locale) load() {
 	}
 	loaded := len(l.strings) > 0
 	for _, path := range paths {
-		data, err := fs.ReadFile(l.source, path)
+		file, err := l.source.Open(path)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				continue
@@ -68,9 +69,29 @@ func (l *Locale) load() {
 			l.err = fmt.Errorf("localization: read %q: %w", path, err)
 			return
 		}
-		table, err := tbl.Unmarshal(data)
+		var table tbl.TextTable
+		if reader, ok := file.(io.ReaderAt); ok {
+			info, statErr := file.Stat()
+			if statErr == nil {
+				table, err = tbl.UnmarshalReaderAt(reader, info.Size())
+			} else {
+				err = statErr
+			}
+		} else {
+			data, readErr := io.ReadAll(file)
+			if readErr != nil {
+				err = readErr
+			} else {
+				table, err = tbl.Unmarshal(data)
+			}
+		}
+		closeErr := file.Close()
 		if err != nil {
 			l.err = fmt.Errorf("localization: decode %q: %w", path, err)
+			return
+		}
+		if closeErr != nil {
+			l.err = fmt.Errorf("localization: close %q: %w", path, closeErr)
 			return
 		}
 		loaded = true

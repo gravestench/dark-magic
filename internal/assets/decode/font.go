@@ -206,11 +206,12 @@ func loadTextTransformFrames(source fs.FS, transformName string, sheet *dc6.DC6)
 	if transformName == "" || sheet == nil {
 		return nil
 	}
-	data, err := fs.ReadFile(source, transformName)
+	file, err := source.Open(transformName)
 	if err != nil {
 		return nil
 	}
-	transforms, err := pl2.FromBytes(data)
+	defer file.Close()
+	transforms, err := pl2.DecodeReader(file)
 	if err != nil || len(transforms.TextColorShifts) == 0 {
 		return nil
 	}

@@ -8,15 +8,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/tsv"
 )
-
-// The historical codec configures gocsv process globals during Unmarshal.
-// Serialize calls until the codec exposes instance-local decoding options.
-var codecMu sync.Mutex
 
 // Load decodes one layered TSV table into the surviving csv-tagged record type.
 // Unknown columns are retained by the generic record store and ignored here,
@@ -25,14 +20,16 @@ func Load[T any](store *recordstore.Store, path string) ([]T, error) {
 	if store == nil {
 		return nil, fmt.Errorf("gamedata: nil record store")
 	}
-	data, err := store.Read(path)
+	file, err := store.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	var result []T
-	codecMu.Lock()
-	err = tsv.Unmarshal(data, &result)
-	codecMu.Unlock()
+	err = tsv.Decode(file, &result)
+	closeErr := file.Close()
+	if err == nil && closeErr != nil {
+		err = closeErr
+	}
 	if err != nil && !strings.Contains(err.Error(), `bare " in non-quoted-field`) {
 		return nil, fmt.Errorf("gamedata: %s: %w", path, err)
 	}

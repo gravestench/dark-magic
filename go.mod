@@ -12,15 +12,15 @@ require (
 	github.com/gen2brain/raylib-go/raylib v0.60.0
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/akara v0.1.4
-	github.com/gravestench/cof v0.1.0
-	github.com/gravestench/dc6 v0.1.0
-	github.com/gravestench/dcc v0.1.0
-	github.com/gravestench/ds1 v0.1.0
-	github.com/gravestench/dt1 v0.1.0
-	github.com/gravestench/mpq v0.1.1-0.20260810081350-4b25d79dc0df
-	github.com/gravestench/pl2 v0.1.0
-	github.com/gravestench/tbl_text v0.1.0
-	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
+	github.com/gravestench/cof v0.2.0
+	github.com/gravestench/dc6 v0.2.0
+	github.com/gravestench/dcc v0.2.0
+	github.com/gravestench/ds1 v0.2.0
+	github.com/gravestench/dt1 v0.2.0
+	github.com/gravestench/mpq v0.2.0
+	github.com/gravestench/pl2 v0.2.0
+	github.com/gravestench/tbl_text v0.2.0
+	github.com/gravestench/tsv v0.2.1
 	github.com/yuin/gopher-lua v1.1.0
 )
 
@@ -49,7 +49,7 @@ require (
 
 require (
 	github.com/JoshVarga/blast v0.0.0-20210808061142-eadad17358e8 // indirect
-	github.com/gravestench/bitstream v0.2.0 // indirect
+	github.com/gravestench/bitstream v0.3.0 // indirect
 	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e
 	github.com/gravestench/wav v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect

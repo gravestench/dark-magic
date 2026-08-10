@@ -1325,6 +1325,15 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 - [x] Add decoder fuzzing, synthetic fixtures, and optional real-asset tests.
 - [x] Standardize headless inspection and conversion commands.
 - [x] Tag stable codec releases and update Dark Magic dependencies.
+- [x] Add incremental reader/writer APIs to sequential codecs and lazy
+  `io.ReaderAt` views to DC6, DCC, DT1, and TBL without removing compatibility
+  APIs.
+- [x] Make MPQ archive and entry access positional and concurrency-safe, verify
+  it under the race detector against an owned real archive, and adopt the new
+  APIs at Dark Magic's content/decode boundary.
+- [ ] Retain lazy codec files in scene/world caches so only requested DC6
+  frames, DCC directions, and DT1 tiles become resident; measure the reduction
+  against the M25 cache and warmup diagnostics.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.

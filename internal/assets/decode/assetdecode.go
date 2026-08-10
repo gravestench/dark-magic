@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"io"
 	"io/fs"
 
 	cof "github.com/gravestench/cof"
@@ -24,12 +25,14 @@ const (
 // Palette reads a Diablo II BGR palette. Palette index zero is transparent,
 // which is the convention used by interface DC6 assets.
 func Palette(source fs.FS, name string) (color.Palette, error) {
-	data, err := fs.ReadFile(source, name)
+	file, err := source.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("palette %q: %w", name, err)
 	}
-	if len(data) < paletteByteSize {
-		return nil, fmt.Errorf("palette %q: got %d bytes, need at least %d", name, len(data), paletteByteSize)
+	defer file.Close()
+	data := make([]byte, paletteByteSize)
+	if _, err := io.ReadFull(file, data); err != nil {
+		return nil, fmt.Errorf("palette %q: need %d bytes: %w", name, paletteByteSize, err)
 	}
 	palette := make(color.Palette, paletteColors)
 	for index := range palette {
@@ -42,11 +45,12 @@ func Palette(source fs.FS, name string) (color.Palette, error) {
 
 // COF reads composite ordering, layer, timing, and event metadata.
 func COF(source fs.FS, name string) (*cof.COF, error) {
-	data, err := fs.ReadFile(source, name)
+	file, err := source.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("cof %q: %w", name, err)
 	}
-	asset, err := cof.Unmarshal(data)
+	defer file.Close()
+	asset, err := cof.UnmarshalReader(file)
 	if err != nil {
 		return nil, fmt.Errorf("cof %q: %w", name, err)
 	}
@@ -55,20 +59,40 @@ func COF(source fs.FS, name string) (*cof.COF, error) {
 
 // DCC reads and decodes a palette-aware character or monster animation.
 func DCC(source fs.FS, name, paletteName string) (*dcc.DCC, error) {
-	data, err := fs.ReadFile(source, name)
+	file, err := source.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("dcc %q: %w", name, err)
 	}
-	asset, err := dcc.FromBytes(data)
-	if err != nil {
-		return nil, fmt.Errorf("dcc %q: %w", name, err)
-	}
+	defer file.Close()
+	var palette color.Palette
 	if paletteName != "" {
-		palette, err := Palette(source, paletteName)
+		palette, err = Palette(source, paletteName)
 		if err != nil {
 			return nil, err
 		}
-		asset.SetPalette(palette)
+	}
+	var asset *dcc.DCC
+	if random, size, ok := randomAccess(file); ok {
+		opened, err := dcc.Open(random, size)
+		if err != nil {
+			return nil, fmt.Errorf("dcc %q: %w", name, err)
+		}
+		if palette != nil {
+			opened.SetPalette(palette)
+		}
+		asset, err = opened.Decode()
+	} else {
+		data, readErr := io.ReadAll(file)
+		if readErr != nil {
+			return nil, fmt.Errorf("dcc %q: %w", name, readErr)
+		}
+		asset, err = dcc.FromBytes(data)
+		if err == nil && palette != nil {
+			asset.SetPalette(palette)
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("dcc %q: %w", name, err)
 	}
 	return asset, nil
 }
@@ -98,22 +122,54 @@ func DCCFrames(asset *dcc.DCC, direction int) ([]image.Image, error) {
 // content filesystem. Passing an empty palette name keeps the decoder's
 // grayscale diagnostic palette.
 func DC6(source fs.FS, name, paletteName string) (*dc6.DC6, error) {
-	data, err := fs.ReadFile(source, name)
+	file, err := source.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("dc6 %q: %w", name, err)
 	}
-	asset, err := dc6.FromBytes(data)
-	if err != nil {
-		return nil, fmt.Errorf("dc6 %q: %w", name, err)
-	}
+	defer file.Close()
+	var palette color.Palette
 	if paletteName != "" {
-		palette, err := Palette(source, paletteName)
+		palette, err = Palette(source, paletteName)
 		if err != nil {
 			return nil, err
 		}
-		asset.SetPalette(palette)
+	}
+	var asset *dc6.DC6
+	if random, size, ok := randomAccess(file); ok {
+		opened, err := dc6.Open(random, size)
+		if err != nil {
+			return nil, fmt.Errorf("dc6 %q: %w", name, err)
+		}
+		if palette != nil {
+			opened.SetPalette(palette)
+		}
+		asset, err = opened.Decode()
+	} else {
+		data, readErr := io.ReadAll(file)
+		if readErr != nil {
+			return nil, fmt.Errorf("dc6 %q: %w", name, readErr)
+		}
+		asset, err = dc6.FromBytes(data)
+		if err == nil && palette != nil {
+			asset.SetPalette(palette)
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("dc6 %q: %w", name, err)
 	}
 	return asset, nil
+}
+
+func randomAccess(file fs.File) (io.ReaderAt, int64, bool) {
+	reader, ok := file.(io.ReaderAt)
+	if !ok {
+		return nil, 0, false
+	}
+	info, err := file.Stat()
+	if err != nil || info.Size() < 0 {
+		return nil, 0, false
+	}
+	return reader, info.Size(), true
 }
 
 // Frame returns one decoded DC6 frame with bounds checking.

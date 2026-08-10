@@ -77,9 +77,36 @@ Magic's build contract.
   `v0.1.0`. Dark Magic consumes these tags and passes `go test ./...` and
   `go vet ./...` with `GOWORK=off`, proving that no filesystem replacement is
   needed.
-- The TSV codec is restored as Dark Magic's typed tabular format boundary. It
-  remains on its historical pseudo-version pending malformed-input,
-  concurrency, diagnostics, and tagged-release maintenance.
+- The TSV codec is restored as Dark Magic's typed tabular format boundary. Its
+  original slice-only API remained pending after this first pass and was closed
+  by the streaming pass below.
+
+## Completed streaming-I/O pass (2026-08-10)
+
+- `bitstream` now has incremental readers and writers that retain at most the
+  current partial byte instead of copying the complete source.
+- Sequential formats consume `io.Reader` and emit to `io.Writer` where
+  applicable: COF, DS1, GPL, PL2, TSV, and WAV/Huffman. Existing byte-slice
+  entry points remain wrappers for compatibility.
+- Offset-oriented formats expose lazy `io.ReaderAt` files: DC6 frames, DCC
+  directions, DT1 tiles, and TBL tables. Opening reads only bounded metadata;
+  callers choose when to materialize payloads.
+- MPQ archive metadata and sectors use positional reads. Separate entry streams
+  and `MpqDataStream.ReadAt` are safe for concurrent use without a shared seek
+  cursor. The optional real-archive race test passes against an owned English
+  `d2data.mpq` containing 10,814 listed files.
+- Dark Magic consumes the new module revisions directly. Directory and MPQ
+  assets take the random-access path; ZIP and minimal test files retain a
+  compatibility buffer fallback. COF, DS1, PL2, palette, and localization
+  loaders consume streams directly.
+- The pass is published as `bitstream` v0.3.0 and v0.2.0 for COF, DC6, DCC,
+  DS1, DT1, GPL, MPQ, PL2, TBL, TSV, and WAV. Dark Magic depends on the stable
+  tags, not checkout paths or pseudo-versions.
+
+The next performance step is selective residency in the engine caches: retain
+lazy DC6/DCC/DT1 file handles long enough to decode only requested frames,
+directions, and tiles. The codec boundary no longer requires another redesign
+for that work.
 
 ## Historical reverse-engineering research
 
