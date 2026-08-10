@@ -215,7 +215,6 @@ func (c *Composer) CreateResource(kind ResourceKind, payload any) (ResourceID, e
 	c.resources[index].resource = resource
 	c.pending = append(c.pending, Change{Kind: "resource-create", Resource: *resource, ResourceID: id})
 	c.resourceCreates++
-	c.structuralRevision++
 	if bytes := resourceTextureBytes(*resource); bytes > 0 {
 		c.textureUploads++
 		c.textureBytes += bytes
@@ -374,7 +373,6 @@ func (c *Composer) DestroyResource(id ResourceID) error {
 	c.freeResources = append(c.freeResources, id.Slot)
 	c.pending = append(c.pending, Change{Kind: "resource-destroy", ResourceID: id})
 	c.resourceDestroys++
-	c.structuralRevision++
 	return nil
 }
 
