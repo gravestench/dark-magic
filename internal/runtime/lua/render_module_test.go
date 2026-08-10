@@ -322,6 +322,50 @@ func TestCOFCompositionDrawsOnlyShadowEnabledLayers(t *testing.T) {
 	}
 }
 
+func TestCOFCompositionDrawsAllShadowsBehindAllVisibleLayers(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 2
+	back, front := cof.CompositeType(3), cof.CompositeType(4)
+	asset.CofLayers = []cof.CofLayer{
+		{Type: back, DrawEffect: cof.DrawEffect(8)},
+		{Type: front, Shadow: 1, DrawEffect: cof.DrawEffect(8)},
+	}
+	asset.Priority = [][][]cof.CompositeType{{{back, front}}}
+	red := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	red.Set(2, 2, color.RGBA{R: 255, A: 255})
+	shadowSource := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	shadowSource.Set(0, 0, color.RGBA{B: 255, A: 255})
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		back:  {image: red, bounds: red.Bounds(), layer: asset.CofLayers[0]},
+		front: {image: shadowSource, bounds: shadowSource.Bounds(), layer: asset.CofLayers[1]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(composed.At(2, 2)).(color.RGBA); got.R != 255 || got.A != 255 {
+		t.Fatalf("visible back layer was covered by a later component shadow: %#v", got)
+	}
+}
+
+func TestCOFCompositionIgnoresDrawEffectOnOpaqueLayer(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 1
+	head := cof.CompositeType(0)
+	asset.CofLayers = []cof.CofLayer{{Type: head, Transparent: false, DrawEffect: cof.DrawEffect(0)}}
+	asset.Priority = [][][]cof.CompositeType{{{head}}}
+	source := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	source.Set(0, 0, color.RGBA{R: 255, A: 255})
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		head: {image: source, bounds: source.Bounds(), layer: asset.CofLayers[0]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(composed.At(0, 0)).(color.RGBA); got.A != 255 {
+		t.Fatalf("opaque layer alpha = %d, want 255", got.A)
+	}
+}
+
 func TestCOFAnimationFramesShareCanvasButKeepDistinctPixels(t *testing.T) {
 	asset := cof.New()
 	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 2, 1

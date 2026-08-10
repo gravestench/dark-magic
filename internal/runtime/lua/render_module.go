@@ -220,27 +220,40 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		return nil, errors.New("COF composition has no component frames")
 	}
 	output := image.NewRGBA(image.Rect(0, 0, bounds.Dx()+2, bounds.Dy()+2))
+	// Diablo's composite renderer makes two complete passes over the COF order:
+	// every projected shadow first, then every visible body/equipment layer.
+	// Drawing a layer's shadow immediately before that layer lets later shadows
+	// darken earlier limbs and looks like broken arm priority on thin characters.
+	for _, componentType := range asset.Priority[direction][frame] {
+		component, ok := components[componentType]
+		if !ok || component.layer.Shadow == 0 {
+			continue
+		}
+		destination := component.bounds.Min.Sub(bounds.Min)
+		mask := image.NewUniform(color.RGBA{A: 96})
+		draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
+	}
 	for _, componentType := range asset.Priority[direction][frame] {
 		component, ok := components[componentType]
 		if !ok {
 			continue
 		}
 		destination := component.bounds.Min.Sub(bounds.Min)
-		if component.layer.Shadow != 0 {
-			mask := image.NewUniform(color.RGBA{A: 96})
-			draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
-		}
 		alpha := uint8(255)
-		switch component.layer.DrawEffect {
-		case cof.DrawEffect(0):
-			alpha = 191
-		case cof.DrawEffect(1):
-			alpha = 128
-		case cof.DrawEffect(2):
-			alpha = 64
-		}
-		if component.layer.Transparent && alpha == 255 {
-			alpha = 128
+		// DrawEffect is meaningful only when COF marks the layer transparent.
+		// Most body layers contain zero in this byte, which otherwise looks like
+		// the 25-percent effect despite being explicitly opaque.
+		if component.layer.Transparent {
+			switch component.layer.DrawEffect {
+			case cof.DrawEffect(0):
+				alpha = 191
+			case cof.DrawEffect(1):
+				alpha = 128
+			case cof.DrawEffect(2):
+				alpha = 64
+			default:
+				alpha = 128
+			}
 		}
 		if alpha == 255 {
 			draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
