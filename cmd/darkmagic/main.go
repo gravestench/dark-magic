@@ -223,6 +223,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := gamesession.RegisterMovement(offlineSession); err != nil {
 		return fmt.Errorf("register offline movement commands: %w", err)
 	}
+	if err := gamesession.RegisterSkillAssignments(offlineSession); err != nil {
+		return fmt.Errorf("register offline skill-assignment commands: %w", err)
+	}
 	if err := gameplayer.Register(offlineSession); err != nil {
 		return fmt.Errorf("register offline player commands: %w", err)
 	}
@@ -231,13 +234,18 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err != nil {
 		return fmt.Errorf("create offline movement source: %w", err)
 	}
+	skillSource, err := gamesession.NewSkillSource(movementController, "local-player")
+	if err != nil {
+		return fmt.Errorf("create offline skill source: %w", err)
+	}
 	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
 	if err != nil {
 		return fmt.Errorf("create offline player entry source: %w", err)
 	}
 	commandSource := func(tick uint64) []simulation.Command {
 		commands := entrySource.Commands(tick)
-		return append(commands, movementSource.Commands(tick)...)
+		commands = append(commands, movementSource.Commands(tick)...)
+		return append(commands, skillSource.Commands(tick)...)
 	}
 	loading := loading.New(map[string]loading.Task{
 		"selected_character": func(context.Context) error {

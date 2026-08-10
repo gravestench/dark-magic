@@ -23,6 +23,12 @@ func TestGameDataModuleExposesTypedCopies(t *testing.T) {
 			"Amazon": {Class: "Amazon", Strength: 20, Dexterity: 25, Intelligence: 15, Vitality: 20, Stamina: 84},
 		},
 		UniqueTitles: []models.UniqueTitle{{Name: "unused", Namco: "Judge"}, {Name: "unused", Namco: "Countess"}},
+		SkillsByID: map[string]models.SkillData{
+			"42": {ID: "42", CharClass: "sor", SkillName: "fire bolt", SkillDesc: "firebolt", LeftSkill: "1"},
+		},
+		SkillDescByName: map[string]models.SkillDescData{
+			"firebolt": {SkillDesc: "firebolt", IconCel: "7", ListRow: 1, StrName: "StrFireBolt", StrShort: "StrFireBoltShort"},
+		},
 	}}
 	if err := runtime.RegisterModule(GameDataModule(data)); err != nil {
 		t.Fatal(err)
@@ -45,6 +51,11 @@ func TestGameDataModuleExposesTypedCopies(t *testing.T) {
 			assert(data.unique_titles()[1].title == "Judge")
 			local missing, message = data.character_class("missing")
 			assert(missing == nil and message == "unknown character class: missing")
+			local skill = assert(data.skill(42))
+			assert(skill.id == 42 and skill.icon == 7 and skill.sheet == "data/global/ui/SPELLS/SoSkillicon.DC6")
+			assert(skill.name_key == "StrFireBolt" and skill.short_key == "StrFireBoltShort")
+			assert(skill.list_row == 1 and skill.left_allowed and not skill.passive)
+			assert(data.skill(999) == nil)
 		`)
 	}); err != nil {
 		t.Fatal(err)

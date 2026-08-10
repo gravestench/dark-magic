@@ -1,6 +1,7 @@
 package modruntime
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
@@ -18,6 +19,7 @@ func GameDataModule(catalog gameDataSnapshotter) Module {
 	return Module{Name: "dm.game_data/v1", Help: documentedModule("Query typed, normalized Diablo II game data.", map[string]CommandHelp{
 		"character_class": commandHelp("dm.game_data.character_class(class)", "Return the typed starting data for a character class."),
 		"unique_titles":   commandHelp("dm.game_data.unique_titles()", "Return the available unique-item titles."),
+		"skill":           commandHelp("dm.game_data.skill(id)", "Return typed skill icon, eligibility, and localization metadata."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"character_class": func(state *lua.LState) int {
@@ -62,6 +64,47 @@ func GameDataModule(catalog gameDataSnapshotter) Module {
 					entry.RawSetString("title", lua.LString(record.Namco))
 					result.Append(entry)
 				}
+				state.Push(result)
+				return 1
+			},
+			"skill": func(state *lua.LState) int {
+				id := state.CheckInt(1)
+				snapshot, err := catalog.Snapshot()
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				skill, found := snapshot.SkillsByID[strconv.Itoa(id)]
+				if !found {
+					state.Push(lua.LNil)
+					return 1
+				}
+				description, found := snapshot.SkillDescByName[skill.SkillDesc]
+				if !found {
+					state.Push(lua.LNil)
+					return 1
+				}
+				icon, err := strconv.Atoi(strings.TrimSpace(description.IconCel))
+				if err != nil || icon < 0 {
+					state.Push(lua.LNil)
+					return 1
+				}
+				sheets := map[string]string{
+					"": "Skillicon", "ama": "AmSkillicon", "sor": "SoSkillicon", "nec": "NeSkillicon",
+					"pal": "PaSkillicon", "bar": "BaSkillicon", "dru": "DrSkillicon", "ass": "AsSkillicon",
+				}
+				sheet, found := sheets[strings.ToLower(strings.TrimSpace(skill.CharClass))]
+				if !found {
+					sheet = "Skillicon"
+				}
+				result := state.NewTable()
+				result.RawSetString("id", lua.LNumber(id))
+				result.RawSetString("icon", lua.LNumber(icon))
+				result.RawSetString("sheet", lua.LString("data/global/ui/SPELLS/"+sheet+".DC6"))
+				result.RawSetString("name_key", lua.LString(description.StrName))
+				result.RawSetString("short_key", lua.LString(description.StrShort))
+				result.RawSetString("list_row", lua.LNumber(description.ListRow))
+				result.RawSetString("left_allowed", lua.LBool(strings.TrimSpace(skill.LeftSkill) == "1"))
+				result.RawSetString("passive", lua.LBool(strings.TrimSpace(skill.Passive) == "1"))
 				state.Push(result)
 				return 1
 			},

@@ -55,6 +55,7 @@ return {
         end
         if render.assets_available() then
             local player = require("dm.player/v1")
+            self.game_data = require("dm.game_data/v1")
             self.hud = game_hud.create(self.root, screen.hud, manifest.palettes, {
                 request_running = player.request_running,
             })
@@ -101,9 +102,20 @@ return {
             return
         end
         if self.hud then
+            local snapshot = self.gameplay_world.hud_snapshot(self.gameplay.hero, self.character_stats)
+            if self.left_skill_id ~= snapshot.left_skill then
+                self.left_skill_id = snapshot.left_skill
+                self.left_skill = self.game_data.skill(snapshot.left_skill)
+            end
+            if self.right_skill_id ~= snapshot.right_skill then
+                self.right_skill_id = snapshot.right_skill
+                self.right_skill = self.game_data.skill(snapshot.right_skill)
+            end
+            snapshot.left_skill_detail = self.left_skill
+            snapshot.right_skill_detail = self.right_skill
             game_hud.update(
                 self.hud,
-                self.gameplay_world.hud_snapshot(self.gameplay.hero, self.character_stats)
+                snapshot
             )
         end
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)

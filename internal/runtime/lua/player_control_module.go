@@ -10,10 +10,17 @@ import (
 func PlayerControlModule(controller *gamesession.MovementController) Module {
 	return Module{Name: "dm.player/v1", Help: documentedModule("Request local-player actions through the authoritative fixed-tick command source.", map[string]CommandHelp{
 		"request_running": commandHelp("dm.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
+		"assign_skill":    commandHelp("dm.player.assign_skill(slot, skill_id)", "Request an authoritative left or right skill assignment."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"request_running": func(state *lua.LState) int {
 				controller.SetRunning(state.CheckBool(1))
+				return 0
+			},
+			"assign_skill": func(state *lua.LState) int {
+				if err := controller.AssignSkill(state.CheckString(1), int64(state.CheckInt(2))); err != nil {
+					state.RaiseError("%v", err)
+				}
 				return 0
 			},
 		})
