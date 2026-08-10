@@ -15,11 +15,15 @@ import (
 type AssetPreloadRequest struct {
 	Kind      string
 	Path      string
+	Secondary string
 	Palette   string
 	Table     string
 	Sheet     string
 	Transform string
 	Tiles     []string
+	Direction int
+	Frame     int
+	Anchor    string
 }
 
 // AssetPreloadStatus is an immutable snapshot suitable for loading screens,
@@ -62,24 +66,36 @@ func (p *assetPreloader) Start(requests []AssetPreloadRequest) uint64 {
 	id := p.nextID
 	p.jobs[id] = &assetPreloadJob{total: len(requests)}
 	p.mu.Unlock()
+	if len(requests) == 0 {
+		return id
+	}
 
-	for _, request := range requests {
-		request := request
+	queue := make(chan AssetPreloadRequest)
+	workerCount := min(len(requests), cap(p.work))
+	for worker := 0; worker < workerCount; worker++ {
 		go func() {
-			p.work <- struct{}{}
-			err := p.load(request)
-			<-p.work
+			for request := range queue {
+				p.work <- struct{}{}
+				err := p.load(request)
+				<-p.work
 
-			p.mu.Lock()
-			job := p.jobs[id]
-			job.completed++
-			if err != nil {
-				job.failed++
-				job.errors = append(job.errors, fmt.Sprintf("%s %q: %v", request.Kind, request.Path, err))
+				p.mu.Lock()
+				job := p.jobs[id]
+				job.completed++
+				if err != nil {
+					job.failed++
+					job.errors = append(job.errors, fmt.Sprintf("%s %q: %v", request.Kind, request.Path, err))
+				}
+				p.mu.Unlock()
 			}
-			p.mu.Unlock()
 		}()
 	}
+	go func() {
+		defer close(queue)
+		for _, request := range requests {
+			queue <- request
+		}
+	}()
 	return id
 }
 
@@ -103,6 +119,30 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		return err
 	case "dc6":
 		_, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
+		return err
+	case "dc6_frame":
+		_, err := p.cache.loadDC6Frame(p.assets, request.Path, request.Palette, request.Direction, request.Frame)
+		return err
+	case "dc6_combined":
+		_, err := p.cache.loadDC6Combined(p.assets, request.Path, request.Palette, request.Direction)
+		return err
+	case "dc6_animation":
+		_, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor)
+		return err
+	case "dc6_composite":
+		first, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
+		if err != nil {
+			return err
+		}
+		second, err := p.cache.loadDC6(p.assets, request.Secondary, request.Palette)
+		if err != nil {
+			return err
+		}
+		bounds := dc6AnimationBounds(first, request.Direction).Union(dc6AnimationBounds(second, request.Direction))
+		if _, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor, bounds); err != nil {
+			return err
+		}
+		_, err = p.cache.loadDC6Animation(p.assets, request.Secondary, request.Palette, request.Direction, request.Anchor, bounds)
 		return err
 	case "dcc":
 		_, err := p.cache.loadDCC(p.assets, request.Path, request.Palette)
@@ -137,8 +177,18 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 			return string(value)
 		}
 		request := AssetPreloadRequest{
-			Kind: stringField("kind"), Path: stringField("path"), Palette: stringField("palette"),
+			Kind: stringField("kind"), Path: stringField("path"), Secondary: stringField("overlay"), Palette: stringField("palette"),
 			Table: stringField("table"), Sheet: stringField("sheet"), Transform: stringField("transform"),
+		}
+		if value, ok := definition.RawGetString("direction").(lua.LNumber); ok {
+			request.Direction = int(value)
+		}
+		if value, ok := definition.RawGetString("frame").(lua.LNumber); ok {
+			request.Frame = int(value)
+		}
+		request.Anchor = stringField("anchor")
+		if request.Anchor == "" {
+			request.Anchor = "offsets"
 		}
 		if tileTable, ok := definition.RawGetString("tiles").(*lua.LTable); ok {
 			for tile := 1; tile <= tileTable.Len(); tile++ {
@@ -158,6 +208,9 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 			}
 		} else if request.Path == "" {
 			return nil, fmt.Errorf("request %d path is required", item)
+		}
+		if request.Kind == "dc6_composite" && request.Secondary == "" {
+			return nil, fmt.Errorf("request %d composite overlay is required", item)
 		}
 		requests = append(requests, request)
 	}

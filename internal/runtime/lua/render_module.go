@@ -128,6 +128,31 @@ type rgbaFrameDigest struct {
 	pixels        [32]byte
 }
 
+type preparedDC6Frame struct {
+	image image.Image
+	frame *dc6.Frame
+}
+
+type preparedDC6Animation struct {
+	frames []image.Image
+	bounds image.Rectangle
+}
+
+func imageWeight(value image.Image) int {
+	if value == nil {
+		return 1
+	}
+	return max(value.Bounds().Dx()*value.Bounds().Dy()*4, 1)
+}
+
+func imagesWeight(values []image.Image) int {
+	weight := 0
+	for _, value := range values {
+		weight += imageWeight(value)
+	}
+	return max(weight, 1)
+}
+
 func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame) (image.Image, error) {
 	if direction < 0 || direction >= len(asset.Priority) {
 		return nil, fmt.Errorf("COF direction %d is out of range", direction)
@@ -314,6 +339,65 @@ func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6
 		return nil, err
 	}
 	return value.(*dc6.DC6), nil
+}
+
+func (c *renderAssetCache) loadDC6Frame(assets fs.FS, name, palette string, direction, frameIndex int) (preparedDC6Frame, error) {
+	key := fmt.Sprintf("dc6-frame\x00%s\x00%s\x00%d\x00%d", name, palette, direction, frameIndex)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		asset, err := c.loadDC6(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		frame, err := assetdecode.Frame(asset, direction, frameIndex)
+		if err != nil {
+			return nil, 0, err
+		}
+		decoded, err := assetdecode.FrameImage(asset, frame)
+		if err != nil {
+			return nil, 0, err
+		}
+		return preparedDC6Frame{image: decoded, frame: frame}, imageWeight(decoded), nil
+	})
+	if err != nil {
+		return preparedDC6Frame{}, err
+	}
+	return value.(preparedDC6Frame), nil
+}
+
+func (c *renderAssetCache) loadDC6Combined(assets fs.FS, name, palette string, direction int) ([]image.Image, error) {
+	key := fmt.Sprintf("dc6-combined\x00%s\x00%s\x00%d", name, palette, direction)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		asset, err := c.loadDC6(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		pages, err := combinedDC6Pages(asset, direction)
+		return pages, imagesWeight(pages), err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.([]image.Image), nil
+}
+
+func (c *renderAssetCache) loadDC6Animation(assets fs.FS, name, palette string, direction int, anchorMode string, sharedBounds ...image.Rectangle) (preparedDC6Animation, error) {
+	boundsKey := ""
+	if len(sharedBounds) > 0 {
+		boundsKey = fmt.Sprint(sharedBounds[0])
+	}
+	key := fmt.Sprintf("dc6-animation\x00%s\x00%s\x00%d\x00%s\x00%s", name, palette, direction, anchorMode, boundsKey)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		asset, err := c.loadDC6(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		frames, bounds, err := normalizedDC6Frames(asset, direction, anchorMode, sharedBounds...)
+		return preparedDC6Animation{frames: frames, bounds: bounds}, imagesWeight(frames), err
+	})
+	if err != nil {
+		return preparedDC6Animation{}, err
+	}
+	return value.(preparedDC6Animation), nil
 }
 
 func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, palette string) (image.Image, error) {
@@ -1113,29 +1197,19 @@ func registerRenderNodeType(state *lua.LState) {
 			paletteName := state.OptString(3, "")
 			direction := state.OptInt(4, 0)
 			frameIndex := state.OptInt(5, 0)
-			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			prepared, err := node.cache.loadDC6Frame(node.assets, fileName, paletteName, direction, frameIndex)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			frame, err := assetdecode.Frame(asset, direction, frameIndex)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
-			}
-			decoded, err := assetdecode.FrameImage(asset, frame)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
-			}
-			if err := node.setImage(decoded); err != nil {
+			if err := node.setImage(prepared.image); err != nil {
 				state.RaiseError("updating render node: %v", err)
 				return 0
 			}
-			state.Push(lua.LNumber(frame.Width))
-			state.Push(lua.LNumber(frame.Height))
-			state.Push(lua.LNumber(frame.OffsetX))
-			state.Push(lua.LNumber(dc6FrameTop(frame)))
+			state.Push(lua.LNumber(prepared.frame.Width))
+			state.Push(lua.LNumber(prepared.frame.Height))
+			state.Push(lua.LNumber(prepared.frame.OffsetX))
+			state.Push(lua.LNumber(dc6FrameTop(prepared.frame)))
 			return 4
 		},
 		"set_dc6_combined": func(state *lua.LState) int {
@@ -1148,12 +1222,7 @@ func registerRenderNodeType(state *lua.LState) {
 			paletteName := state.OptString(3, "")
 			direction := state.OptInt(4, 0)
 			page := state.OptInt(5, 0)
-			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
-			}
-			pages, err := combinedDC6Pages(asset, direction)
+			pages, err := node.cache.loadDC6Combined(node.assets, fileName, paletteName, direction)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
@@ -1223,15 +1292,6 @@ func registerRenderNodeType(state *lua.LState) {
 				state.ArgError(7, "anchor mode must be offsets or first-frame")
 				return 0
 			}
-			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
-			if err != nil {
-				state.RaiseError("%v", err)
-				return 0
-			}
-			if direction < 0 || direction >= len(asset.Directions) {
-				state.ArgError(4, "direction is out of range")
-				return 0
-			}
 			var sharedBounds []image.Rectangle
 			if state.GetTop() >= 11 {
 				bounds := image.Rect(state.CheckInt(8), state.CheckInt(9), state.CheckInt(10), state.CheckInt(11))
@@ -1241,20 +1301,20 @@ func registerRenderNodeType(state *lua.LState) {
 				}
 				sharedBounds = append(sharedBounds, bounds)
 			}
-			frames, bounds, err := normalizedDC6Frames(asset, direction, anchorMode, sharedBounds...)
+			prepared, err := node.cache.loadDC6Animation(node.assets, fileName, paletteName, direction, anchorMode, sharedBounds...)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
+			if err := node.setAnimation(prepared.frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
 				state.RaiseError("updating render animation: %v", err)
 				return 0
 			}
-			state.Push(lua.LNumber(len(frames)))
-			state.Push(lua.LNumber(bounds.Dx()))
-			state.Push(lua.LNumber(bounds.Dy()))
-			state.Push(lua.LNumber(bounds.Min.X))
-			state.Push(lua.LNumber(bounds.Min.Y))
+			state.Push(lua.LNumber(len(prepared.frames)))
+			state.Push(lua.LNumber(prepared.bounds.Dx()))
+			state.Push(lua.LNumber(prepared.bounds.Dy()))
+			state.Push(lua.LNumber(prepared.bounds.Min.X))
+			state.Push(lua.LNumber(prepared.bounds.Min.Y))
 			return 5
 		},
 		"set_dcc": func(state *lua.LState) int {

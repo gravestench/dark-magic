@@ -400,7 +400,7 @@ func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
 	}
 
 	capability := NewRenderCapability(New(), &render.Composer{}, assets)
-	job := capability.preloads.Start([]AssetPreloadRequest{{Kind: "dc6", Path: "one.dc6", Palette: "pal.dat"}})
+	job := capability.preloads.Start([]AssetPreloadRequest{{Kind: "dc6_animation", Path: "one.dc6", Palette: "pal.dat", Anchor: "offsets"}})
 	deadline := time.Now().Add(time.Second)
 	for {
 		status, ok := capability.preloads.Status(job)
@@ -420,7 +420,7 @@ func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
 	}
 
 	before := capability.Diagnostics().DecodeCalls
-	if _, err := capability.cache.loadDC6(assets, "one.dc6", "pal.dat"); err != nil {
+	if _, err := capability.cache.loadDC6Animation(assets, "one.dc6", "pal.dat", 0, "offsets"); err != nil {
 		t.Fatal(err)
 	}
 	if after := capability.Diagnostics().DecodeCalls; after != before {
