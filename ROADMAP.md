@@ -1265,7 +1265,9 @@ replay verification, and narrow audited administrator handlers.
   frame duration, with stable tick and delta values exposed to Lua systems.
 - [x] Replace the production compatibility hero/world state with Lua-defined ECS
   components and systems for input intent, transform, bounded movement, camera
-  follow, and presentation snapshots.
+  follow, and presentation snapshots. The shim now keeps related component
+  schemas and individual systems in documented modules; `world.lua` only
+  registers them and owns the narrow scene-facing binding/snapshot facade.
 - [x] Admit a renderer-matched, round-tripped isometric pixel/subtile transform,
   then use axis-separated DT1 collision in ECS movement without mixing in
   presentation pixels.
