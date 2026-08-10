@@ -4,12 +4,7 @@ import (
 	"image"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/google/uuid"
 )
-
-func (s *Service) GetTexture(uuid uuid.UUID, img image.Image) (texture rl.Texture2D, isNew bool) {
-	return s.getTexture(uuid.String(), img)
-}
 
 func (s *Service) getTexture(key string, img image.Image) (texture rl.Texture2D, isNew bool) {
 

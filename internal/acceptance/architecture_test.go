@@ -215,6 +215,47 @@ func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 	}
 }
 
+func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
+	root := repositoryRoot(t)
+	world := filepath.Join(root, "internal", "platform", "raylib", "world")
+	files, err := filepath.Glob(filepath.Join(world, "*.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("retired direct-renderable world adapter has Go files: %v", files)
+	}
+
+	renderer := filepath.Join(root, "internal", "platform", "raylib", "renderer")
+	forbidden := map[string]bool{"Renderable": true, "NewRenderable": true, "ProvidesRenderables": true, "ProvidesTextures": true, "ManagesCameras": true}
+	err = filepath.WalkDir(renderer, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
+			return err
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			return err
+		}
+		ast.Inspect(file, func(candidate ast.Node) bool {
+			switch candidate := candidate.(type) {
+			case *ast.TypeSpec:
+				if forbidden[candidate.Name.Name] {
+					t.Errorf("%s restores retired renderer type %s", path, candidate.Name.Name)
+				}
+			case *ast.FuncDecl:
+				if forbidden[candidate.Name.Name] {
+					t.Errorf("%s restores retired renderer constructor %s", path, candidate.Name.Name)
+				}
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestNoAccidentalPublicGoPackages(t *testing.T) {
 	pkgRoot := filepath.Join(repositoryRoot(t), "pkg")
 	if _, err := os.Stat(pkgRoot); errors.Is(err, fs.ErrNotExist) {

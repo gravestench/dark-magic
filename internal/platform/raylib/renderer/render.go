@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"image"
 	"image/color"
+	"math"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -12,33 +13,75 @@ func (s *Service) render() {
 		return
 	}
 
-	s.renderRecursively(s.rootNode)
+	s.frames.Add(1)
+	s.renderRecursively(s.rootNode, nil)
 }
 
-func (s *Service) renderRecursively(renderable Renderable) {
-	if clip := renderable.Clip(); clip != nil {
-		rl.BeginScissorMode(int32(clip.X), int32(clip.Y), int32(clip.Width), int32(clip.Height))
-		defer rl.EndScissorMode()
+func (s *Service) renderRecursively(renderable *node, inheritedClip *rl.Rectangle) {
+	s.nodesVisited.Add(1)
+	if !renderable.visible {
+		s.subtreesCulled.Add(1)
+		return
 	}
+	clip := intersectClip(inheritedClip, renderable.Clip())
 	if renderable.IsEnabled() {
+		width, height := s.Resolution()
+		if len(renderable.children) == 0 && renderable.outside(float32(width), float32(height)) {
+			s.subtreesCulled.Add(1)
+			return
+		}
+		if clip != nil {
+			rl.BeginScissorMode(int32(clip.X), int32(clip.Y), int32(clip.Width), int32(clip.Height))
+		}
 		s.renderNode(renderable)
+		if clip != nil {
+			rl.EndScissorMode()
+		}
 	}
 
-	children := renderable.Children()
-	if concrete, ok := renderable.(*node); ok {
-		children = concrete.sortedChildren()
-	}
+	children := renderable.sortedChildren()
 
 	for _, child := range children {
-		s.renderRecursively(child)
+		s.renderRecursively(child, clip)
 	}
 }
 
-func (s *Service) renderNode(node Renderable) {
+func (n *node) outside(viewWidth, viewHeight float32) bool {
+	if n.Rotation() != 0 {
+		return false
+	}
+	x, y := n.Position()
+	scaleX, scaleY := n.scaleXY()
+	bounds := n.Image().Bounds()
+	width := float32(bounds.Dx()) * float32(math.Abs(float64(scaleX)))
+	height := float32(bounds.Dy()) * float32(math.Abs(float64(scaleY)))
+	origin := n.Origin()
+	left, top := x-width*origin.X, y-height*origin.Y
+	return left+width <= 0 || top+height <= 0 || left >= viewWidth || top >= viewHeight
+}
+
+func intersectClip(parent, own *rl.Rectangle) *rl.Rectangle {
+	if parent == nil {
+		return own
+	}
+	if own == nil {
+		return parent
+	}
+	x1 := max(parent.X, own.X)
+	y1 := max(parent.Y, own.Y)
+	x2 := min(parent.X+parent.Width, own.X+own.Width)
+	y2 := min(parent.Y+parent.Height, own.Y+own.Height)
+	result := rl.NewRectangle(x1, y1, max(0, x2-x1), max(0, y2-y1))
+	return &result
+}
+
+func (s *Service) renderNode(node *node) {
+	s.drawCalls.Add(1)
 	x, y := node.Position()
 	tx := node.Texture()
 
 	if node.dirty() {
+		s.textureUpdates.Add(1)
 		img := node.Image()
 		if px, ok := contiguousRGBA(img); ok {
 			if len(px) < 4 {
@@ -63,14 +106,14 @@ func (s *Service) renderNode(node Renderable) {
 	//	rl.NewColor(255, 255, 255, uint8(node.Opacity()*255)))
 
 	origin := node.Origin()
-	scale := node.Scale()
+	scaleX, scaleY := node.scaleXY()
 
 	// src rect is at 0,0 and dimension of src texture
 	srcWidth, srcHeight := float32(tx.Width), float32(tx.Height)
 	srcRect := rl.NewRectangle(0, 0, srcWidth, srcHeight)
 
 	// dst rect is at position of node, with scaled dimension of texture
-	dstWidth, dstHeight := float32(tx.Width)*scale, float32(tx.Height)*scale
+	dstWidth, dstHeight := float32(tx.Width)*scaleX, float32(tx.Height)*scaleY
 	dstRect := rl.NewRectangle(float32(x), float32(y), dstWidth, dstHeight)
 
 	// node origin uses normalized value, applied to scaled dimension of texture

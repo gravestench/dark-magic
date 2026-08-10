@@ -4,7 +4,7 @@ test:
 	go test ./...
 
 architecture:
-	go test ./internal/acceptance -run 'Test(Retired|NoAccidental|DependencyDirection|CommandRemains)'
+	go test ./internal/acceptance -run 'Test(Retired|LegacyRenderer|NoAccidental|DependencyDirection|CommandRemains)'
 
 test-race:
 	go test -race ./...

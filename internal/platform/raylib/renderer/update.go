@@ -10,6 +10,5 @@ func (s *Service) update() {
 			callback()
 		}
 	}
-	s.rootNode.update()
-	s.rootNode.UpdateWorldMatrix(rl.MatrixIdentity())
+	s.rootNode.UpdateWorldMatrix(rl.MatrixIdentity(), false)
 }

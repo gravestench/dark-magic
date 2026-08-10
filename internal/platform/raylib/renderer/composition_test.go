@@ -36,9 +36,9 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 	t.Parallel()
 
 	renderer := &Service{}
-	renderer.rootNode = renderer.NewRenderable()
+	renderer.rootNode = renderer.newNode()
 	renderer.rootNode.Disable()
-	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]Renderable)}
+	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]*node)}
 	parent := render.NodeID{Slot: 1, Generation: 1}
 	child := render.NodeID{Slot: 2, Generation: 1}
 	if err := backend.Apply(render.Change{Kind: "create", ID: parent, Node: render.Node{ID: parent, Layer: render.LayerHUD, ScaleX: 1, Visible: true}}); err != nil {
@@ -47,10 +47,10 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 	if err := backend.Apply(render.Change{Kind: "create", ID: child, Node: render.Node{ID: child, Parent: parent, X: 12, Y: 34, ScaleX: 2, Visible: true}}); err != nil {
 		t.Fatal(err)
 	}
-	renderer.rootNode.UpdateWorldMatrix(rl.MatrixIdentity())
+	renderer.rootNode.UpdateWorldMatrix(rl.MatrixIdentity(), true)
 	childNode := backend.nodes[child]
-	if childNode.Parent() != backend.nodes[parent] || childNode.Scale() != 2 {
-		t.Fatalf("child was not attached: parent=%v scale=%v", childNode.Parent(), childNode.Scale())
+	if childNode.parentNode() != backend.nodes[parent] || childNode.Scale() != 2 {
+		t.Fatalf("child was not attached: parent=%v scale=%v", childNode.parentNode(), childNode.Scale())
 	}
 	if backend.nodes[parent].IsEnabled() || childNode.IsEnabled() {
 		t.Fatal("resource-less grouping nodes were enabled for default-texture drawing")
@@ -65,14 +65,60 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 
 func TestCompositionBackendMapsDiabloScreenBlend(t *testing.T) {
 	renderer := &Service{}
-	renderer.rootNode = renderer.NewRenderable()
+	renderer.rootNode = renderer.newNode()
 	renderer.rootNode.Disable()
-	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]Renderable)}
+	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]*node)}
 	id := render.NodeID{Slot: 1, Generation: 1}
 	if err := backend.Apply(render.Change{Kind: "create", ID: id, Node: render.Node{ID: id, Layer: render.LayerHUD, ScaleX: 1, Blend: "screen"}}); err != nil {
 		t.Fatal(err)
 	}
 	if got := backend.nodes[id].BlendMode(); got != rl.BlendCustom {
 		t.Fatalf("screen blend mapped to %v, want BlendCustom", got)
+	}
+}
+
+func TestBackendUsesNonUniformScaleAndDirtyTransformPropagation(t *testing.T) {
+	renderer := &Service{}
+	renderer.rootNode = renderer.newNode()
+	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]*node)}
+	parent := render.NodeID{Slot: 1, Generation: 1}
+	child := render.NodeID{Slot: 2, Generation: 1}
+	if err := backend.Apply(render.Change{Kind: "create", ID: parent, Node: render.Node{ID: parent, ScaleX: 2, ScaleY: 3, Visible: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.Apply(render.Change{Kind: "create", ID: child, Node: render.Node{ID: child, Parent: parent, X: 4, Y: 5, ScaleX: 1, ScaleY: 1, Visible: true}}); err != nil {
+		t.Fatal(err)
+	}
+	renderer.rootNode.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+	x, y := backend.nodes[child].Position()
+	if x != 8 || y != 15 {
+		t.Fatalf("child world position = %v,%v, want 8,15", x, y)
+	}
+	if backend.nodes[child].transformDirty {
+		t.Fatal("transform remained dirty after propagation")
+	}
+}
+
+func TestFinalDrainLeavesNoPendingCompositionCommands(t *testing.T) {
+	renderer := &Service{}
+	renderer.rootNode = renderer.newNode()
+	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]*node)}
+	composer := &render.Composer{}
+	id, err := composer.Create(render.NodeID{}, render.LayerHUD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Destroy(id); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	backend.close()
+	if diagnostics := composer.Diagnostics(); diagnostics.Pending != 0 {
+		t.Fatalf("pending commands after final drain = %d", diagnostics.Pending)
+	}
+	if len(backend.nodes) != 0 {
+		t.Fatalf("backend nodes after close = %d", len(backend.nodes))
 	}
 }
