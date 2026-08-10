@@ -162,11 +162,14 @@ Executable-era relationships recovered by Riiablo live verbatim under
 remain separate capabilities responsible for resolving strings and assets.
 
 The production game-world scene defines hero position, velocity, bounds, player
-control, and camera-follow components in Lua through `dm.ecs/v1`. Native input
-is normalized into one admitted `player.move` command per active fixed tick;
-the session-owned handler applies velocity before Lua movement, collision, and
-camera systems run. The retained scene only reads component snapshots to update
-presentation nodes. The older
+control, and camera-follow components in Lua through `dm.ecs/v1`. Its
+`darkmagic/gameplay/components` modules group small related schemas, while
+`darkmagic/gameplay/systems` gives each update rule its own documented file.
+`world.lua` is their composition root and retains only player binding plus
+presentation-safe snapshot helpers. Native input is normalized into one admitted
+`player.move` command per active fixed tick; the session-owned handler applies
+velocity before Lua movement, collision, and camera systems run. The retained
+scene only reads component snapshots to update presentation nodes. The older
 `dm.simulation/v1` adapter remains available to compatibility tests and shell
 examples but is no longer registered by the client.
 
