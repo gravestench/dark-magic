@@ -25,6 +25,8 @@ local compat = require("darkmagic.ui.compat")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local ui_lab = {}
+local lab_control_normal = "font_lab_caption"
+local lab_control_hover = "font_lab_gold_sky"
 
 local function copy_at(source, x, y)
     local result = {}
@@ -81,6 +83,8 @@ function ui_lab.create(self)
     self.label_button = label_button.create(self.root, self.controls, {
         id = "label_button", x = 60, y = 218, width = 272, height = 24,
     }, "TEXT-ONLY ACTION", {
+        normal_style = lab_control_normal,
+        hover_style = lab_control_hover,
         on_activate = function() status("label button activated") end,
     })
 
@@ -145,10 +149,16 @@ function ui_lab.create(self)
 
     self.previous_page = label_button.create(self.root, self.controls, {
         id = "list_previous", x = 405, y = 236, width = 80, height = 24,
-    }, "< PREV", { on_activate = function() self.list:previous_page(); status("list page " .. (self.list_page or "")) end })
+    }, "< PREV", {
+        normal_style = lab_control_normal, hover_style = lab_control_hover,
+        on_activate = function() self.list:previous_page(); status("list page " .. (self.list_page or "")) end,
+    })
     self.next_page = label_button.create(self.root, self.controls, {
         id = "list_next", x = 585, y = 236, width = 80, height = 24,
-    }, "NEXT >", { on_activate = function() self.list:next_page(); status("list page " .. (self.list_page or "")) end })
+    }, "NEXT >", {
+        normal_style = lab_control_normal, hover_style = lab_control_hover,
+        on_activate = function() self.list:next_page(); status("list page " .. (self.list_page or "")) end,
+    })
 
     -- Authored TextSlid scrollbar recovered by OpenDiablo2. The arrows and
     -- gutter/thumb are actual DC6 frames when the game asset is mounted.
@@ -169,6 +179,9 @@ function ui_lab.create(self)
         {id="two", label="TAB TWO"},
         {id="three", label="TAB THREE"},
     }, {
+        normal_style = lab_control_normal,
+        hover_style = lab_control_hover,
+        selected_style = lab_control_normal,
         on_change = function(id) status("tab = " .. id) end,
     })
 
@@ -194,11 +207,13 @@ function ui_lab.create(self)
         x = 550, y = 460, width = 200, height = 25,
         on_state = function(_, state) self.tip:set_visible(state == "hover" or state == "focused") end,
     })
-    self.tooltip_label = put(self.root, "label_button_normal", "HOVER FOR TOOLTIP", 550, 460, 200, "center")
+    self.tooltip_label = put(self.root, lab_control_normal, "HOVER FOR TOOLTIP", 550, 460, 200, "center")
 
     self.modal_button = label_button.create(self.root, self.controls, {
         id = "modal_button", x = 405, y = 495, width = 130, height = 25,
     }, "OPEN MODAL", {
+        normal_style = lab_control_normal,
+        hover_style = lab_control_hover,
         on_activate = function()
             if self.modal and self.modal.open then return end
             local definition = manifest.screens.character_select.delete_dialog
