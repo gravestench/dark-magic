@@ -67,7 +67,7 @@ func MPQ(fileName string) (fs.FS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("content: open MPQ %q: %w", fileName, err)
 	}
-	return normalizedFS{FS: archive, backslash: true}, nil
+	return &closeableFS{FS: normalizedFS{FS: archive, backslash: true}, close: archive.Close}, nil
 }
 
 // Close closes a filesystem source if it owns resources.

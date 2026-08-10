@@ -17,7 +17,7 @@ require (
 	github.com/gravestench/dcc v0.1.0
 	github.com/gravestench/ds1 v0.1.0
 	github.com/gravestench/dt1 v0.1.0
-	github.com/gravestench/mpq v0.1.0
+	github.com/gravestench/mpq v0.1.1-0.20260810081350-4b25d79dc0df
 	github.com/gravestench/pl2 v0.1.0
 	github.com/gravestench/tbl_text v0.1.0
 	github.com/gravestench/tsv v0.0.0-20230729064132-bf42816ac988
