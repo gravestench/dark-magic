@@ -66,7 +66,9 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
+	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096, func(persistence.Character) []gameplayer.Skill {
+		return []gameplayer.Skill{{ID: 42, Level: 1, ListRow: 0, LeftAllowed: true, RightAllowed: true}}
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

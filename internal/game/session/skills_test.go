@@ -25,6 +25,16 @@ func TestSkillSourceAppliesAuthoritativeAssignments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	learned, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.learned_skill", Fields: []akara.Field{
+		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},
+		{Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := learned.Set(engine.World().MustCreateEntity(), map[string]any{"owner": entity, "skill_id": int64(42), "left_allowed": true, "right_allowed": true}); err != nil {
+		t.Fatal(err)
+	}
 	session, err := New(engine, Config{})
 	if err != nil {
 		t.Fatal(err)

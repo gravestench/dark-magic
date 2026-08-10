@@ -7,6 +7,7 @@ local scenes = require("dm.scene/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
 local tooltip = require("darkmagic.ui.tooltip")
+local skill_selector = require("darkmagic.ui.skill_selector")
 
 local M = {}
 
@@ -131,6 +132,7 @@ function M.create(root, definition, palettes, commands)
 
     local skills = definition.skills
     hud.skills = {}
+    hud.skill_selector = skill_selector.create(hud.root, skills, palette, hud.controls, assert(commands.assign_skill))
     for _, skill in ipairs({
         { side = "left", placement = skills.left },
         { side = "right", placement = skills.right },
@@ -148,6 +150,7 @@ function M.create(root, definition, palettes, commands)
             width = skills.width,
             height = skills.height,
             focusable = false,
+            on_activate = function() skill_selector.toggle(hud.skill_selector, side) end,
             on_state = function(_, state) tip:set_visible(state == "hover") end,
         })
     end
@@ -283,6 +286,7 @@ function M.snapshot(hud, stats)
     hud.belt.refresh()
     update_skill(hud, "left", stats.left_skill_detail, stats.left_skill or 0)
     update_skill(hud, "right", stats.right_skill_detail, stats.right_skill or 0)
+    skill_selector.set_skills(hud.skill_selector, stats.learned_skills or {})
     if hud.running ~= running then
         hud.running = running
         hud.run_node:set_dc6(hud.definition.run.sheet, hud.palette, 0, running and hud.definition.run.run_frame or hud.definition.run.walk_frame)

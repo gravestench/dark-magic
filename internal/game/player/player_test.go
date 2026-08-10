@@ -23,6 +23,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	}
 	character := persistence.Character{ID: "amazon-hero", Name: "Hero", Class: "Amazon", Level: 3, Expansion: true, Stats: &persistence.Stats{Experience: 100, Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15}}
 	entry := EntryFromCharacter(character, "player-1", 5, 7, 100, 80)
+	entry.Skills = []Skill{{ID: 6, Level: 1, ListRow: 1, LeftAllowed: true, RightAllowed: true}}
 	command, err := Command(entry, "server", 1, 1, simulation.AuthoritySystem)
 	if err != nil {
 		t.Fatal(err)
@@ -66,6 +67,10 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if item, _ := belt.Get("slot_16"); item != "" {
 		t.Fatalf("initial belt slot 16 = %v, want empty", item)
 	}
+	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
+	if !found || learned.Len() != 1 {
+		t.Fatalf("learned skills = %v, %v", learned, found)
+	}
 	if audit := session.Audit(); len(audit) != 1 || audit[0].Kind != EnterCommand {
 		t.Fatalf("audit = %#v", audit)
 	}
@@ -85,7 +90,7 @@ func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
 	if err := saves.Select("amazon-hero"); err != nil {
 		t.Fatal(err)
 	}
-	source, err := NewEntrySource(engine, saves, "local-player", 100, 80)
+	source, err := NewEntrySource(engine, saves, "local-player", 100, 80, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -49,11 +49,17 @@ func RegisterSkillAssignments(session *Session) error {
 					continue
 				}
 				if payload.Left != nil {
+					if !learnedSkillAllows(engine, entity, *payload.Left, "left") {
+						return fmt.Errorf("skill %d is not learned or cannot be assigned to left", *payload.Left)
+					}
 					if err := assignment.Set("left", *payload.Left); err != nil {
 						return err
 					}
 				}
 				if payload.Right != nil {
+					if !learnedSkillAllows(engine, entity, *payload.Right, "right") {
+						return fmt.Errorf("skill %d is not learned or cannot be assigned to right", *payload.Right)
+					}
 					if err := assignment.Set("right", *payload.Right); err != nil {
 						return err
 					}
@@ -62,6 +68,23 @@ func RegisterSkillAssignments(session *Session) error {
 			return nil
 		},
 	})
+}
+
+func learnedSkillAllows(engine *gameecs.Engine, owner akara.Entity, skillID int64, side string) bool {
+	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
+	if !found {
+		return false
+	}
+	for _, entity := range learned.Entities() {
+		component, _ := learned.Get(entity)
+		candidateOwner, _ := component.Get("owner")
+		candidateID, _ := component.Get("skill_id")
+		allowed, _ := component.Get(side + "_allowed")
+		if candidateOwner == owner && candidateID == skillID && allowed == true {
+			return true
+		}
+	}
+	return false
 }
 
 type SkillSource struct {

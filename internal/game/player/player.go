@@ -39,7 +39,20 @@ type Entry struct {
 	Y           float64 `json:"y"`
 	WorldWidth  float64 `json:"world_width"`
 	WorldHeight float64 `json:"world_height"`
+	Skills      []Skill `json:"skills,omitempty"`
 }
+
+// Skill is one learned action admitted with the character. Presentation may
+// describe it, but only this session-owned record decides whether it is usable.
+type Skill struct {
+	ID           int64 `json:"id"`
+	Level        int64 `json:"level"`
+	ListRow      int64 `json:"list_row"`
+	LeftAllowed  bool  `json:"left_allowed"`
+	RightAllowed bool  `json:"right_allowed"`
+}
+
+type SkillProvider func(persistence.Character) []Skill
 
 // EntrySource admits the currently selected save into the authoritative world.
 // Selection remains shell state; after admission, ECS components are the live
@@ -50,14 +63,15 @@ type EntrySource struct {
 	player        string
 	width, height float64
 	sequence      uint64
+	skills        SkillProvider
 }
 
-func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64) (*EntrySource, error) {
+func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64, skills SkillProvider) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
 	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 {
 		return nil, fmt.Errorf("player: entry source requires engine, saves, player, and positive world bounds")
 	}
-	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height}, nil
+	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, skills: skills}, nil
 }
 
 func (source *EntrySource) Commands(tick uint64) []simulation.Command {
@@ -67,6 +81,9 @@ func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 	}
 	source.sequence++
 	entry := EntryFromCharacter(character, source.player, source.width/2, source.height/2, source.width, source.height)
+	if source.skills != nil {
+		entry.Skills = source.skills(character)
+	}
 	command, err := Command(entry, localEntryActor, source.sequence, tick, simulation.AuthoritySystem)
 	if err != nil {
 		return nil
@@ -166,6 +183,39 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 			return fail(err)
 		}
 	}
+	if err := materializeSkills(engine.World(), entity, entry.Skills); err != nil {
+		return fail(err)
+	}
+	return nil
+}
+
+func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) error {
+	store, err := akara.RegisterSchema(world, akara.Schema{Name: "dm.player.learned_skill", Version: 1, Fields: []akara.Field{
+		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},
+		{Name: "level", Kind: akara.FieldInt64}, {Name: "list_row", Kind: akara.FieldInt64},
+		{Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool},
+	}})
+	if err != nil {
+		return err
+	}
+	created := make([]akara.Entity, 0, len(skills))
+	rollback := func() {
+		for _, entity := range created {
+			world.DestroyEntity(entity)
+		}
+	}
+	for _, skill := range skills {
+		entity, err := world.CreateEntity()
+		if err != nil {
+			rollback()
+			return err
+		}
+		created = append(created, entity)
+		if _, err := store.Set(entity, map[string]any{"owner": owner, "skill_id": skill.ID, "level": skill.Level, "list_row": skill.ListRow, "left_allowed": skill.LeftAllowed, "right_allowed": skill.RightAllowed}); err != nil {
+			rollback()
+			return err
+		}
+	}
 	return nil
 }
 
@@ -223,6 +273,11 @@ func decodeEntry(encoded []byte) (Entry, error) {
 	}
 	if entry.Level < 1 || entry.Health < 0 || entry.MaxHealth < entry.Health || entry.Mana < 0 || entry.MaxMana < entry.Mana {
 		return Entry{}, fmt.Errorf("player: invalid progression or vitals")
+	}
+	for _, skill := range entry.Skills {
+		if skill.ID < 0 || skill.Level < 1 || skill.ListRow < 0 || !skill.LeftAllowed && !skill.RightAllowed {
+			return Entry{}, fmt.Errorf("player: invalid learned skill")
+		}
 	}
 	if entry.WorldWidth <= 0 || entry.WorldHeight <= 0 || entry.X < 0 || entry.X > entry.WorldWidth || entry.Y < 0 || entry.Y > entry.WorldHeight {
 		return Entry{}, fmt.Errorf("player: invalid world position or bounds")
