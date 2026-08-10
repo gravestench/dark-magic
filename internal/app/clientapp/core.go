@@ -208,11 +208,15 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	if err != nil {
 		return nil, nil
 	}
-	items := make([]gameitem.Item, 0, 5)
+	items := make([]gameitem.Item, 0, 6)
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
 		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
+	}
+	if armor, found := snapshot.ArmorByCode["cap"]; found {
+		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
+		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
 	}
 	for index, code := range []string{"hp1", "mp1"} {
 		if misc, found := snapshot.MiscByCode[code]; found {

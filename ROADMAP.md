@@ -771,8 +771,10 @@ complete until its actions are driven by authoritative game state and commands.
   overlap rules. Current progress: fixed-tick authority, copied Lua snapshots,
   backpack, stash, and cube grid interaction, canonical body-location
   interaction, four-slot belt interaction, and MPQ-backed item presentation
-  are implemented. Alternate weapon sets, save/realm handoff persistence, and
-  the remaining service/hireling overlays keep this checkpoint open.
+  are implemented. Hireling equipment now uses an independent authoritative
+  slot domain with MPQ-backed slot presentation. Alternate weapon sets,
+  save/realm handoff persistence, and the remaining service overlays keep this
+  checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

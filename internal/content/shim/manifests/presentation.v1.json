@@ -541,7 +541,15 @@
     "hireling": {
       "sheet":"data/global/ui/PANEL/NpcInv.dc6","palette":"sky","x":80,"y":64,
       "close":{"x":272,"bottom_inset":15,"label":"darkmagic.hireling.close"},
-      "labels":[{"key":"darkmagic.hireling.unavailable","x":160,"y":205,"width":250}]
+      "item_slots":{
+        "records":"data/global/excel/Inventory.txt","record_class":"Hireling","container":"hireling",
+        "slots":[
+          {"prefix":"head","body_loc":"head","placeholder":{"sheet":"data/global/ui/PANEL/inv_helm_glove.DC6","frame":1,"offset_x":-2,"offset_y":-1}},
+          {"prefix":"torso","body_loc":"tors","placeholder":{"sheet":"data/global/ui/PANEL/inv_armor.DC6","frame":0,"offset_y":-2}},
+          {"prefix":"rArm","body_loc":"rarm","placeholder":{"sheet":"data/global/ui/PANEL/inv_weapons.DC6","frame":0,"offset_x":-2,"offset_y":-2}},
+          {"prefix":"lArm","body_loc":"larm","placeholder":{"sheet":"data/global/ui/PANEL/inv_weapons.DC6","frame":0,"offset_x":-2,"offset_y":-2}}
+        ]
+      }
     },
     "vendor": {
       "sheet":"data/global/ui/PANEL/buysell.dc6","palette":"sky","x":80,"y":64,

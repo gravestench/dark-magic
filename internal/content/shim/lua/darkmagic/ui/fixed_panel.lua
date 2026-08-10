@@ -8,6 +8,7 @@ local controls = require("darkmagic.ui.controls")
 local button = require("darkmagic.ui.button")
 local text = require("darkmagic.ui.text")
 local item_grid = require("darkmagic.ui.item_grid")
+local item_slots = require("darkmagic.ui.item_slots")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local M = {}
@@ -59,6 +60,26 @@ function M.overlay(id, slot)
                 })
                 self.__darkmagic_item_held = self.item_grid.held
             end
+            if definition.item_slots then
+                local slots = definition.item_slots
+                local record = inventory_record(slots)
+                local geometry = {}
+                for _, slot in ipairs(slots.slots) do
+                    geometry[slot.body_loc] = {
+                        x = definition.x + number(record, slot.prefix .. "Left"),
+                        y = definition.y + number(record, slot.prefix .. "Top"),
+                        width = number(record, slot.prefix .. "Width"),
+                        height = number(record, slot.prefix .. "Height"),
+                        placeholder = slot.placeholder,
+                    }
+                end
+                self.item_slots = item_slots.create(self.root, self.controls, {
+                    container = slots.container,
+                    slots = geometry,
+                    palette = manifest.palettes.units,
+                })
+                self.__darkmagic_item_held = self.item_slots.held
+            end
             local close = {
                 sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky",
                 up_frame=10, down_frame=11,
@@ -77,6 +98,10 @@ function M.overlay(id, slot)
             if self.item_grid then
                 item_grid.update(self.item_grid)
                 self.__darkmagic_item_held = self.item_grid.held
+            end
+            if self.item_slots then
+                item_slots.update(self.item_slots)
+                self.__darkmagic_item_held = self.item_slots.held
             end
             self.controls:update()
             if input.pressed("cancel") then scenes.pop() end
