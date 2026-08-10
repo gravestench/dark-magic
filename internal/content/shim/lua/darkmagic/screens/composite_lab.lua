@@ -80,8 +80,9 @@ function lab:create()
     self.token_index = index_of(tokens, upper(dev.option("composite_token"), "AM"))
     self.mode_index = index_of(modes, upper(dev.option("composite_mode"), "NU"))
     self.weapon = upper(dev.option("composite_weapon"), "HTH")
+    -- Lab-facing direction is deliberately a plain spatial index. Asset-facing
+    -- direction codes stay hidden behind the lookup below.
     self.direction = math.max(0, math.min(15, tonumber(dev.option("composite_direction")) or 0))
-    self.direction_index = index_of(clockwise_directions, self.direction)
     self.appearance = parse_components(dev.option("composite_components"))
     self.frame = tonumber(dev.option("composite_frame")) or -1
     self.playing, self.dirty = self.frame < 0, true
@@ -89,8 +90,9 @@ function lab:create()
 end
 
 function lab:rebuild()
+    local direction_code = clockwise_directions[self.direction + 1]
     local authority = {token=tokens[self.token_index], mode=modes[self.mode_index], weapon_class=self.weapon,
-        direction=self.direction, palette="data/global/palette/ACT1/pal.dat"}
+        direction=direction_code, palette="data/global/palette/ACT1/pal.dat"}
     local ok, resolved = pcall(composite.recipe, authority, self.appearance, self.weapon)
     if ok then
         ok, resolved = pcall(function()
@@ -107,8 +109,8 @@ function lab:rebuild()
             self.actor:animation_pause()
             self.actor:animation_seek(self.frame * 256 / (resolved.rate * 25))
         end
-        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical %d  encoded %d  rate %d  frames %d%s",
-            authority.token, authority.mode, self.weapon, self.direction, resolved.direction, resolved.rate, resolved.frames,
+        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical %d  code %d  encoded %d  rate %d  frames %d%s",
+            authority.token, authority.mode, self.weapon, self.direction, direction_code, resolved.direction, resolved.rate, resolved.frames,
             self.playing and "" or ("  showing " .. self.frame)), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. resolved.cof, 760, "center")
     else
@@ -119,16 +121,8 @@ function lab:rebuild()
 end
 
 function lab:update()
-    if input.pressed("left") then
-        self.direction_index = ((self.direction_index - 2) % #clockwise_directions) + 1
-        self.direction = clockwise_directions[self.direction_index]
-        self.dirty = true
-    end
-    if input.pressed("right") then
-        self.direction_index = (self.direction_index % #clockwise_directions) + 1
-        self.direction = clockwise_directions[self.direction_index]
-        self.dirty = true
-    end
+    if input.pressed("left") then self.direction = (self.direction + 15) % 16; self.dirty = true end
+    if input.pressed("right") then self.direction = (self.direction + 1) % 16; self.dirty = true end
     if input.pressed("up") then self.mode_index = ((self.mode_index - 2) % #modes) + 1; self.dirty = true end
     if input.pressed("down") then self.mode_index = (self.mode_index % #modes) + 1; self.dirty = true end
     if input.pressed("page_up") then self.token_index = ((self.token_index - 2) % #tokens) + 1; self.weapon="HTH"; self.appearance={}; self.dirty=true end
