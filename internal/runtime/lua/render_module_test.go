@@ -295,7 +295,7 @@ func TestCOFCompositionUsesFramePriorityAndPlacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.B != 255 {
+	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.R != 255 {
 		t.Fatalf("priority pixel = %#v", got)
 	}
 	if composed.Bounds().Dx() != 5 || composed.Bounds().Dy() != 5 {

@@ -224,7 +224,13 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 	// every projected shadow first, then every visible body/equipment layer.
 	// Drawing a layer's shadow immediately before that layer lets later shadows
 	// darken earlier limbs and looks like broken arm priority on thin characters.
-	for _, componentType := range asset.Priority[direction][frame] {
+	priority := asset.Priority[direction][frame]
+	// COF rows describe the visible stack from nearest to furthest. The legacy
+	// adapters iterate the byte row forward, but that puts the far arm over the
+	// torso and head in real Necromancer RN assets with our immediate compositor.
+	// Walk back-to-front so the nearest authored component is applied last.
+	for priorityIndex := len(priority) - 1; priorityIndex >= 0; priorityIndex-- {
+		componentType := priority[priorityIndex]
 		component, ok := components[componentType]
 		if !ok || component.layer.Shadow == 0 {
 			continue
@@ -233,7 +239,8 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		mask := image.NewUniform(color.RGBA{A: 96})
 		draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
 	}
-	for _, componentType := range asset.Priority[direction][frame] {
+	for priorityIndex := len(priority) - 1; priorityIndex >= 0; priorityIndex-- {
+		componentType := priority[priorityIndex]
 		component, ok := components[componentType]
 		if !ok {
 			continue

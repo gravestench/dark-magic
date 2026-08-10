@@ -20,7 +20,7 @@ end
 -- arm/head ordering table.
 local encoded_directions = {
     [8] = {1, 3, 5, 7, 0, 2, 4, 6},
-    [16] = {2, 6, 10, 14, 0, 4, 8, 12},
+    [16] = {2, 6, 10, 14, 0, 4, 8, 12, 1, 3, 5, 7, 9, 11, 13, 15},
 }
 
 local function encoded_direction(logical, count)

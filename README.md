@@ -330,7 +330,7 @@ MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
   --composite-direction=3 --composite-components=RH=SSD --composite-frame=0
 ```
 
-Use Left/Right for encoded direction, Up/Down for NU/WL/RN mode, Page Up/Down
+Use Left/Right to traverse all 16 player directions clockwise, Up/Down for NU/WL/RN mode, Page Up/Down
 for player class, Space to pause/play, Home/End to step frames, and Enter to cycle deterministic coherent
 recipes. `--composite-random` selects from that verified recipe set at startup;
 it deliberately does not fabricate arbitrary archive names. The corresponding

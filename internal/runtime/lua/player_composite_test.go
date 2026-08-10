@@ -72,6 +72,10 @@ assert(composite.components.HD=="data/global/chars/AM/HD/AMHDLITWL1HT.dcc")
 assert(composite.components.RA=="data/global/chars/AM/RA/AMRALITWLHTH.dcc")
 assert(composite.components.RH==nil)
 assert(composite.rate==333 and composite.frames==8)
+local fine_direction=require("darkmagic.gameplay.player_composite").unarmed({
+  token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=15,
+})
+assert(fine_direction.direction==15)
 local equipped=require("darkmagic.gameplay.player_composite").resolve({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
 },{active_weapon_set=0,items={{container="equipment",slot="rarm",weapon_set=0,weapon_class="1hs",composite={RH="ssd"}}}})
