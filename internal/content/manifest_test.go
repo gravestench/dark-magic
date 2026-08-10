@@ -72,7 +72,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint", "pause", "options"}) {
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint", "pause", "options", "automap", "death"}) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
@@ -573,5 +573,13 @@ func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 		if screen["sheet"] == "" || screen["close"] == nil {
 			t.Errorf("incomplete fixed panel %s = %#v", id, screen)
 		}
+	}
+	automap := screens["automap"].(map[string]any)
+	if automap["x"] != float64(320) || automap["y"] != float64(240) || automap["width"] != float64(540) || automap["height"] != float64(380) {
+		t.Fatalf("classic automap viewport = %#v", automap)
+	}
+	death := screens["death"].(map[string]any)
+	if death["x"] != float64(320) || death["width"] != float64(600) || death["died_y"] != float64(145) {
+		t.Fatalf("classic death presentation = %#v", death)
 	}
 }

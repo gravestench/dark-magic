@@ -718,9 +718,12 @@ complete until its actions are driven by authoritative game state and commands.
   stash, cube, hireling, vendor, and waypoint now share manifest-owned fixed-panel
   geometry with archive-verified structural fixtures and classic `(0,4)` origins.
   Pause and options derive their dim surface, menu center, retained visuals, and
-  pointer hit regions from the selected logical viewport. Other frontend and
-  asset-specific full-screen overlays remain to be independently verified. The
-  roadmap does not yet claim complete 640x480 application support.
+  pointer hit regions from the selected logical viewport. Automap placeholder
+  bounds and the archive-matched death typography are now profile-owned, with
+  the classic death copy centered at 320 while retaining its recovered vertical
+  rhythm. Other frontend and asset-specific full-screen overlays remain to be
+  independently verified. The roadmap does not yet claim complete 640x480
+  application support.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
 
