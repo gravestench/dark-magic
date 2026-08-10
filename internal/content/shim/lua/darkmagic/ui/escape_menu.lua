@@ -183,7 +183,9 @@ function EscapeMenu:create_image_item(layout_id, layout, row, y)
     if render.assets_available() and row.sheet then
         local node = render.create("modal", self.root)
         node:set_z(30)
-        local ok, width, height = pcall(node.set_dc6, node, row.sheet, palette, 0, 0)
+        -- Large localized labels are split into spatial DC6 tiles (commonly a
+        -- 256px first frame plus a remainder), not animation frames.
+        local ok, width, height = pcall(node.set_dc6_strip, node, row.sheet, palette, 0)
         if ok then
             item.art = node
             item.focus_width = math.max(width, 1)

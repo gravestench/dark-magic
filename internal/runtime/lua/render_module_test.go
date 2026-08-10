@@ -57,6 +57,32 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	}
 }
 
+func TestHorizontalDC6StripJoinsFrameTiles(t *testing.T) {
+	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
+		{Width: 2, Height: 1, OffsetX: 0, OffsetY: 0, IndexData: []byte{1, 1}},
+		{Width: 1, Height: 1, OffsetX: 2, OffsetY: 0, IndexData: []byte{2}},
+	}}}}
+	asset.SetPalette(color.Palette{
+		color.RGBA{},
+		color.RGBA{R: 255, A: 255},
+		color.RGBA{G: 255, A: 255},
+	})
+
+	composite, err := horizontalDC6Strip(asset, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if composite.Bounds() != image.Rect(0, 0, 3, 1) {
+		t.Fatalf("composite bounds = %v", composite.Bounds())
+	}
+	if got := color.RGBAModel.Convert(composite.At(1, 0)).(color.RGBA); got.R != 255 {
+		t.Fatalf("first tile pixel = %#v", got)
+	}
+	if got := color.RGBAModel.Convert(composite.At(2, 0)).(color.RGBA); got.G != 255 {
+		t.Fatalf("second tile pixel = %#v", got)
+	}
+}
+
 func TestAssetWeightReadsAssetContents(t *testing.T) {
 	t.Parallel()
 

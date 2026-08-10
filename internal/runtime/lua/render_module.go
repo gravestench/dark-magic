@@ -608,6 +608,37 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 	return result, bounds, nil
 }
 
+// horizontalDC6Strip joins consecutive frames from one direction left-to-right.
+// Diablo II uses this form for UI art wider than the 256-pixel DC6 frame limit;
+// these frames are image tiles, not animation frames, and do not carry distinct
+// spatial offsets.
+func horizontalDC6Strip(asset *dc6.DC6, direction int) (image.Image, error) {
+	if asset == nil || direction < 0 || direction >= len(asset.Directions) {
+		return nil, fmt.Errorf("DC6 strip direction %d is out of range", direction)
+	}
+	frames := asset.Directions[direction].Frames
+	if len(frames) == 0 {
+		return nil, errors.New("DC6 strip has no frames")
+	}
+	width, height := 0, 0
+	for _, frame := range frames {
+		width += int(frame.Width)
+		height = max(height, int(frame.Height))
+	}
+	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+	x := 0
+	for _, frame := range frames {
+		decoded, err := assetdecode.FrameImage(asset, frame)
+		if err != nil {
+			return nil, err
+		}
+		position := image.Pt(x, height-int(frame.Height))
+		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Over)
+		x += int(frame.Width)
+	}
+	return canvas, nil
+}
+
 // RenderModule exposes backend-neutral retained composition to scoped Lua
 // components. Nodes are automatically destroyed with their component scope.
 func RenderModule(runtime *Runtime, composer *render.Composer) Module {
@@ -644,6 +675,7 @@ func (r *RenderCapability) Module() Module {
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
+		"set_dc6_strip":              commandHelp("node:set_dc6_strip(path [, options])", "Join horizontally tiled DC6 frames from one direction."),
 		"set_dc6_animation":          commandHelp("node:set_dc6_animation(path [, options])", "Render a DC6 animation."),
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
 		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
@@ -987,6 +1019,33 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(frame.OffsetX))
 			state.Push(lua.LNumber(dc6FrameTop(frame)))
 			return 4
+		},
+		"set_dc6_strip": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName := state.CheckString(2)
+			paletteName := state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			decoded, err := horizontalDC6Strip(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(decoded.Bounds().Dx()))
+			state.Push(lua.LNumber(decoded.Bounds().Dy()))
+			return 2
 		},
 		"set_dc6_animation": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
