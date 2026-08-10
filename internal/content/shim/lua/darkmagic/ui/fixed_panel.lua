@@ -72,11 +72,13 @@ function M.overlay(id, slot)
             })
         end,
         update = function(self)
-            self.controls:update()
+            -- Controls may close this overlay immediately. Never touch its item
+            -- nodes after dispatching a button that can destroy their scope.
             if self.item_grid then
                 item_grid.update(self.item_grid)
                 self.__darkmagic_item_held = self.item_grid.held
             end
+            self.controls:update()
             if input.pressed("cancel") then scenes.pop() end
         end,
     }

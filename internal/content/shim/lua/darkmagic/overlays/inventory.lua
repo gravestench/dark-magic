@@ -222,8 +222,10 @@ return {
     end,
 
     update = function(self)
-        self.controls:update()
+        -- Refresh before controls: a close-button activation may synchronously
+        -- destroy this overlay and every render node it owns.
         if self.items ~= nil then refresh_items(self) end
+        self.controls:update()
         if input.pressed("inventory") or input.pressed("cancel") then
             scenes.pop()
         end
