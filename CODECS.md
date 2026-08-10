@@ -89,3 +89,11 @@ labels, and regression queue live in
 [`docs/research/paul-siramy.md`](docs/research/paul-siramy.md). Claims recovered
 from archived community material must be verified against legally supplied data
 or synthetic fixtures before they become codec or engine contracts.
+
+The current legacy-format research pass turns those findings into format and
+runtime specifications under [`docs/formats`](docs/formats) and records the
+codec-repository work that should be planned separately in
+[`docs/formats/CODEC_FOLLOWUPS.md`](docs/formats/CODEC_FOLLOWUPS.md). Codex should
+use that handoff before changing `gravestench/cof`, `dc6`, `dcc`, `ds1`, `dt1`,
+or `pl2`; the follow-up list intentionally separates codec-owned probes/tests
+from Dark Magic-owned DRLG, composite resolution, and rendering work.
