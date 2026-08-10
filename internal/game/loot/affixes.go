@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// AffixKind distinguishes the two independently bounded affix pools.
 type AffixKind string
 
 const (
@@ -65,6 +66,7 @@ type GeneratedItem struct {
 	Unsupported      []PropertyApplication `json:"unsupportedProperties,omitempty"`
 }
 
+// RolledModifier records both the authored range and deterministic result.
 type RolledModifier struct {
 	Code      string `json:"code"`
 	Parameter int    `json:"parameter,omitempty"`
@@ -73,6 +75,7 @@ type RolledModifier struct {
 	Value     int    `json:"value"`
 }
 
+// RolledAffix is a portable, serialization-ready selected affix.
 type RolledAffix struct {
 	Name      string           `json:"name"`
 	Kind      AffixKind        `json:"kind"`

@@ -12,8 +12,10 @@ import (
 	"github.com/gravestench/akara"
 )
 
+// ErrSnapshotVersion rejects snapshots whose canonical schema is unknown.
 var ErrSnapshotVersion = fmt.Errorf("game ecs: unsupported snapshot version")
 
+// SnapshotVersion identifies the canonical dynamic-component encoding.
 const SnapshotVersion = 1
 
 // Snapshot is the canonical, replay-checkable state of runtime-defined ECS
@@ -25,6 +27,7 @@ type Snapshot struct {
 	Components []ComponentSnapshot `json:"components"`
 }
 
+// ComponentSnapshot retains a runtime schema and its ordered instances.
 type ComponentSnapshot struct {
 	Name      string             `json:"name"`
 	Version   uint32             `json:"version"`
@@ -32,11 +35,13 @@ type ComponentSnapshot struct {
 	Instances []InstanceSnapshot `json:"instances"`
 }
 
+// FieldSnapshot is the replay-relevant portion of one dynamic field schema.
 type FieldSnapshot struct {
 	Name string          `json:"name"`
 	Kind akara.FieldKind `json:"kind"`
 }
 
+// InstanceSnapshot binds canonical values to one stable entity identity.
 type InstanceSnapshot struct {
 	Entity uint64          `json:"entity"`
 	Values []ValueSnapshot `json:"values"`

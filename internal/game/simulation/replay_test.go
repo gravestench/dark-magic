@@ -53,7 +53,7 @@ func TestReplayRestoresAppliesAndDiagnosesFirstDivergence(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		checksum, err := snapshot.Checksum()
+		checksum, err := CompositeChecksum(snapshot, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

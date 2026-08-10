@@ -70,6 +70,8 @@ type Screenshotter interface {
 	CaptureScreenshot(string) error
 }
 
+// CaptureFactory keeps optional developer capture construction outside the
+// production client package while making frame observation an explicit plug.
 type CaptureFactory func(string, string, int, Screenshotter) (Capture, error)
 
 type application struct {

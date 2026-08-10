@@ -22,6 +22,9 @@ type ecsAccess struct {
 	read, write map[string]struct{}
 }
 
+// ECSCapability adapts one authoritative engine into checked Lua values. It
+// tracks the currently executing system's declared access so scripts cannot use
+// a component reference to bypass read/write policy.
 type ECSCapability struct {
 	runtime *Runtime
 	engine  *gameecs.Engine
@@ -42,10 +45,13 @@ type ownedECSCommands struct {
 	commands   *akara.CommandBuffer
 }
 
+// NewECSCapability creates the adapter; the runtime and engine retain ownership.
 func NewECSCapability(runtime *Runtime, engine *gameecs.Engine) *ECSCapability {
 	return &ECSCapability{runtime: runtime, engine: engine}
 }
 
+// Module returns the versioned dm.ecs/v1 registration. Resource-producing
+// operations attach their cleanup to the active Lua scope.
 func (capability *ECSCapability) Module() Module {
 	return Module{Name: "dm.ecs/v1", Help: documentedModule("Define runtime ECS components and deterministic scoped systems.", map[string]CommandHelp{
 		"component": commandHelp("dm.ecs.component(definition)", "Register or migrate a named runtime component schema."),

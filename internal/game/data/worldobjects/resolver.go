@@ -19,6 +19,8 @@ type Resolver struct {
 	dynamic map[string]string
 }
 
+// New freezes both data generations into act-local lookup indexes. Dynamic
+// monster preset IDs are positional, so their authored per-act order is kept.
 func New(recoveredData recovered.Snapshot, gameData gamedata.Snapshot) *Resolver {
 	resolver := &Resolver{
 		static:  make(map[string]staticDefinition, len(recoveredData.MapObjects)),
@@ -36,6 +38,8 @@ func New(recoveredData recovered.Snapshot, gameData gamedata.Snapshot) *Resolver
 	return resolver
 }
 
+// ResolveStaticObject maps a DS1 static ID to Objects.txt and its recovered
+// human-readable description.
 func (resolver *Resolver) ResolveStaticObject(act, id int) (int, string, bool) {
 	if resolver == nil {
 		return 0, "", false
@@ -44,6 +48,8 @@ func (resolver *Resolver) ResolveStaticObject(act, id int) (int, string, bool) {
 	return entry.objectID, entry.description, found
 }
 
+// ResolveDynamicObject maps a DS1 dynamic ID to the act-local MonPreset place
+// token. It returns identity only; spawning remains authoritative game logic.
 func (resolver *Resolver) ResolveDynamicObject(act, id int) (string, bool) {
 	if resolver == nil {
 		return "", false

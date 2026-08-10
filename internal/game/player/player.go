@@ -15,10 +15,14 @@ import (
 	"github.com/gravestench/dark-magic/internal/persistence"
 )
 
+// EnterCommand materializes a selected durable character into session-owned ECS
+// state. It is system/admin authority only; clients cannot self-admit players.
 const EnterCommand = "system.player.enter"
 
 const localEntryActor = "system:local-player-entry"
 
+// Entry is the complete validated intent needed to create the initial player
+// archetype. After application, ECS components—not this payload—are live state.
 type Entry struct {
 	CharacterID string  `json:"character_id"`
 	Player      string  `json:"player"`
@@ -52,6 +56,8 @@ type Skill struct {
 	RightAllowed bool  `json:"right_allowed"`
 }
 
+// SkillProvider translates durable character knowledge into authoritative entry
+// facts without coupling player materialization to the typed data catalog.
 type SkillProvider func(persistence.Character) []Skill
 
 // EntrySource admits the currently selected save into the authoritative world.
@@ -66,6 +72,8 @@ type EntrySource struct {
 	skills        SkillProvider
 }
 
+// NewEntrySource creates the offline adapter that emits one entry command for
+// the selected character. Remote sessions receive equivalent commands elsewhere.
 func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64, skills SkillProvider) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
 	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 {
@@ -74,6 +82,7 @@ func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player str
 	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, skills: skills}, nil
 }
 
+// Commands emits entry intent once; it never materializes ECS state directly.
 func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 	character, selected := source.saves.Selected()
 	if !selected || source.entered(character.ID) {
@@ -106,6 +115,7 @@ func (source *EntrySource) entered(characterID string) bool {
 	return false
 }
 
+// EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
 	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, X: x, Y: y, WorldWidth: width, WorldHeight: height}
 	if character.Stats != nil {
@@ -119,6 +129,7 @@ func EntryFromCharacter(character persistence.Character, player string, x, y, wi
 	return entry
 }
 
+// Command encodes player-entry intent for deterministic admission and replay.
 func Command(entry Entry, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
 	payload, err := json.Marshal(entry)
 	if err != nil {
@@ -127,6 +138,7 @@ func Command(entry Entry, actor string, sequence, tick uint64, authority simulat
 	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: EnterCommand, Payload: payload}, nil
 }
 
+// Register installs the trusted player-materialization handler.
 func Register(session *gamesession.Session) error {
 	return session.Register(EnterCommand, gamesession.CommandHandler{
 		Validate: func(command simulation.Command) error {

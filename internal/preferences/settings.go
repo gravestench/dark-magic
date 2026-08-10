@@ -10,6 +10,8 @@ import (
 	"sync"
 )
 
+// Values is the versioned, serializable client-preference snapshot. These are
+// presentation/backend choices, not authoritative character or game state.
 type Values struct {
 	Version               int     `json:"version"`
 	SoundVolume           float64 `json:"sound_volume"`
@@ -19,6 +21,9 @@ type Values struct {
 	TextureCacheBudgetMB  float64 `json:"texture_cache_budget_mb"`
 }
 
+// Settings owns validated live values and their optional host-file lifetime.
+// Callers receive copies, then use setters so validation and dirty tracking stay
+// centralized instead of mutating the serialized structure directly.
 type Settings struct {
 	mu     sync.RWMutex
 	path   string
@@ -26,12 +31,16 @@ type Settings struct {
 	dirty  bool
 }
 
+// Defaults returns a fresh copy of the built-in preference baseline.
 func Defaults() Values {
 	return Values{Version: 1, SoundVolume: .5, MusicVolume: .5, TextureUploadBudgetMB: 16, TextureCacheBudgetMB: 512}
 }
 
+// NewTransient creates in-memory preferences for tests and headless tools.
 func NewTransient() *Settings { return &Settings{values: Defaults()} }
 
+// New loads preferences from path, or the platform configuration directory when
+// path is empty. A missing file is normal first-run state; malformed data is not.
 func New(path string) (*Settings, error) {
 	if path == "" {
 		directory, err := os.UserConfigDir()

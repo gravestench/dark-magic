@@ -19,11 +19,15 @@ const (
 	fontGlyphBytes  = 14
 )
 
+// Glyph maps one Unicode code point to its authored DC6 frame and logical
+// advance box. Frame pixels retain palette shading independently of metrics.
 type Glyph struct {
 	Frame         int
 	Width, Height int
 }
 
+// BitmapFont is a fully decoded, renderer-neutral Diablo bitmap font. It owns
+// CPU images only; retained/native resource upload belongs to presentation.
 type BitmapFont struct {
 	Glyphs       map[rune]Glyph
 	Frames       []image.Image
@@ -54,10 +58,14 @@ func FontTable(data []byte) (map[rune]Glyph, error) {
 	return glyphs, nil
 }
 
+// LoadBitmapFont joins Woo! metrics, DC6 glyph frames, and a palette without a
+// PL2 text transform.
 func LoadBitmapFont(source fs.FS, tableName, sheetName, paletteName string) (*BitmapFont, error) {
 	return LoadBitmapFontWithTransform(source, tableName, sheetName, paletteName, "")
 }
 
+// LoadBitmapFontWithTransform additionally loads authored PL2 text-color banks.
+// Some fonts use direct palette colors while others select a transform bank.
 func LoadBitmapFontWithTransform(source fs.FS, tableName, sheetName, paletteName, transformName string) (*BitmapFont, error) {
 	table, err := fs.ReadFile(source, tableName)
 	if err != nil {
@@ -95,6 +103,8 @@ func LoadBitmapFontWithTransform(source fs.FS, tableName, sheetName, paletteName
 	return font, nil
 }
 
+// Render lays out, wraps, aligns, and composites text into a new CPU image. It
+// never creates retained nodes or native textures, keeping font tests headless.
 func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align string) (*image.RGBA, error) {
 	if f == nil || len(f.Glyphs) == 0 || len(f.Frames) == 0 || f.LineHeight <= 0 {
 		return nil, fmt.Errorf("bitmap font: empty font")
@@ -294,6 +304,7 @@ type modulatedImage struct {
 	Tint color.Color
 }
 
+// At implements image.Image while multiplying authored shading by Tint.
 func (m modulatedImage) At(x, y int) color.Color {
 	red, green, blue, alpha := m.Image.At(x, y).RGBA()
 	tintRed, tintGreen, tintBlue, tintAlpha := m.Tint.RGBA()

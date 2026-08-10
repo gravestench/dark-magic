@@ -21,7 +21,12 @@ type Stats struct {
 	Hits, Misses, Evictions uint64
 }
 
-// Cache stores arbitrary data for fast retrieval
+// Cache is a mutex-protected weighted LRU shared by resource-owning adapters.
+//
+// Weight is deliberately caller-defined: decoded pixels, native textures, and
+// other resources do not have one universal notion of cost. Namespace and
+// generation metadata let a reload invalidate one logical asset family without
+// flushing unrelated entries or returning data from an older content generation.
 type Cache struct {
 	head      *cacheNode
 	tail      *cacheNode
@@ -35,19 +40,21 @@ type Cache struct {
 	evictions uint64
 }
 
-// New creates an  instance of a Cache
+// New creates an empty cache with the supplied total weight budget. A budget of
+// zero keeps bookkeeping active while making every inserted entry immediately
+// eligible for eviction.
 func New(budget int) *Cache {
 	return &Cache{lookup: make(map[string]*cacheNode), budget: budget}
 }
 
-// GetWeight gets the "weight" of a cache
+// GetWeight reports the total caller-declared weight of resident entries.
 func (c *Cache) GetWeight() int {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.weight
 }
 
-// GetBudget gets the memory budget of a cache
+// GetBudget reports the current eviction budget.
 func (c *Cache) GetBudget() int {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

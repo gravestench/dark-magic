@@ -20,6 +20,8 @@ import (
 	tbl "github.com/gravestench/tbl_text"
 )
 
+// Report is a JSON-ready structural observation. Details contain decoder facts,
+// never proprietary source bytes or rendered pixels.
 type Report struct {
 	Path    string `json:"path"`
 	Type    string `json:"type"`
@@ -28,6 +30,8 @@ type Report struct {
 	Details any    `json:"details,omitempty"`
 }
 
+// Inspect reads one virtual content path and delegates to the matching headless
+// decoder. The caller retains ownership of the layered filesystem.
 func Inspect(source fs.FS, path string) (Report, error) {
 	file, err := source.Open(path)
 	if err != nil {

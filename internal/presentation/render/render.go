@@ -16,6 +16,7 @@ import (
 type Layer uint8
 
 const (
+	// Layers are ordered architectural domains, not arbitrary numeric Z bands.
 	LayerWorld Layer = iota
 	LayerHUD
 	LayerModal
@@ -36,9 +37,12 @@ type ResourceID struct {
 	Generation uint32
 }
 
+// ResourceKind tells a backend how to interpret CPU-side resource input.
 type ResourceKind string
 
 const (
+	// Resource kinds name semantic lifetimes; native object types remain private
+	// to the selected renderer backend.
 	ResourceTexture      ResourceKind = "texture"
 	ResourcePalette      ResourceKind = "palette"
 	ResourceFont         ResourceKind = "font"

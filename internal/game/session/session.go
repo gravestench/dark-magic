@@ -16,11 +16,16 @@ import (
 )
 
 var (
-	ErrClosed       = errors.New("game session: closed")
-	ErrHandler      = errors.New("game session: command handler is invalid")
+	// ErrClosed rejects work after session authority has been released.
+	ErrClosed = errors.New("game session: closed")
+	// ErrHandler reports an incomplete command contract.
+	ErrHandler = errors.New("game session: command handler is invalid")
+	// ErrCommandApply wraps a command that was admitted but could not be applied.
 	ErrCommandApply = errors.New("game session: admitted command failed to apply")
 )
 
+// Config bounds deterministic fixed stepping and command lead time. Zero values
+// select production defaults so tests and offline composition share one policy.
 type Config struct {
 	Step               time.Duration
 	MaxCatchUp         int
@@ -28,30 +33,68 @@ type Config struct {
 	CheckpointInterval uint64
 }
 
+// CommandHandler separates untrusted payload validation from trusted mutation.
+// Allowed authority classes are explicit; omission means ordinary player only.
 type CommandHandler struct {
 	Validate simulation.CommandValidator
 	Apply    func(*gameecs.Engine, simulation.Command) error
 	Allowed  []simulation.Authority
 }
 
+// CommandSource samples local intent for exactly one upcoming fixed tick. It is
+// not used for network commands, whose arrival is handled through Submit.
 type CommandSource func(nextTick uint64) []simulation.Command
 
 // Session serializes command admission, deterministic command ordering, ECS
 // updates, and replay recording behind one authority boundary.
 type Session struct {
-	mu          sync.Mutex
-	engine      *gameecs.Engine
-	admitter    *simulation.Admitter
-	config      Config
-	handlers    map[string]CommandHandler
-	pending     map[uint64][]simulation.Command
-	initial     gameecs.Snapshot
-	commands    []simulation.Command
-	checkpoints []simulation.Checkpoint
-	lag         time.Duration
-	closed      bool
+	mu                  sync.Mutex
+	engine              *gameecs.Engine
+	admitter            *simulation.Admitter
+	config              Config
+	handlers            map[string]CommandHandler
+	participants        []simulation.StateParticipant
+	pending             map[uint64][]simulation.Command
+	initial             gameecs.Snapshot
+	initialParticipants []simulation.ParticipantState
+	commands            []simulation.Command
+	checkpoints         []simulation.Checkpoint
+	lag                 time.Duration
+	closed              bool
 }
 
+// RegisterStateParticipant adds deterministic authoritative state to session
+// initial state, checkpoints, replay restoration, and desync verification.
+// Register participants before the first command is submitted or tick advances.
+func (session *Session) RegisterStateParticipant(participant simulation.StateParticipant) error {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	if session.closed {
+		return ErrClosed
+	}
+	if participant == nil || strings.TrimSpace(participant.StateID()) == "" {
+		return fmt.Errorf("game session: state participant and ID are required")
+	}
+	if session.engine.Tick() != session.initial.Tick || len(session.commands) != 0 || len(session.pending) != 0 {
+		return fmt.Errorf("game session: state participants must be registered before commands or ticks")
+	}
+	for _, existing := range session.participants {
+		if existing.StateID() == participant.StateID() {
+			return fmt.Errorf("game session: duplicate state participant %q", participant.StateID())
+		}
+	}
+	data, err := participant.SnapshotState()
+	if err != nil {
+		return fmt.Errorf("game session: snapshot initial participant %q: %w", participant.StateID(), err)
+	}
+	session.participants = append(session.participants, participant)
+	sort.Slice(session.participants, func(i, j int) bool { return session.participants[i].StateID() < session.participants[j].StateID() })
+	session.initialParticipants = append(session.initialParticipants, simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)})
+	sort.Slice(session.initialParticipants, func(i, j int) bool { return session.initialParticipants[i].ID < session.initialParticipants[j].ID })
+	return nil
+}
+
+// Status is an observational administration snapshot, never a mutation API.
 type Status struct {
 	Tick        uint64
 	Pending     int
@@ -60,6 +103,8 @@ type Status struct {
 	Checkpoints int
 }
 
+// New takes ownership of engine and captures its initial replay state. Non-ECS
+// state participants must be registered before commands are queued or time moves.
 func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	if engine == nil {
 		return nil, fmt.Errorf("%w: nil engine", ErrHandler)
@@ -86,6 +131,8 @@ func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	}, nil
 }
 
+// Register binds one stable command kind to validation, authority policy, and
+// trusted mutation. Command kinds are replay-format identities, not UI labels.
 func (session *Session) Register(kind string, handler CommandHandler) error {
 	if handler.Validate == nil || handler.Apply == nil {
 		return ErrHandler
@@ -233,12 +280,16 @@ func (session *Session) checkpointLocked() error {
 	if err != nil {
 		return err
 	}
-	checksum, err := snapshot.Checksum()
+	participants, err := session.snapshotParticipantsLocked()
+	if err != nil {
+		return err
+	}
+	checksum, err := simulation.CompositeChecksum(snapshot, participants)
 	if err != nil {
 		return err
 	}
 	copy := snapshot
-	session.checkpoints = append(session.checkpoints, simulation.Checkpoint{Tick: snapshot.Tick, Checksum: checksum, Snapshot: &copy})
+	session.checkpoints = append(session.checkpoints, simulation.Checkpoint{Tick: snapshot.Tick, Checksum: checksum, Snapshot: &copy, Participants: participants})
 	return nil
 }
 
@@ -274,8 +325,29 @@ func (session *Session) Replay() (simulation.Replay, error) {
 			}
 			checkpoints[index].Snapshot = &copy
 		}
+		checkpoints[index].Participants = cloneParticipantStates(checkpoint.Participants)
 	}
-	return simulation.Replay{Version: simulation.ReplayVersion, StepNanos: int64(session.config.Step), Initial: initial, Commands: commands, Checkpoints: checkpoints}, nil
+	return simulation.Replay{Version: simulation.ReplayVersion, StepNanos: int64(session.config.Step), Initial: initial, InitialParticipants: cloneParticipantStates(session.initialParticipants), Commands: commands, Checkpoints: checkpoints}, nil
+}
+
+func (session *Session) snapshotParticipantsLocked() ([]simulation.ParticipantState, error) {
+	result := make([]simulation.ParticipantState, 0, len(session.participants))
+	for _, participant := range session.participants {
+		data, err := participant.SnapshotState()
+		if err != nil {
+			return nil, fmt.Errorf("game session: snapshot participant %q: %w", participant.StateID(), err)
+		}
+		result = append(result, simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)})
+	}
+	return result, nil
+}
+
+func cloneParticipantStates(states []simulation.ParticipantState) []simulation.ParticipantState {
+	result := make([]simulation.ParticipantState, len(states))
+	for index, state := range states {
+		result[index] = simulation.ParticipantState{ID: state.ID, Data: append([]byte(nil), state.Data...)}
+	}
+	return result
 }
 
 // Status returns a compact observational snapshot for administration surfaces.
@@ -318,6 +390,7 @@ func cloneSnapshot(snapshot gameecs.Snapshot) (gameecs.Snapshot, error) {
 	return gameecs.UnmarshalSnapshot(encoded)
 }
 
+// Close rejects future work and releases the owned ECS exactly once.
 func (session *Session) Close() error {
 	session.mu.Lock()
 	defer session.mu.Unlock()

@@ -8,6 +8,8 @@ import (
 	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 )
 
+// Service samples Raylib on the renderer owner thread and publishes copied
+// logical input snapshots. It does not decide scene focus or gameplay authority.
 type Service struct {
 	common.Service
 	renderer          raylibRenderer.Dependency

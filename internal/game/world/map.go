@@ -11,19 +11,24 @@ import (
 	"github.com/gravestench/dt1"
 )
 
+// SubtilesPerTile is the fixed collision resolution encoded by DT1 tiles.
 const SubtilesPerTile = 5
 
 const (
+	// Tile pixel dimensions describe isometric presentation space only; collision
+	// and navigation use subtile coordinates.
 	TilePixelWidth  = 160
 	TilePixelHeight = 80
 	PreviewMargin   = 160
 )
 
 const (
+	// Object type values are authored DS1 record identities.
 	ObjectTypeDynamic int32 = 1
 	ObjectTypeStatic  int32 = 2
 )
 
+// Flags is the gameplay-relevant union of DT1 subtile collision bits.
 type Flags struct {
 	BlockWalk, BlockLOS, BlockJump, BlockPlayerWalk, BlockLight bool
 }
@@ -33,6 +38,8 @@ type Flags struct {
 // additional player-specific restriction encoded by DT1.
 func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
 
+// Object preserves authored DS1 placement plus optional catalog resolution.
+// Loading identifies objects; authoritative systems decide whether to spawn them.
 type Object struct {
 	Type, ID, X, Y, Flags int32
 	ObjectID              int
@@ -41,11 +48,14 @@ type Object struct {
 	Resolved              bool
 }
 
+// ObjectResolver supplies act-local recovered identity joins without coupling
+// world decoding to a concrete catalog generation.
 type ObjectResolver interface {
 	ResolveStaticObject(act, id int) (objectID int, description string, found bool)
 	ResolveDynamicObject(act, id int) (class string, found bool)
 }
 
+// Map is an immutable decoded stamp in tile/subtile coordinates.
 type Map struct {
 	WidthTiles, HeightTiles       int
 	WidthSubtiles, HeightSubtiles int
@@ -56,6 +66,8 @@ type Map struct {
 
 type tileKey struct{ kind, style, sequence int32 }
 
+// Load joins one DS1 stamp with its DT1 collision definitions. It decodes no
+// renderer textures and performs no entity spawning.
 func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
 	stampFile, err := source.Open(stampPath)
 	if err != nil {

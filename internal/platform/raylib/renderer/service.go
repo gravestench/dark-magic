@@ -11,6 +11,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 )
 
+// Service owns the Raylib window, GPU resources, audio device, and native owner
+// thread. Other packages submit backend-neutral state or subscribe callbacks;
+// they never receive Raylib handles or call native APIs directly.
 type Service struct {
 	logger *slog.Logger
 
@@ -58,6 +61,7 @@ type BackendDiagnostics struct {
 	Frames, DrawCalls, NodesVisited, SubtreesCulled, TextureUpdates uint64
 }
 
+// BackendDiagnostics returns lock-free cumulative counters suitable for overlays.
 func (s *Service) BackendDiagnostics() BackendDiagnostics {
 	return BackendDiagnostics{
 		Frames: s.frames.Load(), DrawCalls: s.drawCalls.Load(),

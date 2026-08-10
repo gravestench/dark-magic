@@ -8,8 +8,12 @@ import (
 	"sync"
 )
 
+// Task loads one named dependency and must stop promptly when its context is
+// cancelled. Tasks own their actual resources; the coordinator owns only order,
+// cancellation, and observable progress.
 type Task func(context.Context) error
 
+// Snapshot is a copied, renderer-neutral view of one loading generation.
 type Snapshot struct {
 	State     string
 	Completed int
@@ -18,6 +22,8 @@ type Snapshot struct {
 	Err       error
 }
 
+// Progress returns normalized completed work. An idle coordinator has no total
+// yet and therefore reports zero rather than pretending to be complete.
 func (s Snapshot) Progress() float64 {
 	if s.Total == 0 {
 		return 0
@@ -25,6 +31,9 @@ func (s Snapshot) Progress() float64 {
 	return float64(s.Completed) / float64(s.Total)
 }
 
+// Coordinator runs explicitly requested dependency sets one generation at a
+// time. Beginning new work cancels the previous generation so a stale worker
+// cannot overwrite the progress observed by a newer scene transition.
 type Coordinator struct {
 	mu         sync.RWMutex
 	tasks      map[string]Task
@@ -33,6 +42,8 @@ type Coordinator struct {
 	snapshot   Snapshot
 }
 
+// New copies the task registry; later caller map edits cannot change the set of
+// dependencies admitted by this coordinator.
 func New(tasks map[string]Task) *Coordinator {
 	copyTasks := make(map[string]Task, len(tasks))
 	for id, task := range tasks {

@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// ArchiveVersion identifies the durable per-owner container-state schema.
 const ArchiveVersion = 4
 
 // archiveEnvelope is the durable boundary for one player's item authority.

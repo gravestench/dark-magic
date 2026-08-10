@@ -31,6 +31,8 @@ type SoundRecords interface {
 	SoundRecords() ([]models.SoundEntry, error)
 }
 
+// NewCatalog connects typed sound records to the layered content filesystem.
+// Resolution remains lazy so startup does not decode or retain every sound.
 func NewCatalog(source fs.FS, records SoundRecords) *Catalog {
 	return &Catalog{source: source, records: records}
 }

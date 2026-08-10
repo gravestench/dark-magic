@@ -65,6 +65,8 @@ type Session struct {
 	closed             bool
 }
 
+// NewSession binds one explicit target runtime and copied authority policy. A
+// session never discovers a process-global VM or widens its own capabilities.
 func NewSession(id, target string, policy Policy, evaluator Evaluator) (*Session, error) {
 	if strings.TrimSpace(id) == "" || strings.TrimSpace(target) == "" {
 		return nil, errors.New("shell: session id and target are required")
