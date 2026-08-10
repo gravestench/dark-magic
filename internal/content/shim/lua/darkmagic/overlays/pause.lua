@@ -18,8 +18,12 @@ return {
 
     create = function(self)
         self.root = render.create("modal")
-        self.root:set_position(recovered.center.x, recovered.center.y)
-        self.root:fill_rect(
+        -- Menu definitions use absolute 800x600 viewport coordinates. Keep the
+        -- owning root at the origin so retained rendering and absolute input
+        -- hit regions share one coordinate space; only center the backdrop.
+        self.backdrop = render.create("modal", self.root)
+        self.backdrop:set_position(recovered.center.x, recovered.center.y)
+        self.backdrop:fill_rect(
             800,
             600,
             recovered.dim.red,

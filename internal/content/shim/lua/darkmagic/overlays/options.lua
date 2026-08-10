@@ -18,8 +18,12 @@ return {
 
     create = function(self)
         self.root = render.create("modal")
-        self.root:set_position(recovered.center.x, recovered.center.y)
-        self.root:fill_rect(
+        -- The recovered menu positions are already absolute viewport
+        -- coordinates. Translating this root used to offset visuals a second
+        -- time while input hit regions correctly remained screen-relative.
+        self.backdrop = render.create("modal", self.root)
+        self.backdrop:set_position(recovered.center.x, recovered.center.y)
+        self.backdrop:fill_rect(
             800,
             600,
             recovered.dim.red,

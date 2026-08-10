@@ -312,7 +312,13 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertStack(t, navigator, "game_world", overlay)
-		assertNodes(t, &composer, 3)
+		wantNodes := 3
+		if overlay == "options" || overlay == "pause" {
+			// Escape overlays keep their coordinate root at the viewport origin
+			// and center a separate full-screen dimming backdrop below the menu.
+			wantNodes++
+		}
+		assertNodes(t, &composer, wantNodes)
 		input.Publish(inputstate.Frame{})
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
@@ -342,7 +348,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 3 || diagnostics.NodeSlots > 4 {
+	if diagnostics := composer.Diagnostics(); diagnostics.ActiveNodes != 3 || diagnostics.NodeSlots > 5 {
 		t.Fatalf("composer diagnostics after rapid transitions = %#v", diagnostics)
 	}
 

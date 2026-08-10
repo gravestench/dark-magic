@@ -10,6 +10,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/preferences"
+	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	glua "github.com/yuin/gopher-lua"
@@ -120,5 +121,65 @@ expect(closed, true, "return callback")
 		return state.DoString(script)
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLuaOptionsOverlayKeepsAuthoredCoordinatesViewportRelative(t *testing.T) {
+	ctx := context.Background()
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := modruntime.New()
+	var input inputstate.Store
+	var mixer audio.Mixer
+	var composer render.Composer
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
+		t.Fatal(err)
+	}
+	scenes := modruntime.NewScenes(runtime, navigation.New())
+	for _, module := range []modruntime.Module{
+		modruntime.InputModule(&input),
+		modruntime.DataModule(contentFS),
+		modruntime.RenderModule(runtime, &composer),
+		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
+		scenes.Module(),
+	} {
+		if err := runtime.RegisterModule(module); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runtime.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(ctx)
+
+	scope := &modruntime.Scope{}
+	defer scope.Close()
+	if err := runtime.RunScoped(ctx, scope, func(state *glua.LState) error {
+		return state.DoString(`local overlay = require("darkmagic.overlays.options"); overlay:create()`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	nodes := composer.Snapshot()
+	if len(nodes) < 2 {
+		t.Fatalf("render nodes = %#v", nodes)
+	}
+	root := nodes[0]
+	if root.X != 0 || root.Y != 0 {
+		t.Fatalf("overlay root position = (%v, %v), want viewport origin", root.X, root.Y)
+	}
+	foundBackdrop := false
+	for _, node := range nodes[1:] {
+		if node.Parent == root.ID && node.X == 400 && node.Y == 300 {
+			foundBackdrop = true
+			break
+		}
+	}
+	if !foundBackdrop {
+		t.Fatalf("centered backdrop child not found below root %#v in nodes %#v", root.ID, nodes)
 	}
 }
