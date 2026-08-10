@@ -293,7 +293,9 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "9c884e4bdc9a33cdbff3a4d5479ef37637e77c92ffbff217c1f2f57f6ae5d854"
+	// Composite Lab reuses the already classified Act I palette and constructs
+	// COF/DCC paths from validated recipes; it introduces no new fixed asset.
+	const auditedFingerprint = "b505e3e9dc2fe2bdf69d32e64e1f0322b4f4945c0ccc3006c886c18a1af77cbd"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

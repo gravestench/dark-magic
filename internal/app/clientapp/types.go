@@ -49,7 +49,16 @@ type Options struct {
 	OutputPalette         string
 	ViewportFit           string
 	PresentationProfileID string
+	CompositeLab          CompositeLabOptions
 	Logs                  *shell.LogBuffer
+}
+
+// CompositeLabOptions are development-only starting values for the integrated
+// composite animation laboratory. They are inert unless that scene is opened.
+type CompositeLabOptions struct {
+	Token, Mode, WeaponClass, Components string
+	Direction, Frame                     int
+	Random                               bool
 }
 
 // Profile is the tiny piece of the optional developer profiler the client uses.

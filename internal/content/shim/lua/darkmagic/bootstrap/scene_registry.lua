@@ -52,6 +52,7 @@ local function register_screens(manifest)
         -- the exact same modding APIs as shipping presentation.
         font_lab={module="darkmagic.screens.font_lab"},
         ui_lab={module="darkmagic.screens.ui_lab"},
+        composite_lab={module="darkmagic.screens.composite_lab"},
     }
 
     -- `pairs` is appropriate here because registration order is not meaningful.
