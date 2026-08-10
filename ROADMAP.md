@@ -691,6 +691,16 @@ complete until its actions are driven by authoritative game state and commands.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.
+  Replace the current single-top-scene UI focus assumption with spatial overlay
+  input routing. The persistent HUD and mini-panel must remain interactive while
+  a gameplay panel is open, including using the originating mini-panel button to
+  close that panel. A left-side and right-side panel may coexist and independently
+  receive pointer input in their respective regions. Opening a new panel must
+  atomically replace the active panel in the same left/right slot; opening a
+  full-screen panel must close both side slots. Hotkeys and mini-panel actions
+  must use the same slot-aware toggle operation so they cannot produce divergent
+  stacks or duplicate overlays. Keyboard/gamepad focus remains singular and
+  deterministic even when pointer input is routed to multiple visible surfaces.
 - [ ] M18.4: Complete data-driven panel geometry and the supported 640x480 profile.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.
