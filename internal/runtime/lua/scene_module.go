@@ -222,10 +222,17 @@ type luaScene struct {
 	input      *inputstate.Store
 }
 
-func (s *luaScene) Create(ctx context.Context) error { return s.call(ctx, s.definition.create) }
-func (s *luaScene) Enter(ctx context.Context) error  { return s.call(ctx, s.definition.enter) }
+// Scene construction legitimately decodes and composes cold MPQ assets. Keep
+// the tight normal invocation budget for update/render callbacks, while giving
+// transactional lifecycle work enough bounded time to finish on slower disks.
+const sceneLifecycleBudget = 10 * time.Second
+
+func (s *luaScene) Create(ctx context.Context) error {
+	return s.callLifecycle(ctx, s.definition.create)
+}
+func (s *luaScene) Enter(ctx context.Context) error  { return s.callLifecycle(ctx, s.definition.enter) }
 func (s *luaScene) Render(ctx context.Context) error { return s.call(ctx, s.definition.render) }
-func (s *luaScene) Exit(ctx context.Context) error   { return s.call(ctx, s.definition.exit) }
+func (s *luaScene) Exit(ctx context.Context) error   { return s.callLifecycle(ctx, s.definition.exit) }
 func (s *luaScene) BlocksUpdateBelow() bool          { return s.definition.blocks }
 func (s *luaScene) PassesInputBelow() bool           { return s.definition.passesInput }
 func (s *luaScene) WorldView() string                { return s.definition.worldView }
@@ -273,11 +280,24 @@ func (s *luaScene) UpdateRoutedInput(ctx context.Context, elapsed time.Duration,
 	return result
 }
 func (s *luaScene) Destroy(ctx context.Context) error {
-	err := s.call(ctx, s.definition.destroy)
+	err := s.callLifecycle(ctx, s.definition.destroy)
 	if s.profiler != nil {
 		err = errorsJoin(err, s.profiler.CaptureSceneHeap(s.id))
 	}
 	return errorsJoin(err, s.scope.Close())
+}
+
+func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction) error {
+	if function == nil {
+		return nil
+	}
+	var result error
+	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
+		result = s.runtime.runScopedWithBudget(ctx, s.scope, sceneLifecycleBudget, func(state *lua.LState) error {
+			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.definition.table)
+		})
+	})
+	return result
 }
 
 func (s *luaScene) call(ctx context.Context, function *lua.LFunction) error {
