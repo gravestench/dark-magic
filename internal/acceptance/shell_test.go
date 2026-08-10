@@ -53,7 +53,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := gameplayer.Register(authority); err != nil {
 		t.Fatal(err)
 	}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player")
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := beforeValue.(float64)
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}

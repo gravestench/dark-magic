@@ -643,8 +643,13 @@ complete until its actions are driven by authoritative game state and commands.
 
 ### M18 execution checkpoints
 
-- [ ] M18.1: Define and test one focus owner across world, HUD, overlay, modal,
+- [x] M18.1: Define and test one focus owner across world, HUD, overlay, modal,
   cursor, transition, and debug layers, including cancellation and scene change.
+  Each native frame now carries an explicit scene/debug/none owner. The debug
+  shell captures before scene publication, and the Lua input capability hides
+  actions, text, and pointer coordinates from nonfocused callbacks while still
+  allowing their simulation updates. HUD and cursor remain presentation owned
+  by the focused scene rather than competing input consumers.
 - [ ] M18.2: Complete the functional 800x600 control panel, belt, skill wells,
   tooltips, cursor states, and minipanel behavior using authoritative snapshots.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays

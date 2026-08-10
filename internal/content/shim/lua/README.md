@@ -27,6 +27,10 @@ Use `scenes.replace` for root-screen transitions, `scenes.push` for overlays,
 and `scenes.pop` to dismiss the top overlay. An overlay can set
 `blocks_update_below` to pause or continue scenes beneath it. The `focused`
 argument to `update` distinguishes continued simulation from input ownership.
+The `dm.input/v1` capability enforces that boundary: nonfocused scene callbacks
+observe no actions, text, or pointer coordinates even when they continue
+updating. `input.owner()` reports the current `scene`, `debug`, or `none` owner
+for diagnostics; scenes should not use it to coordinate navigation.
 
 ## Style
 

@@ -14,6 +14,7 @@ func InputModule(input *inputstate.Store) Module {
 		"pressed":  commandHelp("dm.input.pressed(action)", "Report whether an action was pressed this frame."),
 		"released": commandHelp("dm.input.released(action)", "Report whether an action was released this frame."),
 		"cursor":   commandHelp("dm.input.cursor()", "Return the current cursor coordinates."),
+		"owner":    commandHelp("dm.input.owner()", "Return the current input focus domain and owner ID."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {
@@ -39,6 +40,12 @@ func InputModule(input *inputstate.Store) Module {
 				x, y := input.Cursor()
 				state.Push(lua.LNumber(x))
 				state.Push(lua.LNumber(y))
+				return 2
+			},
+			"owner": func(state *lua.LState) int {
+				owner := input.Owner()
+				state.Push(lua.LString(owner.Domain))
+				state.Push(lua.LString(owner.ID))
 				return 2
 			},
 		})

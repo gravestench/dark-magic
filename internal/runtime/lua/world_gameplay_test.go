@@ -69,8 +69,8 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}})
-	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	source, err := gamesession.NewMovementSource(engine, &input, "test-player", "game_world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,8 +137,8 @@ gameplay=world.create(100,80,collision,"test-player")
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{
 		"right": {Down: true},
 		"down":  {Down: true},
-	}})
-	source, err := gamesession.NewMovementSource(engine, &input, "test-player")
+	}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	source, err := gamesession.NewMovementSource(engine, &input, "test-player", "game_world")
 	if err != nil {
 		t.Fatal(err)
 	}

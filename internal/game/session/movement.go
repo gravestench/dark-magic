@@ -75,15 +75,17 @@ type MovementSource struct {
 	engine   *gameecs.Engine
 	input    *inputstate.Store
 	player   string
+	focusID  string
 	sequence uint64
 }
 
-func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player string) (*MovementSource, error) {
+func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string) (*MovementSource, error) {
 	player = strings.TrimSpace(player)
-	if engine == nil || input == nil || player == "" {
-		return nil, fmt.Errorf("game session: movement source requires engine, input, and player")
+	focusID = strings.TrimSpace(focusID)
+	if engine == nil || input == nil || player == "" || focusID == "" {
+		return nil, fmt.Errorf("game session: movement source requires engine, input, player, and focus owner")
 	}
-	return &MovementSource{engine: engine, input: input, player: player}, nil
+	return &MovementSource{engine: engine, input: input, player: player, focusID: focusID}, nil
 }
 
 func (source *MovementSource) Commands(tick uint64) []simulation.Command {
@@ -92,17 +94,20 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 		return nil
 	}
 	x, y := 0, 0
-	if action := source.input.Action("left"); action.Down || action.Pressed {
-		x--
-	}
-	if action := source.input.Action("right"); action.Down || action.Pressed {
-		x++
-	}
-	if action := source.input.Action("up"); action.Down || action.Pressed {
-		y--
-	}
-	if action := source.input.Action("down"); action.Down || action.Pressed {
-		y++
+	owner := source.input.Owner()
+	if owner.Domain == inputstate.FocusScene && owner.ID == source.focusID {
+		if action := source.input.Action("left"); action.Down || action.Pressed {
+			x--
+		}
+		if action := source.input.Action("right"); action.Down || action.Pressed {
+			x++
+		}
+		if action := source.input.Action("up"); action.Down || action.Pressed {
+			y--
+		}
+		if action := source.input.Action("down"); action.Down || action.Pressed {
+			y++
+		}
 	}
 	source.sequence++
 	payload, _ := json.Marshal(MovePayload{X: x, Y: y})

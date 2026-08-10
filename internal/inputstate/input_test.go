@@ -35,3 +35,30 @@ func TestActionAndCursorHotPathDoesNotAllocate(t *testing.T) {
 		t.Fatalf("hot-path allocations = %v", allocations)
 	}
 }
+
+func TestRouteAssignsOneOwnerAndSuppressesCapturedSceneInput(t *testing.T) {
+	frame := Frame{Actions: map[string]ActionState{"confirm": {Pressed: true}}, Text: "x", CursorX: 3, CursorY: 4}
+	routed := Route(frame, FocusOwner{Domain: FocusDebug, ID: "console"}, true)
+	if routed.Owner.Domain != FocusDebug || routed.Owner.ID != "console" || len(routed.Actions) != 0 || routed.Text != "" || routed.CursorX != 3 || routed.CursorY != 4 {
+		t.Fatalf("routed frame = %#v", routed)
+	}
+}
+
+func TestStoreSuppressesNonfocusedCallbackAndRestoresOwnerAccess(t *testing.T) {
+	var store Store
+	store.Publish(Frame{Actions: map[string]ActionState{"confirm": {Pressed: true}}, Text: "x", CursorX: 3, CursorY: 4, Owner: FocusOwner{Domain: FocusScene, ID: "overlay"}})
+	if err := store.Suppress(func() error {
+		if store.Action("confirm").Pressed || store.Text() != "" {
+			t.Fatal("suppressed callback observed actions or text")
+		}
+		if x, y := store.Cursor(); x != 0 || y != 0 {
+			t.Fatalf("suppressed cursor = %v,%v", x, y)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !store.Action("confirm").Pressed || store.Text() != "x" || store.Owner().ID != "overlay" {
+		t.Fatal("owner access was not restored")
+	}
+}

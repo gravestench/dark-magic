@@ -178,6 +178,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		scenes.SetProfiler(profile)
 	}
 	inputState := &inputstate.Store{}
+	scenes.SetInputStore(inputState)
 	records := recordstore.New(contentFS)
 	records.SetLogger(slog.Default().With("component", "records"))
 	gameData := gamedata.New(records)
@@ -225,7 +226,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := gameplayer.Register(offlineSession); err != nil {
 		return fmt.Errorf("register offline player commands: %w", err)
 	}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player")
+	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player", "game_world")
 	if err != nil {
 		return fmt.Errorf("create offline movement source: %w", err)
 	}
@@ -382,13 +383,15 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		frameContext := scenes.FrameContext(context.Background())
 		pprof.SetGoroutineLabels(frameContext)
 		inputFrame := inputService.Snapshot()
-		if console.Handle(runContext, inputFrame) {
-			inputFrame = inputstate.Frame{
-				Actions: make(map[string]inputstate.ActionState),
-				CursorX: inputFrame.CursorX,
-				CursorY: inputFrame.CursorY,
-			}
+		owner := inputstate.FocusOwner{Domain: inputstate.FocusNone}
+		if focused, ok := navigator.Focused(); ok {
+			owner = inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: focused}
 		}
+		captured := console.Handle(runContext, inputFrame)
+		if captured {
+			owner = inputstate.FocusOwner{Domain: inputstate.FocusDebug, ID: "client-console"}
+		}
+		inputFrame = inputstate.Route(inputFrame, owner, captured)
 		inputState.Publish(inputFrame)
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)
