@@ -11,8 +11,9 @@ import (
 // receive the mutable authority or its internal maps.
 func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, owner string) Module {
 	return Module{Name: "dm.items/v1", Help: documentedModule("Inspect authoritative item containers and request fixed-tick moves.", map[string]CommandHelp{
-		"snapshot": commandHelp("dm.items.snapshot()", "Return copied item identities, placements, and container layout."),
-		"move":     commandHelp("dm.items.move(item_id, destination[, place_held])", "Queue a move or held-item grid placement for the next simulation tick."),
+		"snapshot":          commandHelp("dm.items.snapshot()", "Return copied item identities, placements, container layout, and active weapon set."),
+		"move":              commandHelp("dm.items.move(item_id, destination[, place_held])", "Queue a move or held-item grid placement for the next simulation tick."),
+		"select_weapon_set": commandHelp("dm.items.select_weapon_set(set)", "Queue selection of alternate hand-equipment set 0 or 1."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"snapshot": func(state *lua.LState) int {
@@ -26,6 +27,12 @@ func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, 
 			"move": func(state *lua.LState) int {
 				payload := gameitem.MovePayload{ItemID: state.CheckString(1), Destination: checkPlacement(state, 2), PlaceHeld: state.OptBool(3, false)}
 				if err := controller.Move(payload); err != nil {
+					state.RaiseError("%v", err)
+				}
+				return 0
+			},
+			"select_weapon_set": func(state *lua.LState) int {
+				if err := controller.SelectWeaponSet(state.CheckInt(1)); err != nil {
 					state.RaiseError("%v", err)
 				}
 				return 0
@@ -45,6 +52,7 @@ func checkPlacement(state *lua.LState, index int) gameitem.Placement {
 		Y:         luaInt(table, "y"),
 		Slot:      luaString(table, "slot"),
 		BeltSlot:  luaInt(table, "belt_slot"),
+		WeaponSet: luaInt(table, "weapon_set"),
 	}
 }
 
@@ -65,6 +73,7 @@ func luaInt(table *lua.LTable, name string) int {
 func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[string]gameitem.Item, placements map[string]gameitem.Placement) *lua.LTable {
 	result := state.NewTable()
 	result.RawSetString("belt_capacity", lua.LNumber(layout.BeltCapacity))
+	result.RawSetString("active_weapon_set", lua.LNumber(layout.ActiveWeaponSet))
 	grids := state.NewTable()
 	for container, grid := range layout.Grids {
 		entry := state.NewTable()
@@ -93,6 +102,7 @@ func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[stri
 		entry.RawSetString("y", lua.LNumber(placement.Y))
 		entry.RawSetString("slot", lua.LString(placement.Slot))
 		entry.RawSetString("belt_slot", lua.LNumber(placement.BeltSlot))
+		entry.RawSetString("weapon_set", lua.LNumber(placement.WeaponSet))
 		entries.Append(entry)
 	}
 	result.RawSetString("items", entries)

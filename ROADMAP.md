@@ -784,8 +784,11 @@ complete until its actions are driven by authoritative game state and commands.
   slot domain with MPQ-backed slot presentation. Named quest-service escrow
   slots support the same atomic held-item replacement rule; the primitive can
   also address authority-assigned vendor catalog positions, but selling and
-  buying remain distinct transactions. Alternate weapon sets, save/realm
-  handoff persistence, and service presentation and transaction rules keep this
+  buying remain distinct transactions. Alternate hand-equipment sets now have
+  independent `rarm`/`larm` occupancy, a replayable fixed-tick selection
+  command, Lua snapshot/intent bindings, and the canonical W-key presentation
+  path; armor and jewelry remain shared across both sets. Save/realm handoff
+  persistence and service presentation and transaction rules keep this
   checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.

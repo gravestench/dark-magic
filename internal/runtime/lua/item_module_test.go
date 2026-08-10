@@ -30,14 +30,16 @@ func TestItemModuleReturnsCopiesAndQueuesIntent(t *testing.T) {
 	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
 local items=require("dm.items/v1")
 local snapshot=assert(items.snapshot())
-assert(snapshot.belt_capacity==4 and #snapshot.items==1 and snapshot.items[1].container=="inventory")
+assert(snapshot.belt_capacity==4 and snapshot.active_weapon_set==0)
+assert(#snapshot.items==1 and snapshot.items[1].container=="inventory" and snapshot.items[1].weapon_set==0)
 items.move("potion", {container="held"})
+items.select_weapon_set(1)
 `)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	source, _ := gameitem.NewSource(controller, "alice")
-	if commands := source.Commands(1); len(commands) != 1 {
+	if commands := source.Commands(1); len(commands) != 2 || commands[0].Kind != gameitem.MoveCommand || commands[1].Kind != gameitem.WeaponSetCommand {
 		t.Fatalf("queued commands = %#v", commands)
 	}
 }
