@@ -57,6 +57,17 @@ local function merged_definition(base, override)
     return result
 end
 
+local function leave_character_creation()
+    -- Character select intentionally forwards an empty roster into character
+    -- creation. Sending Exit back through that screen creates a two-scene
+    -- loop, so an empty roster returns to the main menu instead.
+    if #saves.characters() == 0 then
+        scenes.replace("main_menu")
+    else
+        scenes.replace("character_select")
+    end
+end
+
 return {
     create = function(self)
         self.root = render.create("hud")
@@ -399,7 +410,7 @@ return {
             {
                 layer = "hud",
                 z = panel_z,
-                on_activate = function() scenes.replace("character_select") end,
+                on_activate = leave_character_creation,
             }
         )
         self.exit_button.focusable = false
@@ -494,7 +505,7 @@ return {
             if self.form_visible and self.selected and self.controls.focus ~= self.selected.control then
                 self.controls:set_focus(self.selected.control)
             else
-                scenes.replace("character_select")
+                leave_character_creation()
             end
         end
     end,
