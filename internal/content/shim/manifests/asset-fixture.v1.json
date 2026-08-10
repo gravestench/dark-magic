@@ -269,6 +269,34 @@
       "frames_sha256": "4bcee99104cb1d77b91fd7f458942577a753fe8d7b6e2a2ae5d6f3cfe62720c2"
     },
     {
+      "id": "cursor-open-hand",
+      "path": "data/global/ui/CURSOR/ohand.DC6",
+      "sha256": "1ab87b572750f982edb5a3dd248942021e6654dfe89f1df98f2cb9bcdaa98feb",
+      "bytes": 4174,
+      "type": "dc6",
+      "directions": 1,
+      "frame_count": 8,
+      "min_width": 32,
+      "max_width": 32,
+      "min_height": 26,
+      "max_height": 29,
+      "frames_sha256": "3f681adbd7213098acbd0b8f6215f30bd0aa36d673affc582420c917e08e9949"
+    },
+    {
+      "id": "cursor-pointer-rotate",
+      "path": "data/global/ui/CURSOR/protate.DC6",
+      "sha256": "3c1938d5d08d55fa610e3e80dda9c16ea405222a87cbdbb4cdee9da180688dcd",
+      "bytes": 4070,
+      "type": "dc6",
+      "directions": 1,
+      "frame_count": 8,
+      "min_width": 30,
+      "max_width": 31,
+      "min_height": 26,
+      "max_height": 27,
+      "frames_sha256": "300bcfa6b29c5b55f0f295093c567466cb0c7d440d31fa1b078808be2292f7b9"
+    },
+    {
       "id": "hud-overlap",
       "path": "data/global/ui/PANEL/overlap.DC6",
       "sha256": "2e4dde17c351dfc4877867b54f2dc41218edefc16bb5cdcaf85b4c6cdf790230",

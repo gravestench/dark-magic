@@ -199,6 +199,22 @@
       ]
     },
     {
+      "id": "cursor-open-hand",
+      "screen": "shell",
+      "path": "data/global/ui/CURSOR/ohand.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "normal, pressed, and interaction hand cursor frames",
+      "references": ["OpenDiablo2", "AbyssEngine"]
+    },
+    {
+      "id": "cursor-pointer-rotate",
+      "screen": "game-hud",
+      "path": "data/global/ui/CURSOR/protate.DC6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "animated default in-game pointer",
+      "references": ["Riiablo"]
+    },
+    {
       "id": "hud-overlap",
       "screen": "game-hud",
       "path": "data/global/ui/PANEL/overlap.DC6",
