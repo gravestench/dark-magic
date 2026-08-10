@@ -795,7 +795,11 @@ complete until its actions are driven by authoritative game state and commands.
   replayable buy/sell intents cannot provide coordinates, and the server sorts,
   packs, pages, and compacts real item footprints using the recovered Riiablo
   `VendorGrid` traversal order. Durable Diablo II save integration, NPC price
-  and player-gold ledger rules, and quest-service transactions/presentation keep
+  and player-gold ledger rules now keep separate carried/stashed balances,
+  derive server-side prices from item base cost plus authoritative
+  NPC.txt 1024-based buy/sell multipliers and sale caps, and commit gold with
+  item movement atomically; command payloads cannot provide prices. Durable
+  Diablo II save integration and quest-service transactions/presentation keep
   this checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.

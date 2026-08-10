@@ -23,18 +23,18 @@ type request struct {
 	vendor     *VendorPayload
 }
 
-func (controller *Controller) SellHeld(itemID, category string) error {
-	return controller.vendor(VendorSellCommand, VendorPayload{ItemID: itemID, Category: category})
+func (controller *Controller) SellHeld(itemID, vendor, category string) error {
+	return controller.vendor(VendorSellCommand, VendorPayload{ItemID: itemID, Vendor: vendor, Category: category})
 }
 
-func (controller *Controller) BuyToHeld(itemID string) error {
-	return controller.vendor(VendorBuyCommand, VendorPayload{ItemID: itemID})
+func (controller *Controller) BuyToHeld(itemID, vendor string) error {
+	return controller.vendor(VendorBuyCommand, VendorPayload{ItemID: itemID, Vendor: vendor})
 }
 
 func (controller *Controller) vendor(kind string, payload VendorPayload) error {
-	payload.ItemID, payload.Category = strings.TrimSpace(payload.ItemID), strings.TrimSpace(payload.Category)
-	if payload.ItemID == "" {
-		return fmt.Errorf("item: item identity is required")
+	payload.ItemID, payload.Vendor, payload.Category = strings.TrimSpace(payload.ItemID), strings.TrimSpace(payload.Vendor), strings.TrimSpace(payload.Category)
+	if payload.ItemID == "" || payload.Vendor == "" {
+		return fmt.Errorf("item: item identity and vendor are required")
 	}
 	if kind == VendorSellCommand && (payload.Category == "" || strings.Contains(payload.Category, "/")) {
 		return fmt.Errorf("item: valid vendor category is required")

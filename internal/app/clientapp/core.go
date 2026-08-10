@@ -185,13 +185,22 @@ func (app *application) buildItemAuthority() error {
 		gameitem.ContainerInventory: {Width: 10, Height: 4},
 		gameitem.ContainerStash:     {Width: 6, Height: 8},
 		gameitem.ContainerCube:      {Width: 3, Height: 4},
-	}, BeltCapacity: 4, VendorGrid: gameitem.Grid{Width: 10, Height: 10}}
+	}, BeltCapacity: 4, VendorGrid: gameitem.Grid{Width: 10, Height: 10}, Gold: gameitem.GoldBalance{Carried: 10000}}
 	items, placements := app.developmentItems()
 	state, err := gameitem.NewState(layout, items, placements)
 	if err != nil {
 		return wrap("create local item state", err)
 	}
 	app.itemAuthority = gameitem.NewAuthority()
+	catalogSnapshot, err := app.gameData.Snapshot()
+	if err != nil {
+		return wrap("load vendor trade terms", err)
+	}
+	trades := make(gameitem.TradeCatalog, len(catalogSnapshot.NPCTradesByID))
+	for vendor, record := range catalogSnapshot.NPCTradesByID {
+		trades[vendor] = gameitem.TradeTerms{BuyMultiplier: int64(record.BuyMult), SellMultiplier: int64(record.SellMult), MaxBuy: int64(record.MaxBuy)}
+	}
+	app.itemAuthority.SetTradeCatalog(trades)
 	if err := app.itemAuthority.Register("local-player", state); err != nil {
 		return wrap("register local item state", err)
 	}
@@ -211,17 +220,17 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	items := make([]gameitem.Item, 0, 6)
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
-		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
+		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
 	}
 	if armor, found := snapshot.ArmorByCode["cap"]; found {
-		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
+		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
 		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
 	}
 	for index, code := range []string{"hp1", "mp1"} {
 		if misc, found := snapshot.MiscByCode[code]; found {
 			id := "fixture-" + code
-			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
 			if code == "mp1" {
 				placements[id] = gameitem.Placement{Container: gameitem.ContainerBelt, BeltSlot: 0}
 			} else {
@@ -239,7 +248,7 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	} {
 		if misc, found := snapshot.MiscByCode[fixture.code]; found {
 			id := "fixture-" + fixture.code
-			items = append(items, gameitem.Item{ID: id, Code: fixture.code, Width: misc.InvWidth, Height: misc.InvHeight, BeltEligible: fixture.beltEligible, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+			items = append(items, gameitem.Item{ID: id, Code: fixture.code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: fixture.beltEligible, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
 			placements[id] = gameitem.Placement{Container: fixture.container, X: 0, Y: 0}
 		}
 	}

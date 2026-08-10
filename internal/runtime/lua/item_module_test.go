@@ -34,8 +34,8 @@ assert(snapshot.belt_capacity==4 and snapshot.active_weapon_set==0)
 assert(#snapshot.items==1 and snapshot.items[1].container=="inventory" and snapshot.items[1].weapon_set==0)
 items.move("potion", {container="held"})
 items.select_weapon_set(1)
-items.sell_held("potion", "misc")
-items.buy_to_held("stock")
+items.sell_held("potion", "Akara", "misc")
+items.buy_to_held("stock", "Akara")
 `)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)

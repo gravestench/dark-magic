@@ -43,10 +43,10 @@ func TestControllerPreservesMoveAndWeaponSelectionOrder(t *testing.T) {
 
 func TestControllerQueuesVendorTransactionsInOrder(t *testing.T) {
 	controller := &Controller{}
-	if err := controller.SellHeld("held", "weapons"); err != nil {
+	if err := controller.SellHeld("held", "Akara", "weapons"); err != nil {
 		t.Fatal(err)
 	}
-	if err := controller.BuyToHeld("stock"); err != nil {
+	if err := controller.BuyToHeld("stock", "Akara"); err != nil {
 		t.Fatal(err)
 	}
 	source, err := NewSource(controller, "alice")
