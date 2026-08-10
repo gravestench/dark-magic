@@ -27,10 +27,15 @@ Use `scenes.replace` for root-screen transitions, `scenes.push` for overlays,
 and `scenes.pop` to dismiss the top overlay. An overlay can set
 `blocks_update_below` to pause or continue scenes beneath it. The `focused`
 argument to `update` distinguishes continued simulation from input ownership.
-The `dm.input/v1` capability enforces that boundary: nonfocused scene callbacks
-observe no actions, text, or pointer coordinates even when they continue
-updating. `input.owner()` reports the current `scene`, `debug`, or `none` owner
-for diagnostics; scenes should not use it to coordinate navigation.
+The `dm.input/v1` capability enforces that boundary. Nonfocused callbacks
+normally observe no actions, text, or pointer coordinates even when they keep
+updating. An overlay may explicitly set `passes_input_below = true`; callbacks
+beneath it then receive only gameplay actions and the pointer position, never
+UI actions or text. The same overlay declares `world_view = "left"`, `"right"`,
+or `"center"`, which is supplied as the fourth update argument so the world can
+frame the player inside the unobscured region. `input.owner()` still reports the
+single `scene`, `debug`, or `none` UI owner for diagnostics; scenes should not
+use it to coordinate navigation.
 
 ## Style
 

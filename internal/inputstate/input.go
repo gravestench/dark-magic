@@ -24,18 +24,22 @@ const (
 
 // Frame is an immutable input snapshot published by a native backend.
 type Frame struct {
-	Actions map[string]ActionState
-	Text    string
-	CursorX float64
-	CursorY float64
-	Owner   FocusOwner
+	Actions   map[string]ActionState
+	Text      string
+	CursorX   float64
+	CursorY   float64
+	Owner     FocusOwner
+	Gameplay  bool
+	WorldView string
 }
 
 // Route assigns one focus owner. A capturing debug surface receives the raw
 // frame before Route; downstream scene consumers retain pointer position for
 // presentation but cannot observe actions or entered text.
-func Route(frame Frame, owner FocusOwner, captured bool) Frame {
+func Route(frame Frame, owner FocusOwner, captured, gameplay bool, worldView string) Frame {
 	frame.Owner = owner
+	frame.Gameplay = gameplay && !captured
+	frame.WorldView = worldView
 	if captured {
 		frame.Actions = make(map[string]ActionState)
 		frame.Text = ""
@@ -45,8 +49,9 @@ func Route(frame Frame, owner FocusOwner, captured bool) Frame {
 
 // Store publishes and reads cloned immutable frame snapshots.
 type Store struct {
-	current    atomic.Value
-	suppressed atomic.Int32
+	current      atomic.Value
+	suppressed   atomic.Int32
+	gameplayOnly atomic.Int32
 }
 
 // Publish replaces the current frame.
@@ -71,13 +76,18 @@ func (s *Store) Snapshot() Frame {
 		frame.CursorX, frame.CursorY = 0, 0
 		return frame
 	}
+	if s.gameplayOnly.Load() > 0 {
+		frame.Actions = gameplayActions(frame.Actions, frame.CursorX, frame.WorldView)
+		frame.Text = ""
+		return frame
+	}
 	frame.Actions = cloneActions(frame.Actions)
 	return frame
 }
 
 // Text returns the UTF-8 text entered during the current frame.
 func (s *Store) Text() string {
-	if s.suppressed.Load() > 0 {
+	if s.suppressed.Load() > 0 || s.gameplayOnly.Load() > 0 {
 		return ""
 	}
 	value := s.current.Load()
@@ -95,6 +105,11 @@ func (s *Store) Action(name string) ActionState {
 	value := s.current.Load()
 	if value == nil {
 		return ActionState{}
+	}
+	if s.gameplayOnly.Load() > 0 {
+		if !isGameplayAction(name) || name == "pointer_primary" && !pointerInWorld(value.(Frame)) {
+			return ActionState{}
+		}
 	}
 	return value.(Frame).Actions[name]
 }
@@ -121,12 +136,60 @@ func (s *Store) Owner() FocusOwner {
 	return value.(Frame).Owner
 }
 
+// Gameplay reports whether the current UI owner permits authoritative gameplay
+// input to pass through to the world.
+func (s *Store) Gameplay() bool {
+	value := s.current.Load()
+	return value != nil && value.(Frame).Gameplay
+}
+
 // Suppress prevents a nonfocused scene callback from reading actions, text, or
 // pointer coordinates while preserving the published frame for its owner.
 func (s *Store) Suppress(callback func() error) error {
 	s.suppressed.Add(1)
 	defer s.suppressed.Add(-1)
 	return callback()
+}
+
+// GameplayOnly lets an underlying world callback observe only gameplay actions
+// and pointer coordinates. Overlay toggles, menu navigation, and text remain
+// exclusive to the focused UI owner.
+func (s *Store) GameplayOnly(callback func() error) error {
+	s.gameplayOnly.Add(1)
+	defer s.gameplayOnly.Add(-1)
+	return callback()
+}
+
+func isGameplayAction(name string) bool {
+	switch name {
+	case "left", "right", "up", "down", "pointer_primary", "interact", "skill_primary", "skill_secondary":
+		return true
+	default:
+		return false
+	}
+}
+
+func gameplayActions(actions map[string]ActionState, cursorX float64, worldView string) map[string]ActionState {
+	result := make(map[string]ActionState)
+	for name, state := range actions {
+		if isGameplayAction(name) && (name != "pointer_primary" || pointerInView(cursorX, worldView)) {
+			result[name] = state
+		}
+	}
+	return result
+}
+
+func pointerInWorld(frame Frame) bool { return pointerInView(frame.CursorX, frame.WorldView) }
+
+func pointerInView(x float64, view string) bool {
+	switch view {
+	case "left":
+		return x < 400
+	case "right":
+		return x >= 400
+	default:
+		return true
+	}
 }
 
 func cloneActions(actions map[string]ActionState) map[string]ActionState {

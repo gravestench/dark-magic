@@ -66,10 +66,10 @@ return {
         self.initial_camera_x, self.initial_camera_y = nil, nil
     end,
 
-    update = function(self, elapsed, focused)
+    update = function(self, elapsed, focused, input_allowed, world_view)
         -- Transparent overlays may allow updates below them, but only the top
         -- scene receives input focus.
-        if not focused then
+        if not input_allowed then
             return
         end
         if self.hud then
@@ -85,12 +85,12 @@ return {
             scenes.push("skills")
         elseif input.pressed("automap") then
             scenes.push("automap")
-		elseif input.pressed("help") then
-			scenes.push("help")
-		elseif input.pressed("quests") then
-			scenes.push("quests")
-		elseif input.pressed("party") then
-			scenes.push("party")
+        elseif input.pressed("help") then
+            scenes.push("help")
+        elseif input.pressed("quests") then
+            scenes.push("quests")
+        elseif input.pressed("party") then
+            scenes.push("party")
         elseif input.pressed("options") then
             scenes.push("options")
         elseif input.pressed("pause") or input.pressed("cancel") then
@@ -108,14 +108,21 @@ return {
         if not self.initial_camera_x then
             self.initial_camera_x, self.initial_camera_y = camera_x, camera_y
         end
+        local target_x = screen.hero.screen_x
+        if world_view == "left" then
+            target_x = manifest.resolution.width / 4
+        elseif world_view == "right" then
+            target_x = manifest.resolution.width * 3 / 4
+        end
+        local view_offset_x = target_x - screen.hero.screen_x
         if self.map then
             self.map:set_position(
-                screen.map.screen_x - (camera_x - self.initial_camera_x),
+                screen.map.screen_x + view_offset_x - (camera_x - self.initial_camera_x),
                 screen.map.screen_y - (camera_y - self.initial_camera_y)
             )
         end
         self.hero:set_position(
-            screen.hero.screen_x + hero_x - camera_x,
+            target_x + hero_x - camera_x,
             screen.hero.screen_y + hero_y - camera_y
         )
     end,

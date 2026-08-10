@@ -154,6 +154,8 @@ type luaSceneDefinition struct {
 	render                *lua.LFunction
 	exit, destroy         *lua.LFunction
 	blocks                bool
+	passesInput           bool
+	worldView             string
 }
 
 func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, error) {
@@ -179,6 +181,21 @@ func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, err
 		}
 		definition.blocks = bool(value)
 	}
+	if passthrough := table.RawGetString("passes_input_below"); passthrough != lua.LNil {
+		value, ok := passthrough.(lua.LBool)
+		if !ok {
+			return luaSceneDefinition{}, fmt.Errorf("scene %q passes_input_below must be a boolean", id)
+		}
+		definition.passesInput = bool(value)
+	}
+	definition.worldView = "center"
+	if worldView := table.RawGetString("world_view"); worldView != lua.LNil {
+		value, ok := worldView.(lua.LString)
+		if !ok || value != "left" && value != "right" && value != "center" {
+			return luaSceneDefinition{}, fmt.Errorf("scene %q world_view must be left, right, or center", id)
+		}
+		definition.worldView = string(value)
+	}
 	return definition, nil
 }
 
@@ -196,11 +213,17 @@ func (s *luaScene) Enter(ctx context.Context) error  { return s.call(ctx, s.defi
 func (s *luaScene) Render(ctx context.Context) error { return s.call(ctx, s.definition.render) }
 func (s *luaScene) Exit(ctx context.Context) error   { return s.call(ctx, s.definition.exit) }
 func (s *luaScene) BlocksUpdateBelow() bool          { return s.definition.blocks }
+func (s *luaScene) PassesInputBelow() bool           { return s.definition.passesInput }
+func (s *luaScene) WorldView() string                { return s.definition.worldView }
 func (s *luaScene) Update(ctx context.Context, elapsed time.Duration) error {
-	return s.UpdateFocused(ctx, elapsed, true)
+	return s.UpdateInputFocused(ctx, elapsed, true, true, s.definition.worldView)
 }
 
 func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, focused bool) error {
+	return s.UpdateInputFocused(ctx, elapsed, focused, focused, s.definition.worldView)
+}
+
+func (s *luaScene) UpdateInputFocused(ctx context.Context, elapsed time.Duration, focused, inputAllowed bool, worldView string) error {
 	if s.definition.update == nil {
 		return nil
 	}
@@ -208,11 +231,13 @@ func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, foc
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		invoke := func() error {
 			return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused))
+				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(inputAllowed), lua.LString(worldView))
 			})
 		}
-		if !focused && s.input != nil {
+		if !inputAllowed && s.input != nil {
 			result = s.input.Suppress(invoke)
+		} else if !focused && s.input != nil {
+			result = s.input.GameplayOnly(invoke)
 		} else {
 			result = invoke()
 		}
