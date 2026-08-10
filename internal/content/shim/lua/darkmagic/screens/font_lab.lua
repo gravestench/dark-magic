@@ -1,9 +1,16 @@
 -- Interactive bitmap-font and PL2 inspection scene.
 --
--- This development scene deliberately renders through the same semantic text
--- helper used by shipping screens. It is therefore useful for diagnosing font
--- metrics, palette choice, PL2 transforms, wrapping, and alignment without a
--- second preview implementation masking engine bugs.
+-- DEVELOPMENT TOOLS CAN BE NORMAL MOD SCENES.
+--
+-- That idea is worth noticing. Font Lab does not use a secret editor renderer or
+-- a second text implementation. It uses the SAME `darkmagic.ui.text` helper and
+-- retained render capability as shipping screens. If Font Lab looks wrong, the
+-- real UI probably has the same bug; the tool cannot accidentally hide it behind
+-- a separate preview stack.
+--
+-- This scene is also a friendly example of DATA-DRIVEN pages. Most of the file is
+-- an array of page definitions containing title/detail plus a small draw function.
+
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -14,17 +21,23 @@ local data = require("dm.data/v1")
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 
 local font_lab = {}
+
+-- This table maps each page ROOT node to the child nodes drawn for that page.
+-- It lets us hide/show already-built pages instead of rebuilding text every visit.
 local page_nodes = {}
 
--- Position a text texture from a conventional top-left box. Retained text
--- nodes themselves are center-positioned, so the half-box conversion belongs
--- here rather than in every page definition.
+-- Draw one text node from conventional top-left box coordinates.
 local function put(root, style, value, left, top, width, alignment)
     local node = render.create("hud", root)
+
     if page_nodes[root] then
+        -- Track node only when this root belongs to one of our page caches.
         table.insert(page_nodes[root], node)
     end
+
     local _, height = text.set(node, style, value, width, alignment or "left")
+
+    -- text.set produces retained node content; node positioning is center-based.
     node:set_position(left + width / 2, top + height / 2)
     return node, height
 end
@@ -34,11 +47,13 @@ local function heading(root, title, detail)
     put(root, "font_lab_caption", detail, 40, 66, 720, "center")
 end
 
+-- Each row is a PAGE DESCRIPTION, not a class/native screen type.
 local pages = {
     {
         title = "Semantic UI styles",
         detail = "The exact styles currently used by frontend and in-game screens",
         draw = function(root)
+            -- {semantic style name, human explanation}
             local rows = {
                 { "frontend_legal", "Formal12 / Static / Sky PL2 / gold" },
                 { "button_normal", "Exocet10 / Units / neutral 0x646464 modulation" },
@@ -81,6 +96,7 @@ local pages = {
         title = "PL2 text-color slots",
         detail = "Font16 / Units indices transformed through Sky/Pal.pl2",
         draw = function(root)
+            -- Inline tags are interpreted by the shared bitmap text pipeline.
             local samples = {
                 "[white]WHITE  [red]RED  [green]GREEN",
                 "[blue]BLUE  [gold]GOLD  [grey]GREY",
@@ -101,6 +117,8 @@ local pages = {
         title = "Contextual PL2 comparison",
         detail = "Identical Font16 glyph indices and [gold] slot; only Pal.pl2 changes",
         draw = function(root)
+            -- Same semantic text can look subtly different through different
+            -- contextual palette transform tables.
             local rows = {
                 { "font_lab_gold_sky", "Sky/Pal.pl2" },
                 { "font_lab_gold_fechar", "Fechar/Pal.pl2" },
@@ -131,9 +149,13 @@ local pages = {
 
 function font_lab.create(self)
     self.root = render.create("hud")
+
+    -- A plain rectangle gives the lab a neutral backdrop independent of D2 UI art.
     self.background = render.create("hud", self.root)
     self.background:fill_rect(manifest.resolution.width, manifest.resolution.height, 18, 15, 13, 255)
     self.background:set_position(manifest.resolution.width / 2, manifest.resolution.height / 2)
+
+    -- page_roots caches each page root after its first visit.
     self.page_roots = {}
     self.page = 1
     self:show_page(1)
@@ -141,22 +163,32 @@ function font_lab.create(self)
 end
 
 function font_lab.show_page(self, requested)
+    -- Wrap ANY integer request into 1..#pages. The +1 after modulo converts
+    -- Lua-friendly zero-based modulo result back to one-based array indexing.
     local next_page = ((requested - 1) % #pages) + 1
+
     if self.page_roots[self.page] then
+        -- Hide all tracked children from old cached page.
         for _, node in ipairs(page_nodes[self.page_roots[self.page]]) do
             node:set_visible(false)
         end
     end
+
     if not self.page_roots[next_page] then
+        -- First visit: build this page ONCE.
         local root = render.create("hud", self.root)
         self.page_roots[next_page] = root
         page_nodes[root] = {}
+
         local page = pages[next_page]
         heading(root, page.title, page.detail)
         page.draw(root)
         put(root, "font_lab_caption", string.format("%d / %d   Left/Up: previous   Right/Down/Enter/Click: next   Esc: menu", next_page, #pages), 40, 568, 720, "center")
     end
+
     self.page = next_page
+
+    -- Reveal already-built current page children.
     for _, node in ipairs(page_nodes[self.page_roots[next_page]]) do
         node:set_visible(true)
     end
@@ -164,6 +196,9 @@ end
 
 function font_lab.update(self)
     self.cursor:update()
+
+    -- Several logical actions intentionally mean "next" so the lab is easy to
+    -- drive with mouse, keyboard, or controller.
     if input.pressed("right") or input.pressed("down") or input.pressed("confirm") or input.pressed("pointer_primary") then
         self:show_page(self.page + 1)
     elseif input.pressed("left") or input.pressed("up") then
