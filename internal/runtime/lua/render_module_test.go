@@ -322,6 +322,82 @@ func TestCOFCompositionDrawsOnlyShadowEnabledLayers(t *testing.T) {
 	}
 }
 
+func TestCOFCompositionDrawsAllShadowsBehindAllVisibleLayers(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 2
+	back, front := cof.CompositeType(3), cof.CompositeType(4)
+	asset.CofLayers = []cof.CofLayer{
+		{Type: back, DrawEffect: cof.DrawEffect(8)},
+		{Type: front, Shadow: 1, DrawEffect: cof.DrawEffect(8)},
+	}
+	asset.Priority = [][][]cof.CompositeType{{{back, front}}}
+	red := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	red.Set(2, 2, color.RGBA{R: 255, A: 255})
+	shadowSource := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	shadowSource.Set(0, 0, color.RGBA{B: 255, A: 255})
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		back:  {image: red, bounds: red.Bounds(), layer: asset.CofLayers[0]},
+		front: {image: shadowSource, bounds: shadowSource.Bounds(), layer: asset.CofLayers[1]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(composed.At(2, 2)).(color.RGBA); got.R != 255 || got.A != 255 {
+		t.Fatalf("visible back layer was covered by a later component shadow: %#v", got)
+	}
+}
+
+func TestCOFCompositionIgnoresDrawEffectOnOpaqueLayer(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 1
+	head := cof.CompositeType(0)
+	asset.CofLayers = []cof.CofLayer{{Type: head, Transparent: false, DrawEffect: cof.DrawEffect(0)}}
+	asset.Priority = [][][]cof.CompositeType{{{head}}}
+	source := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	source.Set(0, 0, color.RGBA{R: 255, A: 255})
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		head: {image: source, bounds: source.Bounds(), layer: asset.CofLayers[0]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := color.RGBAModel.Convert(composed.At(0, 0)).(color.RGBA); got.A != 255 {
+		t.Fatalf("opaque layer alpha = %d, want 255", got.A)
+	}
+}
+
+func TestCOFAnimationFramesShareCanvasButKeepDistinctPixels(t *testing.T) {
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 2, 1
+	head := cof.CompositeType(0)
+	asset.CofLayers = []cof.CofLayer{{Type: head, DrawEffect: cof.DrawEffect(8)}}
+	asset.Priority = [][][]cof.CompositeType{{{head}, {head}}}
+	first := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	first.Set(0, 0, color.RGBA{R: 255, A: 255})
+	second := image.NewRGBA(image.Rect(0, 0, 3, 1))
+	second.Set(2, 0, color.RGBA{G: 255, A: 255})
+	shared := image.Rect(-2, -1, 4, 3)
+	frame0, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{
+		head: {image: first, bounds: image.Rect(-2, -1, 0, 1), layer: asset.CofLayers[0]},
+	}, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame1, err := composeCOFFrame(asset, 0, 1, map[cof.CompositeType]compositeFrame{
+		head: {image: second, bounds: image.Rect(1, 2, 4, 3), layer: asset.CofLayers[0]},
+	}, shared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frame0.Bounds() != frame1.Bounds() {
+		t.Fatalf("animation canvases differ: %v and %v", frame0.Bounds(), frame1.Bounds())
+	}
+	firstKey, secondKey := render.TextureKey(frame0), render.TextureKey(frame1)
+	if firstKey == secondKey {
+		t.Fatal("visually distinct composite frames share a texture identity")
+	}
+}
+
 func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	t.Parallel()
 

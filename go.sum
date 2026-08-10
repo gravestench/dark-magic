@@ -72,6 +72,12 @@ github.com/gravestench/dcc v0.1.1-0.20260810102023-55276a408b92 h1:v1bJb4fJLni/R
 github.com/gravestench/dcc v0.1.1-0.20260810102023-55276a408b92/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
 github.com/gravestench/dcc v0.2.0 h1:ff92M43uev1U9YbJO/iKbzSTHCAY+PM17rdne1jY0pQ=
 github.com/gravestench/dcc v0.2.0/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
+github.com/gravestench/dcc v0.2.1 h1:MX/g6/n4iBXZCV+8YIST06owrphzEINW0c0unnFdf6Q=
+github.com/gravestench/dcc v0.2.1/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
+github.com/gravestench/dcc v0.3.0 h1:xo8iQIidJCkH8PBgqiNpX6TUcHlAm2tbrH56I/FpbqY=
+github.com/gravestench/dcc v0.3.0/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
+github.com/gravestench/dcc v0.3.1 h1:cphUToGx1tfusg4zbeRM8VTA1SS0ueDNmXoto2tS5eM=
+github.com/gravestench/dcc v0.3.1/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
 github.com/gravestench/ds1 v0.1.0 h1:lQPzNPotIg0rYRHZ6a0ivkKvAJv28ehhsDxIimJ5ce8=
 github.com/gravestench/ds1 v0.1.0/go.mod h1:1xOyWIWALFJyRIxV+vt6TlJ8Y40ik98qByvQwzQCNwY=
 github.com/gravestench/ds1 v0.1.1-0.20260810102016-413af68af2e5 h1:9XGpRTwp36KkxIYbVG9YeNT9zBRrJC4S7ABD4ekQlvE=

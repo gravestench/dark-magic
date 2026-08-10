@@ -167,7 +167,37 @@ func imagesWeight(values []image.Image) int {
 	return max(weight, 1)
 }
 
-func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame) (image.Image, error) {
+// rgbaDCCFrame expands palette indexes with tight slice writes. Using
+// image/draw against dcc.Frame would call the image.Image interface once per
+// pixel (Bounds, At, ColorIndexAt, palette conversion). Character composites
+// perform this operation for every layer and frame, so that generic path makes
+// cold preparation needlessly expensive.
+func rgbaDCCFrame(frame *dcc.Frame, palette *color.Palette) *image.RGBA {
+	bounds := frame.Bounds()
+	result := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	if palette == nil {
+		return result
+	}
+	var colors [256]color.RGBA
+	for index, value := range *palette {
+		if index >= len(colors) {
+			break
+		}
+		colors[index] = color.RGBAModel.Convert(value).(color.RGBA)
+	}
+	for pixel, paletteIndex := range frame.PixelData {
+		if pixel*4+3 >= len(result.Pix) {
+			break
+		}
+		value := colors[paletteIndex]
+		offset := pixel * 4
+		result.Pix[offset], result.Pix[offset+1] = value.R, value.G
+		result.Pix[offset+2], result.Pix[offset+3] = value.B, value.A
+	}
+	return result
+}
+
+func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame, animationBounds ...image.Rectangle) (image.Image, error) {
 	if direction < 0 || direction >= len(asset.Priority) {
 		return nil, fmt.Errorf("COF direction %d is out of range", direction)
 	}
@@ -175,38 +205,55 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		return nil, fmt.Errorf("COF frame %d is out of range", frame)
 	}
 	var bounds image.Rectangle
-	for _, component := range components {
-		if bounds.Empty() {
-			bounds = component.bounds
-		} else {
-			bounds = bounds.Union(component.bounds)
+	if len(animationBounds) > 0 {
+		bounds = animationBounds[0]
+	} else {
+		for _, component := range components {
+			if bounds.Empty() {
+				bounds = component.bounds
+			} else {
+				bounds = bounds.Union(component.bounds)
+			}
 		}
 	}
 	if bounds.Empty() {
 		return nil, errors.New("COF composition has no component frames")
 	}
 	output := image.NewRGBA(image.Rect(0, 0, bounds.Dx()+2, bounds.Dy()+2))
+	// Diablo's composite renderer makes two complete passes over the COF order:
+	// every projected shadow first, then every visible body/equipment layer.
+	// Drawing a layer's shadow immediately before that layer lets later shadows
+	// darken earlier limbs and looks like broken arm priority on thin characters.
+	for _, componentType := range asset.Priority[direction][frame] {
+		component, ok := components[componentType]
+		if !ok || component.layer.Shadow == 0 {
+			continue
+		}
+		destination := component.bounds.Min.Sub(bounds.Min)
+		mask := image.NewUniform(color.RGBA{A: 96})
+		draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
+	}
 	for _, componentType := range asset.Priority[direction][frame] {
 		component, ok := components[componentType]
 		if !ok {
 			continue
 		}
 		destination := component.bounds.Min.Sub(bounds.Min)
-		if component.layer.Shadow != 0 {
-			mask := image.NewUniform(color.RGBA{A: 96})
-			draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
-		}
 		alpha := uint8(255)
-		switch component.layer.DrawEffect {
-		case cof.DrawEffect(0):
-			alpha = 191
-		case cof.DrawEffect(1):
-			alpha = 128
-		case cof.DrawEffect(2):
-			alpha = 64
-		}
-		if component.layer.Transparent && alpha == 255 {
-			alpha = 128
+		// DrawEffect is meaningful only when COF marks the layer transparent.
+		// Most body layers contain zero in this byte, which otherwise looks like
+		// the 25-percent effect despite being explicitly opaque.
+		if component.layer.Transparent {
+			switch component.layer.DrawEffect {
+			case cof.DrawEffect(0):
+				alpha = 191
+			case cof.DrawEffect(1):
+				alpha = 128
+			case cof.DrawEffect(2):
+				alpha = 64
+			default:
+				alpha = 128
+			}
 		}
 		if alpha == 255 {
 			draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
@@ -628,6 +675,25 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		}
 		layers[layer.Type], decoded[layer.Type] = layer, component
 	}
+	// A retained animation node has one anchor and native quad. Every composite
+	// frame must therefore use one shared canvas even though individual DCC
+	// frame rectangles move and change size. Per-frame canvases make the quad
+	// resize around its center (visible jitter) and are unsafe for backends that
+	// retain texture geometry from the first animation frame.
+	var animationBounds image.Rectangle
+	for _, component := range decoded {
+		for _, frame := range component.Direction(direction).Frames() {
+			if animationBounds.Empty() {
+				animationBounds = frame.Bounds()
+			} else {
+				animationBounds = animationBounds.Union(frame.Bounds())
+			}
+		}
+	}
+	if animationBounds.Empty() {
+		return nil, nil, errors.New("COF composition has no component animation bounds")
+	}
+
 	frames := make([]image.Image, asset.FramesPerDirection)
 	for frameIndex := range frames {
 		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
@@ -637,11 +703,10 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
 			}
 			frame := directionFrames[frameIndex]
-			normalized := image.NewRGBA(image.Rect(0, 0, frame.Bounds().Dx(), frame.Bounds().Dy()))
-			draw.Draw(normalized, normalized.Bounds(), frame, frame.Bounds().Min, draw.Src)
+			normalized := rgbaDCCFrame(frame, component.Palette())
 			components[componentType] = compositeFrame{image: normalized, bounds: frame.Bounds(), layer: layers[componentType]}
 		}
-		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components)
+		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components, animationBounds)
 		if err != nil {
 			return nil, nil, err
 		}
