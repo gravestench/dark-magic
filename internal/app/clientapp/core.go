@@ -1,0 +1,197 @@
+package clientapp
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"os"
+	"strings"
+
+	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/content"
+	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
+	"github.com/gravestench/dark-magic/internal/game/data/recovered"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
+	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
+	"github.com/gravestench/dark-magic/internal/inputstate"
+	loadcore "github.com/gravestench/dark-magic/internal/loading"
+	"github.com/gravestench/dark-magic/internal/localization"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
+	"github.com/gravestench/dark-magic/internal/persistence"
+	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
+	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/preferences"
+	"github.com/gravestench/dark-magic/internal/presentation/navigation"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
+	"github.com/gravestench/dark-magic/internal/shell"
+)
+
+func (app *application) loadSettings() error {
+	path, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
+	if err != nil {
+		return wrap("expand shell settings path", err)
+	}
+	app.shellSettings, err = shell.NewSettings(path)
+	if err != nil {
+		return wrap("load shell settings", err)
+	}
+	app.gameSettings, err = preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
+	return wrap("load game preferences", err)
+}
+
+func (app *application) buildPresentationCore() error {
+	profile, err := content.ResolvePresentationProfile(app.options.Content, app.options.PresentationProfileID)
+	if err != nil {
+		return err
+	}
+	app.profile = profile
+	app.presentation, err = content.LoadPresentationBootstrap(app.options.Content)
+	if err != nil {
+		return err
+	}
+
+	// The renderer is the window. Input reads that window. Everything else talks
+	// to backend-neutral stores so game code never needs to know about Raylib.
+	app.renderer = &raylibrenderer.Service{}
+	app.renderer.SetLogger(slog.Default().With("component", "renderer"))
+	app.rendererConfig = raylibrenderer.DefaultConfig()
+	app.rendererConfig.Resolution.Width = profile.Width
+	app.rendererConfig.Resolution.Height = profile.Height
+	app.rendererConfig.Resolution.Fit = app.options.ViewportFit
+	app.renderer.Configure(app.rendererConfig)
+	if err := app.renderer.ConfigurePaletteQuantization(app.options.Content, app.options.OutputPalette); err != nil {
+		return err
+	}
+
+	app.input = raylibinput.New(app.renderer)
+	app.input.SetLogger(slog.Default().With("component", "input"))
+	app.inputState = &inputstate.Store{}
+	app.locale = localization.New(app.options.Content, "English")
+	app.scripts = modruntime.New()
+	app.composer = &render.Composer{}
+	app.mixer = &audio.Mixer{}
+	app.navigator = navigation.New()
+	app.scenes = modruntime.NewScenes(app.scripts, app.navigator)
+	app.scenes.SetInputStore(app.inputState)
+	if app.options.Profile != nil {
+		app.scenes.SetProfiler(app.options.Profile)
+	}
+	return nil
+}
+
+func (app *application) loadGameCatalogs() error {
+	app.records = recordstore.New(app.options.Content)
+	app.records.SetLogger(slog.Default().With("component", "records"))
+	app.gameData = gamedata.New(app.records)
+	app.questCatalog = recovered.New(app.options.Content)
+
+	typed, err := app.gameData.Snapshot()
+	if err != nil {
+		return wrap("load typed game data", err)
+	}
+	recoveredData, err := app.questCatalog.Snapshot()
+	if err != nil {
+		return wrap("load recovered game data", err)
+	}
+	soundNames := make(map[string]struct{}, len(typed.Sounds))
+	for _, sound := range typed.Sounds {
+		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
+	}
+	issues := recovered.ValidateReferences(recoveredData, soundNames, app.locale.Text)
+	app.worldObjectResolver = worldobjects.New(recoveredData, typed)
+	slog.Info("loaded game-data catalogs", "typed_issues", len(typed.Issues),
+		"quests", len(recoveredData.Quests), "speech", len(recoveredData.Speech),
+		"map_objects", len(recoveredData.MapObjects), "reference_issues", len(issues))
+	return nil
+}
+
+func (app *application) buildOfflineSession() error {
+	fixtures := DevelopmentCharacters(app.options.FixtureCharacters)
+	app.saves = persistence.New(fixtures...)
+	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
+		if err := app.saves.Select(fixtures[0].ID); err != nil {
+			return wrap("select development fixture", err)
+		}
+	}
+
+	app.entitySimulation = gameecs.New()
+	session, err := gamesession.New(app.entitySimulation, gamesession.Config{})
+	if err != nil {
+		_ = app.entitySimulation.Close()
+		return wrap("create offline game session", err)
+	}
+	app.offlineSession = session
+	if err := app.registerOfflineCommands(); err != nil {
+		return err
+	}
+	return app.buildLoadingCoordinator()
+}
+
+func (app *application) registerOfflineCommands() error {
+	for name, register := range map[string]func(*gamesession.Session) error{
+		"movement commands": gamesession.RegisterMovement,
+		"skill commands":    gamesession.RegisterSkillAssignments,
+		"player commands":   gameplayer.Register,
+	} {
+		if err := register(app.offlineSession); err != nil {
+			return wrap("register "+name, err)
+		}
+	}
+	movement := &gamesession.MovementController{}
+	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
+	if err != nil {
+		return wrap("create offline movement source", err)
+	}
+	skills, err := gamesession.NewSkillSource(movement, "local-player")
+	if err != nil {
+		return wrap("create offline skill source", err)
+	}
+	entry, err := gameplayer.NewEntrySource(app.entitySimulation, app.saves, "local-player", 4096, 4096)
+	if err != nil {
+		return wrap("create offline player entry source", err)
+	}
+	app.commandSource = func(tick uint64) []simulation.Command {
+		commands := entry.Commands(tick)
+		commands = append(commands, movementSource.Commands(tick)...)
+		return append(commands, skills.Commands(tick)...)
+	}
+	app.playerControl = movement
+	return nil
+}
+
+func (app *application) buildLoadingCoordinator() error {
+	app.loading = loadcore.New(map[string]loadcore.Task{
+		"selected_character": func(context.Context) error {
+			if _, ok := app.saves.Selected(); !ok {
+				return errors.New("no character is selected")
+			}
+			return nil
+		},
+		"loading_assets": func(context.Context) error {
+			for _, name := range app.presentation.LoadingAssets {
+				if _, err := fs.Stat(app.options.Content, name); err != nil {
+					return fmt.Errorf("load dependency %q: %w", name, err)
+				}
+			}
+			return nil
+		},
+		"world": func(context.Context) error { return nil },
+	})
+	return nil
+}
+
+func fixtureNeedsSelection(scene string) bool {
+	switch scene {
+	case "game_world", "game_loading", "inventory", "character", "skills":
+		return true
+	default:
+		return false
+	}
+}

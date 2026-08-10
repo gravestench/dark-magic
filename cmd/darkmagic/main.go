@@ -1,65 +1,33 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"image"
-	"io/fs"
 	"log/slog"
 	"os"
-	"os/signal"
 	"runtime"
-	"runtime/debug"
-	"runtime/pprof"
 	"strings"
-	"syscall"
-	"time"
 
-	"github.com/gravestench/dark-magic/internal/app/filewatch"
-	"github.com/gravestench/dark-magic/internal/app/host"
-	"github.com/gravestench/dark-magic/internal/app/hotreload"
-	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
-	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/app/clientapp"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/dev/capture"
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
-	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
-	gamesession "github.com/gravestench/dark-magic/internal/game/session"
-	"github.com/gravestench/dark-magic/internal/game/simulation"
-	"github.com/gravestench/dark-magic/internal/inputstate"
-	"github.com/gravestench/dark-magic/internal/loading"
-	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/logging"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/internal/persistence"
-	"github.com/gravestench/dark-magic/internal/platform/raylib/input"
-	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
-	"github.com/gravestench/dark-magic/internal/preferences"
-	"github.com/gravestench/dark-magic/internal/presentation/navigation"
-	"github.com/gravestench/dark-magic/internal/presentation/render"
-	"github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
-	"github.com/gravestench/dark-magic/internal/shell/luashell"
-	raylibShell "github.com/gravestench/dark-magic/internal/shell/raylib"
-	"github.com/gravestench/dark-magic/internal/video"
 )
 
 func main() {
 	exitCode := 0
-	// Register this first so it runs after every later cleanup defer. Capture and
-	// startup failures must be observable by Make and CI without skipping profiler
-	// shutdown or other orderly teardown.
+	// Cleanups run before this final exit. Think of it like putting every toy
+	// away before turning off the room light.
 	defer func() { os.Exit(exitCode) }()
-	// Cocoa and GLFW must be initialized and pumped from the process's original
-	// main thread. Keep the entire renderer lifecycle on that thread.
+
+	// macOS requires the window to live on the first operating-system thread.
+	// Locking here keeps that rule out of the rest of the application.
 	runtime.LockOSThread()
+
 	logLevelFlag := flag.String("log-level", environmentDefault("DARK_MAGIC_LOG_LEVEL", "info"), "log verbosity: debug, info, warn, or error")
 	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
 	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
@@ -72,22 +40,21 @@ func main() {
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
 	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
 	flag.Parse()
+
 	logLevel, err := parseLogLevel(*logLevelFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}
-	shellLogs := shell.NewLogBuffer(1000)
-	logHandler := logging.NewHandlerWithObserver(&slog.HandlerOptions{Level: logLevel}, func(record logging.Record) {
-		shellLogs.Append(shell.LogEntry{
-			At: record.At, Level: record.Level.String(), Message: record.Message, Attributes: record.Attributes,
-		})
+	logs := shell.NewLogBuffer(1000)
+	handler := logging.NewHandlerWithObserver(&slog.HandlerOptions{Level: logLevel}, func(record logging.Record) {
+		logs.Append(shell.LogEntry{At: record.At, Level: record.Level.String(), Message: record.Message, Attributes: record.Attributes})
 	})
-	slog.SetDefault(slog.New(logHandler))
+	slog.SetDefault(slog.New(handler))
+
 	var profile *profiling.Session
 	if *profileDirectory != "" {
-		var err error
 		profile, err = profiling.Start(*profileDirectory, true)
 		if err != nil {
 			slog.Error("starting profiler", "error", err)
@@ -101,17 +68,17 @@ func main() {
 			}
 		}()
 	}
+
 	contentFS, err := content.FromEnvironment()
+	if err == nil {
+		err = content.ValidateClientAssets(contentFS)
+	}
 	if err != nil {
-		slog.Error("constructing content filesystem", "error", err)
+		slog.Error("preparing client content", "error", err)
 		exitCode = 1
 		return
 	}
-	if err := content.ValidateClientAssets(contentFS); err != nil {
-		slog.Error("validating client content", "error", err)
-		exitCode = 1
-		return
-	}
+
 	*captureDirectoryFlag, *captureScenes = capture.Defaults(*captureDirectoryFlag, *captureScenes)
 	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
 	if err != nil {
@@ -119,7 +86,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, shellLogs); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -132,435 +99,31 @@ func environmentDefault(name, fallback string) string {
 	return fallback
 }
 
-func parseLogLevel(value string) (slog.Level, error) {
-	return logging.ParseLevel(value)
+func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel(value) }
+
+// run is intentionally boring. The command hands the pieces to the client
+// application package, and that package explains how the pieces fit together.
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, logs *shell.LogBuffer) error {
+	options := clientapp.Options{
+		Content: contentFS, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
+			return capture.New(directory, scenes, settle, renderer)
+		}, CaptureDirectory: captureDirectory,
+		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene,
+		FixtureCharacters: fixtureCharacters, OutputPalette: outputPalette,
+		ViewportFit: viewportFit, PresentationProfileID: presentationProfileID, Logs: logs,
+	}
+	// A nil pointer stored inside an interface looks non-nil. Only put the
+	// profiler in the box when one was really started.
+	if profile != nil {
+		options.Profile = profile
+	}
+	return clientapp.Run(options)
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, shellLogs *shell.LogBuffer) error {
-	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stopSignals()
-	shellSettingsPath, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
-	if err != nil {
-		return fmt.Errorf("expand shell settings path: %w", err)
-	}
-	shellSettings, err := shell.NewSettings(shellSettingsPath)
-	if err != nil {
-		return err
-	}
-	gameSettings, err := preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
-	if err != nil {
-		return fmt.Errorf("load game preferences: %w", err)
-	}
-	sceneErrors := make(chan error, 1)
-	reportSceneError := func(err error) {
-		select {
-		case sceneErrors <- err:
-			stopSignals()
-		default:
-		}
-	}
-	renderer := &raylibRenderer.Service{}
-	renderer.SetLogger(slog.Default().With("component", "renderer"))
-	presentationProfile, err := content.ResolvePresentationProfile(contentFS, presentationProfileID)
-	if err != nil {
-		return err
-	}
-	rendererConfig := raylibRenderer.DefaultConfig()
-	rendererConfig.Resolution.Width = presentationProfile.Width
-	rendererConfig.Resolution.Height = presentationProfile.Height
-	rendererConfig.Resolution.Fit = viewportFit
-	renderer.Configure(rendererConfig)
-	if err := renderer.ConfigurePaletteQuantization(contentFS, outputPalette); err != nil {
-		return err
-	}
-	inputService := input.New(renderer)
-	inputService.SetLogger(slog.Default().With("component", "input"))
-	locale := localization.New(contentFS, "English")
-	scripts := modruntime.New()
-	composer := &render.Composer{}
-	mixer := &audio.Mixer{}
-	navigator := navigation.New()
-	scenes := modruntime.NewScenes(scripts, navigator)
-	if profile != nil {
-		scenes.SetProfiler(profile)
-	}
-	inputState := &inputstate.Store{}
-	scenes.SetInputStore(inputState)
-	records := recordstore.New(contentFS)
-	records.SetLogger(slog.Default().With("component", "records"))
-	gameData := gamedata.New(records)
-	questCatalog := recovered.New(contentFS)
-	presentation, err := content.LoadPresentationBootstrap(contentFS)
-	if err != nil {
-		return err
-	}
-	typedRecords, err := gameData.Snapshot()
-	if err != nil {
-		return fmt.Errorf("load typed game data: %w", err)
-	}
-	slog.Info("loaded typed game-data catalog", "issues", len(typedRecords.Issues))
-	recoveredRecords, err := questCatalog.Snapshot()
-	if err != nil {
-		return fmt.Errorf("load recovered game data: %w", err)
-	}
-	soundNames := make(map[string]struct{}, len(typedRecords.Sounds))
-	for _, sound := range typedRecords.Sounds {
-		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
-	}
-	referenceIssues := recovered.ValidateReferences(recoveredRecords, soundNames, locale.Text)
-	worldObjectResolver := worldobjects.New(recoveredRecords, typedRecords)
-	slog.Info("loaded recovered game-data catalog",
-		"quests", len(recoveredRecords.Quests), "speech", len(recoveredRecords.Speech),
-		"ds1_types", len(recoveredRecords.DS1Types), "map_objects", len(recoveredRecords.MapObjects),
-		"reference_issues", len(referenceIssues))
-	fixtureEntries := developmentCharacters(fixtureCharacters)
-	saves := persistence.New(fixtureEntries...)
-	if len(fixtureEntries) > 0 && (startScene == "game_world" || startScene == "game_loading" || startScene == "inventory" || startScene == "character" || startScene == "skills") {
-		if err := saves.Select(fixtureEntries[0].ID); err != nil {
-			return fmt.Errorf("select development fixture: %w", err)
-		}
-	}
-	entitySimulation := gameecs.New()
-	offlineSession, err := gamesession.New(entitySimulation, gamesession.Config{})
-	if err != nil {
-		_ = entitySimulation.Close()
-		return fmt.Errorf("create offline game session: %w", err)
-	}
-	defer offlineSession.Close()
-	if err := gamesession.RegisterMovement(offlineSession); err != nil {
-		return fmt.Errorf("register offline movement commands: %w", err)
-	}
-	if err := gamesession.RegisterSkillAssignments(offlineSession); err != nil {
-		return fmt.Errorf("register offline skill-assignment commands: %w", err)
-	}
-	if err := gameplayer.Register(offlineSession); err != nil {
-		return fmt.Errorf("register offline player commands: %w", err)
-	}
-	movementController := &gamesession.MovementController{}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, inputState, "local-player", "game_world", movementController)
-	if err != nil {
-		return fmt.Errorf("create offline movement source: %w", err)
-	}
-	skillSource, err := gamesession.NewSkillSource(movementController, "local-player")
-	if err != nil {
-		return fmt.Errorf("create offline skill source: %w", err)
-	}
-	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
-	if err != nil {
-		return fmt.Errorf("create offline player entry source: %w", err)
-	}
-	commandSource := func(tick uint64) []simulation.Command {
-		commands := entrySource.Commands(tick)
-		commands = append(commands, movementSource.Commands(tick)...)
-		return append(commands, skillSource.Commands(tick)...)
-	}
-	loading := loading.New(map[string]loading.Task{
-		"selected_character": func(context.Context) error {
-			if _, ok := saves.Selected(); !ok {
-				return errors.New("no character is selected")
-			}
-			return nil
-		},
-		"loading_assets": func(_ context.Context) error {
-			for _, name := range presentation.LoadingAssets {
-				if _, err := fs.Stat(contentFS, name); err != nil {
-					return fmt.Errorf("load dependency %q: %w", name, err)
-				}
-			}
-			return nil
-		},
-		"world": func(context.Context) error { return nil },
-	})
-	defer loading.Close()
-	components := host.NewManager()
-	if err := scripts.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.AppModule(buildVersion(), stopSignals)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.ShellModule(shellSettings)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.DataModule(contentFS, presentationProfile.ID)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.WorldModule(contentFS, worldObjectResolver)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.InputModule(inputState)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS, gameData)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.SettingsModule(gameSettings, mixer)); err != nil {
-		return err
-	}
-	videoBackend := video.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))
-	if !videoBackend.Available() {
-		videoBackend = video.FFplay{}
-	}
-	if resizable, ok := videoBackend.(interface{ Resize(image.Point) error }); ok {
-		renderer.SubscribeViewport(func(width, height int) {
-			if err := resizable.Resize(image.Pt(width, height)); err != nil {
-				slog.Error("resizing cinematic viewport", "error", err)
-			}
-		})
-	}
-	if err := scripts.RegisterModule(modruntime.VideoModule(scripts, videoBackend, contentFS)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.RecordsModule(gameData)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.GameDataModule(gameData)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.QuestCatalogModule(questCatalog, locale)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.MapCatalogModule(questCatalog)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.LocaleModule(locale)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.SaveModule(saves)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.PlayerControlModule(movementController)); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.NewECSCapability(scripts, entitySimulation).Module()); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(modruntime.LoadingModule(loading)); err != nil {
-		return err
-	}
-	renderCapability := modruntime.NewRenderCapability(scripts, composer, contentFS)
-	if profile != nil {
-		profile.SetDiagnostics(func() any { return renderCapability.Diagnostics() })
-	}
-	if err := scripts.RegisterModule(renderCapability.Module()); err != nil {
-		return err
-	}
-	if err := scripts.RegisterModule(scenes.Module()); err != nil {
-		return err
-	}
-
-	appHost := host.New()
-	staticDefinitions := []host.Definition{
-		{ID: "engine.renderer", Component: renderer},
-		{ID: "engine.input", DependsOn: []string{"engine.renderer"}, Component: inputService},
-		{ID: "engine.lua", DependsOn: []string{"engine.renderer", "engine.input"}, Component: scripts},
-	}
-	if address := os.Getenv("DARK_MAGIC_DEBUG_ADDR"); address != "" {
-		staticDefinitions = append(staticDefinitions, host.Definition{ID: "engine.runtime-api", Component: runtimeapi.New(address, components)})
-	}
-	for _, definition := range staticDefinitions {
-		if err := appHost.Register(definition); err != nil {
-			return err
-		}
-	}
-	if err := appHost.Start(context.Background()); err != nil {
-		return err
-	}
-	stopped := false
-	defer func() {
-		if !stopped {
-			stopHost(appHost)
-		}
-	}()
-	shellPolicy := shell.Policy{
-		Name:         "local-developer",
-		Capabilities: scripts.ModuleNames(),
-		Mutable:      true,
-	}
-	shellEvaluator, err := luashell.NewForPolicy(scripts, shellPolicy)
-	if err != nil {
-		return err
-	}
-	shellSession, err := shell.NewSession("client-local", "client", shellPolicy, shellEvaluator)
-	if err != nil {
-		return err
-	}
-	shellSession.AttachLogs(shellLogs)
-	shellSession.AttachSettings(shellSettings)
-	defer shellSession.Close()
-	console := raylibShell.New(shellSession, shellSettings)
-	if err := console.LoadFont(); err != nil {
-		return err
-	}
-	defer console.Close()
-
-	lastFrame := time.Now()
-	stopSceneFrames := renderer.SubscribeFrame(func() {
-		frameContext := scenes.FrameContext(context.Background())
-		pprof.SetGoroutineLabels(frameContext)
-		inputFrame := inputService.Snapshot()
-		inputFrame.WorldSplit = float64(presentationProfile.Width) / 2
-		owner := inputstate.FocusOwner{Domain: inputstate.FocusNone}
-		if focused, ok := navigator.Focused(); ok {
-			owner = inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: focused}
-		}
-		captured := console.Handle(runContext, inputFrame)
-		if captured {
-			owner = inputstate.FocusOwner{Domain: inputstate.FocusDebug, ID: "client-console"}
-		}
-		gameplayAllowed, worldView := navigator.InputPolicy("game_world")
-		inputFrame = inputstate.Route(inputFrame, owner, captured, gameplayAllowed, worldView)
-		inputState.Publish(inputFrame)
-		now := time.Now()
-		elapsed := now.Sub(lastFrame)
-		lastFrame = now
-		if _, err := offlineSession.AdvanceWithSource(elapsed, commandSource); err != nil {
-			reportSceneError(fmt.Errorf("updating offline game session: %w", err))
-			return
-		}
-		if err := scenes.Update(frameContext, elapsed); err != nil {
-			reportSceneError(fmt.Errorf("updating Lua scenes: %w", err))
-			return
-		}
-		// Updating can replace the focused scene. Refresh the persistent label so
-		// composer draining and native frame work are charged to the new owner.
-		frameContext = scenes.FrameContext(context.Background())
-		pprof.SetGoroutineLabels(frameContext)
-		if err := scenes.Render(frameContext); err != nil {
-			reportSceneError(fmt.Errorf("rendering Lua scenes: %w", err))
-		}
-	})
-	if err := renderer.AttachAudio(mixer); err != nil {
-		return err
-	}
-	// Register composition draining after scene updates so Lua mutations are
-	// visible to Raylib during the same frame.
-	if err := renderer.AttachComposer(composer); err != nil {
-		return err
-	}
-	stopShellOverlay := renderer.SubscribeOverlay(func() {
-		width, height := renderer.WindowSize()
-		console.Draw(width, height)
-	})
-
-	definitions, err := modruntime.DiscoverDefinitions(context.Background(), scripts, contentFS)
-	for _, definition := range definitions {
-		if err == nil {
-			err = components.Register(definition.Managed())
-		}
-	}
-	modDirectory := os.Getenv("DARK_MAGIC_MOD_DIRECTORY")
-	if modDirectory != "" {
-		modDirectory, err = darkpaths.ExpandHost(modDirectory)
-	}
-	if err == nil && modDirectory != "" {
-		coordinator := hotreload.New(contentFS, scripts, components, gameData, definitions)
-		err = components.Register(host.ManagedDefinition{
-			ID: "engine.hot-reload",
-			New: func(context.Context) (host.Component, error) {
-				return filewatch.New(modDirectory, 250*time.Millisecond, coordinator.Reload), nil
-			},
-		})
-	}
-	desired, desiredErr := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "darkmagic.boot")
-	if modDirectory != "" && desired != nil {
-		desired["engine.hot-reload"] = true
-	}
-	if err == nil {
-		err = desiredErr
-	}
-	if err == nil {
-		err = components.ApplyDesired(context.Background(), desired)
-	}
-	if err == nil {
-		err = scenes.Flush(context.Background())
-	}
-	if err == nil && startScene != "" {
-		err = navigator.Replace(context.Background(), startScene)
-	}
-	if err != nil {
-		return err
-	}
-	var captureSession *capture.Session
-	stopCaptureFrames := func() {}
-	if captureDirectory != "" {
-		captureSession, err = capture.New(captureDirectory, captureScenes, captureSettle, renderer)
-		if err != nil {
-			return err
-		}
-		stopCaptureFrames = renderer.SubscribePostFrame(func() {
-			captureSession.Observe(navigator.Stack())
-			if captureSession.Complete() {
-				stopSignals()
-			}
-		})
-	}
-
-	err = renderer.Run(runContext)
-	select {
-	case sceneErr := <-sceneErrors:
-		err = errors.Join(err, sceneErr)
-	default:
-	}
-	stopCaptureFrames()
-	if captureSession != nil {
-		err = errors.Join(err, captureSession.Close())
-	}
-	stopSceneFrames()
-	stopShellOverlay()
-	console.Close()
-
-	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	err = errors.Join(err, scenes.Close(shutdown))
-	err = errors.Join(err, shellSession.Close())
-	err = errors.Join(err, components.ApplyDesired(shutdown, map[string]bool{}))
-	err = errors.Join(err, appHost.Stop(shutdown))
-	stopped = true
-	return err
-}
-
+// Keep this tiny forwarding function for the command's historical tests. The
+// fixture recipe itself belongs beside the client application that consumes it.
 func developmentCharacters(count int) []persistence.Character {
-	if count <= 0 {
-		return nil
-	}
-	classes := []string{"Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Assassin", "Druid"}
-	result := make([]persistence.Character, 0, count)
-	for index := 0; index < count; index++ {
-		class := classes[index%len(classes)]
-		result = append(result, persistence.Character{
-			ID:        fmt.Sprintf("fixture-%02d", index+1),
-			Name:      fmt.Sprintf("Hero%02d", index+1),
-			Class:     class,
-			Level:     index + 1,
-			Expansion: true,
-			Hardcore:  index%3 == 2,
-			Stats: &persistence.Stats{
-				Experience: 1200, NextLevelExperience: 2250,
-				Strength: 25, Dexterity: 20, Vitality: 25, Energy: 15,
-				Defense: 42, Health: 70, MaxHealth: 70, Mana: 30, MaxMana: 30,
-				Stamina: 84, MaxStamina: 84,
-			},
-		})
-	}
-	return result
+	return clientapp.DevelopmentCharacters(count)
 }
 
-func buildVersion() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok || info.Main.Version == "" || info.Main.Version == "(devel)" {
-		return "development"
-	}
-	return info.Main.Version
-}
-
-func stopHost(appHost *host.Host) {
-	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := appHost.Stop(shutdown); err != nil {
-		slog.Error("stopping application host", "error", err)
-	}
-}
+func buildVersion() string { return clientapp.BuildVersion() }

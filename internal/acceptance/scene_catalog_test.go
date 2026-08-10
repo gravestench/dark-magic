@@ -15,10 +15,7 @@ func TestCaptureAllCatalogMatchesRegisteredScenes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	boot, err := os.ReadFile(filepath.Join(root, "internal/content/shim/boot.lua"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	bootstrap := readBootstrapLua(t, root)
 
 	captureMatch := regexp.MustCompile(`(?m)^CAPTURE_ALL_SCENES := (.+)$`).FindSubmatch(makefile)
 	if len(captureMatch) != 2 {
@@ -26,11 +23,19 @@ func TestCaptureAllCatalogMatchesRegisteredScenes(t *testing.T) {
 	}
 	captured := strings.Fields(string(captureMatch[1]))
 	registered := make([]string, 0, len(captured))
-	for _, match := range regexp.MustCompile(`scenes\.register\("([a-z0-9_]+)"`).FindAllSubmatch(boot, -1) {
+	for _, match := range regexp.MustCompile(`scenes\.register\("([a-z0-9_]+)"`).FindAllStringSubmatch(bootstrap, -1) {
 		registered = append(registered, string(match[1]))
 	}
-	for _, match := range regexp.MustCompile(`(?m)^\s+([a-z0-9_]+)=\{title=`).FindAllSubmatch(boot, -1) {
+	for _, match := range regexp.MustCompile(`(?m)^\s+([a-z0-9_]+)=\{(?:title|module)=`).FindAllStringSubmatch(bootstrap, -1) {
 		registered = append(registered, string(match[1]))
+	}
+	// The plain overlays are intentionally one compact list because they need no
+	// routing metadata. Pull those quoted names from that list too.
+	plain := regexp.MustCompile(`ipairs\(\{([^}]+)\}\)`).FindStringSubmatch(bootstrap)
+	if len(plain) == 2 {
+		for _, match := range regexp.MustCompile(`"([a-z0-9_]+)"`).FindAllStringSubmatch(plain[1], -1) {
+			registered = append(registered, match[1])
+		}
 	}
 	slices.Sort(captured)
 	slices.Sort(registered)
@@ -43,13 +48,10 @@ func TestMessagesShellLeavesGameplayLive(t *testing.T) {
 	t.Parallel()
 
 	root := repositoryRoot(t)
-	boot, err := os.ReadFile(filepath.Join(root, "internal/content/shim/boot.lua"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	definition := regexp.MustCompile(`messages=\{[^\n]+\}`).Find(boot)
-	if definition == nil {
-		t.Fatal("boot.lua has no messages shell definition")
+	bootstrap := readBootstrapLua(t, root)
+	definition := regexp.MustCompile(`messages=\{[^\n]+\}`).FindString(bootstrap)
+	if definition == "" {
+		t.Fatal("bootstrap modules have no messages shell definition")
 	}
 	want := []string{
 		"blocks_update_below=false",
@@ -58,8 +60,26 @@ func TestMessagesShellLeavesGameplayLive(t *testing.T) {
 		`layer="hud"`,
 	}
 	for _, fact := range want {
-		if !strings.Contains(string(definition), fact) {
+		if !strings.Contains(definition, fact) {
 			t.Errorf("messages shell definition %q does not contain %q", definition, fact)
 		}
 	}
+}
+
+func readBootstrapLua(t *testing.T, root string) string {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join(root, "internal/content/shim/lua/darkmagic/bootstrap/*.lua"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source strings.Builder
+	for _, path := range paths {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		source.Write(contents)
+		source.WriteByte('\n')
+	}
+	return source.String()
 }
