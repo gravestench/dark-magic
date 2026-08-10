@@ -1,4 +1,9 @@
--- Fixed-profile party panel. Network roster state remains engine-owned.
+-- Fixed-profile party panel shell.
+--
+-- Network/party roster state belongs to the engine/session. This Lua currently
+-- draws the correct panel shape and selected hero heading, then clearly marks the
+-- missing roster interaction rather than manufacturing fake multiplayer state.
+
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
@@ -21,18 +26,27 @@ end
 
 return {
     blocks_update_below = true,
+
     enter = function(self)
         self.root = render.create("modal")
         self.controls = controls.new()
         if not render.assets_available() then return end
+
         local panel = screen.panel
+
+        -- Four authored quadrants make the full party panel.
         panel_frame(self.root, panel, panel.frames[1], panel.x + offset_x, panel.y + offset_y)
         panel_frame(self.root, panel, panel.frames[2], panel.x + offset_x + 256, panel.y + offset_y)
         panel_frame(self.root, panel, panel.frames[3], panel.x + offset_x, panel.y + offset_y + 256)
         panel_frame(self.root, panel, panel.frames[4], panel.x + offset_x + 256, panel.y + offset_y + 256)
+
+        -- For now only show selected local character as a heading. A real party
+        -- roster should come from a network/session snapshot capability later.
         local hero = saves.selected()
         text.create(self.root, "panel_heading", hero and hero.name or "", screen.heading.x + offset_x, screen.heading.y + offset_y, screen.heading.width)
+
         text.create(self.root, "disabled", assert(locale.text("darkmagic.party.unavailable")), screen.unavailable.x + offset_x, screen.unavailable.y + offset_y, screen.unavailable.width)
+
         local close = screen.close
         local close_placement = {
             sheet=close.sheet, palette=close.palette, up_frame=close.up_frame, down_frame=close.down_frame,
@@ -43,6 +57,7 @@ return {
             tooltip=assert(locale.text(close.label)), on_activate=function() scenes.toggle_overlay("party", "full") end,
         })
     end,
+
     update = function(self)
         self.controls:update()
         if input.pressed("party") or input.pressed("cancel") then scenes.pop() end
