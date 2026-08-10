@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"testing"
-	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
@@ -12,6 +11,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
+	glua "github.com/yuin/gopher-lua"
 )
 
 func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
@@ -43,8 +43,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 
-	scripts := fstest.MapFS{
-		"assert.lua": &fstest.MapFile{Data: []byte(`
+	script := `
 local render = require("dm.render/v1")
 local escape_menu = require("darkmagic.ui.escape_menu")
 
@@ -111,9 +110,12 @@ expect(saved, true, "save/exit callback")
 menu.manager:set_focus("main:return_to_game")
 menu.manager:activate(menu.manager.focus)
 expect(closed, true, "return callback")
-`)},
-	}
-	if err := runtime.Execute(ctx, scripts, "assert.lua"); err != nil {
+`
+	scope := &modruntime.Scope{}
+	defer scope.Close()
+	if err := runtime.RunScoped(ctx, scope, func(state *glua.LState) error {
+		return state.DoString(script)
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
