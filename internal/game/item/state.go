@@ -15,8 +15,13 @@ type State struct {
 }
 
 func NewState(layout Layout, items []Item, placements map[string]Placement) (*State, error) {
-	if layout.InventoryWidth <= 0 || layout.InventoryHeight <= 0 || layout.BeltCapacity < 0 {
-		return nil, fmt.Errorf("item: inventory dimensions must be positive and belt capacity cannot be negative")
+	if layout.BeltCapacity < 0 {
+		return nil, fmt.Errorf("item: belt capacity cannot be negative")
+	}
+	for container, grid := range layout.Grids {
+		if !isGrid(container) || grid.Width <= 0 || grid.Height <= 0 {
+			return nil, fmt.Errorf("item: %q requires positive grid dimensions", container)
+		}
 	}
 	state := &State{layout: layout, items: make(map[string]Item, len(items)), placements: make(map[string]Placement, len(placements))}
 	for _, candidate := range items {
@@ -62,25 +67,34 @@ func (state *State) validate(candidate Item, destination Placement) error {
 	switch destination.Container {
 	case ContainerWorld:
 		return nil
-	case ContainerInventory:
-		return state.validateInventory(candidate, destination)
-	case ContainerEquipment:
+	case ContainerInventory, ContainerStash, ContainerCube:
+		return state.validateGrid(candidate, destination)
+	case ContainerEquipment, ContainerHireling:
 		return state.validateEquipment(candidate, destination)
 	case ContainerBelt:
 		return state.validateBelt(candidate, destination)
-	case ContainerCursor:
-		return state.requireEmpty(candidate.ID, ContainerCursor, "")
+	case ContainerHeld:
+		return state.requireEmpty(candidate.ID, ContainerHeld, "")
+	case ContainerVendor, ContainerQuest:
+		if destination.Slot == "" {
+			return fmt.Errorf("item: %s placement requires a service slot", destination.Container)
+		}
+		return state.requireEmpty(candidate.ID, destination.Container, destination.Slot)
 	default:
 		return fmt.Errorf("item: unsupported container %q", destination.Container)
 	}
 }
 
-func (state *State) validateInventory(candidate Item, destination Placement) error {
-	if destination.X < 0 || destination.Y < 0 || destination.X+candidate.Width > state.layout.InventoryWidth || destination.Y+candidate.Height > state.layout.InventoryHeight {
-		return fmt.Errorf("item: %q does not fit in inventory at %d,%d", candidate.ID, destination.X, destination.Y)
+func (state *State) validateGrid(candidate Item, destination Placement) error {
+	grid, configured := state.layout.Grids[destination.Container]
+	if !configured {
+		return fmt.Errorf("item: %s grid is not available", destination.Container)
+	}
+	if destination.X < 0 || destination.Y < 0 || destination.X+candidate.Width > grid.Width || destination.Y+candidate.Height > grid.Height {
+		return fmt.Errorf("item: %q does not fit in %s at %d,%d", candidate.ID, destination.Container, destination.X, destination.Y)
 	}
 	for id, placed := range state.placements {
-		if id == candidate.ID || placed.Container != ContainerInventory {
+		if id == candidate.ID || placed.Container != destination.Container {
 			continue
 		}
 		other := state.items[id]
@@ -89,6 +103,10 @@ func (state *State) validateInventory(candidate Item, destination Placement) err
 		}
 	}
 	return nil
+}
+
+func isGrid(container Container) bool {
+	return container == ContainerInventory || container == ContainerStash || container == ContainerCube
 }
 
 func (state *State) validateEquipment(candidate Item, destination Placement) error {

@@ -758,7 +758,13 @@ complete until its actions are driven by authoritative game state and commands.
 
 - [ ] M19.1: Define authoritative inventory, body, belt, and cursor-item state;
   admit deterministic pickup/place/move/equip/drop commands with validation,
-  replay coverage, and audited administrator equivalents.
+  replay coverage, and audited administrator equivalents. Treat the legacy
+  in-hand item as a persistent authoritative `held` container rather than UI
+  cursor state, so disconnect/reconnect and realm handoff preserve it. Model
+  backpack, stash, cube, player/hireling equipment, belt, vendor/quest-service
+  escrow, held, and world as explicit transfer locations. Keep animated
+  world-drop DC6 presentation separate from the front-facing inventory DC6 used
+  by panels and the held cursor.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

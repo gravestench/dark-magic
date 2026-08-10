@@ -8,9 +8,14 @@ type Container string
 const (
 	ContainerWorld     Container = "world"
 	ContainerInventory Container = "inventory"
+	ContainerStash     Container = "stash"
+	ContainerCube      Container = "cube"
 	ContainerEquipment Container = "equipment"
+	ContainerHireling  Container = "hireling"
 	ContainerBelt      Container = "belt"
-	ContainerCursor    Container = "cursor"
+	ContainerHeld      Container = "held"
+	ContainerVendor    Container = "vendor"
+	ContainerQuest     Container = "quest_service"
 )
 
 // Item contains only facts needed to decide where an item can go. Rich loot
@@ -22,6 +27,15 @@ type Item struct {
 	Height       int
 	BodySlots    []string
 	BeltEligible bool
+	Presentation Presentation
+}
+
+// Presentation keeps the two original views explicit. World drops may animate
+// a generic or item-specific DC6; panels and the held cursor use InventoryDC6.
+type Presentation struct {
+	WorldDC6      string
+	InventoryDC6  string
+	WorldAnimated bool
 }
 
 // Placement says where one item currently lives. X and Y are inventory cells;
@@ -34,8 +48,9 @@ type Placement struct {
 	BeltSlot  int
 }
 
+type Grid struct{ Width, Height int }
+
 type Layout struct {
-	InventoryWidth  int
-	InventoryHeight int
-	BeltCapacity    int
+	Grids        map[Container]Grid
+	BeltCapacity int
 }
