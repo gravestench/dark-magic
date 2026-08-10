@@ -303,15 +303,26 @@ function EscapeMenu:set_layout(layout_id)
     self.current_layout = layout_id
     self:hide_pents()
 
+    -- Make scope changes deterministic. Nothing is eligible while the manager
+    -- changes scope, so it cannot transiently select a row from the new page
+    -- before the authored default focus is applied below.
     for id, items in pairs(self.items) do
-        local visible = id == layout_id
-        for _, item in ipairs(items) do show_item(item, visible) end
-        set_visible(self.titles[id], visible)
+        for _, item in ipairs(items) do show_item(item, false) end
+        set_visible(self.titles[id], false)
+    end
+    self.manager:set_scope(layout_id)
+
+    local items = assert(self.items[layout_id], "missing escape-menu layout controls: " .. layout_id)
+    for _, item in ipairs(items) do show_item(item, true) end
+    set_visible(self.titles[layout_id], true)
+
+    local default = layout.default_focus and self.items_by_id[layout_id .. ":" .. layout.default_focus]
+    if default then
+        assert(self.manager:set_focus(default.control), "escape-menu default focus is not eligible: " .. default.control.id)
+    else
+        self.manager:move_focus(1)
     end
 
-    self.manager:set_scope(layout_id)
-    local default = layout.default_focus and self.items_by_id[layout_id .. ":" .. layout.default_focus]
-    if default then self.manager:set_focus(default.control) end
     local focused = self.manager.focus and self.items_by_id[self.manager.focus.id]
     if focused then self:place_pents(focused) end
 end
