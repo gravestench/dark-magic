@@ -31,7 +31,7 @@ func TestMoveValidatesEveryContainerWithoutPartialMutation(t *testing.T) {
 	}
 }
 
-func TestCursorAndBodySlotsAreExclusive(t *testing.T) {
+func TestHeldAndBodySlotsAreExclusive(t *testing.T) {
 	items := []Item{
 		{ID: "first", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring", "rring"}},
 		{ID: "second", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring", "rring"}},
@@ -80,5 +80,43 @@ func TestGridsAndServiceEscrowAreDistinctContainers(t *testing.T) {
 	}
 	if err := state.Move("second", Placement{Container: ContainerQuest, Slot: "socket_input"}); err == nil {
 		t.Fatal("occupied quest-service slot was accepted")
+	}
+}
+
+func TestPlaceHeldSwapsOneOverlapAndRejectsSeveral(t *testing.T) {
+	items := []Item{
+		{ID: "held", Code: "big", Width: 2, Height: 2},
+		{ID: "one", Code: "gem", Width: 1, Height: 1},
+		{ID: "two", Code: "gem", Width: 1, Height: 1},
+	}
+	state, err := NewState(Layout{Grids: map[Container]Grid{ContainerInventory: {Width: 4, Height: 4}}}, items, map[string]Placement{
+		"held": {Container: ContainerHeld},
+		"one":  {Container: ContainerInventory, X: 1, Y: 1},
+		"two":  {Container: ContainerInventory, X: 3, Y: 3},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	displaced, err := state.PlaceHeld("held", Placement{Container: ContainerInventory, X: 0, Y: 0})
+	if err != nil || displaced != "one" {
+		t.Fatalf("single-overlap swap = %q, %v", displaced, err)
+	}
+	if placement, _ := state.Placement("one"); placement.Container != ContainerHeld {
+		t.Fatalf("displaced item placement = %#v", placement)
+	}
+
+	// Put the large item back in hand, with two small items under its next target.
+	if err := state.Move("one", Placement{Container: ContainerInventory, X: 2, Y: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("held", Placement{Container: ContainerHeld}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := state.Placement("held")
+	if _, err := state.PlaceHeld("held", Placement{Container: ContainerInventory, X: 2, Y: 2}); err == nil {
+		t.Fatal("multiple-overlap placement was accepted")
+	}
+	if after, _ := state.Placement("held"); after != before {
+		t.Fatalf("rejected placement changed held item: %#v -> %#v", before, after)
 	}
 }

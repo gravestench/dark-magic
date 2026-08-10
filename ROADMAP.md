@@ -764,7 +764,11 @@ complete until its actions are driven by authoritative game state and commands.
   backpack, stash, cube, player/hireling equipment, belt, vendor/quest-service
   escrow, held, and world as explicit transfer locations. Keep animated
   world-drop DC6 presentation separate from the front-facing inventory DC6 used
-  by panels and the held cursor.
+  by panels and the held cursor. Backpack, stash, and cube placement validates
+  the complete item footprint: no overlap places normally, exactly one
+  overlapping item performs an atomic held-item swap, and multiple overlaps
+  reject without mutation. Vendor stock is non-spatial and does not use grid
+  overlap rules.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

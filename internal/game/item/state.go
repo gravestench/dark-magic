@@ -63,6 +63,40 @@ func (state *State) Placement(id string) (Placement, bool) {
 	return placement, found
 }
 
+// PlaceHeld applies Diablo II's grid-drop rule. An empty footprint accepts the
+// held item. A footprint touching exactly one item swaps that item into the
+// hand. Touching two or more items is ambiguous, so nothing moves.
+func (state *State) PlaceHeld(id string, destination Placement) (string, error) {
+	candidate, found := state.items[id]
+	if !found {
+		return "", fmt.Errorf("item: unknown item %q", id)
+	}
+	current, found := state.placements[id]
+	if !found || current.Container != ContainerHeld {
+		return "", fmt.Errorf("item: %q is not held", id)
+	}
+	if !isGrid(destination.Container) {
+		return "", fmt.Errorf("item: held grid placement requires inventory, stash, or cube")
+	}
+	if err := state.validateGridBounds(candidate, destination); err != nil {
+		return "", err
+	}
+	overlaps := state.gridOverlaps(candidate, destination)
+	if len(overlaps) > 1 {
+		return "", fmt.Errorf("item: %q overlaps multiple items", id)
+	}
+	if len(overlaps) == 0 {
+		state.placements[id] = destination
+		return "", nil
+	}
+	displaced := overlaps[0]
+	// Both assignments happen only after every check passes. Observers can never
+	// see two held items or a half-completed swap.
+	state.placements[id] = destination
+	state.placements[displaced] = Placement{Container: ContainerHeld}
+	return displaced, nil
+}
+
 func (state *State) validate(candidate Item, destination Placement) error {
 	switch destination.Container {
 	case ContainerWorld:
@@ -86,6 +120,17 @@ func (state *State) validate(candidate Item, destination Placement) error {
 }
 
 func (state *State) validateGrid(candidate Item, destination Placement) error {
+	if err := state.validateGridBounds(candidate, destination); err != nil {
+		return err
+	}
+	overlaps := state.gridOverlaps(candidate, destination)
+	if len(overlaps) > 0 {
+		return fmt.Errorf("item: %q overlaps %q", candidate.ID, overlaps[0])
+	}
+	return nil
+}
+
+func (state *State) validateGridBounds(candidate Item, destination Placement) error {
 	grid, configured := state.layout.Grids[destination.Container]
 	if !configured {
 		return fmt.Errorf("item: %s grid is not available", destination.Container)
@@ -93,16 +138,22 @@ func (state *State) validateGrid(candidate Item, destination Placement) error {
 	if destination.X < 0 || destination.Y < 0 || destination.X+candidate.Width > grid.Width || destination.Y+candidate.Height > grid.Height {
 		return fmt.Errorf("item: %q does not fit in %s at %d,%d", candidate.ID, destination.Container, destination.X, destination.Y)
 	}
+	return nil
+}
+
+func (state *State) gridOverlaps(candidate Item, destination Placement) []string {
+	overlaps := make([]string, 0, 2)
 	for id, placed := range state.placements {
 		if id == candidate.ID || placed.Container != destination.Container {
 			continue
 		}
 		other := state.items[id]
 		if rectanglesOverlap(destination.X, destination.Y, candidate.Width, candidate.Height, placed.X, placed.Y, other.Width, other.Height) {
-			return fmt.Errorf("item: %q overlaps %q", candidate.ID, id)
+			overlaps = append(overlaps, id)
 		}
 	}
-	return nil
+	slices.Sort(overlaps)
+	return overlaps
 }
 
 func isGrid(container Container) bool {
