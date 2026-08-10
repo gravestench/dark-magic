@@ -50,3 +50,30 @@ func TestManifestRejectsInvalidSupportedProfile(t *testing.T) {
 		t.Fatal("invalid supported profile was accepted")
 	}
 }
+
+func TestDataModuleAppliesSelectedPresentationProfile(t *testing.T) {
+	runtime := New()
+	source := fstest.MapFS{"manifest.json": &fstest.MapFile{Data: []byte(`{
+        "schema":"darkmagic.presentation/v1","version":1,"game_version":"test","language":"neutral","confidence":"verified",
+        "resolution":{"width":800,"height":600},"screens":{"world":{"hud":{"sheet":"800.dc6","x":400}}},
+        "supported_profiles":[
+          {"id":"wide","game_version":"test","language":"English","resolution":{"width":800,"height":600}},
+          {"id":"classic","game_version":"test","language":"English","resolution":{"width":640,"height":480},
+           "overrides":{"screens":{"world":{"hud":{"sheet":"640.dc6","x":320}}}}}
+        ]}`)}}
+	if err := runtime.RegisterModule(DataModule(source, "classic")); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
+local manifest=assert(require("dm.data/v1").load_manifest("manifest.json","darkmagic.presentation/v1"))
+assert(manifest.active_profile=="classic")
+assert(manifest.resolution.width==640 and manifest.resolution.height==480)
+assert(manifest.screens.world.hud.sheet=="640.dc6" and manifest.screens.world.hud.x==320)
+`)}}, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}

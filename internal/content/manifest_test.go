@@ -48,6 +48,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 				Width  int `json:"width"`
 				Height int `json:"height"`
 			} `json:"resolution"`
+			Screens []string `json:"screens"`
 		} `json:"supported_profiles"`
 		Resolution struct {
 			Width  int `json:"width"`
@@ -63,13 +64,16 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if manifest.Resolution.Width <= 0 || manifest.Resolution.Height <= 0 {
 		t.Fatalf("invalid presentation resolution: %#v", manifest.Resolution)
 	}
-	if len(manifest.Profiles) != 1 {
-		t.Fatalf("supported presentation profiles = %d, want 1", len(manifest.Profiles))
+	if len(manifest.Profiles) != 2 {
+		t.Fatalf("supported presentation profiles = %d, want 2", len(manifest.Profiles))
 	}
-	profile := manifest.Profiles[0]
-	if profile.ID != "lod-english-800x600" || profile.GameVersion != "diablo-ii-lod" || profile.Language != "English" ||
-		profile.Resolution.Width != manifest.Resolution.Width || profile.Resolution.Height != manifest.Resolution.Height {
-		t.Fatalf("unsupported or inconsistent presentation profile: %#v", profile)
+	desktop, gameplay := manifest.Profiles[0], manifest.Profiles[1]
+	if desktop.ID != "lod-english-800x600" || desktop.GameVersion != "diablo-ii-lod" || desktop.Language != "English" ||
+		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
+		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
+	}
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world"}) {
+		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
@@ -142,17 +146,32 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 		profile := rawProfile.(map[string]any)
 		name := profile["id"].(string)
 		t.Run(name, func(t *testing.T) {
-			resolution := profile["resolution"].(map[string]any)
+			selected, _, err := ApplyPresentationProfile(document, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resolution := selected["resolution"].(map[string]any)
 			width, height := resolution["width"].(float64), resolution["height"].(float64)
 			if width <= 0 || height <= 0 {
 				t.Fatalf("invalid resolution %.0fx%.0f", width, height)
 			}
-			validatePresentationGeometry(t, document["screens"], width, height, "screens")
-			layouts := document["layouts"].(map[string]any)
-			tiles := layouts["frontend_tiles"].(map[string]any)
-			if sumJSONNumbers(tiles["columns"].([]any)) != width || sumJSONNumbers(tiles["rows"].([]any)) != height {
-				t.Fatalf("frontend tile grid does not cover %.0fx%.0f", width, height)
+			screens := selected["screens"].(map[string]any)
+			validatedScreens := any(screens)
+			if scope, ok := profile["screens"].([]any); ok {
+				scoped := make(map[string]any, len(scope))
+				for _, value := range scope {
+					id := value.(string)
+					scoped[id] = screens[id]
+				}
+				validatedScreens = scoped
+			} else {
+				layouts := selected["layouts"].(map[string]any)
+				tiles := layouts["frontend_tiles"].(map[string]any)
+				if sumJSONNumbers(tiles["columns"].([]any)) != width || sumJSONNumbers(tiles["rows"].([]any)) != height {
+					t.Fatalf("frontend tile grid does not cover %.0fx%.0f", width, height)
+				}
 			}
+			validatePresentationGeometry(t, validatedScreens, width, height, "screens")
 			language := profile["language"].(string)
 			localeData, err := fs.ReadFile(Shim(), "locales/"+language+".json")
 			if err != nil {
@@ -162,7 +181,7 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 			if err := json.Unmarshal(localeData, &localized); err != nil {
 				t.Fatalf("decode %s locale: %v", language, err)
 			}
-			for key := range presentationLocaleKeys(document["screens"]) {
+			for key := range presentationLocaleKeys(validatedScreens) {
 				if localized[key] == "" {
 					t.Errorf("%s locale is missing presentation key %q", language, key)
 				}
@@ -243,8 +262,8 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 93 {
-		t.Fatalf("asset fixture contains %d entries, want 93", len(fixture.Assets))
+	if len(fixture.Assets) != 94 {
+		t.Fatalf("asset fixture contains %d entries, want 94", len(fixture.Assets))
 	}
 }
 
@@ -274,7 +293,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "a000cedf05d737a8f571b3349d93c1f35c38f90204b9ba2de2d0e82ae7135b35"
+	const auditedFingerprint = "3f7d62d3d944e800ec3a3661319a5ac18761f3a2323d9ac192196b7c375eb7d5"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

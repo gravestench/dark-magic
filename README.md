@@ -288,6 +288,12 @@ directory by combining `START_SCENE=character_select`,
 `CAPTURE_SCENES=character_select`, and `FIXTURE_CHARACTERS=10`. The equivalent
 development-only CLI option is `--fixture-characters 10`; its deterministic
 in-memory records exercise both columns, paging, and expansion/hardcore labels.
+The default presentation profile remains `lod-english-800x600`. The scoped
+`lod-english-640x480-gameplay` profile selects the original 640-wide in-game
+control panel and logical viewport for `game_world` development without claiming
+that every frontend screen has been converted. Select it with
+`--presentation-profile lod-english-640x480-gameplay` or
+`PRESENTATION_PROFILE=lod-english-640x480-gameplay make capture`.
 When starting directly in `game_world`, `inventory`, or `character`, the first fixture is
 selected automatically so asset-backed presentation can be captured in
 isolation.

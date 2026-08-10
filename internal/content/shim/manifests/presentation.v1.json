@@ -10,6 +10,42 @@
       "game_version": "diablo-ii-lod",
       "language": "English",
       "resolution": { "width": 800, "height": 600 }
+    },
+    {
+      "id": "lod-english-640x480-gameplay",
+      "game_version": "diablo-ii-lod",
+      "language": "English",
+      "resolution": { "width": 640, "height": 480 },
+      "screens": ["game_world"],
+      "overrides": {
+        "screens": {
+          "game_world": {
+            "map": {"screen_x":320,"screen_y":240},
+            "hero": {"screen_x":320,"screen_y":270},
+            "hud": {
+              "panel_sheet": "data/global/ui/PANEL/ctrlpnl7.dc6",
+              "panel_parts": [
+                {"frame":0,"x":0,"bottom":480},
+                {"frame":1,"x":165,"bottom":480},
+                {"frame":2,"x":293,"bottom":480},
+                {"frame":3,"x":421,"bottom":480},
+                {"frame":4,"x":523,"bottom":480}
+              ],
+              "globes": {
+                "health": {"x":30,"y":387,"overlap_x":28,"overlap_y":387},
+                "mana": {"x":530,"y":388,"overlap_x":531,"overlap_y":384}
+              },
+              "stamina": {"x":193,"y":452},
+              "experience": {"x":176,"y":441},
+              "skills": {"left":{"x":117,"y":430},"right":{"x":475,"y":430}},
+              "belt": {"x":262,"y":441},
+              "run": {"x":175,"y":450},
+              "menu": {"x":312,"y":442},
+              "minipanel": {"x":245,"y":405,"button_x":248,"button_y":408}
+            }
+          }
+        }
+      }
     }
   ],
   "provenance": "community research verified against user-supplied archives",

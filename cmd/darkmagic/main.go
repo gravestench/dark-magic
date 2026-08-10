@@ -70,6 +70,7 @@ func main() {
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
 	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
+	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
 	flag.Parse()
 	logLevel, err := parseLogLevel(*logLevelFlag)
 	if err != nil {
@@ -118,7 +119,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, shellLogs); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, shellLogs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -135,7 +136,7 @@ func parseLogLevel(value string) (slog.Level, error) {
 	return logging.ParseLevel(value)
 }
 
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit string, shellLogs *shell.LogBuffer) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, shellLogs *shell.LogBuffer) error {
 	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 	shellSettingsPath, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
@@ -160,7 +161,13 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	}
 	renderer := &raylibRenderer.Service{}
 	renderer.SetLogger(slog.Default().With("component", "renderer"))
+	presentationProfile, err := content.ResolvePresentationProfile(contentFS, presentationProfileID)
+	if err != nil {
+		return err
+	}
 	rendererConfig := raylibRenderer.DefaultConfig()
+	rendererConfig.Resolution.Width = presentationProfile.Width
+	rendererConfig.Resolution.Height = presentationProfile.Height
 	rendererConfig.Resolution.Fit = viewportFit
 	renderer.Configure(rendererConfig)
 	if err := renderer.ConfigurePaletteQuantization(contentFS, outputPalette); err != nil {
@@ -278,7 +285,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	if err := scripts.RegisterModule(modruntime.VFSModule(contentFS)); err != nil {
 		return err
 	}
-	if err := scripts.RegisterModule(modruntime.DataModule(contentFS)); err != nil {
+	if err := scripts.RegisterModule(modruntime.DataModule(contentFS, presentationProfile.ID)); err != nil {
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.WorldModule(contentFS, worldObjectResolver)); err != nil {
@@ -395,6 +402,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		frameContext := scenes.FrameContext(context.Background())
 		pprof.SetGoroutineLabels(frameContext)
 		inputFrame := inputService.Snapshot()
+		inputFrame.WorldSplit = float64(presentationProfile.Width) / 2
 		owner := inputstate.FocusOwner{Domain: inputstate.FocusNone}
 		if focused, ok := navigator.Focused(); ok {
 			owner = inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: focused}

@@ -37,9 +37,10 @@ CAPTURE_DIR ?= ./captures/frontend
 CAPTURE_SCENES ?= loading,title
 START_SCENE ?=
 FIXTURE_CHARACTERS ?= 0
+PRESENTATION_PROFILE ?=
 
 capture:
-	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --start-scene "$(START_SCENE)" --fixture-characters "$(FIXTURE_CHARACTERS)"
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --start-scene "$(START_SCENE)" --fixture-characters "$(FIXTURE_CHARACTERS)" --presentation-profile "$(PRESENTATION_PROFILE)"
 
 CAPTURE_ALL_DIR ?= ./captures/all-scenes
 CAPTURE_ALL_FIXTURE_CHARACTERS ?= 10

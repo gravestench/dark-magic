@@ -24,13 +24,14 @@ const (
 
 // Frame is an immutable input snapshot published by a native backend.
 type Frame struct {
-	Actions   map[string]ActionState
-	Text      string
-	CursorX   float64
-	CursorY   float64
-	Owner     FocusOwner
-	Gameplay  bool
-	WorldView string
+	Actions    map[string]ActionState
+	Text       string
+	CursorX    float64
+	CursorY    float64
+	Owner      FocusOwner
+	Gameplay   bool
+	WorldView  string
+	WorldSplit float64
 }
 
 // Route assigns one focus owner. A capturing debug surface receives the raw
@@ -79,7 +80,7 @@ func (s *Store) Snapshot() Frame {
 		return frame
 	}
 	if s.gameplayOnly.Load() > 0 {
-		frame.Actions = gameplayActions(frame.Actions, frame.CursorX, frame.WorldView, s.allPointer.Load() > 0)
+		frame.Actions = gameplayActions(frame.Actions, frame.CursorX, frame.WorldView, frame.WorldSplit, s.allPointer.Load() > 0)
 		frame.Text = ""
 		return frame
 	}
@@ -198,10 +199,10 @@ func isGameplayAction(name string) bool {
 	}
 }
 
-func gameplayActions(actions map[string]ActionState, cursorX float64, worldView string, allPointer bool) map[string]ActionState {
+func gameplayActions(actions map[string]ActionState, cursorX float64, worldView string, worldSplit float64, allPointer bool) map[string]ActionState {
 	result := make(map[string]ActionState)
 	for name, state := range actions {
-		if isGameplayAction(name) && (name != "pointer_primary" || allPointer || pointerInView(cursorX, worldView)) {
+		if isGameplayAction(name) && (name != "pointer_primary" || allPointer || pointerInView(cursorX, worldView, worldSplit)) {
 			result[name] = state
 		}
 	}
@@ -216,16 +217,21 @@ func pointerActions(actions map[string]ActionState) map[string]ActionState {
 	return result
 }
 
-func pointerInWorld(frame Frame) bool { return pointerInView(frame.CursorX, frame.WorldView) }
+func pointerInWorld(frame Frame) bool {
+	return pointerInView(frame.CursorX, frame.WorldView, frame.WorldSplit)
+}
 
-func pointerInView(x float64, view string) bool {
+func pointerInView(x float64, view string, split float64) bool {
+	if split <= 0 {
+		split = 400
+	}
 	switch view {
 	case "none":
 		return false
 	case "left":
-		return x < 400
+		return x < split
 	case "right":
-		return x >= 400
+		return x >= split
 	default:
 		return true
 	}
