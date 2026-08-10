@@ -791,8 +791,12 @@ complete until its actions are driven by authoritative game state and commands.
   now exports deterministic, checksummed version-1 archives and restores them
   atomically through the ordinary placement validators, preserving held items,
   belt contents, escrow, and the active alternate-weapon set across reconnect
-  or realm handoff. Durable Diablo II save integration and service presentation
-  and transaction rules keep this checkpoint open.
+  or realm handoff. Vendor stock now uses authority-owned category/page grids:
+  replayable buy/sell intents cannot provide coordinates, and the server sorts,
+  packs, pages, and compacts real item footprints using the recovered Riiablo
+  `VendorGrid` traversal order. Durable Diablo II save integration, NPC price
+  and player-gold ledger rules, and quest-service transactions/presentation keep
+  this checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.
 - [ ] M19.3: Add versioned save parsing/writing and non-destructive round trips for

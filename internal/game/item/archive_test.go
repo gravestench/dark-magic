@@ -12,7 +12,7 @@ import (
 func TestArchiveRoundTripPreservesEveryContainerAndActiveWeapons(t *testing.T) {
 	layout := Layout{Grids: map[Container]Grid{
 		ContainerInventory: {Width: 10, Height: 4}, ContainerStash: {Width: 6, Height: 8}, ContainerCube: {Width: 3, Height: 4},
-	}, BeltCapacity: 4, ActiveWeaponSet: 1}
+	}, BeltCapacity: 4, ActiveWeaponSet: 1, VendorGrid: Grid{Width: 10, Height: 10}}
 	items := []Item{
 		{ID: "inventory", Code: "box", Width: 1, Height: 1},
 		{ID: "stash", Code: "box", Width: 1, Height: 1},
@@ -31,7 +31,7 @@ func TestArchiveRoundTripPreservesEveryContainerAndActiveWeapons(t *testing.T) {
 		"cube": {Container: ContainerCube, X: 2, Y: 3}, "primary": {Container: ContainerEquipment, Slot: "rarm", WeaponSet: 0},
 		"alternate": {Container: ContainerEquipment, Slot: "rarm", WeaponSet: 1}, "hireling": {Container: ContainerHireling, Slot: "head"},
 		"belt": {Container: ContainerBelt, BeltSlot: 3}, "held": {Container: ContainerHeld},
-		"quest": {Container: ContainerQuest, Slot: "socket_input"}, "vendor": {Container: ContainerVendor, Slot: "weapons/page:0/index:0"},
+		"quest": {Container: ContainerQuest, Slot: "socket_input"}, "vendor": {Container: ContainerVendor, Slot: "weapons", Page: 2, X: 4, Y: 5},
 		"world": {Container: ContainerWorld},
 	}
 	state, err := NewState(layout, items, placements)

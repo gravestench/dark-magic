@@ -40,3 +40,21 @@ func TestControllerPreservesMoveAndWeaponSelectionOrder(t *testing.T) {
 		t.Fatalf("sequences = %d, %d", commands[0].Sequence, commands[1].Sequence)
 	}
 }
+
+func TestControllerQueuesVendorTransactionsInOrder(t *testing.T) {
+	controller := &Controller{}
+	if err := controller.SellHeld("held", "weapons"); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.BuyToHeld("stock"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewSource(controller, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands := source.Commands(3)
+	if len(commands) != 2 || commands[0].Kind != VendorSellCommand || commands[1].Kind != VendorBuyCommand {
+		t.Fatalf("commands = %#v", commands)
+	}
+}

@@ -185,7 +185,7 @@ func (app *application) buildItemAuthority() error {
 		gameitem.ContainerInventory: {Width: 10, Height: 4},
 		gameitem.ContainerStash:     {Width: 6, Height: 8},
 		gameitem.ContainerCube:      {Width: 3, Height: 4},
-	}, BeltCapacity: 4}
+	}, BeltCapacity: 4, VendorGrid: gameitem.Grid{Width: 10, Height: 10}}
 	items, placements := app.developmentItems()
 	state, err := gameitem.NewState(layout, items, placements)
 	if err != nil {

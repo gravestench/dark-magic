@@ -47,6 +47,7 @@ type Placement struct {
 	Slot      string
 	BeltSlot  int
 	WeaponSet int
+	Page      int
 }
 
 type Grid struct{ Width, Height int }
@@ -55,4 +56,5 @@ type Layout struct {
 	Grids           map[Container]Grid
 	BeltCapacity    int
 	ActiveWeaponSet int
+	VendorGrid      Grid
 }

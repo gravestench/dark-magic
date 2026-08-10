@@ -21,6 +21,10 @@ func NewState(layout Layout, items []Item, placements map[string]Placement) (*St
 	if !validWeaponSet(layout.ActiveWeaponSet) {
 		return nil, fmt.Errorf("item: active weapon set must be 0 or 1")
 	}
+	if layout.VendorGrid.Width < 0 || layout.VendorGrid.Height < 0 ||
+		(layout.VendorGrid.Width == 0) != (layout.VendorGrid.Height == 0) {
+		return nil, fmt.Errorf("item: vendor grid dimensions must both be positive or both be zero")
+	}
 	for container, grid := range layout.Grids {
 		if !isGrid(container) || grid.Width <= 0 || grid.Height <= 0 {
 			return nil, fmt.Errorf("item: %q requires positive grid dimensions", container)
@@ -176,7 +180,9 @@ func (state *State) validate(candidate Item, destination Placement) error {
 		return state.validateBelt(candidate, destination)
 	case ContainerHeld:
 		return state.requireEmpty(candidate.ID, ContainerHeld, "")
-	case ContainerVendor, ContainerQuest:
+	case ContainerVendor:
+		return state.validateVendor(candidate, destination)
+	case ContainerQuest:
 		if err := validateServiceSlot(destination); err != nil {
 			return err
 		}
@@ -184,6 +190,32 @@ func (state *State) validate(candidate Item, destination Placement) error {
 	default:
 		return fmt.Errorf("item: unsupported container %q", destination.Container)
 	}
+}
+
+func (state *State) validateVendor(candidate Item, destination Placement) error {
+	if strings.TrimSpace(destination.Slot) == "" {
+		return fmt.Errorf("item: vendor placement requires a category")
+	}
+	if destination.Page < 0 {
+		return fmt.Errorf("item: vendor page cannot be negative")
+	}
+	grid := state.layout.VendorGrid
+	if grid.Width <= 0 || grid.Height <= 0 {
+		return fmt.Errorf("item: vendor grid is not available")
+	}
+	if destination.X < 0 || destination.Y < 0 || destination.X+candidate.Width > grid.Width || destination.Y+candidate.Height > grid.Height {
+		return fmt.Errorf("item: %q does not fit vendor category %q page %d at %d,%d", candidate.ID, destination.Slot, destination.Page, destination.X, destination.Y)
+	}
+	for id, placed := range state.placements {
+		if id == candidate.ID || placed.Container != ContainerVendor || placed.Slot != destination.Slot || placed.Page != destination.Page {
+			continue
+		}
+		other := state.items[id]
+		if rectanglesOverlap(destination.X, destination.Y, candidate.Width, candidate.Height, placed.X, placed.Y, other.Width, other.Height) {
+			return fmt.Errorf("item: %q overlaps vendor item %q", candidate.ID, id)
+		}
+	}
+	return nil
 }
 
 func (state *State) validateGrid(candidate Item, destination Placement) error {

@@ -34,12 +34,14 @@ assert(snapshot.belt_capacity==4 and snapshot.active_weapon_set==0)
 assert(#snapshot.items==1 and snapshot.items[1].container=="inventory" and snapshot.items[1].weapon_set==0)
 items.move("potion", {container="held"})
 items.select_weapon_set(1)
+items.sell_held("potion", "misc")
+items.buy_to_held("stock")
 `)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	source, _ := gameitem.NewSource(controller, "alice")
-	if commands := source.Commands(1); len(commands) != 2 || commands[0].Kind != gameitem.MoveCommand || commands[1].Kind != gameitem.WeaponSetCommand {
+	if commands := source.Commands(1); len(commands) != 4 || commands[0].Kind != gameitem.MoveCommand || commands[1].Kind != gameitem.WeaponSetCommand || commands[2].Kind != gameitem.VendorSellCommand || commands[3].Kind != gameitem.VendorBuyCommand {
 		t.Fatalf("queued commands = %#v", commands)
 	}
 }
