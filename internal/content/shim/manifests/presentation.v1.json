@@ -470,16 +470,16 @@
       "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","origin_x_correction":1,"origin_y_correction":64,"frames":[4,5,7,6]},
       "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":419,"y":449,"width":32,"height":32,"label":"darkmagic.inventory.close"},
       "slots": [
-        {"id":"head","prefix":"head","label":"darkmagic.inventory.slot.head"},
-        {"id":"neck","prefix":"neck","label":"darkmagic.inventory.slot.neck"},
-        {"id":"torso","prefix":"torso","label":"darkmagic.inventory.slot.torso"},
-        {"id":"right_arm","prefix":"rArm","label":"darkmagic.inventory.slot.right_arm"},
-        {"id":"left_arm","prefix":"lArm","label":"darkmagic.inventory.slot.left_arm"},
-        {"id":"right_hand","prefix":"rHand","label":"darkmagic.inventory.slot.right_hand"},
-        {"id":"left_hand","prefix":"lHand","label":"darkmagic.inventory.slot.left_hand"},
-        {"id":"belt","prefix":"belt","label":"darkmagic.inventory.slot.belt"},
-        {"id":"feet","prefix":"feet","label":"darkmagic.inventory.slot.feet"},
-        {"id":"gloves","prefix":"gloves","label":"darkmagic.inventory.slot.gloves"}
+        {"id":"head","prefix":"head","body_loc":"head","label":"darkmagic.inventory.slot.head"},
+        {"id":"neck","prefix":"neck","body_loc":"neck","label":"darkmagic.inventory.slot.neck"},
+        {"id":"torso","prefix":"torso","body_loc":"tors","label":"darkmagic.inventory.slot.torso"},
+        {"id":"right_arm","prefix":"rArm","body_loc":"rarm","label":"darkmagic.inventory.slot.right_arm"},
+        {"id":"left_arm","prefix":"lArm","body_loc":"larm","label":"darkmagic.inventory.slot.left_arm"},
+        {"id":"right_hand","prefix":"rHand","body_loc":"rrin","label":"darkmagic.inventory.slot.right_hand"},
+        {"id":"left_hand","prefix":"lHand","body_loc":"lrin","label":"darkmagic.inventory.slot.left_hand"},
+        {"id":"belt","prefix":"belt","body_loc":"belt","label":"darkmagic.inventory.slot.belt"},
+        {"id":"feet","prefix":"feet","body_loc":"feet","label":"darkmagic.inventory.slot.feet"},
+        {"id":"gloves","prefix":"gloves","body_loc":"glov","label":"darkmagic.inventory.slot.gloves"}
       ]
     },
     "character": {

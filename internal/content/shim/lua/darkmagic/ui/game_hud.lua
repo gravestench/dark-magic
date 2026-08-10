@@ -3,6 +3,7 @@
 -- The manifest owns asset/frame/placement facts. This module owns only the
 -- disposable render-node lifecycle and value-driven clipping behavior.
 local render = require("dm.render/v1")
+local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
 local locale = require("dm.locale/v1")
 local controls = require("darkmagic.ui.controls")
@@ -10,6 +11,65 @@ local tooltip = require("darkmagic.ui.tooltip")
 local skill_selector = require("darkmagic.ui.skill_selector")
 
 local M = {}
+
+local function held_item(snapshot)
+    if snapshot == nil then return nil end
+    for _, item in ipairs(snapshot.items) do
+        if item.container == "held" then return item end
+    end
+end
+
+local function belt_item(snapshot, slot)
+    if snapshot == nil then return nil end
+    for _, item in ipairs(snapshot.items) do
+        if item.container == "belt" and item.belt_slot == slot then return item end
+    end
+end
+
+local function activate_belt_slot(hud, slot)
+    local held = held_item(hud.item_snapshot)
+    if held ~= nil then
+        hud.commands.move_item(held.id, { container = "belt", belt_slot = slot }, true)
+        return
+    end
+    local item = belt_item(hud.item_snapshot, slot)
+    if item ~= nil then hud.commands.move_item(item.id, { container = "held" }) end
+end
+
+local function refresh_hud_items(hud)
+    if hud.commands.item_snapshot == nil then return end
+    local snapshot = assert(hud.commands.item_snapshot())
+    local belt = hud.definition.belt
+    local cursor_x, cursor_y = input.cursor()
+    hud.item_snapshot = snapshot
+    for _, item in ipairs(snapshot.items) do
+        local drawing = hud.item_nodes[item.id] or {}
+        hud.item_nodes[item.id] = drawing
+        if item.inventory_dc6 ~= "" and item.container == "belt" and drawing.belt_node == nil then
+            drawing.belt_node = render.create("hud", hud.root)
+            drawing.width, drawing.height = drawing.belt_node:set_dc6(item.inventory_dc6, hud.item_palette, 0, 0)
+        end
+        if item.inventory_dc6 ~= "" and item.container == "held" and drawing.held_node == nil then
+            drawing.held_node = render.create("cursor")
+            drawing.width, drawing.height = drawing.held_node:set_dc6(item.inventory_dc6, hud.item_palette, 0, 0)
+            drawing.held_node:set_z(999)
+        end
+        if drawing.belt_node ~= nil then drawing.belt_node:set_visible(item.container == "belt") end
+        if drawing.held_node ~= nil then drawing.held_node:set_visible(item.container == "held") end
+        if drawing.width ~= nil then
+            if item.container == "belt" then
+                local column = item.belt_slot % belt.columns
+                local row = math.floor(item.belt_slot / belt.columns)
+                drawing.belt_node:set_position(
+                    belt.x + column * belt.cell_width + belt.cell_width / 2,
+                    belt.y - row * belt.cell_height + belt.cell_height / 2
+                )
+            elseif item.container == "held" then
+                drawing.held_node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+            end
+        end
+    end
+end
 
 local function dc6_at(root, sheet, palette, frame, x, y)
     local node = render.create("hud", root)
@@ -69,8 +129,9 @@ end
 
 function M.create(root, definition, palettes, commands)
     commands = commands or {}
-    local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false, definition = definition }
+    local hud = { root = render.create("hud", root), controls = controls.new(), running = false, menu_open = false, definition = definition, commands = commands, item_nodes = {} }
     local palette = palettes[definition.palette]
+    hud.item_palette = palettes.units
 
     for _, part in ipairs(definition.panel_parts) do
         dc6_bottom(hud.root, definition.panel_sheet, palette, part.frame, part.x, part.bottom)
@@ -129,6 +190,25 @@ function M.create(root, definition, palettes, commands)
         end,
     })
     hud.belt.refresh = refresh_belt
+    if commands.item_snapshot and commands.move_item then
+        -- The equipped belt currently exposes four bottom-row cells. Wider
+        -- capacities already exist in authority; expanded-row interaction will
+        -- grow from these same controls when belt equipment changes capacity.
+        for slot = 0, belt.columns - 1 do
+            local belt_slot = slot
+            hud.controls:add({
+                id = "belt_" .. slot,
+                label = "Belt slot " .. (slot + 1),
+                x = belt.x + slot * belt.cell_width,
+                y = belt.y,
+                width = belt.cell_width,
+                height = belt.cell_height,
+                focusable = false,
+                on_activate = function() activate_belt_slot(hud, belt_slot) end,
+            })
+        end
+        refresh_hud_items(hud)
+    end
 
     local skills = definition.skills
     hud.skills = {}
@@ -311,7 +391,17 @@ end
 
 function M.update(hud, stats)
     M.snapshot(hud, stats)
+    refresh_hud_items(hud)
     hud.controls:update()
+end
+
+function M.set_item_cursor_visible(hud, visible)
+    local held = held_item(hud.item_snapshot)
+    for id, drawing in pairs(hud.item_nodes) do
+        if drawing.held_node ~= nil then
+            drawing.held_node:set_visible(visible == true and held ~= nil and held.id == id)
+        end
+    end
 end
 
 return M
