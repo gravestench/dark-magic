@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -77,6 +78,18 @@ func TestSessionRetriesBlankFramebuffer(t *testing.T) {
 	}
 	if !session.Complete() {
 		t.Fatal("session did not complete after capturing every requested scene")
+	}
+}
+
+func TestSessionCloseRejectsIncompleteCapture(t *testing.T) {
+	session, err := New(t.TempDir(), "death,title", 1, &fakeScreenshotter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Observe([]string{"death"})
+	err = session.Close()
+	if err == nil || !strings.Contains(err.Error(), "missing scenes: title") {
+		t.Fatalf("Close error = %v, want missing title", err)
 	}
 }
 

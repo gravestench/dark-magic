@@ -12,6 +12,7 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -128,6 +129,16 @@ func (s *Session) Close() error {
 	}
 	if s.err != nil {
 		return fmt.Errorf("capture: %w", s.err)
+	}
+	if len(s.captured) != len(s.wanted) {
+		missing := make([]string, 0, len(s.wanted)-len(s.captured))
+		for scene := range s.wanted {
+			if !s.captured[scene] {
+				missing = append(missing, scene)
+			}
+		}
+		slices.Sort(missing)
+		return fmt.Errorf("capture: incomplete; missing scenes: %s", strings.Join(missing, ","))
 	}
 	return err
 }

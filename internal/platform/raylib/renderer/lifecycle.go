@@ -28,11 +28,14 @@ func (s *Service) Start(context.Context) error {
 		s.rootNode.Disable()
 	}
 	rl.SetTraceLogCallback(func(level int, message string) {
-		if level >= 4 {
+		switch {
+		case level >= int(rl.LogError):
 			s.logger.Error(message)
-			return
+		case level == int(rl.LogWarning):
+			s.logger.Warn(message)
+		default:
+			s.logger.Debug(message)
 		}
-		s.logger.Debug(message)
 	})
 	if s.config.Window.Resizable {
 		rl.SetConfigFlags(rl.FlagWindowResizable)
@@ -41,6 +44,10 @@ func (s *Service) Start(context.Context) error {
 	iconData := branding.WindowIconPNG()
 	icon := rl.LoadImageFromMemory(".png", iconData, int32(len(iconData)))
 	if icon.Width > 0 && icon.Height > 0 {
+		// GLFW accepts window icons only as RGBA pixels. The embedded PNG is
+		// intentionally stored as RGB; convert the decoded image before handing
+		// it across the native boundary.
+		rl.ImageFormat(icon, rl.UncompressedR8g8b8a8)
 		rl.SetWindowIcon(*icon)
 		rl.UnloadImage(icon)
 	} else {
