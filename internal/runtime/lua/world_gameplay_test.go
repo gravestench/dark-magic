@@ -109,6 +109,13 @@ hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_s
 		if hud.RawGetString("left_skill") != lua.LNumber(0) || hud.RawGetString("right_skill") != lua.LNumber(0) {
 			t.Fatalf("HUD skills = %s/%s, want 0/0", hud.RawGetString("left_skill"), hud.RawGetString("right_skill"))
 		}
+		if hud.RawGetString("belt_capacity") != lua.LNumber(4) {
+			t.Fatalf("HUD belt capacity = %s, want 4", hud.RawGetString("belt_capacity"))
+		}
+		beltSlots := hud.RawGetString("belt_slots").(*lua.LTable)
+		if beltSlots.Len() != 16 || beltSlots.RawGetInt(16) != lua.LString("") {
+			t.Fatalf("HUD belt slots = len %d, slot 16 %s", beltSlots.Len(), beltSlots.RawGetInt(16))
+		}
 		return nil
 	}); err != nil {
 		t.Fatal(err)

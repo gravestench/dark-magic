@@ -673,6 +673,11 @@ complete until its actions are driven by authoritative game state and commands.
   checkpoint can be marked complete. Riiablo's mobile controls were explicitly
   excluded from the fixed 800x600 profile; the local AbyssEngine checkout has
   no corresponding skill-well implementation, and OpenD2 is not present.
+  The belt now has an authoritative 16-slot identity component with a four-slot
+  no-belt baseline. Its retained desktop control uses the original 4x4, 31px
+  geometry and `ctrlpnl_popbelt.DC6`, revealing only capacity granted by the
+  equipped belt. Item entities, cursor transfers, and consumption remain M19
+  dependencies and are not simulated with presentation-owned placeholders.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

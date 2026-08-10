@@ -243,8 +243,8 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 90 {
-		t.Fatalf("asset fixture contains %d entries, want 90", len(fixture.Assets))
+	if len(fixture.Assets) != 91 {
+		t.Fatalf("asset fixture contains %d entries, want 91", len(fixture.Assets))
 	}
 }
 
@@ -274,7 +274,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	const auditedFingerprint = "74d502961c3f012a181ac512b62c5aa995d847e503097dd77866c847fe859404"
+	const auditedFingerprint = "c94a748c2b5f984afc63797fb54d48166f6d803d6ba18537b7acbe843c771960"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
@@ -379,6 +379,15 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 					Skills struct {
 						Sheet string `json:"sheet"`
 					} `json:"skills"`
+					Belt struct {
+						Sheet      string `json:"sheet"`
+						X          int    `json:"x"`
+						Y          int    `json:"y"`
+						Columns    int    `json:"columns"`
+						Rows       int    `json:"rows"`
+						CellWidth  int    `json:"cell_width"`
+						CellHeight int    `json:"cell_height"`
+					} `json:"belt"`
 					Run struct {
 						Sheet     string `json:"sheet"`
 						WalkFrame int    `json:"walk_frame"`
@@ -412,6 +421,9 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	}
 	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
 		t.Fatalf("incomplete HUD asset facts: %#v", hud)
+	}
+	if hud.Belt.Sheet == "" || hud.Belt.X != 342 || hud.Belt.Y != 561 || hud.Belt.Columns != 4 || hud.Belt.Rows != 4 || hud.Belt.CellWidth != 31 || hud.Belt.CellHeight != 31 {
+		t.Fatalf("unexpected desktop belt facts: %#v", hud.Belt)
 	}
 	if hud.Run.Sheet == "" || hud.Menu.Sheet == "" || hud.Minipanel.Sheet == "" || hud.Minipanel.ButtonSheet == "" {
 		t.Fatalf("incomplete HUD control assets: %#v", hud)
