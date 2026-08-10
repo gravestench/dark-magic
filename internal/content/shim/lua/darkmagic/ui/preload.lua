@@ -83,10 +83,10 @@ end
 -- this more than once returns the original job instead of scheduling copies.
 function preload.frontend()
     if not render.assets_available() then return nil end
-    if frontend_job then
-        local status = render.preload_status(frontend_job)
-        if status and not status.done then return frontend_job end
-    end
+    -- This immutable bundle is valid for the process lifetime. Requeueing it
+    -- from main_menu after the startup gate completed needlessly revisited
+    -- every decoded asset and every native texture cache entry.
+    if frontend_job then return frontend_job end
     local requests, seen = {}, {}
     local title = manifest.screens.title
     local menu = manifest.screens.main_menu
