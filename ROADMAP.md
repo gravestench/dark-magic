@@ -1208,7 +1208,8 @@ acceptance criteria are in
   existing DCC/DC6/COF/PL2 research and historical Blender 2.80 addon, publish
   versioned semantic schemas, and make `dm-asset validate/inspect --json` useful.
 - [ ] **M32 — glTF import and golden poses:** import a redistributable humanoid
-  and non-humanoid GLB without making glTF the runtime creature abstraction.
+  and non-humanoid GLB, including a measured Dust3D-authored fixture, without
+  making glTF or any authoring tool the runtime creature abstraction.
 - [ ] **M33 — creature laboratory and reference 3D playback:** load, play, pause,
   scrub, inspect bones, and visualize bounds/sockets through a backend-neutral
   creature runtime with an initial Raylib adapter.

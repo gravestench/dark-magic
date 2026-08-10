@@ -43,7 +43,7 @@ M31-M38 form the near-term proof. M39-M43 must not delay that observable slice.
 | --- | --- |
 | Creature, skeleton, animation, component, socket, and event semantics | Dark Magic engine/domain packages |
 | Import, validation, build graph, rendering, quantization, packaging | Dark Magic asset tooling |
-| Artist UI, scene annotations, previews, export orchestration | Blender addon |
+| Artist UI, scene annotations, previews, export orchestration | Replaceable authoring frontends (initially Blender and evaluated Dust3D workflows) |
 | DCC/DC6/COF/PL2 binary mechanics | Independent codec repositories |
 | Skinning, drawing, shaders, texture storage | Renderer backend adapters |
 | Logical IDs, variants, overrides, package layering | Mod/content layer |
@@ -59,7 +59,7 @@ legacy decoding boundary; `internal/presentation/render` and
 ## Authoring and runtime diagrams
 
 ```text
-                 Blender
+          Blender or Dust3D
                     |
                  glTF/GLB + companion manifests
                     |
@@ -164,7 +164,10 @@ sprite/quantization nodes rather than directly from Blender scene state.
 - **Packages / tools / interfaces:** `internal/assets/gltf`; extend `dm-asset
   inspect|validate|build`; define importer and normalized import-result contracts.
 - **Assets:** one redistributable humanoid with idle/walk/attack and one
-  non-humanoid with a materially different hierarchy.
+  non-humanoid with a materially different hierarchy. Prototype at least one
+  Dust3D-authored GLB so its generated topology, skin weights, bone naming,
+  procedural clips, materials, axes, and units are measured by the same importer
+  contract rather than accepted by visual inspection alone.
 - **Tests / acceptance / visible result:** assert hierarchy, bind pose, weights,
   clip durations, material references, bounds, and selected bone transforms at
   fixed timestamps. Both GLBs import headlessly with deterministic structural
@@ -249,7 +252,8 @@ sprite/quantization nodes rather than directly from Blender scene state.
   select the offending Blender object/bone/field.
 - **Codec work:** none; export buttons may call later shared exporters.
 - **Risks / deferred:** renderer parity and multiple Blender versions are tested,
-  not assumed; no embedded Pillow palettes or private DC6 encoder.
+  not assumed; no embedded Pillow palettes or private DC6 encoder. Dust3D remains
+  a separate optional authoring frontend and is not coupled to this addon.
 
 ## M37: Materials and palette parameters
 
@@ -456,6 +460,40 @@ property changes destroy/recreate the rig (and can delete misplaced objects),
 and hard-codes palette index 0 as transparent. Those are migration lessons, not
 contracts. The replacement addon should annotate and preview; shared tooling
 should validate, compile, quantize, and encode.
+
+## Dust3D authoring evaluation
+
+[`huxingyi/dust3d`](https://github.com/huxingyi/dust3d) is a promising MIT-licensed
+low-poly authoring frontend for Dark Magic's original creature assets. It offers
+real-time sketch-to-mesh construction, front/side background-image references,
+automatic UV unwrapping, bone assignment and skinning assistance, procedural
+animation, and GLB/FBX export. This substantially lowers the cost of producing
+stylized humanoid and non-humanoid prototypes for M32-M38.
+
+Dust3D is not treated as an automatic image-to-3D authority. Its documented
+reference-image workflow is artist-guided: an artist loads front/side images and
+traces structural nodes and parts. That is useful and controllable, but generated
+geometry, rigs, skin weights, clips, materials, coordinate conventions, and
+licenses still require validation and provenance.
+
+The initial integration is deliberately file-based:
+
+1. Author and retain the native `.ds3` file plus source-image provenance outside
+   runtime packages.
+2. Export GLB as the preferred interchange artifact; use FBX only as a diagnostic
+   fallback.
+3. Run the same `dm-asset inspect|validate|build` path used for Blender exports.
+4. Record Dust3D version, source hash, export settings, and importer diagnostics
+   as build inputs.
+5. Compare fixed-time golden poses and deterministic eight-direction sprite
+   output against a Blender-authored fixture before admitting Dust3D as a tested
+   production frontend.
+
+Do not embed or fork Dust3D into the engine, depend on `.ds3` at runtime, or let
+its generated skeleton/animation vocabulary become Dark Magic's creature model.
+If GLB export loses required semantic sockets, typed events, collision/selection
+metadata, or material regions, store those in the same versioned companion
+manifest evaluated by M31-M32 rather than inventing a Dust3D-specific runtime.
 
 ## Future possibilities
 
