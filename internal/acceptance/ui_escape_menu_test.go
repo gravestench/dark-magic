@@ -125,6 +125,15 @@ expect(closed, true, "return callback")
 }
 
 func TestLuaOptionsOverlayKeepsAuthoredCoordinatesViewportRelative(t *testing.T) {
+	assertLuaOptionsBackdropCenter(t, "", 400, 300)
+}
+
+func TestLuaOptionsOverlayCentersInClassicViewport(t *testing.T) {
+	assertLuaOptionsBackdropCenter(t, "lod-english-640x480-gameplay", 320, 240)
+}
+
+func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY float64) {
+	t.Helper()
 	ctx := context.Background()
 	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
 	if err != nil {
@@ -141,7 +150,7 @@ func TestLuaOptionsOverlayKeepsAuthoredCoordinatesViewportRelative(t *testing.T)
 	scenes := modruntime.NewScenes(runtime, navigation.New())
 	for _, module := range []modruntime.Module{
 		modruntime.InputModule(&input),
-		modruntime.DataModule(contentFS),
+		modruntime.DataModule(contentFS, profile),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
@@ -174,7 +183,7 @@ func TestLuaOptionsOverlayKeepsAuthoredCoordinatesViewportRelative(t *testing.T)
 	}
 	foundBackdrop := false
 	for _, node := range nodes[1:] {
-		if node.Parent == root.ID && node.X == 400 && node.Y == 300 {
+		if node.Parent == root.ID && node.X == wantX && node.Y == wantY {
 			foundBackdrop = true
 			break
 		}

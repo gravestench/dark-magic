@@ -16,7 +16,7 @@
       "game_version": "diablo-ii-lod",
       "language": "English",
       "resolution": { "width": 640, "height": 480 },
-      "screens": ["game_world","inventory","character","skills","quests","party","help","stash","cube","hireling","vendor","waypoint"],
+      "screens": ["game_world","inventory","character","skills","quests","party","help","stash","cube","hireling","vendor","waypoint","pause","options"],
       "overrides": {
         "screens": {
           "game_world": {
