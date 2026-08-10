@@ -839,6 +839,25 @@ complete until its actions are driven by authoritative game state and commands.
 
 ## M21: Diablo simulation
 
+M21 now starts with the playable-character vertical slice. Spatial NPC service
+work proved the command/authority boundary, but further interactions are ordered
+after one controlled character can enter a map, receive routed input, advance at
+the fixed tick, and drive a real legacy composite from authoritative state.
+
+- [ ] **M21.0: Complete the authoritative playable-character vertical slice.**
+  The first increment now materializes separate composite appearance and
+  animation components, maps normalized movement commands to authoritative
+  NU/WL/RN modes and legacy eight-way facing, projects the ECS position through
+  the map camera, and resolves an unarmed HTH COF plus default body DCC layers.
+  Remaining acceptance is live input/capture coverage, collision/pathing
+  refinement, animation-resource reuse while direction changes, shadows/events,
+  and then equipment-derived component codes and weapon-class selection under
+  M19.4. Continue NPC/quest/vendor interaction breadth only after this slice is
+  comfortable to control and visually stable.
+  Resolve NU and other non-locomotion rates/events from typed `AnimData.d2`;
+  the first slice uses the recovered velocity-coupled WL/RN rates and a bounded
+  idle fallback so zero-speed player COFs remain renderable.
+
 - [ ] Implement the complete stat/value system, ItemStatCost encoding, derived
   stats, caps, per-level values, state modifiers, and description functions.
 - [ ] Implement player and monster modes, animation events, targeting, AI,

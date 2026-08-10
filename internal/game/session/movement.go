@@ -79,6 +79,7 @@ func RegisterMovement(session *Session) error {
 				return nil
 			}
 			modes, modesPresent := akara.GetDynamicStore(engine.World(), "dm.player.movement_mode")
+			animations, animationsPresent := akara.GetDynamicStore(engine.World(), "dm.player.animation")
 			for _, entity := range controls.Entities() {
 				control, found := controls.Get(entity)
 				if !found {
@@ -112,10 +113,40 @@ func RegisterMovement(session *Session) error {
 						}
 					}
 				}
+				if animationsPresent {
+					if animation, found := animations.Get(entity); found {
+						moving := payload.X != 0 || payload.Y != 0
+						mode := "NU"
+						if moving && payload.Running {
+							mode = "RN"
+						} else if moving {
+							mode = "WL"
+						}
+						if err := animation.Set("mode", mode); err != nil {
+							return err
+						}
+						if moving {
+							if err := animation.Set("direction", movementDirection(payload.X, payload.Y)); err != nil {
+								return err
+							}
+						}
+					}
+				}
 			}
 			return nil
 		},
 	})
+}
+
+// movementDirection converts the eight normalized world-space input vectors to
+// the encoded direction order used by player COF/DCC assets. Stopping does not
+// call this function, so an idle player keeps looking the way they last moved.
+func movementDirection(x, y int) int64 {
+	directions := map[[2]int]int64{
+		{0, 1}: 0, {-1, 0}: 1, {0, -1}: 2, {1, 0}: 3,
+		{1, 1}: 4, {-1, 1}: 5, {-1, -1}: 6, {1, -1}: 7,
+	}
+	return directions[[2]int{x, y}]
 }
 
 // MovementSource turns the latest native input snapshot into one replayable

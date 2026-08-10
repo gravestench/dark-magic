@@ -864,7 +864,7 @@ func (r *RenderCapability) Module() Module {
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
 		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
 		"set_cof":                    commandHelp("node:set_cof(path [, options])", "Render a COF composite."),
-		"set_cof_animation":          commandHelp("node:set_cof_animation(path [, options])", "Render an animated COF composite."),
+		"set_cof_animation":          commandHelp("node:set_cof_animation(path, palette, direction, components [, loop, rate])", "Render an animated COF composite with an optional resolved 1/256-rate override."),
 		"set_text":                   commandHelp("node:set_text(text [, options])", "Render bitmap-font text."),
 		"animation_pause":            commandHelp("node:animation_pause()", "Pause the node animation."),
 		"animation_resume":           commandHelp("node:animation_resume()", "Resume the node animation."),
@@ -1435,11 +1435,15 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("composing COF animation: %v", err)
 				return 0
 			}
-			if asset.Speed <= 0 {
+			// Player COFs commonly leave speed at zero because AnimData.d2 owns the
+			// runtime rate. Callers that already resolved that authority may supply
+			// the classic 1/256-rate value without teaching the renderer gameplay.
+			rate := state.OptInt(7, asset.Speed)
+			if rate <= 0 {
 				state.RaiseError("COF speed must be positive")
 				return 0
 			}
-			duration := time.Duration(float64(time.Second) * 256 / (float64(asset.Speed) * 25))
+			duration := time.Duration(float64(time.Second) * 256 / (float64(rate) * 25))
 			if err := node.setAnimation(frames, duration, loop); err != nil {
 				state.RaiseError("updating COF animation: %v", err)
 				return 0
