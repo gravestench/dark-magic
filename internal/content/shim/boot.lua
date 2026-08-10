@@ -23,6 +23,7 @@ local cube = require("darkmagic.overlays.cube")
 local hireling = require("darkmagic.overlays.hireling")
 local vendor = require("darkmagic.overlays.vendor")
 local waypoint = require("darkmagic.overlays.waypoint")
+local death = require("darkmagic.overlays.death")
 local overlay_shell = require("darkmagic.ui.overlay_shell")
 local tcpip = require("darkmagic.screens.tcpip")
 local credits = require("darkmagic.screens.credits")
@@ -80,6 +81,7 @@ return {
         scenes.register("hireling", with_cursor(hireling))
         scenes.register("vendor", with_cursor(vendor))
         scenes.register("waypoint", with_cursor(waypoint))
+        scenes.register("death", with_cursor(death))
         local shells = {
             quick_skills={title="darkmagic.shell.quick_skills",x=470,y=220,width=250,height=270},
             belt={title="darkmagic.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
@@ -90,7 +92,6 @@ return {
             item_tooltip={title="darkmagic.shell.item_tooltip",x=250,y=140,width=300,height=320,blocks_update_below=false},
             ground_items={title="darkmagic.shell.ground_items",x=170,y=120,width=460,height=340,blocks_update_below=false,layer="hud"},
             confirmation_dialog={title="darkmagic.shell.confirmation_dialog",sheet="data/global/ui/FrontEnd/PopUpOkCancel.dc6",palette="fechar",x=270,y=175},
-            death={title="darkmagic.shell.death",x=100,y=180,width=600,height=220},
             area_transition={title="darkmagic.shell.area_transition",x=100,y=180,width=600,height=220},
             player_trade={title="darkmagic.shell.player_trade",x=80,y=64,width=640,height=432},
             gambling={title="darkmagic.shell.gambling",sheet="data/global/ui/PANEL/buysell.dc6",x=80,y=64},
