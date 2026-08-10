@@ -15,6 +15,7 @@ import (
 type navigationRequest struct {
 	kind string
 	id   string
+	slot string
 }
 
 // Scenes adapts Lua-authored scenes to the engine navigation stack.
@@ -54,16 +55,18 @@ func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
 // Module returns the dm.scene/v1 capability.
 func (s *Scenes) Module() Module {
 	return Module{Name: "dm.scene/v1", Help: documentedModule("Register Lua scenes and navigate the active scene stack.", map[string]CommandHelp{
-		"register": commandHelp("dm.scene.register(definition)", "Register a Lua-authored scene definition."),
-		"replace":  commandHelp("dm.scene.replace(id [, payload])", "Replace the active scene."),
-		"push":     commandHelp("dm.scene.push(id [, payload])", "Push a scene above the active scene."),
-		"pop":      commandHelp("dm.scene.pop([payload])", "Pop the active scene."),
+		"register":       commandHelp("dm.scene.register(definition)", "Register a Lua-authored scene definition."),
+		"replace":        commandHelp("dm.scene.replace(id [, payload])", "Replace the active scene."),
+		"push":           commandHelp("dm.scene.push(id [, payload])", "Push a scene above the active scene."),
+		"pop":            commandHelp("dm.scene.pop([payload])", "Pop the active scene."),
+		"toggle_overlay": commandHelp("dm.scene.toggle_overlay(id, slot)", "Toggle an overlay in the left, right, or full spatial slot."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"register": s.luaRegister,
-			"replace":  s.luaRequest("replace"),
-			"push":     s.luaRequest("push"),
-			"pop":      s.luaRequest("pop"),
+			"register":       s.luaRegister,
+			"replace":        s.luaRequest("replace"),
+			"push":           s.luaRequest("push"),
+			"pop":            s.luaRequest("pop"),
+			"toggle_overlay": s.luaToggleOverlay,
 		})
 		module.RawSetString("api", lua.LNumber(1))
 		state.Push(module)
@@ -86,12 +89,23 @@ func (s *Scenes) Flush(ctx context.Context) error {
 			err = s.manager.Push(ctx, request.id)
 		case "pop":
 			err = s.manager.Pop(ctx)
+		case "toggle_overlay":
+			err = s.manager.ToggleOverlay(ctx, request.id, request.slot)
 		}
 		if err != nil {
 			return fmt.Errorf("modruntime: scene %s %q: %w", request.kind, request.id, err)
 		}
 	}
 	return nil
+}
+
+func (s *Scenes) luaToggleOverlay(state *lua.LState) int {
+	id := state.CheckString(1)
+	slot := state.CheckString(2)
+	s.mu.Lock()
+	s.pending = append(s.pending, navigationRequest{kind: "toggle_overlay", id: id, slot: slot})
+	s.mu.Unlock()
+	return 0
 }
 
 // Update advances active scenes and then applies requested transitions.
@@ -224,6 +238,16 @@ func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, foc
 }
 
 func (s *luaScene) UpdateInputFocused(ctx context.Context, elapsed time.Duration, focused, inputAllowed bool, worldView string) error {
+	mode := "none"
+	if focused {
+		mode = "focused"
+	} else if inputAllowed {
+		mode = "gameplay"
+	}
+	return s.UpdateRoutedInput(ctx, elapsed, focused, mode, worldView)
+}
+
+func (s *luaScene) UpdateRoutedInput(ctx context.Context, elapsed time.Duration, focused bool, mode, worldView string) error {
 	if s.definition.update == nil {
 		return nil
 	}
@@ -231,12 +255,16 @@ func (s *luaScene) UpdateInputFocused(ctx context.Context, elapsed time.Duration
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		invoke := func() error {
 			return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(inputAllowed), lua.LString(worldView))
+				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.definition.table, lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(mode != "none"), lua.LString(worldView))
 			})
 		}
-		if !inputAllowed && s.input != nil {
+		if mode == "none" && s.input != nil {
 			result = s.input.Suppress(invoke)
-		} else if !focused && s.input != nil {
+		} else if mode == "pointer" && s.input != nil {
+			result = s.input.PointerOnly(invoke)
+		} else if mode == "gameplay_pointer" && s.input != nil {
+			result = s.input.GameplayAndPointer(invoke)
+		} else if mode == "gameplay" && s.input != nil {
 			result = s.input.GameplayOnly(invoke)
 		} else {
 			result = invoke()

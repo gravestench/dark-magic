@@ -701,6 +701,11 @@ complete until its actions are driven by authoritative game state and commands.
   must use the same slot-aware toggle operation so they cannot produce divergent
   stacks or duplicate overlays. Keyboard/gamepad focus remains singular and
   deterministic even when pointer input is routed to multiple visible surfaces.
+  The navigation manager now owns those left/right/full slot transactions and
+  routes focused, pointer-only, gameplay-only, or combined HUD/gameplay input to
+  each visible scene. Hotkeys and the mini-panel share the Lua toggle capability;
+  regression coverage exercises opposite-side coexistence, same-side replacement,
+  non-top closure, full-panel eviction, and persistent HUD pointer delivery.
 - [ ] M18.4: Complete data-driven panel geometry and the supported 640x480 profile.
 - [ ] M18.5: Complete multi-runtime console tabs, policy gating, and deterministic
   teardown of console-created resources.

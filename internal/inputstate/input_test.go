@@ -98,3 +98,42 @@ func TestStoreGameplayOnlyGatesPointerActionToVisibleWorldHalf(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestStorePointerOnlyExposesNoKeyboardOrText(t *testing.T) {
+	var store Store
+	store.Publish(Frame{
+		Actions: map[string]ActionState{
+			"pointer_primary": {Pressed: true},
+			"confirm":         {Pressed: true},
+			"left":            {Down: true},
+		},
+		Text: "x", CursorX: 600, CursorY: 300,
+	})
+	if err := store.PointerOnly(func() error {
+		if !store.Action("pointer_primary").Pressed || store.Action("confirm").Pressed || store.Action("left").Down || store.Text() != "" {
+			t.Fatalf("pointer-only routing exposed another channel: %#v text=%q", store.Snapshot(), store.Text())
+		}
+		if x, y := store.Cursor(); x != 600 || y != 300 {
+			t.Fatalf("pointer-only cursor = %v,%v", x, y)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStoreGameplayAndPointerKeepsHUDPointerOutsideWorldView(t *testing.T) {
+	var store Store
+	store.Publish(Frame{
+		Actions: map[string]ActionState{"pointer_primary": {Pressed: true}, "inventory": {Pressed: true}},
+		CursorX: 600, WorldView: "left",
+	})
+	if err := store.GameplayAndPointer(func() error {
+		if !store.Action("pointer_primary").Pressed || store.Action("inventory").Pressed {
+			t.Fatalf("gameplay-plus-pointer routing = %#v", store.Snapshot().Actions)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

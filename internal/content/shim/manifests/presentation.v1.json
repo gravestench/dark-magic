@@ -383,13 +383,13 @@
           "sheet":"data/global/ui/PANEL/minipanel_s.dc6","x":325,"y":525,
           "button_sheet":"data/global/ui/PANEL/minipanelbtn.dc6","button_x":328,"button_y":528,"button_step":21,"button_width":20,"button_height":20,
           "buttons":[
-            {"id":"character","label":"darkmagic.minipanel.character","frame":0,"scene":"character","enabled":true},
-            {"id":"inventory","label":"darkmagic.minipanel.inventory","frame":2,"scene":"inventory","enabled":true},
-            {"id":"skills","label":"darkmagic.minipanel.skills","frame":4,"scene":"skills","enabled":true},
-            {"id":"automap","label":"darkmagic.minipanel.automap","frame":8,"scene":"automap","enabled":true},
-            {"id":"messages","label":"darkmagic.minipanel.messages","frame":10,"scene":"messages","enabled":true},
-            {"id":"quests","label":"darkmagic.minipanel.quests","frame":12,"scene":"quests","enabled":true},
-            {"id":"options","label":"darkmagic.minipanel.options","frame":14,"scene":"options","enabled":true}
+            {"id":"character","label":"darkmagic.minipanel.character","frame":0,"scene":"character","slot":"left","enabled":true},
+            {"id":"inventory","label":"darkmagic.minipanel.inventory","frame":2,"scene":"inventory","slot":"right","enabled":true},
+            {"id":"skills","label":"darkmagic.minipanel.skills","frame":4,"scene":"skills","slot":"right","enabled":true},
+            {"id":"automap","label":"darkmagic.minipanel.automap","frame":8,"scene":"automap","slot":"full","enabled":true},
+            {"id":"messages","label":"darkmagic.minipanel.messages","frame":10,"scene":"messages","slot":"full","enabled":true},
+            {"id":"quests","label":"darkmagic.minipanel.quests","frame":12,"scene":"quests","slot":"left","enabled":true},
+            {"id":"options","label":"darkmagic.minipanel.options","frame":14,"scene":"options","slot":"full","enabled":true}
           ]
         }
       }

@@ -38,6 +38,12 @@ type InputAwareUpdater interface {
 	UpdateInputFocused(context.Context, time.Duration, bool, bool, string) error
 }
 
+// RoutedInputUpdater receives the precise input channel assigned to each
+// visible scene. Modes are focused, gameplay, pointer, gameplay_pointer, none.
+type RoutedInputUpdater interface {
+	UpdateRoutedInput(context.Context, time.Duration, bool, string, string) error
+}
+
 // InputPassthrough declares that a scene does not consume gameplay input meant
 // for scenes beneath it. Modal and pause scenes do not implement this policy.
 type InputPassthrough interface {
@@ -53,8 +59,15 @@ type Factory func(context.Context) (Scene, error)
 
 type entry struct {
 	id    string
+	slot  string
 	scene Scene
 }
+
+const (
+	OverlayLeft  = "left"
+	OverlayRight = "right"
+	OverlayFull  = "full"
+)
 
 // Manager owns a deterministic bottom-to-top scene stack. All operations are
 // serialized because scene callbacks may touch single-threaded engine APIs.
@@ -126,6 +139,44 @@ func (m *Manager) Push(ctx context.Context, id string) error {
 	return nil
 }
 
+// ToggleOverlay opens an overlay in a spatial slot, closes it when already
+// active, and atomically replaces conflicting overlays. Left and right slots
+// may coexist; a full overlay excludes both side slots.
+func (m *Manager) ToggleOverlay(ctx context.Context, id, slot string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if slot != OverlayLeft && slot != OverlayRight && slot != OverlayFull {
+		return fmt.Errorf("navigation: invalid overlay slot %q", slot)
+	}
+	for index := len(m.stack) - 1; index >= 0; index-- {
+		if m.stack[index].id == id && m.stack[index].slot == slot {
+			current := m.stack[index]
+			m.stack = append(m.stack[:index], m.stack[index+1:]...)
+			return closeEntries(ctx, []entry{current})
+		}
+	}
+	next, err := m.createAndEnter(ctx, id)
+	if err != nil {
+		return err
+	}
+	next.slot = slot
+	retained := make([]entry, 0, len(m.stack)+1)
+	removed := make([]entry, 0, 2)
+	for _, current := range m.stack {
+		conflicts := current.slot == slot || slot == OverlayFull && (current.slot == OverlayLeft || current.slot == OverlayRight) || current.slot == OverlayFull
+		if conflicts {
+			removed = append(removed, current)
+		} else {
+			retained = append(retained, current)
+		}
+	}
+	m.stack = append(retained, next)
+	if err := closeEntries(ctx, removed); err != nil {
+		return fmt.Errorf("navigation: replace %s overlay with %q: %w", slot, id, err)
+	}
+	return nil
+}
+
 // Pop exits and destroys the top scene.
 func (m *Manager) Pop(ctx context.Context) error {
 	m.mu.Lock()
@@ -155,7 +206,19 @@ func (m *Manager) Update(ctx context.Context, elapsed time.Duration) error {
 	for index := start; index < len(m.stack); index++ {
 		var err error
 		inputAllowed := index == len(m.stack)-1 || passesInputFrom(m.stack, index+1)
-		if updater, ok := m.stack[index].scene.(InputAwareUpdater); ok {
+		mode := "none"
+		if index == len(m.stack)-1 {
+			mode = "focused"
+		} else if inputAllowed && m.stack[index].slot != "" {
+			mode = "pointer"
+		} else if inputAllowed && index == 0 {
+			mode = "gameplay_pointer"
+		} else if inputAllowed {
+			mode = "gameplay"
+		}
+		if updater, ok := m.stack[index].scene.(RoutedInputUpdater); ok {
+			err = updater.UpdateRoutedInput(ctx, elapsed, index == len(m.stack)-1, mode, view)
+		} else if updater, ok := m.stack[index].scene.(InputAwareUpdater); ok {
 			err = updater.UpdateInputFocused(ctx, elapsed, index == len(m.stack)-1, inputAllowed, view)
 		} else if updater, ok := m.stack[index].scene.(FocusedUpdater); ok {
 			err = updater.UpdateFocused(ctx, elapsed, index == len(m.stack)-1)
@@ -185,6 +248,26 @@ func (m *Manager) InputPolicy(id string) (bool, string) {
 func worldView(stack []entry) string {
 	if len(stack) == 0 {
 		return "center"
+	}
+	left, right := false, false
+	for _, current := range stack {
+		switch current.slot {
+		case OverlayFull:
+			return "none"
+		case OverlayLeft:
+			left = true
+		case OverlayRight:
+			right = true
+		}
+	}
+	if left && right {
+		return "none"
+	}
+	if left {
+		return "right"
+	}
+	if right {
+		return "left"
 	}
 	if viewer, ok := stack[len(stack)-1].scene.(WorldViewer); ok {
 		return viewer.WorldView()

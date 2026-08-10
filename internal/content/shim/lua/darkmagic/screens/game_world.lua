@@ -80,23 +80,23 @@ return {
         -- Panels remain available while the fixed-step session is admitting
         -- the selected character; presentation binding must not block UI.
         if input.pressed("inventory") then
-            scenes.push("inventory")
+            scenes.toggle_overlay("inventory", "right")
         elseif input.pressed("character") then
-            scenes.push("character")
+            scenes.toggle_overlay("character", "left")
         elseif input.pressed("skills") then
-            scenes.push("skills")
+            scenes.toggle_overlay("skills", "right")
         elseif input.pressed("automap") then
-            scenes.push("automap")
+            scenes.toggle_overlay("automap", "full")
         elseif input.pressed("help") then
-            scenes.push("help")
+            scenes.toggle_overlay("help", "full")
         elseif input.pressed("quests") then
-            scenes.push("quests")
+            scenes.toggle_overlay("quests", "left")
         elseif input.pressed("party") then
-            scenes.push("party")
+            scenes.toggle_overlay("party", "full")
         elseif input.pressed("options") then
-            scenes.push("options")
+            scenes.toggle_overlay("options", "full")
         elseif input.pressed("pause") or input.pressed("cancel") then
-            scenes.push("pause")
+            scenes.toggle_overlay("pause", "full")
         end
         if not self.gameplay_world.bind(self.gameplay) then
             return

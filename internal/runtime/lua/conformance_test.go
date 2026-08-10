@@ -54,7 +54,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
 		"dm.player/v1":     {"assign_skill", "request_running"},
 		"dm.simulation/v1": {"move_hero", "state"}, "dm.render/v1": {"create", "diagnostics"},
-		"dm.scene/v1": {"register", "replace", "push", "pop"},
+		"dm.scene/v1": {"register", "replace", "push", "pop", "toggle_overlay"},
 	}
 	for _, module := range modules {
 		if err := runtime.RegisterModule(module); err != nil {

@@ -52,6 +52,8 @@ type Store struct {
 	current      atomic.Value
 	suppressed   atomic.Int32
 	gameplayOnly atomic.Int32
+	pointerOnly  atomic.Int32
+	allPointer   atomic.Int32
 }
 
 // Publish replaces the current frame.
@@ -77,7 +79,12 @@ func (s *Store) Snapshot() Frame {
 		return frame
 	}
 	if s.gameplayOnly.Load() > 0 {
-		frame.Actions = gameplayActions(frame.Actions, frame.CursorX, frame.WorldView)
+		frame.Actions = gameplayActions(frame.Actions, frame.CursorX, frame.WorldView, s.allPointer.Load() > 0)
+		frame.Text = ""
+		return frame
+	}
+	if s.pointerOnly.Load() > 0 {
+		frame.Actions = pointerActions(frame.Actions)
 		frame.Text = ""
 		return frame
 	}
@@ -87,7 +94,7 @@ func (s *Store) Snapshot() Frame {
 
 // Text returns the UTF-8 text entered during the current frame.
 func (s *Store) Text() string {
-	if s.suppressed.Load() > 0 || s.gameplayOnly.Load() > 0 {
+	if s.suppressed.Load() > 0 || s.gameplayOnly.Load() > 0 || s.pointerOnly.Load() > 0 {
 		return ""
 	}
 	value := s.current.Load()
@@ -107,9 +114,11 @@ func (s *Store) Action(name string) ActionState {
 		return ActionState{}
 	}
 	if s.gameplayOnly.Load() > 0 {
-		if !isGameplayAction(name) || name == "pointer_primary" && !pointerInWorld(value.(Frame)) {
+		if !isGameplayAction(name) || name == "pointer_primary" && s.allPointer.Load() == 0 && !pointerInWorld(value.(Frame)) {
 			return ActionState{}
 		}
+	} else if s.pointerOnly.Load() > 0 && name != "pointer_primary" {
+		return ActionState{}
 	}
 	return value.(Frame).Actions[name]
 }
@@ -160,6 +169,26 @@ func (s *Store) GameplayOnly(callback func() error) error {
 	return callback()
 }
 
+// GameplayAndPointer exposes gameplay actions plus pointer input everywhere.
+// The persistent game-world scene uses this to keep HUD controls interactive;
+// authoritative world consumers still use Frame.WorldView to reject covered
+// regions.
+func (s *Store) GameplayAndPointer(callback func() error) error {
+	s.gameplayOnly.Add(1)
+	s.allPointer.Add(1)
+	defer s.gameplayOnly.Add(-1)
+	defer s.allPointer.Add(-1)
+	return callback()
+}
+
+// PointerOnly exposes cursor state and pointer actions without keyboard,
+// gamepad, text, or gameplay actions to a nonfocused visible UI surface.
+func (s *Store) PointerOnly(callback func() error) error {
+	s.pointerOnly.Add(1)
+	defer s.pointerOnly.Add(-1)
+	return callback()
+}
+
 func isGameplayAction(name string) bool {
 	switch name {
 	case "left", "right", "up", "down", "pointer_primary", "interact", "skill_primary", "skill_secondary", "toggle_run":
@@ -169,12 +198,20 @@ func isGameplayAction(name string) bool {
 	}
 }
 
-func gameplayActions(actions map[string]ActionState, cursorX float64, worldView string) map[string]ActionState {
+func gameplayActions(actions map[string]ActionState, cursorX float64, worldView string, allPointer bool) map[string]ActionState {
 	result := make(map[string]ActionState)
 	for name, state := range actions {
-		if isGameplayAction(name) && (name != "pointer_primary" || pointerInView(cursorX, worldView)) {
+		if isGameplayAction(name) && (name != "pointer_primary" || allPointer || pointerInView(cursorX, worldView)) {
 			result[name] = state
 		}
+	}
+	return result
+}
+
+func pointerActions(actions map[string]ActionState) map[string]ActionState {
+	result := make(map[string]ActionState)
+	if state, ok := actions["pointer_primary"]; ok {
+		result["pointer_primary"] = state
 	}
 	return result
 }
@@ -183,6 +220,8 @@ func pointerInWorld(frame Frame) bool { return pointerInView(frame.CursorX, fram
 
 func pointerInView(x float64, view string) bool {
 	switch view {
+	case "none":
+		return false
 	case "left":
 		return x < 400
 	case "right":

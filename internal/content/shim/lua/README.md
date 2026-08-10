@@ -23,17 +23,22 @@ instance state. Checked render, audio, video, subscription, and callback handles
 created during a component or scene callback belong to its resource scope and
 are reclaimed when that scope closes.
 
-Use `scenes.replace` for root-screen transitions, `scenes.push` for overlays,
-and `scenes.pop` to dismiss the top overlay. An overlay can set
+Use `scenes.replace` for root-screen transitions and reserve `scenes.push` and
+`scenes.pop` for genuinely stack-ordered modal surfaces. Gameplay panels use
+`scenes.toggle_overlay(id, "left"|"right"|"full")`: opposite side slots may
+coexist, the same slot replaces atomically, toggling the active ID closes it,
+and a full slot evicts both sides. An overlay can set
 `blocks_update_below` to pause or continue scenes beneath it. The `focused`
 argument to `update` distinguishes continued simulation from input ownership.
 The `dm.input/v1` capability enforces that boundary. Nonfocused callbacks
 normally observe no actions, text, or pointer coordinates even when they keep
 updating. An overlay may explicitly set `passes_input_below = true`; callbacks
-beneath it then receive only gameplay actions and the pointer position, never
-UI actions or text. The same overlay declares `world_view = "left"`, `"right"`,
-or `"center"`, which is supplied as the fourth update argument so the world can
-frame the player inside the unobscured region. `input.owner()` still reports the
+beneath it receive a routed channel: the persistent world/HUD retains gameplay
+and pointer input, nonfocused visible side panels receive pointer input only,
+and the top panel alone receives keyboard/gamepad UI actions and text. The
+composed slots supply `world_view` as `"left"`, `"right"`, `"center"`, or
+`"none"` so the world can frame the player inside the unobscured region.
+`input.owner()` still reports the
 single `scene`, `debug`, or `none` UI owner for diagnostics; scenes should not
 use it to coordinate navigation.
 
