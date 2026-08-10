@@ -58,6 +58,29 @@ func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	}
 }
 
+func TestDCCDirectionForCOFUsesIndependentLegacyOrder(t *testing.T) {
+	want16 := []int{4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15}
+	for cofDirection, want := range want16 {
+		got, err := dccDirectionForCOF(cofDirection, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("16-way COF direction %d maps to DCC %d, want %d", cofDirection, got, want)
+		}
+	}
+	want8 := []int{4, 0, 5, 1, 6, 2, 7, 3}
+	for cofDirection, want := range want8 {
+		got, err := dccDirectionForCOF(cofDirection, 8)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("8-way COF direction %d maps to DCC %d, want %d", cofDirection, got, want)
+		}
+	}
+}
+
 func TestCombinedDC6PagesJoinsFrameTiles(t *testing.T) {
 	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
 		{Width: 256, Height: 1, OffsetX: 0, OffsetY: 0, IndexData: bytes.Repeat([]byte{1}, 256)},
@@ -295,7 +318,7 @@ func TestCOFCompositionUsesFramePriorityAndPlacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.R != 255 {
+	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.B != 255 {
 		t.Fatalf("priority pixel = %#v", got)
 	}
 	if composed.Bounds().Dx() != 5 || composed.Bounds().Dy() != 5 {

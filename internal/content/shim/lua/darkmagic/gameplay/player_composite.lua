@@ -18,15 +18,21 @@ end
 -- this same conversion before both selecting a component direction and reading
 -- its COF priority row; skipping it can pair a visible facing with the wrong
 -- arm/head ordering table.
-local encoded_directions = {
-    [8] = {1, 3, 5, 7, 0, 2, 4, 6},
-    [16] = {2, 6, 10, 14, 0, 4, 8, 12, 1, 3, 5, 7, 9, 11, 13, 15},
+local cof_directions = {
+    [8] = {3, 7, 2, 6, 1, 5, 0, 4},
+    [16] = {10, 8, 5, 13, 2, 0, 1, 9, 6, 14, 4, 12, 3, 7, 11, 15},
 }
 
-local function encoded_direction(logical, count)
-    local lookup = encoded_directions[count]
-    if not lookup then return logical end
-    return assert(lookup[logical + 1], "logical direction is out of range")
+local dcc_directions = {
+    [8] = {4, 0, 5, 1, 6, 2, 7, 3},
+    [16] = {4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15},
+}
+
+local function cof_direction(direction, count, space)
+    if space == "logical" then return direction end
+    local lookup = cof_directions[count]
+    if not lookup then return direction end
+    return assert(lookup[direction + 1], "semantic direction is out of range")
 end
 
 local function cof_path(token, mode, weapon_class)
@@ -98,12 +104,13 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
         end
     end
 
-    local direction = encoded_direction(authority.direction, info.directions)
+    local direction = cof_direction(authority.direction, info.directions, authority.direction_space)
 
     return {
         cof = cof,
         palette = authority.palette,
         direction = direction,
+        dcc_direction = dcc_directions[info.directions] and dcc_directions[info.directions][direction + 1] or direction,
         components = components,
         -- AnimData.d2, not the COF header, owns player timing and frame events.
         -- The fallback only keeps modded archives with a missing record usable.

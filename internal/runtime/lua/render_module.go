@@ -197,6 +197,28 @@ func rgbaDCCFrame(frame *dcc.Frame, palette *color.Palette) *image.RGBA {
 	return result
 }
 
+// dccDirectionForCOF translates a spatial COF priority direction into the
+// separately interleaved direction order stored by DCC. OpenDiablo2 has two
+// distinct Dir64ToCof and Dir64ToDcc tables; using one index for both pairs a
+// correctly facing sprite with another facing's arm/head priority.
+func dccDirectionForCOF(direction, count int) (int, error) {
+	lookups := map[int][]int{
+		8:  {4, 0, 5, 1, 6, 2, 7, 3},
+		16: {4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15},
+	}
+	lookup, ok := lookups[count]
+	if !ok {
+		if direction < 0 || direction >= count {
+			return 0, fmt.Errorf("COF direction %d is out of range for %d directions", direction, count)
+		}
+		return direction, nil
+	}
+	if direction < 0 || direction >= len(lookup) {
+		return 0, fmt.Errorf("COF direction %d is out of range for %d directions", direction, count)
+	}
+	return lookup[direction], nil
+}
+
 func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame, animationBounds ...image.Rectangle) (image.Image, error) {
 	if direction < 0 || direction >= len(asset.Priority) {
 		return nil, fmt.Errorf("COF direction %d is out of range", direction)
@@ -225,12 +247,7 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 	// Drawing a layer's shadow immediately before that layer lets later shadows
 	// darken earlier limbs and looks like broken arm priority on thin characters.
 	priority := asset.Priority[direction][frame]
-	// COF rows describe the visible stack from nearest to furthest. The legacy
-	// adapters iterate the byte row forward, but that puts the far arm over the
-	// torso and head in real Necromancer RN assets with our immediate compositor.
-	// Walk back-to-front so the nearest authored component is applied last.
-	for priorityIndex := len(priority) - 1; priorityIndex >= 0; priorityIndex-- {
-		componentType := priority[priorityIndex]
+	for _, componentType := range priority {
 		component, ok := components[componentType]
 		if !ok || component.layer.Shadow == 0 {
 			continue
@@ -239,8 +256,7 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		mask := image.NewUniform(color.RGBA{A: 96})
 		draw.DrawMask(output, component.image.Bounds().Add(destination.Add(image.Pt(2, 2))), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
 	}
-	for priorityIndex := len(priority) - 1; priorityIndex >= 0; priorityIndex-- {
-		componentType := priority[priorityIndex]
+	for _, componentType := range priority {
 		component, ok := components[componentType]
 		if !ok {
 			continue
@@ -666,6 +682,10 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 	if direction < 0 || direction >= asset.NumberOfDirections {
 		return nil, nil, fmt.Errorf("COF direction %d is out of range", direction)
 	}
+	dccDirection, err := dccDirectionForCOF(direction, asset.NumberOfDirections)
+	if err != nil {
+		return nil, nil, err
+	}
 	layers := make(map[cof.CompositeType]cof.CofLayer, len(asset.CofLayers))
 	decoded := make(map[cof.CompositeType]*dcc.DCC)
 	for _, layer := range asset.CofLayers {
@@ -677,8 +697,8 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		if err != nil {
 			return nil, nil, fmt.Errorf("COF layer %s: %w", layer.Type, err)
 		}
-		if direction >= len(component.Directions()) {
-			return nil, nil, fmt.Errorf("COF layer %s lacks direction %d", layer.Type, direction)
+		if dccDirection >= len(component.Directions()) {
+			return nil, nil, fmt.Errorf("COF layer %s lacks DCC direction %d", layer.Type, dccDirection)
 		}
 		layers[layer.Type], decoded[layer.Type] = layer, component
 	}
@@ -689,7 +709,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 	// retain texture geometry from the first animation frame.
 	var animationBounds image.Rectangle
 	for _, component := range decoded {
-		for _, frame := range component.Direction(direction).Frames() {
+		for _, frame := range component.Direction(dccDirection).Frames() {
 			if animationBounds.Empty() {
 				animationBounds = frame.Bounds()
 			} else {
@@ -705,7 +725,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 	for frameIndex := range frames {
 		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
 		for componentType, component := range decoded {
-			directionFrames := component.Direction(direction).Frames()
+			directionFrames := component.Direction(dccDirection).Frames()
 			if frameIndex >= len(directionFrames) {
 				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
 			}

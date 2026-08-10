@@ -10,12 +10,6 @@ local composite = require("darkmagic.gameplay.player_composite")
 local tokens = {"AM", "SO", "NE", "PA", "BA", "DZ", "AI"}
 local modes = {"NU", "WL", "RN"}
 
--- Diablo direction codes are semantic, not clockwise integers. This is the
--- 16-way angular traversal used by Riiablo's direction resolver. Left/Right
--- walk this list so the lab rotates around the character instead of jumping
--- through SOUTH/WEST/NORTH/EAST and then the intermediate directions.
-local clockwise_directions = {1, 11, 6, 12, 2, 13, 7, 14, 3, 15, 4, 8, 0, 9, 5, 10}
-
 -- Curated recipes are intentionally boring and known-coherent. "Random" must
 -- be useful for regression hunting, not produce arbitrary filenames that never
 -- existed in Diablo II. More verified recipes can be added here as coverage grows.
@@ -90,9 +84,8 @@ function lab:create()
 end
 
 function lab:rebuild()
-    local direction_code = clockwise_directions[self.direction + 1]
     local authority = {token=tokens[self.token_index], mode=modes[self.mode_index], weapon_class=self.weapon,
-        direction=direction_code, palette="data/global/palette/ACT1/pal.dat"}
+        direction=self.direction, direction_space="logical", palette="data/global/palette/ACT1/pal.dat"}
     local ok, resolved = pcall(composite.recipe, authority, self.appearance, self.weapon)
     if ok then
         ok, resolved = pcall(function()
@@ -109,8 +102,8 @@ function lab:rebuild()
             self.actor:animation_pause()
             self.actor:animation_seek(self.frame * 256 / (resolved.rate * 25))
         end
-        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical %d  code %d  encoded %d  rate %d  frames %d%s",
-            authority.token, authority.mode, self.weapon, self.direction, direction_code, resolved.direction, resolved.rate, resolved.frames,
+        text.set(self.status, "font_lab_color", string.format("[white]%s  %s  %s  logical/COF %d  DCC %d  rate %d  frames %d%s",
+            authority.token, authority.mode, self.weapon, self.direction, resolved.dcc_direction, resolved.rate, resolved.frames,
             self.playing and "" or ("  showing " .. self.frame)), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. resolved.cof, 760, "center")
     else
