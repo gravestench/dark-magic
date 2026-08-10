@@ -11,6 +11,7 @@ local data = require("dm.data/v1")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local startup = manifest.startup
+local screen = assert(manifest.screens.loading)
 
 return {
     enter = function(self)
@@ -18,8 +19,9 @@ return {
         -- Keep the letterbox backdrop below the embedded presenter, which
         -- occupies z=0 on the transition layer.
         self.root:set_z(-1)
-        self.root:set_position(400, 300)
-        self.root:fill_rect(800, 600, 8, 8, 12, 255)
+        self.root:set_position(screen.x, screen.y)
+        self.root:fill_rect(screen.width, screen.height,
+            screen.fill.red, screen.fill.green, screen.fill.blue, screen.fill.alpha)
         self.index = 0
         self:advance()
     end,
