@@ -45,8 +45,18 @@ type renderAssetCache struct {
 	mu          sync.Mutex
 	generation  uint64
 	decoded     *cachepkg.Cache
+	inflight    map[string]*assetDecodeFlight
 	decodeCalls uint64
 	decodeTime  time.Duration
+}
+
+// assetDecodeFlight lets every caller interested in the same cold asset share
+// one decode. The expensive work happens without holding the cache mutex, so
+// unrelated assets can be prepared by different preload workers at once.
+type assetDecodeFlight struct {
+	done  chan struct{}
+	value any
+	err   error
 }
 
 // RenderDiagnostics is a stable profiling snapshot of decoded and retained
@@ -65,11 +75,38 @@ type RenderCapability struct {
 	composer *render.Composer
 	assets   fs.FS
 	cache    *renderAssetCache
+	preloads *assetPreloader
 }
 
 func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.FS) *RenderCapability {
 	const decodedAssetBudget = 64 * 1024 * 1024
-	return &RenderCapability{runtime: runtime, composer: composer, assets: assets, cache: &renderAssetCache{decoded: cachepkg.New(decodedAssetBudget)}}
+	cache := &renderAssetCache{
+		decoded:  cachepkg.New(decodedAssetBudget),
+		inflight: make(map[string]*assetDecodeFlight),
+	}
+	return &RenderCapability{
+		runtime: runtime, composer: composer, assets: assets, cache: cache,
+		preloads: newAssetPreloader(assets, cache),
+	}
+}
+
+func (c *renderAssetCache) loadImage(assets fs.FS, name string) (image.Image, error) {
+	value, err := c.load(assets, "image\x00"+name, func() (any, int, error) {
+		file, err := assets.Open(name)
+		if err != nil {
+			return nil, 0, err
+		}
+		defer file.Close()
+		decoded, _, err := image.Decode(file)
+		if err != nil {
+			return nil, 0, err
+		}
+		return decoded, decoded.Bounds().Dx() * decoded.Bounds().Dy() * 4, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(image.Image), nil
 }
 
 func (r *RenderCapability) Diagnostics() RenderDiagnostics {
@@ -191,113 +228,111 @@ func dccDecodedWeight(asset *dcc.DCC) int {
 	return max(weight, 1)
 }
 
+func (c *renderAssetCache) load(assets fs.FS, key string, decode func() (any, int, error)) (any, error) {
+	c.mu.Lock()
+	c.refresh(assets)
+	generation := c.generation
+	if cached, ok := c.decoded.RetrieveVersioned("decoded", key, generation); ok {
+		c.mu.Unlock()
+		return cached, nil
+	}
+	flightKey := fmt.Sprintf("%d\x00%s", generation, key)
+	if flight, ok := c.inflight[flightKey]; ok {
+		c.mu.Unlock()
+		<-flight.done
+		return flight.value, flight.err
+	}
+	flight := &assetDecodeFlight{done: make(chan struct{})}
+	c.inflight[flightKey] = flight
+	c.mu.Unlock()
+
+	started := time.Now()
+	value, weight, err := decode()
+	elapsed := time.Since(started)
+
+	c.mu.Lock()
+	c.decodeCalls++
+	c.decodeTime += elapsed
+	if err == nil && generation == c.generation {
+		err = c.decoded.InsertVersioned("decoded", key, generation, value, weight)
+	}
+	flight.value, flight.err = value, err
+	delete(c.inflight, flightKey)
+	close(flight.done)
+	c.mu.Unlock()
+	return value, err
+}
+
 func (c *renderAssetCache) loadFont(assets fs.FS, table, sheet, palette, transform string) (*assetdecode.BitmapFont, error) {
 	key := table + "\x00" + sheet + "\x00" + palette + "\x00" + transform
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh(assets)
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", "font\x00"+key, c.generation); ok {
-		return cached.(*assetdecode.BitmapFont), nil
-	}
-	started := time.Now()
-	font, err := assetdecode.LoadBitmapFontWithTransform(assets, table, sheet, palette, transform)
-	c.decodeCalls++
-	c.decodeTime += time.Since(started)
+	value, err := c.load(assets, "font\x00"+key, func() (any, int, error) {
+		font, err := assetdecode.LoadBitmapFontWithTransform(assets, table, sheet, palette, transform)
+		return font, assetWeight(assets, table, sheet, palette), err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "font\x00"+key, c.generation, font, assetWeight(assets, table, sheet, palette)); err != nil {
-		return nil, err
-	}
-	return font, nil
+	return value.(*assetdecode.BitmapFont), nil
 }
 
 func (c *renderAssetCache) loadCOF(assets fs.FS, name string) (*cof.COF, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh(assets)
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", "cof\x00"+name, c.generation); ok {
-		return cached.(*cof.COF), nil
-	}
-	started := time.Now()
-	asset, err := assetdecode.COF(assets, name)
-	c.decodeCalls++
-	c.decodeTime += time.Since(started)
+	value, err := c.load(assets, "cof\x00"+name, func() (any, int, error) {
+		asset, err := assetdecode.COF(assets, name)
+		return asset, assetWeight(assets, name), err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "cof\x00"+name, c.generation, asset, assetWeight(assets, name)); err != nil {
-		return nil, err
-	}
-	return asset, nil
+	return value.(*cof.COF), nil
 }
 
 func (c *renderAssetCache) loadDCC(assets fs.FS, name, palette string) (*dcc.DCC, error) {
 	key := name + "\x00" + palette
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh(assets)
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dcc\x00"+key, c.generation); ok {
-		return cached.(*dcc.DCC), nil
-	}
-	started := time.Now()
-	asset, err := assetdecode.DCC(assets, name, palette)
-	c.decodeCalls++
-	c.decodeTime += time.Since(started)
+	value, err := c.load(assets, "dcc\x00"+key, func() (any, int, error) {
+		asset, err := assetdecode.DCC(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		return asset, dccDecodedWeight(asset), nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "dcc\x00"+key, c.generation, asset, dccDecodedWeight(asset)); err != nil {
-		return nil, err
-	}
-	return asset, nil
+	return value.(*dcc.DCC), nil
 }
 
 func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6, error) {
 	key := name + "\x00" + palette
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh(assets)
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", "dc6\x00"+key, c.generation); ok {
-		return cached.(*dc6.DC6), nil
-	}
-	started := time.Now()
-	asset, err := assetdecode.DC6(assets, name, palette)
-	c.decodeCalls++
-	c.decodeTime += time.Since(started)
+	value, err := c.load(assets, "dc6\x00"+key, func() (any, int, error) {
+		asset, err := assetdecode.DC6(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		return asset, dc6DecodedWeight(asset), nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decoded.InsertVersioned("decoded", "dc6\x00"+key, c.generation, asset, dc6DecodedWeight(asset)); err != nil {
-		return nil, err
-	}
-	return asset, nil
+	return value.(*dc6.DC6), nil
 }
 
 func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, palette string) (image.Image, error) {
 	key := name + "\x00" + strings.Join(tiles, "\x00") + "\x00" + palette
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh(assets)
-	if cached, ok := c.decoded.RetrieveVersioned("decoded", "ds1\x00"+key, c.generation); ok {
-		return cached.(image.Image), nil
-	}
-	started := time.Now()
-	preview, err := assetinspect.TexturedDS1Preview(assets, name, tiles, palette)
+	value, err := c.load(assets, "ds1\x00"+key, func() (any, int, error) {
+		preview, err := assetinspect.TexturedDS1Preview(assets, name, tiles, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		decoded, _, err := image.Decode(bytes.NewReader(preview))
+		if err != nil {
+			return nil, 0, err
+		}
+		return decoded, decoded.Bounds().Dx() * decoded.Bounds().Dy() * 4, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	decoded, _, err := image.Decode(bytes.NewReader(preview))
-	c.decodeCalls++
-	c.decodeTime += time.Since(started)
-	if err != nil {
-		return nil, err
-	}
-	weight := decoded.Bounds().Dx() * decoded.Bounds().Dy() * 4
-	if err := c.decoded.InsertVersioned("decoded", "ds1\x00"+key, c.generation, decoded, weight); err != nil {
-		return nil, err
-	}
-	return decoded, nil
+	return value.(image.Image), nil
 }
 
 func (n *ownedRenderNode) release() error {
@@ -699,17 +734,20 @@ func RenderModule(runtime *Runtime, composer *render.Composer) Module {
 }
 
 // RenderModuleWithAssets additionally lets nodes decode standard image assets
-// from the layered content filesystem. Decoding occurs on the Lua owner;
-// renderer upload remains queued for the renderer thread.
+// from the layered content filesystem. Scene-demanded decoding occurs on the
+// Lua owner, while explicit preloads use bounded background workers. Renderer
+// upload always remains queued for the renderer thread.
 func RenderModuleWithAssets(runtime *Runtime, composer *render.Composer, assets fs.FS) Module {
 	return NewRenderCapability(runtime, composer, assets).Module()
 }
 
 // Module returns the versioned Lua render capability.
 func (r *RenderCapability) Module() Module {
-	runtime, composer, assets, cache := r.runtime, r.composer, r.assets, r.cache
+	runtime, composer, assets, cache, preloads := r.runtime, r.composer, r.assets, r.cache, r.preloads
 	return Module{Name: "dm.render/v1", Help: documentedModule("Create and inspect retained presentation nodes.", map[string]CommandHelp{
 		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
+		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
+		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
 		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
@@ -744,6 +782,38 @@ func (r *RenderCapability) Module() Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"preload": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				requests, err := luaPreloadRequests(state, 1)
+				if err != nil {
+					state.ArgError(1, err.Error())
+					return 0
+				}
+				state.Push(lua.LNumber(preloads.Start(requests)))
+				return 1
+			},
+			"preload_status": func(state *lua.LState) int {
+				status, ok := preloads.Status(uint64(state.CheckInt(1)))
+				if !ok {
+					state.Push(lua.LNil)
+					return 1
+				}
+				result := state.NewTable()
+				result.RawSetString("total", lua.LNumber(status.Total))
+				result.RawSetString("completed", lua.LNumber(status.Completed))
+				result.RawSetString("failed", lua.LNumber(status.Failed))
+				result.RawSetString("done", lua.LBool(status.Done))
+				errors := state.NewTable()
+				for _, message := range status.Errors {
+					errors.Append(lua.LString(message))
+				}
+				result.RawSetString("errors", errors)
+				state.Push(result)
+				return 1
+			},
 			"diagnostics": func(state *lua.LState) int {
 				decoded, retained := cache.decoded.Diagnostics(), composer.Diagnostics()
 				result := state.NewTable()
@@ -988,13 +1058,7 @@ func registerRenderNodeType(state *lua.LState) {
 				return 0
 			}
 			fileName := state.CheckString(2)
-			file, err := node.assets.Open(fileName)
-			if err != nil {
-				state.RaiseError("opening image %q: %v", fileName, err)
-				return 0
-			}
-			decoded, _, err := image.Decode(file)
-			_ = file.Close()
+			decoded, err := node.cache.loadImage(node.assets, fileName)
 			if err != nil {
 				state.RaiseError("decoding image %q: %v", fileName, err)
 				return 0

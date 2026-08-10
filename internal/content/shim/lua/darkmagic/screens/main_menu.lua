@@ -15,6 +15,7 @@ local text = require("darkmagic.ui.text")
 local compat = require("darkmagic.ui.compat")
 local app = require("dm.app/v1")
 local cursor = require("darkmagic.ui.cursor")
+local preload = require("darkmagic.ui.preload")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.main_menu
@@ -47,6 +48,9 @@ return {
         self:configure_controls()
         self:configure_labels()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+		-- Build this scene first. Once it is visible, the menu becomes useful
+		-- think-time for warming the destinations behind Single Player.
+		preload.frontend()
     end,
 
     configure_labels = function(self)

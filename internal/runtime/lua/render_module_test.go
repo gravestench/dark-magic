@@ -382,6 +382,52 @@ return { id = "screen.dc6", start = function(self)
 	}
 }
 
+func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
+	palette := make([]byte, 256*3)
+	dc6Data := make([]byte, 16+8+4+32+3+3)
+	put := func(offset int, value uint32) { binary.LittleEndian.PutUint32(dc6Data[offset:offset+4], value) }
+	put(0, 6)
+	put(16, 1)
+	put(20, 1)
+	put(24, 28)
+	put(32, 1)
+	put(36, 1)
+	put(56, 3)
+	dc6Data[60], dc6Data[61], dc6Data[62] = 1, 1, 0x80
+	assets := fstest.MapFS{
+		"one.dc6": {Data: dc6Data},
+		"pal.dat": {Data: palette},
+	}
+
+	capability := NewRenderCapability(New(), &render.Composer{}, assets)
+	job := capability.preloads.Start([]AssetPreloadRequest{{Kind: "dc6", Path: "one.dc6", Palette: "pal.dat"}})
+	deadline := time.Now().Add(time.Second)
+	for {
+		status, ok := capability.preloads.Status(job)
+		if !ok {
+			t.Fatal("preload job disappeared")
+		}
+		if status.Done {
+			if status.Completed != 1 || status.Failed != 0 {
+				t.Fatalf("preload status = %#v", status)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("preload did not finish")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	before := capability.Diagnostics().DecodeCalls
+	if _, err := capability.cache.loadDC6(assets, "one.dc6", "pal.dat"); err != nil {
+		t.Fatal(err)
+	}
+	if after := capability.Diagnostics().DecodeCalls; after != before {
+		t.Fatalf("warm asset decoded again: before=%d after=%d", before, after)
+	}
+}
+
 func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 	t.Parallel()
 
