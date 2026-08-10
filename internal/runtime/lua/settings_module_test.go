@@ -9,6 +9,14 @@ import (
 	"github.com/gravestench/dark-magic/internal/preferences"
 )
 
+type recordingRenderSettings struct {
+	debug  bool
+	budget uint64
+}
+
+func (r *recordingRenderSettings) SetResidencyDebug(value bool)        { r.debug = value }
+func (r *recordingRenderSettings) SetTextureUploadBudget(value uint64) { r.budget = value }
+
 func TestSettingsModuleAppliesAudioPreferences(t *testing.T) {
 	runtime := New()
 	settings := preferences.NewTransient()
@@ -27,5 +35,36 @@ func TestSettingsModuleAppliesAudioPreferences(t *testing.T) {
 	diagnostics := mixer.Diagnostics()
 	if diagnostics.BusVolumes["sfx"] != .25 || diagnostics.BusVolumes["speech"] != .25 || diagnostics.BusVolumes["music"] != .75 {
 		t.Fatalf("bus volumes = %#v", diagnostics.BusVolumes)
+	}
+}
+
+func TestSettingsModuleAppliesPersistentRenderDiagnosticsPreferences(t *testing.T) {
+	runtime := New()
+	settings, err := preferences.New(t.TempDir() + "/preferences.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mixer audio.Mixer
+	target := &recordingRenderSettings{}
+	if err := runtime.RegisterModule(SettingsModule(settings, &mixer, target)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(context.Background())
+	script := `local s=require("dm.settings/v1"); s.set("debug_texture_residency",true); s.set("texture_upload_budget_mb",8); s.save(); assert(s.get("debug_texture_residency") and s.get("texture_upload_budget_mb")==8)`
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"script.lua": {Data: []byte(script)}}, "script.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if !target.debug || target.budget != 8*1024*1024 {
+		t.Fatalf("render settings = %#v", target)
+	}
+	reloaded, err := preferences.New(settings.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if values := reloaded.Values(); !values.DebugTextureResidency || values.TextureUploadBudgetMB != 8 {
+		t.Fatalf("persisted values = %#v", values)
 	}
 }

@@ -6,16 +6,30 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// RenderSettingsTarget accepts renderer preferences without coupling Lua to a
+// concrete platform backend.
+type RenderSettingsTarget interface {
+	SetResidencyDebug(bool)
+	SetTextureUploadBudget(uint64)
+}
+
 // SettingsModule exposes validated client preferences. Runtime effects are
 // applied immediately; persistence remains an explicit UI action.
-func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer) Module {
+func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTargets ...RenderSettingsTarget) Module {
 	apply := func(values preferences.Values) error {
 		for _, bus := range []string{"sfx", "ambience", "speech"} {
 			if err := mixer.SetBusVolume(bus, float32(values.SoundVolume)); err != nil {
 				return err
 			}
 		}
-		return mixer.SetBusVolume("music", float32(values.MusicVolume))
+		if err := mixer.SetBusVolume("music", float32(values.MusicVolume)); err != nil {
+			return err
+		}
+		for _, target := range renderTargets {
+			target.SetResidencyDebug(values.DebugTextureResidency)
+			target.SetTextureUploadBudget(uint64(values.TextureUploadBudgetMB * 1024 * 1024))
+		}
+		return nil
 	}
 	_ = apply(settings.Values())
 	return Module{Name: "dm.settings/v1", Help: documentedModule("Inspect, preview, and persist client game preferences.", map[string]CommandHelp{
@@ -32,6 +46,10 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer) Module {
 					state.Push(lua.LNumber(values.SoundVolume))
 				case "music_volume":
 					state.Push(lua.LNumber(values.MusicVolume))
+				case "debug_texture_residency":
+					state.Push(lua.LBool(values.DebugTextureResidency))
+				case "texture_upload_budget_mb":
+					state.Push(lua.LNumber(values.TextureUploadBudgetMB))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}
@@ -39,12 +57,15 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer) Module {
 			},
 			"set": func(state *lua.LState) int {
 				values := settings.Values()
-				value := float64(state.CheckNumber(2))
 				switch name := state.CheckString(1); name {
 				case "sound_volume":
-					values.SoundVolume = value
+					values.SoundVolume = float64(state.CheckNumber(2))
 				case "music_volume":
-					values.MusicVolume = value
+					values.MusicVolume = float64(state.CheckNumber(2))
+				case "debug_texture_residency":
+					values.DebugTextureResidency = state.CheckBool(2)
+				case "texture_upload_budget_mb":
+					values.TextureUploadBudgetMB = float64(state.CheckNumber(2))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}

@@ -40,7 +40,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.WorldModule(app.options.Content, app.worldObjectResolver),
 		modruntime.InputModule(app.inputState),
 		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
-		modruntime.SettingsModule(app.gameSettings, app.mixer),
+		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
 		modruntime.RecordsModule(app.gameData),
 		modruntime.GameDataModule(app.gameData),
 		modruntime.QuestCatalogModule(app.questCatalog, app.locale),

@@ -29,8 +29,12 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 		if err := composer.Drain(backend); err != nil && s.logger != nil {
 			s.logger.Error("draining render composition", "error", err)
 		}
+		if err := composer.DrainWarm(backend, s.textureUploadBudget.Load()); err != nil && s.logger != nil {
+			s.logger.Error("warming texture residency", "error", err)
+		}
 		backend.advance(time.Duration(float64(time.Second) * float64(rl.GetFrameTime())))
 	})
+	s.SubscribeOverlay(func() { s.drawResidencyDebug(composer) })
 	return nil
 }
 
@@ -79,6 +83,7 @@ func (b *compositionBackend) closePaletteEffects() {
 type animationPlayback struct {
 	player       *render.AnimationPlayer
 	frames       []image.Image
+	keys         []string
 	seekRevision uint64
 }
 
@@ -88,7 +93,7 @@ func (b *compositionBackend) advance(elapsed time.Duration) {
 	for id, playback := range b.playbacks {
 		index, changed := playback.player.Advance(elapsed)
 		if changed {
-			b.setAnimationFrame(b.nodes[id], playback.frames[index], index)
+			b.setAnimationFrame(b.nodes[id], playback.frames[index], playback.keys[index], index)
 		}
 	}
 }
@@ -112,6 +117,12 @@ func (b *compositionBackend) Apply(change render.Change) error {
 		b.paletteEffects = make(map[render.ResourceID]*gpuPaletteEffect)
 	}
 	switch change.Kind {
+	case "texture-warm":
+		if change.Resource.TextureKey == "" {
+			return fmt.Errorf("warm texture key is empty")
+		}
+		b.renderer.getTexture(change.Resource.TextureKey, change.Resource.Payload.(image.Image))
+		return nil
 	case "resource-create":
 		b.resources[change.ResourceID] = change.Resource
 		return nil
@@ -136,7 +147,7 @@ func (b *compositionBackend) Apply(change render.Change) error {
 			if previous != next {
 				node.ClearTextures()
 			}
-			node.SetImage(change.Resource.Payload.(image.Image))
+			node.UpdateImageResource(change.Resource.Payload.(image.Image), change.Resource.TextureKey)
 		}
 		return nil
 	case "resource-destroy":
@@ -249,7 +260,7 @@ func (b *compositionBackend) applyNode(node *node, state render.Node) error {
 					return err
 				}
 			} else {
-				node.SetImage(decoded)
+				node.SetImageResource(decoded, resource.TextureKey)
 				delete(b.playbacks, state.ID)
 			}
 			b.nodeResources[state.ID] = state.Resource
@@ -269,7 +280,7 @@ func (b *compositionBackend) applyNode(node *node, state render.Node) error {
 			frame, changed := playback.player.Seek(state.AnimationSeek)
 			playback.seekRevision = state.AnimationSeekRevision
 			if changed {
-				b.setAnimationFrame(node, playback.frames[frame], frame)
+				b.setAnimationFrame(node, playback.frames[frame], playback.keys[frame], frame)
 			}
 		}
 	}
@@ -279,21 +290,23 @@ func (b *compositionBackend) applyNode(node *node, state render.Node) error {
 func (b *compositionBackend) attachAnimation(id render.NodeID, node *node, resource render.Resource) error {
 	animation := resource.Payload.(render.AnimationData)
 	frames := make([]image.Image, len(animation.Frames))
+	keys := make([]string, len(animation.Frames))
 	for index, id := range animation.Frames {
 		frame, exists := b.resources[id]
 		if !exists {
 			return fmt.Errorf("animation %v frame %d is unavailable", resource.ID, index)
 		}
 		frames[index] = frame.Payload.(image.Image)
+		keys[index] = frame.TextureKey
 	}
 	player := render.NewAnimationPlayer(animation.Durations, animation.Loop)
-	b.playbacks[id] = &animationPlayback{player: player, frames: frames}
-	node.SetAnimationFrame(frames[0], 0)
+	b.playbacks[id] = &animationPlayback{player: player, frames: frames, keys: keys}
+	node.SetAnimationFrame(frames[0], keys[0], 0)
 	return nil
 }
 
-func (b *compositionBackend) setAnimationFrame(node *node, frame image.Image, index int) {
-	node.SetAnimationFrame(frame, index)
+func (b *compositionBackend) setAnimationFrame(node *node, frame image.Image, key string, index int) {
+	node.SetAnimationFrame(frame, key, index)
 }
 
 func (b *compositionBackend) drawableImage(resource render.Resource) (image.Image, error) {

@@ -13,6 +13,7 @@ func TestSettingsValidatePersistAndReload(t *testing.T) {
 	}
 	values := settings.Values()
 	values.SoundVolume, values.MusicVolume = .25, .75
+	values.DebugTextureResidency, values.TextureUploadBudgetMB = true, 8
 	if err := settings.Update(values); err != nil {
 		t.Fatal(err)
 	}

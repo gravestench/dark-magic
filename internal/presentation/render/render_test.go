@@ -332,3 +332,30 @@ func TestEmptyDrainHotPathDoesNotAllocate(t *testing.T) {
 		t.Fatalf("empty drain allocations = %v", allocations)
 	}
 }
+
+func TestWarmTextureQueueDeduplicatesAndRespectsBudget(t *testing.T) {
+	composer := &Composer{}
+	backend := &recordingBackend{}
+	first := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	second := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	first.Pix[0], second.Pix[0] = 1, 2
+	if composer.WarmTexture(first) != composer.WarmTexture(first) {
+		t.Fatal("stable texture key changed")
+	}
+	composer.WarmTexture(second)
+	if got := composer.Diagnostics().WarmPending; got != 2 {
+		t.Fatalf("warm pending = %d", got)
+	}
+	if err := composer.DrainWarm(backend, 64); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().WarmPending; got != 1 {
+		t.Fatalf("warm pending after budget = %d", got)
+	}
+	if err := composer.DrainWarm(backend, 64); err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().WarmPending; got != 0 {
+		t.Fatalf("warm pending after drain = %d", got)
+	}
+}

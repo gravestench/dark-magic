@@ -86,7 +86,7 @@ func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.
 	}
 	return &RenderCapability{
 		runtime: runtime, composer: composer, assets: assets, cache: cache,
-		preloads: newAssetPreloader(assets, cache),
+		preloads: newAssetPreloader(assets, cache, composer),
 	}
 }
 
@@ -910,6 +910,8 @@ func (r *RenderCapability) Module() Module {
 				result.RawSetString("active_nodes", lua.LNumber(retained.ActiveNodes))
 				result.RawSetString("active_resources", lua.LNumber(retained.ActiveResources))
 				result.RawSetString("pending_commands", lua.LNumber(retained.Pending))
+				result.RawSetString("pending_warm_textures", lua.LNumber(retained.WarmPending))
+				result.RawSetString("pending_warm_bytes", lua.LNumber(retained.WarmPendingBytes))
 				state.Push(result)
 				return 1
 			},
