@@ -5,9 +5,12 @@ package interaction
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync"
+
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 )
 
 type Target struct {
@@ -16,6 +19,9 @@ type Target struct {
 	Vendor     string   `json:"vendor,omitempty"`
 	Categories []string `json:"categories,omitempty"`
 	Services   []string `json:"services,omitempty"`
+	X          float64  `json:"x"`
+	Y          float64  `json:"y"`
+	Radius     float64  `json:"radius"`
 }
 
 type Context struct {
@@ -36,8 +42,8 @@ func NewAuthority(targets ...Target) (*Authority, error) {
 	authority := &Authority{targets: make(map[string]Target, len(targets)), owners: make(map[string]Context)}
 	for _, target := range targets {
 		target = normalizeTarget(target)
-		if target.ID == "" || target.NPC == "" {
-			return nil, fmt.Errorf("interaction: target ID and NPC are required")
+		if target.ID == "" || target.NPC == "" || target.Radius <= 0 || !finite(target.X) || !finite(target.Y) || !finite(target.Radius) {
+			return nil, fmt.Errorf("interaction: target ID, NPC, and positive radius are required")
 		}
 		if _, exists := authority.targets[target.ID]; exists {
 			return nil, fmt.Errorf("interaction: duplicate target %q", target.ID)
@@ -46,6 +52,8 @@ func NewAuthority(targets ...Target) (*Authority, error) {
 	}
 	return authority, nil
 }
+
+func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }
 
 // RegisterOwner installs optional initial context before the session captures
 // replay state. An empty target leaves the player outside an interaction.
@@ -113,6 +121,24 @@ func (authority *Authority) CanTrade(owner, vendor string) bool {
 func (authority *Authority) CanService(owner, service string) bool {
 	context, err := authority.Snapshot(owner)
 	if err != nil {
+		return false
+	}
+	service = strings.ToLower(strings.TrimSpace(service))
+	index := sort.SearchStrings(context.Services, service)
+	return index < len(context.Services) && context.Services[index] == service
+}
+
+// CanTradeAt and CanServiceAt are the item authority boundary. They re-check
+// current ECS position for every transaction, so walking away invalidates an
+// already-open panel without trusting presentation to close it first.
+func (authority *Authority) CanTradeAt(engine *gameecs.Engine, owner, vendor string) bool {
+	context, err := authority.Snapshot(owner)
+	return err == nil && context.Vendor != "" && strings.EqualFold(context.Vendor, strings.TrimSpace(vendor)) && authority.validateRange(engine, owner, context.TargetID) == nil
+}
+
+func (authority *Authority) CanServiceAt(engine *gameecs.Engine, owner, service string) bool {
+	context, err := authority.Snapshot(owner)
+	if err != nil || authority.validateRange(engine, owner, context.TargetID) != nil {
 		return false
 	}
 	service = strings.ToLower(strings.TrimSpace(service))

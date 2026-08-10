@@ -1,16 +1,20 @@
 package item
 
-import "testing"
+import (
+	"testing"
+
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+)
 
 type interactionPolicyStub struct {
 	vendor  string
 	service string
 }
 
-func (policy interactionPolicyStub) CanTrade(_ string, vendor string) bool {
+func (policy interactionPolicyStub) CanTradeAt(_ *gameecs.Engine, _ string, vendor string) bool {
 	return vendor == policy.vendor
 }
-func (policy interactionPolicyStub) CanService(_ string, service string) bool {
+func (policy interactionPolicyStub) CanServiceAt(_ *gameecs.Engine, _ string, service string) bool {
 	return service == policy.service
 }
 
@@ -31,10 +35,10 @@ func TestAuthorityRejectsCommerceOutsideActiveInteraction(t *testing.T) {
 	if err := authority.Register("alice", state); err != nil {
 		t.Fatal(err)
 	}
-	if err := authority.sellHeld("alice", "held", "akara", "misc"); err == nil {
+	if err := authority.sellHeld(nil, "alice", "held", "akara", "misc"); err == nil {
 		t.Fatal("sale outside active vendor interaction succeeded")
 	}
-	if err := authority.buyToHeld("alice", "stock", "akara"); err == nil {
+	if err := authority.buyToHeld(nil, "alice", "stock", "akara"); err == nil {
 		t.Fatal("purchase outside active vendor interaction succeeded")
 	}
 	_, _, placements, err := authority.Snapshot("alice")

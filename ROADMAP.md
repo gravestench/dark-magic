@@ -865,8 +865,13 @@ complete until its actions are driven by authoritative game state and commands.
   Monster `Inventory.txt` grid geometry, authority-arranged stock, carried item
   cursor state, gold display, and command-backed purchases. Riiablo's recovered
   tab frames and `gridLeft - invLeft` placement corroborate the implementation.
-  Spatial NPC targeting/range, record-built target catalogs, sell/repair modes,
-  price tooltips, gambling refresh, and the remaining NPC services stay open.
+  Interaction opens now resolve the controlled player from authoritative ECS
+  components and reject unknown, missing, or out-of-range targets using the
+  server-owned target anchor and radius. Every commerce/service command repeats
+  that current-position check, so walking away immediately expires permission
+  even if presentation has not closed the panel. Zone-aware and moving NPC
+  entity targets, record-built target catalogs, sell/repair modes, price
+  tooltips, gambling refresh, and the remaining NPC services stay open.
 - [ ] Integrate deterministic item materialization and treasure-class rolls with
   authoritative monster/chest events, world drops, inventories, equipment, and
   persistence without duplicating the completed `internal/game/loot` rules.
