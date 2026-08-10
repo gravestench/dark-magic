@@ -1,5 +1,7 @@
 local render = require("dm.render/v1")
 local scenes = require("dm.scene/v1")
+local data = require("dm.data/v1")
+local cursor = require("darkmagic.ui.cursor")
 local loading = require("darkmagic.screens.loading")
 local title = require("darkmagic.screens.title")
 local main_menu = require("darkmagic.screens.main_menu")
@@ -13,10 +15,23 @@ local skills = require("darkmagic.overlays.skills")
 local automap = require("darkmagic.overlays.automap")
 local options = require("darkmagic.overlays.options")
 local pause = require("darkmagic.overlays.pause")
+local help = require("darkmagic.overlays.help")
+local quests = require("darkmagic.overlays.quests")
+local party = require("darkmagic.overlays.party")
+local stash = require("darkmagic.overlays.stash")
+local cube = require("darkmagic.overlays.cube")
+local hireling = require("darkmagic.overlays.hireling")
+local vendor = require("darkmagic.overlays.vendor")
+local waypoint = require("darkmagic.overlays.waypoint")
+local death = require("darkmagic.overlays.death")
+local overlay_shell = require("darkmagic.ui.overlay_shell")
 local tcpip = require("darkmagic.screens.tcpip")
 local credits = require("darkmagic.screens.credits")
 local cinematics = require("darkmagic.screens.cinematics")
 local font_lab = require("darkmagic.screens.font_lab")
+local ui_lab = require("darkmagic.screens.ui_lab")
+
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 
 return {
     id = "darkmagic.boot",
@@ -27,23 +42,67 @@ return {
         -- below this root as the Lua-authored shell is brought online.
         self.root = render.create("transition")
 
-        scenes.register("loading", loading)
-        scenes.register("title", title)
-        scenes.register("main_menu", main_menu)
-        scenes.register("character_select", character_select)
-        scenes.register("character_create", character_create)
-        scenes.register("game_world", game_world)
-        scenes.register("game_loading", game_loading)
-        scenes.register("tcpip", tcpip)
-        scenes.register("credits", credits)
-        scenes.register("cinematics", cinematics)
-        scenes.register("font_lab", font_lab)
-        scenes.register("inventory", inventory)
-        scenes.register("character", character)
-        scenes.register("skills", skills)
-        scenes.register("automap", automap)
-        scenes.register("options", options)
-        scenes.register("pause", pause)
+        -- The Diablo software pointer is a shell-wide invariant. Every focused
+        -- screen/overlay receives one even if the screen itself never explicitly
+        -- creates a cursor. Startup cinematics and the game loading screen hide
+        -- it. The cinematics browser keeps it visible while choosing a movie and
+        -- hides it only while an act/epilogue video is actually playing.
+        local function with_cursor(definition, options)
+            return cursor.wrap(definition, manifest.cursor, manifest.palettes, options)
+        end
+
+        scenes.register("loading", with_cursor(loading, { hidden = true }))
+        scenes.register("title", with_cursor(title))
+        scenes.register("main_menu", with_cursor(main_menu))
+        scenes.register("character_select", with_cursor(character_select))
+        scenes.register("character_create", with_cursor(character_create))
+        scenes.register("game_world", with_cursor(game_world))
+        scenes.register("game_loading", with_cursor(game_loading, { hidden = true }))
+        scenes.register("tcpip", with_cursor(tcpip))
+        scenes.register("credits", with_cursor(credits))
+        scenes.register("cinematics", with_cursor(cinematics, {
+            visible_when = function(scene)
+                return scene.playback == nil
+            end,
+        }))
+        scenes.register("font_lab", with_cursor(font_lab))
+        scenes.register("ui_lab", with_cursor(ui_lab))
+        scenes.register("inventory", with_cursor(inventory))
+        scenes.register("character", with_cursor(character))
+        scenes.register("skills", with_cursor(skills))
+        scenes.register("automap", with_cursor(automap))
+        scenes.register("options", with_cursor(options))
+        scenes.register("pause", with_cursor(pause))
+        scenes.register("help", with_cursor(help))
+        scenes.register("quests", with_cursor(quests))
+        scenes.register("party", with_cursor(party))
+        scenes.register("stash", with_cursor(stash))
+        scenes.register("cube", with_cursor(cube))
+        scenes.register("hireling", with_cursor(hireling))
+        scenes.register("vendor", with_cursor(vendor))
+        scenes.register("waypoint", with_cursor(waypoint))
+        scenes.register("death", with_cursor(death))
+        local shells = {
+            quick_skills={title="darkmagic.shell.quick_skills",x=470,y=220,width=250,height=270},
+            belt={title="darkmagic.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
+            messages={title="darkmagic.shell.messages",x=120,y=100,width=560,height=380},
+            move_gold={title="darkmagic.shell.move_gold",sheet="data/global/ui/MENU/dialogbackground.DC6",x=270,y=175},
+            npc_interaction={title="darkmagic.shell.npc_interaction",x=250,y=180,width=300,height=260},
+            npc_dialogue={title="darkmagic.shell.npc_dialogue",x=100,y=390,width=600,height=130,blocks_update_below=false},
+            item_tooltip={title="darkmagic.shell.item_tooltip",x=250,y=140,width=300,height=320,blocks_update_below=false},
+            ground_items={title="darkmagic.shell.ground_items",x=170,y=120,width=460,height=340,blocks_update_below=false,layer="hud"},
+            confirmation_dialog={title="darkmagic.shell.confirmation_dialog",sheet="data/global/ui/FrontEnd/PopUpOkCancel.dc6",palette="fechar",x=270,y=175},
+            area_transition={title="darkmagic.shell.area_transition",x=100,y=180,width=600,height=220},
+            player_trade={title="darkmagic.shell.player_trade",x=80,y=64,width=640,height=432},
+            gambling={title="darkmagic.shell.gambling",sheet="data/global/ui/PANEL/buysell.dc6",x=80,y=64},
+            npc_services={title="darkmagic.shell.npc_services",x=200,y=160,width=400,height=300},
+            hireling_hire={title="darkmagic.shell.hireling_hire",x=160,y=100,width=480,height=380},
+            chat={title="darkmagic.shell.chat",x=80,y=430,width=640,height=100,blocks_update_below=false},
+            overhead_labels={title="darkmagic.shell.overhead_labels",x=120,y=100,width=560,height=380,blocks_update_below=false,layer="hud"},
+        }
+        for name, definition in pairs(shells) do
+            scenes.register(name, with_cursor(overlay_shell.new(definition)))
+        end
         scenes.replace("loading")
     end,
 

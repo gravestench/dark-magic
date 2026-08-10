@@ -89,6 +89,11 @@ func (s *Service) renderNode(node Renderable) {
 	}
 
 	if node.BlendMode() != rl.BlendAlpha {
+		if node.BlendMode() == rl.BlendCustom {
+			// Diablo II UI draw mode 3 uses screen-like blending:
+			// GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_FUNC_ADD.
+			rl.SetBlendFactors(rl.One, rl.OneMinusSrcColor, rl.FuncAdd)
+		}
 		rl.BeginBlendMode(node.BlendMode())
 		defer rl.EndBlendMode()
 	}

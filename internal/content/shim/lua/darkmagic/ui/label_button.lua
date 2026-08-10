@@ -11,6 +11,7 @@ function label_button.create(root, manager, definition, label, options)
     options = options or {}
     local normal_style = options.normal_style or "label_button_normal"
     local hover_style = options.hover_style or "label_button_hover"
+    local pressed_style = options.pressed_style or hover_style
     local disabled_style = options.disabled_style or "disabled"
     local label_node
 
@@ -49,9 +50,11 @@ function label_button.create(root, manager, definition, label, options)
             end
         end,
         on_state = function(_, state)
-            if state == "disabled" then
-                draw(disabled_style)
-            elseif state == "hover" or state == "focused" or state == "pressed" then
+        if state == "disabled" then
+            draw(disabled_style)
+        elseif state == "pressed" then
+            draw(pressed_style)
+        elseif state == "hover" or state == "focused" then
                 draw(hover_style)
             else
                 draw(normal_style)

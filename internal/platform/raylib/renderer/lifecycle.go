@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"runtime"
+	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 
@@ -28,23 +30,37 @@ func (s *Service) Start(context.Context) error {
 		s.rootNode.Disable()
 	}
 	rl.SetTraceLogCallback(func(level int, message string) {
-		if level >= 4 {
+		switch {
+		case level >= int(rl.LogError):
 			s.logger.Error(message)
-			return
+		case level == int(rl.LogWarning) && strings.HasPrefix(message, "FONT: Requested codepoints glyphs found:"):
+			// Raylib reports the intentionally sparse Diablo II bitmap-font
+			// codepoint set while successfully installing fallback glyphs.
+			s.logger.Debug(message)
+		case level == int(rl.LogWarning):
+			s.logger.Warn(message)
+		default:
+			s.logger.Debug(message)
 		}
-		s.logger.Debug(message)
 	})
 	if s.config.Window.Resizable {
 		rl.SetConfigFlags(rl.FlagWindowResizable)
 	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
-	iconData := branding.WindowIconPNG()
-	icon := rl.LoadImageFromMemory(".png", iconData, int32(len(iconData)))
-	if icon.Width > 0 && icon.Height > 0 {
-		rl.SetWindowIcon(*icon)
-		rl.UnloadImage(icon)
-	} else {
-		s.logger.Warn("renderer: failed to decode embedded window icon")
+	// Cocoa regular windows do not support GLFW window icons. macOS uses the
+	// application-bundle icon instead, so avoid provoking a native warning.
+	if runtime.GOOS != "darwin" {
+		iconData := branding.WindowIconPNG()
+		icon := rl.LoadImageFromMemory(".png", iconData, int32(len(iconData)))
+		if icon.Width > 0 && icon.Height > 0 {
+			// GLFW accepts window icons only as RGBA pixels. The embedded PNG is
+			// intentionally stored as RGB; convert the decoded image first.
+			rl.ImageFormat(icon, rl.UncompressedR8g8b8a8)
+			rl.SetWindowIcon(*icon)
+			rl.UnloadImage(icon)
+		} else {
+			s.logger.Warn("renderer: failed to decode embedded window icon")
+		}
 	}
 	// Escape belongs to scene and shell focus routing. WindowShouldClose still
 	// observes the native close control after Raylib's default Escape binding is

@@ -12,10 +12,24 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 var errBlankFrame = errors.New("framebuffer contains no visible pixels")
+
+// Defaults makes either capture flag sufficient to opt into capture mode.
+func Defaults(directory, scenes string) (string, string) {
+	directory = strings.TrimSpace(directory)
+	scenes = strings.TrimSpace(scenes)
+	if directory == "" && scenes != "" {
+		directory = "./captures/frontend"
+	}
+	if directory != "" && scenes == "" {
+		scenes = "loading,title"
+	}
+	return directory, scenes
+}
 
 type Screenshotter interface {
 	CaptureScreenshot(string) error
@@ -76,6 +90,10 @@ func (s *Session) Observe(stack []string) {
 	}
 	scene := stack[len(stack)-1]
 	if scene != s.current {
+		if s.wanted[s.current] && !s.captured[s.current] {
+			s.err = fmt.Errorf("scene %q transitioned before a visible frame could be captured", s.current)
+			return
+		}
 		s.current, s.frames = scene, 0
 	}
 	s.frames++
@@ -116,6 +134,16 @@ func (s *Session) Close() error {
 	if s.err != nil {
 		return fmt.Errorf("capture: %w", s.err)
 	}
+	if len(s.captured) != len(s.wanted) {
+		missing := make([]string, 0, len(s.wanted)-len(s.captured))
+		for scene := range s.wanted {
+			if !s.captured[scene] {
+				missing = append(missing, scene)
+			}
+		}
+		slices.Sort(missing)
+		return fmt.Errorf("capture: incomplete; missing scenes: %s", strings.Join(missing, ","))
+	}
 	return err
 }
 
@@ -136,7 +164,7 @@ func inspect(path, scene, name string) (Result, error) {
 	if closeErr != nil {
 		return Result{}, closeErr
 	}
-	if !hasVisiblePixels(frame) {
+	if !hasVisiblePixels(frame, scene) {
 		return Result{}, errBlankFrame
 	}
 	digest := sha256.Sum256(data)
@@ -144,9 +172,16 @@ func inspect(path, scene, name string) (Result, error) {
 	return Result{Scene: scene, File: name, SHA256: hex.EncodeToString(digest[:]), Width: bounds.Dx(), Height: bounds.Dy()}, nil
 }
 
-func hasVisiblePixels(frame image.Image) bool {
+func hasVisiblePixels(frame image.Image, scene string) bool {
 	bounds := frame.Bounds()
 	required := (bounds.Dx()*bounds.Dy() + 49) / 50
+	// These authentic overlays contain only text or a small transitional image
+	// over the world. When booted directly there is no world below them, so the
+	// normal 2% threshold incorrectly classifies valid sparse frames as blank.
+	// They still require hundreds of lit pixels; a black framebuffer retries.
+	if scene == "death" || scene == "game_loading" || scene == "npc_dialogue" || scene == "ground_items" || scene == "chat" || scene == "overhead_labels" {
+		required = (bounds.Dx()*bounds.Dy() + 999) / 1000
+	}
 	visible := 0
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {

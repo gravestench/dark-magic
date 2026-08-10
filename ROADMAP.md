@@ -518,6 +518,11 @@ implementations. The remaining work is tracked explicitly below.
   engine-owned stat snapshot for progression, attributes, defense, life, mana,
   and stamina. Derived combat and resistance values remain part of M21; item
   instances and transfers remain part of M19.
+  The recovered Escape/options hierarchy now uses verified `OptBarC.dc6` and
+  `OptSkull.dc6` controls for live, persistent sound and music preferences via
+  `dm.settings/v1`. Unsupported 3D bias, gamma, contrast, and key-binding rows
+  remain explicitly unavailable until their engine effects and recovered ranges
+  are implemented rather than displaying fabricated values.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
   related records; keep only presentation corrections in shim manifests. The
   selected class's expansion Inventory.txt row now owns inventory grid and

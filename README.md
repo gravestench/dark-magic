@@ -118,6 +118,12 @@ directory. `DARK_MAGIC_SHELL_CONFIG` selects another host path and supports
 home-directory aliases. Multiline Lua values retain line breaks, indentation,
 and tabular spacing in both graphical and terminal shell views.
 
+Game preferences are separate from developer-shell presentation. The authored
+in-game sound and music sliders update mixer buses immediately through
+`dm.settings/v1` and save to `preferences.json` under the platform
+user-configuration directory when the overlay closes. Set
+`DARK_MAGIC_PREFERENCES` to use another file.
+
 Use `dm.apropos("music")` to search the permitted module and command
 descriptions. `dm.docs()` renders Markdown for the session's complete permitted
 Lua API from the same registration metadata used by help and completion.
@@ -271,7 +277,9 @@ The default captures `loading` and `title`; override `CAPTURE_SCENES` with a
 comma-separated list or pass `--capture-scenes` directly. `--capture-settle-frames`
 controls stabilization. Use `START_SCENE=character_create make capture` or
 `--start-scene character_create` to enter a registered scene directly for local
-development review. Capture exits automatically once every requested scene has
+development review. Passing `--capture-scenes` without `--capture-dir` writes to
+`./captures/frontend`, so a single overlay can be captured with
+`--start-scene=death --capture-scenes=death`. Capture exits automatically once every requested scene has
 been recorded. The capture directory contains numbered PNGs plus a
 `report.json` recording scene names, dimensions, and SHA-256 hashes. Capture
 output under `captures/` is ignored by Git so Blizzard imagery remains local.

@@ -169,6 +169,10 @@ func (b *compositionBackend) applyNode(node Renderable, state render.Node) error
 		node.SetBlendMode(rl.BlendAlpha)
 	case "additive":
 		node.SetBlendMode(rl.BlendAdditive)
+	case "screen":
+		// Diablo II draw mode 3: GL_ONE, GL_ONE_MINUS_SRC_COLOR.
+		// renderNode installs the custom factors immediately before drawing.
+		node.SetBlendMode(rl.BlendCustom)
 	case "multiply":
 		node.SetBlendMode(rl.BlendMultiplied)
 	case "add-colors":

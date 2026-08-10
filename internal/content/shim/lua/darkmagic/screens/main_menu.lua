@@ -12,6 +12,7 @@ local dc6 = require("darkmagic.ui.dc6")
 local controls = require("darkmagic.ui.controls")
 local button = require("darkmagic.ui.button")
 local text = require("darkmagic.ui.text")
+local compat = require("darkmagic.ui.compat")
 local app = require("dm.app/v1")
 local cursor = require("darkmagic.ui.cursor")
 
@@ -31,16 +32,16 @@ return {
             manifest.layouts.frontend_tiles
         )
         if render.assets_available() then
-            -- The logo is four independently decoded resources sharing one
-            -- authored anchor and one deterministic animation clock.
             self.logo = {
                 black_left = render.create("hud", self.root),
                 black_right = render.create("hud", self.root),
                 fire_left = render.create("hud", self.root),
                 fire_right = render.create("hud", self.root),
             }
-            self.logo.fire_left:set_blend(logo.fire_blend)
-            self.logo.fire_right:set_blend(logo.fire_blend)
+            -- Diablo II draw mode 3 is screen blending (ONE,
+            -- ONE_MINUS_SRC_COLOR), not ordinary additive blending.
+            self.logo.fire_left:set_blend(compat.draw_mode(3))
+            self.logo.fire_right:set_blend(compat.draw_mode(3))
             self:configure_logo()
         end
         self:configure_controls()
@@ -52,7 +53,20 @@ return {
         if not render.assets_available() then
             return
         end
-        for id, definition in pairs(screen.labels) do
+        for id, manifest_definition in pairs(screen.labels) do
+            local definition = manifest_definition
+            if id == "legal" then
+                local recovered = compat.frontend.main_menu.disclaimer
+                definition = {
+                    x = recovered.x,
+                    y = recovered.y,
+                    width = recovered.width,
+                    align = recovered.align,
+                    style = recovered.style,
+                    key = manifest_definition.key,
+                }
+            end
+
             local label = render.create("hud", self.root)
             local text_value = assert(locale.text(definition.key))
             if id == "version" then
@@ -63,8 +77,6 @@ return {
         end
     end,
 
-    -- Compose each half separately because its black and flame layers share
-    -- bounds with each other, while both halves share the same world anchor.
     configure_logo = function(self)
         dc6.anchored_composite(
             { self.logo.black_left, self.logo.fire_left },
@@ -92,7 +104,11 @@ return {
     configure_controls = function(self)
         self.controls = controls.new()
 
-        local function add_control(id, definition)
+        local function add_control(id)
+            -- The compatibility catalog carries the cross-checked original
+            -- 800x600 geometry/frame facts; navigation/localization remain in
+            -- the presentation manifest so mods can still replace behavior.
+            local definition = compat.screen_control("main_menu", id, assert(screen.controls[id]))
             button.create(self.root, self.controls, id, definition, assert(locale.text(definition.label)), {
                 layer = "hud",
                 on_activate = function()
@@ -106,7 +122,7 @@ return {
         end
 
         for _, id in ipairs({ "single_player", "multiplayer", "credits", "cinematics", "exit" }) do
-            add_control(id, screen.controls[id])
+            add_control(id)
         end
     end,
 

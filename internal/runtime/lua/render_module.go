@@ -608,6 +608,90 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 	return result, bounds, nil
 }
 
+// combinedDC6Pages reconstructs tiled logical images using Diablo II's 256px
+// DC6 page convention. This matches Riiablo's DC6Parameters.COMBINE behavior:
+// a short frame terminates the column/row scan and repeated grids are pages.
+func combinedDC6Pages(asset *dc6.DC6, direction int) ([]image.Image, error) {
+	if asset == nil || direction < 0 || direction >= len(asset.Directions) {
+		return nil, fmt.Errorf("DC6 combined direction %d is out of range", direction)
+	}
+	frames := asset.Directions[direction].Frames
+	if len(frames) == 0 {
+		return nil, errors.New("DC6 combined direction has no frames")
+	}
+	const pageSize = 256
+	columns, width := 0, 0
+	for _, frame := range frames {
+		columns++
+		width += int(frame.Width)
+		if frame.Width < pageSize {
+			break
+		}
+	}
+	rows, height := 0, 0
+	for index := 0; index < len(frames); index += columns {
+		rows++
+		height += int(frames[index].Height)
+		if frames[index].Height < pageSize {
+			break
+		}
+	}
+	framesPerPage := rows * columns
+	if framesPerPage <= 0 || len(frames)%framesPerPage != 0 {
+		return nil, fmt.Errorf("DC6 combined grid %dx%d does not divide %d frames", columns, rows, len(frames))
+	}
+	pages := make([]image.Image, 0, len(frames)/framesPerPage)
+	frameIndex := 0
+	for page := 0; page < len(frames)/framesPerPage; page++ {
+		canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+		y := 0
+		for row := 0; row < rows; row++ {
+			x := 0
+			for column := 0; column < columns; column++ {
+				frame := frames[frameIndex]
+				frameIndex++
+				decoded, err := assetdecode.FrameImage(asset, frame)
+				if err != nil {
+					return nil, err
+				}
+				position := image.Pt(x, y)
+				draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Over)
+				x += int(frame.Width)
+			}
+			y += pageSize
+		}
+		pages = append(pages, canvas)
+	}
+	return pages, nil
+}
+
+func horizontalDC6Strip(asset *dc6.DC6, direction int) (image.Image, error) {
+	if asset == nil || direction < 0 || direction >= len(asset.Directions) {
+		return nil, fmt.Errorf("DC6 strip direction %d is out of range", direction)
+	}
+	frames := asset.Directions[direction].Frames
+	if len(frames) == 0 {
+		return nil, errors.New("DC6 strip has no frames")
+	}
+	width, height := 0, 0
+	for _, frame := range frames {
+		width += int(frame.Width)
+		height = max(height, int(frame.Height))
+	}
+	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+	x := 0
+	for _, frame := range frames {
+		decoded, err := assetdecode.FrameImage(asset, frame)
+		if err != nil {
+			return nil, err
+		}
+		position := image.Pt(x, height-int(frame.Height))
+		draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Over)
+		x += int(frame.Width)
+	}
+	return canvas, nil
+}
+
 // RenderModule exposes backend-neutral retained composition to scoped Lua
 // components. Nodes are automatically destroyed with their component scope.
 func RenderModule(runtime *Runtime, composer *render.Composer) Module {
@@ -644,6 +728,8 @@ func (r *RenderCapability) Module() Module {
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
+		"set_dc6_combined":           commandHelp("node:set_dc6_combined(path [, options])", "Reconstruct and render one tiled DC6 page."),
+		"set_dc6_strip":              commandHelp("node:set_dc6_strip(path [, options])", "Join every frame in one DC6 direction horizontally."),
 		"set_dc6_animation":          commandHelp("node:set_dc6_animation(path [, options])", "Render a DC6 animation."),
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
 		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
@@ -831,9 +917,9 @@ func registerRenderNodeType(state *lua.LState) {
 			node := checkRenderNode(state, 1)
 			blend := state.CheckString(2)
 			switch blend {
-			case "alpha", "additive", "multiply", "add-colors", "subtract-colors":
+			case "alpha", "additive", "multiply", "add-colors", "subtract-colors", "screen":
 			default:
-				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, or subtract-colors")
+				state.ArgError(2, "blend must be alpha, additive, multiply, add-colors, subtract-colors, or screen")
 				return 0
 			}
 			if err := node.composer.Update(node.id, func(current *render.Node) { current.Blend = blend }); err != nil {
@@ -987,6 +1073,67 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(frame.OffsetX))
 			state.Push(lua.LNumber(dc6FrameTop(frame)))
 			return 4
+		},
+		"set_dc6_combined": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName := state.CheckString(2)
+			paletteName := state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			page := state.OptInt(5, 0)
+			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			pages, err := combinedDC6Pages(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if page < 0 || page >= len(pages) {
+				state.ArgError(5, "combined page is out of range")
+				return 0
+			}
+			decoded := pages[page]
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(decoded.Bounds().Dx()))
+			state.Push(lua.LNumber(decoded.Bounds().Dy()))
+			state.Push(lua.LNumber(len(pages)))
+			return 3
+		},
+		"set_dc6_strip": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			fileName := state.CheckString(2)
+			paletteName := state.OptString(3, "")
+			direction := state.OptInt(4, 0)
+			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			decoded, err := horizontalDC6Strip(asset, direction)
+			if err != nil {
+				state.RaiseError("%v", err)
+				return 0
+			}
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(decoded.Bounds().Dx()))
+			state.Push(lua.LNumber(decoded.Bounds().Dy()))
+			return 2
 		},
 		"set_dc6_animation": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

@@ -9,41 +9,36 @@ local M = {}
 local Manager = {}
 Manager.__index = Manager
 
--- Only controls in the active focus scope participate in keyboard/controller
--- navigation. Dialogs use a distinct scope to isolate focus from the screen.
 local function eligible(manager, control)
     return control.focusable and control.enabled and control.visible
         and control.scope == manager.active_scope
 end
 
 local function contains(control, x, y)
-    return control.visible ~= false and control.enabled ~= false
-        and control.scope == control.manager.active_scope
-        and x >= control.x and y >= control.y
+    if control.visible == false or control.enabled == false
+        or control.scope ~= control.manager.active_scope then
+        return false
+    end
+    if control.hit_test then
+        return control.hit_test(control, x, y) == true
+    end
+    return x >= control.x and y >= control.y
         and x < control.x + control.width and y < control.y + control.height
 end
 
 local function state_of(manager, control, x, y)
-    if control.visible == false then
-        return "hidden"
-    end
-    if control.enabled == false then
-        return "disabled"
-    end
-    if manager.pressed == control then
-        return "pressed"
-    end
-    if contains(control, x, y) then
-        return "hover"
-    end
-    if manager.focus == control then
-        return "focused"
-    end
+    if control.visible == false then return "hidden" end
+    if control.enabled == false then return "disabled" end
+    if manager.pressed == control then return "pressed" end
+    if contains(control, x, y) then return "hover" end
+    if manager.focus == control then return "focused" end
     return "normal"
 end
 
--- Register a base control. Required geometry is expressed in window-space
--- pixels so pointer hit testing remains independent of render-node internals.
+local function is_range(control)
+    return control and (control.role == "scrollbar" or control.role == "slider")
+end
+
 function Manager:add(control)
     assert(type(control.id) == "string" and control.id ~= "", "control id is required")
     assert(type(control.x) == "number" and type(control.y) == "number", "control position is required")
@@ -59,244 +54,308 @@ function Manager:add(control)
     control.state = control.enabled and "normal" or "disabled"
     self.controls[#self.controls + 1] = control
     self.by_id[control.id] = control
-    if self.focus == nil and eligible(self, control) then
-        self.focus = control
-    end
+    if self.focus == nil and eligible(self, control) then self.focus = control end
     return control
 end
 
--- Add a toggle that reports its new boolean value through on_change.
 function Manager:add_checkbox(control)
     control.role = "checkbox"
     control.checked = control.checked == true
     local activate = control.on_activate
     control.on_activate = function(current)
         current.checked = not current.checked
-        if current.on_change then
-            current.on_change(current, current.checked)
-        end
-        if activate then
-            activate(current)
-        end
+        if current.on_change then current.on_change(current, current.checked) end
+        if activate then activate(current) end
     end
     return self:add(control)
-end
-
--- Add a UTF-8-aware text field. Input is truncated by character count rather
--- than byte count, which keeps multibyte names intact.
-function Manager:add_text_field(control)
-    control.role = "textbox"
-    control.value = control.value or ""
-    control.max_length = control.max_length or math.huge
-    return self:add(control)
-end
-
--- Add a bounded numeric control driven by left/right actions or pointer clicks.
-function Manager:add_scrollbar(control)
-    control.role = "scrollbar"
-    control.min = control.min or 0
-    control.max = control.max or 1
-    assert(control.max >= control.min, "scrollbar max must be at least min")
-    control.step = control.step or 1
-    control.orientation = control.orientation or "horizontal"
-    assert(control.orientation == "horizontal" or control.orientation == "vertical", "invalid scrollbar orientation")
-    control.value = math.max(control.min, math.min(control.max, control.value or control.min))
-    return self:add(control)
-end
-
--- Look up a control by its stable, screen-local identifier.
-function Manager:get(id)
-    return self.by_id[id]
-end
-
--- Disabled controls remain present for accessibility but cannot retain focus.
-function Manager:set_enabled(id, enabled)
-    local control = assert(self.by_id[id], "unknown control: " .. id)
-    control.enabled = enabled == true
-    if self.focus == control and not control.enabled then
-        self:move_focus(1)
-    end
-end
-
--- Switch the focus boundary, typically when opening or closing a modal dialog.
-function Manager:set_scope(scope)
-    assert(type(scope) == "string" and scope ~= "", "focus scope is required")
-    self.active_scope = scope
-    if not self.focus or not eligible(self, self.focus) then
-        self.focus = nil
-        self:move_focus(1)
-    end
-end
-
--- Move cyclically through eligible controls in registration order.
-function Manager:move_focus(delta)
-    if #self.controls == 0 then
-        self.focus = nil
-        return nil
-    end
-    local start = 0
-    for index, control in ipairs(self.controls) do
-        if control == self.focus then
-            start = index
-            break
-        end
-    end
-    for step = 1, #self.controls do
-        local index = ((start - 1 + delta * step) % #self.controls) + 1
-        local candidate = self.controls[index]
-        if eligible(self, candidate) then
-            self.focus = candidate
-            return candidate
-        end
-    end
-    self.focus = nil
-    return nil
-end
-
-local function set_value(control, value)
-    value = math.max(control.min, math.min(control.max, value))
-    if value == control.value then
-        return
-    end
-    control.value = value
-    if control.on_change then
-        control.on_change(control, value)
-    end
-end
-
--- These UTF-8 helpers intentionally avoid a dependency on Lua's optional utf8
--- library. Continuation bytes never begin a user-visible character.
-local function remove_last_character(value)
-    local index = #value
-    while index > 1 and value:byte(index) >= 128 and value:byte(index) < 192 do
-        index = index - 1
-    end
-    return value:sub(1, index - 1)
 end
 
 local function character_count(value)
     local count = 0
     for index = 1, #value do
         local byte = value:byte(index)
-        if byte < 128 or byte >= 192 then
-            count = count + 1
-        end
+        if byte < 128 or byte >= 192 then count = count + 1 end
     end
     return count
 end
 
-local function first_characters(value, count)
-    if count <= 0 then
-        return ""
+local function byte_at_character(value, character)
+    if character <= 0 then return 1 end
+    local seen = 0
+    for index = 1, #value do
+        local byte = value:byte(index)
+        if byte < 128 or byte >= 192 then
+            if seen == character then return index end
+            seen = seen + 1
+        end
     end
+    return #value + 1
+end
+
+local function first_characters(value, count)
+    if count <= 0 then return "" end
     local seen = 0
     for index = 1, #value do
         local byte = value:byte(index)
         if byte < 128 or byte >= 192 then
             seen = seen + 1
-            if seen > count then
-                return value:sub(1, index - 1)
-            end
+            if seen > count then return value:sub(1, index - 1) end
         end
     end
     return value
 end
 
-function Manager:activate(control)
-    if not control or not control.enabled or not control.visible then
-        return false
-    end
-    if control.on_activate then
-        control.on_activate(control)
-    end
+local function insert_at(value, cursor, inserted)
+    local byte = byte_at_character(value, cursor)
+    return value:sub(1, byte - 1) .. inserted .. value:sub(byte)
+end
+
+local function delete_before(value, cursor)
+    if cursor <= 0 then return value, cursor end
+    local first = byte_at_character(value, cursor - 1)
+    local last = byte_at_character(value, cursor)
+    return value:sub(1, first - 1) .. value:sub(last), cursor - 1
+end
+
+local function delete_at(value, cursor)
+    if cursor >= character_count(value) then return value end
+    local first = byte_at_character(value, cursor)
+    local last = byte_at_character(value, cursor + 1)
+    return value:sub(1, first - 1) .. value:sub(last)
+end
+
+function Manager:add_text_field(control)
+    control.role = "textbox"
+    control.value = control.value or ""
+    control.max_length = control.max_length or math.huge
+    control.cursor = math.max(0, math.min(character_count(control.value), control.cursor or character_count(control.value)))
+    return self:add(control)
+end
+
+local function prepare_range(control, role)
+    control.role = role
+    control.min = control.min or 0
+    control.max = control.max or 1
+    assert(control.max >= control.min, role .. " max must be at least min")
+    control.step = control.step or 1
+    control.orientation = control.orientation or "horizontal"
+    assert(control.orientation == "horizontal" or control.orientation == "vertical", "invalid " .. role .. " orientation")
+    control.value = math.max(control.min, math.min(control.max, control.value or control.min))
+    return control
+end
+
+function Manager:add_scrollbar(control)
+    return self:add(prepare_range(control, "scrollbar"))
+end
+
+function Manager:add_slider(control)
+    return self:add(prepare_range(control, "slider"))
+end
+
+function Manager:get(id) return self.by_id[id] end
+
+function Manager:set_enabled(id, enabled)
+    local control = assert(self.by_id[id], "unknown control: " .. id)
+    control.enabled = enabled == true
+    if self.focus == control and not control.enabled then self:move_focus(1) end
+    if self.pointer_capture == control and not control.enabled then self.pointer_capture = nil end
+end
+
+function Manager:set_visible(id, visible)
+    local control = assert(self.by_id[id], "unknown control: " .. id)
+    control.visible = visible == true
+    if self.focus == control and not control.visible then self:move_focus(1) end
+    if self.pointer_capture == control and not control.visible then self.pointer_capture = nil end
+end
+
+function Manager:set_focus(target)
+    local control = target
+    if type(target) == "string" then control = assert(self.by_id[target], "unknown control: " .. target) end
+    if control ~= nil and not eligible(self, control) then return false end
+    self.focus = control
     return true
 end
 
--- Poll one frame of serialized input and translate it into control state. This
--- function does not draw or execute metamethods while discovering controls.
-function Manager:update()
-    if input.pressed("down") then
+function Manager:set_scope(scope)
+    assert(type(scope) == "string" and scope ~= "", "focus scope is required")
+    self.active_scope = scope
+    self.pointer_capture = nil
+    if not self.focus or not eligible(self, self.focus) then
+        self.focus = nil
         self:move_focus(1)
     end
-    if input.pressed("up") then
-        self:move_focus(-1)
+end
+
+function Manager:move_focus(delta)
+    if #self.controls == 0 then self.focus = nil return nil end
+
+    if self.wrap_focus == false then
+        local focusable = {}
+        local current = 0
+        for _, control in ipairs(self.controls) do
+            if eligible(self, control) then
+                focusable[#focusable + 1] = control
+                if control == self.focus then current = #focusable end
+            end
+        end
+        if #focusable == 0 then self.focus = nil return nil end
+        if current == 0 then
+            current = delta < 0 and #focusable or 1
+        else
+            current = math.max(1, math.min(#focusable, current + delta))
+        end
+        self.focus = focusable[current]
+        return self.focus
     end
-    if self.focus and self.focus.role == "scrollbar" then
-        if input.pressed("right") then
-            set_value(self.focus, self.focus.value + self.focus.step)
-        end
-        if input.pressed("left") then
-            set_value(self.focus, self.focus.value - self.focus.step)
-        end
+
+    local start = 0
+    for index, control in ipairs(self.controls) do
+        if control == self.focus then start = index break end
+    end
+    for step = 1, #self.controls do
+        local index = ((start - 1 + delta * step) % #self.controls) + 1
+        local candidate = self.controls[index]
+        if eligible(self, candidate) then self.focus = candidate return candidate end
+    end
+    self.focus = nil
+    return nil
+end
+
+local function set_value(control, value, snap)
+    value = math.max(control.min, math.min(control.max, value))
+    if snap and control.step and control.step > 0 then
+        local steps = math.floor(((value - control.min) / control.step) + 0.5)
+        value = math.min(control.max, control.min + steps * control.step)
+    end
+    if value == control.value then return false end
+    control.value = value
+    if control.on_change then control.on_change(control, value) end
+    return true
+end
+
+local function set_pointer_value(control, x, y)
+    if control.pointer_to_value then
+        set_value(control, control.pointer_to_value(control, x, y), true)
+        return
+    end
+    local fraction
+    if control.orientation == "vertical" then
+        fraction = (y - control.y) / control.height
     else
-        if input.pressed("right") then
-            self:move_focus(1)
-        end
-        if input.pressed("left") then
-            self:move_focus(-1)
+        fraction = (x - control.x) / control.width
+    end
+    set_value(control, control.min + (control.max - control.min) * fraction, true)
+end
+
+function Manager:activate(control)
+    if not control or not control.enabled or not control.visible then return false end
+    if control.on_activate then control.on_activate(control) end
+    return true
+end
+
+local function edit_text(control)
+    local old = control.value
+    local entered = input.text()
+    if entered ~= "" then
+        if control.filter then entered = control.filter(entered) or "" end
+        local available = control.max_length - character_count(control.value)
+        if available > 0 and entered ~= "" then
+            entered = first_characters(entered, available)
+            control.value = insert_at(control.value, control.cursor, entered)
+            control.cursor = control.cursor + character_count(entered)
         end
     end
+    if input.pressed("backspace") then
+        control.value, control.cursor = delete_before(control.value, control.cursor)
+    end
+    if input.pressed("delete") then control.value = delete_at(control.value, control.cursor) end
+    if input.pressed("home") then control.cursor = 0 end
+    if input.pressed("end") then control.cursor = character_count(control.value) end
+    if input.pressed("left") then control.cursor = math.max(0, control.cursor - 1) end
+    if input.pressed("right") then control.cursor = math.min(character_count(control.value), control.cursor + 1) end
+    if old ~= control.value and control.on_change then control.on_change(control, control.value) end
+end
+
+function Manager:update()
+    local focused_range = is_range(self.focus)
+    local adjustable_range = focused_range and self.focus.max > self.focus.min
+    if adjustable_range and self.focus.orientation == "vertical" then
+        if input.pressed("down") then set_value(self.focus, self.focus.value + self.focus.step) end
+        if input.pressed("up") then set_value(self.focus, self.focus.value - self.focus.step) end
+    else
+        if input.pressed("down") then self:move_focus(1) end
+        if input.pressed("up") then self:move_focus(-1) end
+    end
+
+    if adjustable_range and self.focus.orientation == "horizontal" then
+        if input.pressed("right") then set_value(self.focus, self.focus.value + self.focus.step) end
+        if input.pressed("left") then set_value(self.focus, self.focus.value - self.focus.step) end
+    elseif self.focus and self.focus.role ~= "textbox" and (not focused_range or not adjustable_range) then
+        if input.pressed("right") then self:move_focus(1) end
+        if input.pressed("left") then self:move_focus(-1) end
+    end
+
     local x, y = input.cursor()
     local hovered = nil
-    for _, control in ipairs(self.controls) do
+    local hovered_priority = -math.huge
+    for index, control in ipairs(self.controls) do
         if contains(control, x, y) then
-            hovered = control
+            -- Explicit visual priority lets overlapping character-create actor
+            -- bounds follow their authored draw order. Otherwise preserve the
+            -- historical last-added-wins behavior by using the list index.
+            local priority = control.hit_priority or index
+            if priority >= hovered_priority then
+                hovered = control
+                hovered_priority = priority
+            end
         end
     end
-    if hovered and eligible(self, hovered) then
-        self.focus = hovered
+    if hovered and eligible(self, hovered) then self.focus = hovered end
+
+    -- Diablo II buttons capture on mouse-down but dispatch their action only on
+    -- mouse-up, and only when the release remains inside the same control. Range
+    -- controls retain capture while dragging so their thumb can track the mouse.
+    if input.pressed("pointer_primary") then
+        self.pointer_capture = hovered
     end
+
+    if self.pointer_capture and is_range(self.pointer_capture) and input.down("pointer_primary") then
+        set_pointer_value(self.pointer_capture, x, y)
+    end
+
     self.pressed = nil
-    if hovered and input.down("pointer_primary") then
-        self.pressed = hovered
+    if self.pointer_capture and input.down("pointer_primary") then
+        self.pressed = self.pointer_capture
     elseif self.focus and input.down("confirm") then
         self.pressed = self.focus
     end
-    if input.pressed("pointer_primary") then
-        if hovered and hovered.role == "scrollbar" then
-            local fraction
-            if hovered.orientation == "vertical" then
-                fraction = (y - hovered.y) / hovered.height
+
+    if input.released("pointer_primary") then
+        local captured = self.pointer_capture
+        self.pointer_capture = nil
+        self.pressed = nil
+        if captured and contains(captured, x, y) then
+            if is_range(captured) then
+                set_pointer_value(captured, x, y)
             else
-                fraction = (x - hovered.x) / hovered.width
-            end
-            set_value(hovered, hovered.min + (hovered.max - hovered.min) * fraction)
-        else
-            self:activate(hovered)
-        end
-    end
-    if input.pressed("confirm") then
-        self:activate(self.focus)
-    end
-    if self.focus and self.focus.role == "textbox" then
-        local old = self.focus.value
-        local entered = input.text()
-        if entered ~= "" then
-            local available = self.focus.max_length - character_count(self.focus.value)
-            if available > 0 then
-                self.focus.value = self.focus.value .. first_characters(entered, available)
+                self:activate(captured)
             end
         end
-        if input.pressed("backspace") and self.focus.value ~= "" then
-            self.focus.value = remove_last_character(self.focus.value)
-        end
-        if old ~= self.focus.value and self.focus.on_change then
-            self.focus.on_change(self.focus, self.focus.value)
-        end
     end
+
+    if input.pressed("confirm") then self:activate(self.focus) end
+
+    if self.focus and self.focus.role == "textbox" then edit_text(self.focus) end
+
     for _, control in ipairs(self.controls) do
         local next_state = state_of(self, control, x, y)
         if control.state ~= next_state then
             control.state = next_state
-            if control.on_state then
-                control.on_state(control, next_state)
-            end
+            if control.on_state then control.on_state(control, next_state) end
         end
     end
 end
 
--- Return data rather than render nodes so accessibility and debugging tools can
--- inspect a control tree without gaining mutation capabilities.
 function Manager:accessibility()
     local result = {}
     for _, control in ipairs(self.controls) do
@@ -310,6 +369,7 @@ function Manager:accessibility()
             scope = control.scope,
             checked = control.checked,
             value = control.value,
+            cursor = control.cursor,
             min = control.min,
             max = control.max,
         }
@@ -317,12 +377,16 @@ function Manager:accessibility()
     return result
 end
 
-function M.new()
+function M.new(options)
+    options = options or {}
     return setmetatable({
         controls = {},
         by_id = {},
         focus = nil,
-        active_scope = "default",
+        pressed = nil,
+        pointer_capture = nil,
+        active_scope = options.active_scope or "default",
+        wrap_focus = options.wrap_focus ~= false,
     }, Manager)
 end
 

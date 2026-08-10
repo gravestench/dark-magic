@@ -62,3 +62,17 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 		t.Fatal("destroyed node remains in backend")
 	}
 }
+
+func TestCompositionBackendMapsDiabloScreenBlend(t *testing.T) {
+	renderer := &Service{}
+	renderer.rootNode = renderer.NewRenderable()
+	renderer.rootNode.Disable()
+	backend := &compositionBackend{renderer: renderer, nodes: make(map[render.NodeID]Renderable)}
+	id := render.NodeID{Slot: 1, Generation: 1}
+	if err := backend.Apply(render.Change{Kind: "create", ID: id, Node: render.Node{ID: id, Layer: render.LayerHUD, ScaleX: 1, Blend: "screen"}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := backend.nodes[id].BlendMode(); got != rl.BlendCustom {
+		t.Fatalf("screen blend mapped to %v, want BlendCustom", got)
+	}
+}

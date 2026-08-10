@@ -8,6 +8,7 @@ local scenes = require("dm.scene/v1")
 local data = require("dm.data/v1")
 local dc6 = require("darkmagic.ui.dc6")
 local cursor = require("darkmagic.ui.cursor")
+local compat = require("darkmagic.ui.compat")
 local audio = require("dm.audio/v1")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
@@ -32,11 +33,12 @@ return {
             }
             local logo = screen.logo
             local palette = manifest.palettes[logo.palette]
-            self.logo.fire_left:set_blend(logo.fire_blend)
-            self.logo.fire_right:set_blend(logo.fire_blend)
+            self.logo.fire_left:set_blend(compat.draw_mode(3))
+            self.logo.fire_right:set_blend(compat.draw_mode(3))
 
-            -- Each logo half combines an opaque layer and an additive flame
-            -- layer. Shared anchor-space bounds prevent cropped frames jittering.
+            -- Each logo half combines an opaque layer and a screen-blended
+            -- flame layer. Shared anchor-space bounds prevent cropped frames
+            -- from jittering while preserving the authored DC6 offsets.
             dc6.anchored_composite(
                 { self.logo.black_left, self.logo.fire_left },
                 { logo.black_left, logo.fire_left },
