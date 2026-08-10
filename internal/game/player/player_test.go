@@ -56,6 +56,25 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if running, _ := mode.Get("running"); running != false {
 		t.Fatalf("initial movement mode = %v, want walking", running)
 	}
+	appearanceStore, found := akara.GetDynamicStore(engine.World(), "dm.player.appearance")
+	if !found {
+		t.Fatal("appearance store was not materialized")
+	}
+	appearance, _ := appearanceStore.Get(entity)
+	if token, _ := appearance.Get("token"); token != "AM" {
+		t.Fatalf("token = %v, want AM", token)
+	}
+	animationStore, found := akara.GetDynamicStore(engine.World(), "dm.player.animation")
+	if !found {
+		t.Fatal("animation store was not materialized")
+	}
+	animationState, _ := animationStore.Get(entity)
+	if animation, _ := animationState.Get("mode"); animation != "NU" {
+		t.Fatalf("mode = %v, want NU", animation)
+	}
+	if weaponClass, _ := appearance.Get("weapon_class"); weaponClass != "HTH" {
+		t.Fatalf("weapon class = %v, want HTH", weaponClass)
+	}
 	beltStore, found := akara.GetDynamicStore(engine.World(), "dm.player.belt")
 	if !found {
 		t.Fatal("belt store was not materialized")

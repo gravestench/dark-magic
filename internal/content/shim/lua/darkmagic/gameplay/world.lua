@@ -63,6 +63,29 @@ local function define_components()
         fields = {{ name = "running", type = "bool" }},
     })
 
+    -- The session owns the live composite selector. Presentation is allowed to
+    -- turn this recipe into filenames, but it never decides the player's mode
+    -- or facing from keyboard state on its own.
+    ecs.component({
+        name = "dm.player.appearance",
+        version = 1,
+        fields = {
+            { name = "cof", type = "string" },
+            { name = "token", type = "string" },
+            { name = "palette", type = "string" },
+            { name = "weapon_class", type = "string" },
+        },
+    })
+
+    ecs.component({
+        name = "dm.player.animation",
+        version = 1,
+        fields = {
+            { name = "direction", type = "i64" },
+            { name = "mode", type = "string" },
+        },
+    })
+
     ecs.component({
         name = "dm.player.skill_assignment",
         version = 1,
@@ -229,7 +252,8 @@ function M.bind(state)
     -- Find entities that have the complete set needed by world presentation.
     local entities = ecs.query({
         all = {
-            "dm.player.identity", "dm.world.position", "dm.world.velocity",
+            "dm.player.identity", "dm.player.appearance", "dm.player.animation",
+            "dm.world.position", "dm.world.velocity",
             "dm.world.player_control", "dm.world.bounds",
         },
     })
@@ -259,6 +283,15 @@ function M.position(entity)
     local position = assert(ecs.get(entity, "dm.world.position"))
     -- Lua returns multiple values naturally, so callers can write `x, y = ...`.
     return position:get("x"), position:get("y")
+end
+
+function M.composite_snapshot(entity)
+    local appearance = assert(ecs.get(entity, "dm.player.appearance"))
+    local animation = assert(ecs.get(entity, "dm.player.animation"))
+    local snapshot = appearance:snapshot()
+    snapshot.direction = animation:get("direction")
+    snapshot.mode = animation:get("mode")
+    return snapshot
 end
 
 -- Build one VALUE-ONLY HUD snapshot.

@@ -23,6 +23,7 @@ local audio = require("dm.audio/v1")
 local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
+local player_composite = require("darkmagic.gameplay.player_composite")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
@@ -70,21 +71,10 @@ return {
         -- values where they DO exist.
         self.character_stats = character and character.stats or nil
 
-        if character and character.appearance and render.assets_available() then
-            -- Save importer resolved equipment/appearance into immutable COF/DCC
-            -- description. Renderer capability owns actual decode/composition.
-            self.hero:set_cof_animation(
-                character.appearance.cof,
-                character.appearance.palette,
-                character.appearance.direction,
-                character.appearance.components,
-                "loop"
-            )
-            self.hero:set_scale(screen.hero.scale, screen.hero.scale)
-        else
-            -- Keep a stable hero node even when no visual representation is available.
-            self.hero:set_visible(false)
-        end
+        -- Keep a stable but initially hidden node. Once the session admits the
+        -- player, live ECS appearance selects the composite below. Save metadata
+        -- is deliberately not a second source of runtime mode or direction.
+        self.hero:set_visible(false)
 
         if render.assets_available() then
             -- Require gameplay-facing capabilities only in the asset-backed HUD
@@ -169,6 +159,24 @@ return {
         -- to find that entity and returns false instead of creating a fake duplicate.
         if not self.gameplay_world.bind(self.gameplay) then
             return
+        end
+
+        if render.assets_available() then
+            local authority = self.gameplay_world.composite_snapshot(self.gameplay.hero)
+            local composite = player_composite.unarmed(authority)
+            if composite.key ~= self.hero_composite_key then
+                self.hero:set_cof_animation(
+                    composite.cof,
+                    composite.palette,
+                    composite.direction,
+                    composite.components,
+                    "loop",
+                    composite.rate
+                )
+                self.hero:set_scale(screen.hero.scale, screen.hero.scale)
+                self.hero:set_visible(true)
+                self.hero_composite_key = composite.key
+            end
         end
 
         if self.hud then

@@ -24,6 +24,10 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	animations, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.animation", Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	entity := engine.World().MustCreateEntity()
 	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
 		t.Fatal(err)
@@ -33,6 +37,10 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 		t.Fatal(err)
 	}
 	mode, err := modes.Set(entity, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	animationState, err := animations.Set(entity, map[string]any{"direction": int64(2), "mode": "NU"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,6 +73,27 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	}
 	if running, _ := mode.Get("running"); running != true {
 		t.Fatalf("movement mode = %v, want running", running)
+	}
+	if animation, _ := animationState.Get("mode"); animation != "RN" {
+		t.Fatalf("animation mode = %v, want RN", animation)
+	}
+	if direction, _ := animationState.Get("direction"); direction != int64(3) {
+		t.Fatalf("animation direction = %v, want east/3", direction)
+	}
+}
+
+func TestMovementDirectionMatchesLegacyEightWayEncoding(t *testing.T) {
+	tests := []struct {
+		x, y int
+		want int64
+	}{
+		{0, 1, 0}, {-1, 0, 1}, {0, -1, 2}, {1, 0, 3},
+		{1, 1, 4}, {-1, 1, 5}, {-1, -1, 6}, {1, -1, 7},
+	}
+	for _, test := range tests {
+		if got := movementDirection(test.x, test.y); got != test.want {
+			t.Fatalf("direction(%d,%d) = %d, want %d", test.x, test.y, got, test.want)
+		}
 	}
 }
 

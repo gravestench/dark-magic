@@ -37,8 +37,11 @@ type Entry struct {
 	Expansion   bool    `json:"expansion"`
 	Hardcore    bool    `json:"hardcore"`
 	COF         string  `json:"cof"`
+	Token       string  `json:"token"`
 	Palette     string  `json:"palette"`
 	Direction   int64   `json:"direction"`
+	Mode        string  `json:"mode"`
+	WeaponClass string  `json:"weapon_class"`
 	X           float64 `json:"x"`
 	Y           float64 `json:"y"`
 	WorldWidth  float64 `json:"world_width"`
@@ -117,16 +120,43 @@ func (source *EntrySource) entered(characterID string) bool {
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
-	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, X: x, Y: y, WorldWidth: width, WorldHeight: height}
+	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", X: x, Y: y, WorldWidth: width, WorldHeight: height}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
 		entry.Mana, entry.MaxMana = int64(character.Stats.Mana), int64(character.Stats.MaxMana)
 	}
 	if character.Appearance != nil {
-		entry.COF, entry.Palette, entry.Direction = character.Appearance.COF, character.Appearance.Palette, int64(character.Appearance.Direction)
+		entry.COF, entry.Direction = character.Appearance.COF, int64(character.Appearance.Direction)
+		if character.Appearance.Palette != "" {
+			entry.Palette = character.Appearance.Palette
+		}
 	}
 	return entry
+}
+
+// classToken translates the durable player-facing class name into Diablo II's
+// two-letter composite namespace. This is simulation seed data, not a filename
+// guessed by the renderer.
+func classToken(class string) string {
+	switch strings.ToLower(strings.TrimSpace(class)) {
+	case "amazon":
+		return "AM"
+	case "sorceress":
+		return "SO"
+	case "necromancer":
+		return "NE"
+	case "paladin":
+		return "PA"
+	case "barbarian":
+		return "BA"
+	case "assassin":
+		return "AI"
+	case "druid":
+		return "DZ"
+	default:
+		return ""
+	}
 }
 
 // Command encodes player-entry intent for deterministic admission and replay.
@@ -181,7 +211,8 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.identity, map[string]any{"character_id": entry.CharacterID, "player": entry.Player, "name": entry.Name, "class": entry.Class}},
 		{stores.progress, map[string]any{"level": entry.Level, "experience": entry.Experience}},
 		{stores.vitals, map[string]any{"health": entry.Health, "max_health": entry.MaxHealth, "mana": entry.Mana, "max_mana": entry.MaxMana}},
-		{stores.appearance, map[string]any{"cof": entry.COF, "palette": entry.Palette, "direction": entry.Direction}},
+		{stores.appearance, map[string]any{"cof": entry.COF, "token": entry.Token, "palette": entry.Palette, "weapon_class": entry.WeaponClass}},
+		{stores.animation, map[string]any{"direction": entry.Direction, "mode": entry.Mode}},
 		{stores.position, map[string]any{"x": entry.X, "y": entry.Y}},
 		{stores.velocity, nil},
 		{stores.movementMode, map[string]any{"running": false}},
@@ -232,7 +263,7 @@ func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) e
 }
 
 type stores struct {
-	identity, progress, vitals, appearance                                   *akara.DynamicStore
+	identity, progress, vitals, appearance, animation                        *akara.DynamicStore
 	position, velocity, movementMode, skillAssignment, belt, control, bounds *akara.DynamicStore
 }
 
@@ -241,7 +272,8 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
 		{Name: "dm.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}}},
-		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "direction", Kind: akara.FieldInt64}}},
+		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
+		{Name: "dm.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
 		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
 		{Name: "dm.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}},
@@ -258,7 +290,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], position: registered[4], velocity: registered[5], movementMode: registered[6], skillAssignment: registered[7], belt: registered[8], control: registered[9], bounds: registered[10]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], belt: registered[9], control: registered[10], bounds: registered[11]}, nil
 }
 
 func beltFields() []akara.Field {
@@ -280,11 +312,15 @@ func decodeEntry(encoded []byte) (Entry, error) {
 		return Entry{}, fmt.Errorf("player: entry payload has trailing data")
 	}
 	entry.CharacterID, entry.Player, entry.Name, entry.Class = strings.TrimSpace(entry.CharacterID), strings.TrimSpace(entry.Player), strings.TrimSpace(entry.Name), strings.TrimSpace(entry.Class)
+	entry.Token, entry.Palette, entry.Mode, entry.WeaponClass = strings.ToUpper(strings.TrimSpace(entry.Token)), strings.TrimSpace(entry.Palette), strings.ToUpper(strings.TrimSpace(entry.Mode)), strings.ToUpper(strings.TrimSpace(entry.WeaponClass))
 	if entry.CharacterID == "" || entry.Player == "" || entry.Name == "" || entry.Class == "" {
 		return Entry{}, fmt.Errorf("player: character ID, player, name, and class are required")
 	}
 	if entry.Level < 1 || entry.Health < 0 || entry.MaxHealth < entry.Health || entry.Mana < 0 || entry.MaxMana < entry.Mana {
 		return Entry{}, fmt.Errorf("player: invalid progression or vitals")
+	}
+	if len(entry.Token) != 2 || entry.Palette == "" || entry.Mode != "NU" || entry.WeaponClass != "HTH" || entry.Direction < 0 || entry.Direction > 7 {
+		return Entry{}, fmt.Errorf("player: invalid initial composite appearance")
 	}
 	for _, skill := range entry.Skills {
 		if skill.ID < 0 || skill.Level < 1 || skill.ListRow < 0 || !skill.LeftAllowed && !skill.RightAllowed {

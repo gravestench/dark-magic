@@ -86,6 +86,7 @@ local world=require("darkmagic.gameplay.world")
 hero_x,hero_y=world.position(gameplay.hero)
 camera_x,camera_y=world.position(gameplay.camera)
 hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_stamina=60})
+composite=world.composite_snapshot(gameplay.hero)
 `)
 	}); err != nil {
 		t.Fatal(err)
@@ -111,6 +112,10 @@ hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_s
 		}
 		if hud.RawGetString("belt_capacity") != lua.LNumber(4) {
 			t.Fatalf("HUD belt capacity = %s, want 4", hud.RawGetString("belt_capacity"))
+		}
+		composite := state.GetGlobal("composite").(*lua.LTable)
+		if composite.RawGetString("token") != lua.LString("AM") || composite.RawGetString("mode") != lua.LString("WL") || composite.RawGetString("direction") != lua.LNumber(3) || composite.RawGetString("weapon_class") != lua.LString("HTH") {
+			t.Fatalf("composite snapshot = %#v", composite)
 		}
 		beltSlots := hud.RawGetString("belt_slots").(*lua.LTable)
 		if beltSlots.Len() != 16 || beltSlots.RawGetInt(16) != lua.LString("") {
