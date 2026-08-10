@@ -25,8 +25,8 @@ func (s *Service) Start(context.Context) error {
 		return errors.New("renderer: cache is required")
 	}
 	if s.rootNode == nil {
-		s.cameras = make(map[string]*rl.Camera2D)
-		s.rootNode = s.NewRenderable()
+		s.camera = rl.NewCamera2D(rl.Vector2{}, rl.Vector2{}, 0, 1)
+		s.rootNode = s.newNode()
 		s.rootNode.Disable()
 	}
 	rl.SetTraceLogCallback(func(level int, message string) {
@@ -119,18 +119,26 @@ func (s *Service) Stop(context.Context) error {
 	if !s.isInit.Swap(false) {
 		return nil
 	}
-	if s.cache != nil {
-		s.cache.Clear()
-	}
+	var result error
 	if s.audioBackend != nil {
 		s.audioBackend.Close()
 	}
 	if s.compositionBackend != nil {
+		if s.composition != nil {
+			if err := s.composition.Drain(s.compositionBackend); err != nil {
+				result = errors.Join(result, err)
+			}
+		}
+		s.compositionBackend.close()
 		s.compositionBackend.closePaletteEffects()
+	}
+	if s.cache != nil {
+		s.cache.Clear()
 	}
 	s.stopPaletteQuantizer()
 	s.stopGameTarget()
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
-	return nil
+	s.rootNode = nil
+	return result
 }

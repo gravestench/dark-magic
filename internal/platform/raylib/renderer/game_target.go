@@ -32,7 +32,7 @@ func (s *Service) stopGameTarget() {
 func (s *Service) renderGameTarget(target rl.RenderTexture2D) {
 	rl.BeginTextureMode(target)
 	rl.ClearBackground(rl.Black)
-	rl.BeginMode2D(*s.GetDefaultCamera())
+	rl.BeginMode2D(s.camera)
 	s.update()
 	s.render()
 	rl.EndMode2D()

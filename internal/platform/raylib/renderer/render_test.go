@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/color"
 	"testing"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func TestGetAllPixelDataConvertsModelsAndRespectsBounds(t *testing.T) {
@@ -40,6 +42,30 @@ func TestContiguousRGBARejectsPaddedSubimage(t *testing.T) {
 	subimage := parent.SubImage(image.Rect(1, 1, 3, 3))
 	if _, ok := contiguousRGBA(subimage); ok {
 		t.Fatal("padded subimage unexpectedly used direct upload path")
+	}
+}
+
+func TestIntersectClipPreservesParentAndChildBounds(t *testing.T) {
+	parent := rl.NewRectangle(10, 10, 100, 80)
+	child := rl.NewRectangle(50, 0, 100, 40)
+	got := intersectClip(&parent, &child)
+	want := rl.NewRectangle(50, 10, 60, 30)
+	if *got != want {
+		t.Fatalf("intersection = %#v, want %#v", *got, want)
+	}
+}
+
+func TestLeafCullingUsesLogicalViewport(t *testing.T) {
+	node := &node{image: image.NewRGBA(image.Rect(0, 0, 20, 10)), origin: rl.Vector2{X: .5, Y: .5}, local: rl.MatrixIdentity(), world: rl.MatrixIdentity()}
+	node.SetPosition(110, 50)
+	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+	if !node.outside(100, 100) {
+		t.Fatal("offscreen leaf was not culled")
+	}
+	node.SetPosition(95, 50)
+	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+	if node.outside(100, 100) {
+		t.Fatal("partially visible leaf was culled")
 	}
 }
 

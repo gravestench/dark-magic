@@ -229,6 +229,11 @@ experiments behind the same canonical import boundary.
   fixtures where practical.
 - [x] Prove the boundary by rendering one complete Lua-authored screen using only
   versioned capabilities.
+- [x] Retire the exported Raylib `Renderable` object graph and unused direct-native
+  world adapter. The backend now keeps private native state only, advances
+  animations outside nodes, caches dirty transforms, intersects hierarchical
+  clips, culls hidden subtrees, reports native work, and drains final commands
+  before native shutdown.
 
 ## M13: Lua-authored Diablo shell
 
@@ -542,7 +547,7 @@ M18 is partially implemented, not complete. The merged UI compatibility work
 establishes reusable controls and visually reviewable shells; an overlay is not
 complete until its actions are driven by authoritative game state and commands.
 
-- [ ] Replace the compatibility HUD and placeholder hero with Lua orchestration
+- [x] Replace the compatibility HUD and placeholder hero with Lua orchestration
   over real world and character presentation handles. The fake hero rectangle
   is gone: the world scene now binds an optional selected-character COF/DCC
   appearance snapshot and keeps metadata-only characters invisible instead of
@@ -550,7 +555,8 @@ complete until its actions are driven by authoritative game state and commands.
   presentation node decoded from manifest-selected DT1 tiles and an Act palette;
   it follows deterministic camera displacement without transferring filesystem
   or native renderer ownership into Lua. Tile semantics, collision, entities,
-  and streaming remain pending M20.
+  and streaming remain pending M20. The unused direct-Raylib compatibility world
+  package and its public renderer-object dependency have now been removed.
 - [ ] Assemble the 640x480 and 800x600 control panels, globes, stamina and
   experience bars, belt, skill buttons, minipanel, tooltips, and cursor states.
   The supported 800x600 profile now assembles the six authored panel segments,
@@ -915,8 +921,10 @@ separate profiling PRs unless a measured gameplay budget requires it sooner.
   incompatible color models and padded subimages.
 - [ ] Measure cinematic upload bandwidth and distinguish frame-update traffic
   from resident GPU texture bytes in scene diagnostics and budgets.
-- [ ] Destroy scenes and drain final composition commands on the renderer owner
-  thread before native renderer shutdown; require zero pending commands afterward.
+- [x] Drain final composition commands on the renderer owner thread, release all
+  backend nodes and palette effects, clear GPU caches, and only then close the
+  native renderer. Architecture tests reject restoration of the legacy renderer
+  object API and direct-native world adapter.
 - [ ] Repeat the interactive acceptance profile through `game_loading` and
   `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
   against the latest frontend-only baseline.
@@ -1034,9 +1042,11 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   contracts, in-process decode coordination, synchronized playback, presentation,
   and the fallback player now live in `internal/video`; FFmpeg stays optional,
   and the retired `videocore` import path is rejected. All native Raylib adapters
-  now live under `internal/platform/raylib`, keeping window, input, renderer,
-  audio-device, and transitional world presentation code visibly outside the
-  engine contracts; previous adapter paths are guarded. Repository-private CLIs
+  now live under `internal/platform/raylib`, keeping window, input, renderer, and
+  audio-device code visibly outside the engine contracts; previous adapter paths
+  are guarded. The unused transitional world adapter and exported native-object
+  scene graph are retired, and an acceptance guard prevents their revival.
+  Repository-private CLIs
   and manual diagnostic applications now live together under `internal/dev`,
   every README, Make target, and root usage example points to the new commands,
   and an acceptance constraint rejects recreation of the ambiguous old roots.

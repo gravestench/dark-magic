@@ -73,7 +73,13 @@ func (app *application) registerVideoModule() error {
 func (app *application) registerPresentationModules() error {
 	renderCapability := modruntime.NewRenderCapability(app.scripts, app.composer, app.options.Content)
 	if app.options.Profile != nil {
-		app.options.Profile.SetDiagnostics(func() any { return renderCapability.Diagnostics() })
+		app.options.Profile.SetDiagnostics(func() any {
+			return map[string]any{
+				"composition":    renderCapability.Diagnostics(),
+				"raylib_backend": app.renderer.BackendDiagnostics(),
+				"texture_cache":  app.renderer.CacheDiagnostics(),
+			}
+		})
 	}
 	for _, module := range []modruntime.Module{renderCapability.Module(), app.scenes.Module()} {
 		if err := app.scripts.RegisterModule(module); err != nil {

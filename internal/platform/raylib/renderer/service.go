@@ -17,9 +17,8 @@ type Service struct {
 	config *Config
 	cache  *cache.Cache
 
-	cameras map[string]*rl.Camera2D
-
-	rootNode Renderable
+	camera   rl.Camera2D
+	rootNode *node
 
 	isInit             atomic.Bool
 	frameMux           sync.Mutex
@@ -41,6 +40,25 @@ type Service struct {
 
 	paletteQuantizer *paletteQuantizer
 	gameTarget       rl.RenderTexture2D
+	frames           atomic.Uint64
+	drawCalls        atomic.Uint64
+	nodesVisited     atomic.Uint64
+	subtreesCulled   atomic.Uint64
+	textureUpdates   atomic.Uint64
+}
+
+// BackendDiagnostics reports native-adapter work without exposing Raylib
+// handles. Values are cumulative for the renderer lifetime.
+type BackendDiagnostics struct {
+	Frames, DrawCalls, NodesVisited, SubtreesCulled, TextureUpdates uint64
+}
+
+func (s *Service) BackendDiagnostics() BackendDiagnostics {
+	return BackendDiagnostics{
+		Frames: s.frames.Load(), DrawCalls: s.drawCalls.Load(),
+		NodesVisited: s.nodesVisited.Load(), SubtreesCulled: s.subtreesCulled.Load(),
+		TextureUpdates: s.textureUpdates.Load(),
+	}
 }
 
 // SubscribeOverlay registers owner-thread drawing after scene composition and

@@ -10,18 +10,20 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *Service) NewRenderable() Renderable {
+func (s *Service) newNode() *node {
 	n := &node{
-		renderer: s,
-		uuid:     uuid.New(),
-		opacity:  1,
-		enabled:  true,
-		local:    rl.MatrixIdentity(),
-		world:    rl.MatrixIdentity(),
-		origin:   rl.Vector2{X: 0.5, Y: 0.5},
+		renderer:       s,
+		uuid:           uuid.New(),
+		opacity:        1,
+		enabled:        true,
+		visible:        true,
+		transformDirty: true,
+		local:          rl.MatrixIdentity(),
+		world:          rl.MatrixIdentity(),
+		origin:         rl.Vector2{X: 0.5, Y: 0.5},
 	}
 
-	n.SetParent(s.rootNode)
+	n.setParent(s.rootNode)
 
 	return n
 }
@@ -33,6 +35,7 @@ type node struct {
 	blendMode             rl.BlendMode
 	image                 image.Image
 	enabled               bool
+	visible               bool
 	origin                rl.Vector2
 	textureVariant        string
 	textureKeys           map[string]struct{}
@@ -41,13 +44,12 @@ type node struct {
 	shaderTexture         *rl.Texture2D
 	shaderTextureLocation int32
 
-	onUpdate func()
-
 	world          rl.Matrix
 	local          rl.Matrix
-	parent         Renderable
-	children       []Renderable
+	parent         *node
+	children       []*node
 	childrenSorted bool
+	transformDirty bool
 
 	isDirty bool
 }
@@ -79,20 +81,6 @@ func (n *node) SetOrigin(x, y float64) {
 	n.origin.Y = float32(y)
 }
 
-func (n *node) update() {
-	if n.onUpdate != nil {
-		n.onUpdate()
-	}
-
-	for _, child := range n.children {
-		child.update()
-	}
-}
-
-func (n *node) OnUpdate(f func()) {
-	n.onUpdate = f
-}
-
 func (n *node) UUID() uuid.UUID {
 	return n.uuid
 }
@@ -106,8 +94,9 @@ func (n *node) SetZIndex(i float32) {
 		return
 	}
 	n.local.M14 = i
-	if parent, ok := n.parent.(*node); ok {
-		parent.childrenSorted = false
+	n.transformDirty = true
+	if n.parent != nil {
+		n.parent.childrenSorted = false
 	}
 }
 
@@ -119,9 +108,12 @@ func (n *node) Position() (x, y float32) {
 }
 
 func (n *node) SetPosition(x, y float32) {
+	if n.local.M12 == x && n.local.M13 == y {
+		return
+	}
 	n.local.M12 = x
 	n.local.M13 = y
-	//matrix.M14 = z
+	n.transformDirty = true
 }
 
 func (n *node) Rotation() (degrees float32) {
@@ -180,21 +172,29 @@ func (n *node) SetRotation(degrees float32) {
 	n.local.M12 = tx
 	n.local.M13 = ty
 	n.local.M14 = tz
+	n.transformDirty = true
 }
 
 func (n *node) Scale() (scale float32) {
-	//x := float32(n.world.M0)
-	//y := float32(n.matrix.M5)
-	//z := float32(n.matrix.M10)
-	scale = float32(n.world.M10)
+	return n.world.M0
+}
 
-	return scale
+func (n *node) scaleXY() (float32, float32) {
+	return n.world.M0, n.world.M5
 }
 
 func (n *node) SetScale(scale float32) {
-	n.local.M0 = scale
-	n.local.M5 = scale
-	n.local.M10 = scale
+	n.setScaleXY(scale, scale)
+}
+
+func (n *node) setScaleXY(x, y float32) {
+	if n.local.M0 == x && n.local.M5 == y {
+		return
+	}
+	n.local.M0 = x
+	n.local.M5 = y
+	n.local.M10 = 1
+	n.transformDirty = true
 }
 
 func (n *node) Opacity() (opacity float32) {
@@ -290,7 +290,9 @@ func (n *node) IsEnabled() bool {
 	return n.enabled
 }
 
-func (n *node) Parent() Renderable {
+func (n *node) setVisible(visible bool) { n.visible = visible }
+
+func (n *node) parentNode() *node {
 	if n.parent == nil {
 		return n.renderer.rootNode
 	}
@@ -298,8 +300,8 @@ func (n *node) Parent() Renderable {
 	return n.parent
 }
 
-// SetParent sets the parent of this scene graph node
-func (n *node) SetParent(p Renderable) {
+// setParent updates the private native hierarchy mirrored from retained state.
+func (n *node) setParent(p *node) {
 	if n == p {
 		return
 	}
@@ -309,13 +311,14 @@ func (n *node) SetParent(p Renderable) {
 	}
 
 	n.parent = p
+	n.transformDirty = true
 
 	if p != nil {
 		n.parent.addChild(n)
 	}
 }
 
-func (n *node) addChild(m Renderable) {
+func (n *node) addChild(m *node) {
 	if m == nil {
 		return
 	}
@@ -324,7 +327,7 @@ func (n *node) addChild(m Renderable) {
 	n.childrenSorted = false
 }
 
-func (n *node) removeChild(m Renderable) {
+func (n *node) removeChild(m *node) {
 	if m == nil {
 		return
 	}
@@ -339,12 +342,11 @@ func (n *node) removeChild(m Renderable) {
 	}
 }
 
-// Children yields the child nodes for this node
-func (n *node) Children() []Renderable {
+func (n *node) Children() []*node {
 	return n.children
 }
 
-func (n *node) sortedChildren() []Renderable {
+func (n *node) sortedChildren() []*node {
 	if n.childrenSorted {
 		return n.children
 	}
@@ -357,11 +359,15 @@ func (n *node) sortedChildren() []Renderable {
 
 // UpdateWorldMatrix recursively updates the children world matrices with this
 // nodes world matrix
-func (n *node) UpdateWorldMatrix(parent rl.Matrix) {
-	n.world = rl.MatrixMultiply(n.local, parent)
+func (n *node) UpdateWorldMatrix(parent rl.Matrix, parentDirty bool) {
+	dirty := parentDirty || n.transformDirty
+	if dirty {
+		n.world = rl.MatrixMultiply(n.local, parent)
+		n.transformDirty = false
+	}
 
 	for idx := range n.children {
-		n.children[idx].UpdateWorldMatrix(n.world)
+		n.children[idx].UpdateWorldMatrix(n.world, dirty)
 	}
 }
 
