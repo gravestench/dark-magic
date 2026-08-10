@@ -53,6 +53,26 @@ func TestPlayerCannotTargetAnotherOwner(t *testing.T) {
 	}
 }
 
+func TestHeldPlacementAcceptsQuestSocketButNotVendorStock(t *testing.T) {
+	for _, test := range []struct {
+		container Container
+		wantError bool
+	}{
+		{container: ContainerQuest},
+		{container: ContainerVendor, wantError: true},
+	} {
+		payload := MovePayload{ItemID: "potion", Destination: Placement{Container: test.container, Slot: "input"}, PlaceHeld: true}
+		command, err := Command(payload, "alice", 1, 1, simulation.AuthorityPlayer)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = validateMoveCommand(command)
+		if (err != nil) != test.wantError {
+			t.Fatalf("%s validation error = %v, want error %t", test.container, err, test.wantError)
+		}
+	}
+}
+
 func TestAdministratorMoveNamesOwnerAndAppearsInAudit(t *testing.T) {
 	authority := NewAuthority()
 	if err := authority.Register("alice", testCommandState(t)); err != nil {

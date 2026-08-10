@@ -89,9 +89,11 @@ func (state *State) Snapshot() (Layout, map[string]Item, map[string]Placement) {
 	return layout, items, placements
 }
 
-// PlaceHeld applies Diablo II's grid-drop rule. An empty footprint accepts the
-// held item. A footprint touching exactly one item swaps that item into the
-// hand. Touching two or more items is ambiguous, so nothing moves.
+// PlaceHeld applies Diablo II's cursor-item rule. Grid footprints use overlap
+// validation; named equipment, belt, and quest/service sockets use one occupant.
+// In either case, replacing exactly one item moves it into the hand atomically.
+// Vendor buying and selling are separate transactions: they assign catalog
+// positions instead of treating the visible vendor page as a player grid.
 func (state *State) PlaceHeld(id string, destination Placement) (string, error) {
 	candidate, found := state.items[id]
 	if !found {
@@ -101,11 +103,11 @@ func (state *State) PlaceHeld(id string, destination Placement) (string, error) 
 	if !found || current.Container != ContainerHeld {
 		return "", fmt.Errorf("item: %q is not held", id)
 	}
-	if destination.Container == ContainerEquipment || destination.Container == ContainerHireling || destination.Container == ContainerBelt {
+	if isHeldSlot(destination.Container) {
 		return state.placeHeldSlot(candidate, destination)
 	}
 	if !isGrid(destination.Container) {
-		return "", fmt.Errorf("item: held placement requires a grid, equipment, hireling, or belt destination")
+		return "", fmt.Errorf("item: held placement requires a grid or named-slot destination")
 	}
 	if err := state.validateGridBounds(candidate, destination); err != nil {
 		return "", err
@@ -132,6 +134,8 @@ func (state *State) placeHeldSlot(candidate Item, destination Placement) (string
 	var err error
 	if destination.Container == ContainerBelt {
 		err = state.validateBeltEligibility(candidate, destination)
+	} else if isService(destination.Container) {
+		err = validateServiceSlot(destination)
 	} else {
 		err = state.validateEquipmentEligibility(candidate, destination)
 	}
@@ -159,8 +163,8 @@ func (state *State) validate(candidate Item, destination Placement) error {
 	case ContainerHeld:
 		return state.requireEmpty(candidate.ID, ContainerHeld, "")
 	case ContainerVendor, ContainerQuest:
-		if destination.Slot == "" {
-			return fmt.Errorf("item: %s placement requires a service slot", destination.Container)
+		if err := validateServiceSlot(destination); err != nil {
+			return err
 		}
 		return state.requireEmpty(candidate.ID, destination.Container, destination.Slot)
 	default:
@@ -207,6 +211,21 @@ func (state *State) gridOverlaps(candidate Item, destination Placement) []string
 
 func isGrid(container Container) bool {
 	return container == ContainerInventory || container == ContainerStash || container == ContainerCube
+}
+
+func isService(container Container) bool {
+	return container == ContainerVendor || container == ContainerQuest
+}
+
+func isHeldSlot(container Container) bool {
+	return container == ContainerEquipment || container == ContainerHireling || container == ContainerBelt || container == ContainerQuest
+}
+
+func validateServiceSlot(destination Placement) error {
+	if destination.Slot == "" {
+		return fmt.Errorf("item: %s placement requires a service slot", destination.Container)
+	}
+	return nil
 }
 
 func (state *State) validateEquipment(candidate Item, destination Placement) error {
