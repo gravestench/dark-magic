@@ -28,20 +28,28 @@ function M.create(root, manager, id, definition, label, options)
     local pressed_color = options.pressed_color or {225, 205, 150, 255}
 
     local track, active, thumb, label_node, value_node
+    local authored = render.assets_available() and options.track_sheet and options.thumb_sheet
     if render.assets_available() then
         track = render.create(options.layer or "hud", root)
-        active = render.create(options.layer or "hud", root)
         thumb = render.create(options.layer or "hud", root)
 
-        if orientation == "horizontal" then
-            fill(track, width, track_thickness, track_color)
+        if authored then
+            track:set_dc6(options.track_sheet, assert(options.palette), 0, options.track_frame or 0)
+            thumb:set_dc6(options.thumb_sheet, assert(options.palette), 0, options.thumb_frame or 0)
             track:set_position(x + width / 2, y + height / 2)
         else
+            active = render.create(options.layer or "hud", root)
+        end
+
+        if not authored and orientation == "horizontal" then
+            fill(track, width, track_thickness, track_color)
+            track:set_position(x + width / 2, y + height / 2)
+        elseif not authored then
             fill(track, track_thickness, height, track_color)
             track:set_position(x + width / 2, y + height / 2)
         end
 
-        if label and label ~= "" then
+        if options.show_label ~= false and label and label ~= "" then
             label_node = render.create(options.layer or "hud", root)
             local label_width = options.label_width or width
             local _, label_height = text.set(label_node, options.label_style or "font_lab_caption", label, label_width, "left")
@@ -67,18 +75,22 @@ function M.create(root, manager, id, definition, label, options)
         if orientation == "horizontal" then
             local travel = math.max(0, width - thumb_size)
             local center = x + thumb_size / 2 + travel * fraction
-            local active_width = math.max(1, center - x)
-            fill(active, active_width, track_thickness, fill_color)
-            active:set_position(x + active_width / 2, y + height / 2)
-            fill(thumb, thumb_size, height, color)
+            if active then
+                local active_width = math.max(1, center - x)
+                fill(active, active_width, track_thickness, fill_color)
+                active:set_position(x + active_width / 2, y + height / 2)
+            end
+            if not authored then fill(thumb, thumb_size, height, color) end
             thumb:set_position(center, y + height / 2)
         else
             local travel = math.max(0, height - thumb_size)
             local center = y + thumb_size / 2 + travel * fraction
             local active_height = math.max(1, center - y)
-            fill(active, track_thickness, active_height, fill_color)
-            active:set_position(x + width / 2, y + active_height / 2)
-            fill(thumb, width, thumb_size, color)
+            if active then
+                fill(active, track_thickness, active_height, fill_color)
+                active:set_position(x + width / 2, y + active_height / 2)
+            end
+            if not authored then fill(thumb, width, thumb_size, color) end
             thumb:set_position(x + width / 2, center)
         end
 

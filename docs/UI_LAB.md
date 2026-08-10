@@ -39,8 +39,14 @@ Recovered presentation values live in `darkmagic.ui.compat`. In particular, the
 text scrollbar uses the recovered `TextSlid.dc6` frame mapping: down/up hollow
 arrows `8/9`, down/up filled arrows `10/11`, gutter `13`, and thumb/fill `14`.
 The original executable also references `OptBar.dc6` and `OptBarC.dc6` for
-options sliders; those paths are recorded as candidates but are not used as the
-default slider skin until their frame semantics are verified to the same level.
+options sliders. Asset inspection verifies `OptBarC.dc6` as a two-frame
+255-by-37 bar and `OptSkull.dc6` as a one-frame 28-by-28 thumb. The in-game
+sound and music controls use those authored assets and update validated
+`dm.settings/v1` preferences in the `0..1` range. Riiablo independently uses
+that range for music/effects volume, while AbyssEngine validates the same range
+for its separate music, SFX, UI, and master channels. OpenDiablo2 supplies the
+canonical paths and menu hierarchy; OpenD2 is consulted for retained panel and
+input-order behavior but does not currently implement this options surface.
 
 The frontend logo is also a useful draw-mode regression target: Diablo II draw
 mode 3 uses `GL_ONE, GL_ONE_MINUS_SRC_COLOR`, represented by the retained

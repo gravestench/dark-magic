@@ -6,9 +6,11 @@
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local audio = require("dm.audio/v1")
+local settings = require("dm.settings/v1")
 local data = require("dm.data/v1")
 local controls = require("darkmagic.ui.controls")
 local text = require("darkmagic.ui.text")
+local slider = require("darkmagic.ui.slider")
 local compat = require("darkmagic.ui.compat")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
@@ -80,6 +82,9 @@ local function show_item(item, visible)
     set_visible(item.art, visible)
     set_visible(item.label_node, visible)
     set_visible(item.value_node, visible)
+    set_visible(item.track_node, visible)
+    set_visible(item.active_node, visible)
+    set_visible(item.thumb_node, visible)
 end
 
 function EscapeMenu:hide_pents()
@@ -257,6 +262,7 @@ function EscapeMenu:create_enum_item(layout_id, row, y)
         y = y,
         width = definition.menu_width,
         height = item.height,
+        enabled = not row.unavailable,
         on_activate = function() self:activate(item) end,
         on_state = function(_, state)
             if state == "hover" or state == "focused" or state == "pressed" then
@@ -264,6 +270,51 @@ function EscapeMenu:create_enum_item(layout_id, row, y)
             end
         end,
     })
+    return item
+end
+
+function EscapeMenu:create_range_item(layout_id, row, y)
+    local range = assert(row.range)
+    local item = {
+        id = row.id,
+        layout = layout_id,
+        y = y,
+        height = 40,
+        focus_width = definition.menu_width,
+    }
+    if render.assets_available() then
+        item.label_node = render.create("modal", self.root)
+        item.label_node:set_z(30)
+        local width, height = set_text_node(item.label_node, "font30", row.label, 190, "left")
+        item.label_node:set_position(definition.center.x - 155, y + item.height / 2)
+        item.label_width, item.label_height = width, height
+    end
+    item.control = slider.create(self.root, self.manager, layout_id .. ":" .. row.id, {
+        x = definition.center.x - 10,
+        y = y + 1,
+        width = 255,
+        height = 37,
+        thumb_size = 28,
+        min = range.min,
+        max = range.max,
+        step = range.step,
+        value = settings.get(range.setting),
+        scope = layout_id,
+    }, row.label, {
+        layer = "modal",
+        palette = palette,
+        track_sheet = definition.option_assets.range_track,
+        thumb_sheet = definition.option_assets.range_thumb,
+        show_label = false,
+        show_value = false,
+        on_change = function(_, value)
+            settings.set(range.setting, value)
+            if self.on_option_change then self.on_option_change(layout_id, row.id, value) end
+        end,
+    })
+    item.track_node = item.control.track_node
+    item.active_node = item.control.active_node
+    item.thumb_node = item.control.thumb_node
     return item
 end
 
@@ -286,7 +337,9 @@ function EscapeMenu:create_layout(layout_id, layout)
 
     for _, row in ipairs(layout.rows) do
         local item
-        if layout.font == "font42" and not row.values then
+        if row.range then
+            item = self:create_range_item(layout_id, row, y)
+        elseif layout.font == "font42" and not row.values then
             item = self:create_image_item(layout_id, layout, row, y)
         else
             item = self:create_enum_item(layout_id, row, y)

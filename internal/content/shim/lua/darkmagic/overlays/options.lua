@@ -7,6 +7,7 @@
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local scenes = require("dm.scene/v1")
+local settings = require("dm.settings/v1")
 local compat = require("darkmagic.ui.compat")
 local escape_menu = require("darkmagic.ui.escape_menu")
 
@@ -39,5 +40,10 @@ return {
         if input.pressed("options") or input.pressed("cancel") then
             scenes.pop()
         end
+    end,
+
+    destroy = function()
+        local status = settings.status()
+        if status.dirty and status.path ~= "" then settings.save() end
     end,
 }

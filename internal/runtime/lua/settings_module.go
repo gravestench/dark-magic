@@ -1,0 +1,77 @@
+package modruntime
+
+import (
+	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/preferences"
+	lua "github.com/yuin/gopher-lua"
+)
+
+// SettingsModule exposes validated client preferences. Runtime effects are
+// applied immediately; persistence remains an explicit UI action.
+func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer) Module {
+	apply := func(values preferences.Values) error {
+		for _, bus := range []string{"sfx", "ambience", "speech"} {
+			if err := mixer.SetBusVolume(bus, float32(values.SoundVolume)); err != nil {
+				return err
+			}
+		}
+		return mixer.SetBusVolume("music", float32(values.MusicVolume))
+	}
+	_ = apply(settings.Values())
+	return Module{Name: "dm.settings/v1", Help: documentedModule("Inspect, preview, and persist client game preferences.", map[string]CommandHelp{
+		"get":    commandHelp("dm.settings.get(name)", "Read one active preference."),
+		"set":    commandHelp("dm.settings.set(name, value)", "Validate and apply one preference immediately."),
+		"save":   commandHelp("dm.settings.save()", "Persist active preferences for future launches."),
+		"status": commandHelp("dm.settings.status()", "Return the persistence path and dirty state."),
+	}), Loader: func(state *lua.LState) int {
+		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"get": func(state *lua.LState) int {
+				values := settings.Values()
+				switch name := state.CheckString(1); name {
+				case "sound_volume":
+					state.Push(lua.LNumber(values.SoundVolume))
+				case "music_volume":
+					state.Push(lua.LNumber(values.MusicVolume))
+				default:
+					state.RaiseError("unknown game preference %q", name)
+				}
+				return 1
+			},
+			"set": func(state *lua.LState) int {
+				values := settings.Values()
+				value := float64(state.CheckNumber(2))
+				switch name := state.CheckString(1); name {
+				case "sound_volume":
+					values.SoundVolume = value
+				case "music_volume":
+					values.MusicVolume = value
+				default:
+					state.RaiseError("unknown game preference %q", name)
+				}
+				if err := settings.Update(values); err != nil {
+					state.RaiseError("set game preference: %v", err)
+				}
+				if err := apply(values); err != nil {
+					state.RaiseError("apply game preference: %v", err)
+				}
+				return 0
+			},
+			"save": func(state *lua.LState) int {
+				if err := settings.Save(); err != nil {
+					state.RaiseError("save game preferences: %v", err)
+				}
+				return 0
+			},
+			"status": func(state *lua.LState) int {
+				result := state.NewTable()
+				result.RawSetString("path", lua.LString(settings.Path()))
+				result.RawSetString("dirty", lua.LBool(settings.Dirty()))
+				state.Push(result)
+				return 1
+			},
+		})
+		module.RawSetString("api", lua.LNumber(1))
+		state.Push(module)
+		return 1
+	}}
+}

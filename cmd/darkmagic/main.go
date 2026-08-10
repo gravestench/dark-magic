@@ -41,6 +41,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibRenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -135,6 +136,10 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 	shellSettings, err := shell.NewSettings(shellSettingsPath)
 	if err != nil {
 		return err
+	}
+	gameSettings, err := preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
+	if err != nil {
+		return fmt.Errorf("load game preferences: %w", err)
 	}
 	sceneErrors := make(chan error, 1)
 	reportSceneError := func(err error) {
@@ -264,6 +269,9 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		return err
 	}
 	if err := scripts.RegisterModule(modruntime.AudioModule(scripts, mixer, contentFS, gameData)); err != nil {
+		return err
+	}
+	if err := scripts.RegisterModule(modruntime.SettingsModule(gameSettings, mixer)); err != nil {
 		return err
 	}
 	videoBackend := video.NewEmbeddedBackend(composer, mixer, image.Pt(rendererConfig.Window.Width, rendererConfig.Window.Height))

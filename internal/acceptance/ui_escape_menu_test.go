@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	glua "github.com/yuin/gopher-lua"
@@ -33,6 +34,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 		modruntime.DataModule(contentFS),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
@@ -45,6 +47,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 
 	script := `
 local render = require("dm.render/v1")
+local settings = require("dm.settings/v1")
 local escape_menu = require("darkmagic.ui.escape_menu")
 
 local function value(value)
@@ -95,12 +98,12 @@ menu.manager:activate(menu.manager.focus)
 expect(menu.current_layout, "sound", "sound activation layout")
 expect(focus_id(menu), "sound:previous_menu", "sound default focus")
 
-menu.manager:set_focus("sound:hardware_acceleration")
+local sound = assert(menu.items_by_id["sound:sound_volume"])
+sound.control:set_value(0.25)
+expect(settings.get("sound_volume"), 0.25, "sound slider preference")
+
 local hardware = assert(menu.items_by_id["sound:hardware_acceleration"])
-expect(hardware.values[hardware.value_index], "ON", "hardware initial value")
-menu.manager:activate(menu.manager.focus)
-expect(hardware.values[hardware.value_index], "OFF", "hardware next value")
-expect(changed, "sound:hardware_acceleration=OFF", "option callback")
+expect(hardware.control.enabled, false, "unsupported hardware acceleration is disabled")
 
 menu:set_layout("main")
 menu.manager:set_focus("main:save_exit")
