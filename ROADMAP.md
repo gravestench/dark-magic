@@ -767,13 +767,19 @@ complete until its actions are driven by authoritative game state and commands.
   by panels and the held cursor. Backpack, stash, and cube placement validates
   the complete item footprint: no overlap places normally, exactly one
   overlapping item performs an atomic held-item swap, and multiple overlaps
-  reject without mutation. Vendor stock is non-spatial and does not use grid
-  overlap rules. Current progress: fixed-tick authority, copied Lua snapshots,
+  reject without mutation. Quest and reward panels expose authored spatial item
+  sockets. Vendor stock is shown in paged category grids, but selling is an
+  authoritative transaction that auto-arranges the transferred item instead of
+  a pointer drop into a player-selected vendor cell. Current progress:
+  fixed-tick authority, copied Lua snapshots,
   backpack, stash, and cube grid interaction, canonical body-location
   interaction, four-slot belt interaction, and MPQ-backed item presentation
   are implemented. Hireling equipment now uses an independent authoritative
-  slot domain with MPQ-backed slot presentation. Alternate weapon sets,
-  save/realm handoff persistence, and the remaining service overlays keep this
+  slot domain with MPQ-backed slot presentation. Named quest-service escrow
+  slots support the same atomic held-item replacement rule; the primitive can
+  also address authority-assigned vendor catalog positions, but selling and
+  buying remain distinct transactions. Alternate weapon sets, save/realm
+  handoff persistence, and service presentation and transaction rules keep this
   checkpoint open.
 - [ ] M19.2: Connect loot materialization, world drops, item names/tooltips, and
   Lua UI snapshots to M19.1 without making presentation authoritative.

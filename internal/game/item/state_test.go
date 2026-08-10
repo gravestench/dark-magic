@@ -135,6 +135,43 @@ func TestGridsAndServiceEscrowAreDistinctContainers(t *testing.T) {
 	}
 }
 
+func TestHeldItemAtomicallySwapsWithQuestServiceSocket(t *testing.T) {
+	items := []Item{
+		{ID: "held", Code: "cap", Width: 2, Height: 2},
+		{ID: "socketed", Code: "swd", Width: 1, Height: 3},
+		{ID: "vendor-stock", Code: "hp1", Width: 1, Height: 1},
+	}
+	state, err := NewState(Layout{}, items, map[string]Placement{
+		"held":         {Container: ContainerHeld},
+		"socketed":     {Container: ContainerQuest, Slot: "socket_input"},
+		"vendor-stock": {Container: ContainerVendor, Slot: "weapons/page:0/index:0"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	displaced, err := state.PlaceHeld("held", Placement{Container: ContainerQuest, Slot: "socket_input"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if displaced != "socketed" {
+		t.Fatalf("displaced %q, want socketed", displaced)
+	}
+	if placement, _ := state.Placement("held"); placement.Container != ContainerQuest || placement.Slot != "socket_input" {
+		t.Fatalf("held item placement = %#v", placement)
+	}
+	if placement, _ := state.Placement("socketed"); placement.Container != ContainerHeld {
+		t.Fatalf("displaced service item placement = %#v", placement)
+	}
+
+	if _, err := state.PlaceHeld("socketed", Placement{Container: ContainerVendor, Slot: "armor/page:0/index:0"}); err == nil {
+		t.Fatal("accepted vendor selling as a normal held-item placement")
+	}
+	if placement, _ := state.Placement("socketed"); placement.Container != ContainerHeld {
+		t.Fatalf("rejected handoff changed held item: %#v", placement)
+	}
+}
+
 func TestPlaceHeldSwapsOneOverlapAndRejectsSeveral(t *testing.T) {
 	items := []Item{
 		{ID: "held", Code: "big", Width: 2, Height: 2},

@@ -54,13 +54,13 @@ func validateMoveCommand(command simulation.Command) error {
 		return fmt.Errorf("item: player cannot move another owner's items")
 	}
 	if payload.PlaceHeld && !isHeldDestination(payload.Destination.Container) {
-		return fmt.Errorf("item: held placement requires a grid, equipment, hireling, or belt destination")
+		return fmt.Errorf("item: held placement requires a grid or named-slot destination")
 	}
 	return nil
 }
 
 func isHeldDestination(container Container) bool {
-	return isGrid(container) || container == ContainerEquipment || container == ContainerHireling || container == ContainerBelt
+	return isGrid(container) || isHeldSlot(container)
 }
 
 func decodeMove(encoded []byte) (MovePayload, error) {
