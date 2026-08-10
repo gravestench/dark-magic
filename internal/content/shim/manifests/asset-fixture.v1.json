@@ -409,6 +409,20 @@
       "frames_sha256": "bd774b063ebdc02f84dd332f3493856c0804c297f2ee8d224d9c7dc67831d81f"
     },
     {
+      "id": "vendor-tabs",
+      "path": "data/global/ui/PANEL/buyselltabs.DC6",
+      "sha256": "f66e693be14a05c11eafb254c34f45b812614ef0a8f2bc23a97e5b1b0b1de4c6",
+      "bytes": 19784,
+      "type": "dc6",
+      "directions": 1,
+      "frame_count": 8,
+      "min_width": 79,
+      "max_width": 79,
+      "min_height": 31,
+      "max_height": 31,
+      "frames_sha256": "56919f409312417d1b1640737a2bce8374355204c517c15cb2eb2d5c841d586b"
+    },
+    {
       "id": "quest-background",
       "path": "data/global/ui/MENU/questbackground.dc6",
       "sha256": "dcd539be44338242816eb92474d485551330acd357f4d6534a7ebabc7a3ce4ea",

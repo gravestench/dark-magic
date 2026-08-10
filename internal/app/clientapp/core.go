@@ -18,6 +18,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -131,6 +132,9 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create offline game session", err)
 	}
 	app.offlineSession = session
+	if err := app.buildInteractionAuthority(); err != nil {
+		return err
+	}
 	if err := app.buildItemAuthority(); err != nil {
 		return err
 	}
@@ -149,6 +153,9 @@ func (app *application) registerOfflineCommands() error {
 		if err := register(app.offlineSession); err != nil {
 			return wrap("register "+name, err)
 		}
+	}
+	if err := gameinteraction.RegisterCommands(app.offlineSession, app.interactionAuthority); err != nil {
+		return wrap("register interaction commands", err)
 	}
 	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
 		return wrap("register item commands", err)
@@ -174,10 +181,32 @@ func (app *application) registerOfflineCommands() error {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
 		commands = append(commands, skills.Commands(tick)...)
+		commands = append(commands, app.interactionSource.Commands(tick)...)
 		return append(commands, app.itemSource.Commands(tick)...)
 	}
 	app.playerControl = movement
 	return nil
+}
+
+func (app *application) buildInteractionAuthority() error {
+	var err error
+	app.interactionAuthority, err = gameinteraction.NewAuthority(gameinteraction.Target{
+		ID: "act1-akara", NPC: "Akara", Vendor: "Akara",
+		Categories: []string{"armo", "weap", "misc"},
+	})
+	if err != nil {
+		return wrap("create interaction authority", err)
+	}
+	initialTarget := ""
+	if app.options.StartScene == "vendor" {
+		initialTarget = "act1-akara"
+	}
+	if err := app.interactionAuthority.RegisterOwner("local-player", initialTarget); err != nil {
+		return wrap("register local interaction owner", err)
+	}
+	app.interactionControl = &gameinteraction.Controller{}
+	app.interactionSource, err = gameinteraction.NewSource(app.interactionControl, "local-player")
+	return wrap("create local interaction command source", err)
 }
 
 func (app *application) buildItemAuthority() error {
@@ -201,6 +230,7 @@ func (app *application) buildItemAuthority() error {
 		trades[vendor] = gameitem.TradeTerms{BuyMultiplier: int64(record.BuyMult), SellMultiplier: int64(record.SellMult), MaxBuy: int64(record.MaxBuy)}
 	}
 	app.itemAuthority.SetTradeCatalog(trades)
+	app.itemAuthority.SetInteractionPolicy(app.interactionAuthority)
 	if err := app.itemAuthority.Register("local-player", state); err != nil {
 		return wrap("register local item state", err)
 	}
@@ -222,10 +252,14 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
 		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
+		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true}})
+		placements["fixture-vendor-short-sword"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "weap", Page: 0}
 	}
 	if armor, found := snapshot.ArmorByCode["cap"]; found {
 		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
 		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
+		items = append(items, gameitem.Item{ID: "fixture-vendor-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true}})
+		placements["fixture-vendor-cap"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "armo", Page: 0}
 	}
 	for index, code := range []string{"hp1", "mp1"} {
 		if misc, found := snapshot.MiscByCode[code]; found {
@@ -235,6 +269,11 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 				placements[id] = gameitem.Placement{Container: gameitem.ContainerBelt, BeltSlot: 0}
 			} else {
 				placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+			}
+			if code == "hp1" {
+				vendorID := "fixture-vendor-" + code
+				items = append(items, gameitem.Item{ID: vendorID, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+				placements[vendorID] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "misc", Page: 0}
 			}
 		}
 	}

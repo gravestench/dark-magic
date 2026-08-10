@@ -17,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -95,19 +96,22 @@ type application struct {
 	navigator      *navigation.Manager
 	scenes         *modruntime.Scenes
 
-	records             *recordstore.Store
-	gameData            *gamedata.Catalog
-	questCatalog        *recovered.Catalog
-	worldObjectResolver *worldobjects.Resolver
-	saves               *persistence.Store
-	entitySimulation    *gameecs.Engine
-	offlineSession      *gamesession.Session
-	playerControl       *gamesession.MovementController
-	itemAuthority       *gameitem.Authority
-	itemControl         *gameitem.Controller
-	itemSource          *gameitem.Source
-	commandSource       func(uint64) []simulation.Command
-	loading             *loadcore.Coordinator
+	records              *recordstore.Store
+	gameData             *gamedata.Catalog
+	questCatalog         *recovered.Catalog
+	worldObjectResolver  *worldobjects.Resolver
+	saves                *persistence.Store
+	entitySimulation     *gameecs.Engine
+	offlineSession       *gamesession.Session
+	playerControl        *gamesession.MovementController
+	interactionAuthority *gameinteraction.Authority
+	interactionControl   *gameinteraction.Controller
+	interactionSource    *gameinteraction.Source
+	itemAuthority        *gameitem.Authority
+	itemControl          *gameitem.Controller
+	itemSource           *gameitem.Source
+	commandSource        func(uint64) []simulation.Command
+	loading              *loadcore.Coordinator
 
 	components   *host.Manager
 	engineHost   *host.Host

@@ -554,7 +554,8 @@
     "vendor": {
       "sheet":"data/global/ui/PANEL/buysell.dc6","palette":"sky","x":80,"y":64,
       "close":{"x":272,"bottom_inset":15,"label":"darkmagic.vendor.close"},
-      "labels":[{"key":"darkmagic.vendor.unavailable","x":160,"y":390,"width":250}]
+      "tabs":{"sheet":"data/global/ui/PANEL/buyselltabs.DC6","labels":["darkmagic.vendor.armor","darkmagic.vendor.weapons","darkmagic.vendor.weapons","darkmagic.vendor.misc"],"categories":["armo","weap","weap","misc"]},
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Monster","container":"vendor"}
     },
     "waypoint": {
       "sheet":"data/global/ui/MENU/waygatebackground.dc6","palette":"sky","x":80,"y":64,
