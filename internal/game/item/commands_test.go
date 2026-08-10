@@ -144,6 +144,63 @@ func TestPlayerCannotSelectAnotherOwnersWeaponSet(t *testing.T) {
 	}
 }
 
+func TestVendorSaleAndPurchaseCommandsAreReplayed(t *testing.T) {
+	state, err := NewState(Layout{VendorGrid: Grid{Width: 2, Height: 2}}, []Item{
+		{ID: "held", Code: "ssd", Width: 1, Height: 2}, {ID: "stock", Code: "cap", Width: 1, Height: 1},
+	}, map[string]Placement{"held": {Container: ContainerHeld}, "stock": {Container: ContainerVendor, Slot: "armor"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority := NewAuthority()
+	if err := authority.Register("alice", state); err != nil {
+		t.Fatal(err)
+	}
+	session, err := gamesession.New(gameecs.New(), gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := RegisterCommands(session, authority); err != nil {
+		t.Fatal(err)
+	}
+	sell, _ := VendorCommand(VendorSellCommand, VendorPayload{ItemID: "held", Category: "weapons"}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if err := session.Submit(sell); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	buy, _ := VendorCommand(VendorBuyCommand, VendorPayload{ItemID: "stock"}, "alice", 2, 2, simulation.AuthorityPlayer)
+	if err := session.Submit(buy); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	_, _, placements, err := authority.Snapshot("alice")
+	if err != nil || placements["held"].Container != ContainerVendor || placements["stock"].Container != ContainerHeld {
+		t.Fatalf("placements = %#v, %v", placements, err)
+	}
+	replay, err := session.Replay()
+	if err != nil || len(replay.Commands) != 2 || replay.Commands[0].Kind != VendorSellCommand || replay.Commands[1].Kind != VendorBuyCommand {
+		t.Fatalf("replay = %#v, %v", replay, err)
+	}
+}
+
+func TestVendorCommandRejectsClientCoordinatesAndCrossOwner(t *testing.T) {
+	move, err := Command(MovePayload{ItemID: "held", Destination: Placement{Container: ContainerVendor, Slot: "weapons", X: 9}}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateMoveCommand(move); err == nil {
+		t.Fatal("client-chosen vendor placement was accepted")
+	}
+	command, _ := VendorCommand(VendorSellCommand, VendorPayload{Owner: "bob", ItemID: "held", Category: "weapons"}, "alice", 1, 1, simulation.AuthorityPlayer)
+	if _, err := decodeVendor(command, true); err == nil {
+		t.Fatal("cross-owner vendor sale was accepted")
+	}
+}
+
 func testCommandState(t *testing.T) *State {
 	t.Helper()
 	state, err := NewState(Layout{Grids: map[Container]Grid{ContainerInventory: {Width: 10, Height: 4}}, BeltCapacity: 4}, []Item{{ID: "potion", Code: "hp1", Width: 1, Height: 1, BeltEligible: true}}, map[string]Placement{"potion": {Container: ContainerInventory}})

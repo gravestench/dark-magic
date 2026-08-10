@@ -176,10 +176,10 @@ func TestHeldItemAtomicallySwapsWithQuestServiceSocket(t *testing.T) {
 		{ID: "socketed", Code: "swd", Width: 1, Height: 3},
 		{ID: "vendor-stock", Code: "hp1", Width: 1, Height: 1},
 	}
-	state, err := NewState(Layout{}, items, map[string]Placement{
+	state, err := NewState(Layout{VendorGrid: Grid{Width: 10, Height: 10}}, items, map[string]Placement{
 		"held":         {Container: ContainerHeld},
 		"socketed":     {Container: ContainerQuest, Slot: "socket_input"},
-		"vendor-stock": {Container: ContainerVendor, Slot: "weapons/page:0/index:0"},
+		"vendor-stock": {Container: ContainerVendor, Slot: "weapons"},
 	})
 	if err != nil {
 		t.Fatal(err)

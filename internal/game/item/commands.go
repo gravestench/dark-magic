@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	MoveCommand      = "item.move"
-	WeaponSetCommand = "item.weapon_set"
+	MoveCommand       = "item.move"
+	WeaponSetCommand  = "item.weapon_set"
+	VendorSellCommand = "item.vendor_sell"
+	VendorBuyCommand  = "item.vendor_buy"
 )
 
 // MovePayload describes intent, not trusted results. In particular, Displaced
@@ -29,6 +31,12 @@ type MovePayload struct {
 type WeaponSetPayload struct {
 	Owner string `json:"owner,omitempty"`
 	Set   int    `json:"set"`
+}
+
+type VendorPayload struct {
+	Owner    string `json:"owner,omitempty"`
+	ItemID   string `json:"item_id"`
+	Category string `json:"category,omitempty"`
 }
 
 func RegisterCommands(session *gamesession.Session, authority *Authority) error {
@@ -53,7 +61,7 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 	}); err != nil {
 		return err
 	}
-	return session.Register(WeaponSetCommand, gamesession.CommandHandler{
+	if err := session.Register(WeaponSetCommand, gamesession.CommandHandler{
 		Validate: validateWeaponSetCommand,
 		Apply: func(_ *gameecs.Engine, command simulation.Command) error {
 			payload, err := decodeWeaponSet(command.Payload)
@@ -67,7 +75,71 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 			return authority.selectWeaponSet(owner, payload.Set)
 		},
 		Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
-	})
+	}); err != nil {
+		return err
+	}
+	return registerVendorCommands(session, authority)
+}
+
+func registerVendorCommands(session *gamesession.Session, authority *Authority) error {
+	for _, definition := range []struct {
+		kind string
+		sell bool
+	}{{VendorSellCommand, true}, {VendorBuyCommand, false}} {
+		kind, isSell := definition.kind, definition.sell
+		if err := session.Register(kind, gamesession.CommandHandler{
+			Validate: func(command simulation.Command) error {
+				_, err := decodeVendor(command, isSell)
+				return err
+			},
+			Apply: func(_ *gameecs.Engine, command simulation.Command) error {
+				payload, err := decodeVendor(command, isSell)
+				if err != nil {
+					return err
+				}
+				owner := payload.Owner
+				if owner == "" {
+					owner = command.Player
+				}
+				if isSell {
+					return authority.sellHeld(owner, payload.ItemID, payload.Category)
+				}
+				return authority.buyToHeld(owner, payload.ItemID)
+			},
+			Allowed: []simulation.Authority{simulation.AuthorityPlayer, simulation.AuthorityAdmin},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func decodeVendor(command simulation.Command, sell bool) (VendorPayload, error) {
+	var payload VendorPayload
+	decoder := json.NewDecoder(bytes.NewReader(command.Payload))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		return VendorPayload{}, err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return VendorPayload{}, fmt.Errorf("item: vendor payload has trailing data")
+	}
+	payload.Owner = strings.TrimSpace(payload.Owner)
+	payload.ItemID = strings.TrimSpace(payload.ItemID)
+	payload.Category = strings.TrimSpace(payload.Category)
+	if payload.ItemID == "" {
+		return VendorPayload{}, fmt.Errorf("item: item identity is required")
+	}
+	if sell && (payload.Category == "" || strings.Contains(payload.Category, "/")) {
+		return VendorPayload{}, fmt.Errorf("item: valid vendor category is required")
+	}
+	if !sell && payload.Category != "" {
+		return VendorPayload{}, fmt.Errorf("item: vendor purchase does not accept a category")
+	}
+	if command.Authority == simulation.AuthorityPlayer && payload.Owner != "" && payload.Owner != command.Player {
+		return VendorPayload{}, fmt.Errorf("item: player cannot transact another owner's items")
+	}
+	return payload, nil
 }
 
 func validateMoveCommand(command simulation.Command) error {
@@ -77,6 +149,9 @@ func validateMoveCommand(command simulation.Command) error {
 	}
 	if command.Authority == simulation.AuthorityPlayer && payload.Owner != "" && payload.Owner != command.Player {
 		return fmt.Errorf("item: player cannot move another owner's items")
+	}
+	if payload.Destination.Container == ContainerVendor {
+		return fmt.Errorf("item: vendor stock changes require a transaction command")
 	}
 	if payload.PlaceHeld && !isHeldDestination(payload.Destination.Container) {
 		return fmt.Errorf("item: held placement requires a grid or named-slot destination")
@@ -148,4 +223,15 @@ func WeaponSetSelectionCommand(payload WeaponSetPayload, actor string, sequence,
 		return simulation.Command{}, err
 	}
 	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: WeaponSetCommand, Payload: encoded}, nil
+}
+
+func VendorCommand(kind string, payload VendorPayload, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
+	if kind != VendorSellCommand && kind != VendorBuyCommand {
+		return simulation.Command{}, fmt.Errorf("item: unsupported vendor command %q", kind)
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: kind, Payload: encoded}, nil
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const ArchiveVersion = 1
+const ArchiveVersion = 2
 
 // archiveEnvelope is the durable boundary for one player's item authority.
 // The checksum catches truncated or accidentally modified handoff data before
@@ -30,9 +30,15 @@ type archivedState struct {
 }
 
 type archivedLayout struct {
-	Grids           []archivedGrid `json:"grids"`
-	BeltCapacity    int            `json:"belt_capacity"`
-	ActiveWeaponSet int            `json:"active_weapon_set"`
+	Grids           []archivedGrid     `json:"grids"`
+	BeltCapacity    int                `json:"belt_capacity"`
+	ActiveWeaponSet int                `json:"active_weapon_set"`
+	VendorGrid      archivedDimensions `json:"vendor_grid"`
+}
+
+type archivedDimensions struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 type archivedGrid struct {
@@ -65,6 +71,7 @@ type archivedPlacement struct {
 	Slot      string    `json:"slot,omitempty"`
 	BeltSlot  int       `json:"belt_slot,omitempty"`
 	WeaponSet int       `json:"weapon_set,omitempty"`
+	Page      int       `json:"page,omitempty"`
 }
 
 // MarshalArchive makes a deterministic, checksummed value snapshot. It never
@@ -111,7 +118,7 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 	if err := decodeStrict(encoded, &envelope); err != nil {
 		return nil, fmt.Errorf("item: decode archive envelope: %w", err)
 	}
-	if envelope.Version != ArchiveVersion {
+	if envelope.Version < 1 || envelope.Version > ArchiveVersion {
 		return nil, fmt.Errorf("item: unsupported archive version %d", envelope.Version)
 	}
 	expected, err := hex.DecodeString(envelope.Checksum)
@@ -143,7 +150,7 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 		if _, exists := placements[entry.ItemID]; exists {
 			return nil, fmt.Errorf("item: duplicate archived placement for %q", entry.ItemID)
 		}
-		placements[entry.ItemID] = Placement{Container: entry.Container, X: entry.X, Y: entry.Y, Slot: entry.Slot, BeltSlot: entry.BeltSlot, WeaponSet: entry.WeaponSet}
+		placements[entry.ItemID] = Placement{Container: entry.Container, X: entry.X, Y: entry.Y, Slot: entry.Slot, BeltSlot: entry.BeltSlot, WeaponSet: entry.WeaponSet, Page: entry.Page}
 	}
 	state, err := NewState(layout, items, placements)
 	if err != nil {
@@ -153,7 +160,7 @@ func UnmarshalArchive(encoded []byte) (*State, error) {
 }
 
 func archiveLayout(layout Layout) archivedLayout {
-	result := archivedLayout{BeltCapacity: layout.BeltCapacity, ActiveWeaponSet: layout.ActiveWeaponSet}
+	result := archivedLayout{BeltCapacity: layout.BeltCapacity, ActiveWeaponSet: layout.ActiveWeaponSet, VendorGrid: archivedDimensions{Width: layout.VendorGrid.Width, Height: layout.VendorGrid.Height}}
 	containers := make([]string, 0, len(layout.Grids))
 	for container := range layout.Grids {
 		containers = append(containers, string(container))
@@ -167,7 +174,7 @@ func archiveLayout(layout Layout) archivedLayout {
 }
 
 func restoreLayout(archived archivedLayout) (Layout, error) {
-	layout := Layout{Grids: make(map[Container]Grid, len(archived.Grids)), BeltCapacity: archived.BeltCapacity, ActiveWeaponSet: archived.ActiveWeaponSet}
+	layout := Layout{Grids: make(map[Container]Grid, len(archived.Grids)), BeltCapacity: archived.BeltCapacity, ActiveWeaponSet: archived.ActiveWeaponSet, VendorGrid: Grid{Width: archived.VendorGrid.Width, Height: archived.VendorGrid.Height}}
 	for _, entry := range archived.Grids {
 		if _, exists := layout.Grids[entry.Container]; exists {
 			return Layout{}, fmt.Errorf("item: duplicate archived grid %q", entry.Container)
@@ -178,7 +185,7 @@ func restoreLayout(archived archivedLayout) (Layout, error) {
 }
 
 func archivePlacement(id string, placement Placement) archivedPlacement {
-	return archivedPlacement{ItemID: id, Container: placement.Container, X: placement.X, Y: placement.Y, Slot: placement.Slot, BeltSlot: placement.BeltSlot, WeaponSet: placement.WeaponSet}
+	return archivedPlacement{ItemID: id, Container: placement.Container, X: placement.X, Y: placement.Y, Slot: placement.Slot, BeltSlot: placement.BeltSlot, WeaponSet: placement.WeaponSet, Page: placement.Page}
 }
 
 func archivePresentation(presentation Presentation) archivedPresentation {

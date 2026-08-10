@@ -17,8 +17,32 @@ type Controller struct {
 }
 
 type request struct {
-	move      *MovePayload
-	weaponSet *WeaponSetPayload
+	move       *MovePayload
+	weaponSet  *WeaponSetPayload
+	vendorKind string
+	vendor     *VendorPayload
+}
+
+func (controller *Controller) SellHeld(itemID, category string) error {
+	return controller.vendor(VendorSellCommand, VendorPayload{ItemID: itemID, Category: category})
+}
+
+func (controller *Controller) BuyToHeld(itemID string) error {
+	return controller.vendor(VendorBuyCommand, VendorPayload{ItemID: itemID})
+}
+
+func (controller *Controller) vendor(kind string, payload VendorPayload) error {
+	payload.ItemID, payload.Category = strings.TrimSpace(payload.ItemID), strings.TrimSpace(payload.Category)
+	if payload.ItemID == "" {
+		return fmt.Errorf("item: item identity is required")
+	}
+	if kind == VendorSellCommand && (payload.Category == "" || strings.Contains(payload.Category, "/")) {
+		return fmt.Errorf("item: valid vendor category is required")
+	}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	controller.requests = append(controller.requests, request{vendorKind: kind, vendor: &payload})
+	return nil
 }
 
 func (controller *Controller) Move(payload MovePayload) error {
@@ -73,8 +97,10 @@ func (source *Source) Commands(tick uint64) []simulation.Command {
 		var err error
 		if request.move != nil {
 			command, err = Command(*request.move, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
-		} else {
+		} else if request.weaponSet != nil {
 			command, err = WeaponSetSelectionCommand(*request.weaponSet, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
+		} else {
+			command, err = VendorCommand(request.vendorKind, *request.vendor, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)
 		}
 		if err == nil {
 			commands = append(commands, command)

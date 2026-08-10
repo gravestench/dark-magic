@@ -63,6 +63,27 @@ func (authority *Authority) selectWeaponSet(owner string, set int) error {
 	return state.SelectWeaponSet(set)
 }
 
+func (authority *Authority) sellHeld(owner, itemID, category string) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	state, found := authority.players[owner]
+	if !found {
+		return fmt.Errorf("item: unknown owner %q", owner)
+	}
+	_, err := state.SellHeld(itemID, category)
+	return err
+}
+
+func (authority *Authority) buyToHeld(owner, itemID string) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	state, found := authority.players[owner]
+	if !found {
+		return fmt.Errorf("item: unknown owner %q", owner)
+	}
+	return state.BuyToHeld(itemID)
+}
+
 func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map[string]Placement, error) {
 	authority.mu.RLock()
 	defer authority.mu.RUnlock()
