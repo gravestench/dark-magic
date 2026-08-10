@@ -948,8 +948,9 @@ authority, persistence separation, and resilience acceptance remain open.
 - [x] Add residency-aware capture readiness and warm-queue backpressure. The
   vendor probe observed a burst of roughly 1,000 resident entries—not a hard
   entry ceiling—while hundreds of startup warm requests remained queued.
-  Captures now restart their settle window when the scene's retained structure
-  changes, so late-created text and art cannot produce a partial capture.
+  Captures now restart their settle window when retained node topology changes,
+  so late-created UI pieces cannot produce a partial capture while animation,
+  streaming textures, and refreshed text remain eligible to settle.
   Optional warming runs after presentation and is admitted only while it fits
   without eviction; demand uploads remain unrestricted and therefore retain
   priority over speculative residency.

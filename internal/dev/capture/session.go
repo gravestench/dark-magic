@@ -98,8 +98,9 @@ func (s *Session) Observe(stack []string, structuralRevision uint64) {
 		s.current, s.frames, s.revision = scene, 0, structuralRevision
 	}
 	if structuralRevision != s.revision {
-		// A late decode may create text or art after the scene first appears.
-		// Begin the stability window again instead of capturing a partial scene.
+		// A late scene assembly step may add or remove retained nodes after the
+		// scene first appears. Begin the stability window again instead of
+		// capturing a partial scene. Texture/text updates do not reset it.
 		s.revision, s.frames = structuralRevision, 0
 	}
 	s.frames++

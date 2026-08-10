@@ -177,12 +177,14 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("create offline player entry source", err)
 	}
+	sequencer := simulation.NewLocalSequencer()
 	app.commandSource = func(tick uint64) []simulation.Command {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
 		commands = append(commands, skills.Commands(tick)...)
 		commands = append(commands, app.interactionSource.Commands(tick)...)
-		return append(commands, app.itemSource.Commands(tick)...)
+		commands = append(commands, app.itemSource.Commands(tick)...)
+		return sequencer.Assign(commands)
 	}
 	app.playerControl = movement
 	return nil

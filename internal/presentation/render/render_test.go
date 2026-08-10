@@ -392,6 +392,16 @@ func TestStructuralRevisionIgnoresOrdinaryNodeUpdates(t *testing.T) {
 	if got := composer.Diagnostics().StructuralRevision; got != created {
 		t.Fatalf("ordinary update changed structural revision: got %d, want %d", got, created)
 	}
+	resource, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 1, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := composer.Diagnostics().StructuralRevision; got != created {
+		t.Fatalf("resource refresh changed node topology revision: got %d, want %d", got, created)
+	}
+	if err := composer.DestroyResource(resource); err != nil {
+		t.Fatal(err)
+	}
 	if err := composer.Destroy(id); err != nil {
 		t.Fatal(err)
 	}
