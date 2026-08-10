@@ -14,8 +14,8 @@ local text = require("darkmagic.ui.text")
 local M = {}
 
 local function fill(node, width, height, color)
-    -- Renderer rectangles must have positive dimensions. Even a zero-percent bar
-    -- gets a 1px backing texture; visibility below decides whether it is shown.
+    -- Renderer rectangles must have positive dimensions, so clamp width/height
+    -- to at least one pixel before asking the retained node to build the image.
     node:fill_rect(
         math.max(1, width),
         math.max(1, height),
@@ -72,7 +72,7 @@ function M.create(root, definition, label, options)
         local range = result.max - result.min
 
         -- Normalize arbitrary [min,max] into 0..1. A zero-sized range is treated
-        -- as empty instead of dividing by zero.
+        -- as zero instead of dividing by zero.
         local fraction = range > 0 and (result.value - result.min) / range or 0
         local fill_width = math.max(1, width * fraction)
 
@@ -81,9 +81,6 @@ function M.create(root, definition, label, options)
 
             -- Fill grows from LEFT to RIGHT, so its center shifts as width changes.
             result.fill:set_position(x + fill_width / 2, y + height / 2)
-
-            -- Hide zero progress even though the backing texture is at least 1px.
-            result.fill:set_visible(fraction > 0)
         end
 
         if result.value_node then
