@@ -646,12 +646,15 @@ complete until its actions are driven by authoritative game state and commands.
 - [x] M18.1: Define and test one focus owner across world, HUD, overlay, modal,
   cursor, transition, and debug layers, including cancellation and scene change.
   Each native frame now carries an explicit scene/debug/none owner. The debug
-  shell captures before scene publication, and the Lua input capability hides
-  actions, text, and pointer coordinates from nonfocused callbacks while still
-  allowing their simulation updates. HUD and cursor remain presentation owned
-  by the focused scene rather than competing input consumers.
+  shell captures before scene publication, and the Lua input capability gives
+  nonfocused callbacks either no input or an explicitly filtered gameplay-only
+  channel while their simulation updates continue. HUD and cursor remain
+  presentation owned by the focused scene rather than competing consumers.
 - [ ] M18.2: Complete the functional 800x600 control panel, belt, skill wells,
   tooltips, cursor states, and minipanel behavior using authoritative snapshots.
+  Inventory, character, skills, automap, help, quests, and party overlays now
+  explicitly declare whether gameplay passes beneath them and whether the
+  visible world frames the player in the left, right, or centered region.
 - [ ] M18.3: Convert inventory/equipment and the first dependent item overlays
   from visual shells to command-backed interfaces; continue with character,
   skills, automap, quests, waypoint, NPC, hireling, social, and help surfaces.

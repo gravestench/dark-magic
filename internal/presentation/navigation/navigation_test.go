@@ -122,6 +122,54 @@ func TestFocusedReportsTopScene(t *testing.T) {
 	}
 }
 
+type passthroughScene struct {
+	*testScene
+	view         string
+	receivedView *string
+}
+
+func (s *passthroughScene) PassesInputBelow() bool { return true }
+func (s *passthroughScene) WorldView() string      { return s.view }
+func (s *passthroughScene) UpdateInputFocused(_ context.Context, _ time.Duration, _ bool, _ bool, view string) error {
+	*s.receivedView = view
+	return nil
+}
+
+func TestOverlaySeparatesUIFocusFromGameplayInputAndWorldFraming(t *testing.T) {
+	t.Parallel()
+	var calls []string
+	var receivedView string
+	manager := New()
+	registerScene(t, manager, "world", false, nil, &calls)
+	if err := manager.Register("inventory", func(context.Context) (Scene, error) {
+		return &passthroughScene{testScene: &testScene{id: "inventory", calls: &calls}, view: "left", receivedView: &receivedView}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Replace(context.Background(), "world"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Push(context.Background(), "inventory"); err != nil {
+		t.Fatal(err)
+	}
+	if focused, ok := manager.Focused(); !ok || focused != "inventory" {
+		t.Fatalf("focused = %q, %v", focused, ok)
+	}
+	allowed, view := manager.InputPolicy("world")
+	if !allowed {
+		t.Fatal("inventory did not pass gameplay input to world")
+	}
+	if view != "left" {
+		t.Fatalf("input policy world view = %q, want left", view)
+	}
+	if err := manager.Update(context.Background(), time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if receivedView != "left" {
+		t.Fatalf("world view = %q, want left", receivedView)
+	}
+}
+
 func registerScene(t *testing.T, manager *Manager, id string, blocks bool, enterErr error, calls *[]string) {
 	t.Helper()
 	if err := manager.Register(id, func(context.Context) (Scene, error) {

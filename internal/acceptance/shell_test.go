@@ -39,6 +39,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer render.Composer
 	var input inputstate.Store
+	scenes.SetInputStore(&input)
 	var mixer audio.Mixer
 	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	entitySimulation := gameecs.New()

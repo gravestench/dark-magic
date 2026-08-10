@@ -95,7 +95,7 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 	}
 	x, y := 0, 0
 	owner := source.input.Owner()
-	if owner.Domain == inputstate.FocusScene && owner.ID == source.focusID {
+	if owner.Domain == inputstate.FocusScene && (owner.ID == source.focusID || source.input.Gameplay()) {
 		if action := source.input.Action("left"); action.Down || action.Pressed {
 			x--
 		}

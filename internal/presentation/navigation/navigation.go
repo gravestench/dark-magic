@@ -31,6 +31,23 @@ type FocusedUpdater interface {
 	UpdateFocused(context.Context, time.Duration, bool) error
 }
 
+// InputAwareUpdater receives UI focus and routed gameplay-input access
+// separately. A panel may own UI focus while deliberately allowing the world
+// below it to continue consuming gameplay actions.
+type InputAwareUpdater interface {
+	UpdateInputFocused(context.Context, time.Duration, bool, bool, string) error
+}
+
+// InputPassthrough declares that a scene does not consume gameplay input meant
+// for scenes beneath it. Modal and pause scenes do not implement this policy.
+type InputPassthrough interface {
+	PassesInputBelow() bool
+}
+
+// WorldViewer describes the unobscured region an overlay leaves for world
+// presentation. Values are authored for the fixed logical viewport.
+type WorldViewer interface{ WorldView() string }
+
 // Factory creates a fresh scene instance.
 type Factory func(context.Context) (Scene, error)
 
@@ -134,9 +151,13 @@ func (m *Manager) Update(ctx context.Context, elapsed time.Duration) error {
 			break
 		}
 	}
+	view := worldView(m.stack)
 	for index := start; index < len(m.stack); index++ {
 		var err error
-		if updater, ok := m.stack[index].scene.(FocusedUpdater); ok {
+		inputAllowed := index == len(m.stack)-1 || passesInputFrom(m.stack, index+1)
+		if updater, ok := m.stack[index].scene.(InputAwareUpdater); ok {
+			err = updater.UpdateInputFocused(ctx, elapsed, index == len(m.stack)-1, inputAllowed, view)
+		} else if updater, ok := m.stack[index].scene.(FocusedUpdater); ok {
 			err = updater.UpdateFocused(ctx, elapsed, index == len(m.stack)-1)
 		} else {
 			err = m.stack[index].scene.Update(ctx, elapsed)
@@ -146,6 +167,39 @@ func (m *Manager) Update(ctx context.Context, elapsed time.Duration) error {
 		}
 	}
 	return nil
+}
+
+// InputPolicy reports whether the named active scene may receive gameplay
+// actions through every scene above it and the unobscured world region.
+func (m *Manager) InputPolicy(id string) (bool, string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for index := len(m.stack) - 1; index >= 0; index-- {
+		if m.stack[index].id == id {
+			return index == len(m.stack)-1 || passesInputFrom(m.stack, index+1), worldView(m.stack)
+		}
+	}
+	return false, "center"
+}
+
+func worldView(stack []entry) string {
+	if len(stack) == 0 {
+		return "center"
+	}
+	if viewer, ok := stack[len(stack)-1].scene.(WorldViewer); ok {
+		return viewer.WorldView()
+	}
+	return "center"
+}
+
+func passesInputFrom(stack []entry, start int) bool {
+	for index := start; index < len(stack); index++ {
+		passthrough, ok := stack[index].scene.(InputPassthrough)
+		if !ok || !passthrough.PassesInputBelow() {
+			return false
+		}
+	}
+	return true
 }
 
 // Render renders every scene from bottom to top.

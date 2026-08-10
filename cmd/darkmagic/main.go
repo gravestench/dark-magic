@@ -391,7 +391,8 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 		if captured {
 			owner = inputstate.FocusOwner{Domain: inputstate.FocusDebug, ID: "client-console"}
 		}
-		inputFrame = inputstate.Route(inputFrame, owner, captured)
+		gameplayAllowed, worldView := navigator.InputPolicy("game_world")
+		inputFrame = inputstate.Route(inputFrame, owner, captured, gameplayAllowed, worldView)
 		inputState.Publish(inputFrame)
 		now := time.Now()
 		elapsed := now.Sub(lastFrame)

@@ -130,8 +130,8 @@ function M.wrap(scene, definition, palettes, options)
         M.focus(cursor_for(self), visible_for(self, true))
     end
 
-    scene.update = function(self, elapsed, focused)
-        if original_update then original_update(self, elapsed, focused) end
+    scene.update = function(self, elapsed, focused, input_allowed, world_view)
+        if original_update then original_update(self, elapsed, focused, input_allowed, world_view) end
         M.focus(cursor_for(self), visible_for(self, focused))
     end
 

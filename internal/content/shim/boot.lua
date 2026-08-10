@@ -51,6 +51,12 @@ return {
             return cursor.wrap(definition, manifest.cursor, manifest.palettes, options)
         end
 
+        local function gameplay_overlay(definition, world_view)
+            definition.passes_input_below = true
+            definition.world_view = world_view or "center"
+            return definition
+        end
+
         scenes.register("loading", with_cursor(loading, { hidden = true }))
         scenes.register("title", with_cursor(title))
         scenes.register("main_menu", with_cursor(main_menu))
@@ -67,15 +73,15 @@ return {
         }))
         scenes.register("font_lab", with_cursor(font_lab))
         scenes.register("ui_lab", with_cursor(ui_lab))
-        scenes.register("inventory", with_cursor(inventory))
-        scenes.register("character", with_cursor(character))
-        scenes.register("skills", with_cursor(skills))
-        scenes.register("automap", with_cursor(automap))
+        scenes.register("inventory", with_cursor(gameplay_overlay(inventory, "left")))
+        scenes.register("character", with_cursor(gameplay_overlay(character, "right")))
+        scenes.register("skills", with_cursor(gameplay_overlay(skills, "left")))
+        scenes.register("automap", with_cursor(gameplay_overlay(automap, "center")))
         scenes.register("options", with_cursor(options))
         scenes.register("pause", with_cursor(pause))
-        scenes.register("help", with_cursor(help))
-        scenes.register("quests", with_cursor(quests))
-        scenes.register("party", with_cursor(party))
+        scenes.register("help", with_cursor(gameplay_overlay(help, "center")))
+        scenes.register("quests", with_cursor(gameplay_overlay(quests, "right")))
+        scenes.register("party", with_cursor(gameplay_overlay(party, "center")))
         scenes.register("stash", with_cursor(stash))
         scenes.register("cube", with_cursor(cube))
         scenes.register("hireling", with_cursor(hireling))

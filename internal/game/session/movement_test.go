@@ -57,7 +57,7 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	}
 }
 
-func TestMovementSourceReadsActionsOnlyForGameplayFocusOwner(t *testing.T) {
+func TestMovementSourceHonorsGameplayInputRouting(t *testing.T) {
 	engine := gameecs.New()
 	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
@@ -84,8 +84,16 @@ func TestMovementSourceReadsActionsOnlyForGameplayFocusOwner(t *testing.T) {
 	if payload.X != 0 || payload.Y != 0 {
 		t.Fatalf("overlay focus leaked movement: %#v", payload)
 	}
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "inventory"}, Gameplay: true})
 	payload, err = decodeMove(source.Commands(2)[0].Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.X != 1 || payload.Y != 0 {
+		t.Fatalf("passthrough overlay blocked movement: %#v", payload)
+	}
+	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"right": {Down: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	payload, err = decodeMove(source.Commands(3)[0].Payload)
 	if err != nil {
 		t.Fatal(err)
 	}
