@@ -40,6 +40,61 @@ local function dc6_at(root, sheet, palette, frame, x, y)
     return node, width, height
 end
 
+local function item_at(snapshot, column, row)
+    for _, item in ipairs(snapshot.items) do
+        if item.container == "inventory"
+            and column >= item.x and column < item.x + item.width
+            and row >= item.y and row < item.y + item.height then
+            return item
+        end
+    end
+end
+
+local function held_item(snapshot)
+    for _, item in ipairs(snapshot.items) do
+        if item.container == "held" then return item end
+    end
+end
+
+local function refresh_items(self)
+    local snapshot = assert(self.items.snapshot())
+    local cursor_x, cursor_y = input.cursor()
+    self.item_snapshot = snapshot
+    for _, item in ipairs(snapshot.items) do
+        local drawing = self.item_nodes[item.id]
+        if drawing == nil and item.inventory_dc6 ~= "" then
+            local node = render.create("modal", self.root)
+            local width, height = node:set_dc6(item.inventory_dc6, manifest.palettes.units, 0, 0)
+            drawing = { node = node, width = width, height = height }
+            self.item_nodes[item.id] = drawing
+        end
+        if drawing ~= nil then
+            local visible = item.container == "inventory" or item.container == "held"
+            drawing.node:set_visible(visible)
+            if item.container == "inventory" then
+                drawing.node:set_position(
+                    self.grid_left + item.x * self.cell_width + drawing.width / 2,
+                    self.grid_top + item.y * self.cell_height + drawing.height / 2
+                )
+            elseif item.container == "held" then
+                -- The held container is authoritative even though its picture
+                -- follows the local pointer. Reconnecting does not lose it.
+                drawing.node:set_position(cursor_x + drawing.width / 2, cursor_y + drawing.height / 2)
+            end
+        end
+    end
+end
+
+local function activate_cell(self, column, row)
+    local held = held_item(self.item_snapshot)
+    if held ~= nil then
+        self.items.move(held.id, { container = "inventory", x = column, y = row }, true)
+        return
+    end
+    local item = item_at(self.item_snapshot, column, row)
+    if item ~= nil then self.items.move(item.id, { container = "held" }) end
+end
+
 return {
     blocks_update_below = true,
 
@@ -49,6 +104,11 @@ return {
         if not render.assets_available() then
             return
         end
+
+        -- Item authority is a gameplay capability. Presentation-only test
+        -- harnesses do not install it, so ask for it only after we know this
+        -- overlay can actually build its asset-backed UI.
+        self.items = require("dm.items/v1")
 
         local selected = assert(saves.selected(), "inventory requires a selected character")
         self.record = inventory_record(selected.class)
@@ -83,22 +143,31 @@ return {
         -- pointer hit testing, and future authoritative item placement.
         local columns = number(self.record, "gridX")
         local rows = number(self.record, "gridY")
-        local left = number(self.record, "gridLeft")
-        local top = number(self.record, "gridTop")
-        local cell_width = number(self.record, "gridBoxWidth")
-        local cell_height = number(self.record, "gridBoxHeight")
+        self.grid_left = number(self.record, "gridLeft")
+        self.grid_top = number(self.record, "gridTop")
+        self.cell_width = number(self.record, "gridBoxWidth")
+        self.cell_height = number(self.record, "gridBoxHeight")
+        self.item_nodes = {}
         for row = 0, rows - 1 do
             for column = 0, columns - 1 do
+                -- Each callback gets its own coordinates. Think of these as
+                -- little labels glued to the cell instead of shared loop pens.
+                local cell_column, cell_row = column, row
                 self.controls:add({
                     id = string.format("inventory_%d_%d", column, row),
                     label = string.format("Inventory %d, %d", column + 1, row + 1),
-                    x = left + column * cell_width,
-                    y = top + row * cell_height,
-                    width = cell_width,
-                    height = cell_height,
+                    x = self.grid_left + column * self.cell_width,
+                    y = self.grid_top + row * self.cell_height,
+                    width = self.cell_width,
+                    height = self.cell_height,
+                    on_activate = function() activate_cell(self, cell_column, cell_row) end,
                 })
             end
         end
+
+        -- Item positions are authoritative grid cells. The panel converts those
+        -- cells to pixels and draws the separate front-facing inventory artwork.
+        refresh_items(self)
 
         local close = screen.close
         local close_placement = {
@@ -118,6 +187,7 @@ return {
 
     update = function(self)
         self.controls:update()
+        if self.items ~= nil then refresh_items(self) end
         if input.pressed("inventory") or input.pressed("cancel") then
             scenes.pop()
         end
