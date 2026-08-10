@@ -16,20 +16,23 @@ local screen = manifest.screens.title
 
 return {
     create = function(self)
-        self.root = render.create("transition")
+        -- This is a normal interactive frontend scene after the startup
+        -- videos, not a transition overlay. Keeping its opaque art on the HUD
+        -- layer lets the shell cursor compose above it.
+        self.root = render.create("hud")
         self.background = dc6.frontend_background(
             self.root,
-            "transition",
+            "hud",
             screen.background,
             manifest.palettes[screen.palette],
             manifest.layouts.frontend_tiles
         )
         if render.assets_available() then
             self.logo = {
-                black_left = render.create("transition", self.root),
-                black_right = render.create("transition", self.root),
-                fire_left = render.create("transition", self.root),
-                fire_right = render.create("transition", self.root),
+                black_left = render.create("hud", self.root),
+                black_right = render.create("hud", self.root),
+                fire_left = render.create("hud", self.root),
+                fire_right = render.create("hud", self.root),
             }
             local logo = screen.logo
             local palette = manifest.palettes[logo.palette]

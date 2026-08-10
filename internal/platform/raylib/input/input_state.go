@@ -80,12 +80,19 @@ func (s *Service) updateMouseCursorState() {
 	s.mux.Lock()
 	p := rl.GetMousePosition()
 	x, y, inside := s.renderer.ScreenToGame(int(p.X), int(p.Y))
-	if inside {
-		s.cursor.X, s.cursor.Y = x, y
-	} else {
-		s.cursor.X, s.cursor.Y = -1, -1
-	}
+	s.cursor.X, s.cursor.Y = retainLogicalCursor(s.cursor.X, s.cursor.Y, x, y, inside)
 	s.mux.Unlock()
+}
+
+// retainLogicalCursor prevents a software pointer from flashing at the logical
+// origin when the native pointer enters letterboxing or leaves the window.
+// Pointer actions are still rejected outside the viewport by ScreenToGame;
+// presentation simply remains at its last meaningful coordinate.
+func retainLogicalCursor(previousX, previousY, x, y int, inside bool) (int, int) {
+	if !inside {
+		return previousX, previousY
+	}
+	return x, y
 }
 
 func (s *Service) updateMouseButtonState() {
