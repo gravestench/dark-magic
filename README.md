@@ -290,13 +290,14 @@ development-only CLI option is `--fixture-characters 10`; its deterministic
 in-memory records exercise both columns, paging, and expansion/hardcore labels.
 The default presentation profile remains `lod-english-800x600`. The scoped
 `lod-english-640x480-gameplay` profile selects the original 640-wide in-game
-control panel and logical viewport for `game_world` development without claiming
-that every frontend screen has been converted. Select it with
+control panel and logical viewport across gameplay, side/full overlays, pause,
+options, death, and loading transitions. It deliberately does not claim the
+800x600 expansion frontend screens have been converted. Select it with
 `--presentation-profile lod-english-640x480-gameplay` or
 `PRESENTATION_PROFILE=lod-english-640x480-gameplay make capture`.
-When starting directly in `game_world`, `inventory`, or `character`, the first fixture is
-selected automatically so asset-backed presentation can be captured in
-isolation.
+When starting directly in a gameplay scene such as `game_world`, `inventory`,
+`character`, `stash`, or `help`, the first fixture is selected automatically so
+asset-backed presentation can be captured in isolation.
 Character sources may also attach an immutable appearance snapshot containing
 the resolved COF, palette, direction, and component DCC paths. Character
 selection renders that equipment-aware composite when available and falls back
