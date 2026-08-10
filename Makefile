@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view profile profile-check capture capture-all
+.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all
 
 test:
 	go test ./...
@@ -20,6 +20,9 @@ shim:
 
 bik-view:
 	go run ./internal/dev/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"
+
+presentation-coverage:
+	go run ./internal/dev/tools/presentation_coverage
 
 PROFILE_DIR ?= ./profiles/acceptance
 PROFILE_BUDGETS ?= ./docs/profile-budgets.json

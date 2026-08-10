@@ -304,10 +304,14 @@ implementations. The remaining work is tracked explicitly below.
   source hashes, byte sizes, decoder types, direction/frame counts, dimension
   ranges, and deterministic full-frame-metadata hashes. The catalog tool can
   generate or compare the fixture and reports every mismatch in one pass.
-- [ ] M15.5: Generate a deterministic coverage report joining runtime-consumed
+- [x] M15.5: Generate a deterministic coverage report joining runtime-consumed
   asset paths, presentation-manifest entries, and verified fixture entries.
   Classify deliberate dynamic paths separately, fail CI for unexplained static
-  gaps, and document the remaining screen/HUD/font/audio/TXT/TBL inventory.
+  gaps, and document the remaining screen/HUD/font/audio/TXT/TBL inventory. The
+  headless report currently tracks 139 manifest paths (73 verified, 66 pending),
+  47 code-owned migration paths, one dynamic prefix, and 17 catalog-only paths;
+  CI pins the complete classified-set fingerprint and rejects catalog/fixture
+  drift.
 
 ## M16: MPQ-backed presentation primitives
 

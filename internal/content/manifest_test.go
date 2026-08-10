@@ -248,6 +248,38 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	}
 }
 
+func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
+	t.Parallel()
+
+	manifestData, err := fs.ReadFile(Shim(), "manifests/asset-catalog.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtureData, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest assetcatalog.Manifest
+	var fixture assetcatalog.Fixture
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(fixtureData, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	coverage, err := assetcatalog.BuildCoverage(Shim(), manifest, fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(coverage.CatalogFixtureGaps) != 0 {
+		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
+	}
+	const auditedFingerprint = "74d502961c3f012a181ac512b62c5aa995d847e503097dd77866c847fe859404"
+	if coverage.Fingerprint != auditedFingerprint {
+		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
+	}
+}
+
 func TestCharacterCreationTransitionFacts(t *testing.T) {
 	t.Parallel()
 
