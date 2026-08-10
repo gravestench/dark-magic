@@ -54,6 +54,37 @@ func TestHeldAndBodySlotsAreExclusive(t *testing.T) {
 	}
 }
 
+func TestPlaceHeldSwapsEquipmentAndBeltSlots(t *testing.T) {
+	items := []Item{
+		{ID: "held-ring", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring"}},
+		{ID: "worn-ring", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring"}},
+		{ID: "held-potion", Code: "hp1", Width: 1, Height: 1, BeltEligible: true},
+		{ID: "belt-potion", Code: "mp1", Width: 1, Height: 1, BeltEligible: true},
+	}
+	state, err := NewState(Layout{BeltCapacity: 4}, items, map[string]Placement{
+		"held-ring":   {Container: ContainerHeld},
+		"worn-ring":   {Container: ContainerEquipment, Slot: "lring"},
+		"belt-potion": {Container: ContainerBelt, BeltSlot: 2},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	displaced, err := state.PlaceHeld("held-ring", Placement{Container: ContainerEquipment, Slot: "lring"})
+	if err != nil || displaced != "worn-ring" {
+		t.Fatalf("equipment swap = %q, %v", displaced, err)
+	}
+	if err := state.Move("worn-ring", Placement{Container: ContainerWorld}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Move("held-potion", Placement{Container: ContainerHeld}); err != nil {
+		t.Fatal(err)
+	}
+	displaced, err = state.PlaceHeld("held-potion", Placement{Container: ContainerBelt, BeltSlot: 2})
+	if err != nil || displaced != "belt-potion" {
+		t.Fatalf("belt swap = %q, %v", displaced, err)
+	}
+}
+
 func TestGridsAndServiceEscrowAreDistinctContainers(t *testing.T) {
 	items := []Item{
 		{ID: "first", Code: "box", Width: 2, Height: 2},
