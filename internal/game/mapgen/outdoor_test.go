@@ -43,6 +43,19 @@ func TestBloodMoorBuildsDeterministicCoarseGridJoinedToTown(t *testing.T) {
 	if warp.Role != "town-entry" || warp.Direction != "west" || warp.X != 0 || warp.Y != 40 || warp.DestinationLevel != 1 {
 		t.Fatalf("town warp = %#v", warp)
 	}
+	next := left.Warps()[1]
+	if next.Role != "next-level-exit" || next.Direction != "east" || next.X != 79 || next.Y != 40 || next.DestinationLevel != 3 {
+		t.Fatalf("next-level warp = %#v", next)
+	}
+	routeCells := 0
+	for _, stamp := range left.Stamps() {
+		if stamp.Role == "blood-moor-route" {
+			routeCells++
+		}
+	}
+	if routeCells != 10 {
+		t.Fatalf("route cells = %d, want 10", routeCells)
+	}
 }
 
 func TestBloodMoorRejectsTownWithoutCardinalExit(t *testing.T) {
@@ -50,4 +63,44 @@ func TestBloodMoorRejectsTownWithoutCardinalExit(t *testing.T) {
 	if err == nil {
 		t.Fatal("accepted town without a cardinal exit")
 	}
+}
+
+func TestOutdoorRouteIsContiguousAcrossEveryCardinalPair(t *testing.T) {
+	for _, direction := range []string{"north", "east", "south", "west"} {
+		route := outdoorRoute(42, 10, 10, direction)
+		if len(route) != 10 {
+			t.Fatalf("%s route cells = %d", direction, len(route))
+		}
+		horizontal := direction == "west" || direction == "east"
+		forward := direction == "west" || direction == "north"
+		previousCross := -1
+		for step := 0; step < 10; step++ {
+			axis := step
+			if !forward {
+				axis = 9 - step
+			}
+			cross := -1
+			for cell := range route {
+				cellAxis, cellCross := cell[1], cell[0]
+				if horizontal {
+					cellAxis, cellCross = cell[0], cell[1]
+				}
+				if cellAxis == axis {
+					cross = cellCross
+					break
+				}
+			}
+			if cross < 0 || previousCross >= 0 && abs(cross-previousCross) > 1 {
+				t.Fatalf("%s route is disconnected at step %d: %d -> %d", direction, step, previousCross, cross)
+			}
+			previousCross = cross
+		}
+	}
+}
+
+func abs(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
 }

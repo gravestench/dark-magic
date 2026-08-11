@@ -984,6 +984,9 @@ complete until its actions are driven by authoritative game state and commands.
     collision, camera projection facts, and sparse assembled-world rendering
     when that command commits. Structural outdoor rules and an asset-backed
     interactive seam capture remain before this checkpoint is complete.
+    The outdoor recipe also reserves a deterministic contiguous coarse-cell
+    route between explicit town-entry and next-level edge anchors. Authored
+    path/bridge/cliff selection must now realize that semantic route visually.
 
 ## M21: Diablo simulation
 
