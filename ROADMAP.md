@@ -1323,13 +1323,23 @@ data owners; they do not introduce parallel gameplay authorities.
   TreasureClassEx catalog and generated world seed are installed once by the
   production composition root; checkpoint restoration reproduces the entire
   result checksum. This first policy deliberately awards only the lethal
-  player and retains the corpse indefinitely. Party/owned-unit credit, assist
-  policy, corpse skills/expiry, unique death effects, and conversion of drop
+  player and retains the corpse indefinitely. Party/assist policy, corpse
+  skills/expiry, unique death effects, and conversion of drop
   recipes into authoritative `ContainerWorld` item instances remain their
   explicitly owned follow-ups rather than hidden guesses in death handling.
-- [ ] **M21.12: Owned-unit relation.** Add explicit owner, category, limit,
-  attribution, lifecycle, and checkpoint state before broad summons, pets, or
-  hirelings.
+- [x] **M21.12: Owned-unit relation.** `internal/game/ownedunit` now stores an
+  explicit ECS relationship containing immediate and ultimate owner identity,
+  PetType-like category/group, effective limit and named replacement policy,
+  creation/expiration facts, durability/transition/unsummon policy, and active
+  lifecycle state. Typed PetType records normalize into category policy;
+  per-owner limits and cross-category groups deterministically reject or
+  inactivate stable oldest/newest victims. Stable queries and attribution avoid
+  proximity/appearance guesses, checkpoint restoration preserves the exact
+  relationship checksum, and monster death now retains the owned unit as the
+  immediate source while crediting XP/loot/quest surfaces to its ultimate
+  player owner. One concrete summon skill, expiration/despawn execution,
+  owner-death/zone-transition behavior, mutable stat-derived limits, and
+  durable hireling records remain subsequent behavior layers.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits
