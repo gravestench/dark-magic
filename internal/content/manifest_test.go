@@ -294,9 +294,11 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
 	// Map Labs intentionally add the Act II-V DAT/PL2 palettes as code-owned
-	// developer choices. Random map/tile paths remain dynamic VFS discoveries and
-	// therefore do not pretend every mounted Blizzard asset is manifest-owned.
-	const auditedFingerprint = "1ff5c4e7797762c20f0f3a45f4550e476ab0260f445dc2d998d586ca342cae15"
+	// developer choices. Warp Lab likewise names the verified TP/PP ON-mode COF
+	// and HD/TR components recovered from OpenDiablo2 and visually checked against
+	// mounted production assets. Random map/tile paths remain dynamic VFS
+	// discoveries and therefore do not pretend every mounted asset is manifest-owned.
+	const auditedFingerprint = "e0236c0359e6dc548a93ebc9d6c32b3a8933a0d6e5dfcbde1182b25033de8e23"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

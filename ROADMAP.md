@@ -1098,6 +1098,23 @@ complete until its actions are driven by authoritative game state and commands.
     client-local: a deterministic production Act I cave fixture proves their
     large values are not world subtiles. No movement path consumes selection
     geometry.
+  - [x] M20.15h: Add an argument-free Warp Lab proving the spatial portal
+    transaction over two visibly different production DS1 stamps placed farther apart than one
+    viewport. Portals are paired ECS entities; a pointer click publishes an
+    interaction intent, fixed-tick authority approaches the selected endpoint,
+    enforces its range, and atomically moves the player beside the paired portal.
+    The endpoints use the authored blue town-portal and red permanent-portal
+    COF/DCC composites with luminous screen composition, while ordinary ground
+    clicks remain traversal intents. Both destinations run through the production
+    sparse-map adapter, including tile residency, viewport culling, camera
+    clamping, subtile projection, and shared map/entity depth. Movement intent
+    uses the authoritative deterministic A* route service over DT1 collision
+    with the player's footprint, and selects the normal NU/WL player composite without rewinding playback on
+    facing or warp changes. An authority-observing presentation mask starts
+    black on arrival and fades away over about 100 ms; it does not delay or
+    participate in the warp transaction. The camera and composite merely observe authoritative position. A headless
+    test covers intent, approach, pairing, arrival, and one-shot consumption;
+    `make play-warp-lab` and `make capture-warp-lab` provide MPQ-backed review.
 
 ## M21: Diablo simulation
 

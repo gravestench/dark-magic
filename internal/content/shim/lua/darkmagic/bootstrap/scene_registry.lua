@@ -59,6 +59,7 @@ local function register_screens(manifest)
 		dt1_lab={module="darkmagic.screens.dt1_lab"},
 		ds1_lab={module="darkmagic.screens.ds1_lab"},
 		mapgen_lab={module="darkmagic.screens.mapgen_lab"},
+		warp_lab={module="darkmagic.screens.warp_lab"},
     }
 
     -- `pairs` is appropriate here because registration order is not meaningful.

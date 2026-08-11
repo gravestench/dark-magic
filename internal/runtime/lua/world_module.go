@@ -52,6 +52,7 @@ func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gamewo
 		"screen_to_subtile": commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
 		"selectable_at":     commandHelp("map:selectable_at(x, y)", "Return the best resolved authored object under a world-subtile point."),
 		"line_clear":        commandHelp("map:line_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 line-of-sight collision."),
+		"find_path":         commandHelp("map:find_path(from_x, from_y, to_x, to_y [, radius, stop_radius])", "Find a deterministic collision-aware subtile route, or return nil and an explanation."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -219,6 +220,30 @@ func registerWorldMapType(state *lua.LState) {
 			clear := checkWorldMap(state, 1).LineClear(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)), float64(state.CheckNumber(4)), float64(state.CheckNumber(5)))
 			state.Push(lua.LBool(clear))
 			return 1
+		},
+		"find_path": func(state *lua.LState) int {
+			world := checkWorldMap(state, 1)
+			request := gameworld.PathRequest{
+				Start:  gameworld.Point{X: float64(state.CheckNumber(2)), Y: float64(state.CheckNumber(3))},
+				Goal:   gameworld.Point{X: float64(state.CheckNumber(4)), Y: float64(state.CheckNumber(5))},
+				Radius: float64(state.OptNumber(6, 0)), StopRadius: float64(state.OptNumber(7, 0)),
+			}
+			path, err := world.FindPath(request)
+			if err != nil {
+				state.Push(lua.LNil)
+				state.Push(lua.LString(err.Error()))
+				return 2
+			}
+			result := state.NewTable()
+			for _, point := range path {
+				waypoint := state.NewTable()
+				waypoint.RawSetString("x", lua.LNumber(point.X))
+				waypoint.RawSetString("y", lua.LNumber(point.Y))
+				result.Append(waypoint)
+			}
+			state.Push(result)
+			state.Push(lua.LNil)
+			return 2
 		},
 		"objects": func(state *lua.LState) int {
 			result := state.NewTable()
