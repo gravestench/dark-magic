@@ -24,10 +24,10 @@ func (c Coordinates) SubtileToTile(point Point) Point {
 
 func (c Coordinates) SubtileToWorldPixel(point Point) Point {
 	originX := float64(c.HeightTiles*TilePixelWidth/2 + PreviewMargin)
-	// Match OpenDiablo2 MapRenderer.renderTileDebug: tile-local (0,0) is
-	// the DT1 diamond's top isometric vertex. Collision flags select their
-	// reversed DT1 byte separately; projection must not add a cell-center offset.
-	originY := float64(PreviewMargin)
+	// The tile origin is its top isometric vertex, while an integer gameplay
+	// position names the CENTER of that subtile's 16x8 occupancy diamond. Riiablo
+	// applies this same half-subtile height when drawing filled walkable cells.
+	originY := float64(PreviewMargin + TilePixelHeight/(2*SubtilesPerTile))
 	return Point{
 		X: originX + (point.X-point.Y)*TilePixelWidth/(2*SubtilesPerTile),
 		Y: originY + (point.X+point.Y)*TilePixelHeight/(2*SubtilesPerTile),
@@ -36,7 +36,7 @@ func (c Coordinates) SubtileToWorldPixel(point Point) Point {
 
 func (c Coordinates) WorldPixelToSubtile(point Point) Point {
 	originX := float64(c.HeightTiles*TilePixelWidth/2 + PreviewMargin)
-	originY := float64(PreviewMargin)
+	originY := float64(PreviewMargin + TilePixelHeight/(2*SubtilesPerTile))
 	difference := (point.X - originX) * (2 * SubtilesPerTile) / TilePixelWidth
 	sum := (point.Y - originY) * (2 * SubtilesPerTile) / TilePixelHeight
 	return Point{X: (difference + sum) / 2, Y: (sum - difference) / 2}

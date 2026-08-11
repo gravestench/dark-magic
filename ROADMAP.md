@@ -913,9 +913,9 @@ complete until its actions are driven by authoritative game state and commands.
 - [x] M20.4j: Replace approximate entity/wall depth with the legacy tile-pass
   rule recovered from Riiablo and OpenDiablo2: boundary subtiles behind upper
   walls, interior subtiles in front, with lower/floor/shadow and roof passes fixed.
-- [x] M20.4k: Match OpenDiablo2's collision-debug projection exactly: local
-  subtile (0,0) shares the DT1 tile's top isometric vertex, while DT1 byte-row
-  reversal remains solely in collision lookup. This removes the final 8px mask offset.
+- [x] M20.4k: Keep tile vertices and occupancy centers distinct: DT1 art starts
+  at the isometric vertex, while an integer gameplay position occupies the
+  center of a 16x8 subtile diamond. DT1 byte-row reversal remains in collision lookup.
 - [x] M20.4l: Match OpenDiablo2 wall/object art placement using the minimum DT1
   block-header Y plus 80, obtained through a new lazy codec API that never reads
   encoded pixels. Collision stays authoritative while wagon, prop, and wall art aligns.
