@@ -40,7 +40,9 @@ local function file_name(path)
 end
 
 local function act_from_path(path)
-    return tonumber(tostring(path or ""):lower():match("/act([1-5])/"))
+    local matched = tostring(path or ""):lower():match("/act([1-5])/")
+    if not matched then return nil end
+    return tonumber(matched)
 end
 
 function lab:infer_palette()
