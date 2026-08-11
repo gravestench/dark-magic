@@ -873,6 +873,11 @@ complete until its actions are driven by authoritative game state and commands.
   unobscured viewport plus a prefetch margin; bounded workers rasterize those
   chunks before Lua admits their retained nodes, and conservative index bounds
   are replaced with exact transparent-trimmed bounds at admission.
+- [x] M20.4b: Replace runtime depth-chunk RGBA copies with one shared immutable
+  texture per selected physical DT1 graphic plus lightweight placement nodes.
+  Viewport culling now admits and releases occurrences independently while a
+  reference-counted render resource pool retains each visible source graphic
+  only once. DS1 Lab keeps composed chunks as an intentional diagnostic view.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue

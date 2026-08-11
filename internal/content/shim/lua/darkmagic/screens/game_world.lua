@@ -301,9 +301,10 @@ return {
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
             -- culling and placement. Re-entering the scene cannot accumulate drift.
-            chunked_map.update(
+            local _, map_error = chunked_map.update(
                 self.map, camera_pixel_x, camera_pixel_y, target_x, screen.hero.screen_y, world_view
             )
+            if map_error then error("updating world map: " .. tostring(map_error)) end
         end
 
         -- Legacy gameplay is pointer-authored. Reverse-project only the visible

@@ -36,12 +36,16 @@ type ownedRenderNode struct {
 	composer *render.Composer
 	id       render.NodeID
 	resource render.ResourceID
-	palette  render.ResourceID
-	owned    []render.ResourceID
-	assets   fs.FS
-	cache    *renderAssetCache
-	once     sync.Once
-	err      error
+	// resourceRelease is non-nil when resource is borrowed from the capability's
+	// shared immutable texture pool rather than owned exclusively by this node.
+	resourceRelease func() error
+	palette         render.ResourceID
+	owned           []render.ResourceID
+	assets          fs.FS
+	cache           *renderAssetCache
+	pool            *renderResourcePool
+	once            sync.Once
+	err             error
 }
 
 type renderAssetCache struct {
@@ -96,6 +100,7 @@ type RenderCapability struct {
 	assets   fs.FS
 	cache    *renderAssetCache
 	preloads *assetPreloader
+	pool     *renderResourcePool
 }
 
 // NewRenderCapability creates the shared decode/preload cache used by every Lua
@@ -122,6 +127,7 @@ func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.
 	return &RenderCapability{
 		runtime: runtime, composer: composer, assets: assets, cache: cache,
 		preloads: newAssetPreloader(assets, cache, composer),
+		pool:     newRenderResourcePool(composer),
 	}
 }
 
@@ -938,6 +944,43 @@ func (c *renderAssetCache) loadWorldChunks(assets fs.FS, world *gameworld.Map, p
 	return value.(*maprender.Set), nil
 }
 
+func (c *renderAssetCache) loadWorldTiles(assets fs.FS, world *gameworld.Map, palette string) (*maprender.TileSet, error) {
+	if world == nil {
+		return nil, errors.New("world map is required")
+	}
+	key := fmt.Sprintf("world-tiles\x00%p\x00%s", world, palette)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		set, placeErr := maprender.Place(assets, world, palette)
+		if placeErr != nil {
+			return nil, 0, placeErr
+		}
+		// The placement index retains DT1 block metadata, not expanded RGBA.
+		// Individual unique pictures enter the composed cache on viewport demand.
+		weight := len(set.Draws)*64 + len(set.Graphics)*256
+		return set, max(weight, 1), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(*maprender.TileSet), nil
+}
+
+func (c *renderAssetCache) loadWorldTileGraphic(assets fs.FS, world *gameworld.Map, palette string, graphicIndex int) (image.Image, error) {
+	set, err := c.loadWorldTiles(assets, world, palette)
+	if err != nil {
+		return nil, err
+	}
+	key := fmt.Sprintf("world-tile-graphic\x00%p\x00%s\x00%d", world, palette, graphicIndex)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		pixels, materializeErr := set.MaterializeGraphic(graphicIndex)
+		return pixels, max(imageWeight(pixels), 1), materializeErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(image.Image), nil
+}
+
 func (c *renderAssetCache) loadWorldChunk(assets fs.FS, world *gameworld.Map, palette string, chunkSize, index int) (maprender.Chunk, error) {
 	set, err := c.loadWorldChunks(assets, world, palette, chunkSize)
 	if err != nil {
@@ -979,6 +1022,29 @@ func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
 	state.Push(result)
 }
 
+func pushTileSet(state *lua.LState, set *maprender.TileSet) {
+	result := state.NewTable()
+	result.RawSetString("width", lua.LNumber(set.Width))
+	result.RawSetString("height", lua.LNumber(set.Height))
+	result.RawSetString("graphic_count", lua.LNumber(len(set.Graphics)))
+	entries := state.NewTable()
+	for index, draw := range set.Draws {
+		entry := state.NewTable()
+		entry.RawSetString("index", lua.LNumber(index))
+		entry.RawSetString("graphic", lua.LNumber(draw.Graphic))
+		entry.RawSetString("x", lua.LNumber(draw.Bounds.Min.X))
+		entry.RawSetString("y", lua.LNumber(draw.Bounds.Min.Y))
+		entry.RawSetString("width", lua.LNumber(draw.Bounds.Dx()))
+		entry.RawSetString("height", lua.LNumber(draw.Bounds.Dy()))
+		entry.RawSetString("layer", lua.LNumber(draw.Layer))
+		entry.RawSetString("layer_name", lua.LString(draw.Layer.String()))
+		entry.RawSetString("depth", lua.LNumber(draw.Depth))
+		entries.RawSetInt(index+1, entry)
+	}
+	result.RawSetString("draws", entries)
+	state.Push(result)
+}
+
 func (c *renderAssetCache) loadDS1Collision(assets fs.FS, name string, tiles []string) (image.Image, error) {
 	key := "ds1-collision\x00" + name + "\x00" + strings.Join(tiles, "\x00")
 	value, err := c.load(assets, key, func() (any, int, error) {
@@ -1005,8 +1071,13 @@ func (n *ownedRenderNode) release() error {
 			n.err = n.composer.Destroy(n.id)
 		}
 		if n.resource != (render.ResourceID{}) {
-			n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
+			if n.resourceRelease != nil {
+				n.err = errors.Join(n.err, n.resourceRelease())
+			} else {
+				n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
+			}
 			n.resource = render.ResourceID{}
+			n.resourceRelease = nil
 		}
 		if n.palette != (render.ResourceID{}) {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(n.palette))
@@ -1054,16 +1125,45 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 	if err != nil {
 		return err
 	}
-	previous := n.resource
+	previous, previousRelease := n.resource, n.resourceRelease
 	previousOwned := n.owned
 	if err := n.composer.Update(n.id, func(current *render.Node) { current.Resource = resource }); err != nil {
 		_ = n.composer.DestroyResource(resource)
 		return err
 	}
 	n.resource = resource
+	n.resourceRelease = nil
 	n.owned = nil
 	if previous != (render.ResourceID{}) {
-		err = n.composer.DestroyResource(previous)
+		if previousRelease != nil {
+			err = previousRelease()
+		} else {
+			err = n.composer.DestroyResource(previous)
+		}
+	}
+	for _, owned := range previousOwned {
+		err = errors.Join(err, n.composer.DestroyResource(owned))
+	}
+	return err
+}
+
+func (n *ownedRenderNode) setSharedImage(key string, decoded image.Image) error {
+	resource, release, err := n.pool.acquire(key, decoded)
+	if err != nil {
+		return err
+	}
+	previous, previousRelease, previousOwned := n.resource, n.resourceRelease, n.owned
+	if err := n.composer.Update(n.id, func(current *render.Node) { current.Resource = resource }); err != nil {
+		_ = release()
+		return err
+	}
+	n.resource, n.resourceRelease, n.owned = resource, release, nil
+	if previous != (render.ResourceID{}) {
+		if previousRelease != nil {
+			err = previousRelease()
+		} else {
+			err = n.composer.DestroyResource(previous)
+		}
 	}
 	for _, owned := range previousOwned {
 		err = errors.Join(err, n.composer.DestroyResource(owned))
@@ -1118,7 +1218,7 @@ func (n *ownedRenderNode) setAnimationKeyed(frames []image.Image, textureKeys []
 		cleanup()
 		return err
 	}
-	previous, previousOwned := n.resource, n.owned
+	previous, previousRelease, previousOwned := n.resource, n.resourceRelease, n.owned
 	seek := time.Duration(0)
 	if len(initialSeek) > 0 && initialSeek[0] > 0 {
 		seek = initialSeek[0]
@@ -1133,9 +1233,13 @@ func (n *ownedRenderNode) setAnimationKeyed(frames []image.Image, textureKeys []
 		cleanup()
 		return err
 	}
-	n.resource, n.owned = animation, owned
+	n.resource, n.resourceRelease, n.owned = animation, nil, owned
 	if previous != (render.ResourceID{}) {
-		err = n.composer.DestroyResource(previous)
+		if previousRelease != nil {
+			err = previousRelease()
+		} else {
+			err = n.composer.DestroyResource(previous)
+		}
 	}
 	for _, owned := range previousOwned {
 		err = errors.Join(err, n.composer.DestroyResource(owned))
@@ -1471,7 +1575,7 @@ func RenderModuleWithAssets(runtime *Runtime, composer *render.Composer, assets 
 
 // Module returns the versioned Lua render capability.
 func (r *RenderCapability) Module() Module {
-	runtime, composer, assets, cache, preloads := r.runtime, r.composer, r.assets, r.cache, r.preloads
+	runtime, composer, assets, cache, preloads, pool := r.runtime, r.composer, r.assets, r.cache, r.preloads, r.pool
 	return Module{Name: "dm.render/v1", Help: documentedModule("Create and inspect retained presentation nodes.", map[string]CommandHelp{
 		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
@@ -1479,6 +1583,7 @@ func (r *RenderCapability) Module() Module {
 		"preload_release":      commandHelp("dm.render.preload_release(job)", "Release bookkeeping for a completed preload job."),
 		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
 		"world_chunks":         commandHelp("dm.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
+		"world_tiles":          commandHelp("dm.render.world_tiles(world, palette)", "Return shared DT1 graphic placement geometry for an authoritative world map."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
 		"asset_exists":         commandHelp("dm.render.asset_exists(path)", "Report whether a render asset exists."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
@@ -1500,6 +1605,7 @@ func (r *RenderCapability) Module() Module {
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_ds1_chunk":              commandHelp("node:set_ds1_chunk(map, tiles, palette, chunk_index [, chunk_size])", "Render one sparse DS1 map chunk and return its map-space geometry."),
 		"set_world_chunk":            commandHelp("node:set_world_chunk(world, palette, chunk_index [, chunk_size])", "Render one sparse chunk from an assembled authoritative world map."),
+		"set_world_tile":             commandHelp("node:set_world_tile(world, palette, draw_index)", "Render one placement borrowing a shared immutable DT1 texture."),
 		"set_ds1_collision":          commandHelp("node:set_ds1_collision(map, tiles)", "Render a diagnostic DT1 subtile collision overlay for a DS1 map."),
 		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
@@ -1520,6 +1626,19 @@ func (r *RenderCapability) Module() Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"world_tiles": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				set, err := cache.loadWorldTiles(assets, checkWorldMap(state, 1), state.CheckString(2))
+				if err != nil {
+					state.RaiseError("indexing shared world tiles: %v", err)
+					return 0
+				}
+				pushTileSet(state, set)
+				return 1
+			},
 			"world_chunks": func(state *lua.LState) int {
 				if assets == nil {
 					state.RaiseError("render asset filesystem is unavailable")
@@ -1805,7 +1924,7 @@ func (r *RenderCapability) Module() Module {
 					state.RaiseError("creating render node: %v", err)
 					return 0
 				}
-				node := &ownedRenderNode{composer: composer, id: id, assets: assets, cache: cache}
+				node := &ownedRenderNode{composer: composer, id: id, assets: assets, cache: cache, pool: pool}
 				if err := scope.Add(node.release); err != nil {
 					_ = node.release()
 					state.RaiseError("owning render node: %v", err)
@@ -2061,6 +2180,49 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(chunks.Width))
 			state.Push(lua.LNumber(chunks.Height))
 			state.Push(lua.LNumber(len(chunks.Chunks)))
+			return 7
+		},
+		"set_world_tile": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			world := checkWorldMap(state, 2)
+			palette := state.CheckString(3)
+			drawIndex := state.CheckInt(4)
+			set, err := node.cache.loadWorldTiles(node.assets, world, palette)
+			if err != nil {
+				state.RaiseError("indexing shared world tiles: %v", err)
+				return 0
+			}
+			if drawIndex < 0 || drawIndex >= len(set.Draws) {
+				state.RaiseError("world tile draw %d out of range [0,%d)", drawIndex, len(set.Draws))
+				return 0
+			}
+			draw := set.Draws[drawIndex]
+			if draw.Graphic < 0 || draw.Graphic >= len(set.Graphics) {
+				state.RaiseError("world tile graphic %d out of range [0,%d)", draw.Graphic, len(set.Graphics))
+				return 0
+			}
+			graphic := set.Graphics[draw.Graphic]
+			pixels, err := node.cache.loadWorldTileGraphic(node.assets, world, palette, draw.Graphic)
+			if err != nil {
+				state.RaiseError("decoding shared world tile graphic: %v", err)
+				return 0
+			}
+			key := fmt.Sprintf("world-dt1:%p:%s:%s:%d", world, palette, graphic.Path, graphic.Index)
+			if err := node.setSharedImage(key, pixels); err != nil {
+				state.RaiseError("updating shared world tile node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(draw.Bounds.Min.X))
+			state.Push(lua.LNumber(draw.Bounds.Min.Y))
+			state.Push(lua.LNumber(draw.Bounds.Dx()))
+			state.Push(lua.LNumber(draw.Bounds.Dy()))
+			state.Push(lua.LNumber(set.Width))
+			state.Push(lua.LNumber(set.Height))
+			state.Push(lua.LNumber(len(set.Draws)))
 			return 7
 		},
 		"set_ds1_collision": func(state *lua.LState) int {
