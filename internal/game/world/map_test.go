@@ -101,3 +101,12 @@ func TestTileLayerNamesAreStablePresentationFacts(t *testing.T) {
 		t.Fatalf("unknown layer = %q", got)
 	}
 }
+
+func TestOpenPointNearCenterSkipsBlockedCenterDeterministically(t *testing.T) {
+	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
+	m.flags[2*5+2].BlockWalk = true
+	x, y, found := m.OpenPointNearCenter()
+	if !found || x != 1 || y != 1 {
+		t.Fatalf("open point = %v,%v,%v; want first perimeter point 1,1", x, y, found)
+	}
+}

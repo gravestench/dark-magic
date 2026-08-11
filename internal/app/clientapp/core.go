@@ -23,6 +23,7 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -174,7 +175,17 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("build starting skill provider", err)
 	}
-	entry, err := gameplayer.NewEntrySource(app.entitySimulation, app.saves, "local-player", 4096, 4096, skillProvider)
+	mapRecipe := app.presentation.GameWorldMap
+	worldMap, err := gameworld.Load(app.options.Content, mapRecipe.DS1, mapRecipe.DT1, app.worldObjectResolver)
+	if err != nil {
+		return wrap("load offline entry map", err)
+	}
+	spawnX, spawnY, found := worldMap.OpenPointNearCenter()
+	if !found {
+		return errors.New("create offline player entry source: map has no open spawn subtile")
+	}
+	entry, err := gameplayer.NewEntrySourceAt(app.entitySimulation, app.saves, "local-player",
+		spawnX, spawnY, float64(worldMap.WidthSubtiles), float64(worldMap.HeightSubtiles), skillProvider)
 	if err != nil {
 		return wrap("create offline player entry source", err)
 	}

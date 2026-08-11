@@ -901,6 +901,10 @@ the fixed tick, and drive a real legacy composite from authoritative state.
   asset-backed manual/play and settled-frame acceptance entry points with a
   deterministic selected character; automated command-to-ECS input coverage
   remains in the embedded shell and runtime integration suites.
+  Offline entry now derives authoritative bounds and a deterministic open spawn
+  subtile from the manifest-selected DS1/DT1 map. The retired 4096x4096
+  placeholder bounds can no longer place the camera thousands of subtiles away
+  from every demand-resident map chunk.
 
 - [ ] Implement the complete stat/value system, ItemStatCost encoding, derived
   stats, caps, per-level values, state modifiers, and description functions.
