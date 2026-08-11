@@ -32,17 +32,14 @@ func TestCollisionCellUsesSubtileCenters(t *testing.T) {
 	}
 }
 
-func TestSubtileCentersCoverExactlyOneDT1FloorDiamond(t *testing.T) {
+func TestSubtileProjectionMatchesOpenDiablo2TileDebugOrigin(t *testing.T) {
 	space := Coordinates{HeightTiles: 1}
-	top := space.SubtileToWorldPixel(Point{X: 0, Y: 0})
-	bottom := space.SubtileToWorldPixel(Point{X: SubtilesPerTile - 1, Y: SubtilesPerTile - 1})
-	halfSubtileHeight := float64(TilePixelHeight) / (2 * SubtilesPerTile)
-	if got := top.Y - halfSubtileHeight; got != PreviewMargin {
-		t.Fatalf("first collision diamond begins at y=%v, want tile top %d", got, PreviewMargin)
+	origin := space.SubtileToWorldPixel(Point{})
+	if origin.Y != PreviewMargin {
+		t.Fatalf("tile collision origin y=%v, want %d", origin.Y, PreviewMargin)
 	}
-	if got := bottom.Y + halfSubtileHeight; got != PreviewMargin+TilePixelHeight {
-		t.Fatalf("last collision diamond ends at y=%v, want tile bottom %d", got, PreviewMargin+TilePixelHeight)
-	}
+	assertPointNear(t, space.SubtileToWorldPixel(Point{X: SubtilesPerTile}), Point{X: origin.X + TilePixelWidth/2, Y: origin.Y + TilePixelHeight/2})
+	assertPointNear(t, space.SubtileToWorldPixel(Point{Y: SubtilesPerTile}), Point{X: origin.X - TilePixelWidth/2, Y: origin.Y + TilePixelHeight/2})
 }
 
 func assertPointNear(t *testing.T, got, want Point) {

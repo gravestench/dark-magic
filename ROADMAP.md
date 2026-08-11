@@ -913,6 +913,9 @@ complete until its actions are driven by authoritative game state and commands.
 - [x] M20.4j: Replace approximate entity/wall depth with the legacy tile-pass
   rule recovered from Riiablo and OpenDiablo2: boundary subtiles behind upper
   walls, interior subtiles in front, with lower/floor/shadow and roof passes fixed.
+- [x] M20.4k: Match OpenDiablo2's collision-debug projection exactly: local
+  subtile (0,0) shares the DT1 tile's top isometric vertex, while DT1 byte-row
+  reversal remains solely in collision lookup. This removes the final 8px mask offset.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue
