@@ -1,0 +1,313 @@
+# Next gameplay implementation sequence
+
+Status: implementation-planning handoff derived from the merged gameplay research and current `ROADMAP.md`.
+
+This document is deliberately more volatile than the individual research baselines. Reassess it whenever a dependent M21 checkpoint merges. `ROADMAP.md` remains the implementation-status authority; the system research documents remain the fidelity/evidence authority.
+
+## Current implementation cursor
+
+The first simulation architecture is no longer hypothetical. Current `main` already contains:
+
+- M21.0 pointer-first authoritative player movement, production-map collision/pathing, a medium player footprint, replayable commands, a real legacy composite, and the Rogue Encampment/Blood Moor seam;
+- M21.1 parameterized provenance-preserving `dm.stats/v1` sources with atomic replacement/removal and replay/checkpoint state;
+- M21.2 explicit eight-fractional-bit combat amounts and typed physical/fire/lightning/cold/poison/magic/life/mana channels;
+- M21.3 one ordinary hostile materialized from joined MonStats/MonStats2/MonLvl facts;
+- M21.4 scheduled deterministic hostile target acquisition, chase, and semantic attack requests;
+- M21.5 one replayable melee transaction emitting semantic attempt/hit/damage/death events with explicitly synthetic hit policy;
+- M21.6 an intent-phase skill consumer that freezes `dm.player.skill_intent` into immutable `dm.skill.cast_request`, preserving the admitted skill choice, learned level, target, side, player identity, and request tick exactly once.
+
+Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
+
+## Immediate queue: M21.7 through M21.12
+
+### 1. M21.7: generic skill cast state
+
+Goal: turn the immutable cast request into deterministic simulation state rather than a one-frame callback.
+
+Minimum state machine:
+
+```text
+request -> validate -> start -> effect -> complete
+                     \-> interrupted
+```
+
+Required boundaries:
+
+- target-policy validation using the already-snapshotted request;
+- authoritative resource-cost validation and consumption;
+- start/effect/complete ticks;
+- interruption/cancellation reason;
+- one data-selected behavior family;
+- semantic cast events;
+- replay/checkpoint restoration during an in-progress cast.
+
+Animation may follow cast state. Animation frame advancement must not own the gameplay effect tick.
+
+Do not spawn the general missile system or invent broad skill-family coverage in this checkpoint.
+
+### 2. M21.8: timed state engine
+
+Goal: create the reusable owner for buffs, debuffs, curses, shrine effects, auras, item states, and control effects before content adds bespoke timers everywhere.
+
+Minimum contract:
+
+- stable state-instance identity;
+- state/type ID;
+- source and owner identity;
+- start/expiration tick;
+- parameterized `internal/game/stats` source attachment;
+- explicit refresh/replace/stack policy;
+- semantic apply/remove events;
+- deterministic expiration scheduling;
+- checkpoint/replay support.
+
+Prove one simple refreshable state. Do not infer universal legacy stacking behavior from that fixture.
+
+### 3. M21.9: straight missile slice
+
+Goal: prove one authoritative projectile from cast effect through impact/removal.
+
+Creation should freeze enough information that later changes to the caster do not ambiguously rewrite an in-flight projectile:
+
+- owner/source;
+- skill ID and effective level;
+- creation tick;
+- start position and target/direction;
+- velocity/range/lifetime;
+- collision policy;
+- snapshotted damage/effect inputs required by that behavior;
+- stable hit memory where needed.
+
+Movement, collision, impact, combat consequences, and removal run on authoritative ticks. Presentation only follows copied missile facts/events.
+
+### 4. M21.10: Blood Moor population slice
+
+Goal: replace the hand-created hostile fixture with an inspectable deterministic population/spawn plan derived from generated-zone content.
+
+Keep the layers explicit:
+
+```text
+zone population recipe
+       -> spawn plan
+       -> authoritative materialization
+       -> active/inactive simulation residency
+       -> presentation
+```
+
+Do not make render culling decide whether a monster exists.
+
+### 5. M21.11: monster death transaction
+
+Goal: replace the current minimal lethal consequence with one atomic semantic death transaction.
+
+Join, in deterministic order:
+
+- lethal combat resolution;
+- killer/source attribution;
+- XP consequence;
+- deterministic M6 loot event/materialization;
+- quest-event surface;
+- corpse/dead state;
+- targetability/collision/mode changes;
+- active/inactive lifecycle state;
+- semantic presentation/audio cues.
+
+Death is not merely `hp <= 0`; it is an authoritative transition whose consequences replay together.
+
+### 6. M21.12: owned-unit relation
+
+Goal: establish generic ownership before summons, pets, traps, minions, and hirelings each invent separate owner/attribution models.
+
+At minimum represent:
+
+- owner identity;
+- category/PetType-like semantic class;
+- limit/accounting policy;
+- combat/loot/XP attribution;
+- lifetime/death/despawn policy;
+- checkpoint/replay state.
+
+Hireling persistence, progression, equipment, revival, and service behavior remain layers above this relation.
+
+## Acceptance gate after M21.12
+
+Before breadth becomes the dominant goal, prove one complete generated Blood Moor simulation loop:
+
+1. the player enters the generated zone;
+2. deterministic population materializes a hostile;
+3. the hostile acquires and paths to the player;
+4. player and hostile exchange an authoritative action;
+5. an assigned skill enters deterministic cast state;
+6. one straight missile resolves through authoritative movement/collision/impact;
+7. one timed state applies, refreshes or expires according to explicit policy;
+8. lethal resolution produces one atomic death transaction;
+9. XP, loot, corpse, and quest-event surfaces are produced;
+10. presentation and audio consume semantic events/snapshots without mutating authority;
+11. checkpoint restore and replay reproduce the same semantic result.
+
+This is the first strong gameplay spine. Widen feature coverage after this loop is stable rather than before.
+
+## Breadth queue after the first simulation loop
+
+The merged research baselines imply this dependency order. These are implementation themes, not invented milestone numbers; `ROADMAP.md` should assign/checkpoint them.
+
+### A. Combat fidelity and player combat
+
+Extend the basic transaction with evidence-backed slices:
+
+- player basic attack;
+- defense/chance-to-hit;
+- block and avoidance;
+- resistance, physical/magic reduction and absorb;
+- critical/deadly/mastery ordering;
+- leech/drain;
+- regeneration and periodic damage;
+- durability consequences;
+- player death/corpse/XP-loss;
+- difficulty and PvP scalars.
+
+Keep exact arithmetic behind `COMBAT_SIMULATION_VERIFICATION_QUEUE.md` until supported. Temporary Dark Magic scaffolding must remain labeled as scaffolding.
+
+### B. Item effects and generated-item integration
+
+Use `internal/game/stats` as the common activation target for equipment, charms, socket fillers, runewords, sets, temporary item states, auras, charges, and procs.
+
+Recommended order:
+
+1. richer generated item-instance identity and provenance;
+2. equip/unequip source attachment;
+3. container-dependent charm activation;
+4. socket child identity and gem/rune/jewel sources;
+5. runeword recognition and source lifecycle;
+6. set thresholds/partial bonuses;
+7. charged skill/aura/proc hooks;
+8. monster/chest semantic drop events -> existing M6 loot -> world item authority;
+9. durable save/realm round trip.
+
+Do not duplicate the completed M6 treasure/quality/affix/property engine.
+
+### C. World interactions and GameRules
+
+Generalize existing interaction and transition owners:
+
+1. interaction target kinds beyond NPCs;
+2. one stateful door;
+3. one deterministic chest;
+4. one shrine using the timed-state engine;
+5. generalized authored transition endpoints;
+6. waypoint unlock/travel state;
+7. dynamic town/quest/Cube portal instances;
+8. server-derived NPC dialogue/service snapshots;
+9. immutable session `GameRules` for difficulty/content mode;
+10. encounter-controller primitive for bosses/special events.
+
+Object animation and Lua remain observers of committed authoritative state.
+
+### D. Cube, vendors, quest items, and economy
+
+Build on current authoritative Cube/vendor/quest-service containers:
+
+- declarative CubeMain multiset matcher and atomic outputs;
+- copy/upgrade/socket/unsocket/repair/recharge transformations;
+- quest-item generation/pickup/drop/consume/service/difficulty provenance;
+- vendor stock generation and refresh;
+- full quote model beyond the current simple base-cost multiplier scaffold;
+- repair and recharge;
+- gambling;
+- identify/heal/quest services.
+
+Exact pricing and special recipe edge cases remain explicit probes.
+
+### E. Gameplay and environmental audio
+
+The existing audio mixer/catalog already has the correct native ownership boundary. Add semantics above it:
+
+1. normalize relevant `Sounds.txt` fields into immutable playback definitions;
+2. bridge authoritative semantic gameplay events to audio cues;
+3. add zone soundscape state driven by `Levels.SoundEnv`, inside/outside, and weather facts;
+4. add positional/tracking emitters for monsters, objects, missiles, and effects;
+5. map monster/NPC/object/skill/item/UI cues;
+6. add music/zone-transition policy;
+7. implement priority, duplicate/compound, delay, pitch, fades, falloff, spread, solo/ducking as verified;
+8. expose diagnostics for active semantic emitters and resolved sound records.
+
+Audio variation uses audio/presentation randomness and must never consume gameplay RNG streams.
+
+### F. Versioned gameplay projections for Lua/UI
+
+Do not let every Lua panel independently crawl raw ECS stores. Build copied/revisioned semantic projections from `GAMEPLAY_UI_CONTRACTS.md`, starting with implemented gameplay:
+
+- HUD vitals/resources/active skills and cast state;
+- target/monster state;
+- item tooltip/equipment source summaries;
+- vendor/Cube/service state;
+- quest/waypoint state;
+- party/trade state;
+- mercenary/owned-unit state;
+- death/respawn state.
+
+Lua submits semantic intent and waits for the next projection/event to confirm authority.
+
+## M22: networking follows semantic gameplay
+
+Begin networking once the first authoritative gameplay loop and stable view models exist.
+
+Recommended order:
+
+1. run the same `Session` through an in-process loopback transport;
+2. submit remote semantic commands into the same `Session.Submit` validators used locally;
+3. transfer a versioned initial snapshot/projection;
+4. send per-client incremental authoritative projections/events;
+5. reconnect using stable SessionPlayer/session identity;
+6. add correction/rollback only after measured need;
+7. test latency, loss, duplication, malformed commands, reconnect, and soak.
+
+Never create a network-specific gameplay implementation.
+
+## M23: realm and trusted persistence follow the game-worker contract
+
+Layer realm services around the stable game server:
+
+- Account / Character / SessionPlayer identity separation;
+- character leases;
+- revision/CAS durable character commits;
+- game directory and worker allocation;
+- signed admission/reconnect tokens;
+- content/mod fingerprint negotiation;
+- graceful draining and crash recovery;
+- ladder/social/account data as separate realm state.
+
+Future BNCS/MCP/D2GS original-client compatibility belongs in adapters around semantic realm/game services, not inside the simulation API.
+
+## Research and probes to run in parallel
+
+Implementation should continue while exact compatibility questions are researched, but unsupported exactness claims should not:
+
+- chance-to-hit, block, avoidance, mitigation, absorb, leech, poison and PvP arithmetic;
+- cast timing/delay/interruption, state refresh/stack groups, missile stepping/collision;
+- original AI cadence and specialized path types;
+- NoDrop/MF/Gold Find rounding and generation-context quality differences;
+- runeword/socket/charm/container edge cases;
+- Cube operation/output details;
+- complete vendor pricing/repair/gambling rules;
+- object operation timing, shrine reset/math, portal and waypoint details;
+- player death/corpse/XP-loss behavior;
+- `Sounds.txt` pitch/fade/compound/falloff/tracking/solo/block semantics and `Levels.SoundEnv` behavior;
+- party reward sharing, hostility/PvP edge cases, trade UX/state;
+- BNCS/MCP/D2GS protocol mapping and legacy realm behavior;
+- lossless `.d2s` compatibility and TXT->BIN linkage.
+
+## Rules for Codex gameplay PRs
+
+Before starting a gameplay checkpoint:
+
+1. inspect current `main` because dependent work is merging rapidly;
+2. read the roadmap checkpoint;
+3. read the relevant baseline and verification queue;
+4. summarize **known / inferred / unresolved** before implementing source-sensitive behavior;
+5. extend the existing owner instead of creating a parallel subsystem;
+6. keep the PR to one reviewable behavioral objective;
+7. add synthetic tests first, then owned-game/MPQ/save/network probes where the claim requires them;
+8. update `ROADMAP.md` in the same PR once objective acceptance is satisfied.
+
+This file is planning guidance, not a substitute for the roadmap's evidence/checkbox policy.
