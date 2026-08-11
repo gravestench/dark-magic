@@ -188,7 +188,9 @@ retained renderer boundary, typed data catalog, deterministic loot foundation,
 Lua-defined Akara ECS, DS1/DT1 world decoding, and developer inspection tools
 are operational. The playable world presents DS1 maps through sparse,
 camera-culled texture chunks whose placement follows authoritative ECS camera
-coordinates; it does not allocate a full-map GPU texture. Full world generation, Diablo combat and progression,
+coordinates; it does not allocate a full-map GPU texture. Player movement is
+fixed-tick and command-driven, with normalized diagonal speed and a subtile
+collision footprint rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
 authoritative networking, and end-to-end gameplay remain in progress.
 
 See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and

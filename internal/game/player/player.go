@@ -220,6 +220,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.belt, map[string]any{"capacity": int64(4)}},
 		{stores.control, map[string]any{"player": entry.Player}},
 		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
+		{stores.collider, map[string]any{"radius": 0.35}},
 	}
 	for _, component := range components {
 		if _, err := component.store.Set(entity, component.values); err != nil {
@@ -263,8 +264,8 @@ func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) e
 }
 
 type stores struct {
-	identity, progress, vitals, appearance, animation                        *akara.DynamicStore
-	position, velocity, movementMode, skillAssignment, belt, control, bounds *akara.DynamicStore
+	identity, progress, vitals, appearance, animation                                  *akara.DynamicStore
+	position, velocity, movementMode, skillAssignment, belt, control, bounds, collider *akara.DynamicStore
 }
 
 func registerStores(world *akara.World) (stores, error) {
@@ -281,6 +282,7 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.belt", Version: 1, Fields: beltFields()},
 		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
 		{Name: "dm.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
+		{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))
 	for index, schema := range schemas {
@@ -290,7 +292,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], belt: registered[9], control: registered[10], bounds: registered[11]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], belt: registered[9], control: registered[10], bounds: registered[11], collider: registered[12]}, nil
 }
 
 func beltFields() []akara.Field {

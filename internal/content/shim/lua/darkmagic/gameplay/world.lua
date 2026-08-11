@@ -52,7 +52,7 @@ function M.bind(state)
         all = {
             "dm.player.identity", "dm.player.appearance", "dm.player.animation",
             "dm.world.position", "dm.world.velocity",
-            "dm.world.player_control", "dm.world.bounds",
+            "dm.world.player_control", "dm.world.bounds", "dm.world.collider",
         },
     })
 

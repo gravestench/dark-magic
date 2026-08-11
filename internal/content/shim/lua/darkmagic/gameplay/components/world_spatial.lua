@@ -34,6 +34,15 @@ function M.register()
     })
 
     ecs.component({
+        name = "dm.world.collider",
+        fields = {
+            -- Radius is measured in DS1 subtiles around the entity's center.
+            -- Keeping it separate from map bounds avoids one overloaded brick.
+            { name = "radius", type = "f64" },
+        },
+    })
+
+    ecs.component({
         name = "dm.world.player_control",
         fields = {
             -- Logical session player ID, not a native input-device handle.

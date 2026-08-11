@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -79,6 +80,18 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	}
 	if direction, _ := animationState.Get("direction"); direction != int64(3) {
 		t.Fatalf("animation direction = %v, want east/3", direction)
+	}
+	payload, _ = json.Marshal(MovePayload{X: 1, Y: 1})
+	if err := session.Submit(simulation.Command{Tick: 3, Player: "alpha", Sequence: 2, Kind: MoveCommand, Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	x, _ := velocity.Get("x")
+	y, _ := velocity.Get("y")
+	if magnitude := math.Hypot(x.(float64), y.(float64)); math.Abs(magnitude-10) > 1e-9 {
+		t.Fatalf("diagonal speed = %v, want normalized walk speed 10", magnitude)
 	}
 }
 
