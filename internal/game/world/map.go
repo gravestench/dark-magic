@@ -256,18 +256,13 @@ func (m *Map) OpenPointNearCenter() (float64, float64, bool) {
 // SubtileToPixel projects continuous DS1 subtile coordinates into the same
 // image-space diamond centers used by TexturedDS1Preview.
 func (m *Map) SubtileToPixel(x, y float64) (float64, float64) {
-	originX := float64(m.HeightTiles*TilePixelWidth/2 + PreviewMargin)
-	originY := float64(PreviewMargin + TilePixelHeight/2)
-	return originX + (x-y)*TilePixelWidth/(2*SubtilesPerTile),
-		originY + (x+y)*TilePixelHeight/(2*SubtilesPerTile)
+	point := m.Coordinates().SubtileToWorldPixel(Point{X: x, Y: y})
+	return point.X, point.Y
 }
 
 // PixelToSubtile reverses SubtileToPixel. Fractional values are preserved so
 // callers can choose their own collision sampling policy.
 func (m *Map) PixelToSubtile(x, y float64) (float64, float64) {
-	originX := float64(m.HeightTiles*TilePixelWidth/2 + PreviewMargin)
-	originY := float64(PreviewMargin + TilePixelHeight/2)
-	difference := (x - originX) * (2 * SubtilesPerTile) / TilePixelWidth
-	sum := (y - originY) * (2 * SubtilesPerTile) / TilePixelHeight
-	return (difference + sum) / 2, (sum - difference) / 2
+	point := m.Coordinates().WorldPixelToSubtile(Point{X: x, Y: y})
+	return point.X, point.Y
 }

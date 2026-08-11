@@ -903,9 +903,12 @@ complete until its actions are driven by authoritative game state and commands.
   images or native renderer resources. Composition clips the shared terminal
   DS1 row and column to each generated room's logical LvlPrest footprint,
   preventing neighboring collision, object, and tile facts from overlapping.
-- [ ] M20.11: Replace scene-local coordinate arithmetic with shared tile,
+- [x] M20.11: Replace scene-local coordinate arithmetic with shared tile,
   subtile, world-pixel, screen-pixel, and camera transforms. Derive collision
-  queries and the F3 diagnostic overlay from the same transform contract.
+  queries and the F3 diagnostic overlay from the same transform contract. The
+  world capability now exposes forward and inverse camera projection for future
+  pointer intents; gameplay movement uses the same centered-cell sampling rule
+  as authoritative map queries.
 - [ ] M20.12: Sort map passes, authored objects, characters, missiles, shadows,
   roofs, and overlays through one explicit world-depth contract.
 - [ ] M20.13: Route pointer-authored move, interact, and combat intents through

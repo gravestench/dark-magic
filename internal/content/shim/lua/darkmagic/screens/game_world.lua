@@ -239,13 +239,6 @@ return {
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
 
-        if self.world then
-            -- Project both hero and camera through the SAME map transform so
-            -- subtracting them below produces a stable screen-relative position.
-            hero_x, hero_y = self.world:subtile_to_pixel(hero_x, hero_y)
-            camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
-        end
-
         -- Hero normally targets manifest center. Side overlays ask the world to
         -- frame into the unobscured half instead.
         local target_x = screen.hero.screen_x
@@ -255,19 +248,27 @@ return {
             target_x = manifest.resolution.width * 3 / 4
         end
 
+        local hero_screen_x, hero_screen_y = target_x, screen.hero.screen_y
+        local camera_pixel_x, camera_pixel_y = camera_x, camera_y
+        if self.world then
+            -- Go owns projection, camera subtraction, and screen anchoring.
+            -- Lua supplies coordinates but never repeats isometric arithmetic.
+            hero_screen_x, hero_screen_y = self.world:subtile_to_screen(
+                hero_x, hero_y, camera_x, camera_y, target_x, screen.hero.screen_y
+            )
+            camera_pixel_x, camera_pixel_y = self.world:subtile_to_pixel(camera_x, camera_y)
+        end
+
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
             -- culling and placement. Re-entering the scene cannot accumulate drift.
             chunked_map.update(
-                self.map, camera_x, camera_y, target_x, screen.hero.screen_y, world_view
+                self.map, camera_pixel_x, camera_pixel_y, target_x, screen.hero.screen_y, world_view
             )
         end
 
         -- Hero screen position is target anchor plus hero-to-camera relative offset.
-        self.hero:set_position(
-            target_x + hero_x - camera_x,
-            screen.hero.screen_y + hero_y - camera_y
-        )
+        self.hero:set_position(hero_screen_x, hero_screen_y)
     end,
 
     destroy = function(self)
