@@ -473,7 +473,7 @@ func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
 	switch {
 	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "dt1-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
 		return c.encoded, "encoded"
-	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"), strings.HasPrefix(key, "ds1\x00"):
+	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"), strings.HasPrefix(key, "ds1\x00"), strings.HasPrefix(key, "ds1-chunks\x00"), strings.HasPrefix(key, "world-chunks\x00"):
 		return c.composed, "composed"
 	default:
 		return c.decoded, "decoded"
@@ -1459,6 +1459,7 @@ func (r *RenderCapability) Module() Module {
 		"animation_seek":             commandHelp("node:animation_seek(frame)", "Seek the node animation."),
 		"fill_rect":                  commandHelp("node:fill_rect(width, height, color)", "Render a filled rectangle."),
 		"destroy":                    commandHelp("node:destroy()", "Destroy and release the node."),
+		"exists":                     commandHelp("node:exists()", "Report whether this retained node handle is still live."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -1761,6 +1762,11 @@ func (r *RenderCapability) Module() Module {
 func registerRenderNodeType(state *lua.LState) {
 	meta := state.NewTypeMetatable(renderNodeType)
 	state.SetField(meta, "__index", state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+		"exists": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			state.Push(lua.LBool(node.composer.Exists(node.id)))
+			return 1
+		},
 		"set_position": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
 			x, y := float64(state.CheckNumber(2)), float64(state.CheckNumber(3))

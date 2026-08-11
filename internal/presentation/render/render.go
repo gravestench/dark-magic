@@ -499,6 +499,16 @@ func (c *Composer) Destroy(id NodeID) error {
 	return nil
 }
 
+// Exists reports whether a retained node handle still names the same live
+// generation. It is intentionally read-only so Lua teardown can be idempotent
+// after a parent recursively destroys its children.
+func (c *Composer) Exists(id NodeID) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, err := c.node(id)
+	return err == nil
+}
+
 // Drain applies all currently queued changes in order. A failed change and all
 // later changes remain queued for a retry.
 func (c *Composer) Drain(backend Backend) error {

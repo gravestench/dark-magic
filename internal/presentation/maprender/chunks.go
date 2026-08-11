@@ -46,6 +46,11 @@ type tileSourceKey struct {
 	index int
 }
 
+type draftChunk struct {
+	bounds image.Rectangle // full map-canvas coordinates
+	pixels *image.RGBA
+}
+
 // Compose decodes only selected physical DT1 records and draws them into sparse
 // fixed-size chunks. The caller can upload/cull chunks independently.
 func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int) (*Set, error) {
@@ -69,9 +74,9 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 		ChunkSize: chunkSize,
 		Objects:   append([]world.Object(nil), mapData.Objects...),
 	}
-	chunksByLayer := make(map[world.TileLayer]map[int]map[[2]int]*image.RGBA)
+	chunksByLayer := make(map[world.TileLayer]map[int]map[[2]int]*draftChunk)
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
-		depths := make(map[int]map[[2]int]*image.RGBA)
+		depths := make(map[int]map[[2]int]*draftChunk)
 		chunksByLayer[layer] = depths
 		for _, placement := range mapData.Tiles {
 			if placement.Layer != layer {
@@ -94,10 +99,10 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 			depth := world.TileDepth(layer, placement.X, placement.Y)
 			chunks := depths[depth]
 			if chunks == nil {
-				chunks = make(map[[2]int]*image.RGBA)
+				chunks = make(map[[2]int]*draftChunk)
 				depths[depth] = chunks
 			}
-			drawIntoChunks(chunks, chunkSize, set.Width, set.Height, destination, pixels)
+			drawIntoTightChunks(chunks, chunkSize, set.Width, set.Height, destination, pixels)
 		}
 	}
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
@@ -119,11 +124,84 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 				return keys[i][0] < keys[j][0]
 			})
 			for _, key := range keys {
-				set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: key[0] * chunkSize, Y: key[1] * chunkSize, Layer: layer, Depth: depth, Pixels: chunks[key]})
+				draft := chunks[key]
+				pixels, origin, ok := trimTransparentMargins(draft)
+				if !ok {
+					continue
+				}
+				set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: origin.X, Y: origin.Y, Layer: layer, Depth: depth, Pixels: pixels})
 			}
 		}
 	}
 	return set, nil
+}
+
+// trimTransparentMargins removes the empty padding carried by DT1 sprites.
+// The returned origin keeps the smaller image in exactly the same map-space
+// position, so this is invisible to callers while saving cache and GPU memory.
+func trimTransparentMargins(draft *draftChunk) (*image.RGBA, image.Point, bool) {
+	if draft == nil || draft.pixels == nil {
+		return nil, image.Point{}, false
+	}
+	bounds := draft.pixels.Bounds()
+	visible := image.Rectangle{Min: bounds.Max, Max: bounds.Min}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			if draft.pixels.RGBAAt(x, y).A == 0 {
+				continue
+			}
+			visible.Min.X = min(visible.Min.X, x)
+			visible.Min.Y = min(visible.Min.Y, y)
+			visible.Max.X = max(visible.Max.X, x+1)
+			visible.Max.Y = max(visible.Max.Y, y+1)
+		}
+	}
+	if visible.Empty() {
+		return nil, image.Point{}, false
+	}
+	origin := draft.bounds.Min.Add(visible.Min.Sub(bounds.Min))
+	if visible == bounds {
+		return draft.pixels, origin, true
+	}
+	trimmed := image.NewRGBA(image.Rect(0, 0, visible.Dx(), visible.Dy()))
+	draw.Draw(trimmed, trimmed.Bounds(), draft.pixels, visible.Min, draw.Src)
+	return trimmed, origin, true
+}
+
+// drawIntoTightChunks keeps only the occupied rectangle inside each logical
+// chunk/depth bucket. Outdoor depth ordering often creates one bucket per tile;
+// allocating a full 512x512 RGBA for each one turned an 80x80 level into more
+// than a gigabyte of temporary and cached pixels.
+func drawIntoTightChunks(chunks map[[2]int]*draftChunk, chunkSize, width, height int, destination image.Rectangle, source image.Image) {
+	original := destination
+	destination = destination.Intersect(image.Rect(0, 0, width, height))
+	if destination.Empty() {
+		return
+	}
+	firstColumn, lastColumn := destination.Min.X/chunkSize, (destination.Max.X-1)/chunkSize
+	firstRow, lastRow := destination.Min.Y/chunkSize, (destination.Max.Y-1)/chunkSize
+	for row := firstRow; row <= lastRow; row++ {
+		for column := firstColumn; column <= lastColumn; column++ {
+			cell := image.Rect(column*chunkSize, row*chunkSize, min((column+1)*chunkSize, width), min((row+1)*chunkSize, height))
+			clipped := destination.Intersect(cell)
+			if clipped.Empty() {
+				continue
+			}
+			key := [2]int{column, row}
+			draft := chunks[key]
+			if draft == nil {
+				draft = &draftChunk{bounds: clipped, pixels: image.NewRGBA(image.Rect(0, 0, clipped.Dx(), clipped.Dy()))}
+				chunks[key] = draft
+			} else if union := draft.bounds.Union(clipped); union != draft.bounds {
+				grown := image.NewRGBA(image.Rect(0, 0, union.Dx(), union.Dy()))
+				draw.Draw(grown, draft.pixels.Bounds().Add(draft.bounds.Min.Sub(union.Min)), draft.pixels, image.Point{}, draw.Src)
+				draft.bounds, draft.pixels = union, grown
+			}
+			target := clipped.Sub(draft.bounds.Min)
+			sourcePoint := source.Bounds().Min.Add(clipped.Min.Sub(original.Min))
+			draw.Draw(draft.pixels, target, source, sourcePoint, draw.Over)
+		}
+	}
 }
 
 func loadPalette(source fs.FS, path string) (color.Palette, error) {
