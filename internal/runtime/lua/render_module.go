@@ -769,15 +769,19 @@ func (c *renderAssetCache) loadDT1Tile(assets fs.FS, name, palette string, index
 			return nil, 0, err
 		}
 		var pixels image.Image
+		var imageErr error
 		switch view {
 		case "floor":
-			pixels = tile.FloorImage()
+			pixels, imageErr = tile.FloorImageE()
 		case "wall":
-			pixels = tile.WallImage()
+			pixels, imageErr = tile.WallImageE()
 		case "composite", "":
-			pixels = tile.Image()
+			pixels, imageErr = tile.ImageE()
 		default:
 			return nil, 0, fmt.Errorf("dt1: unknown view %q", view)
+		}
+		if imageErr != nil {
+			return nil, 0, fmt.Errorf("dt1: decode tile %d graphics: %w", index, imageErr)
 		}
 		if pixels == nil {
 			height := int(tile.Height)

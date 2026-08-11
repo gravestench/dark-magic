@@ -176,7 +176,9 @@ func TexturedDS1Image(source fs.FS, ds1Path string, dt1Paths []string, palettePa
 					fillDiamond(canvas, origin.X, origin.Y+tileHeight/2, tileWidth, tileHeight, color.RGBA{R: 35, G: 39, B: 42, A: 255})
 					for _, wall := range record.Walls {
 						if !wall.Hidden && wall.Prop1 != 0 && isLowerWall(int32(wall.Type)) {
-							drawWall(canvas, lookup, wall, x, y, origin)
+							if err := drawWall(canvas, lookup, wall, x, y, origin); err != nil {
+								return nil, fmt.Errorf("draw lower wall at %d,%d: %w", x, y, err)
+							}
 						}
 					}
 					for _, floor := range record.Floors {
@@ -184,27 +186,35 @@ func TexturedDS1Image(source fs.FS, ds1Path string, dt1Paths []string, palettePa
 							continue
 						}
 						key := tileKey{tileType: 0, style: int32(floor.Style), sequence: int32(floor.Sequence)}
-						drawMatchedTile(canvas, lookup[key], x, y, origin, 0)
+						if err := drawMatchedTile(canvas, lookup[key], x, y, origin, 0); err != nil {
+							return nil, fmt.Errorf("draw floor at %d,%d: %w", x, y, err)
+						}
 					}
 					for _, shadow := range record.Shadows {
 						if shadow.Hidden || shadow.Prop1 == 0 {
 							continue
 						}
 						key := tileKey{tileType: 13, style: int32(shadow.Style), sequence: int32(shadow.Sequence)}
-						drawMatchedTileWithAdjust(canvas, lookup[key], x, y, origin, shadowYAdjust)
+						if err := drawMatchedTileWithAdjust(canvas, lookup[key], x, y, origin, shadowYAdjust); err != nil {
+							return nil, fmt.Errorf("draw shadow at %d,%d: %w", x, y, err)
+						}
 					}
 				}
 				if pass == 2 {
 					for _, wall := range record.Walls {
 						if !wall.Hidden && wall.Prop1 != 0 && isUpperWall(int32(wall.Type)) {
-							drawWall(canvas, lookup, wall, x, y, origin)
+							if err := drawWall(canvas, lookup, wall, x, y, origin); err != nil {
+								return nil, fmt.Errorf("draw upper wall at %d,%d: %w", x, y, err)
+							}
 						}
 					}
 				}
 				if pass == 3 {
 					for _, wall := range record.Walls {
 						if !wall.Hidden && int32(wall.Type) == 15 {
-							drawWall(canvas, lookup, wall, x, y, origin)
+							if err := drawWall(canvas, lookup, wall, x, y, origin); err != nil {
+								return nil, fmt.Errorf("draw roof at %d,%d: %w", x, y, err)
+							}
 						}
 					}
 				}
@@ -258,11 +268,11 @@ func texturedDS1TileKeys(stamp *ds1.DS1) map[tileKey]struct{} {
 	return result
 }
 
-func drawWall(canvas *image.RGBA, lookup map[tileKey][]*dt1.Tile, wall ds1.WallRecord, x, y int, origin image.Point) {
+func drawWall(canvas *image.RGBA, lookup map[tileKey][]*dt1.Tile, wall ds1.WallRecord, x, y int, origin image.Point) error {
 	key := tileKey{tileType: int32(wall.Type), style: int32(wall.Style), sequence: int32(wall.Sequence)}
 	candidates := lookup[key]
 	if len(candidates) == 0 {
-		return
+		return nil
 	}
 	tile := selectTile(candidates, x, y, 0)
 	// North corners are split across type 3 and type 4 DT1 records. Align both
@@ -276,39 +286,47 @@ func drawWall(canvas *image.RGBA, lookup map[tileKey][]*dt1.Tile, wall ds1.WallR
 				baseline = left
 			}
 			minimumY := minimumBlockY(baseline)
-			drawTile(canvas, tile, origin, minimumY+80+minimumBlockY(tile)-minimumY)
-			drawTile(canvas, left, origin, minimumY+80+minimumBlockY(left)-minimumY)
-			return
+			if err := drawTile(canvas, tile, origin, minimumY+80+minimumBlockY(tile)-minimumY); err != nil {
+				return err
+			}
+			if err := drawTile(canvas, left, origin, minimumY+80+minimumBlockY(left)-minimumY); err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 	yAdjust := wallYAdjust(tile)
-	drawTile(canvas, tile, origin, yAdjust)
+	return drawTile(canvas, tile, origin, yAdjust)
 }
 
-func drawMatchedTile(canvas *image.RGBA, candidates []*dt1.Tile, x, y int, origin image.Point, yAdjust int) {
+func drawMatchedTile(canvas *image.RGBA, candidates []*dt1.Tile, x, y int, origin image.Point, yAdjust int) error {
 	if len(candidates) == 0 {
-		return
+		return nil
 	}
 	tile := selectTile(candidates, x, y, 0)
-	drawTile(canvas, tile, origin, yAdjust)
+	return drawTile(canvas, tile, origin, yAdjust)
 }
 
-func drawMatchedTileWithAdjust(canvas *image.RGBA, candidates []*dt1.Tile, x, y int, origin image.Point, adjust func(*dt1.Tile) int) {
+func drawMatchedTileWithAdjust(canvas *image.RGBA, candidates []*dt1.Tile, x, y int, origin image.Point, adjust func(*dt1.Tile) int) error {
 	if len(candidates) == 0 {
-		return
+		return nil
 	}
 	tile := selectTile(candidates, x, y, 0)
-	drawTile(canvas, tile, origin, adjust(tile))
+	return drawTile(canvas, tile, origin, adjust(tile))
 }
 
-func drawTile(canvas *image.RGBA, tile *dt1.Tile, origin image.Point, yAdjust int) {
-	tileImage := tile.Image()
+func drawTile(canvas *image.RGBA, tile *dt1.Tile, origin image.Point, yAdjust int) error {
+	tileImage, err := tile.ImageE()
+	if err != nil {
+		return err
+	}
 	if tileImage == nil {
-		return
+		return nil
 	}
 	point := image.Pt(origin.X-80, origin.Y+yAdjust)
 	destination := tileImage.Bounds().Add(point)
 	draw.Draw(canvas, destination, tileImage, tileImage.Bounds().Min, draw.Over)
+	return nil
 }
 
 func wallYAdjust(tile *dt1.Tile) int {
