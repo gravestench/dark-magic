@@ -14,10 +14,12 @@ local render = require("dm.render/v1")
 
 local chunked_map = {}
 
-local function viewport_for(view, width, height)
-    if view == "left" then return 0, 0, width / 2, height end
-    if view == "right" then return width / 2, 0, width, height end
-    if view == "none" then return nil end
+-- Overlay world_view describes camera framing and pointer authority, not an
+-- opaque render clip. Legacy panels contain transparent holes and decorative
+-- edges, so the world must stay resident behind the whole physical viewport.
+-- Otherwise a left/right panel reveals a hard tile boundary; two panels used
+-- to produce world_view="none" and freeze residency on both sides.
+local function render_viewport(width, height)
     return 0, 0, width, height
 end
 
@@ -112,11 +114,9 @@ local function nearby_entries(state, left, top, right, bottom)
     return result
 end
 
-local function refresh_nodes(state, world_view)
-    if not state.set or world_view == "none" then return end
-    local left, top, right, bottom = viewport_for(
-        world_view, state.viewport_width, state.viewport_height
-    )
+local function refresh_nodes(state)
+    if not state.set then return end
+    local left, top, right, bottom = render_viewport(state.viewport_width, state.viewport_height)
     local admitted, visible_keys = 0, {}
     local entries = nearby_entries(state, left, top, right, bottom)
     for _, chunk in ipairs(entries) do
@@ -228,7 +228,7 @@ function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world
     state.root_y = target_y + height / 2 - camera_y
     state.root:set_position(state.root_x, state.root_y)
     if not state.set then return false, state.error end
-    refresh_nodes(state, world_view or "center")
+    refresh_nodes(state)
     return true, nil
 end
 

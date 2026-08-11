@@ -882,7 +882,9 @@ complete until its actions are driven by authoritative game state and commands.
   512-pixel map cells. Camera updates reverse-project the unobscured viewport,
   visit only intersecting buckets, deduplicate edge-spanning placements, and
   release retained nodes and finished preload jobs outside the culling margin
-  instead of scanning every placement in the assembled zone each frame.
+  instead of scanning every placement in the assembled zone each frame. Map
+  residency covers the full physical viewport behind transparent panel artwork;
+  overlay `world_view` remains solely a camera-framing and input-routing policy.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue
