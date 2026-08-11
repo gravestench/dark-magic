@@ -143,6 +143,13 @@ function M.semantic_cues()
         local missile = ecs.get(entity, "dm.missile.event")
         if missile then kind, values = "missile", missile:snapshot() end
         if values then
+            -- Dynamic entity fields are checked ECS handles. Collapse the
+            -- missile reference to a number before this table crosses into
+            -- presentation, just like the event entity itself below.
+            if values.missile then
+                values.missile_id = values.missile:id()
+                values.missile = nil
+            end
             values.entity_id = entity:id()
             values.cue_type = kind
             result[#result + 1] = values
