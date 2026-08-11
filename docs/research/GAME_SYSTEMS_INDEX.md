@@ -15,7 +15,7 @@ Current implementation sequence: [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT
 | 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline | authoritative world/inventory/stash/Cube/equipment/hireling/belt/held/vendor/quest-service containers exist; richer item effect activation remains | data linkage, item stats, persistence | 11 |
 | 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline | authoritative player entry/progression/vitals/skill assignment exist; full progression/difficulty/save synchronization remains | data linkage, timing, persistence, item stats, quests | 12 |
 | 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | M21.2 fixed-point channels and M21.5 first melee transaction/event stream implemented; exact legacy combat/death policies remain probes | stats, timing, skills, items | 17 |
-| 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | M21.6 now freezes admitted skill intent into immutable cast requests; M21.7-M21.9 are the active cast/state/missile queue | timing, stats, combat, missiles/states | 22 |
+| 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | M21.6 immutable cast requests and M21.7 checkpointed cast lifecycle are implemented; M21.8 timed states and M21.9 missile are active | timing, stats, combat, missiles/states | 22 |
 | 8 | Monsters, spawning, AI, and lifecycle | [MONSTERS_SPAWNING_AND_AI.md](MONSTERS_SPAWNING_AND_AI.md) | baseline | M21.3 ordinary-hostile materialization and M21.4 scheduled acquire/chase/attack AI implemented; population/quality/death/inactive lifecycle remain | timing, combat, world/pathfinding | 22 |
 | 18 | Hirelings, mercenaries, pets, and owned units | [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md) | baseline | hireling data/container support exists; generic ownership is active roadmap checkpoint M21.12 before broad pet/hireling behavior | monsters, items, skills, persistence | 24 |
 | 23 | Movement, collision, pathfinding, and room streaming | [MOVEMENT_COLLISION_AND_PATHFINDING.md](MOVEMENT_COLLISION_AND_PATHFINDING.md) | baseline | pointer-first movement, medium footprint, deterministic A*, DT1 collision, diagnostics and first zone seam are implemented; specialized legacy path types/streaming remain | world, timing, monsters | 25 |
@@ -39,7 +39,7 @@ Current implementation sequence: [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT
 
 ## Implementation cursor
 
-The research program now has a baseline for every indexed workstream. Implementation has consumed the first six combat/simulation handoff checkpoints:
+The research program now has a baseline for every indexed workstream. Implementation has consumed the first seven combat/simulation handoff checkpoints:
 
 - M21.1 shared stat/effect sources: implemented.
 - M21.2 fixed-point combat vocabulary: implemented.
@@ -47,14 +47,15 @@ The research program now has a baseline for every indexed workstream. Implementa
 - M21.4 scheduled basic monster AI: implemented.
 - M21.5 basic melee transaction: implemented.
 - M21.6 assigned skill-intent consumption into immutable cast requests: implemented.
-- M21.7 generic skill cast state: next active dependency.
+- M21.7 generic skill cast lifecycle: implemented.
+- M21.8 timed state engine: next active dependency.
 
-Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for the reconciled queue beginning at M21.7 and for the post-first-loop ordering across combat fidelity, items, world interactions, economy, audio, UI, networking, and realm persistence. `ROADMAP.md` remains authoritative for checkbox completion.
+Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for the reconciled queue beginning at M21.8 and for the post-first-loop ordering across combat fidelity, items, world interactions, economy, audio, UI, networking, and realm persistence. `ROADMAP.md` remains authoritative for checkbox completion.
 
 ## Current implementation handoffs
 
 - [FOUNDATION_HANDOFF_FOR_CODEX.md](FOUNDATION_HANDOFF_FOR_CODEX.md) records the foundation slices; several have now graduated into M21 implementation.
-- [COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md](COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md) remains the source-sensitive contract for M21.7-M21.12 and later combat fidelity.
+- [COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md](COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md) remains the source-sensitive contract for M21.8-M21.12 and later combat fidelity.
 - [ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md](ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md) orders generated-item, source-activation, economy, quest-item, and audio slices.
 - [WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md](WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md) orders object, transition, NPC, difficulty, and endgame slices.
 - [MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md](MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md) orders party, trade, realm, transport, persistence, and UI projection slices.
