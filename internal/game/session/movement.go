@@ -100,10 +100,18 @@ func RegisterMovement(session *Session) error {
 				if payload.Running {
 					speed = 15
 				}
-				if err := velocity.Set("x", float64(payload.X)*speed); err != nil {
+				// Two full-speed axes would make diagonal movement sqrt(2) times
+				// faster. Normalize the vector before simulation sees it.
+				x, y := float64(payload.X), float64(payload.Y)
+				if payload.X != 0 && payload.Y != 0 {
+					const inverseSquareRootTwo = 0.7071067811865476
+					x *= inverseSquareRootTwo
+					y *= inverseSquareRootTwo
+				}
+				if err := velocity.Set("x", x*speed); err != nil {
 					return err
 				}
-				if err := velocity.Set("y", float64(payload.Y)*speed); err != nil {
+				if err := velocity.Set("y", y*speed); err != nil {
 					return err
 				}
 				if modesPresent {

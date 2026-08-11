@@ -158,12 +158,14 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 		_ = runtime.Stop(context.Background())
 		_ = engine.Close()
 	})
-	session := materializeGameplayPlayer(t, engine, time.Second)
+	session := materializeGameplayPlayer(t, engine, 30*time.Millisecond)
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
 local world=require("darkmagic.gameplay.world")
-local collision={blocked=function(_,x,_) return x >= 60 end}
+-- The center advances only to x=50.3, but its radius reaches collision cell
+-- 51. A point-only query would clip into the wall; the footprint must stop X.
+local collision={blocked=function(_,x,_) return x >= 51 end}
 gameplay=world.create(100,80,collision,"test-player")
 `)
 	}); err != nil {
@@ -171,7 +173,6 @@ gameplay=world.create(100,80,collision,"test-player")
 	}
 	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{
 		"right": {Down: true},
-		"down":  {Down: true},
 	}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
 	source, err := gamesession.NewMovementSource(engine, &input, "test-player", "game_world")
 	if err != nil {
@@ -186,7 +187,9 @@ gameplay=world.create(100,80,collision,"test-player")
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		if state.GetGlobal("hero_x") != lua.LNumber(50) || state.GetGlobal("hero_y") != lua.LNumber(50) {
+		x := float64(state.GetGlobal("hero_x").(lua.LNumber))
+		y := float64(state.GetGlobal("hero_y").(lua.LNumber))
+		if x != 50 || y != 40 {
 			t.Fatalf("hero = %s,%s", state.GetGlobal("hero_x"), state.GetGlobal("hero_y"))
 		}
 		return nil
