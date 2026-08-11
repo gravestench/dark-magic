@@ -379,6 +379,11 @@ DT1 files from its directory. Equivalent
 captures. The scenes can be captured as `dt1_lab` and `ds1_lab` through the
 ordinary capture flags.
 
+DS1 Lab composes sparse 512x512 CPU chunks, admits at most two newly visible
+native textures per frame, and releases retained chunk nodes outside a viewport
+margin. Its status line reports the logical map dimensions and sparse chunk
+count. The command-line PNG inspector intentionally retains its full-image path.
+
 Inspect a legally obtained Diablo II asset without starting the renderer:
 
 ```shell

@@ -853,9 +853,12 @@ complete until its actions are driven by authoritative game state and commands.
   graphics. World collision and future presentation adapters now consume the
   same selected placements. Selection no longer collapses coordinates on the
   zero axes or admits zero-rarity alternatives when positive weights exist.
-- [ ] M20.2: Replace runtime full-stamp rasterization with incrementally resident,
-  viewport-culled map chunks while retaining the full image composer for
-  diagnostic PNG export.
+- [x] M20.2: Add sparse 512x512 map composition and migrate DS1 Lab to
+  incrementally admitted, viewport-culled chunk nodes while retaining the full
+  image composer for diagnostic PNG export. CPU preload never creates native
+  textures; at most two newly visible chunks become demand-resident per frame,
+  and chunks outside the viewport margin release their retained nodes. The game
+  world migration remains the explicit M20.4 checkpoint.
 - [ ] M20.3: Present floor, lower-wall, shadow, upper-wall, roof, corner-pair,
   and object layers explicitly; add DS1 Lab inspection controls and fixtures.
 - [ ] M20.4: Migrate `game_world` to the shared chunked adapter and derive its
