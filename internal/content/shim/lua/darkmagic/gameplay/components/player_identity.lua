@@ -37,6 +37,11 @@ function M.register()
             { name = "max_health", type = "i64" },
             { name = "mana", type = "i64" },
             { name = "max_mana", type = "i64" },
+            -- Simulation keeps mana in Diablo's 8.8 fixed-point unit so costs
+            -- such as Fire Bolt's 2.5 mana are never rounded away. The whole
+            -- fields above remain convenient display values for Lua and UI.
+            { name = "mana_raw", type = "i64" },
+            { name = "max_mana_raw", type = "i64" },
         },
     })
 end

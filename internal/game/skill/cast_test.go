@@ -60,6 +60,43 @@ func TestCastLifecycleCommitsManaAndEmitsHeadlessPhases(t *testing.T) {
 	}
 }
 
+func TestCastLifecyclePreservesFractionalMana(t *testing.T) {
+	registry, err := NewRegistry(Definition{
+		SkillID:       42,
+		Behavior:      BehaviorPointEvent,
+		TargetPolicy:  TargetPoint,
+		ManaCostRaw:   640, // 2.5 mana in Diablo's 8.8 fixed-point unit.
+		EffectDelay:   1,
+		CompleteDelay: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := gameecs.New()
+	defer engine.Close()
+	if err := RegisterCastLifecycle(engine, registry); err != nil {
+		t.Fatal(err)
+	}
+	requests, _, _, vitals, _, _ := registerCastStores(engine)
+	owner := engine.World().MustCreateEntity()
+	mustSet(t, vitals, owner, map[string]any{
+		"health": int64(10), "max_health": int64(10),
+		"mana": int64(8), "max_mana": int64(8),
+		"mana_raw": int64(2048), "max_mana_raw": int64(2048),
+	})
+	mustSet(t, requests, owner, castRequestFixture())
+
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	vital, _ := vitals.Get(owner)
+	mana, _ := vital.Get("mana")
+	manaRaw, _ := vital.Get("mana_raw")
+	if mana != int64(5) || manaRaw != int64(1408) {
+		t.Fatalf("mana=%v mana_raw=%v", mana, manaRaw)
+	}
+}
+
 func TestCastLifecycleInterruptsWithoutEffect(t *testing.T) {
 	registry, _ := NewRegistry(Definition{SkillID: 42, Behavior: BehaviorPointEvent, TargetPolicy: TargetPoint, EffectDelay: 2, CompleteDelay: 3, Interruptible: true})
 	engine := gameecs.New()
