@@ -183,7 +183,8 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("build starting skill provider", err)
 	}
-	worldMap := app.gameWorlds[1]
+	entryLevel := app.activeWorldLevel
+	worldMap := app.gameWorlds[entryLevel]
 	if worldMap == nil {
 		return errors.New("load offline entry map: session world is unavailable")
 	}
@@ -212,11 +213,12 @@ func (app *application) registerOfflineCommands() error {
 	if err := app.interactionAuthority.AddTargets(interactionTargets...); err != nil {
 		return wrap("materialize authored interaction targets", err)
 	}
-	spawnX, spawnY, found := worldMap.ActOneTownEntry()
+	spawn, found := app.gameWorldSpawns[entryLevel]
 	if !found {
-		return errors.New("create offline player entry source: map has no open spawn subtile")
+		return errors.New("create offline player entry source: world has no trusted spawn subtile")
 	}
-	request := app.gameWorldZones[1].Request()
+	spawnX, spawnY := spawn[0], spawn[1]
+	request := app.gameWorldZones[entryLevel].Request()
 	destination, err := gameplayer.NewDestination(spawnX, spawnY, float64(worldMap.WidthSubtiles), float64(worldMap.HeightSubtiles), int64(request.Act), int64(request.LevelID))
 	if err != nil {
 		return wrap("create Act I town admission destination", err)

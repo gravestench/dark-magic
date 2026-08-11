@@ -29,15 +29,16 @@ type stampLoader func(fs.FS, string, []string, ...ObjectResolver) (*Map, error)
 // world map. Callers may run Step on a worker goroutine because it performs no
 // native renderer work. Result becomes visible only after all steps succeed.
 type Materializer struct {
-	source    fs.FS
-	zone      *mapgen.Zone
-	resolver  ObjectResolver
-	stamps    []mapgen.Stamp
-	load      stampLoader
-	catalogs  map[string]*TileCatalog
-	assembled *Map
-	next      int
-	done      bool
+	source       fs.FS
+	zone         *mapgen.Zone
+	resolver     ObjectResolver
+	stamps       []mapgen.Stamp
+	load         stampLoader
+	catalogs     map[string]*TileCatalog
+	catalogOrder []*TileCatalog
+	assembled    *Map
+	next         int
+	done         bool
 }
 
 func NewMaterializer(source fs.FS, zone *mapgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
@@ -105,6 +106,11 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
+	if materializer.done && materializer.zone.Kind() == mapgen.Outdoor && materializer.zone.Request().Act == 1 {
+		if err := materializer.assembled.realizeActOneDirtPath(materializer.zone.Paths(), materializer.catalogOrder); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -118,6 +124,7 @@ func (materializer *Materializer) loadCached(stamp mapgen.Stamp) (*Map, error) {
 			return nil, err
 		}
 		materializer.catalogs[key] = catalog
+		materializer.catalogOrder = append(materializer.catalogOrder, catalog)
 	}
 	return loadStamp(materializer.source, stamp.DS1Path, catalog, materializer.resolver)
 }

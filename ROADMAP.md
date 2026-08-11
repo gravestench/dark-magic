@@ -1004,8 +1004,8 @@ complete until its actions are driven by authoritative game state and commands.
     The first Blood Moor strategy now builds its production 80x80 extent as a
     deterministic 10x10 graph of authored 8x8 outdoor stamps and carries an
     explicit town-entry warp on the edge opposite the selected town exit.
-    Structural rivers/cliffs/paths, live transition commands, and presentation
-    seam validation remain before this checkpoint is complete.
+    Structural rivers/cliffs/bridges and presentation seam validation remain
+    before this checkpoint is complete.
     Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
     tile placements, and a production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
@@ -1020,11 +1020,12 @@ complete until its actions are driven by authoritative game state and commands.
     when that command commits. Structural outdoor rules and an asset-backed
     interactive seam capture remain before this checkpoint is complete.
     The outdoor recipe also reserves a deterministic contiguous coarse-cell
-    route between explicit town-entry and next-level edge anchors. Authored
-    path/bridge/cliff selection must now realize that semantic route visually.
-    The route is now rasterized into validated tile-resolution `PathTile` facts
-    in the immutable zone checksum. D2MOO confirms the visual dirt path is a
-    later 3x3-neighbor floor-identity pass, not a sequence of DS1 stamps.
+    route between explicit town-entry and next-level edge anchors. The route is
+    rasterized into validated tile-resolution `PathTile` facts in the immutable
+    zone checksum. Materialization applies D2MOO's verified 3x3-neighbor
+    floor-identity pass and rebuilds collision from the selected DT1 metadata.
+    Structural rivers/cliffs/bridges and an asset-backed interactive seam
+    capture remain before this checkpoint is complete.
 
 ## M21: Diablo simulation
 

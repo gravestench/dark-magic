@@ -3,6 +3,7 @@ package clientapp
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
@@ -45,7 +46,21 @@ func (app *application) buildEntryWorld() error {
 	}
 	app.gameWorldZones = map[int]*mapgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	app.activeWorldLevel = 1
+	townSpawnX, townSpawnY, found := townMap.ActOneTownEntry()
+	if !found {
+		return errors.New("Act I town has no campfire entry")
+	}
+	app.gameWorldSpawns = map[int][2]float64{
+		1: {townSpawnX, townSpawnY},
+		2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+	}
+	app.activeWorldLevel = app.options.FixtureWorldLevel
+	if app.activeWorldLevel == 0 {
+		app.activeWorldLevel = 1
+	}
+	if app.gameWorlds[app.activeWorldLevel] == nil {
+		return fmt.Errorf("development fixture world level %d is unavailable", app.activeWorldLevel)
+	}
 	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
 }

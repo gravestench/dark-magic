@@ -275,9 +275,10 @@ That coarse route is also rasterized into an immutable, canonically ordered
 tile-resolution path. D2MOO's `DRLG_OUTDOORS_GenerateDirtPath` confirms why this
 is a separate contract: it examines each path tile's 3x3 neighborhood and
 replaces the floor identity with an Act I dirt-path sequence. It does not place
-a chain of DS1 files. The materializer's next outdoor pass must therefore map
-these semantic tiles to DT1 `(main-index, sub-index)` identities, then rebuild
-collision from the chosen metadata before publishing the world.
+a chain of DS1 files. The materializer now maps these semantic tiles through
+the verified eight-way neighbor mask to Act I DT1 `(main-index 0, sub-index)`
+floor identities, then rebuilds collision from the chosen metadata before
+publishing the world. Rendering and navigation consume the same realized road.
 
 ## Preset variant selection
 
