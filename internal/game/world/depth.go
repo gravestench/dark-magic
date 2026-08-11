@@ -15,34 +15,45 @@ const (
 )
 
 const (
-	depthScale = 10
-	floorDepth = -1_000_000
+	depthTileStride = 100
+	lowerWallDepth  = -1_000_002
+	floorDepth      = -1_000_001
+	shadowDepth     = -1_000_000
+	roofDepth       = 1_000_000
 )
 
-// EntityDepth sorts things that stand in the world by their projected
-// baseline. On an isometric map, x+y increases toward the viewer.
+// EntityDepth reproduces the legacy tile pass split used by OpenDiablo2 and
+// Riiablo. An entity in subtile row/column zero belongs behind that tile's
+// upper wall. Once both local coordinates enter the tile interior, it belongs
+// in front. The small local sum keeps entities in one pass ordered by their
+// feet without allowing them to escape that pass band.
 func EntityDepth(subtileX, subtileY float64) float64 {
-	return (subtileX + subtileY) * depthScale
+	cellX, cellY := CollisionCell(subtileX), CollisionCell(subtileY)
+	tileX, tileY := cellX/SubtilesPerTile, cellY/SubtilesPerTile
+	localX, localY := cellX%SubtilesPerTile, cellY%SubtilesPerTile
+	baseline := (tileX + tileY + 1) * depthTileStride
+	localOrder := (localX + localY) * 2
+	if localX == 0 || localY == 0 {
+		return float64(baseline - 20 + localOrder)
+	}
+	return float64(baseline + 1 + localOrder)
 }
 
-// TileDepth gives an authored tile a baseline compatible with entity depth.
-// One tile advances five subtiles; the extra tile-sized step is the near edge
-// of the diamond where standing entities cross in front of the tile.
+// TileDepth maps authored layers onto the legacy background/middleground/
+// foreground passes. Only upper walls interleave with standing entities.
 func TileDepth(layer TileLayer, tileX, tileY int) int {
-	if layer == LayerFloor {
-		return floorDepth
-	}
-	baseline := (tileX + tileY + 1) * SubtilesPerTile * depthScale
 	switch layer {
-	case LayerShadow:
-		return baseline - 2
 	case LayerLowerWall:
-		return baseline - 1
+		return lowerWallDepth
+	case LayerFloor:
+		return floorDepth
+	case LayerShadow:
+		return shadowDepth
 	case LayerUpperWall:
-		return baseline + 1
+		return (tileX + tileY + 1) * depthTileStride
 	case LayerRoof:
-		return baseline + 2
+		return roofDepth
 	default:
-		return baseline
+		return (tileX + tileY + 1) * depthTileStride
 	}
 }
