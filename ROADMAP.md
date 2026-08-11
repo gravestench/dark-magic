@@ -916,6 +916,9 @@ complete until its actions are driven by authoritative game state and commands.
 - [x] M20.4k: Match OpenDiablo2's collision-debug projection exactly: local
   subtile (0,0) shares the DT1 tile's top isometric vertex, while DT1 byte-row
   reversal remains solely in collision lookup. This removes the final 8px mask offset.
+- [x] M20.4l: Match OpenDiablo2 wall/object art placement using the minimum DT1
+  block-header Y plus 80, obtained through a new lazy codec API that never reads
+  encoded pixels. Collision stays authoritative while wagon, prop, and wall art aligns.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue

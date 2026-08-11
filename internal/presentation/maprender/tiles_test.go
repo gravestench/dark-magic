@@ -25,6 +25,16 @@ func TestTileSetVisibleReturnsOnlyIntersectingDraws(t *testing.T) {
 	}
 }
 
+func TestWallPlacementUsesBlockMinimumInsteadOfHeaderHeight(t *testing.T) {
+	reference := world.TileReference{Height: -160, YAdjust: -16}
+	if got := referenceYAdjust(reference, world.LayerUpperWall); got != -16 {
+		t.Fatalf("wall y adjustment = %d, want block-derived -16", got)
+	}
+	if oldGuess := -absolute(int(reference.Height)) + world.TilePixelHeight; oldGuess == referenceYAdjust(reference, world.LayerUpperWall) {
+		t.Fatal("wall placement silently regressed to DT1 header-height guess")
+	}
+}
+
 func TestTileSetVisibleKeepsSharedGraphicIdentity(t *testing.T) {
 	set := &TileSet{
 		Graphics: []*TileGraphic{{Path: "floor.dt1", Index: 7}},
