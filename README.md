@@ -358,7 +358,9 @@ the current view, scroll and Home/End zoom it, Space returns to and recenters
 the fitted grid, Page Up/Down cycles Act palettes, and Enter selects another mounted DT1
 through a deterministic random sequence. Hovering a tile shows an unscaled,
 75%-opaque pointer tooltip reporting its index,
-type, style, sequence, direction, rarity, block count, and source dimensions.
+semantic orientation/type, main/style index, sub/sequence index, matching
+variant count, direction, rarity, block count, and source dimensions. Cells
+with the same orientation/main/sub lookup key share a subtle background color.
 
 Open a DS1 stamp with its authored DT1 sources using:
 
