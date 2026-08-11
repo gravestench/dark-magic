@@ -31,10 +31,14 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
   behavior, attributes lethal-player XP, rolls the authored treasure class,
   and emits stable kill/loot/quest/presentation facts with replay-equivalent
   checkpoint restoration.
+- M21.12 a generic checkpointed owned-unit relation with explicit immediate
+  and ultimate owner identity, category/group/limit/replacement policy,
+  lifecycle facts, deterministic excess handling, stable queries, and death
+  credit propagation to the ultimate player owner.
 
 Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
 
-## Immediate queue: M21.12
+## Immediate queue: first simulation acceptance gate
 
 ### Completed: M21.8 timed state engine
 
@@ -116,7 +120,7 @@ consequences replay together. The initial policy is now complete. It explicitly
 leaves party/owned-unit attribution, corpse expiry/skills, and authoritative
 world-item materialization to their existing future owners.
 
-### 1. M21.12: owned-unit relation
+### Completed: M21.12 owned-unit relation
 
 Goal: establish generic ownership before summons, pets, traps, minions, and hirelings each invent separate owner/attribution models.
 
@@ -129,7 +133,9 @@ At minimum represent:
 - lifetime/death/despawn policy;
 - checkpoint/replay state.
 
-Hireling persistence, progression, equipment, revival, and service behavior remain layers above this relation.
+The generic relation is complete. Hireling persistence, progression, equipment,
+revival, and service behavior remain layers above it, as do concrete summon
+skills and category-specific transition/death execution.
 
 ## Acceptance gate after M21.12
 

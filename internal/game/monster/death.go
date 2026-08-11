@@ -10,6 +10,7 @@ import (
 	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
+	gameownedunit "github.com/gravestench/dark-magic/internal/game/ownedunit"
 	"github.com/gravestench/dark-magic/internal/game/targeting"
 )
 
@@ -34,6 +35,7 @@ type DeathPolicy struct {
 func deathSchema() akara.Schema {
 	return akara.Schema{Name: DeathTransaction, Version: 1, Fields: []akara.Field{
 		{Name: "tick", Kind: akara.FieldInt64}, {Name: "killer_id", Kind: akara.FieldString},
+		{Name: "credited_id", Kind: akara.FieldString},
 		{Name: "xp", Kind: akara.FieldInt64}, {Name: "loot_seed", Kind: akara.FieldString},
 		{Name: "treasure_class", Kind: akara.FieldString}, {Name: "drops", Kind: akara.FieldString},
 		{Name: "active", Kind: akara.FieldBool}, {Name: "corpse_usable", Kind: akara.FieldBool},
@@ -44,6 +46,7 @@ func deathEventSchema() akara.Schema {
 	return akara.Schema{Name: DeathEvent, Version: 1, Fields: []akara.Field{
 		{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64},
 		{Name: "monster_id", Kind: akara.FieldString}, {Name: "killer_id", Kind: akara.FieldString},
+		{Name: "credited_id", Kind: akara.FieldString},
 		{Name: "xp", Kind: akara.FieldInt64}, {Name: "loot_seed", Kind: akara.FieldString},
 		{Name: "treasure_class", Kind: akara.FieldString}, {Name: "drops", Kind: akara.FieldString},
 	}}
@@ -128,9 +131,10 @@ func commitDeaths(context gameecs.Context, eventEntities []akara.Entity, command
 			return err
 		}
 		killerID := attackerValue.(string)
+		creditedID := creditedKiller(world, stores, killerID)
 		xp := xpValue.(int64)
-		awardXP(commands, stores, killerID, xp)
-		commands.AddDynamic(stores.death, monster, map[string]any{"tick": int64(context.Tick), "killer_id": killerID, "xp": xp, "loot_seed": fmt.Sprint(seed), "treasure_class": treasureValue.(string), "drops": string(dropsJSON), "active": false, "corpse_usable": true})
+		awardXP(commands, stores, creditedID, xp)
+		commands.AddDynamic(stores.death, monster, map[string]any{"tick": int64(context.Tick), "killer_id": killerID, "credited_id": creditedID, "xp": xp, "loot_seed": fmt.Sprint(seed), "treasure_class": treasureValue.(string), "drops": string(dropsJSON), "active": false, "corpse_usable": true})
 		if appearance, ok := stores.appearance.Get(monster); ok {
 			commands.AddDynamic(stores.appearance, monster, copyWith(appearance, "mode", "DT"))
 		}
@@ -139,11 +143,23 @@ func commitDeaths(context gameecs.Context, eventEntities []akara.Entity, command
 		commands.Remove(stores.collider, monster)
 		commands.Remove(stores.selectable, monster)
 		for _, eventKind := range []string{DeathEventKilled, DeathEventLoot, DeathEventQuest, DeathEventPresent} {
-			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{stores.deathEvents: {"kind": eventKind, "tick": int64(context.Tick), "monster_id": spawnValue.(string), "killer_id": killerID, "xp": xp, "loot_seed": fmt.Sprint(seed), "treasure_class": treasureValue.(string), "drops": string(dropsJSON)}})
+			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{stores.deathEvents: {"kind": eventKind, "tick": int64(context.Tick), "monster_id": spawnValue.(string), "killer_id": killerID, "credited_id": creditedID, "xp": xp, "loot_seed": fmt.Sprint(seed), "treasure_class": treasureValue.(string), "drops": string(dropsJSON)}})
 		}
 		commands.Destroy(world, eventEntity)
 	}
 	return nil
+}
+
+func creditedKiller(world *akara.World, stores deathStores, killerID string) string {
+	killer, found := findSelectable(stores, killerID, false)
+	if !found {
+		return killerID
+	}
+	attribution, owned := gameownedunit.ResolveAttribution(world, killer, killerID)
+	if !owned || attribution.UltimateOwnerID == "" {
+		return killerID
+	}
+	return attribution.UltimateOwnerID
 }
 
 func deathLoot(policy DeathPolicy, spawnID, class string) (uint64, []gameloot.Drop, error) {
