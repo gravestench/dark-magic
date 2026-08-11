@@ -35,10 +35,13 @@ const (
 // rows do not enter simulation until their formulas and server functions have
 // been deliberately translated into this representation.
 type Definition struct {
-	SkillID       int64
-	Behavior      string
-	TargetPolicy  string
-	ManaCost      int64
+	SkillID      int64
+	Behavior     string
+	TargetPolicy string
+	ManaCost     int64
+	// ManaCostRaw uses Diablo's 8.8 fixed-point unit (256 == one mana).
+	// ManaCost remains a whole-number compatibility input for older fixtures.
+	ManaCostRaw   int64
 	EffectDelay   uint64
 	CompleteDelay uint64
 	Interruptible bool
@@ -50,7 +53,10 @@ type Registry struct{ definitions map[int64]Definition }
 func NewRegistry(definitions ...Definition) (Registry, error) {
 	result := Registry{definitions: make(map[int64]Definition, len(definitions))}
 	for _, definition := range definitions {
-		if definition.SkillID < 0 || !supportedBehavior(definition.Behavior) || definition.ManaCost < 0 || definition.EffectDelay == 0 || definition.CompleteDelay < definition.EffectDelay || definition.TargetPolicy != TargetPoint && definition.TargetPolicy != TargetUnit {
+		if definition.ManaCostRaw == 0 && definition.ManaCost > 0 {
+			definition.ManaCostRaw = definition.ManaCost * 256
+		}
+		if definition.SkillID < 0 || !supportedBehavior(definition.Behavior) || definition.ManaCost < 0 || definition.ManaCostRaw < 0 || definition.EffectDelay == 0 || definition.CompleteDelay < definition.EffectDelay || definition.TargetPolicy != TargetPoint && definition.TargetPolicy != TargetUnit {
 			return Registry{}, fmt.Errorf("skill: invalid normalized definition for %d", definition.SkillID)
 		}
 		if _, found := result.definitions[definition.SkillID]; found {
@@ -70,7 +76,7 @@ func castStateSchema() akara.Schema {
 		{Name: "player", Kind: akara.FieldString}, {Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64},
 		{Name: "behavior", Kind: akara.FieldString}, {Name: "target_policy", Kind: akara.FieldString}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString},
 		{Name: "start_tick", Kind: akara.FieldInt64}, {Name: "effect_tick", Kind: akara.FieldInt64}, {Name: "complete_tick", Kind: akara.FieldInt64},
-		{Name: "phase", Kind: akara.FieldString}, {Name: "interruptible", Kind: akara.FieldBool}, {Name: "interruption_requested", Kind: akara.FieldBool}, {Name: "mana_cost", Kind: akara.FieldInt64},
+		{Name: "phase", Kind: akara.FieldString}, {Name: "interruptible", Kind: akara.FieldBool}, {Name: "interruption_requested", Kind: akara.FieldBool}, {Name: "mana_cost", Kind: akara.FieldInt64}, {Name: "mana_cost_raw", Kind: akara.FieldInt64},
 	}}
 }
 
@@ -119,7 +125,7 @@ func RegisterCastLifecycle(engine *gameecs.Engine, registry Registry) error {
 func registerCastStores(engine *gameecs.Engine) (requests, states, events, vitals, selectables *akara.DynamicStore, err error) {
 	schemas := []akara.Schema{
 		castRequestSchema(), castStateSchema(), castEventSchema(),
-		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}}},
+		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
 		targeting.Schema(),
 	}
 	stores := make([]*akara.DynamicStore, len(schemas))
@@ -155,12 +161,27 @@ func beginCast(context gameecs.Context, owner akara.Entity, request *akara.Dynam
 	if !present {
 		return fmt.Errorf("skill: caster lacks vitals")
 	}
-	manaValue, _ := vital.Get("mana")
-	if manaValue.(int64) < definition.ManaCost {
+	manaValue, _ := vital.Get("mana_raw")
+	// Some small tests and tools only populate the whole-mana convenience field.
+	// Promote it at the authority boundary so they exercise the same cast path.
+	if manaValue.(int64) == 0 {
+		wholeMana, _ := vital.Get("mana")
+		if wholeMana.(int64) > 0 {
+			manaValue = wholeMana.(int64) * 256
+			if err := vital.Set("mana_raw", manaValue); err != nil {
+				return err
+			}
+		}
+	}
+	if manaValue.(int64) < definition.ManaCostRaw {
 		rejectCast(context, owner, request, "insufficient mana", commands, world, requests, events)
 		return nil
 	}
-	if err := vital.Set("mana", manaValue.(int64)-definition.ManaCost); err != nil {
+	remainingMana := manaValue.(int64) - definition.ManaCostRaw
+	if err := vital.Set("mana_raw", remainingMana); err != nil {
+		return err
+	}
+	if err := vital.Set("mana", remainingMana/256); err != nil {
 		return err
 	}
 	player, _ := request.Get("player")
@@ -169,7 +190,7 @@ func beginCast(context gameecs.Context, owner akara.Entity, request *akara.Dynam
 	stateValues := map[string]any{
 		"player": player.(string), "side": side.(string), "skill_id": definition.SkillID, "skill_level": level.(int64), "behavior": definition.Behavior, "target_policy": definition.TargetPolicy,
 		"target_x": targetX.(float64), "target_y": targetY.(float64), "target_id": targetID.(string), "start_tick": int64(context.Tick), "effect_tick": int64(context.Tick + definition.EffectDelay),
-		"complete_tick": int64(context.Tick + definition.CompleteDelay), "phase": "started", "interruptible": definition.Interruptible, "interruption_requested": false, "mana_cost": definition.ManaCost,
+		"complete_tick": int64(context.Tick + definition.CompleteDelay), "phase": "started", "interruptible": definition.Interruptible, "interruption_requested": false, "mana_cost": definition.ManaCost, "mana_cost_raw": definition.ManaCostRaw,
 	}
 	commands.AddDynamic(states, owner, stateValues)
 	commands.Remove(requests, owner)

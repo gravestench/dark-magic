@@ -281,7 +281,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 	}{
 		{stores.identity, map[string]any{"character_id": entry.CharacterID, "player": entry.Player, "name": entry.Name, "class": entry.Class}},
 		{stores.progress, map[string]any{"level": entry.Level, "experience": entry.Experience}},
-		{stores.vitals, map[string]any{"health": entry.Health, "max_health": entry.MaxHealth, "mana": entry.Mana, "max_mana": entry.MaxMana}},
+		{stores.vitals, map[string]any{"health": entry.Health, "max_health": entry.MaxHealth, "mana": entry.Mana, "max_mana": entry.MaxMana, "mana_raw": entry.Mana * 256, "max_mana_raw": entry.MaxMana * 256}},
 		{stores.appearance, map[string]any{"cof": entry.COF, "token": entry.Token, "palette": entry.Palette, "weapon_class": entry.WeaponClass}},
 		{stores.animation, map[string]any{"direction": entry.Direction, "mode": entry.Mode}},
 		{stores.position, map[string]any{"x": entry.X, "y": entry.Y}},
@@ -352,7 +352,7 @@ func registerStores(world *akara.World) (stores, error) {
 	schemas := []akara.Schema{
 		{Name: "dm.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
 		{Name: "dm.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
-		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}}},
+		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
 		{Name: "dm.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
