@@ -16,12 +16,19 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
 - M21.5 one replayable melee transaction emitting semantic attempt/hit/damage/death events with explicitly synthetic hit policy;
 - M21.6 an intent-phase skill consumer that freezes `dm.player.skill_intent` into immutable `dm.skill.cast_request`, preserving admitted skill choice, learned level, target, side, player identity, and request tick exactly once;
 - M21.7 a normalized skill-definition registry plus checkpointed cast lifecycle with target/resource validation, start/effect/complete ticks, interruption state, semantic cast events, mana committed once, and a first headless `basic.point_event` behavior family.
+- M21.8 a checkpointed timed-state owner with source-tagged identity,
+  same-source refresh, independent sources, deterministic expiration, and
+  semantic apply/refresh/remove events. Rich stat-source attachment and
+  additional stacking/dispel/aura policies remain deliberately deferred.
+- M21.9 a headless straight-missile vertical slice with cast-effect creation,
+  snapshotted damage and motion facts, swept unit contact, combat-owned impact,
+  range/lifetime removal, semantic events, and replay-equivalent restoration.
 
 Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
 
-## Immediate queue: M21.8 through M21.12
+## Immediate queue: M21.10 through M21.12
 
-### 1. M21.8: timed state engine
+### Completed: M21.8 timed state engine
 
 Goal: create the reusable owner for buffs, debuffs, curses, shrine effects, auras, item states, and control effects before content adds bespoke timers everywhere.
 
@@ -39,9 +46,10 @@ Minimum contract:
 
 Prove one simple refreshable state. Do not infer universal legacy stacking behavior from that fixture.
 
-M21.7 already established cast timing and interruption. M21.8 should consume semantic skill/object/item effects into a generic timed-state mechanism rather than add another cast-specific timer system.
+The reusable timed-state foundation is complete. Additional policy modules and
+stat-source attachment remain future extensions driven by concrete effects.
 
-### 2. M21.9: straight missile slice
+### Completed: M21.9 straight missile slice
 
 Goal: prove one authoritative projectile from cast effect through impact/removal.
 
@@ -56,9 +64,12 @@ Creation should freeze enough information that later changes to the caster do no
 - snapshotted damage/effect inputs required by that behavior;
 - stable hit memory where needed.
 
-Movement, collision, impact, combat consequences, and removal run on authoritative ticks. Presentation only follows copied missile facts/events.
+The first synthetic single-hit policy now proves this contract through
+checkpointed cast, motion, swept unit collision, combat impact, and removal.
+Retail missile definitions and additional movement/contact policies remain
+implementation-driven verification work.
 
-### 3. M21.10: Blood Moor population slice
+### 1. M21.10: Blood Moor population slice
 
 Goal: replace the hand-created hostile fixture with an inspectable deterministic population/spawn plan derived from generated-zone content.
 
@@ -74,7 +85,7 @@ zone population recipe
 
 Do not make render culling decide whether a monster exists.
 
-### 4. M21.11: monster death transaction
+### 2. M21.11: monster death transaction
 
 Goal: replace the current minimal lethal consequence with one atomic semantic death transaction.
 
@@ -92,7 +103,7 @@ Join, in deterministic order:
 
 Death is not merely `hp <= 0`; it is an authoritative transition whose consequences replay together.
 
-### 5. M21.12: owned-unit relation
+### 3. M21.12: owned-unit relation
 
 Goal: establish generic ownership before summons, pets, traps, minions, and hirelings each invent separate owner/attribution models.
 

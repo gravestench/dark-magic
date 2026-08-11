@@ -20,6 +20,9 @@ const (
 	// BehaviorPointEvent is the first generic family: it emits its authoritative
 	// effect at a point/semantic target for a later trusted effect consumer.
 	BehaviorPointEvent = "basic.point_event"
+	// BehaviorStraightMissile emits the same semantic effect event; the missile
+	// authority consumes it using a separately verified projectile definition.
+	BehaviorStraightMissile = "basic.straight_missile"
 
 	EventCastStarted     = "cast_started"
 	EventSkillEffect     = "skill_effect"
@@ -47,7 +50,7 @@ type Registry struct{ definitions map[int64]Definition }
 func NewRegistry(definitions ...Definition) (Registry, error) {
 	result := Registry{definitions: make(map[int64]Definition, len(definitions))}
 	for _, definition := range definitions {
-		if definition.SkillID < 0 || definition.Behavior != BehaviorPointEvent || definition.ManaCost < 0 || definition.EffectDelay == 0 || definition.CompleteDelay < definition.EffectDelay || definition.TargetPolicy != TargetPoint && definition.TargetPolicy != TargetUnit {
+		if definition.SkillID < 0 || !supportedBehavior(definition.Behavior) || definition.ManaCost < 0 || definition.EffectDelay == 0 || definition.CompleteDelay < definition.EffectDelay || definition.TargetPolicy != TargetPoint && definition.TargetPolicy != TargetUnit {
 			return Registry{}, fmt.Errorf("skill: invalid normalized definition for %d", definition.SkillID)
 		}
 		if _, found := result.definitions[definition.SkillID]; found {
@@ -56,6 +59,10 @@ func NewRegistry(definitions ...Definition) (Registry, error) {
 		result.definitions[definition.SkillID] = definition
 	}
 	return result, nil
+}
+
+func supportedBehavior(behavior string) bool {
+	return behavior == BehaviorPointEvent || behavior == BehaviorStraightMissile
 }
 
 func castStateSchema() akara.Schema {

@@ -210,6 +210,41 @@ func applyPhysical(entity akara.Entity, damage Amount, monsterStats, playerVital
 	return 0, false, fmt.Errorf("combat: target has no health authority")
 }
 
+// ApplyPhysical applies already-resolved physical damage through combat's
+// existing health authority. Callers must perform their own hit validation.
+func ApplyPhysical(engine *gameecs.Engine, entity akara.Entity, damage Amount) (Amount, bool, error) {
+	if engine == nil || damage < 0 {
+		return 0, false, fmt.Errorf("combat: engine and non-negative damage are required")
+	}
+	_, _, _, _, _, monsters, players, err := registerMeleeStores(engine)
+	if err != nil {
+		return 0, false, err
+	}
+	return applyPhysical(entity, damage, monsters, players)
+}
+
+// ApplyConfirmedPhysical records contact resolved by an authoritative caller,
+// then applies damage through combat's health owner and emits standard events.
+func ApplyConfirmedPhysical(engine *gameecs.Engine, commands *akara.CommandBuffer, tick uint64, attackerID, targetID string, target akara.Entity, damage Amount) (Amount, bool, error) {
+	if commands == nil || attackerID == "" || targetID == "" {
+		return 0, false, fmt.Errorf("combat: confirmed impact requires commands and identities")
+	}
+	_, events, _, _, _, _, _, err := registerMeleeStores(engine)
+	if err != nil {
+		return 0, false, err
+	}
+	remaining, died, err := ApplyPhysical(engine, target, damage)
+	if err != nil {
+		return 0, false, err
+	}
+	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, tick, attackerID, targetID, true, 0, 0)})
+	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventDamageApplied, tick, attackerID, targetID, true, damage.Raw(), remaining.Raw())})
+	if died {
+		commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventUnitDied, tick, attackerID, targetID, true, damage.Raw(), 0)})
+	}
+	return remaining, died, nil
+}
+
 func stableRoll(domain string, tick uint64, attacker, target string) uint64 {
 	hash := fnv.New64a()
 	_, _ = hash.Write([]byte(domain))
