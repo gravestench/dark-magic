@@ -76,7 +76,10 @@ function lab:rebuild()
         if self.total > 0 then self.index = self.index % self.total end
         local scale = math.min(3, 380 / math.max(1, width), 360 / math.max(1, height))
         self.tile_node:set_scale(scale, scale)
-        self.tile_node:set_position(400 - width * scale / 2, 105 + (370 - height * scale) / 2)
+        -- Render nodes use their center as the origin. Put that center in the
+        -- middle of the preview area; subtracting half the image here would do
+        -- it twice and push tall wall tiles off the top of the window.
+        self.tile_node:set_position(400, 105 + 370 / 2)
         self.tile_node:set_visible(true)
         text.set(self.status, "font_lab_color", string.format("[white]tile %d / %d   [blue]%s   [green]ACT%d   [white]%dx%d", self.index, self.total - 1, view, self.palette_index, width, height), 760, "center")
         text.set(self.detail, "font_lab_color", string.format("[white]type/style/sequence %d/%d/%d   dir %d   rarity %d   blocks %d   source %dx%d   roof %d", metadata.type, metadata.style, metadata.sequence, metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height, metadata.roof_height), 760, "center")
