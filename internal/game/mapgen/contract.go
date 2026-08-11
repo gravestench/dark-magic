@@ -93,6 +93,7 @@ type Stamp struct {
 	Variant      int
 	Populate     bool
 	LogicalWalls bool
+	Overlay      bool
 }
 
 // Room is a simulation-space rectangle. StampID is zero only for an unassigned
@@ -241,9 +242,6 @@ func validateDefinition(def Definition) error {
 			return fmt.Errorf("%w: overlapping structure tile %d,%d", ErrZone, tile.X, tile.Y)
 		}
 		seenStructure[position] = struct{}{}
-		if tile.Kind == "bridge" && !tile.Passable {
-			return fmt.Errorf("%w: bridge %d,%d must be passable", ErrZone, tile.X, tile.Y)
-		}
 		if tile.Kind != "bridge" && tile.Passable {
 			return fmt.Errorf("%w: %s %d,%d cannot be passable", ErrZone, tile.Kind, tile.X, tile.Y)
 		}

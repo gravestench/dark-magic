@@ -98,9 +98,9 @@ func TestZoneCopiesAndValidatesStructureTiles(t *testing.T) {
 		t.Fatalf("immutable structure kind = %q", got)
 	}
 	bad := validDefinition()
-	bad.Structures = []StructureTile{{X: 0, Y: 0, Kind: "bridge"}}
+	bad.Structures = []StructureTile{{X: 0, Y: 0, Kind: "river", Passable: true}}
 	if _, err := NewZone(bad); err == nil {
-		t.Fatal("accepted an impassable bridge")
+		t.Fatal("accepted a passable river")
 	}
 }
 

@@ -1032,10 +1032,16 @@ complete until its actions are driven by authoritative game state and commands.
     explicit town-entry warp on the edge opposite the selected town exit.
     Structural rivers/cliffs/bridges and presentation seam validation remain
     before this checkpoint is complete.
-    The immutable outdoor recipe now emits a continuous river, one explicit
-    passable bridge on the guaranteed route, and a cliff ridge with a three-tile
-    opening. Mapgen Lab renders these server-owned structural facts without asset
-    decoding. Legacy DT1 realization and interactive seam capture remain pending.
+    The immutable outdoor recipe now emits a continuous river, an explicit
+    bridge footprint with per-tile passability, and a cliff ridge with a route
+    opening. East/west routes cross the bridge; north/south routes keep the
+    authored vertical river away from the required route. Mapgen Lab renders
+    these server-owned structural facts without asset decoding. River generation
+    now follows D2MOO's paired 8x8 LvlPrest 26/27
+    strip and replaces one pair with the authored LvlPrest 28 bridge variants.
+    Overlay stamps replace matching fill layers, and MPQ-backed acceptance proves
+    blocked river collision plus open bridge terrain. Cliff DT1 realization and
+    interactive seam capture remain pending.
     Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
     tile placements, and a production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable

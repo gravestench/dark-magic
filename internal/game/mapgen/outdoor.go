@@ -56,8 +56,11 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 	exit := nextLevelEdgeWarp(width, height, entry.Direction)
 	route := outdoorRoute(request.Seed, columns, rows, entry.Direction)
 	path := outdoorPathTiles(route, columns, rows, entry, exit)
-	structures := outdoorStructures(request.Seed, width, height, entry.Direction, path)
-	stamps := make([]Stamp, 0, columns*rows)
+	structures, structuralStamps, path, err := generator.outdoorStructures(request, level, columns, rows, entry.Direction, path)
+	if err != nil {
+		return nil, err
+	}
+	stamps := make([]Stamp, 0, columns*rows+len(structuralStamps))
 	rooms := make([]Room, 0, columns*rows)
 	links := make([]Link, 0, (columns-1)*rows+(rows-1)*columns)
 	for y := 0; y < rows; y++ {
@@ -85,6 +88,7 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 			}
 		}
 	}
+	stamps = append(stamps, structuralStamps...)
 	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Paths: path, Structures: structures, Trace: []string{
 		fmt.Sprintf("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", request.LevelID, columns, rows),
 		"authored 8x8 Blood Moor fill presets selected by independent cell streams",
@@ -94,65 +98,157 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 	}})
 }
 
-// outdoorStructures creates two barriers perpendicular to the primary route.
-// The river has exactly one bridge on the route. The cliff ridge leaves a
-// three-tile opening, which avoids a one-cell choke while preserving structure.
-func outdoorStructures(seed uint64, width, height int, entryDirection string, path []PathTile) []StructureTile {
-	horizontalTravel := entryDirection == "west" || entryDirection == "east"
-	riverAxis := width / 2
-	cliffAxis := width / 4
-	if !horizontalTravel {
-		riverAxis, cliffAxis = height/2, height/4
+// outdoorStructures creates an authored vertical river band plus a semantic
+// cliff ridge. East/west routes cross the bridge; north/south routes keep the
+// river near the opposite edge. The cliff always leaves a route opening.
+func (generator *ActOneOutdoorGenerator) outdoorStructures(request Request, level model.LevelData, columns, rows int, entryDirection string, path []PathTile) ([]StructureTile, []Stamp, []PathTile, error) {
+	plan := planActOneRiver(request.Seed, columns, rows, entryDirection, path)
+	if plan.crossesRoute {
+		path = pathThroughBridge(path, plan.column*actOneOutdoorCellSize, plan.row*actOneOutdoorCellSize+actOneOutdoorCellSize/2)
 	}
-	riverCross := pathCrossing(path, horizontalTravel, riverAxis)
-	cliffCross := pathCrossing(path, horizontalTravel, cliffAxis)
-	// A dedicated stream decides which side receives the ridge without changing
-	// route or fill-stamp randomness.
-	if NewStreams(seed).For("blood-moor-cliff-side").Uint64n(2) == 1 {
-		if horizontalTravel {
-			cliffAxis = width - 1 - cliffAxis
-		} else {
-			cliffAxis = height - 1 - cliffAxis
-		}
-		cliffCross = pathCrossing(path, horizontalTravel, cliffAxis)
+	structures := riverStructureTiles(plan, rows)
+	structures = append(structures, cliffStructureTiles(request.Seed, columns, rows, path, plan)...)
+	stamps, err := generator.outdoorStructureStamps(request, level, columns, rows, plan)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	result := make([]StructureTile, 0, width+height)
-	crossSize := height
-	if !horizontalTravel {
-		crossSize = width
+	return structures, stamps, path, nil
+}
+
+type actOneRiverPlan struct {
+	column, row  int
+	crossesRoute bool
+}
+
+func planActOneRiver(seed uint64, columns, rows int, entryDirection string, path []PathTile) actOneRiverPlan {
+	plan := actOneRiverPlan{column: columns/2 - 1, row: rows / 2, crossesRoute: entryDirection == "west" || entryDirection == "east"}
+	if !plan.crossesRoute {
+		// Act I's authored river presets are vertical in tile space. For a
+		// north/south primary route, keep the band near the opposite edge.
+		plan.column = columns - 2
+		plan.row = int(NewStreams(seed).For("blood-moor-bridge-row").Uint64n(uint64(rows)))
+		return plan
 	}
-	for cross := 0; cross < crossSize; cross++ {
-		x, y := riverAxis, cross
-		if !horizontalTravel {
-			x, y = cross, riverAxis
+	for _, tile := range path {
+		if tile.X >= plan.column*actOneOutdoorCellSize && tile.X < (plan.column+2)*actOneOutdoorCellSize {
+			plan.row = tile.Y / actOneOutdoorCellSize
+			break
 		}
-		kind, passable := "river", false
-		if cross == riverCross {
-			kind, passable = "bridge", true
+	}
+	return plan
+}
+
+func riverStructureTiles(plan actOneRiverPlan, rows int) []StructureTile {
+	result := make([]StructureTile, 0, rows*actOneOutdoorCellSize*2)
+	for y := 0; y < rows*actOneOutdoorCellSize; y++ {
+		for x := plan.column * actOneOutdoorCellSize; x < (plan.column+2)*actOneOutdoorCellSize; x++ {
+			kind, passable := "river", false
+			if y/actOneOutdoorCellSize == plan.row && y%actOneOutdoorCellSize >= 2 && y%actOneOutdoorCellSize <= 5 {
+				kind = "bridge"
+				localX, localY := x-plan.column*actOneOutdoorCellSize, y%actOneOutdoorCellSize
+				passable = localY == 3 || localY == 4 || (localY == 2 || localY == 5) && (localX < 4 || localX >= 12)
+			}
+			result = append(result, StructureTile{X: x, Y: y, Kind: kind, Passable: passable})
 		}
-		result = append(result, StructureTile{X: x, Y: y, Kind: kind, Passable: passable})
-		if absInt(cross-cliffCross) <= 1 {
-			continue
-		}
-		x, y = cliffAxis, cross
-		if !horizontalTravel {
-			x, y = cross, cliffAxis
-		}
-		result = append(result, StructureTile{X: x, Y: y, Kind: "cliff"})
 	}
 	return result
 }
 
-func pathCrossing(path []PathTile, horizontalTravel bool, axis int) int {
+func cliffStructureTiles(seed uint64, columns, rows int, path []PathTile, river actOneRiverPlan) []StructureTile {
+	y := rows * actOneOutdoorCellSize / 4
+	if NewStreams(seed).For("blood-moor-cliff-side").Uint64n(2) == 1 {
+		y = rows*actOneOutdoorCellSize - 1 - y
+	}
+	pathSet := make(map[PathTile]bool, len(path))
 	for _, tile := range path {
-		if horizontalTravel && tile.X == axis {
-			return tile.Y
+		pathSet[tile] = true
+	}
+	result := make([]StructureTile, 0, columns*actOneOutdoorCellSize)
+	for x := 0; x < columns*actOneOutdoorCellSize; x++ {
+		if x >= river.column*actOneOutdoorCellSize && x < (river.column+2)*actOneOutdoorCellSize {
+			continue
 		}
-		if !horizontalTravel && tile.Y == axis {
-			return tile.X
+		open := false
+		for offset := -1; offset <= 1; offset++ {
+			open = open || pathSet[PathTile{X: x, Y: y + offset}]
+		}
+		if !open {
+			result = append(result, StructureTile{X: x, Y: y, Kind: "cliff"})
 		}
 	}
-	return 0
+	return result
+}
+
+func (generator *ActOneOutdoorGenerator) outdoorStructureStamps(request Request, level model.LevelData, columns, rows int, plan actOneRiverPlan) ([]Stamp, error) {
+	stamps := make([]Stamp, 0, rows*2)
+	for row := 0; row < rows; row++ {
+		for side, presetDef := range []int{26, 27} {
+			// D2MOO's nPickedFile is the authored one-based file number. Stamp
+			// variants are zero-based, so river file 3 and bridge files 1/3 map
+			// to indices 2 and 0/2 respectively.
+			variant := 2
+			if row == plan.row {
+				presetDef = 28
+				variant = []int{0, 2}[side]
+			}
+			preset, found := generator.data.LevelPresetByDef[presetDef]
+			if !found {
+				return nil, fmt.Errorf("%w: Act I structural preset %d is unavailable", ErrZone, presetDef)
+			}
+			stamp, err := generator.outdoorStructuralStamp(request, level, preset, variant,
+				uint32(columns*rows+row*2+side+1), (plan.column+side)*actOneOutdoorCellSize, row*actOneOutdoorCellSize)
+			if err != nil {
+				return nil, err
+			}
+			stamps = append(stamps, stamp)
+		}
+	}
+	return stamps, nil
+}
+
+// pathThroughBridge bends only the portion of the semantic route adjacent to
+// the river. Old path cells inside the water band are removed, then both banks
+// are connected to the authored bridge center. This keeps the route continuous
+// without changing either endpoint or unrelated outdoor topology.
+func pathThroughBridge(path []PathTile, riverX, bridgeY int) []PathTile {
+	const riverWidth = 2 * actOneOutdoorCellSize
+	left, right := PathTile{X: riverX - 1, Y: bridgeY}, PathTile{X: riverX + riverWidth, Y: bridgeY}
+	leftSource, rightSource := left, right
+	leftDistance, rightDistance := int(^uint(0)>>1), int(^uint(0)>>1)
+	result := make(map[PathTile]bool, len(path)+riverWidth)
+	for _, tile := range path {
+		if tile.X < riverX || tile.X >= riverX+riverWidth {
+			result[tile] = true
+		}
+		if tile.X == left.X && absInt(tile.Y-bridgeY) < leftDistance {
+			leftSource, leftDistance = tile, absInt(tile.Y-bridgeY)
+		}
+		if tile.X == right.X && absInt(tile.Y-bridgeY) < rightDistance {
+			rightSource, rightDistance = tile, absInt(tile.Y-bridgeY)
+		}
+	}
+	rasterPath(leftSource, left, result)
+	rasterPath(left, right, result)
+	rasterPath(right, rightSource, result)
+	connected := make([]PathTile, 0, len(result))
+	for tile := range result {
+		connected = append(connected, tile)
+	}
+	return connected
+}
+
+func (generator *ActOneOutdoorGenerator) outdoorStructuralStamp(request Request, level model.LevelData, preset model.LevelPreset, variant int, id uint32, x, y int) (Stamp, error) {
+	variants := presetFiles(preset)
+	if variant < 0 || variant >= len(variants) {
+		return Stamp{}, fmt.Errorf("%w: structural preset %d lacks variant %d", ErrZone, preset.Def, variant)
+	}
+	tiles, err := maskedTilePaths(generator.data.LevelTypes, level.LevelType, preset.Dt1Mask)
+	if err != nil {
+		return Stamp{}, err
+	}
+	return Stamp{ID: id, PresetDef: preset.Def, Role: "blood-moor-structure", X: x, Y: y,
+		Width: preset.SizeX, Height: preset.SizeY, DS1Path: assetPath(variants[variant]), TilePaths: tiles,
+		Variant: variant, Populate: false, LogicalWalls: preset.Logicals != 0, Overlay: true}, nil
 }
 
 func outdoorPathTiles(route map[[2]int]bool, columns, rows int, entry, exit Warp) []PathTile {

@@ -98,3 +98,43 @@ func TestMaterializerHonorsCancellationWithoutAdvancing(t *testing.T) {
 		t.Fatal("canceled step advanced progress")
 	}
 }
+
+func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
+	zone, err := mapgen.NewZone(mapgen.Definition{
+		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2}, Kind: mapgen.Outdoor,
+		Bounds: mapgen.Bounds{Width: 1, Height: 1},
+		Stamps: []mapgen.Stamp{
+			{ID: 1, Width: 1, Height: 1, DS1Path: "fill.ds1"},
+			{ID: 2, Width: 1, Height: 1, DS1Path: "river.ds1", Overlay: true},
+		},
+		Rooms: []mapgen.Room{{ID: 1, Width: 1, Height: 1, StampID: 1}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	materializer, err := NewMaterializer(fstest.MapFS{}, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	materializer.load = func(_ fs.FS, name string, _ []string, _ ...ObjectResolver) (*Map, error) {
+		identity := TileIdentity{MainIndex: 1}
+		if name == "river.ds1" {
+			identity.MainIndex = 2
+		}
+		return &Map{WidthTiles: 1, HeightTiles: 1, WidthSubtiles: 5, HeightSubtiles: 5,
+			flags: make([]Flags, 25), Tiles: []TilePlacement{{Layer: LayerFloor, Identity: identity}}}, nil
+	}
+	if err := materializer.Step(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := materializer.Step(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	result, err := materializer.Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Tiles) != 1 || result.Tiles[0].Identity.MainIndex != 2 {
+		t.Fatalf("overlay tiles = %#v", result.Tiles)
+	}
+}
