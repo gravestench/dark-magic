@@ -67,7 +67,24 @@ func MPQ(fileName string) (fs.FS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("content: open MPQ %q: %w", fileName, err)
 	}
-	return &closeableFS{FS: normalizedFS{FS: archive, backslash: true}, close: archive.Close}, nil
+	// MPQ archives predate io/fs and expose their directory information through
+	// the special (listfile) member instead of ReadDir. Keep that flat list on
+	// the adapter so callers can enumerate assets without teaching the decoder
+	// about fake directory handles. An archive without a listfile remains useful:
+	// known paths can still be opened normally.
+	listed, _ := archive.Listfile()
+	paths := make([]string, 0, len(listed))
+	for _, name := range listed {
+		clean, normalizeErr := Normalize(name)
+		if normalizeErr == nil && clean != "." {
+			paths = append(paths, clean)
+		}
+	}
+	return &listedCloseableFS{
+		FS:    normalizedFS{FS: archive, backslash: true},
+		close: archive.Close,
+		paths: paths,
+	}, nil
 }
 
 // Close closes a filesystem source if it owns resources.
@@ -107,3 +124,18 @@ type closeableFS struct {
 }
 
 func (f *closeableFS) Close() error { return f.close() }
+
+// listedCloseableFS adapts archive formats that can name their members but do
+// not implement io/fs directory walking. Paths returns a copy because mounted
+// content is shared by loaders running on several goroutines.
+type listedCloseableFS struct {
+	fs.FS
+	close func() error
+	paths []string
+}
+
+func (f *listedCloseableFS) Close() error { return f.close() }
+
+func (f *listedCloseableFS) Paths() []string {
+	return append([]string(nil), f.paths...)
+}
