@@ -70,7 +70,10 @@ end
 
 function lab:position_map()
     self.map_node:set_scale(self.zoom, self.zoom)
-    self.map_node:set_position(400 - self.width * self.zoom / 2 + self.pan_x, 95 + (430 - self.height * self.zoom) / 2 + self.pan_y)
+    -- The retained renderer anchors images at their center. Pan that center
+    -- around the middle of the map preview instead of applying top-left layout
+    -- math a second time.
+    self.map_node:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
 end
 
 function lab:rebuild()
