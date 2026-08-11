@@ -263,6 +263,14 @@ decorative fill pieces alone reproduce a complete wilderness: border, river,
 cliff, traversable-path, substitution, cave, and quest-site layers remain
 explicit strategy stages.
 
+The recipe now reserves a one-cell-wide primary route from the town-facing
+edge to an explicit opposite-edge next-level anchor. The seeded route advances
+one coarse cell per step and can drift sideways by at most one cell, which
+makes connectivity directly testable without treating decorative pixels as
+navigation data. Route cells still use ordinary fill DS1s today; later path,
+river/bridge, and cliff selectors consume the semantic corridor instead of
+trying to rediscover it from the rendered map.
+
 ## Preset variant selection
 
 `LvlPrest` can name multiple DS1 files. D2MOO uses deterministic level RNG to select file variants. In some outdoor paths it keeps per-preset build state and cycles the selected file after a seeded starting point, reducing immediate repetition.

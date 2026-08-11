@@ -51,6 +51,9 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 		return nil, fmt.Errorf("%w: Blood Moor dimensions %dx%d are not an 8-tile grid", ErrZone, width, height)
 	}
 	columns, rows := width/actOneOutdoorCellSize, height/actOneOutdoorCellSize
+	entry := townEdgeWarp(width, height, townDirection)
+	exit := nextLevelEdgeWarp(width, height, entry.Direction)
+	route := outdoorRoute(request.Seed, columns, rows, entry.Direction)
 	stamps := make([]Stamp, 0, columns*rows)
 	rooms := make([]Room, 0, columns*rows)
 	links := make([]Link, 0, (columns-1)*rows+(rows-1)*columns)
@@ -66,6 +69,9 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 			if err != nil {
 				return nil, err
 			}
+			if route[[2]int{x, y}] {
+				stamp.Role = "blood-moor-route"
+			}
 			stamps = append(stamps, stamp)
 			rooms = append(rooms, Room{ID: id, X: stamp.X, Y: stamp.Y, Width: stamp.Width, Height: stamp.Height, StampID: id})
 			if x > 0 {
@@ -76,11 +82,11 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 			}
 		}
 	}
-	warp := townEdgeWarp(width, height, townDirection)
-	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{warp}, Trace: []string{
+	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Trace: []string{
 		fmt.Sprintf("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", request.LevelID, columns, rows),
 		"authored 8x8 Blood Moor fill presets selected by independent cell streams",
 		fmt.Sprintf("Rogue Encampment joins the %s Blood Moor edge", oppositeDirection(townDirection)),
+		fmt.Sprintf("a deterministic %d-cell route joins town to the opposite next-level edge", len(route)),
 	}})
 }
 
@@ -123,6 +129,57 @@ func townEdgeWarp(width, height int, townDirection string) Warp {
 		x = 0
 	}
 	return Warp{ID: 1, Role: "town-entry", Direction: direction, X: x, Y: y, DestinationLevel: 1}
+}
+
+func nextLevelEdgeWarp(width, height int, entryDirection string) Warp {
+	direction := oppositeDirection(entryDirection)
+	warp := townEdgeWarp(width, height, oppositeDirection(direction))
+	warp.ID = 2
+	warp.Role = "next-level-exit"
+	warp.Direction = direction
+	warp.DestinationLevel = 3
+	return warp
+}
+
+// outdoorRoute reserves one coarse-cell-wide semantic corridor. Each step
+// advances toward the far edge and may move sideways by one cell, so the path
+// is contiguous, deterministic, and cannot fold back on itself. It does not
+// pretend that a fill DS1 is road artwork; later path/cliff/river layers use
+// this recipe when choosing their authored pieces.
+func outdoorRoute(seed uint64, columns, rows int, entryDirection string) map[[2]int]bool {
+	horizontal := entryDirection == "west" || entryDirection == "east"
+	length, crossSize := rows, columns
+	if horizontal {
+		length, crossSize = columns, rows
+	}
+	forward := entryDirection == "west" || entryDirection == "north"
+	cross, target := crossSize/2, crossSize/2
+	result := make(map[[2]int]bool, length)
+	stream := NewStreams(seed).For("blood-moor-primary-route")
+	for step := 0; step < length; step++ {
+		axis := step
+		if !forward {
+			axis = length - step - 1
+		}
+		x, y := cross, axis
+		if horizontal {
+			x, y = axis, cross
+		}
+		result[[2]int{x, y}] = true
+		remaining := length - step - 1
+		if remaining == 0 {
+			continue
+		}
+		delta := int(stream.Uint64n(3)) - 1
+		next := max(0, min(crossSize-1, cross+delta))
+		if next-target > remaining-1 {
+			next = target + remaining - 1
+		} else if target-next > remaining-1 {
+			next = target - remaining + 1
+		}
+		cross = next
+	}
+	return result
 }
 
 func oppositeDirection(direction string) string {
