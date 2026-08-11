@@ -90,6 +90,8 @@ type Node struct {
 	ScaleX                float64
 	ScaleY                float64
 	Rotation              float64
+	OriginX               float64
+	OriginY               float64
 	Visible               bool
 	Clip                  *Rect
 	Blend                 string
@@ -433,7 +435,7 @@ func (c *Composer) Create(parent NodeID, layer Layer) (NodeID, error) {
 		c.slots = append(c.slots, slot{generation: 1})
 	}
 	id := NodeID{Slot: index, Generation: c.slots[index].generation}
-	node := &Node{ID: id, Parent: parent, Layer: layer, ScaleX: 1, ScaleY: 1, Visible: true, Blend: "alpha"}
+	node := &Node{ID: id, Parent: parent, Layer: layer, ScaleX: 1, ScaleY: 1, OriginX: 0.5, OriginY: 0.5, Visible: true, Blend: "alpha"}
 	c.slots[index].node = node
 	c.pending = append(c.pending, Change{Kind: "create", Node: *node, ID: id})
 	c.structuralRevision++

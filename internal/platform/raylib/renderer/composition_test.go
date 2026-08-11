@@ -55,6 +55,9 @@ func TestCompositionBackendMirrorsCheckedNodes(t *testing.T) {
 	if backend.nodes[parent].IsEnabled() || childNode.IsEnabled() {
 		t.Fatal("resource-less grouping nodes were enabled for default-texture drawing")
 	}
+	if origin := childNode.Origin(); origin.X != 0 || origin.Y != 0 {
+		t.Fatalf("explicit zero origin was not mirrored: %v", origin)
+	}
 	if err := backend.Apply(render.Change{Kind: "destroy", ID: child}); err != nil {
 		t.Fatal(err)
 	}

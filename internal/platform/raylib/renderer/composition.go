@@ -218,6 +218,7 @@ func (b *compositionBackend) applyNode(node *node, state render.Node) error {
 	node.SetPosition(float32(state.X), float32(state.Y))
 	node.setScaleXY(float32(state.ScaleX), float32(state.ScaleY))
 	node.SetRotation(float32(state.Rotation))
+	node.SetOrigin(state.OriginX, state.OriginY)
 	if state.Clip == nil {
 		node.SetClip(nil)
 	} else {
