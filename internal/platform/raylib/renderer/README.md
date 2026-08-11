@@ -23,8 +23,11 @@ private native state required to draw those changes.
 - Shutdown drains pending composition changes, releases backend nodes and palette
   effects, clears GPU caches, and only then closes the native context.
 
-`BackendDiagnostics` exposes cumulative work counters without leaking native
-handles. Profiling records these beside composer and texture-cache diagnostics.
+`BackendDiagnostics` exposes cumulative and exact last-frame work counters
+without leaking native handles. The persistent residency overlay reports frame
+draws, traversal, culling, and texture updates beside composer and texture-cache
+diagnostics. Those numbers decide whether a scene needs tighter culling,
+resource reuse, or backend batching; we do not guess from placement counts.
 
 ## Texture upload policy
 

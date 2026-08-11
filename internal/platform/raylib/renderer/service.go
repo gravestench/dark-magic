@@ -41,24 +41,30 @@ type Service struct {
 	audioMu      sync.Mutex
 	audioBackend *raylibAudioBackend
 
-	paletteQuantizer    *paletteQuantizer
-	gameTarget          rl.RenderTexture2D
-	frames              atomic.Uint64
-	drawCalls           atomic.Uint64
-	nodesVisited        atomic.Uint64
-	subtreesCulled      atomic.Uint64
-	textureUpdates      atomic.Uint64
-	textureUploads      atomic.Uint64
-	textureUploadBytes  atomic.Uint64
-	textureUploadBudget atomic.Uint64
-	textureCacheBudget  atomic.Uint64
-	residencyDebug      atomic.Bool
+	paletteQuantizer        *paletteQuantizer
+	gameTarget              rl.RenderTexture2D
+	frames                  atomic.Uint64
+	drawCalls               atomic.Uint64
+	nodesVisited            atomic.Uint64
+	subtreesCulled          atomic.Uint64
+	textureUpdates          atomic.Uint64
+	textureUploads          atomic.Uint64
+	textureUploadBytes      atomic.Uint64
+	textureUploadBudget     atomic.Uint64
+	textureCacheBudget      atomic.Uint64
+	residencyDebug          atomic.Bool
+	lastFrameDrawCalls      atomic.Uint64
+	lastFrameNodesVisited   atomic.Uint64
+	lastFrameSubtreesCulled atomic.Uint64
+	lastFrameTextureUpdates atomic.Uint64
 }
 
 // BackendDiagnostics reports native-adapter work without exposing Raylib
 // handles. Values are cumulative for the renderer lifetime.
 type BackendDiagnostics struct {
 	Frames, DrawCalls, NodesVisited, SubtreesCulled, TextureUpdates uint64
+	LastFrameDrawCalls, LastFrameNodesVisited                       uint64
+	LastFrameSubtreesCulled, LastFrameTextureUpdates                uint64
 }
 
 // BackendDiagnostics returns lock-free cumulative counters suitable for overlays.
@@ -66,7 +72,11 @@ func (s *Service) BackendDiagnostics() BackendDiagnostics {
 	return BackendDiagnostics{
 		Frames: s.frames.Load(), DrawCalls: s.drawCalls.Load(),
 		NodesVisited: s.nodesVisited.Load(), SubtreesCulled: s.subtreesCulled.Load(),
-		TextureUpdates: s.textureUpdates.Load(),
+		TextureUpdates:          s.textureUpdates.Load(),
+		LastFrameDrawCalls:      s.lastFrameDrawCalls.Load(),
+		LastFrameNodesVisited:   s.lastFrameNodesVisited.Load(),
+		LastFrameSubtreesCulled: s.lastFrameSubtreesCulled.Load(),
+		LastFrameTextureUpdates: s.lastFrameTextureUpdates.Load(),
 	}
 }
 

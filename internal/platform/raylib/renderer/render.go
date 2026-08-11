@@ -13,8 +13,20 @@ func (s *Service) render() {
 		return
 	}
 
+	// These counters live for the whole renderer lifetime. Remember where this
+	// frame starts so the debug overlay can also answer the much more useful
+	// question: "how much work did the frame I can see require?"
+	start := s.BackendDiagnostics()
 	s.frames.Add(1)
 	s.renderRecursively(s.rootNode, nil)
+	s.recordFrameWork(start)
+}
+
+func (s *Service) recordFrameWork(start BackendDiagnostics) {
+	s.lastFrameDrawCalls.Store(s.drawCalls.Load() - start.DrawCalls)
+	s.lastFrameNodesVisited.Store(s.nodesVisited.Load() - start.NodesVisited)
+	s.lastFrameSubtreesCulled.Store(s.subtreesCulled.Load() - start.SubtreesCulled)
+	s.lastFrameTextureUpdates.Store(s.textureUpdates.Load() - start.TextureUpdates)
 }
 
 func (s *Service) renderRecursively(renderable *node, inheritedClip *rl.Rectangle) {

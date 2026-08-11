@@ -45,6 +45,8 @@ type ResidencyDiagnostics struct {
 	Uploads, UploadBytes, UploadBudget uint64
 	WarmPending                        int
 	WarmPendingBytes                   uint64
+	FrameDrawCalls, FrameNodesVisited  uint64
+	FrameSubtreesCulled, FrameUpdates  uint64
 }
 
 func (s *Service) ResidencyDiagnostics(composer *render.Composer) ResidencyDiagnostics {
@@ -52,6 +54,11 @@ func (s *Service) ResidencyDiagnostics(composer *render.Composer) ResidencyDiagn
 		Uploads: s.textureUploads.Load(), UploadBytes: s.textureUploadBytes.Load(),
 		UploadBudget: s.textureUploadBudget.Load(),
 	}
+	backend := s.BackendDiagnostics()
+	result.FrameDrawCalls = backend.LastFrameDrawCalls
+	result.FrameNodesVisited = backend.LastFrameNodesVisited
+	result.FrameSubtreesCulled = backend.LastFrameSubtreesCulled
+	result.FrameUpdates = backend.LastFrameTextureUpdates
 	if s.cache != nil {
 		stats := s.cache.Diagnostics()
 		result.Entries, result.Weight, result.Budget = stats.Entries, stats.Weight, stats.Budget
@@ -70,6 +77,7 @@ func (s *Service) drawResidencyDebug(composer *render.Composer) {
 	}
 	stats := s.ResidencyDiagnostics(composer)
 	lines := []string{
+		fmt.Sprintf("frame draws=%d  nodes=%d  culled=%d  texture updates=%d", stats.FrameDrawCalls, stats.FrameNodesVisited, stats.FrameSubtreesCulled, stats.FrameUpdates),
 		fmt.Sprintf("GPU textures  resident=%d  %.1f/%.1f MiB", stats.Entries, float64(stats.Weight)/(1024*1024), float64(stats.Budget)/(1024*1024)),
 		fmt.Sprintf("cache hits=%d  misses=%d  evictions=%d", stats.Hits, stats.Misses, stats.Evictions),
 		fmt.Sprintf("lifetime uploads=%d  traffic=%.1f MiB  warm budget=%.1f MiB/frame", stats.Uploads, float64(stats.UploadBytes)/(1024*1024), float64(stats.UploadBudget)/(1024*1024)),
