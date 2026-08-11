@@ -15,7 +15,7 @@ type LevelWarp struct {
 	Name string `csv:"Name"`
 
 	// Id defines the numeric ID for the type of Level Warp.
-	Id string `csv:"Id"`
+	Id int `csv:"Id"`
 
 	// SelectX defines the horizontal offset of the starting left corner position of the Level Warp area.
 	SelectX int `csv:"SelectX"`

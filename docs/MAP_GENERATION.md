@@ -255,6 +255,17 @@ every orientation-10/11 record a resolved warp. Destination, selection bounds,
 arrival offset, and direction are later joins against level and typed `LvlWarp`
 data. Presentation must not infer those facts from pixels or filenames.
 
+For ordinary visibility markers, main indexes 0 through 7 select the matching
+`Levels.txt` `Vis#`/`Warp#` pair. Dark Magic exposes those pairs as typed,
+slot-preserving links and indexes numeric `LvlWarp.Id` records. The world join
+therefore resolves destination level and copies selection, exit-walk, offset,
+lighting, interaction, direction, and unique-ID fields without filename or
+pixel heuristics. A shipped `Warp# = -1` retains the visibility relationship but
+does not produce an actionable transition endpoint. Geometry values remain in
+authored units until their screen/world transforms are verified on real maps;
+merely decoding a number is not evidence that we understand how the executable
+applies it.
+
 ## Outdoor levels
 
 Outdoor generation is not one simple noise/grid algorithm. D2MOO shows a shared outdoor grid plus many Act/level-specific generators and hard-coded required placements.

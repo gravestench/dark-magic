@@ -1086,6 +1086,12 @@ complete until its actions are driven by authoritative game state and commands.
     special-tile facts instead of scanning the renderer-facing tile list. This
     preserves invisible markers and their full `(orientation, style, sequence)`
     identity for the upcoming typed `LvlWarp`/level-data destination join.
+  - [x] M20.15f: Resolve ordinary DS1 visibility markers through typed level
+    data. `SpecialTile.MainIndex` 0-7 now selects the same-numbered paired
+    `Levels.Vis#`/`Warp#` fields, and numeric `LvlWarp.Id` records are indexed
+    with shipped-data duplicate reporting. The join publishes destination and
+    authored geometry without prematurely interpreting offset coordinate
+    transforms. Styles 30-33 remain distinct entry/corpse/portal markers.
 
 ## M21: Diablo simulation
 
