@@ -61,6 +61,12 @@ func (app *application) buildEntryWorld() error {
 	if app.gameWorlds[app.activeWorldLevel] == nil {
 		return fmt.Errorf("development fixture world level %d is unavailable", app.activeWorldLevel)
 	}
+	if app.options.FixturePointerMove {
+		spawn := app.gameWorldSpawns[app.activeWorldLevel]
+		app.pointerAcceptance = newPointerMovementAcceptance(
+			app.gameWorlds[app.activeWorldLevel], spawn[0], spawn[1], app.profile.Width, app.profile.Height,
+		)
+	}
 	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
 }

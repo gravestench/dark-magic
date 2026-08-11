@@ -52,6 +52,10 @@ func (app *application) updateFrame() {
 
 func (app *application) publishInput(frameContext context.Context) {
 	frame := app.input.Snapshot()
+	if app.pointerAcceptance != nil {
+		x, y, present := app.controlledPlayerPosition()
+		frame = app.pointerAcceptance.Frame(frame, x, y, present)
+	}
 	frame.WorldSplit = float64(app.profile.Width) / 2
 	owner := app.focusOwner()
 	captured := app.console.Handle(frameContext, frame)

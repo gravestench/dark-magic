@@ -43,6 +43,7 @@ func main() {
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
 	fixtureWorldLevel := flag.Int("fixture-world-level", 1, "development-only authoritative level for the selected fixture character")
 	fixtureWorldSpawn := flag.String("fixture-world-spawn", "entry", "development-only fixture spawn: entry or seam")
+	fixturePointerMove := flag.Bool("fixture-pointer-move", false, "development-only click-to-move acceptance before capture")
 	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
 	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
@@ -112,7 +113,7 @@ func main() {
 	lab := clientapp.CompositeLabOptions{Token: *compositeToken, Mode: *compositeMode, WeaponClass: *compositeWeapon, Direction: *compositeDirection, Frame: *compositeFrame, Components: *compositeComponents, Random: *compositeRandom}
 	dt1Lab := clientapp.DT1LabOptions{Path: *dt1Path, Palette: *dt1Palette, Tile: *dt1Tile, View: *dt1View}
 	ds1Lab := clientapp.DS1LabOptions{Path: *ds1Path, Tiles: *ds1Tiles, Palette: *ds1Palette}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, lab, dt1Lab, ds1Lab, logs); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, lab, dt1Lab, ds1Lab, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -129,13 +130,13 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, lab clientapp.CompositeLabOptions, dt1Lab clientapp.DT1LabOptions, ds1Lab clientapp.DS1LabOptions, logs *shell.LogBuffer) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, lab clientapp.CompositeLabOptions, dt1Lab clientapp.DT1LabOptions, ds1Lab clientapp.DS1LabOptions, logs *shell.LogBuffer) error {
 	options := clientapp.Options{
 		Content: contentFS, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
 		}, CaptureDirectory: captureDirectory,
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,
-		FixtureCharacters: fixtureCharacters, FixtureWorldLevel: fixtureWorldLevel, FixtureWorldSpawn: fixtureWorldSpawn, OutputPalette: outputPalette,
+		FixtureCharacters: fixtureCharacters, FixtureWorldLevel: fixtureWorldLevel, FixtureWorldSpawn: fixtureWorldSpawn, FixturePointerMove: fixturePointerMove, OutputPalette: outputPalette,
 		ViewportFit: viewportFit, BorderlessFullscreen: fullscreen, PresentationProfileID: presentationProfileID, Logs: logs,
 		CompositeLab: lab, DT1Lab: dt1Lab, DS1Lab: ds1Lab,
 	}

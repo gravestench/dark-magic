@@ -53,6 +53,7 @@ type Options struct {
 	FixtureCharacters     int
 	FixtureWorldLevel     int
 	FixtureWorldSpawn     string
+	FixturePointerMove    bool
 	OutputPalette         string
 	ViewportFit           string
 	BorderlessFullscreen  bool
@@ -152,6 +153,7 @@ type application struct {
 	gameWorldSpawns      map[int][2]float64
 	activeWorldLevel     int
 	loading              *loadcore.Coordinator
+	pointerAcceptance    *pointerMovementAcceptance
 
 	components   *host.Manager
 	engineHost   *host.Host

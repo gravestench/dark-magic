@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-panels capture-blood-moor capture-act1-seam play-game-world
+.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam play-game-world
 
 test:
 	go test ./...
@@ -41,15 +41,19 @@ PRESENTATION_PROFILE ?=
 START_OVERLAYS ?=
 FIXTURE_WORLD_LEVEL ?= 1
 FIXTURE_WORLD_SPAWN ?= entry
+FIXTURE_POINTER_MOVE ?= 0
 CAPTURE_SETTLE ?= 10
 
 capture:
-	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --start-overlays "$(START_OVERLAYS)" --fixture-characters "$(FIXTURE_CHARACTERS)" --fixture-world-level "$(FIXTURE_WORLD_LEVEL)" --fixture-world-spawn "$(FIXTURE_WORLD_SPAWN)" --presentation-profile "$(PRESENTATION_PROFILE)"
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --start-overlays "$(START_OVERLAYS)" --fixture-characters "$(FIXTURE_CHARACTERS)" --fixture-world-level "$(FIXTURE_WORLD_LEVEL)" --fixture-world-spawn "$(FIXTURE_WORLD_SPAWN)" --fixture-pointer-move="$(FIXTURE_POINTER_MOVE)" --presentation-profile "$(PRESENTATION_PROFILE)"
 
 # These focused entry points always select a deterministic character fixture.
 # MPQ_DIRECTORY still points at the user's legally obtained content.
 capture-game-world:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
+
+capture-game-world-movement:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_POINTER_MOVE=1 CAPTURE_SETTLE=30
 
 capture-blood-moor:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 CAPTURE_SETTLE=60

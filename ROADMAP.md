@@ -1096,7 +1096,13 @@ focus must not replace pointer coordinates as the authoritative client request.
   retaining axis-separated wall sliding. COF shadow-enabled components now use
   the baseline-anchored half-height/shear projection corroborated by Riiablo and
   OpenDiablo2, with center-preserving animation canvases and exact pixel probes.
-  Remaining acceptance is native live-input/capture coverage, broader
+  `make capture-game-world-movement` now injects one ordinary logical primary
+  pointer frame at the native application boundary, waits for copied
+  authoritative player position to move and settle, then records the
+  production-asset frame. This exercises Lua screen-to-world projection, the
+  replayable command source, collision-aware pathing, fixed-tick ECS movement,
+  camera tracking, and composite presentation without a fixture-only movement
+  command or direct state mutation. Remaining acceptance is broader
   collision/pathing refinement, richer imported equipment recipes under M19.4, and enough
   play testing to make the slice comfortable and visually stable. Continue
   NPC/quest/vendor interaction breadth only after that point.
