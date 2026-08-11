@@ -35,6 +35,10 @@ local function index_of(values, wanted)
     return 1
 end
 
+local function file_name(path)
+    return tostring(path or ""):match("([^/]+)$") or tostring(path or "")
+end
+
 function lab:random_asset()
     if #self.assets == 0 then return end
     self.random_state = (self.random_state * 48271) % 2147483647
@@ -92,7 +96,7 @@ function lab:rebuild()
         self:fit()
         self:position_map()
         self.map_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", width, height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", file_name(self.path), width, height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
     else
         self.map_node:set_visible(false)
@@ -118,7 +122,7 @@ function lab:update()
     if input.pressed("space") then self:fit(); moved = true end
     if moved then
         self:position_map()
-        text.set(self.status, "font_lab_color", string.format("[white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", file_name(self.path), self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
     end
 end
 

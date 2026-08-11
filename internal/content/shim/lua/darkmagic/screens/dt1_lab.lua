@@ -32,6 +32,10 @@ local function index_of(values, wanted)
     return 1
 end
 
+local function file_name(path)
+    return tostring(path or ""):match("([^/]+)$") or tostring(path or "")
+end
+
 function lab:random_asset()
     if #self.assets == 0 then return end
     self.random_state = (self.random_state * 48271) % 2147483647
@@ -46,7 +50,8 @@ function lab:create()
     self.tile_node:set_position(400, 315)
     self.title = label(self.root, "DT1 TILE LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 64, "font_lab_color")
-    self.detail = label(self.root, "", 510, "font_lab_color")
+    self.source = label(self.root, "", 486, "font_lab_color")
+    self.detail = label(self.root, "", 516, "font_lab_color")
     self.help = label(self.root, "Left/Right: tile   Home/End: -/+10   Up/Down: view   Page Up/Down: palette   Enter: random DT1", 560)
     self.path = tostring(dev.option("dt1_path") or "")
     self.palette = tostring(dev.option("dt1_palette") or "")
@@ -63,6 +68,7 @@ function lab:rebuild()
     if self.path == "" then
         self.tile_node:set_visible(false)
         text.set(self.status, "font_lab_color", "[gold]NO DT1 SELECTED", 760, "center")
+        text.set(self.source, "font_lab_color", "", 760, "center")
         text.set(self.detail, "font_lab_color", "[white]Pass --dt1-path and optionally --dt1-palette/--dt1-tile/--dt1-view", 760, "center")
         self.dirty = false
         return
@@ -81,11 +87,13 @@ function lab:rebuild()
         -- it twice and push tall wall tiles off the top of the window.
         self.tile_node:set_position(400, 105 + 370 / 2)
         self.tile_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[white]tile %d / %d   [blue]%s   [green]ACT%d   [white]%dx%d", self.index, self.total - 1, view, self.palette_index, width, height), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]tile %d / %d   [blue]%s   [green]ACT%d   [white]%dx%d", file_name(self.path), self.index, self.total - 1, view, self.palette_index, width, height), 760, "center")
+        text.set(self.source, "font_lab_color", "[white]" .. self.path, 760, "center")
         text.set(self.detail, "font_lab_color", string.format("[white]type/style/sequence %d/%d/%d   dir %d   rarity %d   blocks %d   source %dx%d   roof %d", metadata.type, metadata.style, metadata.sequence, metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height, metadata.roof_height), 760, "center")
     else
         self.tile_node:set_visible(false)
         text.set(self.status, "font_lab_color", "[red]DT1 ERROR", 760, "center")
+        text.set(self.source, "font_lab_color", "[white]" .. self.path, 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. tostring(width), 760, "center")
     end
     self.dirty = false
