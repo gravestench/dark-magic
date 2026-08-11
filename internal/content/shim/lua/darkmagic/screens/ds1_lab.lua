@@ -33,15 +33,6 @@ local function label(root, value, y, style)
     return node
 end
 
-local function split_paths(value)
-    local result = {}
-    for path in tostring(value or ""):gmatch("[^,]+") do
-        path = path:match("^%s*(.-)%s*$")
-        if path ~= "" then table.insert(result, path) end
-    end
-    return result
-end
-
 local function index_of(values, wanted)
     wanted = tostring(wanted or ""):lower()
     for index, value in ipairs(values) do if value:lower() == wanted then return index end end
@@ -125,9 +116,9 @@ function lab:create()
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
     self.help = label(self.root, "Tab: layer   F3: collision   Arrows/drag: pan   Scroll/Home/End: zoom   PgUp/PgDn: palette   Space: fit", 565)
-    self.path = tostring(dev.option("ds1_path") or "")
-    self.tiles = split_paths(dev.option("ds1_tiles"))
-    self.palette = tostring(dev.option("ds1_palette") or "")
+	self.path = ""
+	self.tiles = {}
+	self.palette = palettes[1]
     self.palette_index = index_of(palettes, self.palette)
     self.palette = palettes[self.palette_index]
     self:infer_palette()
@@ -138,7 +129,7 @@ function lab:create()
 	self.high_resolution_scroll_frames = 0
     self.layer_view = 0
     self.collision_visible = false
-    self:queue_preview()
+	self:random_asset()
 end
 
 function lab:fit()
@@ -248,7 +239,7 @@ function lab:rebuild()
         self.map_root:set_visible(false)
         self:clear_chunks()
         text.set(self.status, "font_lab_color", "[gold]NO DS1 RECIPE SELECTED", 760, "center")
-        text.set(self.detail, "font_lab_color", "[white]Pass --ds1-path and comma-separated --ds1-tiles (plus the act palette if needed)", 760, "center")
+		text.set(self.detail, "font_lab_color", "[white]No mounted DS1 recipe with neighboring DT1 assets was found", 760, "center")
         self.dirty = false
         return
     end

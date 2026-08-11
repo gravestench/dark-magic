@@ -172,7 +172,7 @@ function lab:start_gallery()
     self.building = self.path ~= ""
     if not self.building then
         text.set(self.status, "font_lab_color", "[gold]NO DT1 SELECTED", 760, "center")
-        text.set(self.source, "font_lab_color", "[white]Pass --dt1-path (and optionally --dt1-palette/--dt1-tile)", 760, "center")
+		text.set(self.source, "font_lab_color", "[white]No mounted DT1 assets were found", 760, "center")
         return
     end
     text.set(self.status, "font_lab_color", "[gold]LOADING [blue]" .. file_name(self.path), 760, "center")
@@ -332,12 +332,12 @@ function lab:create()
         style="dt1_lab_tooltip", max_width=310, origin_x="left", origin_y="top", alpha=192,
     })
 
-    self.path = tostring(dev.option("dt1_path") or "")
-    self.palette = tostring(dev.option("dt1_palette") or "")
+	self.path = ""
+	self.palette = palettes[1]
     self.palette_index = index_of(palettes, self.palette)
     self.palette = palettes[self.palette_index]
     self:infer_palette()
-    self.index = math.max(0, tonumber(dev.option("dt1_tile")) or 0)
+	self.index = 0
     self.assets = vfs.list("data/global/tiles", ".dt1") or {}
     self.random_state = dev.seed()
     self.tile_nodes = {}
@@ -345,7 +345,7 @@ function lab:create()
     self.view_mode = "gallery"
     self.dragging, self.drag_x, self.drag_y = false, 0, 0
     self.high_resolution_scroll_frames = 0
-    self:start_gallery()
+	self:random_asset()
 end
 
 function lab:update()
