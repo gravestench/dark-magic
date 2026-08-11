@@ -84,6 +84,7 @@ func (bounds Bounds) valid() bool { return bounds.Width > 0 && bounds.Height > 0
 type Stamp struct {
 	ID           uint32
 	PresetDef    int
+	Role         string
 	X, Y         int
 	Width        int
 	Height       int

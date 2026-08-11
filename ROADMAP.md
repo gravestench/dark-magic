@@ -889,9 +889,14 @@ complete until its actions are driven by authoritative game state and commands.
   merge probability, normalized bounds, connectivity, and stable checksums.
   Every ordinary room's W/E/S/N mask selects the verified contiguous Act I Cave
   LvlPrest definition (53..67) and a purpose-stream variant. Mapgen Lab draws
-  the topology without decoding assets. Special/quest/exit room replacement,
-  exact legacy RNG call order, and other LevelType chamber sets remain explicit
-  follow-up fidelity work.
+  the topology without decoding assets. Other LevelType chamber sets remain
+  explicit follow-up asset-interpretation work. Dark Magic intentionally does
+  not target legacy seed compatibility or reproduction of original layouts.
+- [x] M20.9: Reserve deterministic maze endpoints for previous-level and
+  next-level roles, keep merge loops from consuming those one-door leaves, and
+  replace ordinary rooms with the direction-compatible Act I Cave Prev/Next
+  LvlPrest definitions 83..90. Mapgen Lab distinguishes both roles while the
+  immutable zone recipe exposes them to future warp materialization.
 
 ## M21: Diablo simulation
 

@@ -64,6 +64,8 @@ function lab:draw_topology(zone)
     local left, top = 400 - zone.width * scale / 2, 155
     local by_id = {}
     for _, room in ipairs(zone.rooms) do by_id[room.id] = room end
+    local roles = {}
+    for _, stamp in ipairs(zone.stamps) do roles[stamp.id] = stamp.role end
     local function rectangle(width, height, x, y, r, g, b, a)
         local node = render.create("hud", self.root)
         node:fill_rect(math.max(2, width), math.max(2, height), r, g, b, a)
@@ -79,9 +81,13 @@ function lab:draw_topology(zone)
         rectangle(math.abs(bx - ax) + 4, math.abs(by - ay) + 4, (ax + bx) / 2, (ay + by) / 2, 96, 96, 160, 220)
     end
     for _, room in ipairs(zone.rooms) do
+        local role = roles[room.stamp_id]
+        local r, g, b = 70, 95, 130
+        if role == "previous-level" then r, g, b = 55, 125, 80 end
+        if role == "next-level" then r, g, b = 145, 105, 45 end
         rectangle(room.width * scale - 3, room.height * scale - 3,
             left + (room.x + room.width / 2) * scale,
-            top + (room.y + room.height / 2) * scale, 70, 95, 130, 240)
+            top + (room.y + room.height / 2) * scale, r, g, b, 240)
     end
 end
 
