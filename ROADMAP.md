@@ -1231,9 +1231,20 @@ data owners; they do not introduce parallel gameplay authorities.
   request at melee range. Target memory, tactical state, and deadlines are all
   ordinary snapshot/checksum fields. Exact family-specific AI, LOS, threat,
   faction effects, and legacy fallback cadence remain later verified policy.
-- [ ] **M21.5: Basic melee transaction.** Resolve legal target, hit/miss,
+- [x] **M21.5: Basic melee transaction.** Resolve legal target, hit/miss,
   physical damage, HP, and semantic hit/death events using synthetic verified
   vectors. Advanced avoidance, mitigation, leech, poison, and PvP remain probes.
+  The combat-phase transaction consumes and removes AI attack requests, checks
+  stable target identity plus authoritative act/level/range, applies an explicit
+  synthetic hit policy and deterministic purpose-separated rolls, rolls the
+  typed fixed-point physical range, mutates the target's existing HP authority,
+  and emits ordered attempt, hit-resolution, damage, and death records. Monster
+  HP remains raw fixed-point; the current whole-point player-vitals schema uses
+  an explicit exact adapter that rejects fractional write-back rather than
+  rounding silently. The hit policy is Dark Magic scaffolding—not a legacy
+  chance-to-hit claim—and defense, block, avoidance, mitigation, criticals,
+  leech, secondary states, player attacks, and the full death transaction stay
+  in their documented verification/dependency queues.
 - [ ] **M21.6: Consume assigned skill intent.** Resolve the existing
   `dm.player.skill_intent` into one deterministic cast request with assigned
   skill and learned level read exactly once.
