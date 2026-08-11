@@ -69,7 +69,7 @@ func cloneStates(states map[int32]InputState) map[int32]InputState {
 func (s *Service) updateKeyboardState() {
 	s.mux.Lock()
 	for _, key := range s.normalKeyCodes() {
-		s.keyStates[key] = currentKeyState(key)
+		s.keyStates[key] = currentKeyState(key, repeatsWhenHeld(key))
 	}
 	s.mux.Unlock()
 }
@@ -77,7 +77,7 @@ func (s *Service) updateKeyboardState() {
 func (s *Service) updateKeyboardModifierState() {
 	s.mux.Lock()
 	for _, key := range s.modifierKeyCodes() {
-		s.keyModStates[key] = currentKeyState(key)
+		s.keyModStates[key] = currentKeyState(key, false)
 	}
 	s.mux.Unlock()
 }
@@ -125,8 +125,8 @@ func (s *Service) updateMouseButtonState() {
 	s.mux.Unlock()
 }
 
-func currentKeyState(key int32) InputState {
-	if rl.IsKeyPressed(key) {
+func currentKeyState(key int32, repeat bool) InputState {
+	if rl.IsKeyPressed(key) || repeat && rl.IsKeyPressedRepeat(key) {
 		return StatePressed
 	}
 	if rl.IsKeyReleased(key) {
@@ -136,6 +136,20 @@ func currentKeyState(key int32) InputState {
 		return StateDown
 	}
 	return StateUp
+}
+
+// repeatsWhenHeld follows ordinary desktop behavior: navigation and editing
+// keys repeat after Raylib's platform-style initial delay, while activation,
+// cancellation, toggles, and function keys remain one-shot.
+func repeatsWhenHeld(key int32) bool {
+	switch key {
+	case rl.KeyBackspace, rl.KeyDelete, rl.KeyInsert,
+		rl.KeyRight, rl.KeyLeft, rl.KeyDown, rl.KeyUp,
+		rl.KeyPageUp, rl.KeyPageDown, rl.KeyHome, rl.KeyEnd:
+		return true
+	default:
+		return false
+	}
 }
 
 func (*Service) normalKeyCodes() []int32 {

@@ -115,7 +115,7 @@ function lab:create()
     self.random_state = dev.seed()
 	self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
 	self.dragging, self.drag_x, self.drag_y = false, 0, 0
-	self.scroll_remainder = 0
+	self.high_resolution_scroll_frames = 0
     self:queue_preview()
 end
 
@@ -134,8 +134,8 @@ function lab:position_map()
     self.map_node:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
 end
 
-function lab:set_zoom(value, anchor_x, anchor_y)
-    local next_zoom = quantized_zoom(value)
+function lab:set_zoom(value, anchor_x, anchor_y, continuous)
+    local next_zoom = continuous and math.max(0.01, math.min(4, value)) or quantized_zoom(value)
     if next_zoom == self.zoom then return false end
     anchor_x, anchor_y = anchor_x or 400, anchor_y or (95 + 430 / 2)
     local center_x, center_y = 400 + self.pan_x, 95 + 430 / 2 + self.pan_y
@@ -163,7 +163,7 @@ function lab:rebuild()
         self:fit()
         self:position_map()
         self.map_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", file_name(self.path), width, height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), width, height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
     else
         self.map_node:set_visible(false)
@@ -206,18 +206,18 @@ function lab:update()
         and pointer_y >= preview.top and pointer_y <= preview.bottom
     local _, scroll_y = input.scroll()
     if scroll_y ~= 0 and pointer_inside then
-        -- Wheels report whole units. macOS trackpads report small fractional
-        -- deltas, so accumulate and gently amplify only those fractions instead
-        -- of throwing their high-resolution movement away.
-        local scroll_units = math.abs(scroll_y) < 1 and scroll_y * 4 or scroll_y
-        self.scroll_remainder = self.scroll_remainder + scroll_units
-        local steps = 0
-        if self.scroll_remainder >= 1 then steps = math.floor(self.scroll_remainder) end
-        if self.scroll_remainder <= -1 then steps = math.ceil(self.scroll_remainder) end
-        if steps ~= 0 then
-            self.scroll_remainder = self.scroll_remainder - steps
-            moved = self:set_zoom(self.zoom + steps * zoom_step, pointer_x, pointer_y) or moved
+        local fractional = math.abs(scroll_y - math.floor(scroll_y + 0.5)) > 0.0001
+        if fractional then self.high_resolution_scroll_frames = 8 end
+        if self.high_resolution_scroll_frames > 0 then
+            -- Trackpads are an analog gesture. Multiplicative zoom feels even at
+            -- every scale and deliberately bypasses the discrete 0.05 grid.
+            moved = self:set_zoom(self.zoom * math.exp(scroll_y * 0.12), pointer_x, pointer_y, true) or moved
+        else
+            -- A notched wheel remains predictable: one notch, one 0.05 step.
+            moved = self:set_zoom(self.zoom + scroll_y * zoom_step, pointer_x, pointer_y, false) or moved
         end
+    elseif self.high_resolution_scroll_frames > 0 then
+        self.high_resolution_scroll_frames = self.high_resolution_scroll_frames - 1
     end
     if input.pressed("pointer_primary") and pointer_inside then
         self.dragging, self.drag_x, self.drag_y = true, pointer_x, pointer_y
@@ -233,7 +233,7 @@ function lab:update()
     end
     if moved then
         self:position_map()
-        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", file_name(self.path), self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
     end
 end
 
