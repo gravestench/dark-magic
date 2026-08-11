@@ -18,19 +18,6 @@ local recipes = {
     {token="AM", weapon="1HS", appearance={RH="SSD"}},
 }
 
-local function upper(value, fallback)
-    value = tostring(value or fallback or ""):upper()
-    return value ~= "" and value or fallback
-end
-
-local function parse_components(value)
-    local result = {}
-    for component, appearance in tostring(value or ""):gmatch("([%w]+)%s*=%s*([%w]+)") do
-        result[component:upper()] = appearance:upper()
-    end
-    return result
-end
-
 local function label(root, value, y, style)
     local node = render.create("hud", root)
     local _, height = text.set(node, style or "font_lab_caption", value, 760, "center")
@@ -61,7 +48,6 @@ end
 function lab:create()
     -- Load the development capability only when this lab is actually opened.
     -- Shipping/test boots may register the scene without granting dev options.
-    local dev = require("dm.dev/v1")
     self.root = render.create("hud")
     self.actor = render.create("hud", self.root)
     self.actor:set_position(400, 345)
@@ -71,17 +57,16 @@ function lab:create()
     self.help = label(self.root, "Left/Right: direction   Up/Down: mode   Page Up/Down: class   Enter: recipe   Space: play   Home/End: frame", 548)
     self.detail = label(self.root, "", 574)
 
-    self.token_index = index_of(tokens, upper(dev.option("composite_token"), "AM"))
-    self.mode_index = index_of(modes, upper(dev.option("composite_mode"), "NU"))
-    self.weapon = upper(dev.option("composite_weapon"), "HTH")
+	self.token_index = index_of(tokens, "AM")
+	self.mode_index = index_of(modes, "NU")
+	self.weapon = "HTH"
     -- Lab-facing direction is deliberately a plain spatial index. Asset-facing
     -- direction codes stay hidden behind the lookup below.
-    self.direction = math.max(0, math.min(15, tonumber(dev.option("composite_direction")) or 0))
-    self.appearance = parse_components(dev.option("composite_components"))
-    self.frame = tonumber(dev.option("composite_frame")) or -1
+	self.direction = 0
+	self.appearance = {}
+	self.frame = -1
     self.playing, self.dirty = self.frame < 0, true
     self.playback_seconds = 0
-    if dev.option("composite_random") then self:choose_random() end
 end
 
 function lab:rebuild()

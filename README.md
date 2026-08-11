@@ -383,31 +383,25 @@ Open the integrated composite animation laboratory against mounted MPQs with:
 
 ```shell
 MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
-  --start-scene=composite_lab \
-  --composite-token=AM --composite-mode=WL --composite-weapon=1HS \
-  --composite-direction=3 --composite-components=RH=SSD --composite-frame=0
+  --start-scene=composite_lab
 ```
 
 Use Left/Right to increment or decrement the logical `0..15` player direction,
 Up/Down for NU/WL/RN mode, Page Up/Down
 for player class, Space to pause/play, Home/End to step frames, and Enter to cycle deterministic coherent
-recipes. `--composite-random` selects from that verified recipe set at startup;
-it deliberately does not fabricate arbitrary archive names. The corresponding
-`DARK_MAGIC_COMPOSITE_TOKEN`, `MODE`, `WEAPON`, and `COMPONENTS` environment
-variables make repeatable local captures convenient.
+recipes. The lab owns its defaults and selection state; no composite-specific
+arguments leak through the production client composition root.
 
 Browse a DT1 tileset through the engine's lazy tile decoder with:
 
 ```shell
 MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
-  --start-scene=dt1_lab \
-  --dt1-path=data/global/tiles/Act1/BARRACKS/floor.dt1 \
-  --dt1-palette=data/global/palette/ACT1/pal.dat --dt1-tile=0
+  --start-scene=dt1_lab
 ```
 
 The lab incrementally lays out every tile as a centered, labeled gallery cell
 and initially fits the complete grid. Tab toggles between that grid and a
-readable 1x view centered on `--dt1-tile`. Arrow keys or pointer dragging pan
+readable 1x view centered on the selected tile. Arrow keys or pointer dragging pan
 the current view, scroll and Home/End zoom it, Space returns to and recenters
 the fitted grid, Page Up/Down cycles Act palettes, and Enter selects another mounted DT1
 through a deterministic random sequence. Hovering a tile shows an unscaled,
@@ -420,18 +414,14 @@ Open a DS1 stamp with its authored DT1 sources using:
 
 ```shell
 MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
-  --start-scene=ds1_lab \
-  --ds1-path=data/global/tiles/Act1/BARRACKS/barE.ds1 \
-  --ds1-tiles=data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \
-  --ds1-palette=data/global/palette/ACT1/pal.pl2
+  --start-scene=ds1_lab
 ```
 
 Arrow keys pan, Home/End zooms, Space fits the complete stamp, Page Up/Down
-cycles Act palettes, and Enter deterministically selects a mounted DS1 plus the
-DT1 files from its directory. Equivalent
-`DARK_MAGIC_DT1_*` and `DARK_MAGIC_DS1_*` environment variables support repeatable
-captures. The scenes can be captured as `dt1_lab` and `ds1_lab` through the
-ordinary capture flags.
+cycles Act palettes, and Enter selects a mounted DS1 plus the DT1 files from its
+directory. Both map labs discover their mounted assets themselves and open with
+a useful selection. The scenes can be captured as `dt1_lab` and `ds1_lab`
+through the ordinary capture flags.
 
 `--start-scene=mapgen_lab` opens the pointer-driven generation proof. It shows
 the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and
