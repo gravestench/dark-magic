@@ -54,7 +54,10 @@ end
 
 function lab:draw_topology(zone)
     for _, node in ipairs(self.topology_nodes or {}) do
-        if node:exists() then node:destroy() end
+        -- Every entry is a live node created by the previous draw and each list
+        -- is discarded immediately below. Render nodes expose destroy(), not an
+        -- exists() query; calling that invented method crashed the second seed.
+        node:destroy()
     end
     self.topology_nodes = {}
     local scale = math.min(640 / math.max(1, zone.width), 190 / math.max(1, zone.height))
