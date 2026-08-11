@@ -23,6 +23,9 @@ const (
 	// BehaviorStraightMissile emits the same semantic effect event; the missile
 	// authority consumes it using a separately verified projectile definition.
 	BehaviorStraightMissile = "basic.straight_missile"
+	// BehaviorBasicMelee emits a target-unit effect for combat's shared melee
+	// transaction. The skill layer schedules the action but never applies damage.
+	BehaviorBasicMelee = "basic.melee"
 
 	EventCastStarted     = "cast_started"
 	EventSkillEffect     = "skill_effect"
@@ -68,7 +71,7 @@ func NewRegistry(definitions ...Definition) (Registry, error) {
 }
 
 func supportedBehavior(behavior string) bool {
-	return behavior == BehaviorPointEvent || behavior == BehaviorStraightMissile
+	return behavior == BehaviorPointEvent || behavior == BehaviorStraightMissile || behavior == BehaviorBasicMelee
 }
 
 func castStateSchema() akara.Schema {

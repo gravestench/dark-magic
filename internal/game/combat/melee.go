@@ -12,7 +12,9 @@ import (
 
 const (
 	BasicMeleeSystemID = "combat.basic_melee"
-	BasicAttackRequest = "dm.monster.basic_attack_request"
+	BasicAttackRequest = "dm.combat.basic_attack_request"
+	MeleeProfile       = "dm.combat.melee_profile"
+	BasicAttackReceipt = "dm.combat.basic_attack_receipt"
 	CombatEvent        = "dm.combat.event"
 
 	EventAttackAttempted = "attack_attempted"
@@ -54,27 +56,28 @@ func RegisterBasicMelee(engine *gameecs.Engine, policy BasicMeleePolicy) error {
 	if err := policy.validate(); err != nil {
 		return err
 	}
-	requests, events, selectables, positions, locations, monsterStats, playerVitals, err := registerMeleeStores(engine)
+	requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals, err := registerMeleeStores(engine)
 	if err != nil {
 		return err
 	}
 	return engine.Register(gameecs.Definition{
 		ID: BasicMeleeSystemID, Phase: gameecs.PhaseCombat,
-		All:   []akara.ComponentType{requests, selectables, positions, locations, monsterStats},
-		Read:  []akara.ComponentType{requests, selectables, positions, locations},
+		All:   []akara.ComponentType{requests, selectables, positions, locations, profiles},
+		Read:  []akara.ComponentType{requests, selectables, positions, locations, profiles},
 		Write: []akara.ComponentType{requests, events, monsterStats, playerVitals},
 		Update: func(context gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer) error {
-			return resolveMelee(context, entities, commands, engine.World(), policy, requests, events, selectables, positions, locations, monsterStats, playerVitals)
+			return resolveMelee(context, entities, commands, engine.World(), policy, requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals)
 		},
 	})
 }
 
-func registerMeleeStores(engine *gameecs.Engine) (requests, events, selectables, positions, locations, monsterStats, playerVitals *akara.DynamicStore, err error) {
+func registerMeleeStores(engine *gameecs.Engine) (requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals *akara.DynamicStore, err error) {
 	schemas := []akara.Schema{
-		{Name: BasicAttackRequest, Version: 1, Fields: []akara.Field{{Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64}, {Name: "range", Kind: akara.FieldFloat64}}},
+		{Name: BasicAttackRequest, Version: 1, Fields: []akara.Field{{Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64}}},
 		eventSchema(), targeting.Schema(),
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
 		{Name: "dm.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
+		{Name: MeleeProfile, Version: 1, Fields: []akara.Field{{Name: "range", Kind: akara.FieldFloat64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}}},
 		{Name: "dm.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
 	}
@@ -82,13 +85,13 @@ func registerMeleeStores(engine *gameecs.Engine) (requests, events, selectables,
 	for index, schema := range schemas {
 		stores[index], err = akara.RegisterSchema(engine.World(), schema)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 	}
-	return stores[0], stores[1], stores[2], stores[3], stores[4], stores[5], stores[6], nil
+	return stores[0], stores[1], stores[2], stores[3], stores[4], stores[5], stores[6], stores[7], nil
 }
 
-func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *akara.CommandBuffer, world *akara.World, policy BasicMeleePolicy, requests, events, selectables, positions, locations, monsterStats, playerVitals *akara.DynamicStore) error {
+func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *akara.CommandBuffer, world *akara.World, policy BasicMeleePolicy, requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals *akara.DynamicStore) error {
 	for _, attacker := range attackers {
 		request, _ := requests.Get(attacker)
 		targetID, _ := request.Get("target_id")
@@ -96,7 +99,8 @@ func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *a
 		if requestTick.(int64) > int64(context.Tick) {
 			return fmt.Errorf("combat: attack request is from future tick %d", requestTick.(int64))
 		}
-		attackRange, _ := request.Get("range")
+		profile, _ := profiles.Get(attacker)
+		attackRange, _ := profile.Get("range")
 		attackerID, legalTarget, err := legalMeleeTarget(attacker, targetID.(string), attackRange.(float64), selectables, positions, locations)
 		commands.Remove(requests, attacker)
 		if err != nil {
@@ -112,9 +116,8 @@ func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *a
 		if !hit {
 			continue
 		}
-		attackerComponent, _ := monsterStats.Get(attacker)
-		minimum, _ := attackerComponent.Get("physical_min")
-		maximum, _ := attackerComponent.Get("physical_max")
+		minimum, _ := profile.Get("physical_min")
+		maximum, _ := profile.Get("physical_max")
 		damage, err := rollDamage(FromRaw(minimum.(int64)), FromRaw(maximum.(int64)), stableRoll("damage", context.Tick, attackerID, targetID.(string)))
 		if err != nil {
 			return err
@@ -218,7 +221,7 @@ func ApplyPhysical(engine *gameecs.Engine, entity akara.Entity, damage Amount) (
 	if engine == nil || damage < 0 {
 		return 0, false, fmt.Errorf("combat: engine and non-negative damage are required")
 	}
-	_, _, _, _, _, monsters, players, err := registerMeleeStores(engine)
+	_, _, _, _, _, _, monsters, players, err := registerMeleeStores(engine)
 	if err != nil {
 		return 0, false, err
 	}
@@ -241,7 +244,7 @@ func ApplyConfirmedDamage(engine *gameecs.Engine, commands *akara.CommandBuffer,
 	if !channel.valid() || damage < 0 {
 		return 0, false, fmt.Errorf("combat: confirmed impact requires a valid channel and non-negative damage")
 	}
-	_, events, _, _, _, _, _, err := registerMeleeStores(engine)
+	_, events, _, _, _, _, _, _, err := registerMeleeStores(engine)
 	if err != nil {
 		return 0, false, err
 	}

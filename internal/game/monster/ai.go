@@ -14,7 +14,7 @@ import (
 const (
 	AISystemID           = "monster.basic_ai"
 	AIComponent          = "dm.monster.ai"
-	BasicAttackComponent = "dm.monster.basic_attack_request"
+	BasicAttackComponent = "dm.combat.basic_attack_request"
 	AIIdle               = "idle"
 	AIChase              = "chase"
 	AIAttack             = "attack"
@@ -37,7 +37,7 @@ func aiSchema() akara.Schema {
 
 func attackSchema() akara.Schema {
 	return akara.Schema{Name: BasicAttackComponent, Version: 1, Fields: []akara.Field{
-		{Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64}, {Name: "range", Kind: akara.FieldFloat64},
+		{Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64},
 	}}
 }
 
@@ -130,7 +130,7 @@ func updateAI(context gameecs.Context, entities []akara.Entity, commands *akara.
 			if err := setVelocity(velocity, 0, 0); err != nil {
 				return err
 			}
-			commands.AddDynamic(attacks, entity, map[string]any{"target_id": target.id, "request_tick": int64(context.Tick), "range": attackRange.(float64)})
+			commands.AddDynamic(attacks, entity, map[string]any{"target_id": target.id, "request_tick": int64(context.Tick)})
 			continue
 		}
 		if err := setBrain(brain, AIChase, target.id); err != nil {

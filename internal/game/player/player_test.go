@@ -75,6 +75,16 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if weaponClass, _ := appearance.Get("weapon_class"); weaponClass != "HTH" {
 		t.Fatalf("weapon class = %v, want HTH", weaponClass)
 	}
+	meleeStore, found := akara.GetDynamicStore(engine.World(), "dm.combat.melee_profile")
+	if !found {
+		t.Fatal("melee profile store was not materialized")
+	}
+	melee, _ := meleeStore.Get(entity)
+	minimum, _ := melee.Get("physical_min")
+	maximum, _ := melee.Get("physical_max")
+	if minimum != int64(256) || maximum != int64(512) {
+		t.Fatalf("unarmed damage = %v..%v raw, want 256..512", minimum, maximum)
+	}
 	beltStore, found := akara.GetDynamicStore(engine.World(), "dm.player.belt")
 	if !found {
 		t.Fatal("belt store was not materialized")

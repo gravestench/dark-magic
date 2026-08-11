@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/gravestench/akara"
+	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -25,31 +27,34 @@ const localEntryActor = "system:local-player-entry"
 // Entry is the complete validated intent needed to create the initial player
 // archetype. After application, ECS components—not this payload—are live state.
 type Entry struct {
-	CharacterID string  `json:"character_id"`
-	Player      string  `json:"player"`
-	Name        string  `json:"name"`
-	Class       string  `json:"class"`
-	Level       int64   `json:"level"`
-	Experience  int64   `json:"experience"`
-	Health      int64   `json:"health"`
-	MaxHealth   int64   `json:"max_health"`
-	Mana        int64   `json:"mana"`
-	MaxMana     int64   `json:"max_mana"`
-	Expansion   bool    `json:"expansion"`
-	Hardcore    bool    `json:"hardcore"`
-	COF         string  `json:"cof"`
-	Token       string  `json:"token"`
-	Palette     string  `json:"palette"`
-	Direction   int64   `json:"direction"`
-	Mode        string  `json:"mode"`
-	WeaponClass string  `json:"weapon_class"`
-	X           float64 `json:"x"`
-	Y           float64 `json:"y"`
-	WorldWidth  float64 `json:"world_width"`
-	WorldHeight float64 `json:"world_height"`
-	Act         int64   `json:"act"`
-	LevelID     int64   `json:"level_id"`
-	Skills      []Skill `json:"skills,omitempty"`
+	CharacterID    string  `json:"character_id"`
+	Player         string  `json:"player"`
+	Name           string  `json:"name"`
+	Class          string  `json:"class"`
+	Level          int64   `json:"level"`
+	Experience     int64   `json:"experience"`
+	Health         int64   `json:"health"`
+	MaxHealth      int64   `json:"max_health"`
+	Mana           int64   `json:"mana"`
+	MaxMana        int64   `json:"max_mana"`
+	Expansion      bool    `json:"expansion"`
+	Hardcore       bool    `json:"hardcore"`
+	COF            string  `json:"cof"`
+	Token          string  `json:"token"`
+	Palette        string  `json:"palette"`
+	Direction      int64   `json:"direction"`
+	Mode           string  `json:"mode"`
+	WeaponClass    string  `json:"weapon_class"`
+	MeleeRange     float64 `json:"melee_range"`
+	PhysicalMinRaw int64   `json:"physical_min_raw"`
+	PhysicalMaxRaw int64   `json:"physical_max_raw"`
+	X              float64 `json:"x"`
+	Y              float64 `json:"y"`
+	WorldWidth     float64 `json:"world_width"`
+	WorldHeight    float64 `json:"world_height"`
+	Act            int64   `json:"act"`
+	LevelID        int64   `json:"level_id"`
+	Skills         []Skill `json:"skills,omitempty"`
 }
 
 // Skill is one learned action admitted with the character. Presentation may
@@ -182,7 +187,10 @@ func (source *EntrySource) entered(characterID string) bool {
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
-	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
+	// D2MOO confirms that the damage pipeline synthesizes an unarmed/default
+	// range when no weapon contributes one. The narrow 1-2 profile is explicit
+	// admission scaffolding until equipped item/stat sources replace it.
+	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", MeleeRange: 2, PhysicalMinRaw: gamecombat.MustWhole(1).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(2).Raw(), X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
@@ -282,6 +290,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.identity, map[string]any{"character_id": entry.CharacterID, "player": entry.Player, "name": entry.Name, "class": entry.Class}},
 		{stores.progress, map[string]any{"level": entry.Level, "experience": entry.Experience}},
 		{stores.vitals, map[string]any{"health": entry.Health, "max_health": entry.MaxHealth, "mana": entry.Mana, "max_mana": entry.MaxMana, "mana_raw": entry.Mana * 256, "max_mana_raw": entry.MaxMana * 256}},
+		{stores.melee, map[string]any{"range": entry.MeleeRange, "physical_min": entry.PhysicalMinRaw, "physical_max": entry.PhysicalMaxRaw}},
 		{stores.appearance, map[string]any{"cof": entry.COF, "token": entry.Token, "palette": entry.Palette, "weapon_class": entry.WeaponClass}},
 		{stores.animation, map[string]any{"direction": entry.Direction, "mode": entry.Mode}},
 		{stores.position, map[string]any{"x": entry.X, "y": entry.Y}},
@@ -344,7 +353,7 @@ func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) e
 }
 
 type stores struct {
-	identity, progress, vitals, appearance, animation                                                                     *akara.DynamicStore
+	identity, progress, vitals, melee, appearance, animation                                                              *akara.DynamicStore
 	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, location, collider, selectable *akara.DynamicStore
 }
 
@@ -353,6 +362,7 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
 		{Name: "dm.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
+		{Name: gamecombat.MeleeProfile, Version: 1, Fields: []akara.Field{{Name: "range", Kind: akara.FieldFloat64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}}},
 		{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
 		{Name: "dm.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
@@ -375,7 +385,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], skillIntent: registered[9], belt: registered[10], control: registered[11], bounds: registered[12], location: registered[13], collider: registered[14], selectable: registered[15]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], melee: registered[3], appearance: registered[4], animation: registered[5], position: registered[6], velocity: registered[7], movementMode: registered[8], skillAssignment: registered[9], skillIntent: registered[10], belt: registered[11], control: registered[12], bounds: registered[13], location: registered[14], collider: registered[15], selectable: registered[16]}, nil
 }
 
 func beltFields() []akara.Field {
@@ -404,6 +414,9 @@ func decodeEntry(encoded []byte) (Entry, error) {
 	if entry.Level < 1 || entry.Health < 0 || entry.MaxHealth < entry.Health || entry.Mana < 0 || entry.MaxMana < entry.Mana {
 		return Entry{}, fmt.Errorf("player: invalid progression or vitals")
 	}
+	if !validInitialMelee(entry) {
+		return Entry{}, fmt.Errorf("player: invalid initial melee profile")
+	}
 	if len(entry.Token) != 2 || entry.Palette == "" || entry.Mode != "NU" || entry.WeaponClass != "HTH" || entry.Direction < 0 || entry.Direction > 7 {
 		return Entry{}, fmt.Errorf("player: invalid initial composite appearance")
 	}
@@ -419,4 +432,13 @@ func decodeEntry(encoded []byte) (Entry, error) {
 		return Entry{}, fmt.Errorf("player: entry act and level are invalid")
 	}
 	return entry, nil
+}
+
+func validInitialMelee(entry Entry) bool {
+	if entry.MeleeRange <= 0 || math.IsNaN(entry.MeleeRange) || math.IsInf(entry.MeleeRange, 0) || entry.PhysicalMinRaw < 0 || entry.PhysicalMaxRaw < entry.PhysicalMinRaw {
+		return false
+	}
+	// The first melee roller deliberately supports whole authored endpoints.
+	// Reject fractional admission here instead of crashing on the first swing.
+	return entry.PhysicalMinRaw%int64(gamecombat.One) == 0 && entry.PhysicalMaxRaw%int64(gamecombat.One) == 0
 }
