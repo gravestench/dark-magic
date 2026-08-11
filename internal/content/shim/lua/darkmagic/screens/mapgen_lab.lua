@@ -94,6 +94,17 @@ function lab:draw_topology(zone)
             left + (room.x + room.width / 2) * scale,
             top + (room.y + room.height / 2) * scale, r, g, b, 240)
     end
+	-- Structural facts sit above the coarse rooms so they remain visible without
+	-- loading DS1 or DT1 graphics. Rivers are blue, cliffs are gray, and the
+	-- guaranteed passable bridge is gold.
+	for _, structure in ipairs(zone.structures or {}) do
+		local r, g, b = 35, 90, 170
+		if structure.kind == "cliff" then r, g, b = 110, 105, 95 end
+		if structure.kind == "bridge" then r, g, b = 205, 155, 55 end
+		rectangle(math.max(2, scale), math.max(2, scale),
+			left + (structure.x + 0.5) * scale,
+			top + (structure.y + 0.5) * scale, r, g, b, 255)
+	end
 end
 
 function lab:create()

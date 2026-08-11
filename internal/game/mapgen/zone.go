@@ -29,7 +29,10 @@ func (zone *Zone) Links() []Link     { return append([]Link(nil), zone.definitio
 func (zone *Zone) Warps() []Warp     { return append([]Warp(nil), zone.definition.Warps...) }
 func (zone *Zone) Spawns() []Spawn   { return append([]Spawn(nil), zone.definition.Spawns...) }
 func (zone *Zone) Paths() []PathTile { return append([]PathTile(nil), zone.definition.Paths...) }
-func (zone *Zone) Trace() []string   { return append([]string(nil), zone.definition.Trace...) }
+func (zone *Zone) Structures() []StructureTile {
+	return append([]StructureTile(nil), zone.definition.Structures...)
+}
+func (zone *Zone) Trace() []string { return append([]string(nil), zone.definition.Trace...) }
 
 // MarshalJSON is the canonical, versioned representation used by replays,
 // diagnostics, and server/client verification.
@@ -55,6 +58,7 @@ func cloneDefinition(source Definition) Definition {
 	result.Warps = append([]Warp(nil), source.Warps...)
 	result.Spawns = append([]Spawn(nil), source.Spawns...)
 	result.Paths = append([]PathTile(nil), source.Paths...)
+	result.Structures = append([]StructureTile(nil), source.Structures...)
 	result.Trace = append([]string(nil), source.Trace...)
 	return result
 }
@@ -83,5 +87,11 @@ func canonicalize(definition *Definition) {
 			return definition.Paths[i].X < definition.Paths[j].X
 		}
 		return definition.Paths[i].Y < definition.Paths[j].Y
+	})
+	sort.Slice(definition.Structures, func(i, j int) bool {
+		if definition.Structures[i].Y == definition.Structures[j].Y {
+			return definition.Structures[i].X < definition.Structures[j].X
+		}
+		return definition.Structures[i].Y < definition.Structures[j].Y
 	})
 }

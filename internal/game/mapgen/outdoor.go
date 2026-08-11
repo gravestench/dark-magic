@@ -12,8 +12,9 @@ const actOneOutdoorCellSize = 8
 
 // ActOneOutdoorGenerator is the first intentionally narrow outdoor strategy.
 // It builds Blood Moor's authored 8x8 coarse grid and preserves the edge that
-// joins Rogue Encampment. Rivers, cliffs, paths, substitutions, and mandatory
-// quest sites remain later strategy layers; they are not random callbacks here.
+// joins Rogue Encampment. Structural facts are emitted separately from authored
+// fill stamps so simulation can validate rivers, cliffs, and bridge openings
+// before presentation selects legacy DT1 graphics.
 type ActOneOutdoorGenerator struct{ data gamedata.Snapshot }
 
 func NewActOneOutdoorGenerator(data gamedata.Snapshot) *ActOneOutdoorGenerator {
@@ -55,6 +56,7 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 	exit := nextLevelEdgeWarp(width, height, entry.Direction)
 	route := outdoorRoute(request.Seed, columns, rows, entry.Direction)
 	path := outdoorPathTiles(route, columns, rows, entry, exit)
+	structures := outdoorStructures(request.Seed, width, height, entry.Direction, path)
 	stamps := make([]Stamp, 0, columns*rows)
 	rooms := make([]Room, 0, columns*rows)
 	links := make([]Link, 0, (columns-1)*rows+(rows-1)*columns)
@@ -83,12 +85,74 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 			}
 		}
 	}
-	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Paths: path, Trace: []string{
+	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Paths: path, Structures: structures, Trace: []string{
 		fmt.Sprintf("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", request.LevelID, columns, rows),
 		"authored 8x8 Blood Moor fill presets selected by independent cell streams",
 		fmt.Sprintf("Rogue Encampment joins the %s Blood Moor edge", oppositeDirection(townDirection)),
 		fmt.Sprintf("a deterministic %d-cell route joins town to the opposite next-level edge", len(route)),
+		"a continuous river and cliff ridge preserve explicit passable crossings on the primary route",
 	}})
+}
+
+// outdoorStructures creates two barriers perpendicular to the primary route.
+// The river has exactly one bridge on the route. The cliff ridge leaves a
+// three-tile opening, which avoids a one-cell choke while preserving structure.
+func outdoorStructures(seed uint64, width, height int, entryDirection string, path []PathTile) []StructureTile {
+	horizontalTravel := entryDirection == "west" || entryDirection == "east"
+	riverAxis := width / 2
+	cliffAxis := width / 4
+	if !horizontalTravel {
+		riverAxis, cliffAxis = height/2, height/4
+	}
+	riverCross := pathCrossing(path, horizontalTravel, riverAxis)
+	cliffCross := pathCrossing(path, horizontalTravel, cliffAxis)
+	// A dedicated stream decides which side receives the ridge without changing
+	// route or fill-stamp randomness.
+	if NewStreams(seed).For("blood-moor-cliff-side").Uint64n(2) == 1 {
+		if horizontalTravel {
+			cliffAxis = width - 1 - cliffAxis
+		} else {
+			cliffAxis = height - 1 - cliffAxis
+		}
+		cliffCross = pathCrossing(path, horizontalTravel, cliffAxis)
+	}
+	result := make([]StructureTile, 0, width+height)
+	crossSize := height
+	if !horizontalTravel {
+		crossSize = width
+	}
+	for cross := 0; cross < crossSize; cross++ {
+		x, y := riverAxis, cross
+		if !horizontalTravel {
+			x, y = cross, riverAxis
+		}
+		kind, passable := "river", false
+		if cross == riverCross {
+			kind, passable = "bridge", true
+		}
+		result = append(result, StructureTile{X: x, Y: y, Kind: kind, Passable: passable})
+		if absInt(cross-cliffCross) <= 1 {
+			continue
+		}
+		x, y = cliffAxis, cross
+		if !horizontalTravel {
+			x, y = cross, cliffAxis
+		}
+		result = append(result, StructureTile{X: x, Y: y, Kind: "cliff"})
+	}
+	return result
+}
+
+func pathCrossing(path []PathTile, horizontalTravel bool, axis int) int {
+	for _, tile := range path {
+		if horizontalTravel && tile.X == axis {
+			return tile.Y
+		}
+		if !horizontalTravel && tile.Y == axis {
+			return tile.X
+		}
+	}
+	return 0
 }
 
 func outdoorPathTiles(route map[[2]int]bool, columns, rows int, entry, exit Warp) []PathTile {

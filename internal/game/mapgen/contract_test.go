@@ -86,6 +86,24 @@ func TestZoneCopiesAndValidatesPathTiles(t *testing.T) {
 	}
 }
 
+func TestZoneCopiesAndValidatesStructureTiles(t *testing.T) {
+	definition := validDefinition()
+	definition.Structures = []StructureTile{{X: 1, Y: 2, Kind: "river"}, {X: 1, Y: 3, Kind: "bridge", Passable: true}}
+	zone, err := NewZone(definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition.Structures[0].Kind = "cliff"
+	if got := zone.Structures()[0].Kind; got != "river" {
+		t.Fatalf("immutable structure kind = %q", got)
+	}
+	bad := validDefinition()
+	bad.Structures = []StructureTile{{X: 0, Y: 0, Kind: "bridge"}}
+	if _, err := NewZone(bad); err == nil {
+		t.Fatal("accepted an impassable bridge")
+	}
+}
+
 func TestRequestRejectsImplicitOrUnknownInputs(t *testing.T) {
 	for _, request := range []Request{
 		{Act: 1, LevelID: 1},

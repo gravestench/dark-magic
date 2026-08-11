@@ -59,7 +59,7 @@ func TestMapgenModuleExposesBloodMoorTownEdge(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("dm.mapgen/v1").outdoor(2,42,"east"); assert(z.kind=="outdoor" and #z.rooms==100 and z.warps[1].direction=="west")`)}}
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("dm.mapgen/v1").outdoor(2,42,"east"); assert(z.kind=="outdoor" and #z.rooms==100 and z.warps[1].direction=="west" and #z.structures>0); local bridges=0; for _,s in ipairs(z.structures) do if s.kind=="bridge" then assert(s.passable); bridges=bridges+1 end end; assert(bridges==1)`)}}
 	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

@@ -137,6 +137,16 @@ func zoneToLua(state *lua.LState, zone *mapgen.Zone) *lua.LTable {
 		warps.Append(item)
 	}
 	result.RawSetString("warps", warps)
+	structures := state.NewTable()
+	for _, structure := range zone.Structures() {
+		item := state.NewTable()
+		setLuaInteger(item, "x", structure.X)
+		setLuaInteger(item, "y", structure.Y)
+		item.RawSetString("kind", lua.LString(structure.Kind))
+		item.RawSetString("passable", lua.LBool(structure.Passable))
+		structures.Append(item)
+	}
+	result.RawSetString("structures", structures)
 	trace := state.NewTable()
 	for _, line := range zone.Trace() {
 		trace.Append(lua.LString(line))
