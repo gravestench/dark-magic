@@ -147,7 +147,7 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		return err
 	case "dc6":
-		_, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
+		_, err := p.cache.loadDC6File(p.assets, request.Path, request.Palette)
 		return err
 	case "dc6_frame":
 		frame, err := p.cache.loadDC6Frame(p.assets, request.Path, request.Palette, request.Direction, request.Frame)
@@ -168,15 +168,15 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		return err
 	case "dc6_composite":
-		first, err := p.cache.loadDC6(p.assets, request.Path, request.Palette)
+		first, err := p.cache.loadDC6Direction(p.assets, request.Path, request.Palette, request.Direction)
 		if err != nil {
 			return err
 		}
-		second, err := p.cache.loadDC6(p.assets, request.Secondary, request.Palette)
+		second, err := p.cache.loadDC6Direction(p.assets, request.Secondary, request.Palette, request.Direction)
 		if err != nil {
 			return err
 		}
-		bounds := dc6AnimationBounds(first, request.Direction).Union(dc6AnimationBounds(second, request.Direction))
+		bounds := dc6AnimationBounds(first.asset, 0).Union(dc6AnimationBounds(second.asset, 0))
 		firstAnimation, err := p.cache.loadDC6Animation(p.assets, request.Path, request.Palette, request.Direction, request.Anchor, bounds)
 		if err != nil {
 			return err

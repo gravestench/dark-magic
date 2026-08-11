@@ -16,7 +16,7 @@ require (
 	github.com/gravestench/dc6 v0.2.0
 	github.com/gravestench/dcc v0.3.2
 	github.com/gravestench/ds1 v0.2.0
-	github.com/gravestench/dt1 v0.2.0
+	github.com/gravestench/dt1 v0.3.0
 	github.com/gravestench/mpq v0.2.0
 	github.com/gravestench/pl2 v0.2.0
 	github.com/gravestench/tbl_text v0.2.0
