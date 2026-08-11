@@ -31,6 +31,8 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"shell_lua":         actionState(s.KeyState(rl.KeyF1)),
 			"shell_logs":        actionState(s.KeyState(rl.KeyF2)),
 			"debug_collision":   actionState(s.KeyState(rl.KeyF3)),
+			"debug_map_tiles":   actionState(s.KeyState(rl.KeyF4)),
+			"debug_origins":     actionState(s.KeyState(rl.KeyF5)),
 			"pointer_primary":   pointer,
 			"pointer_secondary": pointerSecondary,
 			"confirm":           confirm,

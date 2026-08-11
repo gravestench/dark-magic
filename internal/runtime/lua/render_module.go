@@ -1618,6 +1618,8 @@ func (r *RenderCapability) Module() Module {
 		"set_ds1_chunk":              commandHelp("node:set_ds1_chunk(map, tiles, palette, chunk_index [, chunk_size])", "Render one sparse DS1 map chunk and return its map-space geometry."),
 		"set_world_chunk":            commandHelp("node:set_world_chunk(world, palette, chunk_index [, chunk_size])", "Render one sparse chunk from an assembled authoritative world map."),
 		"set_world_tile":             commandHelp("node:set_world_tile(world, palette, draw_index)", "Render one placement borrowing a shared immutable DT1 texture."),
+		"set_world_collision_region": commandHelp("node:set_world_collision_region(world, left, top, right, bottom)", "Render a bounded authoritative subtile collision diagnostic and return map-pixel geometry."),
+		"set_world_tile_region":      commandHelp("node:set_world_tile_region(world, left, top, right, bottom)", "Render bounded authoritative tile/subtile projection geometry and return map-pixel geometry."),
 		"set_ds1_collision":          commandHelp("node:set_ds1_collision(map, tiles)", "Render a diagnostic DT1 subtile collision overlay for a DS1 map."),
 		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
@@ -2236,6 +2238,36 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(set.Height))
 			state.Push(lua.LNumber(len(set.Draws)))
 			return 7
+		},
+		"set_world_collision_region": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			world := checkWorldMap(state, 2)
+			region := image.Rect(state.CheckInt(3), state.CheckInt(4), state.CheckInt(5), state.CheckInt(6))
+			decoded, bounds := maprender.CollisionRegionImage(world, region)
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating world collision diagnostic: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(bounds.Min.Y))
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+			return 4
+		},
+		"set_world_tile_region": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			world := checkWorldMap(state, 2)
+			region := image.Rect(state.CheckInt(3), state.CheckInt(4), state.CheckInt(5), state.CheckInt(6))
+			decoded, bounds := maprender.TileRegionImage(world, region)
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating world tile diagnostic: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(bounds.Min.Y))
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+			return 4
 		},
 		"set_ds1_collision": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
