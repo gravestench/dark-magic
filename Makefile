@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-panels capture-blood-moor play-game-world
+.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-panels capture-blood-moor capture-act1-seam play-game-world
 
 test:
 	go test ./...
@@ -40,10 +40,11 @@ FIXTURE_CHARACTERS ?= 0
 PRESENTATION_PROFILE ?=
 START_OVERLAYS ?=
 FIXTURE_WORLD_LEVEL ?= 1
+FIXTURE_WORLD_SPAWN ?= entry
 CAPTURE_SETTLE ?= 10
 
 capture:
-	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --start-overlays "$(START_OVERLAYS)" --fixture-characters "$(FIXTURE_CHARACTERS)" --fixture-world-level "$(FIXTURE_WORLD_LEVEL)" --presentation-profile "$(PRESENTATION_PROFILE)"
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --start-overlays "$(START_OVERLAYS)" --fixture-characters "$(FIXTURE_CHARACTERS)" --fixture-world-level "$(FIXTURE_WORLD_LEVEL)" --fixture-world-spawn "$(FIXTURE_WORLD_SPAWN)" --presentation-profile "$(PRESENTATION_PROFILE)"
 
 # These focused entry points always select a deterministic character fixture.
 # MPQ_DIRECTORY still points at the user's legally obtained content.
@@ -52,6 +53,12 @@ capture-game-world:
 
 capture-blood-moor:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 CAPTURE_SETTLE=60
+
+# Capture both authoritative arrival points with production MPQ assets. The two
+# images make collision, camera, depth, and art continuity reviewable together.
+capture-act1-seam:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/town" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=1 FIXTURE_WORLD_SPAWN=seam CAPTURE_SETTLE=60
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/blood-moor" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 FIXTURE_WORLD_SPAWN=seam CAPTURE_SETTLE=60
 
 # Capture the world beneath every spatial overlay arrangement that changes the
 # camera anchor. Artifacts stay local because original MPQ assets are required.

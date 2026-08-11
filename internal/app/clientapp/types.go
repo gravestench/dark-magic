@@ -52,6 +52,7 @@ type Options struct {
 	StartOverlays         string
 	FixtureCharacters     int
 	FixtureWorldLevel     int
+	FixtureWorldSpawn     string
 	OutputPalette         string
 	ViewportFit           string
 	BorderlessFullscreen  bool
