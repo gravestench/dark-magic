@@ -18,6 +18,7 @@ func (app *application) startCapture() error {
 	}
 	app.stopCapture = app.renderer.SubscribePostFrame(func() {
 		busy := app.renderCapability != nil && app.renderCapability.Diagnostics().PreloadsPending > 0
+		busy = busy || app.pointerAcceptance.Busy()
 		app.capture.Observe(app.navigator.Stack(), app.composer.Diagnostics().StructuralRevision, busy)
 		if app.capture.Complete() {
 			app.stop()
