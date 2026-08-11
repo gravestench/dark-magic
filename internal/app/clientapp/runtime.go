@@ -11,6 +11,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
+	gametargeting "github.com/gravestench/dark-magic/internal/game/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
@@ -61,6 +62,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.LocaleModule(app.locale),
 		modruntime.SaveModule(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
+		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
 		modruntime.InteractionModule(app.interactionAuthority, app.interactionControl, "local-player"),
 		modruntime.ItemModule(app.itemAuthority, app.itemControl, "local-player"),
 		modruntime.NewECSCapability(app.scripts, app.entitySimulation).Module(),

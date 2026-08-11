@@ -12,6 +12,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	"github.com/gravestench/dark-magic/internal/game/targeting"
 	"github.com/gravestench/dark-magic/internal/persistence"
 )
 
@@ -237,6 +238,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.control, map[string]any{"player": entry.Player}},
 		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
 		{stores.collider, map[string]any{"radius": 0.35}},
+		{stores.selectable, map[string]any{"id": "player:" + entry.Player, "kind": targeting.KindPlayer, "label": entry.Name, "owner": entry.Player, "radius": 0.75, "priority": int64(10)}},
 	}
 	for _, component := range components {
 		if _, err := component.store.Set(entity, component.values); err != nil {
@@ -280,8 +282,8 @@ func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) e
 }
 
 type stores struct {
-	identity, progress, vitals, appearance, animation                                               *akara.DynamicStore
-	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, collider *akara.DynamicStore
+	identity, progress, vitals, appearance, animation                                                           *akara.DynamicStore
+	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, collider, selectable *akara.DynamicStore
 }
 
 func registerStores(world *akara.World) (stores, error) {
@@ -300,6 +302,7 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
 		{Name: "dm.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
 		{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
+		targeting.Schema(),
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))
 	for index, schema := range schemas {
@@ -309,7 +312,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], skillIntent: registered[9], belt: registered[10], control: registered[11], bounds: registered[12], collider: registered[13]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], skillIntent: registered[9], belt: registered[10], control: registered[11], bounds: registered[12], collider: registered[13], selectable: registered[14]}, nil
 }
 
 func beltFields() []akara.Field {

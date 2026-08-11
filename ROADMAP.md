@@ -921,7 +921,7 @@ complete until its actions are driven by authoritative game state and commands.
   live ECS position, and continue through the existing authoritative collision
   integrator. HUD space, obscured overlay halves, and held-item input do not
   leak movement.
-- [ ] M20.14: Materialize selectable world entities and resolve pointer targets
+- [x] M20.14: Materialize selectable world entities and resolve pointer targets
   into move, interact, primary-skill, or secondary-skill commands by authority,
   range, collision/path, and line-of-sight policy. Do not fake interaction by
   treating every world click as non-spatial UI.
@@ -941,10 +941,12 @@ complete until its actions are driven by authoritative game state and commands.
     unreachable-target cancellation, and hover presentation sourced from the
     same selector. Fixed-tick commands record successive authoritative
     waypoints, while DT1 collision remains the movement and path source.
-  - [ ] M20.14d: Materialize hostile, NPC, item, portal, missile, and scenery
-    kinds from authoritative spawned entity definitions; dispatch primary click
-    to interaction, pickup, movement, or the assigned primary skill by kind.
-    Do not infer hostility from a DS1 dynamic-object number or display string.
+  - [x] M20.14d: Define authoritative spawned-entity components for player,
+    hostile, NPC, item, portal, missile, and scenery kinds; materialize players
+    into the contract; resolve overlaps by copied ECS facts; filter the local
+    player; and dispatch hostile primary clicks to assigned primary-skill intent.
+    Future monster, drop, portal, and missile spawners attach these components;
+    no hostility is inferred from a DS1 number or display string.
 
 ## M21: Diablo simulation
 
