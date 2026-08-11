@@ -75,6 +75,23 @@ const (
 	LayerRoof
 )
 
+func (l TileLayer) String() string {
+	switch l {
+	case LayerFloor:
+		return "floor"
+	case LayerLowerWall:
+		return "lower-wall"
+	case LayerShadow:
+		return "shadow"
+	case LayerUpperWall:
+		return "upper-wall"
+	case LayerRoof:
+		return "roof"
+	default:
+		return "unknown"
+	}
+}
+
 // TilePlacement is one deterministic DS1-cell-to-DT1 selection. Presentation
 // decodes Reference.Path/Index; collision consumes only copied metadata.
 type TilePlacement struct {
@@ -133,6 +150,13 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 						layer = LayerRoof
 					}
 					result.addTile(catalog, tileX, tileY, layer, identity)
+					// A north corner is authored as one DS1 orientation but drawn
+					// from paired type-3 and type-4 DT1 records on one baseline.
+					if identity.Orientation == 3 {
+						companion := identity
+						companion.Orientation = 4
+						result.addTile(catalog, tileX, tileY, layer, companion)
+					}
 				}
 			}
 			for _, shadow := range record.Shadows {
