@@ -94,6 +94,8 @@ github.com/gravestench/dt1 v0.2.0 h1:z0OAA4zDzgl87rlfBaq96jdDSQ94A7eoKI3oiG79Xts
 github.com/gravestench/dt1 v0.2.0/go.mod h1:vqmYuxN/bKmA39MDuS1E32JXK7rTQY1nQswto0d4G5o=
 github.com/gravestench/dt1 v0.3.0 h1:a1iyTgoU67dNDGBf1stdkMA1uyylMUYtqyE0b/ubpss=
 github.com/gravestench/dt1 v0.3.0/go.mod h1:vqmYuxN/bKmA39MDuS1E32JXK7rTQY1nQswto0d4G5o=
+github.com/gravestench/dt1 v0.3.1 h1:U7aTzGmFKYtA/AdelQv4ohwdGddKEcFYqpjBz5kXijg=
+github.com/gravestench/dt1 v0.3.1/go.mod h1:vqmYuxN/bKmA39MDuS1E32JXK7rTQY1nQswto0d4G5o=
 github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e h1:/vTh+8tKvHy2lNPPgAjlNNBFOPlOM8ObOSI8mgIgbSA=
 github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e/go.mod h1:vJAc9hlwEWypZBGynn0tycP77gmybyMaoSxJeK4tLZ0=
 github.com/gravestench/mpq v0.1.1-0.20260810081350-4b25d79dc0df h1:3IUNDtn5uBfofSj2sxQULyJyH+WYcwWx4Xv+V8Z2RWQ=
