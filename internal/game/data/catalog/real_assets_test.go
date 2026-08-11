@@ -68,9 +68,19 @@ func TestRealArchivesDecodeTypedCoreTables(t *testing.T) {
 	if !slices.ContainsFunc(snapshot.LevelTypes, func(record models.LevelType) bool { return record.Act > 0 }) ||
 		!slices.ContainsFunc(snapshot.LevelPresets, func(record models.LevelPreset) bool { return record.Def > 0 && record.Files > 0 }) ||
 		!slices.ContainsFunc(snapshot.LevelMazes, func(record models.LevelMazeData) bool { return record.Rooms > 0 && record.SizeX > 0 }) ||
-		!slices.ContainsFunc(snapshot.LevelWarps, func(record models.LevelWarp) bool { return record.Id != "" && record.Tiles > 0 }) ||
+		!slices.ContainsFunc(snapshot.LevelWarps, func(record models.LevelWarp) bool { return record.Id >= 0 && record.Tiles > 0 }) ||
 		!slices.ContainsFunc(snapshot.LevelSubs, func(record models.LevelSubstitutionData) bool { return record.Type > 0 && record.File != "" }) {
 		t.Fatal("typed world-generation fields did not bind representative authored values")
+	}
+	for _, level := range snapshot.Levels {
+		for _, link := range level.Links() {
+			if link.WarpID < 0 {
+				continue
+			}
+			if _, found := snapshot.LevelWarpsByID[link.WarpID]; !found {
+				t.Fatalf("level %d visibility slot %d references missing LvlWarp %d", level.Id, link.Slot, link.WarpID)
+			}
+		}
 	}
 	if len(snapshot.MonstersByID) == 0 || len(snapshot.MonsterGfxByID) == 0 || len(snapshot.MonsterLevels) == 0 || len(snapshot.MonsterPropsByID) == 0 || len(snapshot.MonsterSoundByID) == 0 || len(snapshot.MonsterEquipment) == 0 {
 		t.Fatal("typed monster foundation tables are incomplete")

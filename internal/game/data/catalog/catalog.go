@@ -59,6 +59,7 @@ type Snapshot struct {
 	LevelMazes                 []models.LevelMazeData
 	LevelMazeByLevel           map[int]models.LevelMazeData
 	LevelWarps                 []models.LevelWarp
+	LevelWarpsByID             map[int]models.LevelWarp
 	LevelSubs                  []models.LevelSubstitutionData
 	Monsters                   []models.MonsterStats
 	MonstersByID               map[string]models.MonsterStats
@@ -452,6 +453,11 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	levelWarpsByID, found, err := ObservedIndex(LevelWarpTable, levelWarps, func(record models.LevelWarp) int { return record.Id })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index level warps: %w", err)
+	}
+	issues = append(issues, found...)
 	levelSubs, err := Load[models.LevelSubstitutionData](c.store, LevelSubTable)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
@@ -908,7 +914,7 @@ func (c *Catalog) load() (Snapshot, error) {
 		Gems: gems, GemsByCode: gemsByCode, RuneWords: runeWords, CubeRecipes: cubeRecipes,
 		Sets: sets, SetsByIndex: setsByIndex,
 		LevelTypes: levelTypes, LevelPresets: levelPresets, LevelPresetByDef: levelPresetByDef,
-		LevelMazes: levelMazes, LevelMazeByLevel: levelMazeByLevel, LevelWarps: levelWarps, LevelSubs: levelSubs,
+		LevelMazes: levelMazes, LevelMazeByLevel: levelMazeByLevel, LevelWarps: levelWarps, LevelWarpsByID: levelWarpsByID, LevelSubs: levelSubs,
 		Monsters: monsters, MonstersByID: monstersByID, MonsterGraphics: monsterGraphics, MonsterGfxByID: monsterGfxByID,
 		MonsterLevels: monsterLevels, MonsterLevelByLevel: monsterLevelByLevel, MonsterProps: monsterProps, MonsterPropsByID: monsterPropsByID,
 		MonsterSounds: monsterSounds, MonsterSoundByID: monsterSoundByID, MonsterEquipment: monsterEquipment,
@@ -997,6 +1003,7 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		LevelMazes:                 append([]models.LevelMazeData(nil), source.LevelMazes...),
 		LevelMazeByLevel:           make(map[int]models.LevelMazeData, len(source.LevelMazeByLevel)),
 		LevelWarps:                 append([]models.LevelWarp(nil), source.LevelWarps...),
+		LevelWarpsByID:             make(map[int]models.LevelWarp, len(source.LevelWarpsByID)),
 		LevelSubs:                  append([]models.LevelSubstitutionData(nil), source.LevelSubs...),
 		Monsters:                   append([]models.MonsterStats(nil), source.Monsters...),
 		MonstersByID:               make(map[string]models.MonsterStats, len(source.MonstersByID)),
@@ -1149,6 +1156,9 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.LevelMazeByLevel {
 		result.LevelMazeByLevel[key] = value
+	}
+	for key, value := range source.LevelWarpsByID {
+		result.LevelWarpsByID[key] = value
 	}
 	for key, value := range source.MonstersByID {
 		result.MonstersByID[key] = value

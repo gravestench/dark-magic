@@ -119,7 +119,7 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 	if first.GemsByCode["gcw"].Name != "Chipped Amethyst" || len(first.RuneWords) != 1 || len(first.CubeRecipes) != 1 || first.SetsByIndex["Civerb's Vestments"].Name != "Civerb's Vestments" {
 		t.Fatalf("typed socketing and crafting tables = %#v", first)
 	}
-	if len(first.LevelTypes) != 1 || first.LevelPresetByDef[1].LevelId != 1 || first.LevelMazeByLevel[8].Rooms != 4 || len(first.LevelWarps) != 1 || len(first.LevelSubs) != 1 {
+	if len(first.LevelTypes) != 1 || first.LevelPresetByDef[1].LevelId != 1 || first.LevelMazeByLevel[8].Rooms != 4 || len(first.LevelWarps) != 1 || first.LevelWarpsByID[1].Name != "Cave Entrance" || len(first.LevelSubs) != 1 {
 		t.Fatalf("typed world-generation tables = %#v", first)
 	}
 	if first.MonstersByID["zombie"].Code != "ZM" || first.MonsterGfxByID["zombie"].Id == "" || len(first.MonsterLevels) != 1 || first.MonsterPropsByID["zombie"].Prop1 != "res-all" || first.MonsterSoundByID["zombie"].Attack1 != "zombie_attack" || len(first.MonsterEquipment) != 1 {
@@ -165,12 +165,13 @@ func TestCatalogBuildsClonedTypedSnapshotAndIndexes(t *testing.T) {
 		t.Fatalf("typed hardcoded reference tables = %#v", first)
 	}
 	delete(first.CharStatsByClass, "Amazon")
+	delete(first.LevelWarpsByID, 1)
 	first.CharStats[0].Strength = 1
 	second, err := catalog.Snapshot()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if second.CharStatsByClass["Amazon"].Strength != 20 || second.CharStats[0].Strength != 20 {
+	if second.CharStatsByClass["Amazon"].Strength != 20 || second.CharStats[0].Strength != 20 || second.LevelWarpsByID[1].Name != "Cave Entrance" {
 		t.Fatal("catalog exposed mutable snapshot ownership")
 	}
 }
