@@ -60,7 +60,7 @@ return {
 func TestVFSVersionedCapability(t *testing.T) {
 	t.Parallel()
 
-	contentFS, err := content.New(content.Layer{Name: "shim", FS: fstest.MapFS{"value.txt": &fstest.MapFile{Data: []byte("hello")}}})
+	contentFS, err := content.New(content.Layer{Name: "shim", FS: fstest.MapFS{"value.txt": &fstest.MapFile{Data: []byte("hello")}, "tiles/one.DT1": &fstest.MapFile{Data: []byte("tile")}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,12 +76,17 @@ func TestVFSVersionedCapability(t *testing.T) {
 local vfs = require("dm.vfs/v1")
 value = assert(vfs.read("value.txt"))
 origin = assert(vfs.source("value.txt")).layer
+listed = assert(vfs.list(".", ".dt1"))
 `)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		if state.GetGlobal("value").String() != "hello" || state.GetGlobal("origin").String() != "shim" {
 			t.Fatalf("value/source = %s/%s", state.GetGlobal("value"), state.GetGlobal("origin"))
+		}
+		listed := state.GetGlobal("listed").(*lua.LTable)
+		if listed.Len() != 1 || listed.RawGetInt(1).String() != "tiles/one.DT1" {
+			t.Fatalf("listed assets = %s", listed)
 		}
 		return nil
 	}); err != nil {

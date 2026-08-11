@@ -293,9 +293,10 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
-	// Composite Lab reuses the already classified Act I palette and constructs
-	// COF/DCC paths from validated recipes; it introduces no new fixed asset.
-	const auditedFingerprint = "b505e3e9dc2fe2bdf69d32e64e1f0322b4f4945c0ccc3006c886c18a1af77cbd"
+	// Map Labs intentionally add the Act II-V DAT/PL2 palettes as code-owned
+	// developer choices. Random map/tile paths remain dynamic VFS discoveries and
+	// therefore do not pretend every mounted Blizzard asset is manifest-owned.
+	const auditedFingerprint = "1ff5c4e7797762c20f0f3a45f4550e476ab0260f445dc2d998d586ca342cae15"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

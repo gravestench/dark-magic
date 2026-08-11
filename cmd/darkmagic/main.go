@@ -55,7 +55,7 @@ func main() {
 	dt1View := flag.String("dt1-view", environmentDefault("DARK_MAGIC_DT1_VIEW", "composite"), "DT1 lab view: composite, floor, or wall")
 	ds1Path := flag.String("ds1-path", os.Getenv("DARK_MAGIC_DS1_PATH"), "DS1 lab archive path")
 	ds1Tiles := flag.String("ds1-tiles", os.Getenv("DARK_MAGIC_DS1_TILES"), "DS1 lab comma-separated DT1 paths")
-	ds1Palette := flag.String("ds1-palette", environmentDefault("DARK_MAGIC_DS1_PALETTE", "data/global/palette/ACT1/pal.dat"), "DS1 lab palette path")
+	ds1Palette := flag.String("ds1-palette", environmentDefault("DARK_MAGIC_DS1_PALETTE", "data/global/palette/ACT1/pal.pl2"), "DS1 lab palette path")
 	flag.Parse()
 
 	logLevel, err := parseLogLevel(*logLevelFlag)
