@@ -890,9 +890,11 @@ the fixed tick, and drive a real legacy composite from authoritative state.
   presentation recipes, never renderer paths. Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
   `dm.world.collider` radius now probes the player's full footprint while
-  retaining axis-separated wall sliding. Remaining acceptance is live
-  input/capture coverage, broader collision/pathing refinement, exact legacy shadow
-  projection probes, richer imported equipment recipes under M19.4, and enough
+  retaining axis-separated wall sliding. COF shadow-enabled components now use
+  the baseline-anchored half-height/shear projection corroborated by Riiablo and
+  OpenDiablo2, with center-preserving animation canvases and exact pixel probes.
+  Remaining acceptance is native live-input/capture coverage, broader
+  collision/pathing refinement, richer imported equipment recipes under M19.4, and enough
   play testing to make the slice comfortable and visually stable. Continue
   NPC/quest/vendor interaction breadth only after that point.
 

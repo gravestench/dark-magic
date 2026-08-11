@@ -261,7 +261,7 @@ func blendRGBA(destination *image.RGBA, x, y int, source color.RGBA, opacity uin
 // drawCompositeComponent consumes DCC palette indexes directly. This avoids a
 // temporary RGBA allocation and palette expansion for every layer/frame before
 // immediately copying those pixels into the final composite.
-func drawCompositeComponent(output *image.RGBA, component compositeFrame, destination image.Point, shadow bool, opacity uint8) {
+func drawCompositeComponent(output *image.RGBA, component compositeFrame, destination image.Point, opacity uint8) {
 	if len(component.indices) > 0 && len(component.palette) > 0 {
 		width, height := component.bounds.Dx(), component.bounds.Dy()
 		for y := 0; y < height; y++ {
@@ -272,9 +272,6 @@ func drawCompositeComponent(output *image.RGBA, component compositeFrame, destin
 					continue
 				}
 				value := color.RGBAModel.Convert(component.palette[index]).(color.RGBA)
-				if shadow {
-					value = color.RGBA{A: value.A}
-				}
 				blendRGBA(output, destination.X+x, destination.Y+y, value, opacity)
 			}
 		}
@@ -283,17 +280,67 @@ func drawCompositeComponent(output *image.RGBA, component compositeFrame, destin
 	if component.image == nil {
 		return
 	}
-	if shadow {
-		mask := image.NewUniform(color.RGBA{A: opacity})
-		draw.DrawMask(output, component.image.Bounds().Add(destination), mask, image.Point{}, component.image, component.image.Bounds().Min, draw.Over)
-		return
-	}
 	if opacity == 255 {
 		draw.Draw(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, draw.Over)
 		return
 	}
 	mask := image.NewUniform(color.Alpha{A: opacity})
 	draw.DrawMask(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, mask, image.Point{}, draw.Over)
+}
+
+// projectedShadowBounds mirrors the legacy character-shadow affine transform:
+// keep the feet on their baseline, compress vertical distance by one half, and
+// shear upper pixels horizontally by that same distance. Riiablo expresses it
+// as scale(1,.5)+shear(-1,0); OpenDiablo2 uses scale(1,.5)+skew(.5,0).
+func projectedShadowBounds(bounds image.Rectangle) image.Rectangle {
+	if bounds.Empty() {
+		return image.Rectangle{}
+	}
+	shift := bounds.Dy() / 2
+	baseline := bounds.Max.Y - 1
+	return image.Rect(bounds.Min.X, baseline-shift, bounds.Max.X+shift, baseline+1)
+}
+
+func shadowCanvasBounds(visible image.Rectangle, components map[cof.CompositeType]compositeFrame) image.Rectangle {
+	projected := visible
+	for _, component := range components {
+		if component.layer.Shadow != 0 {
+			projected = projected.Union(projectedShadowBounds(component.bounds))
+		}
+	}
+	// Retained animation nodes are center-anchored. Expand both sides equally so
+	// adding a long shadow never slides the visible body away from the hero point.
+	horizontal := max(visible.Min.X-projected.Min.X, projected.Max.X-visible.Max.X, 0)
+	vertical := max(visible.Min.Y-projected.Min.Y, projected.Max.Y-visible.Max.Y, 0)
+	return image.Rect(visible.Min.X-horizontal, visible.Min.Y-vertical, visible.Max.X+horizontal, visible.Max.Y+vertical)
+}
+
+func drawCompositeShadow(output *image.RGBA, component compositeFrame, canvas image.Rectangle, opacity uint8) {
+	width, height := component.bounds.Dx(), component.bounds.Dy()
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			var alpha uint8
+			if len(component.indices) > 0 && y*width+x < len(component.indices) {
+				index := int(component.indices[y*width+x])
+				if index > 0 && index < len(component.palette) {
+					alpha = color.RGBAModel.Convert(component.palette[index]).(color.RGBA).A
+				}
+			} else if component.image != nil {
+				_, _, _, value := component.image.At(component.bounds.Min.X+x, component.bounds.Min.Y+y).RGBA()
+				alpha = uint8(value >> 8)
+			}
+			if alpha == 0 {
+				continue
+			}
+			// Integer rounding deliberately matches nearest-pixel rasterization of
+			// the half-scale/shear transform instead of accumulating float drift.
+			distance := height - 1 - y
+			shift := (distance + 1) / 2
+			absoluteX := component.bounds.Min.X + x + shift
+			absoluteY := component.bounds.Max.Y - 1 - shift
+			blendRGBA(output, absoluteX-canvas.Min.X, absoluteY-canvas.Min.Y, color.RGBA{A: alpha}, opacity)
+		}
+	}
 }
 
 // rgbaDCCFrame expands palette indexes with tight slice writes. Using
@@ -370,7 +417,8 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 	if bounds.Empty() {
 		return nil, errors.New("COF composition has no component frames")
 	}
-	output := image.NewRGBA(image.Rect(0, 0, bounds.Dx()+2, bounds.Dy()+2))
+	canvas := shadowCanvasBounds(bounds, components)
+	output := image.NewRGBA(image.Rect(0, 0, canvas.Dx(), canvas.Dy()))
 	// Diablo's composite renderer makes two complete passes over the COF order:
 	// every projected shadow first, then every visible body/equipment layer.
 	// Drawing a layer's shadow immediately before that layer lets later shadows
@@ -381,15 +429,14 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 		if !ok || component.layer.Shadow == 0 {
 			continue
 		}
-		destination := component.bounds.Min.Sub(bounds.Min)
-		drawCompositeComponent(output, component, destination.Add(image.Pt(2, 2)), true, 96)
+		drawCompositeShadow(output, component, canvas, 96)
 	}
 	for _, componentType := range priority {
 		component, ok := components[componentType]
 		if !ok {
 			continue
 		}
-		destination := component.bounds.Min.Sub(bounds.Min)
+		destination := component.bounds.Min.Sub(canvas.Min)
 		alpha := uint8(255)
 		// DrawEffect is meaningful only when COF marks the layer transparent.
 		// Most body layers contain zero in this byte, which otherwise looks like
@@ -406,7 +453,7 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 				alpha = 128
 			}
 		}
-		drawCompositeComponent(output, component, destination, false, alpha)
+		drawCompositeComponent(output, component, destination, alpha)
 	}
 	return output, nil
 }
