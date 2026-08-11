@@ -354,11 +354,37 @@ func TestCompositeShadowUsesLegacyHalfHeightShear(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Top-left shears two pixels right and projects two pixels above baseline;
+	// Top-left shears two pixels left and projects two pixels above baseline;
 	// baseline-left remains anchored. Coordinates are translated by canvas.Min.
-	for _, point := range []image.Point{{4, 1}, {2, 3}} {
+	for _, point := range []image.Point{{0, 1}, {2, 3}} {
 		if _, _, _, alpha := composed.At(point.X, point.Y).RGBA(); alpha == 0 {
 			t.Fatalf("projected shadow pixel %v is transparent", point)
+		}
+	}
+}
+
+func TestCompositeShadowProjectsPartsFromOneSharedBaseline(t *testing.T) {
+	headType, torsoType := cof.CompositeType(0), cof.CompositeType(1)
+	layers := []cof.CofLayer{{Type: headType, Shadow: 1}, {Type: torsoType, Shadow: 1}}
+	head := image.NewRGBA(image.Rect(0, 0, 1, 2))
+	torso := image.NewRGBA(image.Rect(0, 0, 1, 2))
+	head.SetRGBA(0, 0, color.RGBA{A: 255})
+	torso.SetRGBA(0, 1, color.RGBA{A: 255})
+	bounds := image.Rect(0, 0, 1, 4)
+	components := map[cof.CompositeType]compositeFrame{
+		headType:  {image: head, bounds: head.Bounds(), layer: layers[0]},
+		torsoType: {image: torso, bounds: image.Rect(0, 2, 1, 4), layer: layers[1]},
+	}
+	mask := compositeShadowMask(bounds, []cof.CompositeType{headType, torsoType}, components)
+	canvas := shadowCanvasBounds(bounds, components)
+	output := image.NewRGBA(image.Rect(0, 0, canvas.Dx(), canvas.Dy()))
+	drawCompositeShadow(output, mask, bounds, canvas, 255)
+	// The head's top and torso's foot use the same y=3 ground baseline. If each
+	// part projected from its own bottom, the head pixel would land a row higher.
+	for _, absolute := range []image.Point{{-2, 1}, {0, 3}} {
+		point := absolute.Sub(canvas.Min)
+		if output.RGBAAt(point.X, point.Y).A == 0 {
+			t.Fatalf("shared-baseline shadow pixel %v is transparent", absolute)
 		}
 	}
 }
@@ -383,7 +409,12 @@ func TestCOFCompositionDrawsAllShadowsBehindAllVisibleLayers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := color.RGBAModel.Convert(composed.At(2, 2)).(color.RGBA); got.R != 255 || got.A != 255 {
+	canvas := shadowCanvasBounds(red.Bounds(), map[cof.CompositeType]compositeFrame{
+		back:  {image: red, bounds: red.Bounds(), layer: asset.CofLayers[0]},
+		front: {image: shadowSource, bounds: shadowSource.Bounds(), layer: asset.CofLayers[1]},
+	})
+	point := image.Pt(2, 2).Sub(canvas.Min)
+	if got := color.RGBAModel.Convert(composed.At(point.X, point.Y)).(color.RGBA); got.R != 255 || got.A != 255 {
 		t.Fatalf("visible back layer was covered by a later component shadow: %#v", got)
 	}
 }

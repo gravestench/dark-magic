@@ -66,8 +66,8 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 local composite=require("darkmagic.gameplay.player_composite").unarmed({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
 })
-assert(string.sub(composite.key,1,12)=="AM:WL:HTH:13")
-assert(composite.direction==13 and composite.dcc_direction==14)
+assert(string.sub(composite.key,1,12)=="AM:WL:HTH:14")
+assert(composite.direction==14 and composite.dcc_direction==3)
 assert(composite.components.HD=="data/global/chars/AM/HD/AMHDLITWL1HT.dcc")
 assert(composite.components.RA=="data/global/chars/AM/RA/AMRALITWLHTH.dcc")
 assert(composite.components.RH==nil)
@@ -126,7 +126,7 @@ for _,token in ipairs({"AM","SO","NE","PA","BA","AI","DZ"}) do
   for _,mode in ipairs({"NU","WL","RN"}) do
     local ok,err=pcall(function()
       local composite=adapter.unarmed({token=token,mode=mode,weapon_class="HTH",palette="data/global/Palette/units/pal.dat",direction=3})
-	  assert(composite.direction==13 and composite.dcc_direction==14)
+	  assert(composite.direction==14 and composite.dcc_direction==3)
 	  if token=="NE" then
 	    assert(composite.components.S1 and composite.components.S2)
 	  end

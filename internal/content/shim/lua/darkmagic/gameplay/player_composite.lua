@@ -19,17 +19,21 @@ end
 -- its COF priority row; skipping it can pair a visible facing with the wrong
 -- arm/head ordering table.
 local cof_directions = {
-    [8] = {3, 7, 2, 6, 1, 5, 0, 4},
-    [16] = {10, 8, 5, 13, 2, 0, 1, 9, 6, 14, 4, 12, 3, 7, 11, 15},
+    -- These are Riiablo DC.Direction.toRealDir and the eight sampled values
+    -- from OpenDiablo2 Dir64ToCof. Simulation's readable directions are
+    -- SOUTH/WEST/NORTH/EAST/DOWN/LEFT/UP/RIGHT; COF priority rows are not.
+    [8] = {1, 3, 5, 7, 0, 2, 4, 6},
+    [16] = {2, 6, 10, 14, 0, 4, 8, 12, 1, 3, 5, 7, 9, 11, 13, 15},
 }
 
+-- COF rows are sequential angle buckets; DCC files use the legacy interleave.
 local dcc_directions = {
     [8] = {4, 0, 5, 1, 6, 2, 7, 3},
     [16] = {4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15},
 }
 
 local function cof_direction(direction, count, space)
-    if space == "logical" then return direction end
+    if space == "encoded" then return direction end
     local lookup = cof_directions[count]
     if not lookup then return direction end
     return assert(lookup[direction + 1], "semantic direction is out of range")

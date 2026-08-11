@@ -1021,8 +1021,13 @@ focus must not replace pointer coordinates as the authoritative client request.
   `AnimData.d2` records supply rates and frame events; crossed events propagate
   through the presentation controller; COF shadow flags produce a distinct
   shadow pass; and authoritative equipment slots select component appearance
-  codes and active-hand weapon classes. The item snapshot carries only validated
-  presentation recipes, never renderer paths. Diagonal velocity is normalized
+  codes and active-hand weapon classes. Semantic movement facing now follows the
+  separate legacy logical-to-COF and COF-to-DCC direction tables corroborated by
+  Riiablo and OpenDiablo2. Shadow-enabled body parts are first assembled into one
+  shared alpha mask, then projected leftward at half height from one baseline so
+  limbs cannot produce detached, full-height component shadows. The item
+  snapshot carries only validated presentation recipes, never renderer paths.
+  Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
   `dm.world.collider` radius now probes the player's full footprint while
   retaining axis-separated wall sliding. COF shadow-enabled components now use

@@ -293,24 +293,27 @@ func drawCompositeComponent(output *image.RGBA, component compositeFrame, destin
 	draw.DrawMask(output, component.image.Bounds().Add(destination), component.image, component.image.Bounds().Min, mask, image.Point{}, draw.Over)
 }
 
-// projectedShadowBounds mirrors the legacy character-shadow affine transform:
-// keep the feet on their baseline, compress vertical distance by one half, and
-// shear upper pixels horizontally by that same distance. Riiablo expresses it
-// as scale(1,.5)+shear(-1,0); OpenDiablo2 uses scale(1,.5)+skew(.5,0).
+// projectedShadowBounds mirrors Riiablo's legacy character-shadow transform:
+// keep the feet on their shared baseline, compress vertical distance by one
+// half, and shear upper pixels left by that same distance.
 func projectedShadowBounds(bounds image.Rectangle) image.Rectangle {
 	if bounds.Empty() {
 		return image.Rectangle{}
 	}
 	shift := bounds.Dy() / 2
 	baseline := bounds.Max.Y - 1
-	return image.Rect(bounds.Min.X, baseline-shift, bounds.Max.X+shift, baseline+1)
+	return image.Rect(bounds.Min.X-shift, baseline-shift, bounds.Max.X, baseline+1)
 }
 
 func shadowCanvasBounds(visible image.Rectangle, components map[cof.CompositeType]compositeFrame) image.Rectangle {
 	projected := visible
 	for _, component := range components {
 		if component.layer.Shadow != 0 {
-			projected = projected.Union(projectedShadowBounds(component.bounds))
+			// One eligible component means the assembled silhouette is projected
+			// from the shared character bounds. Do not size the canvas from each
+			// component's private baseline or the far-left shadow gets clipped.
+			projected = projected.Union(projectedShadowBounds(visible))
+			break
 		}
 	}
 	// Retained animation nodes are center-anchored. Expand both sides equally so
@@ -320,20 +323,46 @@ func shadowCanvasBounds(visible image.Rectangle, components map[cof.CompositeTyp
 	return image.Rect(visible.Min.X-horizontal, visible.Min.Y-vertical, visible.Max.X+horizontal, visible.Max.Y+vertical)
 }
 
-func drawCompositeShadow(output *image.RGBA, component compositeFrame, canvas image.Rectangle, opacity uint8) {
-	width, height := component.bounds.Dx(), component.bounds.Dy()
+// compositeShadowMask assembles every shadow-enabled body part at the shared
+// character origin before projection. Projecting parts independently gives a
+// head, arms, and torso different ground baselines—the floating fragments the
+// player sees beside the character instead of one contiguous silhouette.
+func compositeShadowMask(bounds image.Rectangle, priority []cof.CompositeType, components map[cof.CompositeType]compositeFrame) *image.RGBA {
+	mask := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	for _, componentType := range priority {
+		component, ok := components[componentType]
+		if !ok || component.layer.Shadow == 0 {
+			continue
+		}
+		width, height := component.bounds.Dx(), component.bounds.Dy()
+		origin := component.bounds.Min.Sub(bounds.Min)
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				var alpha uint8
+				if len(component.indices) > 0 && y*width+x < len(component.indices) {
+					index := int(component.indices[y*width+x])
+					if index > 0 && index < len(component.palette) {
+						alpha = color.RGBAModel.Convert(component.palette[index]).(color.RGBA).A
+					}
+				} else if component.image != nil {
+					point := component.image.Bounds().Min.Add(image.Pt(x, y))
+					_, _, _, value := component.image.At(point.X, point.Y).RGBA()
+					alpha = uint8(value >> 8)
+				}
+				if alpha > mask.RGBAAt(origin.X+x, origin.Y+y).A {
+					mask.SetRGBA(origin.X+x, origin.Y+y, color.RGBA{A: alpha})
+				}
+			}
+		}
+	}
+	return mask
+}
+
+func drawCompositeShadow(output *image.RGBA, mask *image.RGBA, bounds, canvas image.Rectangle, opacity uint8) {
+	width, height := mask.Bounds().Dx(), mask.Bounds().Dy()
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			var alpha uint8
-			if len(component.indices) > 0 && y*width+x < len(component.indices) {
-				index := int(component.indices[y*width+x])
-				if index > 0 && index < len(component.palette) {
-					alpha = color.RGBAModel.Convert(component.palette[index]).(color.RGBA).A
-				}
-			} else if component.image != nil {
-				_, _, _, value := component.image.At(component.bounds.Min.X+x, component.bounds.Min.Y+y).RGBA()
-				alpha = uint8(value >> 8)
-			}
+			alpha := mask.RGBAAt(x, y).A
 			if alpha == 0 {
 				continue
 			}
@@ -341,8 +370,8 @@ func drawCompositeShadow(output *image.RGBA, component compositeFrame, canvas im
 			// the half-scale/shear transform instead of accumulating float drift.
 			distance := height - 1 - y
 			shift := (distance + 1) / 2
-			absoluteX := component.bounds.Min.X + x + shift
-			absoluteY := component.bounds.Max.Y - 1 - shift
+			absoluteX := bounds.Min.X + x - shift
+			absoluteY := bounds.Max.Y - 1 - shift
 			blendRGBA(output, absoluteX-canvas.Min.X, absoluteY-canvas.Min.Y, color.RGBA{A: alpha}, opacity)
 		}
 	}
@@ -429,13 +458,8 @@ func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.Co
 	// Drawing a layer's shadow immediately before that layer lets later shadows
 	// darken earlier limbs and looks like broken arm priority on thin characters.
 	priority := asset.Priority[direction][frame]
-	for _, componentType := range priority {
-		component, ok := components[componentType]
-		if !ok || component.layer.Shadow == 0 {
-			continue
-		}
-		drawCompositeShadow(output, component, canvas, 96)
-	}
+	shadow := compositeShadowMask(bounds, priority, components)
+	drawCompositeShadow(output, shadow, bounds, canvas, 96)
 	for _, componentType := range priority {
 		component, ok := components[componentType]
 		if !ok {
