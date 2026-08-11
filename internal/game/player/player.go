@@ -70,6 +70,11 @@ type Destination struct {
 	Act, LevelID        int64
 }
 
+// PlayerColliderRadius is one gameplay subtile. Riiablo models players as
+// Size.MEDIUM (diameter 2) and uses size/2 for the physics circle. A map tile is
+// five subtiles, so this is deliberately much smaller than the rendered hero.
+const PlayerColliderRadius = 1.0
+
 // NewDestination validates a finite authoritative world and its entry anchor.
 func NewDestination(x, y, width, height float64, act, levelID int64) (Destination, error) {
 	if width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act < 1 || act > 5 || levelID <= 0 {
@@ -288,7 +293,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.control, map[string]any{"player": entry.Player}},
 		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
 		{stores.location, map[string]any{"act": entry.Act, "level_id": entry.LevelID}},
-		{stores.collider, map[string]any{"radius": 0.35}},
+		{stores.collider, map[string]any{"radius": PlayerColliderRadius}},
 		{stores.selectable, map[string]any{"id": "player:" + entry.Player, "kind": targeting.KindPlayer, "label": entry.Name, "owner": entry.Player, "radius": 0.75, "priority": int64(10)}},
 	}
 	for _, component := range components {
