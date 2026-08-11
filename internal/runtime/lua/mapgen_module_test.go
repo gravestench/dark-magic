@@ -60,5 +60,8 @@ func mazeModuleFixture() gamedata.Snapshot {
 		record := model.LevelPreset{Def: 52 + mask, SizeX: 24, SizeY: 24, Files: 1, File1: "Act1/Caves/room.ds1", Dt1Mask: 1}
 		result.LevelPresetByDef[record.Def] = record
 	}
+	for definition := 83; definition <= 90; definition++ {
+		result.LevelPresetByDef[definition] = model.LevelPreset{Def: definition, SizeX: 24, SizeY: 24, Files: 1, File1: "Act1/Caves/special.ds1", Dt1Mask: 1}
+	}
 	return result
 }

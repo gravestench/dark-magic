@@ -50,7 +50,11 @@ func (generator *MazeGenerator) Generate(request Request) (*Zone, error) {
 	}
 	cells, edges := growMaze(roomCount, NewStreams(request.Seed).For("maze-topology"))
 	edges = mergeAdjacentCells(cells, edges, rules.Merge, NewStreams(request.Seed).For("maze-merge"))
-	return generator.materialize(request, level, rules, cells, edges)
+	roles, err := specialRoomRoles(cells, edges, NewStreams(request.Seed).For("maze-special-rooms"))
+	if err != nil {
+		return nil, err
+	}
+	return generator.materialize(request, level, rules, cells, edges, roles)
 }
 
 func growMaze(count int, random Random) ([]mazeCell, []mazeEdge) {
@@ -81,6 +85,7 @@ func mergeAdjacentCells(cells []mazeCell, edges []mazeEdge, chance int, random R
 	for _, edge := range edges {
 		existing[edge] = true
 	}
+	degrees := cellDegrees(edges)
 	occupied := make(map[mazeCell]bool, len(cells))
 	for _, cell := range cells {
 		occupied[cell] = true
@@ -90,7 +95,9 @@ func mergeAdjacentCells(cells []mazeCell, edges []mazeEdge, chance int, random R
 		for _, delta := range []mazeCell{{1, 0}, {0, 1}} {
 			other := mazeCell{cell.x + delta.x, cell.y + delta.y}
 			edge := canonicalEdge(cell, other)
-			if occupied[other] && !existing[edge] && int(random.Uint64n(1000)) < chance {
+			// Keep tree leaves available for authored one-door entrance/exit
+			// chambers. Internal loops may merge; endpoints retain their role.
+			if occupied[other] && !existing[edge] && degrees[cell] > 1 && degrees[other] > 1 && int(random.Uint64n(1000)) < chance {
 				existing[edge] = true
 				edges = append(edges, edge)
 			}
@@ -99,7 +106,7 @@ func mergeAdjacentCells(cells []mazeCell, edges []mazeEdge, chance int, random R
 	return edges
 }
 
-func (generator *MazeGenerator) materialize(request Request, level model.LevelData, rules model.LevelMazeData, cells []mazeCell, edges []mazeEdge) (*Zone, error) {
+func (generator *MazeGenerator) materialize(request Request, level model.LevelData, rules model.LevelMazeData, cells []mazeCell, edges []mazeEdge, roles map[mazeCell]string) (*Zone, error) {
 	minX, minY, maxX, maxY := cells[0].x, cells[0].y, cells[0].x, cells[0].y
 	for _, cell := range cells[1:] {
 		minX, minY, maxX, maxY = min(minX, cell.x), min(minY, cell.y), max(maxX, cell.x), max(maxY, cell.y)
@@ -125,7 +132,11 @@ func (generator *MazeGenerator) materialize(request Request, level model.LevelDa
 	stamps := make([]Stamp, 0, len(cells))
 	for _, cell := range cells {
 		id, mask := ids[cell], masks[cell]
-		presetDef := 52 + int(mask) // verified LvlPrest Act I Cave W..NSEW sequence
+		presetDef := ordinaryCavePreset(mask)
+		role := roles[cell]
+		if role != "" {
+			presetDef = specialCavePreset(role, mask)
+		}
 		preset, found := generator.data.LevelPresetByDef[presetDef]
 		if !found || preset.SizeX != rules.SizeX || preset.SizeY != rules.SizeY {
 			return nil, fmt.Errorf("%w: cave connection mask %#x has no compatible LvlPrest %d", ErrZone, mask, presetDef)
@@ -140,14 +151,90 @@ func (generator *MazeGenerator) materialize(request Request, level model.LevelDa
 			return nil, err
 		}
 		x, y := (cell.x-minX)*rules.SizeX, (cell.y-minY)*rules.SizeY
-		stamps = append(stamps, Stamp{ID: id, PresetDef: presetDef, X: x, Y: y, Width: rules.SizeX, Height: rules.SizeY, DS1Path: assetPath(variants[variant]), TilePaths: tiles, Variant: variant, Populate: preset.Populate != 0, LogicalWalls: preset.Logicals != 0})
+		stamps = append(stamps, Stamp{ID: id, PresetDef: presetDef, Role: role, X: x, Y: y, Width: rules.SizeX, Height: rules.SizeY, DS1Path: assetPath(variants[variant]), TilePaths: tiles, Variant: variant, Populate: preset.Populate != 0, LogicalWalls: preset.Logicals != 0})
 		rooms = append(rooms, Room{ID: id, X: x, Y: y, Width: rules.SizeX, Height: rules.SizeY, StampID: id})
 	}
 	return NewZone(Definition{Request: request, Kind: Maze, Bounds: Bounds{Width: (maxX - minX + 1) * rules.SizeX, Height: (maxY - minY + 1) * rules.SizeY}, Stamps: stamps, Rooms: rooms, Links: links, Trace: []string{
 		fmt.Sprintf("LvlMaze[%d] requested %d rooms of %dx%d", request.LevelID, len(rooms), rules.SizeX, rules.SizeY),
 		fmt.Sprintf("topology created %d canonical room links", len(links)),
 		"Act I Cave chamber definitions selected by exact W/E/S/N masks",
+		"distinct leaf chambers assigned previous-level and next-level roles",
 	}})
+}
+
+func ordinaryCavePreset(mask uint8) int { return 52 + int(mask) }
+
+func specialCavePreset(role string, mask uint8) int {
+	ordinal := map[uint8]int{connectionWest: 0, connectionEast: 1, connectionSouth: 2, connectionNorth: 3}[mask]
+	switch role {
+	case "previous-level":
+		return 83 + ordinal
+	case "next-level":
+		return 87 + ordinal
+	default:
+		return ordinaryCavePreset(mask)
+	}
+}
+
+func specialRoomRoles(cells []mazeCell, edges []mazeEdge, random Random) (map[mazeCell]string, error) {
+	degrees := cellDegrees(edges)
+	var leaves []mazeCell
+	for _, cell := range cells {
+		if degrees[cell] == 1 {
+			leaves = append(leaves, cell)
+		}
+	}
+	if len(cells) == 1 {
+		return map[mazeCell]string{cells[0]: "previous-level"}, nil
+	}
+	if len(leaves) < 2 {
+		return nil, fmt.Errorf("%w: maze has fewer than two endpoint rooms", ErrZone)
+	}
+	sort.Slice(leaves, func(i, j int) bool {
+		if leaves[i].y == leaves[j].y {
+			return leaves[i].x < leaves[j].x
+		}
+		return leaves[i].y < leaves[j].y
+	})
+	entrance := leaves[random.Uint64n(uint64(len(leaves)))]
+	distances := cellDistances(entrance, edges)
+	exit := leaves[0]
+	for _, candidate := range leaves {
+		if candidate != entrance && (exit == entrance || distances[candidate] > distances[exit]) {
+			exit = candidate
+		}
+	}
+	return map[mazeCell]string{entrance: "previous-level", exit: "next-level"}, nil
+}
+
+func cellDegrees(edges []mazeEdge) map[mazeCell]int {
+	result := make(map[mazeCell]int)
+	for _, edge := range edges {
+		result[edge.a]++
+		result[edge.b]++
+	}
+	return result
+}
+
+func cellDistances(start mazeCell, edges []mazeEdge) map[mazeCell]int {
+	adjacent := make(map[mazeCell][]mazeCell)
+	for _, edge := range edges {
+		adjacent[edge.a] = append(adjacent[edge.a], edge.b)
+		adjacent[edge.b] = append(adjacent[edge.b], edge.a)
+	}
+	result := map[mazeCell]int{start: 0}
+	queue := []mazeCell{start}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, next := range adjacent[current] {
+			if _, found := result[next]; !found {
+				result[next] = result[current] + 1
+				queue = append(queue, next)
+			}
+		}
+	}
+	return result
 }
 
 func mazeRoomCount(record model.LevelMazeData, difficulty Difficulty) int {

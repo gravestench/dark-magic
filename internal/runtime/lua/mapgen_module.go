@@ -80,6 +80,7 @@ func zoneToLua(state *lua.LState, zone *mapgen.Zone) *lua.LTable {
 		item := state.NewTable()
 		setLuaInteger(item, "id", int(stamp.ID))
 		setLuaInteger(item, "preset_def", stamp.PresetDef)
+		item.RawSetString("role", lua.LString(stamp.Role))
 		setLuaInteger(item, "variant", stamp.Variant)
 		item.RawSetString("ds1", lua.LString(stamp.DS1Path))
 		tiles := state.NewTable()

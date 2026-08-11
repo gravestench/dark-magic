@@ -66,10 +66,9 @@ recipes; it deliberately contains no images, textures, renderer nodes, or screen
 coordinates. Purpose-named random streams keep topology, preset-variant, and
 population rolls independent, and every zone has a canonical SHA-256 checksum.
 
-The current general stream implementation is replay-stable Dark Magic policy.
-Exact legacy DRLG compatibility still requires the two-word seed arithmetic and
-call order below; generators claiming that fidelity must implement and test it
-explicitly rather than treating the general stream as a compatibility shortcut.
+The named-stream implementation is replay-stable Dark Magic policy. Dark Magic
+does not reproduce original layouts from legacy seeds; the historical arithmetic
+below remains useful research context, not a compatibility requirement.
 
 D2MOO reconstructs the 1.10f seed state as two 32-bit values:
 
@@ -193,9 +192,15 @@ authored `Merge` chance to adjacent rooms through a separate named stream, and
 normalizes the result into positive tile-space bounds. The shipped LvlPrest
 sequence 53 through 67 corresponds exactly to connection masks 1 through 15
 when bits are W=1, E=2, S=4, N=8; the generator verifies dimensions and selects
-only that matching chamber. Special entrance, exit, quest, and treasure room
-replacement still requires its own legacy rules and must not be approximated by
-the ordinary chamber picker.
+only that matching chamber.
+
+The first special-room layer reserves two graph leaves before materialization.
+One becomes the previous-level chamber and a maximally distant leaf becomes the
+next-level chamber. Internal merge loops cannot consume these one-door leaves.
+Their door direction selects Act I Cave Prev/Next definitions 83 through 90.
+This is deterministic Dark Magic policy using production-authored pieces; it
+does not claim to reproduce the executable's seed-specific layout. Quest and
+treasure replacement remain separate rule layers.
 
 The generator:
 
