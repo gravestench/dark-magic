@@ -1451,6 +1451,7 @@ func (r *RenderCapability) Module() Module {
 					entry.RawSetString("height", lua.LNumber(chunk.Pixels.Bounds().Dy()))
 					entry.RawSetString("layer", lua.LNumber(chunk.Layer))
 					entry.RawSetString("layer_name", lua.LString(chunk.Layer.String()))
+					entry.RawSetString("depth", lua.LNumber(chunk.Depth))
 					entries.RawSetInt(index+1, entry)
 				}
 				result.RawSetString("chunks", entries)

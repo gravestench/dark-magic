@@ -17,6 +17,8 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 		"load": commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
 		"dimensions":        commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
+		"canvas":            commandHelp("map:canvas()", "Return isometric world-pixel canvas dimensions."),
+		"entity_depth":      commandHelp("map:entity_depth(x, y)", "Return shared presentation depth for a world entity baseline."),
 		"flags":             commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
 		"blocked":           commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
 		"blocked_position":  commandHelp("map:blocked_position(x, y)", "Sample collision at a continuous subtile-center position."),
@@ -70,6 +72,16 @@ func registerWorldMapType(state *lua.LState) {
 			setLuaInteger(result, "act", world.Act)
 			setLuaInteger(result, "object_count", len(world.Objects))
 			state.Push(result)
+			return 1
+		},
+		"canvas": func(state *lua.LState) int {
+			world := checkWorldMap(state, 1)
+			state.Push(lua.LNumber((world.WidthTiles+world.HeightTiles)*gameworld.TilePixelWidth/2 + gameworld.PreviewMargin*2))
+			state.Push(lua.LNumber((world.WidthTiles+world.HeightTiles)*gameworld.TilePixelHeight/2 + gameworld.PreviewMargin*2))
+			return 2
+		},
+		"entity_depth": func(state *lua.LState) int {
+			state.Push(lua.LNumber(gameworld.EntityDepth(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))))
 			return 1
 		},
 		"flags": func(state *lua.LState) int {

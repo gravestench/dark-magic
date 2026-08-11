@@ -185,6 +185,11 @@ ZIP, and shim sources. `internal/assets/decode` converts supported formats,
 uploads and disposal. Inspection and catalog tools reuse the same content and
 decode paths under `internal/assets/inspect` and `internal/assets/catalog`.
 
+World-space draw ordering is a renderer-neutral policy in `internal/game/world`.
+Map passes and standing entities receive comparable projected-baseline keys;
+the chunk adapter may batch equal-depth facts but must not put the entire map
+under a parent that prevents walls and entities from interleaving.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and
