@@ -158,10 +158,13 @@ This is the first strong gameplay spine. Widen feature coverage after this loop 
 The renderer-independent authority portion is now proven end to end, including
 command-admitted entry/population/action, hostile acquisition and fixed-step
 movement, melee, cast/missile/state/death consequences, midpoint restoration,
-full command-log replay, and checksum-stable observation. The remaining gate is
-the presentation/audio projection of live monster and semantic cue read models;
-do not mark the gate complete until those adapters consume copied facts without
-writing simulation state.
+full command-log replay, and checksum-stable observation. Live monster visuals
+now consume copied identity, joined MonStats2 component recipes, derived display
+mode/facing, and world position; death/missile events enter an observe-once
+value queue, and the death cue resolves the authored MonSounds/Sounds record.
+The remaining gate is concrete missile art/audio projection. Do not mark it
+complete until those adapters also consume copied facts without writing
+simulation state.
 
 ## Breadth queue after the first simulation loop
 

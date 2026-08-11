@@ -26,14 +26,19 @@ const (
 // and MonStats2 rows plus one effective MonLvl row. Source IDs remain visible so
 // a diagnostic can explain exactly which legacy facts produced the archetype.
 type Definition struct {
-	ID             string            `json:"id"`
-	BaseID         string            `json:"base_id"`
-	GraphicsID     string            `json:"graphics_id"`
-	NameKey        string            `json:"name_key"`
-	MonsterType    string            `json:"monster_type"`
-	AI             string            `json:"ai"`
-	Token          string            `json:"token"`
-	WeaponClass    string            `json:"weapon_class"`
+	ID          string `json:"id"`
+	BaseID      string `json:"base_id"`
+	GraphicsID  string `json:"graphics_id"`
+	NameKey     string `json:"name_key"`
+	MonsterType string `json:"monster_type"`
+	AI          string `json:"ai"`
+	Token       string `json:"token"`
+	WeaponClass string `json:"weapon_class"`
+	// Components is the joined MonStats2 body recipe. The old game had to keep
+	// these columns in its second monster table; runtime code should not have to
+	// remember that spreadsheet accident.
+	Components     map[string]string `json:"components"`
+	DeathSound     string            `json:"death_sound"`
 	Level          int64             `json:"level"`
 	LifeMin        gamecombat.Amount `json:"life_min"`
 	LifeMax        gamecombat.Amount `json:"life_max"`
@@ -80,7 +85,14 @@ func FromCatalog(snapshot gamedata.Snapshot, id string, difficulty Difficulty) (
 		}
 		level = &row
 	}
-	return JoinDefinition(stats, graphics, level, difficulty)
+	definition, err := JoinDefinition(stats, graphics, level, difficulty)
+	if err != nil {
+		return Definition{}, err
+	}
+	if sounds, found := snapshot.MonsterSoundByID[strings.TrimSpace(stats.MonSound)]; found {
+		definition.DeathSound = strings.TrimSpace(sounds.DeathSound)
+	}
+	return definition, nil
 }
 
 type difficultyValues struct {
@@ -181,7 +193,8 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		ID: stats.Id, BaseID: strings.TrimSpace(stats.BaseId), GraphicsID: graphics.Id,
 		NameKey: strings.TrimSpace(stats.NameStr), MonsterType: strings.TrimSpace(stats.MonType), AI: strings.TrimSpace(stats.AI),
 		Token: strings.ToUpper(strings.TrimSpace(stats.Code)), WeaponClass: strings.ToUpper(strings.TrimSpace(graphics.BaseWeapon)),
-		Level: int64(effectiveLevel), LifeMin: lifeMin, LifeMax: lifeMax, Defense: int64(values.defense), AttackRating: int64(values.attack),
+		Components: monsterComponents(graphics),
+		Level:      int64(effectiveLevel), LifeMin: lifeMin, LifeMax: lifeMax, Defense: int64(values.defense), AttackRating: int64(values.attack),
 		PhysicalMin: damageMin, PhysicalMax: damageMax, Experience: int64(values.experience),
 		TreasureClass:  treasureClass(stats, difficulty),
 		ColliderRadius: diameter / 2, SelectRadius: diameter / 2, Velocity: int64(stats.Velocity), Killable: stats.Killable,
@@ -196,6 +209,34 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		definition.MonLvlLevel = level.Level
 	}
 	return definition, nil
+}
+
+// monsterComponents copies only enabled, non-empty visual pieces. A component
+// code names the middle part of a legacy DCC filename (for example HD=LIT).
+// Keeping the tiny mapping here makes the renderer consume a cohesive monster
+// definition instead of reaching back into raw MonStats2 rows.
+func monsterComponents(graphics models.MonsterStats2) map[string]string {
+	values := []struct {
+		name, visual string
+		enabled      bool
+	}{
+		{"HD", graphics.HDv, graphics.HD}, {"TR", graphics.TRv, graphics.TR},
+		{"LG", graphics.LGv, graphics.LG}, {"RA", graphics.RAv, graphics.RA},
+		{"LA", graphics.LAv, graphics.LA}, {"RH", graphics.RHv, graphics.RH},
+		{"LH", graphics.LHv, graphics.LH}, {"SH", graphics.SHv, graphics.SH},
+		{"S1", graphics.S1v, graphics.S1}, {"S2", graphics.S2v, graphics.S2},
+		{"S3", graphics.S3v, graphics.S3}, {"S4", graphics.S4v, graphics.S4},
+		{"S5", graphics.S5v, graphics.S5}, {"S6", graphics.S6v, graphics.S6},
+		{"S7", graphics.S7v, graphics.S7}, {"S8", graphics.S8v, graphics.S8},
+	}
+	result := make(map[string]string)
+	for _, value := range values {
+		visual := strings.ToUpper(strings.TrimSpace(value.visual))
+		if value.enabled && visual != "" {
+			result[value.name] = visual
+		}
+	}
+	return result
 }
 
 func treasureClass(stats models.MonsterStats, difficulty Difficulty) string {

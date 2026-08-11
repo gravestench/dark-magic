@@ -24,12 +24,20 @@ local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
 local player_composite = require("darkmagic.gameplay.player_composite")
+local monster_composite = require("darkmagic.gameplay.monster_composite")
 local chunked_map = require("darkmagic.presentation.chunked_map")
 local tooltip = require("darkmagic.ui.tooltip")
 local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
+
+local function destroy_monsters(self)
+	for _, monster in pairs(self.monsters or {}) do
+		if monster.node and monster.node:exists() then monster.node:destroy() end
+	end
+	self.monsters = {}
+end
 
 local function install_current_world(self)
 	local world_capability = self.world_capability
@@ -42,6 +50,7 @@ local function install_current_world(self)
 	local next_world, recipe = world_capability.current()
 	assert(next_world and recipe, "session world is unavailable")
 	if self.hero and self.hero:exists() then self.hero:destroy() end
+	destroy_monsters(self)
 	self.collision_node, self.collision_region_key = nil, nil
 	self.tile_debug_node, self.tile_debug_region_key = nil, nil
 	self.hero_origin = nil
@@ -152,6 +161,93 @@ local function selectable_at(self, x, y)
 	return self.world and self.world:selectable_at(x, y) or nil
 end
 
+local function retained_monster(self, key)
+	local monster = self.monsters[key]
+	if monster then return monster end
+	monster = {node=render.create("world", self.map.root), direction=0}
+	monster.node:set_visible(false)
+	self.monsters[key] = monster
+	return monster
+end
+
+local function finish_monster_preload(monster, composite)
+	if not monster.pending_job then return end
+	local status = render.preload_status(monster.pending_job)
+	if not status.done then return end
+	local pending = monster.pending_composite
+	if composite and status.failed == 0 and pending.key == composite.key then
+		local loop = pending.mode == "DT" and "once" or "loop"
+		monster.node:set_cof_animation(pending.cof, pending.palette,
+			pending.direction, pending.components, loop, pending.rate,
+			monster.playback.seconds)
+		monster.node:set_visible(true)
+		monster.composite_key = pending.key
+	end
+	monster.pending_job, monster.pending_composite = nil, nil
+end
+
+local function update_monster(self, monster, snapshot, elapsed)
+	monster.spawn_id, monster.death_sound = snapshot.spawn_id, snapshot.death_sound
+	monster.direction = monster_composite.facing(monster.direction, snapshot.velocity_x, snapshot.velocity_y)
+	snapshot.direction = monster.direction
+	local composite = monster_composite.resolve(snapshot)
+	if composite and (not monster.playback or monster.playback.mode ~= composite.mode) then
+		monster.playback = monster_composite.new_playback(composite)
+	end
+	if composite then monster.events = monster_composite.advance(monster.playback, composite, elapsed) end
+	if composite and composite.key ~= monster.composite_key and not monster.pending_job then
+		monster.pending_job = render.preload({monster_composite.preload_request(composite)})
+		monster.pending_composite = composite
+	end
+	finish_monster_preload(monster, composite)
+	local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+	monster.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
+	monster.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+end
+
+-- Reconcile copied ECS monster facts with retained render nodes. This is a
+-- presentation adapter, not a gameplay system: it creates/destroys pictures,
+-- but never writes position, mode, health, collision, or event components.
+local function update_monsters(self, elapsed)
+	if not self.map or not self.world then return end
+	self.monsters = self.monsters or {}
+	local seen = {}
+	for _, snapshot in ipairs(self.gameplay_world.monster_snapshots()) do
+		if snapshot.level_id == self.world_level_id then
+			local key = tostring(snapshot.entity_id)
+			seen[key] = true
+			update_monster(self, retained_monster(self, key), snapshot, elapsed)
+		end
+	end
+	for key, monster in pairs(self.monsters) do
+		if not seen[key] then
+			monster.node:destroy()
+			self.monsters[key] = nil
+		end
+	end
+end
+
+local function observe_semantic_cues(self)
+	self.observed_cues = self.observed_cues or {}
+	self.semantic_cues = {}
+	for _, cue in ipairs(self.gameplay_world.semantic_cues()) do
+		if not self.observed_cues[cue.entity_id] then
+			self.observed_cues[cue.entity_id] = true
+			-- This copied queue is the narrow hand-off to visual/audio adapters.
+			self.semantic_cues[#self.semantic_cues + 1] = cue
+			if cue.cue_type == "monster_death" and cue.kind == "monster_death_presented" then
+				for _, monster in pairs(self.monsters or {}) do
+					if monster.spawn_id == cue.monster_id and monster.death_sound ~= "" then
+						-- MonSounds points to a Sounds.txt record. The audio catalog
+						-- resolves localization, variants, volume, and output bus.
+						pcall(audio.play_record, monster.death_sound, cue.tick or 0)
+					end
+				end
+			end
+		end
+	end
+end
+
 return {
     create = function(self)
         -- Ordinary Lua helper defining/binding ECS world presentation behavior.
@@ -168,7 +264,6 @@ return {
             -- dimensions, collision, subtile projection, future LOS/objects/etc.
 			install_current_world(self)
         end
-
         -- Hero sprite/composite is presentation only. The authoritative hero is
         -- a separate ECS entity admitted by the session and bound later.
         -- Map bands and standing entities share one parent so their baseline
@@ -226,6 +321,10 @@ return {
 
     update = function(self, elapsed, focused, input_allowed, world_view)
 		if render.assets_available() then install_current_world(self) end
+		if render.assets_available() then
+			update_monsters(self, elapsed)
+			observe_semantic_cues(self)
+		end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
         -- may keep the world updating while routing only certain input below.
         --
@@ -495,6 +594,7 @@ return {
         -- gameplay.world owns only its presentation camera entity; its destroy
         -- helper intentionally leaves session-owned hero authority alone.
         self.gameplay_world.destroy(self.gameplay)
+		destroy_monsters(self)
         chunked_map.destroy(self.map)
     end,
 }
