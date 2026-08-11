@@ -888,6 +888,10 @@ complete until its actions are driven by authoritative game state and commands.
   Runtime residency also prefetches one viewport-quarter camera shift plus a
   legacy tile width, so opening, closing, or combining side panels cannot expose
   a one-frame black strip while visible DT1 jobs catch up.
+- [x] M20.4d: Extend the persistent texture-residency overlay with exact
+  last-frame draw-call, scene-node traversal, subtree-culling, and texture-update
+  counters. Backend batching or instancing is now gated on measured game-world
+  workload instead of total map-placement counts.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue

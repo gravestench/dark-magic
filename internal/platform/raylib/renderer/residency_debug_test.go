@@ -19,3 +19,24 @@ func TestTextureCacheBudgetIsDeferredUntilOwnerThreadAppliesIt(t *testing.T) {
 		t.Fatalf("applied budget = %d", got)
 	}
 }
+
+func TestRecordFrameWorkPublishesOnlyCurrentFrameDeltas(t *testing.T) {
+	service := &Service{}
+	service.drawCalls.Store(100)
+	service.nodesVisited.Store(200)
+	service.subtreesCulled.Store(30)
+	service.textureUpdates.Store(40)
+	start := service.BackendDiagnostics()
+
+	service.drawCalls.Add(12)
+	service.nodesVisited.Add(20)
+	service.subtreesCulled.Add(3)
+	service.textureUpdates.Add(2)
+	service.recordFrameWork(start)
+
+	got := service.BackendDiagnostics()
+	if got.LastFrameDrawCalls != 12 || got.LastFrameNodesVisited != 20 ||
+		got.LastFrameSubtreesCulled != 3 || got.LastFrameTextureUpdates != 2 {
+		t.Fatalf("last-frame diagnostics = %+v", got)
+	}
+}
