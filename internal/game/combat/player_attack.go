@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/gravestench/akara"
+	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
-const AttackApproach = "dm.combat.attack_approach"
+const AttackApproach = gameaction.AttackApproachComponent
 
 // PathFinder is the narrow collision-aware route service needed by an attack
 // approach. world.Map satisfies it; tests may omit it to exercise open ground.
