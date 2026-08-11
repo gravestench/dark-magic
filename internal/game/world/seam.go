@@ -10,9 +10,11 @@ import (
 // SeamEndpoint is one authoritative side of a level transition. Coordinates
 // are collision-space subtiles, not renderer pixels.
 type SeamEndpoint struct {
-	LevelID   int
-	X, Y      float64
-	Direction string
+	LevelID            int
+	X, Y               float64
+	ArrivalX, ArrivalY float64
+	Width, Height      float64
+	Direction          string
 }
 
 // Seam is a verified bidirectional relationship between two materialized
@@ -46,7 +48,23 @@ func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen
 	if !found {
 		return Seam{}, fmt.Errorf("world: Blood Moor town edge is blocked")
 	}
-	return Seam{Town: SeamEndpoint{LevelID: 1, X: townX, Y: townY, Direction: townDirection}, Wilderness: SeamEndpoint{LevelID: 2, X: moorX, Y: moorY, Direction: warps[0].Direction}}, nil
+	townArrivalX, townArrivalY, found := insetArrival(townMap, townX, townY, townDirection)
+	if !found {
+		return Seam{}, fmt.Errorf("world: town arrival is blocked")
+	}
+	moorArrivalX, moorArrivalY, found := insetArrival(moorMap, moorX, moorY, warps[0].Direction)
+	if !found {
+		return Seam{}, fmt.Errorf("world: Blood Moor arrival is blocked")
+	}
+	return Seam{
+		Town:       SeamEndpoint{LevelID: 1, X: townX, Y: townY, ArrivalX: townArrivalX, ArrivalY: townArrivalY, Width: float64(townMap.WidthSubtiles), Height: float64(townMap.HeightSubtiles), Direction: townDirection},
+		Wilderness: SeamEndpoint{LevelID: 2, X: moorX, Y: moorY, ArrivalX: moorArrivalX, ArrivalY: moorArrivalY, Width: float64(moorMap.WidthSubtiles), Height: float64(moorMap.HeightSubtiles), Direction: warps[0].Direction},
+	}, nil
+}
+
+func insetArrival(world *Map, x, y float64, edge string) (float64, float64, bool) {
+	delta := map[string][2]float64{"north": {0, 6}, "east": {-6, 0}, "south": {0, -6}, "west": {6, 0}}[edge]
+	return world.OpenPointNearSubtile(x+delta[0], y+delta[1])
 }
 
 func cardinalTownAnchor(anchors []ExitAnchor, direction string) (ExitAnchor, bool) {

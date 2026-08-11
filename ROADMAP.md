@@ -975,6 +975,12 @@ complete until its actions are driven by authoritative game state and commands.
     tile placements, and a production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
     subtile coordinates without asking presentation to infer either endpoint.
+    A trusted fixed-tick `system.world.transition` command now requires the
+    player's authoritative source level and proximity to that seam, then
+    atomically updates destination level, inset arrival position, world bounds,
+    and velocity. The local source detects the crossed endpoint without trusting
+    Lua and arrival inset prevents immediate bounce-back. Active-map adapter
+    switching and full presentation/input seam validation remain.
 
 ## M21: Diablo simulation
 
