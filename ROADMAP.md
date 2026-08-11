@@ -868,6 +868,10 @@ complete until its actions are driven by authoritative game state and commands.
   is queued off-thread, camera-near textures are admitted gradually and culled
   against the unobscured left/right view, and map placement derives exclusively
   from absolute authoritative camera coordinates without a scene-entry baseline.
+- [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
+  boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
+  collision overlay. Red marks walk blocking, orange player-only blocking, blue
+  LOS, magenta jump, and yellow light blocking.
 
 ## M21: Diablo simulation
 
@@ -875,6 +879,12 @@ M21 now starts with the playable-character vertical slice. Spatial NPC service
 work proved the command/authority boundary, but further interactions are ordered
 after one controlled character can enter a map, receive routed input, advance at
 the fixed tick, and drive a real legacy composite from authoritative state.
+
+Gameplay input follows the legacy pointer-first contract: the mouse targets
+movement, interaction, item use, and combat, while keyboard events provide
+hotkeys, text, modifiers, and cancellation. Modern controller navigation and
+world targeting are future adapters over those semantic intents; controller
+focus must not replace pointer coordinates as the authoritative client request.
 
 - [ ] **M21.0: Complete the authoritative playable-character vertical slice.**
   The first increment now materializes separate composite appearance and

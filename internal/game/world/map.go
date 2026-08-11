@@ -197,7 +197,10 @@ func (m *Map) addTile(catalog *TileCatalog, tileX, tileY int, layer TileLayer, i
 func (m *Map) apply(tileX, tileY int, tile TileReference) {
 	for index, source := range tile.SubTileFlags {
 		x := tileX*SubtilesPerTile + index%SubtilesPerTile
-		y := tileY*SubtilesPerTile + index/SubtilesPerTile
+		// DT1 stores its five subtile rows bottom-to-top. World coordinates grow
+		// top-to-bottom, so reading the bytes as ordinary row-major data mirrors
+		// collision vertically inside every tile.
+		y := tileY*SubtilesPerTile + (SubtilesPerTile - 1 - index/SubtilesPerTile)
 		if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
 			continue
 		}

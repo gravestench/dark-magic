@@ -47,13 +47,34 @@ func TestApplyCombinesSubtileFlags(t *testing.T) {
 	m.apply(1, 0, TileReference{SubTileFlags: first.SubTileFlags})
 	m.apply(1, 0, TileReference{SubTileFlags: second.SubTileFlags})
 
-	got, ok := m.FlagsAt(5, 0)
+	got, ok := m.FlagsAt(5, 4)
 	if !ok || !got.BlockLOS || !got.BlockPlayerWalk || !got.Blocked() {
-		t.Fatalf("FlagsAt(5, 0) = %#v, %v", got, ok)
+		t.Fatalf("FlagsAt(5, 4) = %#v, %v", got, ok)
 	}
-	got, ok = m.FlagsAt(9, 4)
+	got, ok = m.FlagsAt(9, 0)
 	if !ok || !got.BlockWalk || !got.Blocked() {
-		t.Fatalf("FlagsAt(9, 4) = %#v, %v", got, ok)
+		t.Fatalf("FlagsAt(9, 0) = %#v, %v", got, ok)
+	}
+}
+
+func TestApplyUsesLegacyBottomToTopDT1SubtileRows(t *testing.T) {
+	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
+	tile := &dt1.Tile{}
+	for index := range tile.SubTileFlags {
+		tile.SubTileFlags[index].BlockWalk = index == 0 || index == 24
+	}
+	m.apply(0, 0, TileReference{SubTileFlags: tile.SubTileFlags})
+	for _, point := range [][2]int{{0, 4}, {4, 0}} {
+		flags, ok := m.FlagsAt(point[0], point[1])
+		if !ok || !flags.BlockWalk {
+			t.Fatalf("legacy subtile %v = %#v, %v", point, flags, ok)
+		}
+	}
+	for _, point := range [][2]int{{0, 0}, {4, 4}} {
+		flags, _ := m.FlagsAt(point[0], point[1])
+		if flags.BlockWalk {
+			t.Fatalf("unrelated mirrored subtile %v is blocked", point)
+		}
 	}
 }
 

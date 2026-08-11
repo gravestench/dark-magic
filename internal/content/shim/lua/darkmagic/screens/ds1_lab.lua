@@ -124,7 +124,7 @@ function lab:create()
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
-    self.help = label(self.root, "Tab: layer   Arrows/drag: pan   Scroll/Home/End: zoom   PgUp/PgDn: palette   Space: fit   Enter: random", 565)
+    self.help = label(self.root, "Tab: layer   F3: collision   Arrows/drag: pan   Scroll/Home/End: zoom   PgUp/PgDn: palette   Space: fit", 565)
     self.path = tostring(dev.option("ds1_path") or "")
     self.tiles = split_paths(dev.option("ds1_tiles"))
     self.palette = tostring(dev.option("ds1_palette") or "")
@@ -137,6 +137,7 @@ function lab:create()
 	self.dragging, self.drag_x, self.drag_y = false, 0, 0
 	self.high_resolution_scroll_frames = 0
     self.layer_view = 0
+    self.collision_visible = false
     self:queue_preview()
 end
 
@@ -160,6 +161,25 @@ function lab:clear_chunks()
         if node:exists() then node:destroy() end
         self.chunk_nodes[index] = nil
     end
+    if self.collision_node then
+        if self.collision_node:exists() then self.collision_node:destroy() end
+        self.collision_node = nil
+        self.collision_visible = false
+    end
+end
+
+-- Collision is deliberately lazy. The diagnostic full-map RGBA overlay should
+-- cost nothing during ordinary chunked map inspection.
+function lab:toggle_collision()
+    if not self.chunk_set then return end
+    if not self.collision_node then
+        self.collision_node = render.create("hud", self.map_root)
+        self.collision_node:set_ds1_collision(self.path, self.tiles)
+        self.collision_node:set_z(20)
+        self.collision_node:set_visible(false)
+    end
+    self.collision_visible = not self.collision_visible
+    self.collision_node:set_visible(self.collision_visible)
 end
 
 function lab:active_chunk_count()
@@ -276,6 +296,7 @@ function lab:update()
         self:update_status()
         return
     end
+    if input.pressed("debug_collision") then self:toggle_collision(); return end
     if input.pressed("confirm") then self:random_asset(); return end
     if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
     if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end

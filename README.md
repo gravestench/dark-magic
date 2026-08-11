@@ -399,6 +399,10 @@ outside a viewport margin. Its status line reports logical dimensions,
 demand-resident/total chunks, and authored object placements. Objects remain
 simulation facts rather than pixels baked into a tile chunk. The command-line
 PNG inspector intentionally retains its full-image path.
+Press F3 in DS1 Lab to lazily overlay the authoritative DT1 subtile collision
+grid: red is walk blocking, orange player-only blocking, blue line-of-sight,
+magenta jump, and yellow light blocking. This diagnostic uses the same
+bottom-to-top DT1 row transform consumed by simulation.
 
 Inspect a legally obtained Diablo II asset without starting the renderer:
 

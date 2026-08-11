@@ -157,6 +157,12 @@ That separation is deliberate. A mod can use the same interaction behavior with 
 
 A control is mostly plain data plus callbacks. There is no hidden native button object.
 
+Gameplay itself is pointer-first because Diablo II is pointer-first. Pointer
+coordinates and button/hold events become movement, interaction, item, and
+combat intents; keyboard events supply hotkeys, modifiers, text, and escape
+behavior. A future controller adapter may synthesize navigation or a world
+target, but Lua systems must not assume controller focus is the primary model.
+
 ## Snapshots and intent: the most important gameplay rule
 
 Presentation should not quietly become gameplay authority.
