@@ -9,12 +9,33 @@ import (
 
 const worldMapType = "dm.world.map/v1"
 
+// CurrentWorld is the immutable authoritative map and the asset recipe used by
+// presentation to draw that same map. The slice is copied into Lua.
+type CurrentWorld struct {
+	Map *gameworld.Map
+	DS1 string
+	DT1 []string
+}
+
+type CurrentWorldProvider func() CurrentWorld
+
 // WorldModule decodes immutable world facts from mounted DS1 and DT1 assets.
 // Rendering remains a separate capability so headless servers can use the same
 // authored collision and object data as clients.
 func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
+	return worldModule(source, nil, resolvers...)
+}
+
+// SessionWorldModule adds read-only access to the current session-owned map.
+// Asset loading remains available for labs, but gameplay scenes use current().
+func SessionWorldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gameworld.ObjectResolver) Module {
+	return worldModule(source, current, resolvers...)
+}
+
+func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gameworld.ObjectResolver) Module {
 	return Module{Name: "dm.world/v1", Help: documentedModule("Decode immutable gameplay facts from authored world assets.", map[string]CommandHelp{
-		"load": commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
+		"load":    commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
+		"current": commandHelp("dm.world.current()", "Return the current session-owned map and its copied presentation recipe."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
 		"dimensions":        commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
 		"canvas":            commandHelp("map:canvas()", "Return isometric world-pixel canvas dimensions."),
@@ -32,6 +53,27 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"current": func(state *lua.LState) int {
+				if current == nil {
+					state.Push(lua.LNil)
+					return 1
+				}
+				value := current()
+				if value.Map == nil {
+					state.Push(lua.LNil)
+					return 1
+				}
+				pushWorldMap(state, value.Map)
+				recipe := state.NewTable()
+				recipe.RawSetString("ds1", lua.LString(value.DS1))
+				tiles := state.NewTable()
+				for _, path := range value.DT1 {
+					tiles.Append(lua.LString(path))
+				}
+				recipe.RawSetString("dt1", tiles)
+				state.Push(recipe)
+				return 2
+			},
 			"load": func(state *lua.LState) int {
 				stampPath := state.CheckString(1)
 				paths := state.CheckTable(2)
@@ -48,10 +90,7 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 				if err != nil {
 					return pushLuaError(state, err)
 				}
-				userData := state.NewUserData()
-				userData.Value = decoded
-				state.SetMetatable(userData, state.GetTypeMetatable(worldMapType))
-				state.Push(userData)
+				pushWorldMap(state, decoded)
 				return 1
 			},
 		})
@@ -59,6 +98,13 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 		state.Push(module)
 		return 1
 	}}
+}
+
+func pushWorldMap(state *lua.LState, world *gameworld.Map) {
+	userData := state.NewUserData()
+	userData.Value = world
+	state.SetMetatable(userData, state.GetTypeMetatable(worldMapType))
+	state.Push(userData)
 }
 
 func registerWorldMapType(state *lua.LState) {

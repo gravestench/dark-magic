@@ -128,6 +128,9 @@ func (app *application) buildOfflineSession() error {
 	}
 
 	app.entitySimulation = gameecs.New()
+	if err := app.buildEntryWorld(); err != nil {
+		return err
+	}
 	session, err := gamesession.New(app.entitySimulation, gamesession.Config{})
 	if err != nil {
 		_ = app.entitySimulation.Close()
@@ -175,10 +178,9 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("build starting skill provider", err)
 	}
-	mapRecipe := app.presentation.GameWorldMap
-	worldMap, err := gameworld.Load(app.options.Content, mapRecipe.DS1, mapRecipe.DT1, app.worldObjectResolver)
-	if err != nil {
-		return wrap("load offline entry map", err)
+	worldMap := app.gameWorld
+	if worldMap == nil {
+		return errors.New("load offline entry map: session world is unavailable")
 	}
 	movementSource.SetNavigation(worldMap)
 	app.interactionAuthority.ConfigureWorld(worldMap)
@@ -205,7 +207,7 @@ func (app *application) registerOfflineCommands() error {
 	if err := app.interactionAuthority.AddTargets(interactionTargets...); err != nil {
 		return wrap("materialize authored interaction targets", err)
 	}
-	spawnX, spawnY, found := worldMap.OpenPointNearCenter()
+	spawnX, spawnY, found := worldMap.ActOneTownEntry()
 	if !found {
 		return errors.New("create offline player entry source: map has no open spawn subtile")
 	}

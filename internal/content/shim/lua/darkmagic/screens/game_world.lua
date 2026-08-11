@@ -44,20 +44,22 @@ return {
         -- Root retained node for world-layer presentation owned by this scene.
         self.root = render.create("world")
 
-        if render.assets_available() and screen.map then
+        if render.assets_available() then
             -- IMPORTANT: load the map through TWO different views for two
             -- different jobs.
             --
             -- dm.world/v1 produces renderer-INDEPENDENT semantic map facts:
             -- dimensions, collision, subtile projection, future LOS/objects/etc.
             local world = require("dm.world/v1")
-            self.world = assert(world.load(screen.map.ds1, screen.map.dt1))
+			self.world, self.world_recipe = world.current()
+			assert(self.world and self.world_recipe, "session world is unavailable")
+			self.world_recipe.palette = screen.map.palette
             self.world_dimensions = self.world:dimensions()
             self.world_canvas_width, self.world_canvas_height = self.world:canvas()
 
             -- Presentation receives the same recipe, but uploads only chunks near
             -- the camera. It remains a disposable picture of authoritative facts.
-            self.map = chunked_map.create(self.root, screen.map, {
+			self.map = chunked_map.create(self.root, self.world_recipe, {
                 z = screen.map.z,
                 viewport_width = manifest.resolution.width,
                 viewport_height = manifest.resolution.height,
