@@ -17,7 +17,7 @@ Gameplay-system, save, item, stat, and timing sources are tracked separately in 
 
 | Source | Version / commit | License | Role | Material used |
 | --- | --- | --- | --- | --- |
-| Paul Siramy DT1 documentation | historical site, `paul.siramy.free.fr/_divers/dt1_doc/` | historical documentation | format documentation / original modding research | DT1 layout, tile/block concepts, DS1/DT1 relationship, coordinate semantics. Original site is intermittently unavailable and should be mirrored only through lawful archival references. |
+| Paul Siramy DT1 documentation | [archived 2002 specification](https://tristram-archives.github.io/diablo2_infodump/2013/just%20hosting%20these%2C%20Downloaded%20from%20Internet/documentation/dt1-docs-in-html/index.htm) | historical documentation | format documentation / original modding research | DT1 layout, tile/block concepts, DS1/DT1 relationship, coordinate semantics, and explicit classification of non-7,6 files as incompletely decoded preliminary variations. |
 | Paul Siramy Win_DS1 / DS1 editor docs and tools | historical | historical documentation / source distribution | reverse-engineering evidence | DS1 version behavior, layer order, object/path/substitution semantics, map coordinate terminology. |
 | Paul Siramy MergeDCC / animation extractor material | historical | source distribution; verify per archive | reverse-engineering evidence | DCC/DC6 decoding edge cases and animation composition history. |
 | The Phrozen Keep | historical forum corpus | per-post copyright | historical corroboration | old file-format discussions, COF/composite behavior, level TXT semantics, renderer limitations, and quest-record research. Forum claims are never treated as authoritative without corroboration. |
@@ -113,9 +113,10 @@ Do not hide disagreements. Mark them in the relevant format document and add a p
 
 - **COF rate field:** Riiablo's later parser treats the four bytes following the COF bounding box as a 32-bit animation rate. OpenDiablo2 exposes the final byte as speed and treats the preceding three bytes as unknown. The Dark Magic codec must preserve all four bytes until owned-asset probes establish the observed value distribution and playback interpretation.
 - **DT1 header version wording:** owned Barracks assets contain both modern
-  `7,6` and structurally distinct legacy `4,1` libraries. Preserve both words;
-  do not relabel the second word or decode `4,1` with modern `0x114` offsets
-  until the legacy pointer-table layout has executable coverage. Barracks DS1
+  `7,6` and structurally distinct preliminary `4,1` files. Preserve both words;
+  do not relabel the second word or decode `4,1` with modern `0x114` offsets.
+  Paul Siramy's specification says these are preliminary leftovers which he
+  never completely decoded. Barracks DS1
   stamps declare historical `.tg1` names which resolve to specific modern
   `.dt1` libraries; directory-wide loading incorrectly makes the unrelated
   `4,1` files blockers for valid quest stamps.

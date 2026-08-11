@@ -409,7 +409,10 @@ through a deterministic random sequence. Hovering a tile shows an unscaled,
 semantic orientation/type, main/style index, sub/sequence index, matching
 variant count, direction, rarity, block count, and source dimensions. Cells
 with the same orientation/main/sub lookup key share a subtle background color.
-Press F to select an exact mounted DT1 through the shared fuzzy picker.
+Press F to select an exact mounted DT1 through the shared fuzzy picker. Files
+using the archived preliminary `4.1` layout remain discoverable but produce an
+explicit unsupported-layout diagnostic; they are never decoded with `7.6`
+offsets.
 
 Open a DS1 stamp with its authored DT1 sources using:
 
@@ -419,8 +422,9 @@ MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
 ```
 
 Arrow keys pan, Home/End zooms, Space fits the complete stamp, Page Up/Down
-cycles Act palettes, and Enter selects a mounted DS1 plus the DT1 files from its
-directory. Both map labs discover their mounted assets themselves and open with
+cycles Act palettes, and Enter selects a mounted DS1 plus exactly the DT1
+libraries declared by that stamp (including historical `.tg1` name mapping).
+Both map labs discover their mounted assets themselves and open with
 a useful selection. The scenes can be captured as `dt1_lab` and `ds1_lab`
 through the ordinary capture flags.
 Press F to find a specific mounted DS1 by any subsequence of its path. Monster

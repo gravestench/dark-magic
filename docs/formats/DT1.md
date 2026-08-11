@@ -50,6 +50,14 @@ Consumers must therefore resolve the DS1 declaration table instead of loading
 the entire directory. This distinction lets valid quest stamps render while the
 unrelated `4,1` files remain explicitly unsupported and available for research.
 
+Paul Siramy's archived 2002 DT1 specification explicitly calls non-`7,6`
+files preliminary format variations left in the archives, warns that the
+documented offsets produce garbage for them, and notes that he never completely
+decoded them. The independent DT1 module therefore exposes a header-only layout
+probe and a typed unsupported-layout error; it does not pretend that `4,1` is a
+second production tile format. See the archived
+[DT1 format specification](https://tristram-archives.github.io/diablo2_infodump/2013/just%20hosting%20these%2C%20Downloaded%20from%20Internet/documentation/dt1-docs-in-html/index.htm).
+
 ### Library header
 
 | Offset | Size | Meaning | Confidence |

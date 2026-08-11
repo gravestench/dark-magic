@@ -37,6 +37,21 @@ available, affected game version, and a non-proprietary regression test.
 Archive discovery should enumerate the original URL tree through the Internet
 Archive CDX service rather than relying only on captures of the index page.
 
+### DT1 format and tools
+
+- Archived 2002 DT1 specification:
+  <https://tristram-archives.github.io/diablo2_infodump/2013/just%20hosting%20these%2C%20Downloaded%20from%20Internet/documentation/dt1-docs-in-html/index.htm>
+- Archived `dt1_all` and `dt1_check` source packages:
+  <https://tristram-archives.github.io/diablo2_infodump/>
+- **Documented:** the production layout begins with `7,6`; applying its header
+  offsets to other leading words produces garbage.
+- **Documented:** non-`7,6` files were believed to be preliminary leftovers and
+  were never completely decoded by Siramy. His audit tools record their header
+  words but only traverse tile bodies for `7,6`.
+- **Observed:** owned `barracks.dt1` and `gargtrap.dt1` begin with `4,1`, while
+  the Barracks DS1 stamps inspected so far declare specific `.tg1` names which
+  resolve to modern `7,6` libraries instead.
+
 ### Animation research
 
 - Paul Siramy, *Extracting Diablo II Animations* (54-page PDF mirror):
