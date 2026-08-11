@@ -1004,7 +1004,7 @@ complete until its actions are driven by authoritative game state and commands.
     player; and dispatch hostile primary clicks to assigned primary-skill intent.
     Future monster, drop, portal, and missile spawners attach these components;
     no hostility is inferred from a DS1 number or display string.
-- [ ] M20.15: Generate and enter Act I Rogue Encampment as the first production
+- [x] M20.15: Generate and enter Act I Rogue Encampment as the first production
   session-owned zone.
   - [x] M20.15a: Correct static `LvlPrest.Files=0` alternative handling, select
     all four `TownN1/E1/S1/W1` layouts deterministically, retain their cardinal
@@ -1024,14 +1024,12 @@ complete until its actions are driven by authoritative game state and commands.
     Offline selection and remote/realm join admission now share one validated
     server-selected destination and command builder. Clients cannot choose the
     spawn or mint the system/admin-authority admission command.
-  - [ ] M20.15d: Join the selected cardinal town edge to the first generated
+  - [x] M20.15d: Join the selected cardinal town edge to the first generated
     wilderness zone and validate bidirectional transition, collision, camera,
     depth, and pointer navigation across the seam.
     The first Blood Moor strategy now builds its production 80x80 extent as a
     deterministic 10x10 graph of authored 8x8 outdoor stamps and carries an
     explicit town-entry warp on the edge opposite the selected town exit.
-    Structural rivers/cliffs/bridges and presentation seam validation remain
-    before this checkpoint is complete.
     The immutable outdoor recipe now emits a continuous river, an explicit
     bridge footprint with per-tile passability, and a cliff ridge with a route
     opening. East/west routes cross the bridge; north/south routes keep the
@@ -1039,9 +1037,10 @@ complete until its actions are driven by authoritative game state and commands.
     these server-owned structural facts without asset decoding. River generation
     now follows D2MOO's paired 8x8 LvlPrest 26/27
     strip and replaces one pair with the authored LvlPrest 28 bridge variants.
-    Overlay stamps replace matching fill layers, and MPQ-backed acceptance proves
-    blocked river collision plus open bridge terrain. Cliff DT1 realization and
-    interactive seam capture remain pending.
+    Overlay stamps replace matching fill layers. The semantic cliff ridge is
+    realized with authored LvlPrest 17 `StnClf3.ds1` sections, leaves a stable
+    route opening, and avoids overlapping the river band. MPQ-backed acceptance
+    proves blocked river and cliff collision plus open bridge terrain.
     Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
     tile placements, and a production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
@@ -1053,15 +1052,14 @@ complete until its actions are driven by authoritative game state and commands.
     Lua and arrival inset prevents immediate bounce-back. The client now swaps
     authoritative navigation, collision, spatial interaction selection, Lua
     collision, camera projection facts, and sparse assembled-world rendering
-    when that command commits. Structural outdoor rules and an asset-backed
-    interactive seam capture remain before this checkpoint is complete.
+    when that command commits. `make capture-act1-seam` places a deterministic
+    fixture just inside both authoritative arrival points and records separate
+    production-asset town and Blood Moor images for visual seam review.
     The outdoor recipe also reserves a deterministic contiguous coarse-cell
     route between explicit town-entry and next-level edge anchors. The route is
     rasterized into validated tile-resolution `PathTile` facts in the immutable
     zone checksum. Materialization applies D2MOO's verified 3x3-neighbor
     floor-identity pass and rebuilds collision from the selected DT1 metadata.
-    Structural rivers/cliffs/bridges and an asset-backed interactive seam
-    capture remain before this checkpoint is complete.
 
 ## M21: Diablo simulation
 

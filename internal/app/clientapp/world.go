@@ -50,9 +50,9 @@ func (app *application) buildEntryWorld() error {
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}
-	app.gameWorldSpawns = map[int][2]float64{
-		1: {townSpawnX, townSpawnY},
-		2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+	app.gameWorldSpawns, err = entryWorldSpawns(app.options.FixtureWorldSpawn, seam, townSpawnX, townSpawnY)
+	if err != nil {
+		return err
 	}
 	app.activeWorldLevel = app.options.FixtureWorldLevel
 	if app.activeWorldLevel == 0 {
@@ -63,6 +63,20 @@ func (app *application) buildEntryWorld() error {
 	}
 	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
+}
+
+// entryWorldSpawns keeps the real admission rule and the screenshot fixture
+// choice visibly separate. Players normally enter town at the campfire. A
+// development capture may instead stand just inside either side of the seam.
+func entryWorldSpawns(fixtureSpawn string, seam gameworld.Seam, townX, townY float64) (map[int][2]float64, error) {
+	switch fixtureSpawn {
+	case "", "entry":
+		return map[int][2]float64{1: {townX, townY}, 2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY}}, nil
+	case "seam":
+		return map[int][2]float64{1: {seam.Town.ArrivalX, seam.Town.ArrivalY}, 2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY}}, nil
+	default:
+		return nil, fmt.Errorf("development fixture world spawn %q is unavailable", fixtureSpawn)
+	}
 }
 
 func (app *application) materializeZone(zone *mapgen.Zone) (*gameworld.Map, error) {

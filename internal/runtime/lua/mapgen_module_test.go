@@ -67,7 +67,7 @@ func TestMapgenModuleExposesBloodMoorTownEdge(t *testing.T) {
 
 func outdoorModuleFixture() gamedata.Snapshot {
 	result := gamedata.Snapshot{LevelsByID: map[int]model.LevelData{2: {Id: 2, Act: 0, DrlgType: 3, LevelType: 2, SizeX: 80, SizeY: 80}}, LevelPresetByDef: map[int]model.LevelPreset{}, LevelTypes: []model.LevelType{{}, {}, {File1: "Act1/Outdoors/Outdoor1.dt1"}}}
-	for _, def := range []int{26, 27, 28, 29, 30, 35} {
+	for _, def := range []int{17, 26, 27, 28, 29, 30, 35} {
 		result.LevelPresetByDef[def] = model.LevelPreset{Def: def, SizeX: 8, SizeY: 8, Files: 1, File1: "Act1/Outdoors/fill.ds1", Dt1Mask: 1}
 	}
 	for _, def := range []int{26, 27, 28} {

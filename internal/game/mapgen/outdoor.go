@@ -106,9 +106,10 @@ func (generator *ActOneOutdoorGenerator) outdoorStructures(request Request, leve
 	if plan.crossesRoute {
 		path = pathThroughBridge(path, plan.column*actOneOutdoorCellSize, plan.row*actOneOutdoorCellSize+actOneOutdoorCellSize/2)
 	}
+	cliff := planActOneCliff(request.Seed, rows, path)
 	structures := riverStructureTiles(plan, rows)
-	structures = append(structures, cliffStructureTiles(request.Seed, columns, rows, path, plan)...)
-	stamps, err := generator.outdoorStructureStamps(request, level, columns, rows, plan)
+	structures = append(structures, cliffStructureTiles(columns, cliff, plan)...)
+	stamps, err := generator.outdoorStructureStamps(request, level, columns, rows, plan, cliff)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -118,6 +119,10 @@ func (generator *ActOneOutdoorGenerator) outdoorStructures(request Request, leve
 type actOneRiverPlan struct {
 	column, row  int
 	crossesRoute bool
+}
+
+type actOneCliffPlan struct {
+	row, openingColumn int
 }
 
 func planActOneRiver(seed uint64, columns, rows int, entryDirection string, path []PathTile) actOneRiverPlan {
@@ -154,40 +159,48 @@ func riverStructureTiles(plan actOneRiverPlan, rows int) []StructureTile {
 	return result
 }
 
-func cliffStructureTiles(seed uint64, columns, rows int, path []PathTile, river actOneRiverPlan) []StructureTile {
-	y := rows * actOneOutdoorCellSize / 4
+func planActOneCliff(seed uint64, rows int, path []PathTile) actOneCliffPlan {
+	row := rows / 4
 	if NewStreams(seed).For("blood-moor-cliff-side").Uint64n(2) == 1 {
-		y = rows*actOneOutdoorCellSize - 1 - y
+		row = rows - 3
 	}
-	pathSet := make(map[PathTile]bool, len(path))
+	wallY := row*actOneOutdoorCellSize + 5
+	openingX, distance := int(^uint(0)>>1), int(^uint(0)>>1)
 	for _, tile := range path {
-		pathSet[tile] = true
+		candidate := absInt(tile.Y - wallY)
+		// Paths are value sets and therefore arrive in no promised order. When
+		// two cells are equally close, the leftmost one is the stable winner.
+		if candidate < distance || candidate == distance && tile.X < openingX {
+			openingX, distance = tile.X, candidate
+		}
 	}
+	return actOneCliffPlan{row: row, openingColumn: openingX / actOneOutdoorCellSize}
+}
+
+func cliffStructureTiles(columns int, cliff actOneCliffPlan, river actOneRiverPlan) []StructureTile {
+	wallY := cliff.row*actOneOutdoorCellSize + 5
 	result := make([]StructureTile, 0, columns*actOneOutdoorCellSize)
 	for x := 0; x < columns*actOneOutdoorCellSize; x++ {
+		if x/actOneOutdoorCellSize == cliff.openingColumn {
+			continue
+		}
 		if x >= river.column*actOneOutdoorCellSize && x < (river.column+2)*actOneOutdoorCellSize {
 			continue
 		}
-		open := false
-		for offset := -1; offset <= 1; offset++ {
-			open = open || pathSet[PathTile{X: x, Y: y + offset}]
-		}
-		if !open {
-			result = append(result, StructureTile{X: x, Y: y, Kind: "cliff"})
-		}
+		result = append(result, StructureTile{X: x, Y: wallY, Kind: "cliff"})
 	}
 	return result
 }
 
-func (generator *ActOneOutdoorGenerator) outdoorStructureStamps(request Request, level model.LevelData, columns, rows int, plan actOneRiverPlan) ([]Stamp, error) {
-	stamps := make([]Stamp, 0, rows*2)
+func (generator *ActOneOutdoorGenerator) outdoorStructureStamps(request Request, level model.LevelData, columns, rows int, river actOneRiverPlan, cliff actOneCliffPlan) ([]Stamp, error) {
+	stamps := make([]Stamp, 0, rows*2+columns)
 	for row := 0; row < rows; row++ {
 		for side, presetDef := range []int{26, 27} {
-			// D2MOO's nPickedFile is the authored one-based file number. Stamp
-			// variants are zero-based, so river file 3 and bridge files 1/3 map
-			// to indices 2 and 0/2 respectively.
-			variant := 2
-			if row == plan.row {
+			// D2MOO selects zero-based authored slots. River slot 3 is the plain
+			// segment. Bridge slot 0 is empty, so our compact non-empty variant
+			// list maps D2MOO's bridge slots 1/3 to indices 0/2.
+			variant := 3
+			if row == river.row {
 				presetDef = 28
 				variant = []int{0, 2}[side]
 			}
@@ -196,12 +209,28 @@ func (generator *ActOneOutdoorGenerator) outdoorStructureStamps(request Request,
 				return nil, fmt.Errorf("%w: Act I structural preset %d is unavailable", ErrZone, presetDef)
 			}
 			stamp, err := generator.outdoorStructuralStamp(request, level, preset, variant,
-				uint32(columns*rows+row*2+side+1), (plan.column+side)*actOneOutdoorCellSize, row*actOneOutdoorCellSize)
+				uint32(columns*rows+row*2+side+1), (river.column+side)*actOneOutdoorCellSize, row*actOneOutdoorCellSize)
 			if err != nil {
 				return nil, err
 			}
 			stamps = append(stamps, stamp)
 		}
+	}
+	for column := 0; column < columns; column++ {
+		if column == cliff.openingColumn || column == river.column || column == river.column+1 {
+			continue
+		}
+		preset, found := generator.data.LevelPresetByDef[17]
+		if !found {
+			return nil, fmt.Errorf("%w: Act I straight-cliff preset 17 is unavailable", ErrZone)
+		}
+		stamp, err := generator.outdoorStructuralStamp(request, level, preset, 0,
+			uint32(columns*rows+rows*2+column+1), column*actOneOutdoorCellSize, cliff.row*actOneOutdoorCellSize)
+		if err != nil {
+			return nil, err
+		}
+		stamp.Role = "blood-moor-cliff"
+		stamps = append(stamps, stamp)
 	}
 	return stamps, nil
 }

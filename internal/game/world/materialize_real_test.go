@@ -129,7 +129,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if worldMap.WidthTiles != 80 || worldMap.HeightTiles != 80 || len(worldMap.Tiles) == 0 {
 		t.Fatalf("Blood Moor = %dx%d with %d tiles", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
 	}
-	foundOpenBridge, foundBlockedRiver := false, false
+	foundOpenBridge, foundBlockedRiver, foundBlockedCliff := false, false, false
 	openBridgeTiles := make([]mapgen.PathTile, 0)
 	for _, structure := range moor.Structures() {
 		flags, inside := worldMap.FlagsAt(structure.X*gameworld.SubtilesPerTile+2, structure.Y*gameworld.SubtilesPerTile+2)
@@ -144,9 +144,12 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 		if structure.Kind == "river" && flags.Blocked() {
 			foundBlockedRiver = true
 		}
+		if structure.Kind == "cliff" && flags.Blocked() {
+			foundBlockedCliff = true
+		}
 	}
-	if !foundOpenBridge || !foundBlockedRiver {
-		t.Fatalf("asset-backed structures: open bridge=%v blocked river=%v; open bridge tile centers=%v", foundOpenBridge, foundBlockedRiver, openBridgeTiles)
+	if !foundOpenBridge || !foundBlockedRiver || !foundBlockedCliff {
+		t.Fatalf("asset-backed structures: open bridge=%v blocked river=%v blocked cliff=%v; open bridge tile centers=%v", foundOpenBridge, foundBlockedRiver, foundBlockedCliff, openBridgeTiles)
 	}
 	warp := moor.Warps()[0]
 	if _, inside := worldMap.FlagsAt(warp.X*gameworld.SubtilesPerTile, warp.Y*gameworld.SubtilesPerTile); !inside {
