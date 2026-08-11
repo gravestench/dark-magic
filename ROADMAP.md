@@ -23,20 +23,33 @@ reviewable checkpoint:
 4. Record the completed checkpoint here in the same pull request. Merge before
    branching the next dependent checkpoint.
 
-The milestone-number order is historical, not a strict dependency graph. The
-active queue below closes bounded earlier gaps before item/gameplay work:
+Research status and implementation status are deliberately separate. A
+`baseline` document in [docs/research/GAME_SYSTEMS_INDEX.md](docs/research/GAME_SYSTEMS_INDEX.md)
+means ownership, evidence, unknowns, and implementation slices have been
+identified; it does not mean the behavior is implemented or verified. Exact
+legacy arithmetic and patch-sensitive behavior graduate only through the
+executable probes tracked in the foundation and combat verification queues.
 
-1. **M15.5 — presentation catalog coverage:** inventory every runtime-consumed
-   presentation asset/dependency and report manifest or fixture gaps.
-2. **M18.1 — authoritative overlay input routing:** make world/HUD/overlay/modal/
-   cursor/debug focus ownership explicit and acceptance-tested.
-3. **M18.2 + M27 — functional 800x600 HUD controls:** finish belt, skill, tooltip,
-   cursor, and shared styling needed by item interaction.
-4. **M19.1 + M29 gameplay-command integration — authoritative item containers:**
-   implement inventory/body/belt/cursor commands and connect the Lua presentation
-   without client authority.
-5. Resume M18/M19 vertically per overlay; schedule independent M26 native-path
-   work when it does not destabilize gameplay PRs.
+The milestone-number order is historical, not a strict dependency graph. The
+active dependency queue, reassessed after the foundation and combat/simulation
+research imports, is:
+
+1. **M21.1 — shared stat/effect sources:** establish stable, layered provenance
+   before combat, equipment, skills, states, and monster modifiers can disagree
+   about where a value came from.
+2. **M21.2 — fixed-point combat vocabulary:** add explicit damage channels,
+   conversion, rounding, and synthetic vectors without claiming unverified
+   legacy formulas.
+3. **M21.3-M21.5 — first hostile vertical slice:** materialize one typed Blood
+   Moor monster, schedule its intent, and resolve one basic melee transaction.
+4. **M21.6-M21.9 — skills, states, and missiles:** consume the existing skill
+   intent through deterministic cast, timed-state, and straight-missile paths.
+5. **M21.10-M21.12 — population, death, and ownership:** connect deterministic
+   packs, semantic death events, loot/XP/corpse consequences, and owned units.
+
+M18/M19 UI, item, save, and presentation work remains active where it supplies
+one of those vertical slices. Independent M26/M27 work should proceed only when
+it does not destabilize the simulation spine.
 
 The creature-authoring program in M31-M43 is a parallel, reusable asset track.
 It may begin with research and synthetic fixtures without displacing the active
@@ -1158,6 +1171,64 @@ focus must not replace pointer coordinates as the authoritative client request.
   persistence without duplicating the completed `internal/game/loot` rules.
 - [ ] Implement record-driven music, ambience, speech, monster, object, item, UI,
   and combat sound selection with deterministic event identity where required.
+
+### M21 execution checkpoints
+
+These checkpoints follow the dependency order in
+[the combat/simulation implementation handoff](docs/research/COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md).
+They extend the existing session, ECS, item, loot, world, targeting, and typed
+data owners; they do not introduce parallel gameplay authorities.
+
+- [ ] **M21.1: Shared stat/effect source model.** Represent parameterized stat
+  identity, stable source identity, source kind/owner/lifetime, and ordered
+  contributions without flattening provenance into permanent totals. Support
+  atomic add/replace/remove, deterministic snapshots and checksums, explicit
+  dependency invalidation, and checkpoint/replay tests. Begin with synthetic
+  sources for base facts and equipped items; preserve room for passives, timed
+  states, auras, monster modifiers, and hireling equipment. ItemStatCost-driven
+  derived operations remain gated by the foundation verification queue.
+- [ ] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
+  lightning, cold, poison, magic, life, and mana quantities plus explicit
+  conversion/rounding helpers and boundary vectors. Keep Dark Magic policy and
+  source-derived legacy behavior labeled separately.
+- [ ] **M21.3: Ordinary hostile materialization.** Build one deterministic Blood
+  Moor hostile from typed MonStats/MonLvl facts with stable identity/seed,
+  effective base stats, collider, targetable presentation snapshot, and no
+  sophisticated AI.
+- [ ] **M21.4: Scheduled basic monster AI.** Implement the deterministic loop
+  `idle -> acquire hostile -> path toward -> request basic attack`. AI chooses
+  intent and owns checkpointed next-think/memory state; it never mutates HP.
+- [ ] **M21.5: Basic melee transaction.** Resolve legal target, hit/miss,
+  physical damage, HP, and semantic hit/death events using synthetic verified
+  vectors. Advanced avoidance, mitigation, leech, poison, and PvP remain probes.
+- [ ] **M21.6: Consume assigned skill intent.** Resolve the existing
+  `dm.player.skill_intent` into one deterministic cast request with assigned
+  skill and learned level read exactly once.
+- [ ] **M21.7: Generic skill cast state.** Add target validation, resource cost,
+  action start/effect/complete ticks, interruption boundaries, and one basic
+  behavior family independent of renderer animation frames.
+- [ ] **M21.8: Timed state engine.** Add source-tagged instances, deterministic
+  refresh/stack policy, scheduled expiration, semantic apply/remove events, and
+  checkpoint/replay coverage; prove one simple refreshable control state first.
+- [ ] **M21.9: Straight missile slice.** Run cast, authoritative missile motion,
+  collision, combat impact, hit memory, lifetime, and removal through one
+  deterministic vertical slice with the required source stats snapshotted at
+  creation.
+- [ ] **M21.10: Blood Moor population slice.** Derive an inspectable deterministic
+  ordinary-pack plan from generated world content and materialize it without
+  coupling simulation residency to render culling.
+- [ ] **M21.11: Monster death transaction.** Join lethal resolution to stable
+  kill/death events, XP attribution, deterministic loot, quest-event surface,
+  corpse state, and active/inactive lifecycle. Death must be atomic and
+  replayable, not merely `hp <= 0`.
+- [ ] **M21.12: Owned-unit relation.** Add explicit owner, category, limit,
+  attribution, lifecycle, and checkpoint state before broad summons, pets, or
+  hirelings.
+
+The first simulation acceptance loop is a generated Blood Moor with one typed
+hostile that acquires and paths to the player, exchanges a basic attack, emits
+death and loot events, and reproduces the same result after replay/checkpoint
+restore while Lua only submits intents and presents copied facts.
 
 ## M22: Client and game-session networking
 

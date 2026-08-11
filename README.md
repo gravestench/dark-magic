@@ -14,6 +14,46 @@ data-driven rules, scriptable gameplay, and explicit native-resource ownership.
 Dark Magic does not distribute Blizzard assets. Running the client or real-asset
 tools requires a legally obtained Diablo II installation or MPQ set.
 
+## Research and community acknowledgements
+
+Dark Magic exists because decades of Diablo II modders, preservationists,
+reverse engineers, tool authors, and independent engine developers documented
+behavior that the original executable kept implicit. Thank you to the entire
+Diablo II community—and especially to the people who published their findings,
+test cases, tools, and source so later projects could verify rather than guess.
+
+Our principal research and corroboration sources include:
+
+* [Paul Siramy's historical research and tools](http://paul.siramy.free.fr/)
+  and the wider [Phrozen Keep community](https://d2mods.info/), particularly for
+  DS1, DT1, map editing/generation, animation formats, and engine behavior.
+* [ThePhrozenKeep/D2MOO](https://github.com/ThePhrozenKeep/D2MOO), the pinned
+  reverse-engineered Diablo II 1.10f runtime baseline used throughout the
+  gameplay and map research.
+* [jaenster/libd2](https://github.com/jaenster/libd2), both for independent
+  1.14d implementation evidence and its unusually strong retail-capture,
+  holdout, save-round-trip, item-roll, and pathfinding verification discipline.
+* [Riiablo](https://github.com/collinsmith/riiablo), including its format,
+  composite, rendering, UI, and recovered declarative quest/dialogue/object
+  work.
+* [OpenDiablo2](https://github.com/OpenDiablo2/OpenDiablo2), from which this
+  project descends, and [OpenD2](https://github.com/eezstreet/OpenD2) and
+  [AbyssEngine](https://github.com/AbyssEngine/AbyssEngine) as independent
+  behavioral and presentation references.
+* [nokka/d2s](https://github.com/nokka/d2s) for independent save-format
+  documentation, the historical Diablo II Data File Guide bundled for research,
+  and the many community-authored manuals, patch notes, forum posts, and tools
+  cited in the individual research ledgers.
+
+These projects are evidence, not code-generation templates. Dark Magic restates
+behavior independently, respects source licenses, labels version conflicts and
+uncertainty, and prefers repeatable observations of lawfully owned game data.
+The detailed provenance, inspected versions, confidence rules, and source paths
+live in the [format source matrix](docs/formats/SOURCE_MATRIX.md) and
+[gameplay-systems source matrix](docs/research/SYSTEMS_SOURCE_MATRIX.md). The
+[research index](docs/research/GAME_SYSTEMS_INDEX.md) distinguishes a documented
+baseline from behavior that has actually been validated.
+
 ## Directory structure
 
 * `cmd` contains the client, game-session server, and realm composition roots.
@@ -199,9 +239,11 @@ direction, and guidance on where new work belongs.
 
 For the focused playable-character acceptance loop, point `MPQ_DIRECTORY` at
 legally obtained game data and run `make play-game-world`. The command selects
-one deterministic character fixture and enters the real world scene; arrow/WASD
-movement exercises fixed-tick authority, run/walk mode, composite facing,
-camera chunks, and DT1 collision together. `make capture-game-world` records a
+one deterministic character fixture and enters the real world scene; pointer
+movement exercises screen-to-world targeting, fixed-tick authority, run/walk
+mode, composite facing, camera chunks, and DT1 collision together. Keyboard
+input remains available for hotkeys, modifiers, text, and cancellation.
+`make capture-game-world` records a
 fully settled initial frame under `CAPTURE_DIR` (default `captures/frontend`).
 These targets intentionally do not bundle or guess a game-data location.
 
