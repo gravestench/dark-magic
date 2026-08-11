@@ -112,5 +112,11 @@ Do not hide disagreements. Mark them in the relevant format document and add a p
 ## Known conflicts requiring probes
 
 - **COF rate field:** Riiablo's later parser treats the four bytes following the COF bounding box as a 32-bit animation rate. OpenDiablo2 exposes the final byte as speed and treats the preceding three bytes as unknown. The Dark Magic codec must preserve all four bytes until owned-asset probes establish the observed value distribution and playback interpretation.
-- **DT1 header version wording:** historical tools often describe DT1 as version `7.6`; later parsers commonly expose `7` as the first 32-bit field and the second field as flags/version-like metadata. Probe representative owned DT1 files and preserve both 32-bit words rather than collapsing the distinction prematurely.
+- **DT1 header version wording:** owned Barracks assets contain both modern
+  `7,6` and structurally distinct legacy `4,1` libraries. Preserve both words;
+  do not relabel the second word or decode `4,1` with modern `0x114` offsets
+  until the legacy pointer-table layout has executable coverage. Barracks DS1
+  stamps declare historical `.tg1` names which resolve to specific modern
+  `.dt1` libraries; directory-wide loading incorrectly makes the unrelated
+  `4,1` files blockers for valid quest stamps.
 - **Renderer limits vs format limits:** historical 256x256 DC6 and small DCC decode-buffer restrictions are original renderer/tool constraints, not sufficient evidence of binary-format maxima.

@@ -99,9 +99,16 @@ function lab:random_asset()
     self.random_state = (self.random_state * 48271) % 2147483647
     self.path = self.assets[(self.random_state % #self.assets) + 1]
     self:infer_palette()
-    local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
-    self.tiles = vfs.list(directory, ".dt1") or {}
+    local ok, dependencies = pcall(render.ds1_dependencies, self.path)
+    self.tiles = ok and dependencies or {}
     self.chunk_set, self.width, self.height = nil, nil, nil
+    if not ok then
+        self.pending_job = nil
+        self.map_root:set_visible(false); self:clear_chunks()
+        text.set(self.status, "font_lab_color", "[red]DS1 DEPENDENCY ERROR[/]", 760, "center")
+        text.set(self.detail, "font_lab_color", "[white]" .. tostring(dependencies) .. "[/]", 760, "center")
+        return
+    end
     self:queue_preview()
 end
 
@@ -141,9 +148,16 @@ function lab:create()
 		end
 		self.path = path
 		self:infer_palette()
-		local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
-		self.tiles = vfs.list(directory, ".dt1") or {}
+		local ok, dependencies = pcall(render.ds1_dependencies, self.path)
+		self.tiles = ok and dependencies or {}
 		self.chunk_set, self.width, self.height = nil, nil, nil
+		if not ok then
+			self.pending_job = nil
+			self.map_root:set_visible(false); self:clear_chunks()
+			text.set(self.status, "font_lab_color", "[red]DS1 DEPENDENCY ERROR[/]", 760, "center")
+			text.set(self.detail, "font_lab_color", "[white]" .. tostring(dependencies) .. "[/]", 760, "center")
+			return
+		end
 		self:queue_preview()
 	end})
     self.random_state = dev.seed()
@@ -231,7 +245,11 @@ function lab:refresh_chunks()
             node:set_ds1_chunk(self.path, self.tiles, self.palette, chunk.index)
             node:set_position(chunk.x + chunk.width / 2 - self.width / 2,
                 chunk.y + chunk.height / 2 - self.height / 2)
-            node:set_z(chunk.layer)
+            -- Layer numbers are semantic filter identities, not draw-order
+            -- values. In the legacy background pass lower walls draw first and
+            -- floors cover their upper overlap (especially visible in the
+            -- Arcane Sanctuary). The native chunk depth already encodes that.
+            node:set_z(chunk.depth)
             self.chunk_nodes[key] = node
             admitted = admitted + 1
             changed = true

@@ -110,6 +110,24 @@ func TestMapgenLabRegenerationUsesDocumentedRenderNodeLifetime(t *testing.T) {
 	}
 }
 
+func TestDS1LabUsesNativeChunkDepthForLayerOrdering(t *testing.T) {
+	t.Parallel()
+
+	root := repositoryRoot(t)
+	path := filepath.Join(root, "internal/content/shim/lua/darkmagic/screens/ds1_lab.lua")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(contents)
+	if !strings.Contains(source, "node:set_z(chunk.depth)") {
+		t.Fatal("DS1 Lab does not use the native renderer's authoritative chunk depth")
+	}
+	if strings.Contains(source, "node:set_z(chunk.layer)") {
+		t.Fatal("DS1 Lab uses semantic layer identities as draw-order values")
+	}
+}
+
 func readBootstrapLua(t *testing.T, root string) string {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(root, "internal/content/shim/lua/darkmagic/bootstrap/*.lua"))
