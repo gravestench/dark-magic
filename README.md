@@ -166,6 +166,10 @@ game aspect ratio. `DARK_MAGIC_VIEWPORT_FIT` provides the equivalent environment
 setting. Mouse input is mapped back into logical game coordinates; input in
 letterbox regions is excluded from the game viewport.
 
+Use `--fullscreen` for a maximized borderless window that retains desktop
+window semantics instead of switching the monitor into an exclusive video
+mode. Set `DARK_MAGIC_FULLSCREEN=true` for the environment equivalent.
+
 ## Join the Quest
 
 Are you ready to embark on a journey into the heart of darkness? Unite with 

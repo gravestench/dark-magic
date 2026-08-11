@@ -48,6 +48,7 @@ type Options struct {
 	FixtureCharacters     int
 	OutputPalette         string
 	ViewportFit           string
+	BorderlessFullscreen  bool
 	PresentationProfileID string
 	CompositeLab          CompositeLabOptions
 	DT1Lab                DT1LabOptions

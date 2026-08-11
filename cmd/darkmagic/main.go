@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/app/clientapp"
@@ -41,6 +42,8 @@ func main() {
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
 	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
+	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
+	fullscreen := flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless window")
 	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
 	compositeToken := flag.String("composite-token", environmentDefault("DARK_MAGIC_COMPOSITE_TOKEN", "AM"), "composite lab character token")
 	compositeMode := flag.String("composite-mode", environmentDefault("DARK_MAGIC_COMPOSITE_MODE", "NU"), "composite lab animation mode")
@@ -106,7 +109,7 @@ func main() {
 	lab := clientapp.CompositeLabOptions{Token: *compositeToken, Mode: *compositeMode, WeaponClass: *compositeWeapon, Direction: *compositeDirection, Frame: *compositeFrame, Components: *compositeComponents, Random: *compositeRandom}
 	dt1Lab := clientapp.DT1LabOptions{Path: *dt1Path, Palette: *dt1Palette, Tile: *dt1Tile, View: *dt1View}
 	ds1Lab := clientapp.DS1LabOptions{Path: *ds1Path, Tiles: *ds1Tiles, Palette: *ds1Palette}
-	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *presentationProfile, lab, dt1Lab, ds1Lab, logs); err != nil {
+	if err := run(contentFS, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *fixtureCharacters, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, lab, dt1Lab, ds1Lab, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -123,14 +126,14 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit, presentationProfileID string, lab clientapp.CompositeLabOptions, dt1Lab clientapp.DT1LabOptions, ds1Lab clientapp.DS1LabOptions, logs *shell.LogBuffer) error {
+func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene string, fixtureCharacters int, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, lab clientapp.CompositeLabOptions, dt1Lab clientapp.DT1LabOptions, ds1Lab clientapp.DS1LabOptions, logs *shell.LogBuffer) error {
 	options := clientapp.Options{
 		Content: contentFS, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
 		}, CaptureDirectory: captureDirectory,
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene,
 		FixtureCharacters: fixtureCharacters, OutputPalette: outputPalette,
-		ViewportFit: viewportFit, PresentationProfileID: presentationProfileID, Logs: logs,
+		ViewportFit: viewportFit, BorderlessFullscreen: fullscreen, PresentationProfileID: presentationProfileID, Logs: logs,
 		CompositeLab: lab, DT1Lab: dt1Lab, DS1Lab: ds1Lab,
 	}
 	// A nil pointer stored inside an interface looks non-nil. Only put the

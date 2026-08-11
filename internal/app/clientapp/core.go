@@ -69,6 +69,7 @@ func (app *application) buildPresentationCore() error {
 	app.rendererConfig.Resolution.Width = profile.Width
 	app.rendererConfig.Resolution.Height = profile.Height
 	app.rendererConfig.Resolution.Fit = app.options.ViewportFit
+	app.rendererConfig.Window.Borderless = app.options.BorderlessFullscreen
 	app.renderer.Configure(app.rendererConfig)
 	if err := app.renderer.ConfigurePaletteQuantization(app.options.Content, app.options.OutputPalette); err != nil {
 		return err
