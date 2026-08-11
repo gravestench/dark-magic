@@ -16,9 +16,11 @@ function M.register()
     ecs.component({name="dm.lab.warp.portal", version=1, fields={
         field("id","string"), field("pair","entity"), field("label","string"), field("radius","f64"),
     }})
-    ecs.component({name="dm.lab.warp.intent", version=1, fields={field("portal","entity")}})
+    ecs.component({name="dm.lab.warp.intent", version=1, fields={
+        field("portal","entity"), field("route","string"), field("waypoint","i64"),
+    }})
     ecs.component({name="dm.lab.warp.move_intent", version=1, fields={
-        field("x", "f64"), field("y", "f64"),
+        field("x", "f64"), field("y", "f64"), field("route","string"), field("waypoint","i64"),
     }})
     ecs.component({name="dm.lab.warp.actor", version=1, fields={
         field("speed", "f64"), field("direction", "i64"),

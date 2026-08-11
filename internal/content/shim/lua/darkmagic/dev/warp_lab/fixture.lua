@@ -35,16 +35,18 @@ function M.create(a,b,spawn)
     return fixture
 end
 
-function M.intent(fixture,portal_id)
+function M.intent(fixture,portal_id,route)
     local portal = portal_id == "warp-lab:a" and fixture.portal_a or fixture.portal_b
     ecs.remove(fixture.player, "dm.lab.warp.move_intent")
-    ecs.set(fixture.player, "dm.lab.warp.intent", {portal = portal})
+    ecs.set(fixture.player, "dm.lab.warp.intent", {portal = portal, route = route or "", waypoint = 1})
     ecs.get(fixture.player, "dm.lab.warp.state"):set("event", "interaction intent: " .. portal_id)
 end
 
-function M.move(fixture, x, y)
+function M.move(fixture, x, y, route)
     ecs.remove(fixture.player, "dm.lab.warp.intent")
-    ecs.set(fixture.player, "dm.lab.warp.move_intent", {x = x, y = y})
+    ecs.set(fixture.player, "dm.lab.warp.move_intent", {
+        x = x, y = y, route = route or "", waypoint = 1,
+    })
     ecs.get(fixture.player, "dm.lab.warp.state"):set("event", "ground movement intent")
 end
 

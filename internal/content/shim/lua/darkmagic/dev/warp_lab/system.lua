@@ -32,6 +32,29 @@ local function move_toward(position, actor, target, elapsed)
     return distance - step
 end
 
+-- Routes are tiny immutable strings stored inside the intent component. This
+-- keeps the deterministic waypoints in authoritative ECS state instead of a
+-- presentation-owned Lua table that would disappear during replay or reload.
+local function route_waypoint(route, wanted)
+    local index = 0
+    for x, y in route:gmatch("([^,;]+),([^;]+)") do
+        index = index + 1
+        if index == wanted then return {x=tonumber(x), y=tonumber(y)} end
+    end
+    return nil
+end
+
+local function follow_route(position, actor, intent, fallback, elapsed)
+    local index = intent:get("waypoint")
+    local target = route_waypoint(intent:get("route"), index) or fallback
+    local remaining = move_toward(position, actor, target, elapsed)
+    if remaining <= 0.1 and route_waypoint(intent:get("route"), index + 1) then
+        intent:set("waypoint", index + 1)
+        return math.huge
+    end
+    return remaining
+end
+
 function M.register()
     ecs.system({
         id = "darkmagic.lab.warp.resolve_move", phase = "movement",
@@ -43,7 +66,7 @@ function M.register()
                 local actor = ecs.get(entity, "dm.lab.warp.actor")
                 local intent = ecs.get(entity, "dm.lab.warp.move_intent")
                 local position = ecs.get(entity, "dm.world.position")
-                local remaining = move_toward(position, actor, {
+                local remaining = follow_route(position, actor, intent, {
                     x = intent:get("x"), y = intent:get("y"),
                 }, context.delta_seconds)
                 if remaining <= 0.1 then
@@ -71,11 +94,13 @@ function M.register()
                     commands:remove(entity, "dm.lab.warp.intent")
                 else
                     state:set("event", "walking to " .. target_portal:get("label"))
-                    local remaining = move_toward(position, actor, {
+                    follow_route(position, actor, intent, {
                         x = target_position:get("x"),
                         y = target_position:get("y"),
                     }, context.delta_seconds)
-                    if remaining <= target_portal:get("radius") then
+                    local dx = position:get("x") - target_position:get("x")
+                    local dy = position:get("y") - target_position:get("y")
+                    if math.sqrt(dx * dx + dy * dy) <= target_portal:get("radius") then
                         local destination_entity = target_portal:get("pair")
                         local destination_portal = ecs.get(destination_entity, "dm.lab.warp.portal")
                         local destination_position = ecs.get(destination_entity, "dm.world.position")

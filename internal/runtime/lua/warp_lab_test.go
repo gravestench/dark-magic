@@ -59,12 +59,17 @@ assert(ecs.get(warp_fixture.player,"dm.lab.warp.intent")==nil)
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`warp_fixture_module.move(warp_fixture,110,52)`)
+		// The encoded route deliberately bends away from the direct line. This
+		// proves the fixed-tick system follows authoritative planner waypoints
+		// instead of treating the final pointer target as a straight-line hint.
+		return state.DoString(`warp_fixture_module.move(warp_fixture,110,52,"102,55;110,55;110,52")`)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := engine.Update(time.Second); err != nil {
-		t.Fatal(err)
+	for range 3 {
+		if err := engine.Update(time.Second); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
@@ -72,7 +77,7 @@ local ecs=require("dm.ecs/v1")
 local position=ecs.get(warp_fixture.player,"dm.world.position")
 local actor=ecs.get(warp_fixture.player,"dm.lab.warp.actor")
 assert(position:get("x")==110 and position:get("y")==52)
-assert(actor:get("direction")==3)
+assert(actor:get("direction")==2)
 assert(ecs.get(warp_fixture.player,"dm.lab.warp.move_intent")==nil)
 `)
 	}); err != nil {

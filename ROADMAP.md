@@ -1108,7 +1108,8 @@ complete until its actions are driven by authoritative game state and commands.
     clicks remain traversal intents. Both destinations run through the production
     sparse-map adapter, including tile residency, viewport culling, camera
     clamping, subtile projection, and shared map/entity depth. Movement intent
-    selects the normal NU/WL player composite without rewinding playback on
+    uses the authoritative deterministic A* route service over DT1 collision
+    with the player's footprint, and selects the normal NU/WL player composite without rewinding playback on
     facing or warp changes. An authority-observing presentation mask starts
     black on arrival and fades away over about 100 ms; it does not delay or
     participate in the warp transaction. The camera and composite merely observe authoritative position. A headless

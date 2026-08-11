@@ -49,10 +49,19 @@ local function choose_stamps()
 end
 
 local function nearest_open(map, width, height, wanted_x, wanted_y)
+    local function footprint_open(x, y)
+        for offset_y = -1, 1 do
+            for offset_x = -1, 1 do
+                if math.sqrt(offset_x * offset_x + offset_y * offset_y) <= 1.5
+                    and map:blocked_position(x + offset_x, y + offset_y) then return false end
+            end
+        end
+        return true
+    end
     for radius = 0, math.max(width, height) do
         for y = math.max(1, wanted_y - radius), math.min(height - 2, wanted_y + radius) do
             for x = math.max(1, wanted_x - radius), math.min(width - 2, wanted_x + radius) do
-                if not map:blocked(x, y) then return x + 0.5, y + 0.5 end
+                if footprint_open(x + 0.5, y + 0.5) then return x + 0.5, y + 0.5 end
             end
         end
     end
@@ -89,6 +98,24 @@ local function active_stamp(self, global_x)
     local first, second = self.stamps[1], self.stamps[2]
     if math.abs(global_x - first.origin_x) <= math.abs(global_x - second.origin_x) then return first end
     return second
+end
+
+local function planned_route(self, global_x, global_y, stop_radius)
+    local position = self.ecs.get(self.fixture.player, "dm.world.position")
+    local start_x, start_y = local_position(self.active, position:get("x"), position:get("y"))
+    local goal_x, goal_y = local_position(self.active, global_x, global_y)
+    local path, path_error = self.active.map:find_path(
+        start_x, start_y, goal_x, goal_y, 1, stop_radius or 0)
+    if not path then
+        self.ecs.get(self.fixture.player, "dm.lab.warp.state"):set(
+            "event", "route rejected: " .. tostring(path_error))
+        return nil
+    end
+    local encoded = {}
+    for _, point in ipairs(path) do
+        encoded[#encoded + 1] = string.format("%.0f,%.0f", self.active.origin_x + point.x, point.y)
+    end
+    return table.concat(encoded, ";")
 end
 
 local function make_stamp_view(self, stamp)
@@ -211,7 +238,9 @@ function lab:update_portals()
             local sx, sy = item.stamp.map:subtile_to_screen(local_x, local_y,
                 player_x, player_y, item.stamp.target_x, item.stamp.target_y)
             if input.pressed("pointer_primary") and (pointer_x-sx)^2+(pointer_y-sy)^2 <= 42^2 then
-                self.fixture_module.intent(self.fixture, item.id)
+                local route = planned_route(self, x, y,
+                    self.ecs.get(item.entity, "dm.lab.warp.portal"):get("radius"))
+                if route then self.fixture_module.intent(self.fixture, item.id, route) end
                 activated = true
             end
         end
@@ -226,7 +255,9 @@ function lab:update_pointer_movement()
     local player_x, player_y = local_position(self.active, player:get("x"), player:get("y"))
     local target_x, target_y = self.active.map:screen_to_subtile(pointer_x, pointer_y,
         player_x, player_y, self.active.target_x, self.active.target_y)
-    self.fixture_module.move(self.fixture, self.active.origin_x + target_x, target_y)
+    local global_x = self.active.origin_x + target_x
+    local route = planned_route(self, global_x, target_y, 0)
+    if route then self.fixture_module.move(self.fixture, global_x, target_y, route) end
 end
 
 local function update_warp_fade(self, warp_count, elapsed)
