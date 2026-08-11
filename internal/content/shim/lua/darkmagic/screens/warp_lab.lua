@@ -238,8 +238,12 @@ function lab:update_portals()
             local sx, sy = item.stamp.map:subtile_to_screen(local_x, local_y,
                 player_x, player_y, item.stamp.target_x, item.stamp.target_y)
             if input.pressed("pointer_primary") and (pointer_x-sx)^2+(pointer_y-sy)^2 <= 42^2 then
-                local route = planned_route(self, x, y,
-                    self.ecs.get(item.entity, "dm.lab.warp.portal"):get("radius"))
+                -- Route to the actual portal cell. FindPath's stop radius is
+                -- measured between quantized collision cells, while portal
+                -- activation below uses continuous authored coordinates. Using
+                -- the interaction radius in both domains can leave the actor
+                -- one fractional step outside the real activation circle.
+                local route = planned_route(self, x, y, 0)
                 if route then self.fixture_module.intent(self.fixture, item.id, route) end
                 activated = true
             end

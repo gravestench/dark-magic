@@ -35,14 +35,16 @@ func TestWarpLabIntentWalksToPortalAndArrivesAtPair(t *testing.T) {
 		return state.DoString(`
 local fixture=require("darkmagic.dev.warp_lab.fixture")
 warp_fixture_module=fixture
-warp_fixture=fixture.create({x=10,y=0},{x=100,y=50},{x=0,y=0})
-fixture.intent(warp_fixture,"warp-lab:a")
+warp_fixture=fixture.create({x=10.5,y=0.5},{x=100,y=50},{x=0.5,y=0.5})
+fixture.intent(warp_fixture,"warp-lab:a","0,0;10,0")
 `)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := engine.Update(time.Second); err != nil {
-		t.Fatal(err)
+	for range 2 {
+		if err := engine.Update(time.Second); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
