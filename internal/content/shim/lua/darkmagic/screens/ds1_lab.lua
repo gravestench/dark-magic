@@ -5,6 +5,7 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local vfs = require("dm.vfs/v1")
+local fuzzy_picker = require("darkmagic.ui.fuzzy_picker")
 
 local lab = {}
 local palettes = {
@@ -115,7 +116,7 @@ function lab:create()
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
-    self.help = label(self.root, "Tab: layer   F3: collision   Arrows/drag: pan   Scroll/Home/End: zoom   PgUp/PgDn: palette   Space: fit", 565)
+	self.help = label(self.root, "F: find asset   Enter: random   Tab: layer   F3: collision   Arrows/drag: pan   Scroll/Home/End: zoom", 565)
 	self.path = ""
 	self.tiles = {}
 	self.palette = palettes[1]
@@ -123,6 +124,14 @@ function lab:create()
     self.palette = palettes[self.palette_index]
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT DS1", items=self.assets, on_select=function(path)
+		self.path = path
+		self:infer_palette()
+		local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
+		self.tiles = vfs.list(directory, ".dt1") or {}
+		self.width, self.height = nil, nil
+		self:queue_preview()
+	end})
     self.random_state = dev.seed()
 	self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
 	self.dragging, self.drag_x, self.drag_y = false, 0, 0
@@ -266,6 +275,8 @@ function lab:rebuild()
 end
 
 function lab:update()
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
     if self.pending_job then
         local status = render.preload_status(self.pending_job)
         if not status or not status.done then return end

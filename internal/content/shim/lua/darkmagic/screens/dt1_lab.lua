@@ -5,6 +5,7 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local tooltip = require("darkmagic.ui.tooltip")
+local fuzzy_picker = require("darkmagic.ui.fuzzy_picker")
 local vfs = require("dm.vfs/v1")
 
 local palettes = {
@@ -325,7 +326,7 @@ function lab:create()
     self.title = label(self.root, "DT1 TILE GALLERY", 18, "font_lab_heading")
     self.status = label(self.root, "", 64, "font_lab_color")
     self.source = label(self.root, "", 535, "font_lab_caption")
-    self.help = label(self.root, "Tab: grid/tile view   Arrows/drag: pan   Scroll/Home/End: zoom   Space: fit   PgUp/PgDn: palette   Enter: random", 565)
+	self.help = label(self.root, "F: find asset   Enter: random   Tab: grid/tile   Arrows/drag: pan   Scroll/Home/End: zoom   Space: fit", 565)
     -- This tooltip is a sibling of the transformed gallery, so its text stays
     -- at ordinary screen scale regardless of gallery pan or zoom.
     self.tile_tooltip = tooltip.create(self.root, "", 0, 0, {
@@ -339,6 +340,11 @@ function lab:create()
     self:infer_palette()
 	self.index = 0
     self.assets = vfs.list("data/global/tiles", ".dt1") or {}
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT DT1", items=self.assets, on_select=function(path)
+		self.path, self.index = path, 0
+		self:infer_palette()
+		self:start_gallery()
+	end})
     self.random_state = dev.seed()
     self.tile_nodes = {}
     self.pan_x, self.pan_y, self.zoom = 0, 0, 1
@@ -349,6 +355,8 @@ function lab:create()
 end
 
 function lab:update()
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
     if self.building then self:build_some_tiles() end
     if input.pressed("tab") and self.total > 0 then self:toggle_view(); return end
     if input.pressed("confirm") then self:random_asset(); return end

@@ -389,7 +389,7 @@ MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
 Use Left/Right to increment or decrement the logical `0..15` player direction,
 Up/Down for NU/WL/RN mode, Page Up/Down
 for player class, Space to pause/play, Home/End to step frames, and Enter to cycle deterministic coherent
-recipes. The lab owns its defaults and selection state; no composite-specific
+recipes. Press F to open the shared type-to-filter fuzzy recipe picker. The lab owns its defaults and selection state; no composite-specific
 arguments leak through the production client composition root.
 
 Browse a DT1 tileset through the engine's lazy tile decoder with:
@@ -409,6 +409,7 @@ through a deterministic random sequence. Hovering a tile shows an unscaled,
 semantic orientation/type, main/style index, sub/sequence index, matching
 variant count, direction, rarity, block count, and source dimensions. Cells
 with the same orientation/main/sub lookup key share a subtle background color.
+Press F to select an exact mounted DT1 through the shared fuzzy picker.
 
 Open a DS1 stamp with its authored DT1 sources using:
 
@@ -422,6 +423,8 @@ cycles Act palettes, and Enter selects a mounted DS1 plus the DT1 files from its
 directory. Both map labs discover their mounted assets themselves and open with
 a useful selection. The scenes can be captured as `dt1_lab` and `ds1_lab`
 through the ordinary capture flags.
+Press F to find a specific mounted DS1 by any subsequence of its path. Monster
+and missile labs expose the same picker for their typed record IDs.
 
 `--start-scene=mapgen_lab` opens the pointer-driven generation proof. It shows
 the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and

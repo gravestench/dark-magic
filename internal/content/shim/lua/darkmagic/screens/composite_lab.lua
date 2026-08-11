@@ -6,6 +6,7 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local composite = require("darkmagic.gameplay.player_composite")
+local fuzzy_picker = require("darkmagic.ui.fuzzy_picker")
 
 local tokens = {"AM", "SO", "NE", "PA", "BA", "DZ", "AI"}
 local modes = {"NU", "WL", "RN"}
@@ -54,7 +55,7 @@ function lab:create()
     self.actor:set_scale(2, 2)
     self.title = label(self.root, "COMPOSITE ANIMATION LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 68)
-    self.help = label(self.root, "Left/Right: direction   Up/Down: mode   Page Up/Down: class   Enter: recipe   Space: play   Home/End: frame", 548)
+	self.help = label(self.root, "F: find recipe   Left/Right: direction   Up/Down: mode   PgUp/PgDn: class   Enter: random", 548)
     self.detail = label(self.root, "", 574)
 
 	self.token_index = index_of(tokens, "AM")
@@ -67,6 +68,17 @@ function lab:create()
 	self.frame = -1
     self.playing, self.dirty = self.frame < 0, true
     self.playback_seconds = 0
+	local choices = {}
+	for _, token in ipairs(tokens) do
+		for _, mode in ipairs(modes) do choices[#choices + 1] = token .. " " .. mode .. " HTH" end
+	end
+	choices[#choices + 1] = "AM WL 1HS"
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT COMPOSITE RECIPE", items=choices, on_select=function(value)
+		local token, mode, weapon = value:match("^(%S+)%s+(%S+)%s+(%S+)$")
+		self.token_index, self.mode_index, self.weapon = index_of(tokens, token), index_of(modes, mode), weapon
+		self.appearance = weapon == "1HS" and {RH="SSD"} or {}
+		self.dirty = true
+	end})
 end
 
 function lab:rebuild()
@@ -101,6 +113,8 @@ function lab:rebuild()
 end
 
 function lab:update(elapsed)
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
     -- Facing changes select another direction resource, not another animation.
     -- Keep one lab-owned clock so rebuilding the retained animation can seek to
     -- the same point instead of visibly restarting at frame zero.
