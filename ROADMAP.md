@@ -38,15 +38,18 @@ The active dependency queue, reassessed after that gate, is:
    equipment-derived damage on the shared pointer-selected Attack transaction.
    Its checkpointed pending action now follows a still-valid target through the
    collision-aware world pathfinder and admits melee only after reaching range.
-2. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
+2. **Developer labs:** remove lab-specific arguments from the client composition
+   root. Labs should open with useful defaults and select records/assets through
+   one reusable modal fuzzy finder; add a combat lab on that same foundation.
+3. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
    evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
    resistance, death/corpse consequences, and difficulty rules.
-3. **M19/M21 item-stat activation:** project equipped weapons, armor, charms,
+4. **M19/M21 item-stat activation:** project equipped weapons, armor, charms,
    sockets, sets, runewords, charges, auras, and procs into the shared stat-source
    authority while preserving container and source identity.
-4. **M21 world interactions:** extend the existing command boundary through one
+5. **M21 world interactions:** extend the existing command boundary through one
    door, chest, shrine, waypoint, portal, and then record-driven NPC services.
-5. **M22 networking:** carry the proven replay/checkpoint authority over
+6. **M22 networking:** carry the proven replay/checkpoint authority over
    transport without moving simulation decisions into clients.
 
 M18/M19 UI, item, save, and presentation work remains active where it supplies
@@ -1354,8 +1357,7 @@ data owners; they do not introduce parallel gameplay authorities.
   than pathfinding every tick, follows a moving same-zone target, and cancels
   cleanly when that target disappears or becomes unreachable. Complete this
   checkpoint by deriving the active player profile from authoritative
-  equipment/stat sources, driving the correct attack animation/event boundary,
-  and adding an asset-backed
+  equipment/stat sources and adding an asset-backed
   pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	assetdecode "github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
@@ -193,7 +194,12 @@ func (app *application) registerOfflineCommands() error {
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
 	}
-	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID, bloodMoor); err != nil {
+	animationData, err := assetdecode.AnimationData(app.options.Content, "data/global/AnimData.d2")
+	if err != nil {
+		return wrap("load authoritative player animation timing", err)
+	}
+	attackTimings := newCombatTimingAdapter(animationData)
+	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID, bloodMoor, attackTimings); err != nil {
 		return wrap("register player basic attack", err)
 	}
 	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {

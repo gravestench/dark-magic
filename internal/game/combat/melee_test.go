@@ -58,7 +58,7 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	if err := gameskill.RegisterCastLifecycle(engine, registry); err != nil {
 		t.Fatal(err)
 	}
-	if err := RegisterPlayerBasicAttack(engine, 0, nil); err != nil {
+	if err := RegisterPlayerBasicAttack(engine, 0, nil, fixedAttackTiming{AttackTiming{Frames: 4, Speed: 256, ImpactFrame: 2}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := RegisterBasicMelee(engine, BasicMeleePolicy{HitChance: 100}); err != nil {
@@ -74,6 +74,10 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	mustSetEntity(t, stores.playerVitals, player, map[string]any{"health": int64(10), "max_health": int64(10), "mana": int64(0), "max_mana": int64(0), "mana_raw": int64(0), "max_mana_raw": int64(0)})
 	velocities, _ := akara.GetDynamicStore(engine.World(), "dm.world.velocity")
 	mustSetEntity(t, velocities, player, map[string]any{"x": 0.0, "y": 0.0})
+	animations, _ := akara.GetDynamicStore(engine.World(), "dm.player.animation")
+	mustSetEntity(t, animations, player, map[string]any{"direction": int64(3), "mode": "NU"})
+	appearances, _ := akara.GetDynamicStore(engine.World(), "dm.player.appearance")
+	mustSetEntity(t, appearances, player, map[string]any{"cof": "", "token": "AM", "palette": "units.dat", "weapon_class": "HTH"})
 	controls, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	mustSetEntity(t, controls, player, map[string]any{"player": "hero"})
 	mustSetEntity(t, stores.selectables, target, map[string]any{"id": "monster:fallen", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 0.5, "priority": int64(20)})
@@ -89,8 +93,11 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	if err := engine.Update(time.Second / 25); err != nil {
 		t.Fatal(err)
 	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
 	// The skill effect records a pending action at the pre-simulation barrier.
-	// The following fixed tick revalidates its target and admits the hit.
+	// The following fixed tick revalidates its target and begins approach.
 	if err := engine.Update(time.Second / 25); err != nil {
 		t.Fatal(err)
 	}
@@ -111,11 +118,39 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	if err := engine.Update(time.Second / 25); err != nil {
 		t.Fatal(err)
 	}
+	animation, _ := animations.Get(player)
+	mode, _ := animation.Get("mode")
+	if mode != "A1" {
+		t.Fatalf("attack animation mode = %v, want A1", mode)
+	}
 	stats, _ := stores.monsterStats.Get(target)
 	health, _ := stats.Get("health")
+	if health != MustWhole(5).Raw() {
+		t.Fatalf("health before authored impact frame = %v, want %d", health, MustWhole(5).Raw())
+	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	health, _ = stats.Get("health")
 	if health != MustWhole(3).Raw() {
 		t.Fatalf("monster health = %v, want %d", health, MustWhole(3).Raw())
 	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	mode, _ = animation.Get("mode")
+	if mode != "NU" {
+		t.Fatalf("completed attack animation mode = %v, want NU", mode)
+	}
+}
+
+type fixedAttackTiming struct{ timing AttackTiming }
+
+func (timing fixedAttackTiming) AttackTiming(_, _ string) (AttackTiming, bool) {
+	return timing.timing, true
 }
 
 func gameskillStores(t *testing.T, engine *gameecs.Engine) (*akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore) {
