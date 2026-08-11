@@ -17,6 +17,9 @@ function M.register()
         field("id","string"), field("pair","entity"), field("label","string"), field("radius","f64"),
     }})
     ecs.component({name="dm.lab.warp.intent", version=1, fields={field("portal","entity")}})
+    ecs.component({name="dm.lab.warp.move_intent", version=1, fields={
+        field("x", "f64"), field("y", "f64"),
+    }})
     ecs.component({name="dm.lab.warp.actor", version=1, fields={field("speed","f64")}})
     ecs.component({name="dm.lab.warp.state", version=1, fields={
         field("event","string"), field("warp_count","i64"),

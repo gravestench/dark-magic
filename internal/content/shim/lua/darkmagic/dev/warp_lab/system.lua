@@ -20,6 +20,25 @@ end
 
 function M.register()
     ecs.system({
+        id = "darkmagic.lab.warp.resolve_move", phase = "movement",
+        query = {all = {"dm.lab.warp.actor", "dm.lab.warp.move_intent", "dm.world.position"}},
+        read = {"dm.lab.warp.actor", "dm.lab.warp.move_intent"},
+        write = {"dm.world.position", "dm.lab.warp.move_intent"},
+        update = function(context, entities, commands)
+            for _, entity in ipairs(entities) do
+                local actor = ecs.get(entity, "dm.lab.warp.actor")
+                local intent = ecs.get(entity, "dm.lab.warp.move_intent")
+                local position = ecs.get(entity, "dm.world.position")
+                local remaining = move_toward(position, {
+                    x = intent:get("x"), y = intent:get("y"),
+                }, actor:get("speed"), context.delta_seconds)
+                if remaining <= 0.1 then
+                    commands:remove(entity, "dm.lab.warp.move_intent")
+                end
+            end
+        end,
+    })
+    ecs.system({
         id="darkmagic.lab.warp.resolve_intent", phase="movement",
         query={all={"dm.lab.warp.actor","dm.lab.warp.intent","dm.lab.warp.state","dm.world.position"}},
         read={"dm.lab.warp.actor","dm.lab.warp.intent","dm.lab.warp.portal"},
