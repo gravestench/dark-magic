@@ -15,9 +15,16 @@ end
 
 local function footprint_blocked(collision, x, y, radius)
     if not collision then return false end
-    for _, offset_x in ipairs({-radius, radius}) do
-        for _, offset_y in ipairs({-radius, radius}) do
-            if collision:blocked_position(x + offset_x, y + offset_y) then
+    local reach = math.ceil(radius)
+    for offset_y = -reach, reach do
+        for offset_x = -reach, reach do
+            -- Match the authoritative A* clearance sampler. The extra half
+            -- subtile converts a continuous circle into collision-cell centers;
+            -- a medium (radius 1) player therefore reserves the surrounding
+            -- 3x3 neighborhood used by Riiablo's size-2 path clearance.
+            local distance = math.sqrt(offset_x * offset_x + offset_y * offset_y)
+            if distance <= radius + 0.5
+                and collision:blocked_position(x + offset_x, y + offset_y) then
                 return true
             end
         end

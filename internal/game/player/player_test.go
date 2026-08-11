@@ -97,6 +97,17 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if kind, _ := selectable.Get("kind"); kind != "player" {
 		t.Fatalf("selectable kind = %v", kind)
 	}
+	colliderStore, found := akara.GetDynamicStore(engine.World(), "dm.world.collider")
+	if !found {
+		t.Fatal("collider store was not materialized")
+	}
+	collider, present := colliderStore.Get(entity)
+	if !present {
+		t.Fatal("player lacks collider component")
+	}
+	if radius, _ := collider.Get("radius"); radius != PlayerColliderRadius {
+		t.Fatalf("player collider radius = %v, want %v", radius, PlayerColliderRadius)
+	}
 	locationStore, found := akara.GetDynamicStore(engine.World(), "dm.world.location")
 	if !found {
 		t.Fatal("world location store was not materialized")

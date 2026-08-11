@@ -1093,9 +1093,14 @@ focus must not replace pointer coordinates as the authoritative client request.
   Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
   `dm.world.collider` radius now probes the player's full footprint while
-  retaining axis-separated wall sliding. COF shadow-enabled components now use
-  the baseline-anchored half-height/shear projection corroborated by Riiablo and
-  OpenDiablo2, with center-preserving animation canvases and exact pixel probes.
+  retaining axis-separated wall sliding. Riiablo's player factory identifies
+  players as `Size.MEDIUM = 2` and its physics adapter uses `size / 2`, confirming
+  a one-subtile radius (two-subtile diameter), not one five-subtile map tile.
+  Player admission, continuous Lua integration, and Go A* now share that radius
+  and the same surrounding 3x3 collision-cell clearance. COF shadow-enabled
+  components now use the baseline-anchored half-height/shear projection
+  corroborated by Riiablo and OpenDiablo2, with center-preserving animation
+  canvases and exact pixel probes.
   `make capture-game-world-movement` now injects one ordinary logical primary
   pointer frame at the native application boundary, waits for copied
   authoritative player position to move and settle, then records the

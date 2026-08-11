@@ -165,7 +165,8 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 local world=require("darkmagic.gameplay.world")
 -- The center advances only to x=50.3, but its radius reaches collision cell
 -- 51. A point-only query would clip into the wall; the footprint must stop X.
-local collision={blocked_position=function(_,x,_) return math.floor(x + 0.5) >= 51 end}
+-- Only the axial cell is blocked. A four-corners-only footprint misses it.
+local collision={blocked_position=function(_,x,y) return math.floor(x + 0.5) >= 51 and math.floor(y + 0.5) == 40 end}
 gameplay=world.create(100,80,collision,"test-player")
 `)
 	}); err != nil {
