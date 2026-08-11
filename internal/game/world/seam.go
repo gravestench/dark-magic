@@ -29,12 +29,13 @@ func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen
 		return Seam{}, fmt.Errorf("world: Act I seam requires Rogue Encampment and Blood Moor")
 	}
 	townStamps, warps := townZone.Stamps(), moorZone.Warps()
-	if len(townStamps) != 1 || len(warps) != 1 || warps[0].DestinationLevel != 1 {
+	townEntry, found := warpByRole(warps, "town-entry")
+	if len(townStamps) != 1 || !found || townEntry.DestinationLevel != 1 {
 		return Seam{}, fmt.Errorf("world: Act I seam recipes are incomplete")
 	}
 	townDirection := strings.TrimPrefix(townStamps[0].Role, "act1-town:exit-")
-	if oppositeCardinal(townDirection) != warps[0].Direction {
-		return Seam{}, fmt.Errorf("world: town exit %q does not meet wilderness edge %q", townDirection, warps[0].Direction)
+	if oppositeCardinal(townDirection) != townEntry.Direction {
+		return Seam{}, fmt.Errorf("world: town exit %q does not meet wilderness edge %q", townDirection, townEntry.Direction)
 	}
 	anchor, found := cardinalTownAnchor(townMap.AuthoredExitAnchors(), townDirection)
 	if !found {
@@ -44,7 +45,7 @@ func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen
 	if !found {
 		return Seam{}, fmt.Errorf("world: town exit is blocked")
 	}
-	moorX, moorY, found := moorMap.OpenPointNearSubtile(float64(warps[0].X*SubtilesPerTile)+2.5, float64(warps[0].Y*SubtilesPerTile)+2.5)
+	moorX, moorY, found := moorMap.OpenPointNearSubtile(float64(townEntry.X*SubtilesPerTile)+2.5, float64(townEntry.Y*SubtilesPerTile)+2.5)
 	if !found {
 		return Seam{}, fmt.Errorf("world: Blood Moor town edge is blocked")
 	}
@@ -52,14 +53,29 @@ func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen
 	if !found {
 		return Seam{}, fmt.Errorf("world: town arrival is blocked")
 	}
-	moorArrivalX, moorArrivalY, found := insetArrival(moorMap, moorX, moorY, warps[0].Direction)
+	moorArrivalX, moorArrivalY, found := insetArrival(moorMap, moorX, moorY, townEntry.Direction)
 	if !found {
 		return Seam{}, fmt.Errorf("world: Blood Moor arrival is blocked")
 	}
 	return Seam{
 		Town:       SeamEndpoint{LevelID: 1, X: townX, Y: townY, ArrivalX: townArrivalX, ArrivalY: townArrivalY, Width: float64(townMap.WidthSubtiles), Height: float64(townMap.HeightSubtiles), Direction: townDirection},
-		Wilderness: SeamEndpoint{LevelID: 2, X: moorX, Y: moorY, ArrivalX: moorArrivalX, ArrivalY: moorArrivalY, Width: float64(moorMap.WidthSubtiles), Height: float64(moorMap.HeightSubtiles), Direction: warps[0].Direction},
+		Wilderness: SeamEndpoint{LevelID: 2, X: moorX, Y: moorY, ArrivalX: moorArrivalX, ArrivalY: moorArrivalY, Width: float64(moorMap.WidthSubtiles), Height: float64(moorMap.HeightSubtiles), Direction: townEntry.Direction},
 	}, nil
+}
+
+func warpByRole(warps []mapgen.Warp, role string) (mapgen.Warp, bool) {
+	var result mapgen.Warp
+	found := false
+	for _, warp := range warps {
+		if warp.Role != role {
+			continue
+		}
+		if found {
+			return mapgen.Warp{}, false
+		}
+		result, found = warp, true
+	}
+	return result, found
 }
 
 func insetArrival(world *Map, x, y float64, edge string) (float64, float64, bool) {
