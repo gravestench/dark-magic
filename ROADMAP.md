@@ -1220,9 +1220,17 @@ data owners; they do not introduce parallel gameplay authorities.
   selection components. Synthetic join, difficulty, direct-value, authority,
   deterministic-life, and target-resolution tests avoid asserting later
   player-count, ladder, boss, quality, AI, hit, or death policies.
-- [ ] **M21.4: Scheduled basic monster AI.** Implement the deterministic loop
+- [x] **M21.4: Scheduled basic monster AI.** Implement the deterministic loop
   `idle -> acquire hostile -> path toward -> request basic attack`. AI chooses
   intent and owns checkpointed next-think/memory state; it never mutates HP.
+  The first behavior system reads typed `aidel`, `aidist`, velocity, and melee
+  range facts; filters player candidates by authoritative act/level and aggro
+  radius; retains a stable target; and runs only when its ECS-owned future tick
+  is due. It uses injected deterministic world pathfinding when available,
+  writes movement velocity as tactics output, and adds a semantic basic-attack
+  request at melee range. Target memory, tactical state, and deadlines are all
+  ordinary snapshot/checksum fields. Exact family-specific AI, LOS, threat,
+  faction effects, and legacy fallback cadence remain later verified policy.
 - [ ] **M21.5: Basic melee transaction.** Resolve legal target, hit/miss,
   physical damage, HP, and semantic hit/death events using synthetic verified
   vectors. Advanced avoidance, mitigation, leech, poison, and PvP remain probes.

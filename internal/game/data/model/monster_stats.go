@@ -36,8 +36,8 @@ type MonsterStats struct {
 	MonSound                string `csv:"MonSound"`                // Points to the "Id" field of a monster sound from the monsounds.txt file.
 	UMonSound               string `csv:"UMonSound"`               // Points to the "Id" field of a monster sound from the monsounds.txt file.
 	Threat                  string `csv:"threat"`                  // Controls the AI threat value of the monster, affecting targeting priorities of enemy AIs.
-	Aidel                   string `csv:"aidel"`                   // Controls the delay in frame length for how often the monster's AI will update its commands.
-	Aidist                  string `csv:"aidist"`                  // Controls the maximum distance (measured in tiles) between the monster and an enemy until the monster's AI becomes aggressive. If equals 0, then default to 35.
+	Aidel                   int    `csv:"aidel"`                   // Controls the delay in frame length for how often the monster's AI will update its commands.
+	Aidist                  int    `csv:"aidist"`                  // Controls the maximum distance (measured in tiles) between the monster and an enemy until the monster's AI becomes aggressive. If equals 0, then default to 35.
 	AIP1                    string `csv:"aip1"`                    // Numeric parameter used to control various functions of the monster's AI. Depends on the AI script being used.
 	AIP2                    string `csv:"aip2"`                    // Numeric parameter used to control various functions of the monster's AI. Depends on the AI script being used.
 	AIP3                    string `csv:"aip3"`                    // Numeric parameter used to control various functions of the monster's AI. Depends on the AI script being used.

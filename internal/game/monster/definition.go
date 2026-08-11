@@ -44,6 +44,9 @@ type Definition struct {
 	ColliderRadius float64           `json:"collider_radius"`
 	SelectRadius   float64           `json:"select_radius"`
 	Velocity       int64             `json:"velocity"`
+	ThinkInterval  uint64            `json:"think_interval"`
+	AggroRadius    float64           `json:"aggro_radius"`
+	AttackRange    float64           `json:"attack_range"`
 	Killable       bool              `json:"killable"`
 	MonLvlLevel    int               `json:"mon_level_row"`
 }
@@ -159,6 +162,12 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		return Definition{}, err
 	}
 	diameter := math.Max(float64(graphics.SizeX), float64(graphics.SizeY))
+	thinkInterval := max(stats.Aidel, 1)
+	aggroRadius := stats.Aidist
+	if aggroRadius <= 0 {
+		aggroRadius = 35
+	}
+	attackRange := max(graphics.MeleeRng, 1)
 	effectiveLevel := stats.Level
 	if level != nil {
 		effectiveLevel = level.Level
@@ -170,6 +179,7 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		Level: int64(effectiveLevel), LifeMin: lifeMin, LifeMax: lifeMax, Defense: int64(values.defense), AttackRating: int64(values.attack),
 		PhysicalMin: damageMin, PhysicalMax: damageMax, Experience: int64(values.experience),
 		ColliderRadius: diameter / 2, SelectRadius: diameter / 2, Velocity: int64(stats.Velocity), Killable: stats.Killable,
+		ThinkInterval: uint64(thinkInterval), AggroRadius: float64(aggroRadius), AttackRange: float64(attackRange),
 	}
 	if level != nil {
 		definition.MonLvlLevel = level.Level
