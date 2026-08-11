@@ -44,5 +44,7 @@ would manufacture incorrect rules.
 
 Likewise, Riiablo's quest panel always displays the first quest stage. Its UI
 layout is useful implementation reference, but it is not evidence for quest
-state transitions. Quest progression and NPC speech selection still require
-additional reverse-engineered sources or verified gameplay traces.
+state transitions. The initial cross-source quest and world survey now lives in
+[QUESTS_AND_WORLD.md](QUESTS_AND_WORLD.md), with the recovered runtime shape in
+[QUEST_RUNTIME_MODEL.md](QUEST_RUNTIME_MODEL.md). Exact transitions and NPC
+speech selection still require verified gameplay traces.
