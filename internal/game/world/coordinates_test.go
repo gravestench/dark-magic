@@ -32,6 +32,19 @@ func TestCollisionCellUsesSubtileCenters(t *testing.T) {
 	}
 }
 
+func TestSubtileCentersCoverExactlyOneDT1FloorDiamond(t *testing.T) {
+	space := Coordinates{HeightTiles: 1}
+	top := space.SubtileToWorldPixel(Point{X: 0, Y: 0})
+	bottom := space.SubtileToWorldPixel(Point{X: SubtilesPerTile - 1, Y: SubtilesPerTile - 1})
+	halfSubtileHeight := float64(TilePixelHeight) / (2 * SubtilesPerTile)
+	if got := top.Y - halfSubtileHeight; got != PreviewMargin {
+		t.Fatalf("first collision diamond begins at y=%v, want tile top %d", got, PreviewMargin)
+	}
+	if got := bottom.Y + halfSubtileHeight; got != PreviewMargin+TilePixelHeight {
+		t.Fatalf("last collision diamond ends at y=%v, want tile bottom %d", got, PreviewMargin+TilePixelHeight)
+	}
+}
+
 func assertPointNear(t *testing.T, got, want Point) {
 	t.Helper()
 	const epsilon = 0.000001

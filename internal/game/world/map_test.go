@@ -90,7 +90,7 @@ func TestFlagsAtRejectsOutsideMap(t *testing.T) {
 func TestSubtilePixelProjectionMatchesRendererAndRoundTrips(t *testing.T) {
 	m := &Map{WidthTiles: 10, HeightTiles: 8}
 	x, y := m.SubtileToPixel(5, 10)
-	if x != 720 || y != 320 {
+	if x != 720 || y != 288 {
 		t.Fatalf("projected = %v,%v", x, y)
 	}
 	for _, point := range [][2]float64{{0, 0}, {5, 10}, {13.25, 7.5}} {
