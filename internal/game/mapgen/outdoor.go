@@ -1,0 +1,130 @@
+package mapgen
+
+import (
+	"fmt"
+	"strings"
+
+	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
+	model "github.com/gravestench/dark-magic/internal/game/data/model"
+)
+
+const actOneOutdoorCellSize = 8
+
+// ActOneOutdoorGenerator is the first intentionally narrow outdoor strategy.
+// It builds Blood Moor's authored 8x8 coarse grid and preserves the edge that
+// joins Rogue Encampment. Rivers, cliffs, paths, substitutions, and mandatory
+// quest sites remain later strategy layers; they are not random callbacks here.
+type ActOneOutdoorGenerator struct{ data gamedata.Snapshot }
+
+func NewActOneOutdoorGenerator(data gamedata.Snapshot) *ActOneOutdoorGenerator {
+	return &ActOneOutdoorGenerator{data: data}
+}
+
+// GenerateFromTown ties Blood Moor's town-facing edge to the selected town
+// layout. The town role is part of the immutable recipe, never inferred from a
+// renderer node or the camera.
+func (generator *ActOneOutdoorGenerator) GenerateFromTown(request Request, town Stamp) (*Zone, error) {
+	direction, err := townExitDirection(town.Role)
+	if err != nil {
+		return nil, err
+	}
+	return generator.generate(request, direction)
+}
+
+func (generator *ActOneOutdoorGenerator) Generate(request Request) (*Zone, error) {
+	return generator.generate(request, "south")
+}
+
+func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection string) (*Zone, error) {
+	if err := request.Validate(); err != nil {
+		return nil, err
+	}
+	level, found := generator.data.LevelsByID[request.LevelID]
+	if !found || request.Act != 1 || level.Act != 0 {
+		return nil, fmt.Errorf("%w: Blood Moor request belongs to Act I", ErrRequest)
+	}
+	if request.LevelID != 2 || level.DrlgType != 3 || level.LevelType != 2 {
+		return nil, fmt.Errorf("%w: first outdoor strategy supports Blood Moor level 2", ErrRequest)
+	}
+	width, height := levelSize(level, request.Difficulty)
+	if width <= 0 || height <= 0 || width%actOneOutdoorCellSize != 0 || height%actOneOutdoorCellSize != 0 {
+		return nil, fmt.Errorf("%w: Blood Moor dimensions %dx%d are not an 8-tile grid", ErrZone, width, height)
+	}
+	columns, rows := width/actOneOutdoorCellSize, height/actOneOutdoorCellSize
+	stamps := make([]Stamp, 0, columns*rows)
+	rooms := make([]Room, 0, columns*rows)
+	links := make([]Link, 0, (columns-1)*rows+(rows-1)*columns)
+	for y := 0; y < rows; y++ {
+		for x := 0; x < columns; x++ {
+			id := uint32(y*columns + x + 1)
+			presetDef := []int{29, 30, 35}[NewStreams(request.Seed).For(fmt.Sprintf("outdoor-cell-%d-preset", id)).Uint64n(3)]
+			preset, found := generator.data.LevelPresetByDef[presetDef]
+			if !found || preset.SizeX != actOneOutdoorCellSize || preset.SizeY != actOneOutdoorCellSize {
+				return nil, fmt.Errorf("%w: Blood Moor fill preset %d is unavailable", ErrZone, presetDef)
+			}
+			stamp, err := generator.outdoorStamp(request, level, preset, id, x*actOneOutdoorCellSize, y*actOneOutdoorCellSize)
+			if err != nil {
+				return nil, err
+			}
+			stamps = append(stamps, stamp)
+			rooms = append(rooms, Room{ID: id, X: stamp.X, Y: stamp.Y, Width: stamp.Width, Height: stamp.Height, StampID: id})
+			if x > 0 {
+				links = append(links, Link{From: id - 1, To: id})
+			}
+			if y > 0 {
+				links = append(links, Link{From: id - uint32(columns), To: id})
+			}
+		}
+	}
+	warp := townEdgeWarp(width, height, townDirection)
+	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{warp}, Trace: []string{
+		fmt.Sprintf("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", request.LevelID, columns, rows),
+		"authored 8x8 Blood Moor fill presets selected by independent cell streams",
+		fmt.Sprintf("Rogue Encampment joins the %s Blood Moor edge", oppositeDirection(townDirection)),
+	}})
+}
+
+func (generator *ActOneOutdoorGenerator) outdoorStamp(request Request, level model.LevelData, preset model.LevelPreset, id uint32, x, y int) (Stamp, error) {
+	variants := presetFiles(preset)
+	if len(variants) == 0 {
+		return Stamp{}, fmt.Errorf("%w: outdoor preset %d has no DS1 variants", ErrZone, preset.Def)
+	}
+	variant := int(NewStreams(request.Seed).For(fmt.Sprintf("outdoor-cell-%d-variant", id)).Uint64n(uint64(len(variants))))
+	tiles, err := maskedTilePaths(generator.data.LevelTypes, level.LevelType, preset.Dt1Mask)
+	if err != nil {
+		return Stamp{}, err
+	}
+	return Stamp{ID: id, PresetDef: preset.Def, Role: "blood-moor-fill", X: x, Y: y, Width: preset.SizeX, Height: preset.SizeY, DS1Path: assetPath(variants[variant]), TilePaths: tiles, Variant: variant, Populate: preset.Populate != 0, LogicalWalls: preset.Logicals != 0}, nil
+}
+
+func townExitDirection(role string) (string, error) {
+	const prefix = "act1-town:exit-"
+	if !strings.HasPrefix(role, prefix) {
+		return "", fmt.Errorf("%w: town stamp has no cardinal exit role", ErrRequest)
+	}
+	direction := strings.TrimPrefix(role, prefix)
+	if direction != "north" && direction != "east" && direction != "south" && direction != "west" {
+		return "", fmt.Errorf("%w: unknown town exit %q", ErrRequest, direction)
+	}
+	return direction, nil
+}
+
+func townEdgeWarp(width, height int, townDirection string) Warp {
+	direction := oppositeDirection(townDirection)
+	x, y := width/2, height/2
+	switch direction {
+	case "north":
+		y = 0
+	case "east":
+		x = width - 1
+	case "south":
+		y = height - 1
+	case "west":
+		x = 0
+	}
+	return Warp{ID: 1, Role: "town-entry", Direction: direction, X: x, Y: y, DestinationLevel: 1}
+}
+
+func oppositeDirection(direction string) string {
+	return map[string]string{"north": "south", "east": "west", "south": "north", "west": "east"}[direction]
+}

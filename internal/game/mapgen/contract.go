@@ -113,6 +113,8 @@ type Link struct {
 // Warp preserves an authored level transition without creating presentation UI.
 type Warp struct {
 	ID               uint32
+	Role             string
+	Direction        string
 	X, Y             int
 	DestinationLevel int
 }
@@ -184,6 +186,19 @@ func validateDefinition(def Definition) error {
 		if _, found := roomIDs[link.To]; !found {
 			return fmt.Errorf("%w: link references room %d", ErrZone, link.To)
 		}
+	}
+	warpIDs := make(map[uint32]struct{}, len(def.Warps))
+	for _, warp := range def.Warps {
+		if warp.ID == 0 || warp.DestinationLevel <= 0 || warp.X < def.Bounds.X || warp.Y < def.Bounds.Y || warp.X >= def.Bounds.X+def.Bounds.Width || warp.Y >= def.Bounds.Y+def.Bounds.Height {
+			return fmt.Errorf("%w: incomplete or out-of-bounds warp %d", ErrZone, warp.ID)
+		}
+		if warp.Direction != "north" && warp.Direction != "east" && warp.Direction != "south" && warp.Direction != "west" {
+			return fmt.Errorf("%w: warp %d has invalid direction %q", ErrZone, warp.ID, warp.Direction)
+		}
+		if _, duplicate := warpIDs[warp.ID]; duplicate {
+			return fmt.Errorf("%w: duplicate warp %d", ErrZone, warp.ID)
+		}
+		warpIDs[warp.ID] = struct{}{}
 	}
 	return nil
 }

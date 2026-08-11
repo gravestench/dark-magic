@@ -49,6 +49,30 @@ func TestMapgenModuleExposesMazeTopology(t *testing.T) {
 	}
 }
 
+func TestMapgenModuleExposesBloodMoorTownEdge(t *testing.T) {
+	runtime := New()
+	fixture := mapgenCatalogStub{snapshot: outdoorModuleFixture()}
+	if err := runtime.RegisterModule(MapgenModule(fixture)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("dm.mapgen/v1").outdoor(2,42,"east"); assert(z.kind=="outdoor" and #z.rooms==100 and z.warps[1].direction=="west")`)}}
+	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func outdoorModuleFixture() gamedata.Snapshot {
+	result := gamedata.Snapshot{LevelsByID: map[int]model.LevelData{2: {Id: 2, Act: 0, DrlgType: 3, LevelType: 2, SizeX: 80, SizeY: 80}}, LevelPresetByDef: map[int]model.LevelPreset{}, LevelTypes: []model.LevelType{{}, {}, {File1: "Act1/Outdoors/Outdoor1.dt1"}}}
+	for _, def := range []int{29, 30, 35} {
+		result.LevelPresetByDef[def] = model.LevelPreset{Def: def, SizeX: 8, SizeY: 8, Files: 1, File1: "Act1/Outdoors/fill.ds1", Dt1Mask: 1}
+	}
+	return result
+}
+
 func mazeModuleFixture() gamedata.Snapshot {
 	result := gamedata.Snapshot{
 		LevelsByID:       map[int]model.LevelData{9: {Id: 9, DrlgType: 1, LevelType: 3}},

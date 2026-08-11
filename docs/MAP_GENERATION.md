@@ -254,6 +254,15 @@ Shared behavior includes:
 
 Act-specific files such as `DrlgOutWild`, `DrlgOutDesr`, `DrlgOutJung`, `DrlgOutSiege`, and generic placement helpers encode materially different rules. Dark Magic should expose Act/level strategy hooks rather than hide these rules behind a generic `OutdoorGenerator` with random callbacks.
 
+Dark Magic's first executable outdoor strategy is deliberately Blood Moor-only.
+The production level is 80x80 tiles, represented as a 10x10 graph of authored
+8x8 Act I outdoor stamps. Its initial fill layer uses independent per-cell
+streams and records the town-facing edge opposite the selected Rogue
+Encampment exit. This is a structural/materialization proof, not a claim that
+decorative fill pieces alone reproduce a complete wilderness: border, river,
+cliff, traversable-path, substitution, cave, and quest-site layers remain
+explicit strategy stages.
+
 ## Preset variant selection
 
 `LvlPrest` can name multiple DS1 files. D2MOO uses deterministic level RNG to select file variants. In some outdoor paths it keeps per-preset build state and cycles the selected file after a seeded starting point, reducing immediate repetition.

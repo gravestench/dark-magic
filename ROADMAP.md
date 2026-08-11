@@ -966,6 +966,11 @@ complete until its actions are driven by authoritative game state and commands.
   - [ ] M20.15d: Join the selected cardinal town edge to the first generated
     wilderness zone and validate bidirectional transition, collision, camera,
     depth, and pointer navigation across the seam.
+    The first Blood Moor strategy now builds its production 80x80 extent as a
+    deterministic 10x10 graph of authored 8x8 outdoor stamps and carries an
+    explicit town-entry warp on the edge opposite the selected town exit.
+    Structural rivers/cliffs/paths, live transition commands, and presentation
+    seam validation remain before this checkpoint is complete.
 
 ## M21: Diablo simulation
 
