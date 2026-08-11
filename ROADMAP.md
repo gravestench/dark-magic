@@ -987,7 +987,7 @@ complete until its actions are driven by authoritative game state and commands.
   - [x] M20.15b: Replace the fixed presentation fixture with the generated town
     recipe, materialize it incrementally, and publish it atomically to the
     authoritative session and chunked renderer.
-  - [ ] M20.15c: Route character creation, game join, and same-act game entry to
+  - [x] M20.15c: Route character creation, game join, and same-act game entry to
     the town campfire anchor; preserve character/session identity independently
     of the selected town layout.
     The entry command now records the server-selected act and level in an
@@ -995,7 +995,9 @@ complete until its actions are driven by authoritative game state and commands.
     the generated Act I town and campfire anchor. The production-asset client
     seam now proves a frontend-created/selected character is admitted by the
     fixed-tick session at that exact anchor with Act 1 / level 1 authority.
-    Remote join admission remains before this checkpoint is complete.
+    Offline selection and remote/realm join admission now share one validated
+    server-selected destination and command builder. Clients cannot choose the
+    spawn or mint the system/admin-authority admission command.
   - [ ] M20.15d: Join the selected cardinal town edge to the first generated
     wilderness zone and validate bidirectional transition, collision, camera,
     depth, and pointer navigation across the seam.

@@ -62,6 +62,38 @@ type Skill struct {
 	RightAllowed bool  `json:"right_allowed"`
 }
 
+// Destination is the server-selected place where an admitted character enters
+// a game. Keeping this separate from a local save means offline selection and a
+// remote realm join can share exactly the same trusted town-spawn policy.
+type Destination struct {
+	X, Y, Width, Height float64
+	Act, LevelID        int64
+}
+
+// NewDestination validates a finite authoritative world and its entry anchor.
+func NewDestination(x, y, width, height float64, act, levelID int64) (Destination, error) {
+	if width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act < 1 || act > 5 || levelID <= 0 {
+		return Destination{}, fmt.Errorf("player: destination requires an in-bounds spawn, act, and level")
+	}
+	return Destination{X: x, Y: y, Width: width, Height: height, Act: act, LevelID: levelID}, nil
+}
+
+// AdmissionCommand converts a durable character selected by a trusted host
+// into one replayable entry command. Network clients may request a join, but
+// they cannot choose their spawn or mint this system/admin-authority command.
+func AdmissionCommand(character persistence.Character, player string, destination Destination, skills []Skill, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
+	if authority != simulation.AuthoritySystem && authority != simulation.AuthorityAdmin {
+		return simulation.Command{}, fmt.Errorf("player: admission requires system or admin authority")
+	}
+	validated, err := NewDestination(destination.X, destination.Y, destination.Width, destination.Height, destination.Act, destination.LevelID)
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	entry := EntryFromCharacter(character, player, validated.X, validated.Y, validated.Width, validated.Height)
+	entry.Act, entry.LevelID, entry.Skills = validated.Act, validated.LevelID, append([]Skill(nil), skills...)
+	return Command(entry, actor, sequence, tick, authority)
+}
+
 // SkillProvider translates durable character knowledge into authoritative entry
 // facts without coupling player materialization to the typed data catalog.
 type SkillProvider func(persistence.Character) []Skill
@@ -70,14 +102,12 @@ type SkillProvider func(persistence.Character) []Skill
 // Selection remains shell state; after admission, ECS components are the live
 // gameplay state and Lua only observes them.
 type EntrySource struct {
-	engine         *gameecs.Engine
-	saves          *persistence.Store
-	player         string
-	width, height  float64
-	spawnX, spawnY float64
-	act, levelID   int64
-	sequence       uint64
-	skills         SkillProvider
+	engine      *gameecs.Engine
+	saves       *persistence.Store
+	player      string
+	destination Destination
+	sequence    uint64
+	skills      SkillProvider
 }
 
 // NewEntrySource creates the offline adapter that emits one entry command for
@@ -94,11 +124,22 @@ func NewEntrySourceAt(engine *gameecs.Engine, saves *persistence.Store, player s
 // NewEntrySourceAtLocation records the server-selected act and town level in
 // the same authoritative command as the server-selected spawn coordinate.
 func NewEntrySourceAtLocation(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64, act, levelID int64, skills SkillProvider) (*EntrySource, error) {
+	destination, err := NewDestination(x, y, width, height, act, levelID)
+	if err != nil {
+		return nil, err
+	}
+	return NewEntrySourceForDestination(engine, saves, player, destination, skills)
+}
+
+// NewEntrySourceForDestination adapts local save selection to the same
+// destination contract used by trusted remote admission.
+func NewEntrySourceForDestination(engine *gameecs.Engine, saves *persistence.Store, player string, destination Destination, skills SkillProvider) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
-	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act < 1 || act > 5 || levelID <= 0 {
+	validated, err := NewDestination(destination.X, destination.Y, destination.Width, destination.Height, destination.Act, destination.LevelID)
+	if err != nil || engine == nil || saves == nil || player == "" {
 		return nil, fmt.Errorf("player: entry source requires engine, saves, player, and positive world bounds")
 	}
-	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, spawnX: x, spawnY: y, act: act, levelID: levelID, skills: skills}, nil
+	return &EntrySource{engine: engine, saves: saves, player: player, destination: validated, skills: skills}, nil
 }
 
 // Commands emits entry intent once; it never materializes ECS state directly.
@@ -108,12 +149,11 @@ func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 		return nil
 	}
 	source.sequence++
-	entry := EntryFromCharacter(character, source.player, source.spawnX, source.spawnY, source.width, source.height)
-	entry.Act, entry.LevelID = source.act, source.levelID
+	var skills []Skill
 	if source.skills != nil {
-		entry.Skills = source.skills(character)
+		skills = source.skills(character)
 	}
-	command, err := Command(entry, localEntryActor, source.sequence, tick, simulation.AuthoritySystem)
+	command, err := AdmissionCommand(character, source.player, source.destination, skills, localEntryActor, source.sequence, tick, simulation.AuthoritySystem)
 	if err != nil {
 		return nil
 	}
@@ -361,7 +401,7 @@ func decodeEntry(encoded []byte) (Entry, error) {
 			return Entry{}, fmt.Errorf("player: invalid learned skill")
 		}
 	}
-	if entry.WorldWidth <= 0 || entry.WorldHeight <= 0 || entry.X < 0 || entry.X > entry.WorldWidth || entry.Y < 0 || entry.Y > entry.WorldHeight {
+	if entry.WorldWidth <= 0 || entry.WorldHeight <= 0 || entry.X < 0 || entry.X >= entry.WorldWidth || entry.Y < 0 || entry.Y >= entry.WorldHeight {
 		return Entry{}, fmt.Errorf("player: invalid world position or bounds")
 	}
 	if entry.Act < 1 || entry.Act > 5 || entry.LevelID <= 0 {
