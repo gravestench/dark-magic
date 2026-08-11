@@ -214,6 +214,22 @@ The generator:
 
 Connection topology therefore influences which DS1 preset is legal. Randomly choosing any DS1 of the same size is not compatible.
 
+### Generated-zone materialization
+
+The immutable zone recipe is materialized into authoritative gameplay facts in
+small, cancellable steps. Each step decodes one DS1 stamp and joins its selected
+tiles, objects, and collision into the zone-sized map. Rooms that use the same
+DT1 sources share one immutable tile catalog, so the large tile libraries are
+not decoded again for every chamber. No image or native texture is created by
+this stage, and consumers cannot obtain the partially assembled map.
+
+Production DS1 stamps commonly encode one shared terminal row and column beyond
+the logical `LvlPrest` dimensions (for example, a 24x24 cave chamber decodes as
+25x25). Generated room dimensions are authoritative. Materialization clips that
+shared edge—including tiles, objects, and collision—before joining adjacent
+rooms, rather than allowing neighboring stamps to overlap or compensating later
+in rendering and movement code.
+
 ## Outdoor levels
 
 Outdoor generation is not one simple noise/grid algorithm. D2MOO shows a shared outdoor grid plus many Act/level-specific generators and hard-coded required placements.
