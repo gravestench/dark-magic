@@ -1245,9 +1245,19 @@ data owners; they do not introduce parallel gameplay authorities.
   chance-to-hit claim—and defense, block, avoidance, mitigation, criticals,
   leech, secondary states, player attacks, and the full death transaction stay
   in their documented verification/dependency queues.
-- [ ] **M21.6: Consume assigned skill intent.** Resolve the existing
+- [x] **M21.6: Consume assigned skill intent.** Resolve the existing
   `dm.player.skill_intent` into one deterministic cast request with assigned
-  skill and learned level read exactly once.
+  skill and learned level read exactly once. The intent-phase consumer treats
+  the existing component as a mutable admission mailbox, preserves the skill
+  already resolved from the authoritative assignment by command admission,
+  resolves its learned-skill level once,
+  and snapshots player, side, skill ID, learned level, semantic/point target,
+  and request tick into `dm.skill.cast_request`. It clears the mailbox in the
+  same update and refuses to overwrite an unconsumed request, so later skill
+  reassignment or level changes cannot rewrite an in-flight action. Both the
+  offline client authority and standalone session server install the consumer;
+  cast validation, costs, timing, interruption, and behavior dispatch remain
+  the M21.7 transaction.
 - [ ] **M21.7: Generic skill cast state.** Add target validation, resource cost,
   action start/effect/complete ticks, interruption boundaries, and one basic
   behavior family independent of renderer animation frames.
