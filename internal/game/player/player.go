@@ -307,6 +307,12 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 	return nil
 }
 
+// ApplyEntryCommand reuses trusted player materialization during replay.
+// It does not admit untrusted input; only already-recorded commands belong here.
+func ApplyEntryCommand(engine *gameecs.Engine, command simulation.Command) error {
+	return materialize(engine, command)
+}
+
 func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) error {
 	store, err := akara.RegisterSchema(world, akara.Schema{Name: "dm.player.learned_skill", Version: 1, Fields: []akara.Field{
 		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},

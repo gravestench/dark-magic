@@ -137,15 +137,25 @@ func registerSpawn(engine *gameecs.Engine, registry Registry, s stores) error {
 			act, _ := location.Get("act")
 			level, _ := location.Get("level_id")
 			skillLevel, _ := event.Get("skill_level")
+			ownerID := combatOwnerID(caster, player.(string), s.selectables)
 			commands.AddDynamic(s.receipts, eventEntity, map[string]any{"processed": true})
 			commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{
 				s.positions: {"x": x, "y": y},
 				s.locations: {"act": act, "level_id": level},
-				s.missiles:  {"owner_id": player, "owner_entity": caster, "skill_id": skillID, "skill_level": skillLevel, "created_tick": int64(context.Tick), "expires_tick": int64(context.Tick + definition.LifetimeTicks), "velocity_x": dx / length * definition.SpeedPerTick, "velocity_y": dy / length * definition.SpeedPerTick, "previous_x": x, "previous_y": y, "traveled": 0.0, "max_range": definition.MaxRange, "collision_policy": CollisionSingleHit, "collision_radius": definition.CollisionRadius, "physical": definition.PhysicalDamage.Raw(), "hit_target_id": "", "announced": false},
+				s.missiles:  {"owner_id": ownerID, "owner_entity": caster, "skill_id": skillID, "skill_level": skillLevel, "created_tick": int64(context.Tick), "expires_tick": int64(context.Tick + definition.LifetimeTicks), "velocity_x": dx / length * definition.SpeedPerTick, "velocity_y": dy / length * definition.SpeedPerTick, "previous_x": x, "previous_y": y, "traveled": 0.0, "max_range": definition.MaxRange, "collision_policy": CollisionSingleHit, "collision_radius": definition.CollisionRadius, "physical": definition.PhysicalDamage.Raw(), "hit_target_id": "", "announced": false},
 			})
 		}
 		return nil
 	}})
+}
+
+func combatOwnerID(caster akara.Entity, player string, selectables *akara.DynamicStore) string {
+	if selectable, found := selectables.Get(caster); found {
+		if value, err := selectable.Get("id"); err == nil && value.(string) != "" {
+			return value.(string)
+		}
+	}
+	return "player:" + player
 }
 
 func registerMovement(engine *gameecs.Engine, s stores) error {

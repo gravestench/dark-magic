@@ -155,6 +155,14 @@ Before breadth becomes the dominant goal, prove one complete generated Blood Moo
 
 This is the first strong gameplay spine. Widen feature coverage after this loop is stable rather than before.
 
+The renderer-independent authority portion is now proven end to end, including
+command-admitted entry/population/action, hostile acquisition and fixed-step
+movement, melee, cast/missile/state/death consequences, midpoint restoration,
+full command-log replay, and checksum-stable observation. The remaining gate is
+the presentation/audio projection of live monster and semantic cue read models;
+do not mark the gate complete until those adapters consume copied facts without
+writing simulation state.
+
 ## Breadth queue after the first simulation loop
 
 The merged research baselines imply this dependency order. These are implementation themes, not invented milestone numbers; `ROADMAP.md` should assign/checkpoint them.
