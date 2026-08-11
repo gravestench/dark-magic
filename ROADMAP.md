@@ -1194,10 +1194,17 @@ data owners; they do not introduce parallel gameplay authorities.
   canonical `dm.stats/v1` replay participant. Tests prove parameter separation,
   equip-style attach/detach, failed-batch rollback, deterministic serialization,
   strict atomic restore, race-safe snapshots, and composite-checksum coverage.
-- [ ] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
+- [x] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
   lightning, cold, poison, magic, life, and mana quantities plus explicit
   conversion/rounding helpers and boundary vectors. Keep Dark Magic policy and
-  source-derived legacy behavior labeled separately.
+  source-derived legacy behavior labeled separately. The renderer-neutral
+  `internal/game/combat` vocabulary now represents signed 8-bit-fractional
+  amounts, checked whole/raw conversion and arithmetic, wide-intermediate ratio
+  scaling, and explicit toward-zero/floor/ceil/nearest-away rounding. A stable
+  fixed-order bundle keeps physical, fire, lightning, cold, poison, magic, life,
+  and mana channels separate. Synthetic positive, negative, half-unit, overflow,
+  channel-order, and bundle vectors lock down mechanism without claiming any
+  unverified hit, resistance, absorb, leech, or PvP formula.
 - [ ] **M21.3: Ordinary hostile materialization.** Build one deterministic Blood
   Moor hostile from typed MonStats/MonLvl facts with stable identity/seed,
   effective base stats, collider, targetable presentation snapshot, and no
