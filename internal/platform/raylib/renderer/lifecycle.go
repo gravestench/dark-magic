@@ -43,10 +43,15 @@ func (s *Service) Start(context.Context) error {
 			s.logger.Debug(message)
 		}
 	})
-	if s.config.Window.Resizable {
-		rl.SetConfigFlags(rl.FlagWindowResizable)
+	if flags := windowConfigFlags(*s.config); flags != 0 {
+		rl.SetConfigFlags(flags)
 	}
 	rl.InitWindow(int32(s.config.Window.Width), int32(s.config.Window.Height), s.config.Window.Title)
+	if s.config.Window.Borderless {
+		// Desktop fullscreen remains an ordinary window: it loses its frame and
+		// fills the monitor without requesting an exclusive video mode.
+		rl.MaximizeWindow()
+	}
 	// Cocoa regular windows do not support GLFW window icons. macOS uses the
 	// application-bundle icon instead, so avoid provoking a native warning.
 	if runtime.GOOS != "darwin" {
@@ -82,6 +87,20 @@ func (s *Service) Start(context.Context) error {
 	rl.HideCursor()
 	s.isInit.Store(true)
 	return nil
+}
+
+func windowConfigFlags(config Config) uint32 {
+	var flags uint32
+	if config.Window.Resizable {
+		flags |= rl.FlagWindowResizable
+	}
+	if config.Window.Fullscreen {
+		flags |= rl.FlagFullscreenMode
+	}
+	if config.Window.Borderless {
+		flags |= rl.FlagBorderlessWindowedMode | rl.FlagWindowMaximized
+	}
+	return flags
 }
 
 // Run owns the frame loop and must be invoked on the process main thread after
