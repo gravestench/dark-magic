@@ -1,22 +1,22 @@
--- DT1 Lab browses real tiles through the same lazy decoder and retained renderer
--- used by DS1 presentation. It intentionally contains no codec logic.
+-- DT1 Lab lays every tile in one file into a scrollable gallery. Codec work
+-- stays in Go; this scene only arranges retained image and text nodes.
 
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local vfs = require("dm.vfs/v1")
 
-local views = {"composite", "floor", "wall"}
 local palettes = {
     "data/global/palette/ACT1/pal.dat", "data/global/palette/ACT2/pal.dat",
     "data/global/palette/ACT3/pal.dat", "data/global/palette/ACT4/pal.dat",
     "data/global/palette/ACT5/pal.dat",
 }
+local preview = {left=40, top=95, right=760, bottom=525}
+local cell = {width=240, height=210, image_width=210, image_height=150}
+local zoom_step = 0.05
+local tiles_per_frame = 2
 local lab = {}
 
--- Lab artwork can be bright, noisy, or nearly the same color as the bitmap
--- font. Draw these simple translucent bands after the tile node, but before
--- the labels, so the diagnostic text always remains the topmost content.
 local function text_backdrop(root, top, height)
     local node = render.create("hud", root)
     node:fill_rect(800, height, 0, 0, 0, 128)
@@ -31,11 +31,6 @@ local function label(root, value, y, style)
     return node
 end
 
-local function view_index(wanted)
-    for index, value in ipairs(views) do if value == wanted then return index end end
-    return 1
-end
-
 local function index_of(values, wanted)
     wanted = tostring(wanted or ""):lower()
     for index, value in ipairs(values) do if value:lower() == wanted then return index end end
@@ -48,19 +43,180 @@ end
 
 local function act_from_path(path)
     local normalized = tostring(path or ""):lower()
-    -- Lord of Destruction stores Act V map art beneath "Expansion" rather
-    -- than an "Act5" directory, but it still uses the Act V display palette.
     if normalized:match("/expansion/") then return 5 end
     local matched = normalized:match("/act([1-5])/")
-    if not matched then return nil end
-    return tonumber(matched)
+    return matched and tonumber(matched) or nil
+end
+
+local function quantized_zoom(value)
+    local snapped = math.floor(value / zoom_step + 0.5) * zoom_step
+    return math.max(zoom_step, math.min(3, snapped))
 end
 
 function lab:infer_palette()
     local act = act_from_path(self.path)
     if not act then return end
-    self.palette_index = act
-    self.palette = palettes[act]
+    self.palette_index, self.palette = act, palettes[act]
+end
+
+function lab:destroy_tiles()
+    for _, node in ipairs(self.tile_nodes) do
+        if node:exists() then node:destroy() end
+    end
+    self.tile_nodes = {}
+end
+
+-- The gallery coordinate system is centered around zero. That means resetting
+-- pan to zero always puts the center of the complete group in the viewport,
+-- independent of its row and column count.
+function lab:tile_position(index)
+    local column = index % self.columns
+    local row = math.floor(index / self.columns)
+    return (column - (self.columns - 1) / 2) * cell.width,
+        (row - (self.rows - 1) / 2) * cell.height
+end
+
+function lab:position_gallery()
+    self.gallery:set_scale(self.zoom, self.zoom)
+    self.gallery:set_position(400 + self.pan_x, (preview.top + preview.bottom) / 2 + self.pan_y)
+end
+
+function lab:center_gallery()
+    self.pan_x, self.pan_y = 0, 0
+    self:position_gallery()
+end
+
+function lab:center_tile(index)
+    local x, y = self:tile_position(index)
+    self.pan_x, self.pan_y = -x * self.zoom, -y * self.zoom
+    self:position_gallery()
+end
+
+function lab:set_zoom(value, anchor_x, anchor_y, continuous)
+    local next_zoom = continuous and math.max(0.02, math.min(3, value)) or quantized_zoom(value)
+    if next_zoom == self.zoom then return false end
+    anchor_x, anchor_y = anchor_x or 400, anchor_y or ((preview.top + preview.bottom) / 2)
+    local center_x = 400 + self.pan_x
+    local center_y = (preview.top + preview.bottom) / 2 + self.pan_y
+    local local_x, local_y = (anchor_x - center_x) / self.zoom, (anchor_y - center_y) / self.zoom
+    self.pan_x = anchor_x - 400 - local_x * next_zoom
+    self.pan_y = anchor_y - (preview.top + preview.bottom) / 2 - local_y * next_zoom
+    self.zoom = next_zoom
+    self:position_gallery()
+    return true
+end
+
+function lab:fit_gallery()
+    local width = math.max(cell.width, self.columns * cell.width)
+    local height = math.max(cell.height, self.rows * cell.height)
+    self.zoom = math.max(0.05, math.min(1, 700 / width, 410 / height))
+    self:center_gallery()
+end
+
+function lab:update_status()
+    if self.total == 0 then return end
+    local view = self.view_mode == "focus" and ("TILE #" .. self.index) or "GRID"
+    text.set(self.status, "font_lab_color", string.format(
+        "[blue]%s   [white]%d tiles   [green]ACT%d   [gold]%s   [white]zoom %.3fx",
+        file_name(self.path), self.total, self.palette_index, view, self.zoom), 760, "center")
+end
+
+function lab:set_view(mode)
+    self.view_mode = mode
+    if mode == "focus" then
+        self.zoom = 1
+        self:center_tile(self.index)
+    else
+        self:fit_gallery()
+    end
+    self:update_status()
+end
+
+function lab:toggle_view()
+    self:set_view(self.view_mode == "gallery" and "focus" or "gallery")
+end
+
+-- Start an incremental rebuild. Decoding every tile in one Lua update would
+-- make a large DT1 hitch or exceed the scene deadline, so update() admits only
+-- a couple of cells per frame.
+function lab:start_gallery()
+    self:destroy_tiles()
+    self.total, self.build_index = 0, 0
+    self.columns, self.rows = 1, 1
+    self.building = self.path ~= ""
+    if not self.building then
+        text.set(self.status, "font_lab_color", "[gold]NO DT1 SELECTED", 760, "center")
+        text.set(self.source, "font_lab_color", "[white]Pass --dt1-path (and optionally --dt1-palette/--dt1-tile)", 760, "center")
+        return
+    end
+    text.set(self.status, "font_lab_color", "[gold]LOADING [blue]" .. file_name(self.path), 760, "center")
+    text.set(self.source, "font_lab_color", "[white]" .. self.path, 760, "center")
+end
+
+function lab:add_tile(index)
+    local image_node = render.create("hud", self.gallery)
+    local ok, width, height, metadata = pcall(function()
+        return image_node:set_dt1(self.path, self.palette, index, "composite")
+    end)
+    if not ok then
+        image_node:destroy()
+        self.building = false
+        text.set(self.status, "font_lab_color", "[red]DT1 ERROR", 760, "center")
+        text.set(self.source, "font_lab_color", "[white]tile " .. index .. ": " .. tostring(width), 760, "center")
+        return false
+    end
+
+    if self.total == 0 then
+        self.total = metadata.total
+        -- A 720x430 viewport is wider than it is tall, so bias the square-root
+        -- grid toward extra columns instead of producing a very tall strip.
+        self.columns = math.max(1, math.ceil(math.sqrt(self.total * 1.6)))
+        self.rows = math.max(1, math.ceil(self.total / self.columns))
+        self.index = self.index % math.max(1, self.total)
+    end
+
+    local x, y = self:tile_position(index)
+    local scale = math.min(1.5, cell.image_width / math.max(1, width), cell.image_height / math.max(1, height))
+    image_node:set_scale(scale, scale)
+    image_node:set_position(x, y - 18)
+    table.insert(self.tile_nodes, image_node)
+
+    -- The selected tile receives a quiet gold backing. It remains centered in
+    -- exactly the same cell as every other image rather than changing layout.
+    if index == self.index then
+        local selection = render.create("hud", self.gallery)
+        selection:fill_rect(cell.width - 8, cell.height - 8, 105, 76, 18, 96)
+        selection:set_position(x, y)
+        selection:set_z(-1)
+        table.insert(self.tile_nodes, selection)
+    end
+
+    local caption = render.create("hud", self.gallery)
+    local value = string.format(
+        "[gold]#%d [white]type/style/seq %d/%d/%d\n[blue]dir %d [white]rarity %d  blocks %d  %dx%d",
+        index, metadata.type, metadata.style, metadata.sequence,
+        metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height)
+    local _, caption_height = text.set(caption, "font_lab_caption", value, cell.width - 12, "center")
+    caption:set_position(x, y + cell.height / 2 - caption_height / 2 - 5)
+    table.insert(self.tile_nodes, caption)
+    return true
+end
+
+function lab:build_some_tiles()
+    for _ = 1, tiles_per_frame do
+        if not self.building then return end
+        if not self:add_tile(self.build_index) then return end
+        self.build_index = self.build_index + 1
+        if self.build_index >= self.total then
+            self.building = false
+            -- Grid view is the stable default. Focusing one readable tile is an
+            -- explicit view change, never a surprising final loading phase.
+            self:set_view(self.view_mode)
+            return
+        end
+    end
+    text.set(self.status, "font_lab_color", string.format(
+        "[gold]LAYING OUT [blue]%s   [white]%d / %d", file_name(self.path), self.build_index, self.total), 760, "center")
 end
 
 function lab:random_asset()
@@ -68,85 +224,93 @@ function lab:random_asset()
     self.random_state = (self.random_state * 48271) % 2147483647
     self.path = self.assets[(self.random_state % #self.assets) + 1]
     self:infer_palette()
-    self.index, self.total, self.dirty = 0, 0, true
+    self.index = 0
+    self:start_gallery()
 end
 
 function lab:create()
     local dev = require("dm.dev/v1")
     self.root = render.create("hud")
-    self.tile_node = render.create("hud", self.root)
-    self.tile_node:set_position(400, 315)
+    self.gallery = render.create("hud", self.root)
+    self.gallery:set_clip(preview.left, preview.top, preview.right - preview.left, preview.bottom - preview.top)
     self.top_text_backdrop = text_backdrop(self.root, 0, 94)
-    self.bottom_text_backdrop = text_backdrop(self.root, 470, 130)
-    self.title = label(self.root, "DT1 TILE LAB", 18, "font_lab_heading")
+    self.bottom_text_backdrop = text_backdrop(self.root, 525, 75)
+    self.title = label(self.root, "DT1 TILE GALLERY", 18, "font_lab_heading")
     self.status = label(self.root, "", 64, "font_lab_color")
-    self.source = label(self.root, "", 486, "font_lab_color")
-    self.detail = label(self.root, "", 516, "font_lab_color")
-    self.help = label(self.root, "Left/Right: tile   Home/End: -/+10   Up/Down: view   Page Up/Down: palette   Enter: random DT1", 560)
+    self.source = label(self.root, "", 535, "font_lab_caption")
+    self.help = label(self.root, "Tab: grid/tile view   Arrows/drag: pan   Scroll/Home/End: zoom   Space: fit   PgUp/PgDn: palette   Enter: random", 565)
+
     self.path = tostring(dev.option("dt1_path") or "")
     self.palette = tostring(dev.option("dt1_palette") or "")
-    self.index = math.max(0, tonumber(dev.option("dt1_tile")) or 0)
-    self.view_index = view_index(tostring(dev.option("dt1_view") or "composite"))
     self.palette_index = index_of(palettes, self.palette)
     self.palette = palettes[self.palette_index]
     self:infer_palette()
+    self.index = math.max(0, tonumber(dev.option("dt1_tile")) or 0)
     self.assets = vfs.list("data/global/tiles", ".dt1") or {}
     self.random_state = dev.seed()
-    self.total, self.dirty = 0, true
-end
-
-function lab:rebuild()
-    if self.path == "" then
-        self.tile_node:set_visible(false)
-        text.set(self.status, "font_lab_color", "[gold]NO DT1 SELECTED", 760, "center")
-        text.set(self.source, "font_lab_color", "", 760, "center")
-        text.set(self.detail, "font_lab_color", "[white]Pass --dt1-path and optionally --dt1-palette/--dt1-tile/--dt1-view", 760, "center")
-        self.dirty = false
-        return
-    end
-    local view = views[self.view_index]
-    local ok, width, height, metadata = pcall(function()
-        return self.tile_node:set_dt1(self.path, self.palette, self.index, view)
-    end)
-    if ok then
-        self.total = metadata.total
-        if self.total > 0 then self.index = self.index % self.total end
-        local scale = math.min(3, 380 / math.max(1, width), 360 / math.max(1, height))
-        self.tile_node:set_scale(scale, scale)
-        -- Render nodes use their center as the origin. Put that center in the
-        -- middle of the preview area; subtracting half the image here would do
-        -- it twice and push tall wall tiles off the top of the window.
-        self.tile_node:set_position(400, 105 + 370 / 2)
-        self.tile_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]tile %d / %d   [blue]%s   [green]ACT%d   [white]%dx%d", file_name(self.path), self.index, self.total - 1, view, self.palette_index, width, height), 760, "center")
-        text.set(self.source, "font_lab_color", "[white]" .. self.path, 760, "center")
-        text.set(self.detail, "font_lab_color", string.format("[white]type/style/sequence %d/%d/%d   dir %d   rarity %d   blocks %d   source %dx%d   roof %d", metadata.type, metadata.style, metadata.sequence, metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height, metadata.roof_height), 760, "center")
-    else
-        self.tile_node:set_visible(false)
-        text.set(self.status, "font_lab_color", "[red]DT1 ERROR", 760, "center")
-        text.set(self.source, "font_lab_color", "[white]" .. self.path, 760, "center")
-        text.set(self.detail, "font_lab_color", "[white]" .. tostring(width), 760, "center")
-    end
-    self.dirty = false
+    self.tile_nodes = {}
+    self.pan_x, self.pan_y, self.zoom = 0, 0, 1
+    self.view_mode = "gallery"
+    self.dragging, self.drag_x, self.drag_y = false, 0, 0
+    self.high_resolution_scroll_frames = 0
+    self:start_gallery()
 end
 
 function lab:update()
-    local delta = 0
-    if input.pressed("left") then delta = -1 end
-    if input.pressed("right") then delta = 1 end
-    if input.pressed("home") then delta = -10 end
-    if input.pressed("end") then delta = 10 end
-    if delta ~= 0 then
-        local total = math.max(1, self.total)
-        self.index = (self.index + delta) % total
-        self.dirty = true
+    if self.building then self:build_some_tiles() end
+    if input.pressed("tab") and self.total > 0 then self:toggle_view(); return end
+    if input.pressed("confirm") then self:random_asset(); return end
+    if input.pressed("page_up") then
+        self.palette_index = ((self.palette_index - 2) % #palettes) + 1
+        self.palette = palettes[self.palette_index]
+        self:start_gallery()
+        return
     end
-    if input.pressed("up") then self.view_index = ((self.view_index - 2) % #views) + 1; self.dirty = true end
-    if input.pressed("down") then self.view_index = (self.view_index % #views) + 1; self.dirty = true end
-    if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true end
-    if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true end
-    if input.pressed("confirm") then self:random_asset() end
-    if self.dirty then self:rebuild() end
+    if input.pressed("page_down") then
+        self.palette_index = (self.palette_index % #palettes) + 1
+        self.palette = palettes[self.palette_index]
+        self:start_gallery()
+        return
+    end
+
+    local moved = false
+    if input.pressed("left") then self.pan_x = self.pan_x - 24; moved = true end
+    if input.pressed("right") then self.pan_x = self.pan_x + 24; moved = true end
+    if input.pressed("up") then self.pan_y = self.pan_y - 24; moved = true end
+    if input.pressed("down") then self.pan_y = self.pan_y + 24; moved = true end
+    if input.pressed("home") then moved = self:set_zoom(self.zoom - zoom_step) or moved end
+    if input.pressed("end") then moved = self:set_zoom(self.zoom + zoom_step) or moved end
+    if input.pressed("space") then self.view_mode = "gallery"; self:fit_gallery(); self:update_status(); moved = true end
+
+    local pointer_x, pointer_y = input.cursor()
+    local pointer_inside = pointer_x >= preview.left and pointer_x <= preview.right
+        and pointer_y >= preview.top and pointer_y <= preview.bottom
+    local _, scroll_y = input.scroll()
+    if scroll_y ~= 0 and pointer_inside then
+        local fractional = math.abs(scroll_y - math.floor(scroll_y + 0.5)) > 0.0001
+        if fractional then self.high_resolution_scroll_frames = 8 end
+        if self.high_resolution_scroll_frames > 0 then
+            moved = self:set_zoom(self.zoom * math.exp(scroll_y * 0.12), pointer_x, pointer_y, true) or moved
+        else
+            moved = self:set_zoom(self.zoom + scroll_y * zoom_step, pointer_x, pointer_y, false) or moved
+        end
+    elseif self.high_resolution_scroll_frames > 0 then
+        self.high_resolution_scroll_frames = self.high_resolution_scroll_frames - 1
+    end
+
+    if input.pressed("pointer_primary") and pointer_inside then
+        self.dragging, self.drag_x, self.drag_y = true, pointer_x, pointer_y
+    elseif input.released("pointer_primary") then
+        self.dragging = false
+    end
+    if self.dragging and input.down("pointer_primary") then
+        local delta_x, delta_y = pointer_x - self.drag_x, pointer_y - self.drag_y
+        if delta_x ~= 0 or delta_y ~= 0 then
+            self.pan_x, self.pan_y = self.pan_x + delta_x, self.pan_y + delta_y
+            self.drag_x, self.drag_y, moved = pointer_x, pointer_y, true
+        end
+    end
+    if moved then self:position_gallery(); self:update_status() end
 end
 
 return lab
