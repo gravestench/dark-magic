@@ -82,6 +82,7 @@ return {
             -- path that actually needs them.
             local player = require("dm.player/v1")
             self.player = player
+			self.interaction = require("dm.interaction/v1")
             local items = require("dm.items/v1")
             self.items = items
             self.game_data = require("dm.game_data/v1")
@@ -287,11 +288,27 @@ return {
             in_world = false
         end
         if self.player and self.world and in_world and not self.__darkmagic_item_held
-            and input.down("pointer_primary") then
+            and (input.pressed("pointer_primary") or (input.down("pointer_primary") and not self.pending_interaction)) then
             local target_world_x, target_world_y = self.world:screen_to_subtile(
                 pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
             )
-            self.player.request_move(target_world_x, target_world_y)
+			local selected = self.world:selectable_at(target_world_x, target_world_y)
+			if selected and input.pressed("pointer_primary") then
+				self.pending_interaction = selected
+				self.player.request_move(selected.x, selected.y)
+			else
+				self.pending_interaction = nil
+				self.player.request_move(target_world_x, target_world_y)
+			end
+		end
+		if self.pending_interaction then
+			local selected = self.pending_interaction
+			local dx, dy = hero_x - selected.x, hero_y - selected.y
+			if dx * dx + dy * dy <= 16 and self.world:line_clear(hero_x, hero_y, selected.x, selected.y) then
+				self.interaction.open_at(selected.x, selected.y)
+				self.player.request_move(hero_x, hero_y)
+				self.pending_interaction = nil
+			end
         end
 
         -- Hero screen position is target anchor plus hero-to-camera relative offset.

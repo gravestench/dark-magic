@@ -18,8 +18,11 @@ const (
 )
 
 type Payload struct {
-	Owner  string `json:"owner,omitempty"`
-	Target string `json:"target,omitempty"`
+	Owner  string  `json:"owner,omitempty"`
+	Target string  `json:"target,omitempty"`
+	At     bool    `json:"at,omitempty"`
+	X      float64 `json:"x,omitempty"`
+	Y      float64 `json:"y,omitempty"`
 }
 
 func RegisterCommands(session *gamesession.Session, authority *Authority) error {
@@ -46,6 +49,9 @@ func RegisterCommands(session *gamesession.Session, authority *Authority) error 
 					owner = command.Player
 				}
 				if opens {
+					if payload.At {
+						return authority.openSpatialAt(engine, owner, payload.X, payload.Y)
+					}
 					return authority.openSpatial(engine, owner, payload.Target)
 				}
 				return authority.close(owner)
@@ -69,10 +75,16 @@ func decode(command simulation.Command, opens bool) (Payload, error) {
 		return Payload{}, fmt.Errorf("interaction: payload has trailing data")
 	}
 	payload.Owner, payload.Target = strings.TrimSpace(payload.Owner), strings.ToLower(strings.TrimSpace(payload.Target))
-	if opens && payload.Target == "" {
+	if opens && payload.Target == "" && !payload.At {
 		return Payload{}, fmt.Errorf("interaction: target is required")
 	}
-	if !opens && payload.Target != "" {
+	if opens && payload.Target != "" && payload.At {
+		return Payload{}, fmt.Errorf("interaction: choose target ID or coordinates, not both")
+	}
+	if payload.At && (!finite(payload.X) || !finite(payload.Y)) {
+		return Payload{}, fmt.Errorf("interaction: coordinates must be finite")
+	}
+	if !opens && (payload.Target != "" || payload.At) {
 		return Payload{}, fmt.Errorf("interaction: close does not accept a target")
 	}
 	if command.Authority == simulation.AuthorityPlayer && payload.Owner != "" && payload.Owner != command.Player {

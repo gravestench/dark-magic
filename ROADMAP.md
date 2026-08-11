@@ -925,6 +925,17 @@ complete until its actions are driven by authoritative game state and commands.
   into move, interact, primary-skill, or secondary-skill commands by authority,
   range, collision/path, and line-of-sight policy. Do not fake interaction by
   treating every world click as non-spatial UI.
+  - [x] M20.14a: Turn resolved authored DS1 objects into stable selectable
+    footprints, index them spatially, resolve overlapping hits deterministically,
+    and admit coordinate-authored interactions only after authoritative range
+    and DT1 line-of-sight checks. Primary clicks approach a selected object and
+    stop before requesting interaction; Lua never chooses the trusted target ID.
+  - [ ] M20.14b: Add authoritative hostile/item/portal selectable kinds and
+    dispatch primary versus secondary assigned-skill intents without coupling
+    pointer devices to combat rules.
+  - [ ] M20.14c: Replace direct approach with entity-size-aware path requests,
+    interaction stopping distance, unreachable-target cancellation, and hover/
+    selection presentation sourced from the same selector.
 
 ## M21: Diablo simulation
 

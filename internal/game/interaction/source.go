@@ -25,6 +25,16 @@ func (controller *Controller) Open(target string) error {
 	return nil
 }
 
+func (controller *Controller) OpenAt(x, y float64) error {
+	if !finite(x) || !finite(y) {
+		return fmt.Errorf("interaction: coordinates must be finite")
+	}
+	controller.mu.Lock()
+	controller.requests = append(controller.requests, Payload{At: true, X: x, Y: y})
+	controller.mu.Unlock()
+	return nil
+}
+
 func (controller *Controller) Close() {
 	controller.mu.Lock()
 	controller.requests = append(controller.requests, Payload{})
@@ -53,7 +63,7 @@ func (source *Source) Commands(tick uint64) []simulation.Command {
 	for _, payload := range requests {
 		source.controller.sequence++
 		kind := OpenCommand
-		if payload.Target == "" {
+		if payload.Target == "" && !payload.At {
 			kind = CloseCommand
 		}
 		command, err := Command(kind, payload, source.player, source.controller.sequence, tick, simulation.AuthorityPlayer)

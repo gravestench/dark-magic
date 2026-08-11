@@ -27,6 +27,8 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 		"pixel_to_subtile":  commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
 		"subtile_to_screen": commandHelp("map:subtile_to_screen(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Project a world subtile through a camera to screen space."),
 		"screen_to_subtile": commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
+		"selectable_at":     commandHelp("map:selectable_at(x, y)", "Return the best resolved authored object under a world-subtile point."),
+		"line_clear":        commandHelp("map:line_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 line-of-sight collision."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -134,6 +136,26 @@ func registerWorldMapType(state *lua.LState) {
 			state.Push(lua.LNumber(result.X))
 			state.Push(lua.LNumber(result.Y))
 			return 2
+		},
+		"selectable_at": func(state *lua.LState) int {
+			selected, found := checkWorldMap(state, 1).SelectableAt(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
+			if !found {
+				state.Push(lua.LNil)
+				return 1
+			}
+			result := state.NewTable()
+			result.RawSetString("id", lua.LString(selected.ID))
+			result.RawSetString("kind", lua.LString(selected.Kind))
+			result.RawSetString("x", lua.LNumber(selected.X))
+			result.RawSetString("y", lua.LNumber(selected.Y))
+			result.RawSetString("radius", lua.LNumber(selected.Radius))
+			state.Push(result)
+			return 1
+		},
+		"line_clear": func(state *lua.LState) int {
+			clear := checkWorldMap(state, 1).LineClear(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)), float64(state.CheckNumber(4)), float64(state.CheckNumber(5)))
+			state.Push(lua.LBool(clear))
+			return 1
 		},
 		"objects": func(state *lua.LState) int {
 			result := state.NewTable()
