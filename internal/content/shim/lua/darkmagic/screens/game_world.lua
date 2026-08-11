@@ -120,15 +120,24 @@ local function set_cross(marker, visible, x, y)
 	if visible then marker.horizontal:set_position(x, y); marker.vertical:set_position(x, y) end
 end
 
+local function destroy_cross(marker)
+	if not marker then return end
+	marker.horizontal:destroy()
+	marker.vertical:destroy()
+end
+
 local function update_debug_legend(self)
 	local active = self.collision_visible or self.tile_debug_visible or self.origins_visible
+	if not active and self.debug_legend then
+		self.debug_legend:destroy()
+		self.debug_legend = nil
+		return
+	end
 	if active and not self.debug_legend then
 		self.debug_legend = render.create("hud", self.root)
 		self.debug_legend:set_z(1000000)
 	end
 	if not self.debug_legend then return end
-	self.debug_legend:set_visible(active)
-	if not active then return end
 	text.set(self.debug_legend, "font_lab_color", string.format(
 		"[gold]WORLD DEBUG  [white]F3 collision %s  F4 tiles %s  F5 origins %s",
 		self.collision_visible and "[green]ON" or "[red]off",
@@ -352,14 +361,29 @@ return {
 		if input.pressed("debug_collision") then
 			self.collision_visible = not self.collision_visible
 			self.collision_region_key = nil
-			if self.collision_node then self.collision_node:set_visible(self.collision_visible) end
+			if not self.collision_visible and self.collision_node then
+				-- Diagnostic textures are disposable. Destroying the whole retained
+				-- node avoids leaving a hidden texture/resource transition queued on
+				-- the render thread when F3 is released.
+				self.collision_node:destroy()
+				self.collision_node = nil
+			end
 		end
 		if input.pressed("debug_map_tiles") then
 			self.tile_debug_visible = not self.tile_debug_visible
 			self.tile_debug_region_key = nil
-			if self.tile_debug_node then self.tile_debug_node:set_visible(self.tile_debug_visible) end
+			if not self.tile_debug_visible and self.tile_debug_node then
+				self.tile_debug_node:destroy()
+				self.tile_debug_node = nil
+			end
 		end
-		if input.pressed("debug_origins") then self.origins_visible = not self.origins_visible end
+		if input.pressed("debug_origins") then
+			self.origins_visible = not self.origins_visible
+			if not self.origins_visible then
+				destroy_cross(self.hero_origin); self.hero_origin = nil
+				destroy_cross(self.camera_origin); self.camera_origin = nil
+			end
+		end
 		update_debug_legend(self)
 		refresh_collision_overlay(self, hero_x, hero_y)
 		refresh_tile_overlay(self, hero_x, hero_y)
@@ -386,9 +410,9 @@ return {
 			self.hero:set_z(self.world:entity_depth(hero_x, hero_y))
 		end
 		if self.origins_visible and not self.hero_origin and self.map then self.hero_origin = create_cross("world", self.map.root, 900002, 255, 64, 255) end
-		if self.hero_origin then set_cross(self.hero_origin, self.origins_visible == true, hero_screen_x, hero_screen_y) end
+		if self.hero_origin then set_cross(self.hero_origin, true, hero_screen_x, hero_screen_y) end
 		if self.origins_visible and not self.camera_origin then self.camera_origin = create_cross("hud", self.root, 999999, 64, 255, 64) end
-		if self.camera_origin then set_cross(self.camera_origin, self.origins_visible == true, target_x, target_y) end
+		if self.camera_origin then set_cross(self.camera_origin, true, target_x, target_y) end
 
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
