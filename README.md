@@ -437,6 +437,15 @@ to produce another deterministic zone; DS1 Lab remains the separate, lazy
 materialization tool. The `dm.mapgen/v1` capability also retains the earlier
 typed Act I Tristram preset proof.
 
+`--start-scene=warp_lab` opens an argument-free spatial transition proof using
+two copies of a mounted Act I DS1 stamp placed more than one viewport apart.
+The player starts beside the western portal. Click the portal to publish an
+interaction intent; fixed-tick ECS authority walks into range, resolves the
+portal's explicit paired entity, teleports to the eastern endpoint, and moves
+the camera to the second stamp. Run it with `make play-warp-lab`, or create a
+local production-asset image with `make capture-warp-lab`. Blizzard-owned
+capture output remains ignored by Git.
+
 Generated zone recipes are decoded one stamp at a time by the renderer-neutral
 world materializer. It reuses DT1 catalogs across matching rooms, reports safe
 loading progress, and only publishes the completed tile/object/collision map.
