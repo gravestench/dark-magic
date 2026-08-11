@@ -53,7 +53,7 @@ play-game-world:
 
 CAPTURE_ALL_DIR ?= ./captures/all-scenes
 CAPTURE_ALL_FIXTURE_CHARACTERS ?= 10
-CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip credits cinematics font_lab ui_lab composite_lab dt1_lab ds1_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
+CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip credits cinematics font_lab ui_lab composite_lab dt1_lab ds1_lab mapgen_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
 
 # Launch each scene in isolation because the capture session records visited
 # scenes; it does not manufacture navigation through unrelated UI flows.

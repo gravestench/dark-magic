@@ -878,8 +878,12 @@ complete until its actions are driven by authoritative game state and commands.
   images or native renderer resources. Purpose-named random streams isolate
   topology, preset, and population decisions, while canonical serialization and
   checksums make generation replay-verifiable across server and client.
-- [ ] M20.7: Prove one Act I preset level through typed LvlPrest/LvlTypes records
-  and expose the resulting zone recipe and trace in a pointer-driven Mapgen Lab.
+- [x] M20.7: Prove one Act I preset level through typed Levels, LvlPrest, and
+  LvlTypes records. The generator validates DRLG type and act, selects a seeded
+  DS1 variant, applies the authored DT1 mask, and emits the immutable zone
+  recipe and decision trace. `mapgen_lab` exposes that result through pointer
+  seed controls without forcing expensive renderer materialization; DS1 Lab
+  remains the separate lazy consumer of emitted recipes.
 - [ ] M20.8: Generate the first deterministic LvlMaze room topology, verify
   bounds/connectivity/stable checksums, and select only connection-compatible
   preset chambers before expanding fidelity to special rooms and every act.
