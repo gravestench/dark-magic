@@ -190,6 +190,12 @@ Map passes and standing entities receive comparable projected-baseline keys;
 the chunk adapter may batch equal-depth facts but must not put the entire map
 under a parent that prevents walls and entities from interleaving.
 
+Pointer gameplay crosses the presentation boundary as a world-subtile target,
+not a screen pixel or direct velocity mutation. Lua applies the shared inverse
+camera transform, then the fixed-tick session records and admits the target;
+authoritative ECS position and collision determine movement. Future entity hit
+testing must turn that same target into explicit interaction or skill commands.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and

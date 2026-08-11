@@ -20,6 +20,7 @@
       "overrides": {
         "screens": {
           "game_world": {
+            "world_input_bottom": 360,
             "map": {"screen_x":320,"screen_y":240},
             "hero": {"screen_x":320,"screen_y":270},
             "hud": {
@@ -414,6 +415,7 @@
       "dependencies": ["selected_character", "loading_assets", "world"]
     },
     "game_world": {
+      "world_input_bottom": 480,
       "map": {
         "ds1": "data/global/tiles/Act1/BARRACKS/barE.ds1",
         "dt1": [
