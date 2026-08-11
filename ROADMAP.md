@@ -1283,10 +1283,20 @@ data owners; they do not introduce parallel gameplay authorities.
   expiration exactly. Additive stacks, strongest/longest-wins arbitration,
   aura ownership, dispel classes, and state-contributed stat modifiers remain
   later policy modules rather than hidden behavior in this foundation.
-- [ ] **M21.9: Straight missile slice.** Run cast, authoritative missile motion,
-  collision, combat impact, hit memory, lifetime, and removal through one
-  deterministic vertical slice with the required source stats snapshotted at
-  creation.
+- [x] **M21.9: Straight missile slice.** The verified
+  `basic.straight_missile` cast behavior now creates a checkpointed
+  authoritative projectile with owner/source identity, skill and learned
+  level, creation/expiration ticks, direction and per-tick velocity, maximum
+  range, explicit single-hit collision policy, swept-contact radius, and
+  fixed-point physical damage snapshotted at creation. Movement sweeps between
+  previous/current positions, ignores its owner and non-damageable scenery,
+  selects the first legal contact, routes confirmed damage/death through the
+  existing combat authority, records semantic spawn/hit/expiry events, and
+  removes on contact, lifetime, or range. Headless cast-to-impact and
+  snapshot/restore tests reproduce health, events, and removal exactly.
+  Terrain masks, acceleration, homing, piercing/bounce/explosion policies,
+  formula-derived retail definitions, and presentation projection remain
+  later verified behavior families.
 - [ ] **M21.10: Blood Moor population slice.** Derive an inspectable deterministic
   ordinary-pack plan from generated world content and materialize it without
   coupling simulation residency to render culling.
