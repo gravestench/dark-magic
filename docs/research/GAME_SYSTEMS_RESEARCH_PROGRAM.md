@@ -4,7 +4,7 @@ Status: research baseline complete / implementation and verification program act
 
 All 28 workstreams in [GAME_SYSTEMS_INDEX.md](GAME_SYSTEMS_INDEX.md) now have implementation-oriented baseline documents. That means ownership, major state/data relationships, implementation slices, and explicit unknowns are documented. It does **not** mean all legacy behavior is implemented or empirically validated.
 
-Dark Magic also moved substantially while this research was being assembled: the authoritative simulation now includes shared stat-source provenance, fixed-point combat vocabulary, ordinary hostile materialization, scheduled basic monster AI, a semantic melee transaction, and immutable cast requests consumed from admitted player skill intent. Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) together with `ROADMAP.md` to determine the current implementation cursor.
+Dark Magic also moved substantially while this research was being assembled: the authoritative simulation now includes shared stat-source provenance, fixed-point combat vocabulary, ordinary hostile materialization, scheduled basic monster AI, a semantic melee transaction, immutable cast requests, and a checkpointed generic skill cast lifecycle. Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) together with `ROADMAP.md` to determine the current implementation cursor.
 
 Dark Magic already has substantial engine foundations: a typed game-data catalog, a fixed-step authoritative session, replay/checkpoint support, authoritative item containers, deterministic loot generation, renderer-neutral world facts, Lua capability boundaries, provenance-preserving stat sources, and the beginning of a typed combat/monster/skill simulation. The purpose of this research program is therefore **not** to invent parallel systems. It identifies the Diablo II fidelity work that remains inside or beside those owners.
 
@@ -88,7 +88,7 @@ The following are **existing owners to extend**, not proposals to replace:
 | parameterized stat/effect provenance | `internal/game/stats` | extend M21.1 source identity/aggregation; do not flatten removable equipment/state/aura/charm contributions into permanent totals |
 | typed fixed-point combat vocabulary | `internal/game/combat` | extend M21.2/M21.5 transactions and events while keeping exact legacy formulas evidence-gated |
 | monster definition/materialization and basic AI | current monster/ECS simulation owners | extend M21.3/M21.4 with population, quality, lifecycle and behavior families; do not move AI into presentation |
-| skill admission and immutable cast requests | `internal/game/session` plus current skill simulation owner | extend M21.6 with cast/state/missile execution; do not re-read mutable assignment after the request has been frozen |
+| skill admission, immutable cast requests, and cast lifecycle | `internal/game/session` plus current skill simulation owner | extend M21.6/M21.7 with timed states and missiles; raw Skills formulas/server-function IDs remain explicit promotion/verification boundaries |
 | deterministic loot generation | `internal/game/loot` | research remaining quality/stat/lifecycle fidelity instead of writing a second generator |
 | authoritative item placement and transactions | `internal/game/item` | extend item instance/location semantics and runtime effects |
 | selected-character shell state | `internal/persistence` | keep separate from legacy `.d2s` codec and from live ECS authority |
