@@ -884,9 +884,14 @@ complete until its actions are driven by authoritative game state and commands.
   recipe and decision trace. `mapgen_lab` exposes that result through pointer
   seed controls without forcing expensive renderer materialization; DS1 Lab
   remains the separate lazy consumer of emitted recipes.
-- [ ] M20.8: Generate the first deterministic LvlMaze room topology, verify
-  bounds/connectivity/stable checksums, and select only connection-compatible
-  preset chambers before expanding fidelity to special rooms and every act.
+- [x] M20.8: Generate the first deterministic LvlMaze room topology for Act I
+  Cave Level 1, including difficulty room counts, orthogonal growth, authored
+  merge probability, normalized bounds, connectivity, and stable checksums.
+  Every ordinary room's W/E/S/N mask selects the verified contiguous Act I Cave
+  LvlPrest definition (53..67) and a purpose-stream variant. Mapgen Lab draws
+  the topology without decoding assets. Special/quest/exit room replacement,
+  exact legacy RNG call order, and other LevelType chamber sets remain explicit
+  follow-up fidelity work.
 
 ## M21: Diablo simulation
 

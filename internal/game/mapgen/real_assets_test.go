@@ -43,4 +43,20 @@ func TestActOnePresetRecipeAgainstOwnedAssets(t *testing.T) {
 		}
 		_ = file.Close()
 	}
+	maze, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{
+		Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(maze.Rooms()) != 4 || len(maze.Links()) < 3 {
+		t.Fatalf("real Cave Level 1 topology has %d rooms and %d links", len(maze.Rooms()), len(maze.Links()))
+	}
+	for _, chamber := range maze.Stamps() {
+		file, err := source.Open(chamber.DS1Path)
+		if err != nil {
+			t.Fatalf("generated cave DS1 %q is unavailable: %v", chamber.DS1Path, err)
+		}
+		_ = file.Close()
+	}
 }

@@ -187,6 +187,16 @@ Room creation preserves the preset's DT1 mask and generated grid flags. Once a r
 
 Maze generation is a room-graph algorithm using fixed-size room rectangles from `LvlMaze`.
 
+Dark Magic's first executable maze slice deliberately covers ordinary Act I
+Cave LevelType 3 chambers. It grows a connected orthogonal graph, applies the
+authored `Merge` chance to adjacent rooms through a separate named stream, and
+normalizes the result into positive tile-space bounds. The shipped LvlPrest
+sequence 53 through 67 corresponds exactly to connection masks 1 through 15
+when bits are W=1, E=2, S=4, N=8; the generator verifies dimensions and selects
+only that matching chamber. Special entrance, exit, quest, and treasure room
+replacement still requires its own legacy rules and must not be approximated by
+the ordinary chamber picker.
+
 The generator:
 
 - creates/places adjacent rooms while checking overlap;
