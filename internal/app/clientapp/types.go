@@ -19,8 +19,10 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
+	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -135,6 +137,8 @@ type application struct {
 	itemControl          *gameitem.Controller
 	itemSource           *gameitem.Source
 	commandSource        func(uint64) []simulation.Command
+	gameWorld            *gameworld.Map
+	gameWorldZone        *mapgen.Zone
 	loading              *loadcore.Coordinator
 
 	components   *host.Manager

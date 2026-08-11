@@ -953,7 +953,7 @@ complete until its actions are driven by authoritative game state and commands.
     all four `TownN1/E1/S1/W1` layouts deterministically, retain their cardinal
     wilderness-exit role, and derive an open player-entry point near the
     authored RogueBonfire instead of the map center.
-  - [ ] M20.15b: Replace the fixed presentation fixture with the generated town
+  - [x] M20.15b: Replace the fixed presentation fixture with the generated town
     recipe, materialize it incrementally, and publish it atomically to the
     authoritative session and chunked renderer.
   - [ ] M20.15c: Route character creation, game join, and same-act game entry to
