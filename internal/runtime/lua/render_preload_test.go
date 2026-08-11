@@ -38,3 +38,24 @@ func TestLuaPreloadRequestsPreservesCompositeRecipe(t *testing.T) {
 		t.Fatalf("request components = %#v", request.Components)
 	}
 }
+
+func TestLuaPreloadRequestsPreservesChunkGeometry(t *testing.T) {
+	state := lua.NewState()
+	defer state.Close()
+	if err := state.DoString(`request = {{
+		kind = "ds1_chunks", path = "map.ds1", palette = "act1.pl2",
+		tiles = {"floor.dt1", "walls.dt1"}, chunk_size = 256,
+	}}`); err != nil {
+		t.Fatal(err)
+	}
+	table := state.GetGlobal("request").(*lua.LTable)
+	state.Push(table)
+	requests, err := luaPreloadRequests(state, state.GetTop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := requests[0]
+	if request.ChunkSize != 256 || len(request.Tiles) != 2 || request.Tiles[1] != "walls.dt1" {
+		t.Fatalf("chunk request = %#v", request)
+	}
+}
