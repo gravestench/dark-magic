@@ -19,6 +19,9 @@ type Service struct {
 	cursor            struct {
 		X, Y int
 	}
+	scroll struct {
+		X, Y float32
+	}
 
 	mux        sync.RWMutex
 	stopFrames func()
@@ -53,5 +56,6 @@ func (s *Service) update() {
 	s.updateKeyboardState()
 	s.updateKeyboardModifierState()
 	s.updateMouseCursorState()
+	s.updateMouseWheelState()
 	s.updateMouseButtonState()
 }

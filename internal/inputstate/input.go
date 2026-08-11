@@ -28,6 +28,8 @@ type Frame struct {
 	Text       string
 	CursorX    float64
 	CursorY    float64
+	ScrollX    float64
+	ScrollY    float64
 	Owner      FocusOwner
 	Gameplay   bool
 	WorldView  string
@@ -44,6 +46,7 @@ func Route(frame Frame, owner FocusOwner, captured, gameplay bool, worldView str
 	if captured {
 		frame.Actions = make(map[string]ActionState)
 		frame.Text = ""
+		frame.ScrollX, frame.ScrollY = 0, 0
 	}
 	return frame
 }
@@ -77,6 +80,7 @@ func (s *Store) Snapshot() Frame {
 		frame.Actions = make(map[string]ActionState)
 		frame.Text = ""
 		frame.CursorX, frame.CursorY = 0, 0
+		frame.ScrollX, frame.ScrollY = 0, 0
 		return frame
 	}
 	if s.gameplayOnly.Load() > 0 {
@@ -135,6 +139,20 @@ func (s *Store) Cursor() (float64, float64) {
 	}
 	frame := value.(Frame)
 	return frame.CursorX, frame.CursorY
+}
+
+// Scroll reads this frame's high-resolution pointer scroll delta. Values stay
+// fractional so trackpads are not degraded into simulated wheel clicks.
+func (s *Store) Scroll() (float64, float64) {
+	if s.suppressed.Load() > 0 || s.gameplayOnly.Load() > 0 {
+		return 0, 0
+	}
+	value := s.current.Load()
+	if value == nil {
+		return 0, 0
+	}
+	frame := value.(Frame)
+	return frame.ScrollX, frame.ScrollY
 }
 
 // Owner returns the current frame's explicit focus owner.

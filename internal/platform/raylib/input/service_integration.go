@@ -20,5 +20,6 @@ type GetsInputState interface {
 	KeyboardState() map[int32]InputState
 	KeyboardModifierState() map[int32]InputState
 	MouseCursorState() (x, y int)
+	MouseWheelState() (x, y float32)
 	MouseButtonState() map[int32]InputState
 }

@@ -104,7 +104,7 @@ function lab:create()
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
-    self.help = label(self.root, "Arrows/drag: pan   Home/End: zoom 0.05   Page Up/Down: palette   Space: fit   Enter: random DS1", 565)
+    self.help = label(self.root, "Arrows/drag: pan   Scroll/Home/End: zoom 0.05   Page Up/Down: palette   Space: fit   Enter: random DS1", 565)
     self.path = tostring(dev.option("ds1_path") or "")
     self.tiles = split_paths(dev.option("ds1_tiles"))
     self.palette = tostring(dev.option("ds1_palette") or "")
@@ -113,8 +113,9 @@ function lab:create()
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
     self.random_state = dev.seed()
-    self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
-    self.dragging, self.drag_x, self.drag_y = false, 0, 0
+	self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
+	self.dragging, self.drag_x, self.drag_y = false, 0, 0
+	self.scroll_remainder = 0
     self:queue_preview()
 end
 
@@ -131,6 +132,19 @@ function lab:position_map()
     -- around the middle of the map preview instead of applying top-left layout
     -- math a second time.
     self.map_node:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
+end
+
+function lab:set_zoom(value, anchor_x, anchor_y)
+    local next_zoom = quantized_zoom(value)
+    if next_zoom == self.zoom then return false end
+    anchor_x, anchor_y = anchor_x or 400, anchor_y or (95 + 430 / 2)
+    local center_x, center_y = 400 + self.pan_x, 95 + 430 / 2 + self.pan_y
+    local local_x = (anchor_x - center_x) / self.zoom
+    local local_y = (anchor_y - center_y) / self.zoom
+    self.pan_x = anchor_x - 400 - local_x * next_zoom
+    self.pan_y = anchor_y - (95 + 430 / 2) - local_y * next_zoom
+    self.zoom = next_zoom
+    return true
 end
 
 function lab:rebuild()
@@ -183,14 +197,29 @@ function lab:update()
     if input.pressed("right") then self.pan_x = self.pan_x + 24; moved = true end
     if input.pressed("up") then self.pan_y = self.pan_y - 24; moved = true end
     if input.pressed("down") then self.pan_y = self.pan_y + 24; moved = true end
-    if input.pressed("home") then self.zoom = quantized_zoom(self.zoom - zoom_step); moved = true end
-    if input.pressed("end") then self.zoom = quantized_zoom(self.zoom + zoom_step); moved = true end
+    if input.pressed("home") then moved = self:set_zoom(self.zoom - zoom_step) or moved end
+    if input.pressed("end") then moved = self:set_zoom(self.zoom + zoom_step) or moved end
     if input.pressed("space") then self:fit(); moved = true end
 
     local pointer_x, pointer_y = input.cursor()
-    if input.pressed("pointer_primary")
-        and pointer_x >= preview.left and pointer_x <= preview.right
-        and pointer_y >= preview.top and pointer_y <= preview.bottom then
+    local pointer_inside = pointer_x >= preview.left and pointer_x <= preview.right
+        and pointer_y >= preview.top and pointer_y <= preview.bottom
+    local _, scroll_y = input.scroll()
+    if scroll_y ~= 0 and pointer_inside then
+        -- Wheels report whole units. macOS trackpads report small fractional
+        -- deltas, so accumulate and gently amplify only those fractions instead
+        -- of throwing their high-resolution movement away.
+        local scroll_units = math.abs(scroll_y) < 1 and scroll_y * 4 or scroll_y
+        self.scroll_remainder = self.scroll_remainder + scroll_units
+        local steps = 0
+        if self.scroll_remainder >= 1 then steps = math.floor(self.scroll_remainder) end
+        if self.scroll_remainder <= -1 then steps = math.ceil(self.scroll_remainder) end
+        if steps ~= 0 then
+            self.scroll_remainder = self.scroll_remainder - steps
+            moved = self:set_zoom(self.zoom + steps * zoom_step, pointer_x, pointer_y) or moved
+        end
+    end
+    if input.pressed("pointer_primary") and pointer_inside then
         self.dragging, self.drag_x, self.drag_y = true, pointer_x, pointer_y
     elseif input.released("pointer_primary") then
         self.dragging = false
