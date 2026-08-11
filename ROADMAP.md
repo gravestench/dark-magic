@@ -39,8 +39,9 @@ The active dependency queue, reassessed after that gate, is:
    Its checkpointed pending action now follows a still-valid target through the
    collision-aware world pathfinder and admits melee only after reaching range.
 2. **Developer labs:** the lab-specific arguments have left the client
-   composition root, and composite/DT1/DS1/monster/missile labs now share one
-   modal fuzzy finder. Add a combat lab on that same no-argument foundation.
+   composition root, and the labs now share one modal fuzzy finder. The new
+   no-argument combat lab drives the production melee request/event transaction
+   with disposable ECS fixtures; grow it with M21 casts, effects, and equipment.
 3. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
    evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
    resistance, death/corpse consequences, and difficulty rules.

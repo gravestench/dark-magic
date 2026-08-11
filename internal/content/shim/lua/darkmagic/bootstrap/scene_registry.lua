@@ -55,6 +55,7 @@ local function register_screens(manifest)
 		composite_lab={module="darkmagic.screens.composite_lab"},
 		monster_lab={module="darkmagic.screens.monster_lab"},
 		missile_lab={module="darkmagic.screens.missile_lab"},
+		combat_lab={module="darkmagic.screens.combat_lab"},
 		dt1_lab={module="darkmagic.screens.dt1_lab"},
 		ds1_lab={module="darkmagic.screens.ds1_lab"},
 		mapgen_lab={module="darkmagic.screens.mapgen_lab"},

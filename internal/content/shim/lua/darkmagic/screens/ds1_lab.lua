@@ -78,6 +78,8 @@ end
 function lab:queue_preview()
     if self.path == "" or #self.tiles == 0 then
         self.pending_job = nil
+        self.chunk_set = nil
+        self.width, self.height = nil, nil
         self.dirty = true
         return
     end
@@ -99,7 +101,7 @@ function lab:random_asset()
     self:infer_palette()
     local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
     self.tiles = vfs.list(directory, ".dt1") or {}
-    self.width, self.height = nil, nil
+    self.chunk_set, self.width, self.height = nil, nil, nil
     self:queue_preview()
 end
 
@@ -125,11 +127,23 @@ function lab:create()
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
 	self.picker = fuzzy_picker.create(self.root, {title="SELECT DS1", items=self.assets, on_select=function(path)
+		-- Picker values normally come from the mounted VFS catalog. Resolve the
+		-- path again anyway: stale mounts and malformed developer input should
+		-- produce an in-scene error, never reach chunk arithmetic.
+		local source, source_error = vfs.source(path)
+		if not source then
+			self.path, self.tiles, self.chunk_set = "", {}, nil
+			self.width, self.height, self.pending_job = nil, nil, nil
+			self.map_root:set_visible(false); self:clear_chunks()
+			text.set(self.status, "font_lab_color", "[red]INVALID DS1 PATH[/]", 760, "center")
+			text.set(self.detail, "font_lab_color", "[white]" .. tostring(source_error or path) .. "[/]", 760, "center")
+			return
+		end
 		self.path = path
 		self:infer_palette()
 		local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
 		self.tiles = vfs.list(directory, ".dt1") or {}
-		self.width, self.height = nil, nil
+		self.chunk_set, self.width, self.height = nil, nil, nil
 		self:queue_preview()
 	end})
     self.random_state = dev.seed()
@@ -247,6 +261,7 @@ function lab:rebuild()
     if self.path == "" or #self.tiles == 0 then
         self.map_root:set_visible(false)
         self:clear_chunks()
+        self.chunk_set = nil
         text.set(self.status, "font_lab_color", "[gold]NO DS1 RECIPE SELECTED", 760, "center")
 		text.set(self.detail, "font_lab_color", "[white]No mounted DS1 recipe with neighboring DT1 assets was found", 760, "center")
         self.dirty = false
@@ -268,6 +283,7 @@ function lab:rebuild()
     else
         self.map_root:set_visible(false)
         self:clear_chunks()
+        self.chunk_set, self.width, self.height = nil, nil, nil
         text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. tostring(chunks), 760, "center")
     end
@@ -283,6 +299,8 @@ function lab:update()
         self.pending_job = nil
         if status.failed > 0 then
             self.map_root:set_visible(false)
+            self.chunk_set, self.width, self.height = nil, nil, nil
+            self:clear_chunks()
             text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
             text.set(self.detail, "font_lab_color", "[white]" .. tostring(status.errors[1] or "preview preload failed"), 760, "center")
             return

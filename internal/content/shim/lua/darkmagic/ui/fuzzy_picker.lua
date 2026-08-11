@@ -62,8 +62,8 @@ function M.create(root, options)
         self.root:set_visible(visible)
     end
 
-    function picker:refresh()
-        self.matches = ranked(self.items, self.query)
+    function picker:refresh(matches)
+        self.matches = matches or ranked(self.items, self.query)
         self.selected = math.max(1, math.min(self.selected, math.max(1, #self.matches)))
         text.set(self.query_node, "font_lab_color", "[gold]>[/] [white]" .. self.query .. "_[/]", 620, "left")
         self.query_node:set_position(400, 155)
@@ -92,14 +92,18 @@ function M.create(root, options)
         local entered = input.text()
         if entered ~= "" then
             self.query, self.selected = self.query .. entered, 1
-            self:refresh()
         end
         if input.pressed("backspace") and #self.query > 0 then
             self.query, self.selected = self.query:sub(1, #self.query - 1), 1
-            self:refresh()
         end
-        if input.pressed("up") then self.selected = math.max(1, self.selected - 1); self:refresh() end
-        if input.pressed("down") then self.selected = math.min(#self.matches, self.selected + 1); self:refresh() end
+        -- Re-rank and repaint every open frame. Text entry and renderer texture
+        -- updates are separate frame snapshots, so this deliberately avoids a
+        -- one-shot dirty flag that could leave the visible rows stale.
+        local matches = ranked(self.items, self.query)
+        self.matches = matches
+        if input.pressed("up") then self.selected = math.max(1, self.selected - 1) end
+        if input.pressed("down") then self.selected = math.min(#self.matches, self.selected + 1) end
+        self:refresh(matches)
         if input.pressed("cancel") then self:close(); return true end
         if input.pressed("confirm") and self.matches[self.selected] then
             local value = self.matches[self.selected].value

@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab play-game-world play-monster-lab play-missile-lab
+.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab play-game-world play-monster-lab play-missile-lab play-combat-lab
 
 test:
 	go test ./...
@@ -81,15 +81,21 @@ play-monster-lab:
 play-missile-lab:
 	go run -tags ffmpeg ./cmd/darkmagic --start-scene missile_lab
 
+play-combat-lab:
+	go run -tags ffmpeg ./cmd/darkmagic --start-scene combat_lab
+
 capture-monster-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=monster_lab START_SCENE=monster_lab CAPTURE_SETTLE=30
 
 capture-missile-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=missile_lab START_SCENE=missile_lab CAPTURE_SETTLE=30
 
+capture-combat-lab:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=combat_lab START_SCENE=combat_lab CAPTURE_SETTLE=30
+
 CAPTURE_ALL_DIR ?= ./captures/all-scenes
 CAPTURE_ALL_FIXTURE_CHARACTERS ?= 10
-CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab dt1_lab ds1_lab mapgen_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
+CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab combat_lab dt1_lab ds1_lab mapgen_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
 
 # Launch each scene in isolation because the capture session records visited
 # scenes; it does not manufacture navigation through unrelated UI flows.
