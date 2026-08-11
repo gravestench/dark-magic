@@ -2,7 +2,9 @@ package clientapp
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/filewatch"
@@ -79,7 +81,28 @@ func (app *application) activateComponents(modDirectory string) error {
 		return wrap("flush initial scene requests", err)
 	}
 	if app.options.StartScene == "" {
+		if len(requestedOverlays(app.options.StartOverlays)) > 0 {
+			return fmt.Errorf("open requested overlays: --start-overlays requires --start-scene")
+		}
 		return nil
 	}
-	return wrap("open requested start scene", app.navigator.Replace(context.Background(), app.options.StartScene))
+	if err := app.navigator.Replace(context.Background(), app.options.StartScene); err != nil {
+		return wrap("open requested start scene", err)
+	}
+	for _, overlay := range requestedOverlays(app.options.StartOverlays) {
+		if err := app.navigator.Push(context.Background(), overlay); err != nil {
+			return wrap("open requested start overlay "+overlay, err)
+		}
+	}
+	return nil
+}
+
+func requestedOverlays(value string) []string {
+	var result []string
+	for _, candidate := range strings.Split(value, ",") {
+		if candidate = strings.TrimSpace(candidate); candidate != "" {
+			result = append(result, candidate)
+		}
+	}
+	return result
 }

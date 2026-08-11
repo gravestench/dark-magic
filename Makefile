@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world play-game-world
+.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-panels play-game-world
 
 test:
 	go test ./...
@@ -38,15 +38,24 @@ CAPTURE_SCENES ?= loading,title
 START_SCENE ?=
 FIXTURE_CHARACTERS ?= 0
 PRESENTATION_PROFILE ?=
+START_OVERLAYS ?=
 CAPTURE_SETTLE ?= 10
 
 capture:
-	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --fixture-characters "$(FIXTURE_CHARACTERS)" --presentation-profile "$(PRESENTATION_PROFILE)"
+	go run -tags ffmpeg ./cmd/darkmagic --capture-dir "$(CAPTURE_DIR)" --capture-scenes "$(CAPTURE_SCENES)" --capture-settle-frames "$(CAPTURE_SETTLE)" --start-scene "$(START_SCENE)" --start-overlays "$(START_OVERLAYS)" --fixture-characters "$(FIXTURE_CHARACTERS)" --presentation-profile "$(PRESENTATION_PROFILE)"
 
 # These focused entry points always select a deterministic character fixture.
 # MPQ_DIRECTORY still points at the user's legally obtained content.
 capture-game-world:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
+
+# Capture the world beneath every spatial overlay arrangement that changes the
+# camera anchor. Artifacts stay local because original MPQ assets are required.
+capture-game-world-panels:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/left" CAPTURE_SCENES=character START_SCENE=game_world START_OVERLAYS=character FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/right" CAPTURE_SCENES=inventory START_SCENE=game_world START_OVERLAYS=inventory FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/both" CAPTURE_SCENES=character START_SCENE=game_world START_OVERLAYS=inventory,character FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/full" CAPTURE_SCENES=help START_SCENE=game_world START_OVERLAYS=help FIXTURE_CHARACTERS=1 CAPTURE_SETTLE=60
 
 play-game-world:
 	go run -tags ffmpeg ./cmd/darkmagic --start-scene game_world --fixture-characters 1 --presentation-profile "$(PRESENTATION_PROFILE)"

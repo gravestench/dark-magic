@@ -49,6 +49,7 @@ type Options struct {
 	CaptureScenes         string
 	CaptureSettle         int
 	StartScene            string
+	StartOverlays         string
 	FixtureCharacters     int
 	OutputPalette         string
 	ViewportFit           string
