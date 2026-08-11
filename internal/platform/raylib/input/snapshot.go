@@ -44,6 +44,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"skills":            actionState(s.KeyState(rl.KeyT)),
 			"automap":           actionState(s.KeyState(rl.KeyTab)),
 			"help":              actionState(s.KeyState(rl.KeyH)),
+			"search":            actionState(s.KeyState(rl.KeyF)),
 			"quests":            actionState(s.KeyState(rl.KeyQ)),
 			"party":             actionState(s.KeyState(rl.KeyP)),
 			"options":           actionState(s.KeyState(rl.KeyO)),

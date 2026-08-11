@@ -4,6 +4,7 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local adapter = require("darkmagic.gameplay.missile_presentation")
+local fuzzy_picker = require("darkmagic.ui.fuzzy_picker")
 
 local lab = {}
 
@@ -21,9 +22,16 @@ function lab:create()
     self.actor:set_position(400, 320); self.actor:set_scale(3, 3)
     self.title = label(self.root, "MISSILE ANIMATION LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 68)
-    self.help = label(self.root, "Left/Right: direction   Page Up/Down: missile   Enter: random", 548)
+	self.help = label(self.root, "F: find missile   Left/Right: direction   Page Up/Down: browse   Enter: random", 548)
     self.detail = label(self.root, "", 574)
     self.records = data.missiles()
+	local choices = {}
+	for _, record in ipairs(self.records) do choices[#choices + 1] = record.id end
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT MISSILE", items=choices, on_select=function(value)
+		for index, record in ipairs(self.records) do
+			if record.id == value then self.index, self.direction, self.dirty = index, 0, true; return end
+		end
+	end})
     self.index, self.direction, self.random_counter, self.dirty = 1, 0, 0, true
 end
 
@@ -61,6 +69,8 @@ function lab:rebuild()
 end
 
 function lab:update()
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
     local directions = self.records[self.index] and math.max(1, self.records[self.index].directions) or 1
     if input.pressed("left") then self.direction=(self.direction+directions-1)%directions;self.dirty=true end
     if input.pressed("right") then self.direction=(self.direction+1)%directions;self.dirty=true end

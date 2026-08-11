@@ -38,9 +38,9 @@ The active dependency queue, reassessed after that gate, is:
    equipment-derived damage on the shared pointer-selected Attack transaction.
    Its checkpointed pending action now follows a still-valid target through the
    collision-aware world pathfinder and admits melee only after reaching range.
-2. **Developer labs:** remove lab-specific arguments from the client composition
-   root. Labs should open with useful defaults and select records/assets through
-   one reusable modal fuzzy finder; add a combat lab on that same foundation.
+2. **Developer labs:** the lab-specific arguments have left the client
+   composition root, and composite/DT1/DS1/monster/missile labs now share one
+   modal fuzzy finder. Add a combat lab on that same no-argument foundation.
 3. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
    evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
    resistance, death/corpse consequences, and difficulty rules.

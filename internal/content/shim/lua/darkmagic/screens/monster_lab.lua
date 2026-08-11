@@ -5,6 +5,7 @@ local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
 local composite = require("darkmagic.gameplay.monster_composite")
+local fuzzy_picker = require("darkmagic.ui.fuzzy_picker")
 
 local modes = {"NU", "WL", "A1", "A2", "GH", "DT", "DD", "RN"}
 local lab = {}
@@ -23,9 +24,16 @@ function lab:create()
     self.actor:set_position(400, 335); self.actor:set_scale(2, 2)
     self.title = label(self.root, "MONSTER ANIMATION LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 68)
-    self.help = label(self.root, "Left/Right: direction   Up/Down: mode   Page Up/Down: monster   Enter: random", 548)
+	self.help = label(self.root, "F: find monster   Left/Right: direction   Up/Down: mode   PgUp/PgDn: browse   Enter: random", 548)
     self.detail = label(self.root, "", 574)
     self.records = data.monsters()
+	local choices = {}
+	for _, record in ipairs(self.records) do choices[#choices + 1] = record.id end
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT MONSTER", items=choices, on_select=function(value)
+		for index, record in ipairs(self.records) do
+			if record.id == value then self.index, self.direction, self.dirty = index, 0, true; return end
+		end
+	end})
     self.index, self.mode_index, self.direction, self.random_counter = 1, 1, 0, 0
     self.dirty = true
 end
@@ -65,6 +73,8 @@ function lab:rebuild()
 end
 
 function lab:update()
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
     if input.pressed("left") then self.direction=(self.direction+7)%8;self.dirty=true end
     if input.pressed("right") then self.direction=(self.direction+1)%8;self.dirty=true end
     if input.pressed("up") then self.mode_index=((self.mode_index-2)%#modes)+1;self.dirty=true end
