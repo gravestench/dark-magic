@@ -1179,14 +1179,21 @@ These checkpoints follow the dependency order in
 They extend the existing session, ECS, item, loot, world, targeting, and typed
 data owners; they do not introduce parallel gameplay authorities.
 
-- [ ] **M21.1: Shared stat/effect source model.** Represent parameterized stat
+- [x] **M21.1: Shared stat/effect source model.** Represent parameterized stat
   identity, stable source identity, source kind/owner/lifetime, and ordered
   contributions without flattening provenance into permanent totals. Support
   atomic add/replace/remove, deterministic snapshots and checksums, explicit
   dependency invalidation, and checkpoint/replay tests. Begin with synthetic
   sources for base facts and equipped items; preserve room for passives, timed
   states, auras, monster modifiers, and hireling equipment. ItemStatCost-driven
-  derived operations remain gated by the foundation verification queue.
+  derived operations remain gated by the foundation verification queue. The
+  new renderer-neutral `internal/game/stats` authority keeps full parameterized
+  keys and ordered source entries, applies validated replace/remove batches
+  atomically, treats identical replacement as an idempotent no-op, increments a
+  per-entity invalidation revision, rejects arithmetic overflow, and exports a
+  canonical `dm.stats/v1` replay participant. Tests prove parameter separation,
+  equip-style attach/detach, failed-batch rollback, deterministic serialization,
+  strict atomic restore, race-safe snapshots, and composite-checksum coverage.
 - [ ] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
   lightning, cold, poison, magic, life, and mana quantities plus explicit
   conversion/rounding helpers and boundary vectors. Keep Dark Magic policy and
