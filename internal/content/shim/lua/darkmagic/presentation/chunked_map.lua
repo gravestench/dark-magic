@@ -36,12 +36,10 @@ local function finish_preload(state)
         return
     end
     local ok, result = pcall(function()
-        return render.ds1_chunks(
-            state.recipe.ds1,
-            state.recipe.dt1,
-            state.recipe.palette,
-            state.chunk_size
-        )
+        if state.recipe.world then
+            return render.world_chunks(state.recipe.world, state.recipe.palette, state.chunk_size)
+        end
+        return render.ds1_chunks(state.recipe.ds1, state.recipe.dt1, state.recipe.palette, state.chunk_size)
     end)
     if not ok then
         state.error = tostring(result)
@@ -70,13 +68,14 @@ local function refresh_nodes(state, world_view)
         local key = chunk.index + 1
         if visible and not state.nodes[key] and admitted < state.admit_per_frame then
             local node = render.create("world", state.root)
-            node:set_ds1_chunk(
-                state.recipe.ds1,
-                state.recipe.dt1,
-                state.recipe.palette,
-                chunk.index,
-                state.chunk_size
-            )
+            if state.recipe.world then
+                node:set_world_chunk(state.recipe.world, state.recipe.palette, chunk.index, state.chunk_size)
+            else
+                node:set_ds1_chunk(
+                    state.recipe.ds1, state.recipe.dt1, state.recipe.palette,
+                    chunk.index, state.chunk_size
+                )
+            end
             node:set_position(
                 local_left + chunk.width / 2,
                 local_top + chunk.height / 2
@@ -110,13 +109,15 @@ function chunked_map.create(parent, recipe, options)
         root_y = 0,
     }
     state.root:set_z(options.z or 0)
-    state.job = render.preload({{
-        kind = "ds1_chunks",
+    local request = {
+        kind = recipe.world and "world_chunks" or "ds1_chunks",
         path = recipe.ds1,
         tiles = recipe.dt1,
+        world = recipe.world,
         palette = recipe.palette,
         chunk_size = state.chunk_size,
-    }})
+    }
+    state.job = render.preload({request})
     return state
 end
 

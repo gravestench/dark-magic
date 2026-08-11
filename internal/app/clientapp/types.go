@@ -7,6 +7,7 @@ package clientapp
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
@@ -22,6 +23,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
@@ -130,6 +132,9 @@ type application struct {
 	entitySimulation     *gameecs.Engine
 	offlineSession       *gamesession.Session
 	playerControl        *gamesession.MovementController
+	movementSource       *gamesession.MovementSource
+	transitionAuthority  *gametransition.Authority
+	transitionSource     *gametransition.Source
 	interactionAuthority *gameinteraction.Authority
 	interactionControl   *gameinteraction.Controller
 	interactionSource    *gameinteraction.Source
@@ -137,8 +142,10 @@ type application struct {
 	itemControl          *gameitem.Controller
 	itemSource           *gameitem.Source
 	commandSource        func(uint64) []simulation.Command
-	gameWorld            *gameworld.Map
-	gameWorldZone        *mapgen.Zone
+	worldMu              sync.RWMutex
+	gameWorlds           map[int]*gameworld.Map
+	gameWorldZones       map[int]*mapgen.Zone
+	activeWorldLevel     int
 	loading              *loadcore.Coordinator
 
 	components   *host.Manager

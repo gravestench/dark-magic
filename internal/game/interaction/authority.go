@@ -71,15 +71,23 @@ func (authority *Authority) AddTargets(targets ...Target) error {
 	return authority.rebuildSelectorLocked()
 }
 
+// ConfigureWorld atomically switches both line-of-sight collision and the
+// spatial selection index. Targets belonging to the previous zone remain in
+// the authoritative registry for replay/configuration stability, but they can
+// no longer receive pointer hits in the newly active zone.
 func (authority *Authority) ConfigureWorld(world *gameworld.Map) {
 	authority.mu.Lock()
+	defer authority.mu.Unlock()
 	authority.world = world
-	authority.mu.Unlock()
+	_ = authority.rebuildSelectorLocked()
 }
 
 func (authority *Authority) rebuildSelectorLocked() error {
 	items := make([]gameworld.Selectable, 0, len(authority.targets))
 	for _, target := range authority.targets {
+		if !authority.targetActiveLocked(target.ID) {
+			continue
+		}
 		items = append(items, gameworld.Selectable{ID: target.ID, Kind: "interaction", X: target.X, Y: target.Y, Radius: target.SelectRadius})
 	}
 	selector, err := gameworld.NewSelector(items, 8)
@@ -88,6 +96,18 @@ func (authority *Authority) rebuildSelectorLocked() error {
 	}
 	authority.selector = selector
 	return nil
+}
+
+func (authority *Authority) targetActiveLocked(id string) bool {
+	if authority.world == nil {
+		return true
+	}
+	for _, selected := range authority.world.Selectables() {
+		if selected.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 func (authority *Authority) targetAt(x, y float64) (Target, error) {

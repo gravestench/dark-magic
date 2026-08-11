@@ -7,6 +7,7 @@
 local ecs = require("dm.ecs/v1")
 
 local M = {}
+local active_collision = nil
 
 local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
@@ -58,6 +59,7 @@ local function update_entity(entity, collision, elapsed)
 end
 
 function M.register(collision)
+	active_collision = collision
     ecs.system({
         id = "darkmagic.world.integrate",
         phase = "movement",
@@ -66,10 +68,12 @@ function M.register(collision)
         write = { "dm.world.position" },
         update = function(context, entities)
             for _, entity in ipairs(entities) do
-                update_entity(entity, collision, context.delta_seconds)
+				update_entity(entity, active_collision, context.delta_seconds)
             end
         end,
     })
 end
+
+function M.set_collision(collision) active_collision = collision end
 
 return M

@@ -13,4 +13,6 @@ function M.register(collision)
     camera_follow.register()
 end
 
+function M.set_collision(collision) movement.set_collision(collision) end
+
 return M

@@ -23,6 +23,7 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
@@ -165,11 +166,15 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
 		return wrap("register item commands", err)
 	}
+	if err := gametransition.Register(app.offlineSession, app.transitionAuthority); err != nil {
+		return wrap("register zone transition commands", err)
+	}
 	movement := &gamesession.MovementController{}
 	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
 	if err != nil {
 		return wrap("create offline movement source", err)
 	}
+	app.movementSource = movementSource
 	skills, err := gamesession.NewSkillSource(movement, "local-player")
 	if err != nil {
 		return wrap("create offline skill source", err)
@@ -178,7 +183,7 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("build starting skill provider", err)
 	}
-	worldMap := app.gameWorld
+	worldMap := app.gameWorlds[1]
 	if worldMap == nil {
 		return errors.New("load offline entry map: session world is unavailable")
 	}
@@ -211,11 +216,15 @@ func (app *application) registerOfflineCommands() error {
 	if !found {
 		return errors.New("create offline player entry source: map has no open spawn subtile")
 	}
-	request := app.gameWorldZone.Request()
+	request := app.gameWorldZones[1].Request()
 	entry, err := gameplayer.NewEntrySourceAtLocation(app.entitySimulation, app.saves, "local-player",
 		spawnX, spawnY, float64(worldMap.WidthSubtiles), float64(worldMap.HeightSubtiles), int64(request.Act), int64(request.LevelID), skillProvider)
 	if err != nil {
 		return wrap("create offline player entry source", err)
+	}
+	app.transitionSource, err = gametransition.NewSource(app.entitySimulation, "local-player", app.transitionAuthority)
+	if err != nil {
+		return wrap("create zone transition source", err)
 	}
 	sequencer := simulation.NewLocalSequencer()
 	app.commandSource = func(tick uint64) []simulation.Command {
@@ -224,6 +233,7 @@ func (app *application) registerOfflineCommands() error {
 		commands = append(commands, skills.Commands(tick)...)
 		commands = append(commands, app.interactionSource.Commands(tick)...)
 		commands = append(commands, app.itemSource.Commands(tick)...)
+		commands = append(commands, app.transitionSource.Commands(tick)...)
 		return sequencer.Assign(commands)
 	}
 	app.playerControl = movement

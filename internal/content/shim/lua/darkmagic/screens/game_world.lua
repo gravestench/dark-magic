@@ -30,6 +30,40 @@ local tooltip = require("darkmagic.ui.tooltip")
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
 
+local function install_current_world(self)
+	local world_capability = self.world_capability
+	if not world_capability then
+		world_capability = require("dm.world/v1")
+		self.world_capability = world_capability
+	end
+	local level_id = world_capability.current_level()
+	if self.world_level_id == level_id then return false end
+	local next_world, recipe = world_capability.current()
+	assert(next_world and recipe, "session world is unavailable")
+	if self.hero and self.hero:exists() then self.hero:destroy() end
+	if self.map then chunked_map.destroy(self.map) end
+	self.world, self.world_recipe, self.world_level_id = next_world, recipe, recipe.level_id
+	recipe.palette = screen.map.palette
+	recipe.world = next_world
+	self.world_dimensions = next_world:dimensions()
+	self.world_canvas_width, self.world_canvas_height = next_world:canvas()
+	self.map = chunked_map.create(self.root, recipe, {
+		z = screen.map.z,
+		viewport_width = manifest.resolution.width,
+		viewport_height = manifest.resolution.height,
+		canvas_width = self.world_canvas_width,
+		canvas_height = self.world_canvas_height,
+	})
+	self.hero = render.create("world", self.map.root)
+	self.hero:set_visible(false)
+	-- The previous render handle belonged to the destroyed map root. Force the
+	-- cached appearance to attach to this new handle while preserving the
+	-- playback clock, so crossing a seam does not rewind the animation.
+	self.hero_composite_key = nil
+	if self.gameplay then self.gameplay_world.set_collision(self.gameplay, next_world) end
+	return true
+end
+
 local function selectable_at(self, x, y)
 	local spawned = self.targeting and self.targeting.selectable_at(x, y) or nil
 	if spawned and spawned.owner ~= "local-player" then return spawned end
@@ -50,29 +84,14 @@ return {
             --
             -- dm.world/v1 produces renderer-INDEPENDENT semantic map facts:
             -- dimensions, collision, subtile projection, future LOS/objects/etc.
-            local world = require("dm.world/v1")
-			self.world, self.world_recipe = world.current()
-			assert(self.world and self.world_recipe, "session world is unavailable")
-			self.world_recipe.palette = screen.map.palette
-            self.world_dimensions = self.world:dimensions()
-            self.world_canvas_width, self.world_canvas_height = self.world:canvas()
-
-            -- Presentation receives the same recipe, but uploads only chunks near
-            -- the camera. It remains a disposable picture of authoritative facts.
-			self.map = chunked_map.create(self.root, self.world_recipe, {
-                z = screen.map.z,
-                viewport_width = manifest.resolution.width,
-                viewport_height = manifest.resolution.height,
-                canvas_width = self.world_canvas_width,
-                canvas_height = self.world_canvas_height,
-            })
+			install_current_world(self)
         end
 
         -- Hero sprite/composite is presentation only. The authoritative hero is
         -- a separate ECS entity admitted by the session and bound later.
         -- Map bands and standing entities share one parent so their baseline
         -- depths can interleave. A parent-level z can never provide occlusion.
-        self.hero = render.create("world", self.map and self.map.root or self.root)
+		if not self.hero then self.hero = render.create("world", self.map and self.map.root or self.root) end
 		if render.assets_available() then self.world_hover_tip = tooltip.create(self.root, "", 0, 0, {origin_x="left",origin_y="top",alpha=190}) end
 
         local character = saves.selected()
@@ -124,6 +143,7 @@ return {
     end,
 
     update = function(self, elapsed, focused, input_allowed, world_view)
+		if render.assets_available() then install_current_world(self) end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
         -- may keep the world updating while routing only certain input below.
         --

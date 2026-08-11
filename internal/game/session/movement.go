@@ -242,6 +242,7 @@ func movementDirection(x, y int) int64 {
 // MovementSource turns the latest native input snapshot into one replayable
 // command per active gameplay tick.
 type MovementSource struct {
+	mu         sync.Mutex
 	engine     *gameecs.Engine
 	input      *inputstate.Store
 	player     string
@@ -253,6 +254,8 @@ type MovementSource struct {
 }
 
 func (source *MovementSource) SetNavigation(world *gameworld.Map) {
+	source.mu.Lock()
+	defer source.mu.Unlock()
 	source.navigation = world
 	source.path = nil
 	source.pathTarget = nil
@@ -272,6 +275,8 @@ func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, 
 }
 
 func (source *MovementSource) Commands(tick uint64) []simulation.Command {
+	source.mu.Lock()
+	defer source.mu.Unlock()
 	controls, present := akara.GetDynamicStore(source.engine.World(), "dm.world.player_control")
 	if !present || controls.Len() == 0 {
 		return nil
