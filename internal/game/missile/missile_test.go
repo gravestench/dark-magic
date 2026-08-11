@@ -42,6 +42,12 @@ func TestStraightMissileCastMovesHitsAndReplays(t *testing.T) {
 	if stores.missiles.Len() != 1 {
 		t.Fatalf("missiles=%d", stores.missiles.Len())
 	}
+	instance, _ := stores.missiles.Get(stores.missiles.Entities()[0])
+	dcc, _ := instance.Get("dcc")
+	travel, _ := instance.Get("travel_sound")
+	if dcc != "data/global/missiles/test.dcc" || travel != "test_travel" {
+		t.Fatalf("presentation recipe dcc=%q travel=%q", dcc, travel)
+	}
 	snapshot, err := engine.Snapshot()
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +103,7 @@ func testRegistries(t *testing.T) (gameskill.Registry, Registry) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	missiles, err := NewRegistry(Definition{SkillID: 42, SpeedPerTick: 1, MaxRange: 2, LifetimeTicks: 10, CollisionRadius: 0.1, PhysicalDamage: gamecombat.MustWhole(3)})
+	missiles, err := NewRegistry(Definition{SkillID: 42, SpeedPerTick: 1, MaxRange: 2, LifetimeTicks: 10, CollisionRadius: 0.1, PhysicalDamage: gamecombat.MustWhole(3), Presentation: Presentation{MissileID: "test", DCC: "data/global/missiles/test.dcc", Palette: "data/global/palette/units/pal.dat", TravelSound: "test_travel", HitSound: "test_hit", Directions: 8, FramesPerSecond: 25, Loop: true}})
 	if err != nil {
 		t.Fatal(err)
 	}

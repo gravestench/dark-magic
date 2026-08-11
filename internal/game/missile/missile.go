@@ -36,6 +36,17 @@ type Definition struct {
 	LifetimeTicks   uint64
 	CollisionRadius float64
 	PhysicalDamage  gamecombat.Amount
+	// Presentation is an immutable copy of the deliberately joined Missiles.txt
+	// recipe. Simulation stores these plain facts on the missile entity but never
+	// interprets asset paths, animation rates, or sound keys.
+	Presentation Presentation
+}
+
+type Presentation struct {
+	MissileID, DCC, Palette, TravelSound, HitSound string
+	Directions, FramesPerSecond                    int64
+	Loop                                           bool
+	OffsetX, OffsetY, OffsetZ                      float64
 }
 
 // Registry rejects projectile definitions that cannot simulate deterministically.
@@ -82,8 +93,8 @@ func registerStores(engine *gameecs.Engine) (stores, error) {
 	schemas := []akara.Schema{
 		{Name: gameskill.CastEventComponent, Version: 1, Fields: []akara.Field{{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "player", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64}, {Name: "behavior", Kind: akara.FieldString}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}, {Name: "reason", Kind: akara.FieldString}}},
 		{Name: SpawnReceipt, Version: 1, Fields: []akara.Field{{Name: "processed", Kind: akara.FieldBool}}},
-		{Name: Component, Version: 1, Fields: []akara.Field{{Name: "owner_id", Kind: akara.FieldString}, {Name: "owner_entity", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64}, {Name: "created_tick", Kind: akara.FieldInt64}, {Name: "expires_tick", Kind: akara.FieldInt64}, {Name: "velocity_x", Kind: akara.FieldFloat64}, {Name: "velocity_y", Kind: akara.FieldFloat64}, {Name: "previous_x", Kind: akara.FieldFloat64}, {Name: "previous_y", Kind: akara.FieldFloat64}, {Name: "traveled", Kind: akara.FieldFloat64}, {Name: "max_range", Kind: akara.FieldFloat64}, {Name: "collision_policy", Kind: akara.FieldString}, {Name: "collision_radius", Kind: akara.FieldFloat64}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "hit_target_id", Kind: akara.FieldString}, {Name: "announced", Kind: akara.FieldBool}}},
-		{Name: EventComponent, Version: 1, Fields: []akara.Field{{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "missile", Kind: akara.FieldEntity}, {Name: "owner_id", Kind: akara.FieldString}, {Name: "target_id", Kind: akara.FieldString}, {Name: "physical", Kind: akara.FieldInt64}}},
+		{Name: Component, Version: 2, Fields: []akara.Field{{Name: "owner_id", Kind: akara.FieldString}, {Name: "owner_entity", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64}, {Name: "created_tick", Kind: akara.FieldInt64}, {Name: "expires_tick", Kind: akara.FieldInt64}, {Name: "velocity_x", Kind: akara.FieldFloat64}, {Name: "velocity_y", Kind: akara.FieldFloat64}, {Name: "previous_x", Kind: akara.FieldFloat64}, {Name: "previous_y", Kind: akara.FieldFloat64}, {Name: "traveled", Kind: akara.FieldFloat64}, {Name: "max_range", Kind: akara.FieldFloat64}, {Name: "collision_policy", Kind: akara.FieldString}, {Name: "collision_radius", Kind: akara.FieldFloat64}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "hit_target_id", Kind: akara.FieldString}, {Name: "announced", Kind: akara.FieldBool}, {Name: "missile_id", Kind: akara.FieldString}, {Name: "dcc", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "travel_sound", Kind: akara.FieldString}, {Name: "hit_sound", Kind: akara.FieldString}, {Name: "directions", Kind: akara.FieldInt64}, {Name: "frames_per_second", Kind: akara.FieldInt64}, {Name: "loop", Kind: akara.FieldBool}, {Name: "offset_x", Kind: akara.FieldFloat64}, {Name: "offset_y", Kind: akara.FieldFloat64}, {Name: "offset_z", Kind: akara.FieldFloat64}}},
+		{Name: EventComponent, Version: 2, Fields: []akara.Field{{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "missile", Kind: akara.FieldEntity}, {Name: "owner_id", Kind: akara.FieldString}, {Name: "target_id", Kind: akara.FieldString}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "sound", Kind: akara.FieldString}}},
 		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
 		{Name: "dm.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
 		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
@@ -137,12 +148,13 @@ func registerSpawn(engine *gameecs.Engine, registry Registry, s stores) error {
 			act, _ := location.Get("act")
 			level, _ := location.Get("level_id")
 			skillLevel, _ := event.Get("skill_level")
+			presentation := definition.Presentation
 			ownerID := combatOwnerID(caster, player.(string), s.selectables)
 			commands.AddDynamic(s.receipts, eventEntity, map[string]any{"processed": true})
 			commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{
 				s.positions: {"x": x, "y": y},
 				s.locations: {"act": act, "level_id": level},
-				s.missiles:  {"owner_id": ownerID, "owner_entity": caster, "skill_id": skillID, "skill_level": skillLevel, "created_tick": int64(context.Tick), "expires_tick": int64(context.Tick + definition.LifetimeTicks), "velocity_x": dx / length * definition.SpeedPerTick, "velocity_y": dy / length * definition.SpeedPerTick, "previous_x": x, "previous_y": y, "traveled": 0.0, "max_range": definition.MaxRange, "collision_policy": CollisionSingleHit, "collision_radius": definition.CollisionRadius, "physical": definition.PhysicalDamage.Raw(), "hit_target_id": "", "announced": false},
+				s.missiles:  {"owner_id": ownerID, "owner_entity": caster, "skill_id": skillID, "skill_level": skillLevel, "created_tick": int64(context.Tick), "expires_tick": int64(context.Tick + definition.LifetimeTicks), "velocity_x": dx / length * definition.SpeedPerTick, "velocity_y": dy / length * definition.SpeedPerTick, "previous_x": x, "previous_y": y, "traveled": 0.0, "max_range": definition.MaxRange, "collision_policy": CollisionSingleHit, "collision_radius": definition.CollisionRadius, "physical": definition.PhysicalDamage.Raw(), "hit_target_id": "", "announced": false, "missile_id": presentation.MissileID, "dcc": presentation.DCC, "palette": presentation.Palette, "travel_sound": presentation.TravelSound, "hit_sound": presentation.HitSound, "directions": presentation.Directions, "frames_per_second": presentation.FramesPerSecond, "loop": presentation.Loop, "offset_x": presentation.OffsetX, "offset_y": presentation.OffsetY, "offset_z": presentation.OffsetZ},
 			})
 		}
 		return nil
@@ -177,7 +189,8 @@ func registerMovement(engine *gameecs.Engine, s stores) error {
 			if !announced.(bool) {
 				owner, _ := missile.Get("owner_id")
 				physical, _ := missile.Get("physical")
-				commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventSpawned, context.Tick, entity, owner.(string), "", physical.(int64))})
+				travelSound, _ := missile.Get("travel_sound")
+				commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventSpawned, context.Tick, entity, owner.(string), "", physical.(int64), travelSound.(string))})
 				if err := missile.Set("announced", true); err != nil {
 					return err
 				}
@@ -213,16 +226,17 @@ func registerCollision(engine *gameecs.Engine, s stores) error {
 			traveled, _ := missile.Get("traveled")
 			maxRange, _ := missile.Get("max_range")
 			owner, _ := missile.Get("owner_id")
+			hitSound, _ := missile.Get("hit_sound")
 			if int64(context.Tick) >= expires.(int64) {
 				commands.Destroy(engine.World(), entity)
-				commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventExpired, context.Tick, entity, owner.(string), "", 0)})
+				commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventExpired, context.Tick, entity, owner.(string), "", 0, "")})
 				continue
 			}
 			target, targetID := firstContact(engine, entity, missile, s)
 			if targetID == "" {
 				if traveled.(float64) >= maxRange.(float64) {
 					commands.Destroy(engine.World(), entity)
-					commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventExpired, context.Tick, entity, owner.(string), "", 0)})
+					commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventExpired, context.Tick, entity, owner.(string), "", 0, "")})
 				}
 				continue
 			}
@@ -236,7 +250,7 @@ func registerCollision(engine *gameecs.Engine, s stores) error {
 			if err := missile.Set("hit_target_id", targetID); err != nil {
 				return err
 			}
-			commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventHit, context.Tick, entity, owner.(string), targetID, physical.(int64))})
+			commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{s.events: eventValues(EventHit, context.Tick, entity, owner.(string), targetID, physical.(int64), hitSound.(string))})
 			commands.Destroy(engine.World(), entity)
 		}
 		return nil
@@ -326,6 +340,6 @@ func finitePositive(value float64) bool {
 func finiteNonNegative(value float64) bool {
 	return value >= 0 && !math.IsNaN(value) && !math.IsInf(value, 0)
 }
-func eventValues(kind string, tick uint64, missile akara.Entity, owner, target string, physical int64) map[string]any {
-	return map[string]any{"kind": kind, "tick": int64(tick), "missile": missile, "owner_id": owner, "target_id": target, "physical": physical}
+func eventValues(kind string, tick uint64, missile akara.Entity, owner, target string, physical int64, sound string) map[string]any {
+	return map[string]any{"kind": kind, "tick": int64(tick), "missile": missile, "owner_id": owner, "target_id": target, "physical": physical, "sound": sound}
 }

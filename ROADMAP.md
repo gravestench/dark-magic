@@ -1363,8 +1363,12 @@ restore while Lua only submits intents and presents copied facts.
   death mode; direction changes preserve playback, cold recipes preload, and
   missing optional animations stay non-fatal. Death and missile ECS events now
   cross a value-only, observe-once cue boundary, and authored MonSounds/Sounds
-  death records reach the audio catalog. Concrete missile art and its sound
-  record joins remain before this gate is complete. Normalized player combat definitions also remain explicit
+  death records reach the audio catalog. Missile definitions can now carry a
+  joined `Missiles.txt` DCC/direction/rate/offset and travel/hit sound recipe;
+  live instances render from copied position facts after background decode, and
+  semantic spawn/hit cues reach the audio catalog. Production registration of
+  an evidence-backed player missile skill remains before this gate is complete.
+  Normalized player combat definitions also remain explicit
   scaffolding in the acceptance fixture until evidence-backed skill behaviors
   replace them in production.
 
