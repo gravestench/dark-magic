@@ -197,6 +197,14 @@ See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package ownership, dependency
 direction, and guidance on where new work belongs.
 
+For the focused playable-character acceptance loop, point `MPQ_DIRECTORY` at
+legally obtained game data and run `make play-game-world`. The command selects
+one deterministic character fixture and enters the real world scene; arrow/WASD
+movement exercises fixed-tick authority, run/walk mode, composite facing,
+camera chunks, and DT1 collision together. `make capture-game-world` records a
+fully settled initial frame under `CAPTURE_DIR` (default `captures/frontend`).
+These targets intentionally do not bundle or guess a game-data location.
+
 ## How to contribute
 We welcome contributions from developers, artists, designers, and Diablo 
 enthusiasts of all levels of expertise. If you want to be part of this journey, 

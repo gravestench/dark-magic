@@ -897,6 +897,10 @@ the fixed tick, and drive a real legacy composite from authoritative state.
   collision/pathing refinement, richer imported equipment recipes under M19.4, and enough
   play testing to make the slice comfortable and visually stable. Continue
   NPC/quest/vendor interaction breadth only after that point.
+  `make play-game-world` and `make capture-game-world` now provide the focused
+  asset-backed manual/play and settled-frame acceptance entry points with a
+  deterministic selected character; automated command-to-ECS input coverage
+  remains in the embedded shell and runtime integration suites.
 
 - [ ] Implement the complete stat/value system, ItemStatCost encoding, derived
   stats, caps, per-level values, state modifiers, and description functions.
