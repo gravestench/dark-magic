@@ -312,7 +312,7 @@ func TestCOFCompositionUsesFramePriorityAndPlacement(t *testing.T) {
 	if got := color.RGBAModel.Convert(composed.At(1, 1)).(color.RGBA); got.B != 255 {
 		t.Fatalf("priority pixel = %#v", got)
 	}
-	if composed.Bounds().Dx() != 5 || composed.Bounds().Dy() != 5 {
+	if composed.Bounds().Dx() != 3 || composed.Bounds().Dy() != 3 {
 		t.Fatalf("bounds = %v", composed.Bounds())
 	}
 }
@@ -331,8 +331,35 @@ func TestCOFCompositionDrawsOnlyShadowEnabledLayers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, _, alpha := composed.At(2, 2).RGBA(); alpha == 0 {
-		t.Fatal("shadow-enabled COF layer produced no offset shadow pixel")
+	if _, _, _, alpha := composed.At(0, 0).RGBA(); alpha == 0 {
+		t.Fatal("shadow-enabled COF layer produced no projected shadow pixel")
+	}
+}
+
+func TestCompositeShadowUsesLegacyHalfHeightShear(t *testing.T) {
+	componentType := cof.CompositeType(0)
+	asset := cof.New()
+	asset.NumberOfDirections, asset.FramesPerDirection, asset.NumberOfLayers = 1, 1, 1
+	asset.CofLayers = []cof.CofLayer{{Type: componentType, Shadow: 1}}
+	asset.Priority = [][][]cof.CompositeType{{{componentType}}}
+	source := image.NewRGBA(image.Rect(10, 20, 12, 24))
+	source.Set(10, 20, color.RGBA{R: 255, A: 255}) // top-left
+	source.Set(10, 23, color.RGBA{R: 255, A: 255}) // baseline-left
+	component := compositeFrame{image: source, bounds: source.Bounds(), layer: asset.CofLayers[0]}
+	canvas := shadowCanvasBounds(source.Bounds(), map[cof.CompositeType]compositeFrame{componentType: component})
+	if canvas.Min.X != 8 || canvas.Max.X != 14 || canvas.Min.Y != 20 || canvas.Max.Y != 24 {
+		t.Fatalf("center-preserving shadow canvas = %v", canvas)
+	}
+	composed, err := composeCOFFrame(asset, 0, 0, map[cof.CompositeType]compositeFrame{componentType: component})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Top-left shears two pixels right and projects two pixels above baseline;
+	// baseline-left remains anchored. Coordinates are translated by canvas.Min.
+	for _, point := range []image.Point{{4, 1}, {2, 3}} {
+		if _, _, _, alpha := composed.At(point.X, point.Y).RGBA(); alpha == 0 {
+			t.Fatalf("projected shadow pixel %v is transparent", point)
+		}
 	}
 }
 
