@@ -7,17 +7,17 @@ Gameplay source inventory: [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md).
 
 | # | Workstream | Primary document | Research status | Current-engine context | Dependencies | Open probes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 28 | Content loading, TXT/BIN compilation, localization, and modability | [GAME_DATA_LOADING_AND_LINKAGE.md](GAME_DATA_LOADING_AND_LINKAGE.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | content/VFS, localization | 8 |
-| 24 | Time, RNG, simulation ticks, and determinism | [TIMING_RNG_AND_DETERMINISM.md](TIMING_RNG_AND_DETERMINISM.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | session, ECS, replay | 10 |
-| 20 | Save games and persistent character state | [CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md](CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | data linkage, items, quests | 12 |
-| 3 | Item stats, affixes, and property evaluation | [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | data linkage, items, skills/states | 12 |
-| 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | data linkage, item stats, persistence | 11 |
-| 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline in this research PR | existing owner inspected; fidelity gaps documented | data linkage, timing, persistence, item stats, quests | 12 |
-| 12 | Combat, damage, defense, and death | `COMBAT_DAMAGE_AND_DEATH.md` | queued | dedicated research not yet consolidated | stats, timing, skills, items | TBD |
-| 11 | Skills, missiles, states, and combat actions | `SKILLS_STATES_AND_MISSILES.md` | queued | dedicated research not yet consolidated | timing, stats, combat, missiles/states | TBD |
-| 8 | Monsters, spawning, AI, and lifecycle | `MONSTERS_SPAWNING_AND_AI.md` | queued | dedicated research not yet consolidated | timing, combat, world/pathfinding | TBD |
-| 18 | Hirelings, mercenaries, pets, and owned units | `HIRELINGS_AND_OWNED_UNITS.md` | queued | dedicated research not yet consolidated | monsters, items, skills, persistence | TBD |
-| 23 | Movement, collision, pathfinding, and room streaming | `MOVEMENT_COLLISION_AND_PATHFINDING.md` | queued | Map generation and world movement implementation provide partial support | world, timing, monsters | TBD |
+| 28 | Content loading, TXT/BIN compilation, localization, and modability | [GAME_DATA_LOADING_AND_LINKAGE.md](GAME_DATA_LOADING_AND_LINKAGE.md) | baseline | existing owner inspected; fidelity gaps documented | content/VFS, localization | 8 |
+| 24 | Time, RNG, simulation ticks, and determinism | [TIMING_RNG_AND_DETERMINISM.md](TIMING_RNG_AND_DETERMINISM.md) | baseline | existing owner inspected; fidelity gaps documented | session, ECS, replay | 10 |
+| 20 | Save games and persistent character state | [CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md](CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, items, quests | 12 |
+| 3 | Item stats, affixes, and property evaluation | [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, items, skills/states | 12 |
+| 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, item stats, persistence | 11 |
+| 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, timing, persistence, item stats, quests | 12 |
+| 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | session/item/player/targeting owners inspected; combat transaction slices documented | stats, timing, skills, items | 17 |
+| 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | existing `player.use_skill` admission inspected; execution/state/missile gap documented | timing, stats, combat, missiles/states | 22 |
+| 8 | Monsters, spawning, AI, and lifecycle | [MONSTERS_SPAWNING_AND_AI.md](MONSTERS_SPAWNING_AND_AI.md) | baseline | typed monster data/world/targeting inspected; population/AI/lifecycle gaps documented | timing, combat, world/pathfinding | 22 |
+| 18 | Hirelings, mercenaries, pets, and owned units | [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md) | baseline | hireling/pet data and hireling item container inspected; owned-unit/persistence gaps documented | monsters, items, skills, persistence | 24 |
+| 23 | Movement, collision, pathfinding, and room streaming | [MOVEMENT_COLLISION_AND_PATHFINDING.md](MOVEMENT_COLLISION_AND_PATHFINDING.md) | baseline | current deterministic A*, movement commands, zone transitions and diagnostics inspected; legacy path-type/streaming gaps documented | world, timing, monsters | 25 |
 | 2 | Item generation, treasure classes, and drops | `ITEM_GENERATION_AND_LOOT.md` | queued | M6 implementation exists; consolidation queued | data linkage, RNG, item system/stats | TBD |
 | 4 | Unique, set, rare, crafted, and personalized items | `ITEM_QUALITIES_AND_SETS.md` | queued | dedicated research not yet consolidated | item generation + stats | TBD |
 | 5 | Sockets, gems, runes, jewels, and runewords | `SOCKETS_RUNES_GEMS_JEWELS.md` | queued | dedicated research not yet consolidated | item system + stats/qualities | TBD |
@@ -26,15 +26,22 @@ Gameplay source inventory: [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md).
 | 14 | Vendors, pricing, repair, gambling, and economy | `VENDORS_PRICING_AND_ECONOMY.md` | queued | dedicated research not yet consolidated | items + NPCs + difficulty | TBD |
 | 7 | Quest items and scripted item interactions | `QUEST_ITEMS.md` | queued | Quest runtime docs provide supporting behavior; dedicated item doc queued | items + quests + world objects | TBD |
 | 21 | World objects and environmental interactions | `WORLD_OBJECTS_AND_INTERACTIONS.md` | queued | Map/quest docs provide partial support | world/map + quests + items | TBD |
-| 22 | Shrines, wells, curses, buffs, and temporary states | `SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md` | queued | dedicated research not yet consolidated | stats/states + world objects | TBD |
-| 10 | Warps, portals, waypoints, teleportation, and transitions | `WARPS_PORTALS_WAYPOINTS.md` | queued | Map/quest docs provide partial support | world/map + quests + persistence | TBD |
+| 22 | Shrines, wells, curses, buffs, and temporary states | `SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md` | queued | state-system baseline now exists; dedicated object/effect research queued | stats/states + world objects | TBD |
+| 10 | Warps, portals, waypoints, teleportation, and transitions | `WARPS_PORTALS_WAYPOINTS.md` | queued | current authoritative zone transition path and map/quest docs provide partial support | world/map + quests + persistence | TBD |
 | 9 | NPCs, dialogue, gossip, services, and town state | `NPCS_DIALOGUE_AND_SERVICES.md` | queued | Quest/dialogue recovered-data docs provide partial support | quests + vendors + dialogue/localization | TBD |
-| 15 | Difficulty progression and game modes | `DIFFICULTY_AND_GAME_MODES.md` | queued | dedicated research not yet consolidated | progression + quests + loot + monsters | TBD |
+| 15 | Difficulty progression and game modes | `DIFFICULTY_AND_GAME_MODES.md` | queued | combat/hireling baselines now expose difficulty-dependent rules needing consolidation | progression + quests + loot + monsters | TBD |
 | 27 | Endgame and special events | `ENDGAME_AND_SPECIAL_EVENTS.md` | queued | dedicated research not yet consolidated | quests + world + difficulty + combat | TBD |
-| 17 | Multiplayer parties, hostility, trading, and shared progress | `MULTIPLAYER_PARTIES_PVP_AND_TRADE.md` | queued | dedicated research not yet consolidated | session + items + quests + combat | TBD |
+| 17 | Multiplayer parties, hostility, trading, and shared progress | `MULTIPLAYER_PARTIES_PVP_AND_TRADE.md` | queued | combat/ownership baselines identify attribution/PvP dependencies; dedicated research queued | session + items + quests + combat | TBD |
 | 16 | Battle.net, realm servers, and responsibilities | `REALM_AND_BATTLENET_ARCHITECTURE.md` | queued | dedicated research not yet consolidated | session + persistence + multiplayer | TBD |
 | 25 | UI-visible game-state contracts | `GAMEPLAY_UI_CONTRACTS.md` | queued | dedicated research not yet consolidated | all authoritative snapshots | TBD |
-| 26 | Audio, music, ambience, and gameplay cues | `GAMEPLAY_AUDIO_BEHAVIOR.md` | queued | dedicated research not yet consolidated | presentation + world/combat events | TBD |
+| 26 | Audio, music, ambience, and gameplay cues | `GAMEPLAY_AUDIO_BEHAVIOR.md` | queued | semantic combat/skill event baseline now gives future cue boundary | presentation + world/combat events | TBD |
+
+## Current implementation handoffs
+
+- [FOUNDATION_HANDOFF_FOR_CODEX.md](FOUNDATION_HANDOFF_FOR_CODEX.md) turns the first six foundation baselines into bounded implementation checkpoints.
+- [COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md](COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md) orders the combat/skill/monster/movement/owned-unit vertical slices.
+- [FOUNDATION_VERIFICATION_QUEUE.md](FOUNDATION_VERIFICATION_QUEUE.md) tracks the highest-value foundation probes.
+- [COMBAT_SIMULATION_VERIFICATION_QUEUE.md](COMBAT_SIMULATION_VERIFICATION_QUEUE.md) tracks the empirical combat/simulation probes.
 
 ## Existing cross-cutting research
 
