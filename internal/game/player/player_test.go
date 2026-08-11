@@ -97,6 +97,17 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if kind, _ := selectable.Get("kind"); kind != "player" {
 		t.Fatalf("selectable kind = %v", kind)
 	}
+	locationStore, found := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	if !found {
+		t.Fatal("world location store was not materialized")
+	}
+	location, _ := locationStore.Get(entity)
+	if act, _ := location.Get("act"); act != int64(1) {
+		t.Fatalf("entry act = %v", act)
+	}
+	if level, _ := location.Get("level_id"); level != int64(1) {
+		t.Fatalf("entry level = %v", level)
+	}
 	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
 	if !found || learned.Len() != 1 {
 		t.Fatalf("learned skills = %v, %v", learned, found)
@@ -144,5 +155,39 @@ func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
 	}
 	if y, _ := position.Get("y"); y != float64(13) {
 		t.Fatalf("spawn y = %v, want authored 13", y)
+	}
+}
+
+func TestEntrySourceRecordsServerSelectedTown(t *testing.T) {
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := Register(session); err != nil {
+		t.Fatal(err)
+	}
+	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	if err := saves.Select("hero"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewEntrySourceAtLocation(engine, saves, "player", 12, 13, 100, 80, 5, 109, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
+		t.Fatal(err)
+	}
+	store, found := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	if !found {
+		t.Fatal("location store is missing")
+	}
+	location, _ := store.Get(store.Entities()[0])
+	if act, _ := location.Get("act"); act != int64(5) {
+		t.Fatalf("act = %v", act)
+	}
+	if level, _ := location.Get("level_id"); level != int64(109) {
+		t.Fatalf("level = %v", level)
 	}
 }

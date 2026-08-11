@@ -47,6 +47,8 @@ type Entry struct {
 	Y           float64 `json:"y"`
 	WorldWidth  float64 `json:"world_width"`
 	WorldHeight float64 `json:"world_height"`
+	Act         int64   `json:"act"`
+	LevelID     int64   `json:"level_id"`
 	Skills      []Skill `json:"skills,omitempty"`
 }
 
@@ -73,6 +75,7 @@ type EntrySource struct {
 	player         string
 	width, height  float64
 	spawnX, spawnY float64
+	act, levelID   int64
 	sequence       uint64
 	skills         SkillProvider
 }
@@ -85,11 +88,17 @@ func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player str
 
 // NewEntrySourceAt admits the player at a server-selected map coordinate.
 func NewEntrySourceAt(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64, skills SkillProvider) (*EntrySource, error) {
+	return NewEntrySourceAtLocation(engine, saves, player, x, y, width, height, 1, 1, skills)
+}
+
+// NewEntrySourceAtLocation records the server-selected act and town level in
+// the same authoritative command as the server-selected spawn coordinate.
+func NewEntrySourceAtLocation(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64, act, levelID int64, skills SkillProvider) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
-	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height {
+	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act < 1 || act > 5 || levelID <= 0 {
 		return nil, fmt.Errorf("player: entry source requires engine, saves, player, and positive world bounds")
 	}
-	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, spawnX: x, spawnY: y, skills: skills}, nil
+	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, spawnX: x, spawnY: y, act: act, levelID: levelID, skills: skills}, nil
 }
 
 // Commands emits entry intent once; it never materializes ECS state directly.
@@ -100,6 +109,7 @@ func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 	}
 	source.sequence++
 	entry := EntryFromCharacter(character, source.player, source.spawnX, source.spawnY, source.width, source.height)
+	entry.Act, entry.LevelID = source.act, source.levelID
 	if source.skills != nil {
 		entry.Skills = source.skills(character)
 	}
@@ -127,7 +137,7 @@ func (source *EntrySource) entered(characterID string) bool {
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
-	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", X: x, Y: y, WorldWidth: width, WorldHeight: height}
+	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
@@ -237,6 +247,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		{stores.belt, map[string]any{"capacity": int64(4)}},
 		{stores.control, map[string]any{"player": entry.Player}},
 		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
+		{stores.location, map[string]any{"act": entry.Act, "level_id": entry.LevelID}},
 		{stores.collider, map[string]any{"radius": 0.35}},
 		{stores.selectable, map[string]any{"id": "player:" + entry.Player, "kind": targeting.KindPlayer, "label": entry.Name, "owner": entry.Player, "radius": 0.75, "priority": int64(10)}},
 	}
@@ -282,8 +293,8 @@ func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) e
 }
 
 type stores struct {
-	identity, progress, vitals, appearance, animation                                                           *akara.DynamicStore
-	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, collider, selectable *akara.DynamicStore
+	identity, progress, vitals, appearance, animation                                                                     *akara.DynamicStore
+	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, location, collider, selectable *akara.DynamicStore
 }
 
 func registerStores(world *akara.World) (stores, error) {
@@ -301,6 +312,7 @@ func registerStores(world *akara.World) (stores, error) {
 		{Name: "dm.player.belt", Version: 1, Fields: beltFields()},
 		{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
 		{Name: "dm.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
+		{Name: "dm.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
 		{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 		targeting.Schema(),
 	}
@@ -312,7 +324,7 @@ func registerStores(world *akara.World) (stores, error) {
 		}
 		registered[index] = store
 	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], skillIntent: registered[9], belt: registered[10], control: registered[11], bounds: registered[12], collider: registered[13], selectable: registered[14]}, nil
+	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], appearance: registered[3], animation: registered[4], position: registered[5], velocity: registered[6], movementMode: registered[7], skillAssignment: registered[8], skillIntent: registered[9], belt: registered[10], control: registered[11], bounds: registered[12], location: registered[13], collider: registered[14], selectable: registered[15]}, nil
 }
 
 func beltFields() []akara.Field {
@@ -351,6 +363,9 @@ func decodeEntry(encoded []byte) (Entry, error) {
 	}
 	if entry.WorldWidth <= 0 || entry.WorldHeight <= 0 || entry.X < 0 || entry.X > entry.WorldWidth || entry.Y < 0 || entry.Y > entry.WorldHeight {
 		return Entry{}, fmt.Errorf("player: invalid world position or bounds")
+	}
+	if entry.Act < 1 || entry.Act > 5 || entry.LevelID <= 0 {
+		return Entry{}, fmt.Errorf("player: entry act and level are invalid")
 	}
 	return entry, nil
 }
