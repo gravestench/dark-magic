@@ -878,6 +878,11 @@ complete until its actions are driven by authoritative game state and commands.
   Viewport culling now admits and releases occurrences independently while a
   reference-counted render resource pool retains each visible source graphic
   only once. DS1 Lab keeps composed chunks as an intentional diagnostic view.
+- [x] M20.4c: Spatially bucket shared DT1 placement commands in deterministic
+  512-pixel map cells. Camera updates reverse-project the unobscured viewport,
+  visit only intersecting buckets, deduplicate edge-spanning placements, and
+  release retained nodes and finished preload jobs outside the culling margin
+  instead of scanning every placement in the assembled zone each frame.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue

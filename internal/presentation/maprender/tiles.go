@@ -5,10 +5,13 @@ import (
 	"image"
 	"image/color"
 	"io/fs"
+	"sort"
 	"sync"
 
 	"github.com/gravestench/dark-magic/internal/game/world"
 )
+
+const DefaultTileBucketSize = 512
 
 // TileGraphic is one decoded physical DT1 record. A map may place this picture
 // thousands of times, but it should only occupy CPU and GPU memory once.
@@ -30,6 +33,13 @@ type TileDraw struct {
 	Depth   int
 }
 
+// TileBucket is one deterministic cell in the placement spatial index. Draws
+// contains indexes into TileSet.Draws, never copies of graphics or placements.
+type TileBucket struct {
+	Column, Row int
+	Draws       []int
+}
+
 // TileSet separates immutable pictures from their placement commands. This is
 // deliberately renderer-neutral: a backend may use ordinary retained nodes,
 // instancing, or a future tile batch without changing authoritative map data.
@@ -37,8 +47,11 @@ type TileSet struct {
 	Width, Height int
 	Graphics      []*TileGraphic
 	Draws         []TileDraw
+	BucketSize    int
+	Buckets       []TileBucket
 	source        fs.FS
 	palette       color.Palette
+	buckets       map[[2]int][]int
 }
 
 // Place builds shared DT1 graphics and lightweight draw commands. Unlike the
@@ -53,9 +66,9 @@ func Place(source fs.FS, mapData *world.Map, palettePath string) (*TileSet, erro
 		return nil, fmt.Errorf("maprender: load palette %q: %w", palettePath, err)
 	}
 	result := &TileSet{
-		Width:  (mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelWidth/2 + world.PreviewMargin*2,
-		Height: (mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelHeight/2 + world.PreviewMargin*2,
-		source: source, palette: palette,
+		Width:      (mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelWidth/2 + world.PreviewMargin*2,
+		Height:     (mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelHeight/2 + world.PreviewMargin*2,
+		BucketSize: DefaultTileBucketSize, source: source, palette: palette,
 	}
 	graphicIndexes := make(map[tileSourceKey]int)
 	canvas := image.Rect(0, 0, result.Width, result.Height)
@@ -90,7 +103,47 @@ func Place(source fs.FS, mapData *world.Map, palettePath string) (*TileSet, erro
 			Depth:   world.TileDepth(placement.Layer, placement.X, placement.Y),
 		})
 	}
+	result.buildBuckets()
 	return result, nil
+}
+
+func (set *TileSet) buildBuckets() {
+	if set == nil {
+		return
+	}
+	if set.BucketSize <= 0 {
+		set.BucketSize = DefaultTileBucketSize
+	}
+	set.buckets = make(map[[2]int][]int)
+	for index, draw := range set.Draws {
+		if draw.Bounds.Empty() {
+			continue
+		}
+		firstColumn, lastColumn := draw.Bounds.Min.X/set.BucketSize, (draw.Bounds.Max.X-1)/set.BucketSize
+		firstRow, lastRow := draw.Bounds.Min.Y/set.BucketSize, (draw.Bounds.Max.Y-1)/set.BucketSize
+		for row := firstRow; row <= lastRow; row++ {
+			for column := firstColumn; column <= lastColumn; column++ {
+				key := [2]int{column, row}
+				set.buckets[key] = append(set.buckets[key], index)
+			}
+		}
+	}
+	keys := make([][2]int, 0, len(set.buckets))
+	for key := range set.buckets {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i][1] != keys[j][1] {
+			return keys[i][1] < keys[j][1]
+		}
+		return keys[i][0] < keys[j][0]
+	})
+	set.Buckets = make([]TileBucket, 0, len(keys))
+	for _, key := range keys {
+		set.Buckets = append(set.Buckets, TileBucket{
+			Column: key[0], Row: key[1], Draws: append([]int(nil), set.buckets[key]...),
+		})
+	}
 }
 
 // MaterializeGraphic expands one unique DT1 picture at most once. It is safe
@@ -153,11 +206,25 @@ func (set *TileSet) Visible(view image.Rectangle, destination []int) []int {
 	if set == nil || view.Empty() {
 		return destination
 	}
-	for index, draw := range set.Draws {
-		if !draw.Bounds.Intersect(view).Empty() {
-			destination = append(destination, index)
+	if set.buckets == nil {
+		set.buildBuckets()
+	}
+	start := len(destination)
+	seen := make(map[int]struct{})
+	firstColumn, lastColumn := view.Min.X/set.BucketSize, (view.Max.X-1)/set.BucketSize
+	firstRow, lastRow := view.Min.Y/set.BucketSize, (view.Max.Y-1)/set.BucketSize
+	for row := firstRow; row <= lastRow; row++ {
+		for column := firstColumn; column <= lastColumn; column++ {
+			for _, index := range set.buckets[[2]int{column, row}] {
+				if _, duplicate := seen[index]; duplicate || set.Draws[index].Bounds.Intersect(view).Empty() {
+					continue
+				}
+				seen[index] = struct{}{}
+				destination = append(destination, index)
+			}
 		}
 	}
+	sort.Ints(destination[start:])
 	return destination
 }
 

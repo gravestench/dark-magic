@@ -82,13 +82,43 @@ local function finish_preload(state)
     state.set = result
 end
 
+-- Convert the unobscured screen rectangle back into map-canvas pixels, then
+-- inspect only the spatial buckets it crosses. A town may contain thousands of
+-- placements, while an 800x600 camera usually touches only a handful of 512px
+-- buckets. Draws spanning bucket edges are deduplicated here.
+local function nearby_entries(state, left, top, right, bottom)
+    if not state.set.draws or not state.set.buckets then return state.set.chunks end
+    local size = state.set.bucket_size
+    local map_left = left - state.margin - state.root_x + state.set.width / 2
+    local map_top = top - state.margin - state.root_y + state.set.height / 2
+    local map_right = right + state.margin - state.root_x + state.set.width / 2
+    local map_bottom = bottom + state.margin - state.root_y + state.set.height / 2
+    local first_column, last_column = math.floor(map_left / size), math.floor(map_right / size)
+    local first_row, last_row = math.floor(map_top / size), math.floor(map_bottom / size)
+    local result, seen = {}, {}
+    for row = first_row, last_row do
+        for column = first_column, last_column do
+            local indexes = state.set.buckets[string.format("%d:%d", column, row)]
+            if indexes then
+                for _, index in ipairs(indexes) do
+                    if not seen[index] then
+                        seen[index] = true
+                        result[#result + 1] = state.set.draws[index]
+                    end
+                end
+            end
+        end
+    end
+    return result
+end
+
 local function refresh_nodes(state, world_view)
     if not state.set or world_view == "none" then return end
     local left, top, right, bottom = viewport_for(
         world_view, state.viewport_width, state.viewport_height
     )
-    local admitted = 0
-    local entries = state.set.draws or state.set.chunks
+    local admitted, visible_keys = 0, {}
+    local entries = nearby_entries(state, left, top, right, bottom)
     for _, chunk in ipairs(entries) do
         -- Chunk coordinates begin at the map's top-left. Render children are
         -- centered around their parent, so translate once into centered space.
@@ -101,6 +131,7 @@ local function refresh_nodes(state, world_view)
             and screen_top + chunk.height >= top - state.margin
             and screen_top <= bottom + state.margin
         local key = chunk.index + 1
+        if visible then visible_keys[key] = true end
         if visible and not state.nodes[key] and state.pending[key] then
             local status = render.preload_status(state.pending[key])
             if status and status.done then
@@ -128,15 +159,23 @@ local function refresh_nodes(state, world_view)
                 admit_chunk(state, chunk, key)
             end
             admitted = admitted + 1
-        elseif not visible and state.pending[key] then
-            local status = render.preload_status(state.pending[key])
-            if status and status.done then
-                render.preload_release(state.pending[key])
-                state.pending[key] = nil
-            end
-        elseif not visible and state.nodes[key] then
+        end
+    end
+    -- Anything that was resident last frame but did not occur in a nearby
+    -- bucket this frame is outside the culling margin.
+    for key, node in pairs(state.nodes) do
+        if not visible_keys[key] then
             state.nodes[key]:destroy()
             state.nodes[key] = nil
+        end
+    end
+    for key, job in pairs(state.pending) do
+        if not visible_keys[key] then
+            local status = render.preload_status(job)
+            if status and status.done then
+                render.preload_release(job)
+                state.pending[key] = nil
+            end
         end
     end
 end

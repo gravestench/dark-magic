@@ -1027,6 +1027,7 @@ func pushTileSet(state *lua.LState, set *maprender.TileSet) {
 	result.RawSetString("width", lua.LNumber(set.Width))
 	result.RawSetString("height", lua.LNumber(set.Height))
 	result.RawSetString("graphic_count", lua.LNumber(len(set.Graphics)))
+	result.RawSetString("bucket_size", lua.LNumber(set.BucketSize))
 	entries := state.NewTable()
 	for index, draw := range set.Draws {
 		entry := state.NewTable()
@@ -1042,6 +1043,17 @@ func pushTileSet(state *lua.LState, set *maprender.TileSet) {
 		entries.RawSetInt(index+1, entry)
 	}
 	result.RawSetString("draws", entries)
+	buckets := state.NewTable()
+	for _, bucket := range set.Buckets {
+		indexes := state.NewTable()
+		for _, drawIndex := range bucket.Draws {
+			// Lua sequences are one-based; draw.index remains the zero-based API
+			// identity passed back into set_world_tile.
+			indexes.Append(lua.LNumber(drawIndex + 1))
+		}
+		buckets.RawSetString(fmt.Sprintf("%d:%d", bucket.Column, bucket.Row), indexes)
+	}
+	result.RawSetString("buckets", buckets)
 	state.Push(result)
 }
 

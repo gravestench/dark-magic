@@ -38,3 +38,36 @@ func TestTileSetVisibleKeepsSharedGraphicIdentity(t *testing.T) {
 		t.Fatalf("repeated placements lost shared graphic identity: %v", visible)
 	}
 }
+
+func TestTileSetVisibleDeduplicatesDrawSpanningBuckets(t *testing.T) {
+	set := &TileSet{BucketSize: 16, Draws: []TileDraw{
+		{Bounds: image.Rect(8, 8, 40, 40)}, // occupies nine spatial buckets
+		{Bounds: image.Rect(48, 48, 56, 56)},
+	}}
+	got := set.Visible(image.Rect(0, 0, 48, 48), nil)
+	if len(got) != 1 || got[0] != 0 {
+		t.Fatalf("visible indexes = %v, want [0] without bucket duplicates", got)
+	}
+	if len(set.Buckets) != 10 {
+		t.Fatalf("bucket count = %d, want 10", len(set.Buckets))
+	}
+}
+
+func BenchmarkTileSetVisibleSpatialIndex(b *testing.B) {
+	set := &TileSet{BucketSize: 512}
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 100; x++ {
+			left, top := x*160, y*80
+			set.Draws = append(set.Draws, TileDraw{Bounds: image.Rect(left, top, left+160, top+160)})
+		}
+	}
+	set.buildBuckets()
+	view := image.Rect(7000, 3500, 8000, 4300)
+	b.ReportAllocs()
+	for b.Loop() {
+		visible := set.Visible(view, nil)
+		if len(visible) == 0 {
+			b.Fatal("spatial query unexpectedly found no draws")
+		}
+	}
+}
