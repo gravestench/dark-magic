@@ -119,6 +119,10 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		harness.action(t, "down")    // Move dialog focus from the field to OK.
 		harness.action(t, "confirm") // Accept after the authored walk is complete.
 		assertStack(t, harness.navigator, "game_loading")
+		selected, ok := harness.saves.Selected()
+		if !ok || selected.Name != "Hero" || selected.Class != "Sorceress" {
+			t.Fatalf("created selection = %#v, selected=%v", selected, ok)
+		}
 	})
 
 	t.Run("character deletion is confirmed before leaving the list", func(t *testing.T) {
@@ -148,6 +152,7 @@ type startupHarness struct {
 	navigator *navigation.Manager
 	input     *inputstate.Store
 	backend   *startupVideoBackend
+	saves     *persistence.Store
 }
 
 func newStartupHarness(t *testing.T) *startupHarness {
@@ -177,6 +182,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	var mixer audio.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
 	loading := acceptanceLoadingCoordinator()
+	saves := persistence.New(entries...)
 	t.Cleanup(loading.Close)
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
@@ -191,7 +197,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 		modruntime.VideoModule(runtime, backend, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(persistence.New(entries...)),
+		modruntime.SaveModule(saves),
 		modruntime.SimulationModule(simulation),
 		modruntime.LoadingModule(loading),
 		scenes.Module(),
@@ -222,7 +228,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	if err := scenes.Flush(ctx); err != nil {
 		t.Fatal(err)
 	}
-	harness := &startupHarness{runtime: runtime, scenes: scenes, navigator: navigator, input: &input, backend: backend}
+	harness := &startupHarness{runtime: runtime, scenes: scenes, navigator: navigator, input: &input, backend: backend, saves: saves}
 	assertStack(t, navigator, "loading")
 	harness.assertPaths(t, blizzardMovie)
 	return harness

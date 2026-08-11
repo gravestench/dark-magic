@@ -961,8 +961,10 @@ complete until its actions are driven by authoritative game state and commands.
     of the selected town layout.
     The entry command now records the server-selected act and level in an
     authoritative `dm.world.location` component; creation and offline join use
-    the generated Act I town and campfire anchor. Explicit transitions and
-    remote join admission remain before this checkpoint is complete.
+    the generated Act I town and campfire anchor. The production-asset client
+    seam now proves a frontend-created/selected character is admitted by the
+    fixed-tick session at that exact anchor with Act 1 / level 1 authority.
+    Remote join admission remains before this checkpoint is complete.
   - [ ] M20.15d: Join the selected cardinal town edge to the first generated
     wilderness zone and validate bidirectional transition, collision, camera,
     depth, and pointer navigation across the seam.
