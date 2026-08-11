@@ -37,6 +37,7 @@ func loadTexture(img image.Image) rl.Texture2D {
 	if pixels, ok := contiguousRGBA(img); ok {
 		native := rl.NewImage(pixels, int32(bounds.Dx()), int32(bounds.Dy()), 1, rl.UncompressedR8g8b8a8)
 		texture := rl.LoadTextureFromImage(native)
+		configurePixelArtTexture(texture)
 		runtime.KeepAlive(pixels)
 		return texture
 	}
@@ -45,5 +46,21 @@ func loadTexture(img image.Image) rl.Texture2D {
 	// the former call site, release the temporary C image after GPU upload.
 	native := rl.NewImageFromImage(img)
 	defer rl.UnloadImage(native)
-	return rl.LoadTextureFromImage(native)
+	texture := rl.LoadTextureFromImage(native)
+	configurePixelArtTexture(texture)
+	return texture
+}
+
+// configurePixelArtTexture prevents sampling outside a decoded frame. DCC and
+// DC6 textures often have opaque pixels on their first row or column. With the
+// backend's repeat wrap those edge texels can reappear on the opposite edge as
+// a detached one-pixel run when DrawTexturePro scales the image. Diablo assets
+// are authored pixel art, so nearest sampling plus edge clamping is the stable
+// contract for every ordinary retained texture.
+func configurePixelArtTexture(texture rl.Texture2D) {
+	if !rl.IsTextureValid(texture) {
+		return
+	}
+	rl.SetTextureFilter(texture, rl.FilterPoint)
+	rl.SetTextureWrap(texture, rl.WrapClamp)
 }
