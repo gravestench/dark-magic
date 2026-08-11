@@ -1258,9 +1258,20 @@ data owners; they do not introduce parallel gameplay authorities.
   offline client authority and standalone session server install the consumer;
   cast validation, costs, timing, interruption, and behavior dispatch remain
   the M21.7 transaction.
-- [ ] **M21.7: Generic skill cast state.** Add target validation, resource cost,
+- [x] **M21.7: Generic skill cast state.** Add target validation, resource cost,
   action start/effect/complete ticks, interruption boundaries, and one basic
-  behavior family independent of renderer animation frames.
+  behavior family independent of renderer animation frames. A verified
+  normalized-definition registry now separates numeric skill identity from
+  behavior, point/unit target policy, whole mana cost, authoritative phase
+  delays, and interruption policy; raw `Skills.txt` rows cannot enter it until
+  their formulas/functions are deliberately translated. The pre-simulation
+  lifecycle consumes immutable cast requests, validates targets, commits mana
+  once, checkpoints start/effect/complete deadlines and phase, and emits stable
+  started, point-effect, completed, interrupted, or rejected events. The first
+  `basic.point_event` family is fully headless. Rejections consume bad requests
+  without crashing the session, and interruption never depends on renderer
+  frames. Retail behavior mappings, formula-derived costs/timing, cooldowns,
+  refunds, and concrete effects remain explicit later checkpoints/probes.
 - [ ] **M21.8: Timed state engine.** Add source-tagged instances, deterministic
   refresh/stack policy, scheduled expiration, semantic apply/remove events, and
   checkpoint/replay coverage; prove one simple refreshable control state first.
