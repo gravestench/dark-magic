@@ -44,8 +44,8 @@ func TestApplyCombinesSubtileFlags(t *testing.T) {
 	second := &dt1.Tile{}
 	second.SubTileFlags[0].BlockPlayerWalk = true
 
-	m.apply(1, 0, first)
-	m.apply(1, 0, second)
+	m.apply(1, 0, TileReference{SubTileFlags: first.SubTileFlags})
+	m.apply(1, 0, TileReference{SubTileFlags: second.SubTileFlags})
 
 	got, ok := m.FlagsAt(5, 0)
 	if !ok || !got.BlockLOS || !got.BlockPlayerWalk || !got.Blocked() {
@@ -81,25 +81,11 @@ func TestSubtilePixelProjectionMatchesRendererAndRoundTrips(t *testing.T) {
 	}
 }
 
-func TestChooseIsDeterministicAndHandlesZeroWeight(t *testing.T) {
-	first := &dt1.Tile{RarityFrameIndex: 0}
-	second := &dt1.Tile{RarityFrameIndex: 0}
-	if got := choose([]*dt1.Tile{first, second}, 7, 11); got != first {
-		t.Fatalf("zero-weight choose returned %p, want first tile %p", got, first)
-	}
-	first.RarityFrameIndex, second.RarityFrameIndex = 1, 10
-	want := choose([]*dt1.Tile{first, second}, 7, 11)
-	for range 10 {
-		if got := choose([]*dt1.Tile{first, second}, 7, 11); got != want {
-			t.Fatalf("choose was not deterministic: got %p, want %p", got, want)
-		}
-	}
-}
-
 func TestApplyIgnoresTileOutsideMap(t *testing.T) {
 	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
 	tile := &dt1.Tile{}
 	tile.SubTileFlags[0].BlockWalk = true
-	m.apply(-1, 0, tile)
-	m.apply(1, 0, tile)
+	reference := TileReference{SubTileFlags: tile.SubTileFlags}
+	m.apply(-1, 0, reference)
+	m.apply(1, 0, reference)
 }

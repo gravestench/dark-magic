@@ -844,6 +844,23 @@ complete until its actions are driven by authoritative game state and commands.
   missiles, overlays, selectable bounds, and automap discovery.
 - [ ] Stream and cull zones without changing deterministic simulation results.
 
+### M20 execution checkpoints
+
+- [x] M20.1: Extract one immutable DT1 catalog keyed by
+  orientation/main-index/sub-index; select rarity-weighted physical records
+  deterministically for each DS1 coordinate; and preserve source identity,
+  material, collision, roof, and presentation-pass metadata without decoding
+  graphics. World collision and future presentation adapters now consume the
+  same selected placements. Selection no longer collapses coordinates on the
+  zero axes or admits zero-rarity alternatives when positive weights exist.
+- [ ] M20.2: Replace runtime full-stamp rasterization with incrementally resident,
+  viewport-culled map chunks while retaining the full image composer for
+  diagnostic PNG export.
+- [ ] M20.3: Present floor, lower-wall, shadow, upper-wall, roof, corner-pair,
+  and object layers explicitly; add DS1 Lab inspection controls and fixtures.
+- [ ] M20.4: Migrate `game_world` to the shared chunked adapter and derive its
+  camera exclusively from authoritative player/world coordinates.
+
 ## M21: Diablo simulation
 
 M21 now starts with the playable-character vertical slice. Spatial NPC service
@@ -1401,7 +1418,10 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 
 - [x] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
 - [x] Avoid redundant pixel conversion and uploads when creating a texture.
-- [x] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
+- [ ] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
+  The previous checked state described an intended optimization, but the audited
+  runtime `set_ds1` path still rasterizes and uploads one complete RGBA surface.
+  M20.2 owns the actual replacement.
 - [x] Cache scene child ordering until topology or Z-index changes.
 - [x] Avoid unconditional per-frame callback and input-map allocations.
 - [x] Pre-index dynamic loot candidates by item type and level.
