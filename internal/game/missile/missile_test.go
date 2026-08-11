@@ -103,7 +103,7 @@ func testRegistries(t *testing.T) (gameskill.Registry, Registry) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	missiles, err := NewRegistry(Definition{SkillID: 42, SpeedPerTick: 1, MaxRange: 2, LifetimeTicks: 10, CollisionRadius: 0.1, PhysicalDamage: gamecombat.MustWhole(3), Presentation: Presentation{MissileID: "test", DCC: "data/global/missiles/test.dcc", Palette: "data/global/palette/units/pal.dat", TravelSound: "test_travel", HitSound: "test_hit", Directions: 8, FramesPerSecond: 25, Loop: true}})
+	missiles, err := NewRegistry(Definition{SkillID: 42, SpeedPerTick: 1, MaxRange: 2, LifetimeTicks: 10, CollisionRadius: 0.1, DamageChannel: gamecombat.Fire, MinimumDamage: gamecombat.MustWhole(3), MaximumDamage: gamecombat.MustWhole(3), Presentation: Presentation{MissileID: "test", DCC: "data/global/missiles/test.dcc", Palette: "data/global/palette/units/pal.dat", TravelSound: "test_travel", HitSound: "test_hit", Directions: 8, FramesPerSecond: 25, Loop: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +166,17 @@ func assertHitResult(t *testing.T, engine *gameecs.Engine, target akara.Entity) 
 	combatEvents := store(t, engine, gamecombat.CombatEvent)
 	if combatEvents.Len() != 2 {
 		t.Fatalf("combat events=%d", combatEvents.Len())
+	}
+	for _, entity := range combatEvents.Entities() {
+		event, _ := combatEvents.Get(entity)
+		kind, _ := event.Get("kind")
+		if kind == gamecombat.EventDamageApplied {
+			channel, _ := event.Get("damage_channel")
+			physical, _ := event.Get("physical")
+			if channel != "fire" || physical != int64(0) {
+				t.Fatalf("fire missile event channel=%v physical=%v", channel, physical)
+			}
+		}
 	}
 }
 func eventKinds(events *akara.DynamicStore) []string {
