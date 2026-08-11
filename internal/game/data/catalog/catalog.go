@@ -65,6 +65,7 @@ type Snapshot struct {
 	MonsterGraphics            []models.MonsterStats2
 	MonsterGfxByID             map[string]models.MonsterStats2
 	MonsterLevels              []models.MonsterLevelStats
+	MonsterLevelByLevel        map[int]models.MonsterLevelStats
 	MonsterProps               []models.MonsterProp
 	MonsterPropsByID           map[string]models.MonsterProp
 	MonsterSounds              []models.MonsterSounds
@@ -477,6 +478,11 @@ func (c *Catalog) load() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
 	}
+	monsterLevelByLevel, found, err := ObservedIndex(MonsterLevelsTable, monsterLevels, func(record models.MonsterLevelStats) int { return record.Level })
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("gamedata: index monster levels: %w", err)
+	}
+	issues = append(issues, found...)
 	monsterProps, err := Load[models.MonsterProp](c.store, MonsterPropsTable)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("gamedata: build catalog: %w", err)
@@ -904,7 +910,7 @@ func (c *Catalog) load() (Snapshot, error) {
 		LevelTypes: levelTypes, LevelPresets: levelPresets, LevelPresetByDef: levelPresetByDef,
 		LevelMazes: levelMazes, LevelMazeByLevel: levelMazeByLevel, LevelWarps: levelWarps, LevelSubs: levelSubs,
 		Monsters: monsters, MonstersByID: monstersByID, MonsterGraphics: monsterGraphics, MonsterGfxByID: monsterGfxByID,
-		MonsterLevels: monsterLevels, MonsterProps: monsterProps, MonsterPropsByID: monsterPropsByID,
+		MonsterLevels: monsterLevels, MonsterLevelByLevel: monsterLevelByLevel, MonsterProps: monsterProps, MonsterPropsByID: monsterPropsByID,
 		MonsterSounds: monsterSounds, MonsterSoundByID: monsterSoundByID, MonsterEquipment: monsterEquipment,
 		Missiles: missiles, MissilesByName: missilesByName, States: states, StatesByName: statesByName,
 		Overlays: overlays, OverlaysByName: overlaysByName, PetTypes: petTypes,
@@ -997,6 +1003,7 @@ func cloneSnapshot(source Snapshot) Snapshot {
 		MonsterGraphics:            append([]models.MonsterStats2(nil), source.MonsterGraphics...),
 		MonsterGfxByID:             make(map[string]models.MonsterStats2, len(source.MonsterGfxByID)),
 		MonsterLevels:              append([]models.MonsterLevelStats(nil), source.MonsterLevels...),
+		MonsterLevelByLevel:        make(map[int]models.MonsterLevelStats, len(source.MonsterLevelByLevel)),
 		MonsterProps:               append([]models.MonsterProp(nil), source.MonsterProps...),
 		MonsterPropsByID:           make(map[string]models.MonsterProp, len(source.MonsterPropsByID)),
 		MonsterSounds:              append([]models.MonsterSounds(nil), source.MonsterSounds...),
@@ -1148,6 +1155,9 @@ func cloneSnapshot(source Snapshot) Snapshot {
 	}
 	for key, value := range source.MonsterGfxByID {
 		result.MonsterGfxByID[key] = value
+	}
+	for key, value := range source.MonsterLevelByLevel {
+		result.MonsterLevelByLevel[key] = value
 	}
 	for key, value := range source.MonsterPropsByID {
 		result.MonsterPropsByID[key] = value

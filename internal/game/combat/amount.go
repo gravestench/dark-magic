@@ -99,6 +99,12 @@ func (amount Amount) Scale(numerator, denominator int64, rounding Rounding) (Amo
 	return Amount(result), nil
 }
 
+// MultiplyDivide applies the same checked, allocation-free ratio operation to
+// authoritative integer values which are not fixed-point amounts.
+func MultiplyDivide(left, right, denominator int64, rounding Rounding) (int64, error) {
+	return multiplyDivideRounded(left, right, denominator, rounding)
+}
+
 func divideRounded(numerator, denominator int64, rounding Rounding) (int64, error) {
 	return multiplyDivideRounded(numerator, 1, denominator, rounding)
 }
