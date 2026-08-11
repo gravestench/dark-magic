@@ -1,6 +1,10 @@
 package input
 
-import "testing"
+import (
+	"testing"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 func TestKeyStateReturnsOnlyRequestedKey(t *testing.T) {
 	service := &Service{keyStates: map[int32]InputState{
@@ -24,5 +28,18 @@ func TestRetainLogicalCursorOutsideViewport(t *testing.T) {
 	x, y = retainLogicalCursor(320, 240, 17, 29, true)
 	if x != 17 || y != 29 {
 		t.Fatalf("inside cursor = %d,%d, want 17,29", x, y)
+	}
+}
+
+func TestHeldKeyRepeatAppliesOnlyToNavigationAndEditing(t *testing.T) {
+	for _, key := range []int32{rl.KeyLeft, rl.KeyDown, rl.KeyPageUp, rl.KeyHome, rl.KeyBackspace, rl.KeyDelete} {
+		if !repeatsWhenHeld(key) {
+			t.Fatalf("key %d should repeat", key)
+		}
+	}
+	for _, key := range []int32{rl.KeyEnter, rl.KeyEscape, rl.KeySpace, rl.KeyF1} {
+		if repeatsWhenHeld(key) {
+			t.Fatalf("key %d should remain one-shot", key)
+		}
 	}
 }
