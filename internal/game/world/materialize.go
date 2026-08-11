@@ -101,7 +101,7 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	if decoded.WidthTiles > stamp.Width+1 || decoded.HeightTiles > stamp.Height+1 {
 		return fmt.Errorf("world: stamp %d decoded size %dx%d exceeds recipe %dx%d plus shared edge", stamp.ID, decoded.WidthTiles, decoded.HeightTiles, stamp.Width, stamp.Height)
 	}
-	if err := materializer.assembled.place(decoded, stamp.X, stamp.Y, stamp.Width, stamp.Height); err != nil {
+	if err := materializer.assembled.place(decoded, stamp.X, stamp.Y, stamp.Width, stamp.Height, stamp.Overlay); err != nil {
 		return fmt.Errorf("world: place stamp %d: %w", stamp.ID, err)
 	}
 	materializer.next++
@@ -136,18 +136,33 @@ func (materializer *Materializer) Result() (*Map, error) {
 	return materializer.assembled, nil
 }
 
-func (target *Map) place(source *Map, offsetX, offsetY, width, height int) error {
+func (target *Map) place(source *Map, offsetX, offsetY, width, height int, overlay bool) error {
 	if source == nil || offsetX < 0 || offsetY < 0 || width <= 0 || height <= 0 || width > source.WidthTiles || height > source.HeightTiles || offsetX+width > target.WidthTiles || offsetY+height > target.HeightTiles {
 		return errors.New("stamp lies outside zone bounds")
 	}
+	placements := make([]TilePlacement, 0, len(source.Tiles))
+	replaced := make(map[[3]int]struct{}, len(source.Tiles))
 	for _, tile := range source.Tiles {
 		if tile.X < 0 || tile.Y < 0 || tile.X >= width || tile.Y >= height {
 			continue
 		}
 		tile.X += offsetX
 		tile.Y += offsetY
-		target.Tiles = append(target.Tiles, tile)
+		if overlay {
+			replaced[[3]int{tile.X, tile.Y, int(tile.Layer)}] = struct{}{}
+		}
+		placements = append(placements, tile)
 	}
+	if overlay {
+		kept := target.Tiles[:0]
+		for _, tile := range target.Tiles {
+			if _, replace := replaced[[3]int{tile.X, tile.Y, int(tile.Layer)}]; !replace {
+				kept = append(kept, tile)
+			}
+		}
+		target.Tiles = kept
+	}
+	target.Tiles = append(target.Tiles, placements...)
 	// DS1 object coordinates use the same 5x5 subtile grid as gameplay facts.
 	objectOffsetX := int32(offsetX * SubtilesPerTile)
 	objectOffsetY := int32(offsetY * SubtilesPerTile)

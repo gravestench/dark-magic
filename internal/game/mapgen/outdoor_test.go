@@ -10,8 +10,16 @@ import (
 
 func outdoorFixture() gamedata.Snapshot {
 	presets := map[int]model.LevelPreset{}
-	for _, def := range []int{29, 30, 35} {
+	for _, def := range []int{26, 27, 28, 29, 30, 35} {
 		presets[def] = model.LevelPreset{Def: def, SizeX: 8, SizeY: 8, Files: 1, File1: fmt.Sprintf("Act1/Outdoors/fill%d.ds1", def), Dt1Mask: 1, Populate: 1}
+	}
+	for _, def := range []int{26, 27, 28} {
+		preset := presets[def]
+		preset.Files = 4
+		preset.File2 = fmt.Sprintf("Act1/Outdoors/structure%d-2.ds1", def)
+		preset.File3 = fmt.Sprintf("Act1/Outdoors/structure%d-3.ds1", def)
+		preset.File4 = fmt.Sprintf("Act1/Outdoors/structure%d-4.ds1", def)
+		presets[def] = preset
 	}
 	return gamedata.Snapshot{
 		LevelsByID:       map[int]model.LevelData{2: {Id: 2, Act: 0, DrlgType: 3, LevelType: 2, SizeX: 80, SizeY: 80}},
@@ -36,7 +44,7 @@ func TestBloodMoorBuildsDeterministicCoarseGridJoinedToTown(t *testing.T) {
 	if a != b {
 		t.Fatal("same Blood Moor request changed")
 	}
-	if len(left.Stamps()) != 100 || len(left.Rooms()) != 100 || len(left.Links()) != 180 {
+	if len(left.Stamps()) != 120 || len(left.Rooms()) != 100 || len(left.Links()) != 180 {
 		t.Fatalf("grid = %d stamps, %d rooms, %d links", len(left.Stamps()), len(left.Rooms()), len(left.Links()))
 	}
 	warp := left.Warps()[0]
@@ -136,8 +144,21 @@ func TestBloodMoorStructuresKeepRoutePassableAcrossEveryCardinalPair(t *testing.
 		for _, tile := range path {
 			pathSet[tile] = true
 		}
-		structures := outdoorStructures(42, 80, 80, entry.Direction, path)
+		generator := NewActOneOutdoorGenerator(outdoorFixture())
+		structures, stamps, path, err := generator.outdoorStructures(Request{Version: ContractVersion, Seed: 42, Act: 1, LevelID: 2}, outdoorFixture().LevelsByID[2], 10, 10, entry.Direction, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pathSet = make(map[PathTile]bool, len(path))
+		for _, tile := range path {
+			pathSet[tile] = true
+		}
+		if len(stamps) != 20 {
+			t.Fatalf("%s structure stamps = %d, want 20", direction, len(stamps))
+		}
 		bridges := 0
+		pathBridges := 0
+		passableBridges := 0
 		for _, tile := range structures {
 			onPath := pathSet[PathTile{X: tile.X, Y: tile.Y}]
 			if onPath && !tile.Passable {
@@ -145,13 +166,25 @@ func TestBloodMoorStructuresKeepRoutePassableAcrossEveryCardinalPair(t *testing.
 			}
 			if tile.Kind == "bridge" {
 				bridges++
-				if !onPath || !tile.Passable {
+				if tile.Passable {
+					passableBridges++
+				}
+				if onPath {
+					pathBridges++
+				}
+				if onPath && !tile.Passable {
 					t.Fatalf("%s bridge is not a passable route crossing: %#v", direction, tile)
 				}
 			}
 		}
-		if bridges != 1 {
-			t.Fatalf("%s bridges = %d, want 1", direction, bridges)
+		if bridges != 64 {
+			t.Fatalf("%s bridge footprint = %d tiles, want 64", direction, bridges)
+		}
+		if passableBridges != 48 {
+			t.Fatalf("%s passable bridge footprint = %d tiles, want 48", direction, passableBridges)
+		}
+		if (entry.Direction == "west" || entry.Direction == "east") && pathBridges == 0 {
+			t.Fatalf("%s route does not cross the bridge", direction)
 		}
 	}
 }
