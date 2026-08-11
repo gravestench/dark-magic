@@ -39,10 +39,22 @@ local function file_name(path)
     return tostring(path or ""):match("([^/]+)$") or tostring(path or "")
 end
 
+local function act_from_path(path)
+    return tonumber(tostring(path or ""):lower():match("/act([1-5])/"))
+end
+
+function lab:infer_palette()
+    local act = act_from_path(self.path)
+    if not act then return end
+    self.palette_index = act
+    self.palette = palettes[act]
+end
+
 function lab:random_asset()
     if #self.assets == 0 then return end
     self.random_state = (self.random_state * 48271) % 2147483647
     self.path = self.assets[(self.random_state % #self.assets) + 1]
+    self:infer_palette()
     local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
     self.tiles = vfs.list(directory, ".dt1") or {}
     self.width, self.height = nil, nil
@@ -62,6 +74,7 @@ function lab:create()
     self.palette = tostring(dev.option("ds1_palette") or "")
     self.palette_index = index_of(palettes, self.palette)
     self.palette = palettes[self.palette_index]
+    self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
     self.random_state = 1
     self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, true
