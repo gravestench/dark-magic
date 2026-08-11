@@ -24,11 +24,12 @@ const DefaultChunkSize = 512
 // Chunk is one sparse map-space texture. X/Y are top-left coordinates in the
 // same full-stamp pixel space returned by world.Map.SubtileToPixel.
 type Chunk struct {
-	Column, Row int
-	X, Y        int
-	Layer       world.TileLayer
-	Depth       int
-	Pixels      *image.RGBA
+	Column, Row   int
+	X, Y          int
+	Width, Height int
+	Layer         world.TileLayer
+	Depth         int
+	Pixels        *image.RGBA
 }
 
 // Set describes the complete logical canvas without allocating that canvas.
@@ -39,6 +40,13 @@ type Set struct {
 	// Objects stay semantic. Presentation may inspect them, but tile chunks do
 	// not bake entities into pixels and therefore never steal simulation's job.
 	Objects []world.Object
+
+	draws [][]chunkDraw
+}
+
+type chunkDraw struct {
+	tile        *dt1.Tile
+	destination image.Rectangle
 }
 
 type tileSourceKey struct {
@@ -54,6 +62,24 @@ type draftChunk struct {
 // Compose decodes only selected physical DT1 records and draws them into sparse
 // fixed-size chunks. The caller can upload/cull chunks independently.
 func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int) (*Set, error) {
+	set, err := Index(source, mapData, palettePath, chunkSize)
+	if err != nil {
+		return nil, err
+	}
+	for index := range set.Chunks {
+		chunk, materializeErr := set.Materialize(index)
+		if materializeErr != nil {
+			return nil, materializeErr
+		}
+		set.Chunks[index] = chunk
+	}
+	return set, nil
+}
+
+// Index prepares lightweight chunk geometry without rasterizing the complete
+// map. It is the world-runtime path: the camera can inspect these rectangles,
+// then call Materialize only for chunks entering its residency margin.
+func Index(source fs.FS, mapData *world.Map, palettePath string, chunkSize int) (*Set, error) {
 	if source == nil || mapData == nil {
 		return nil, fmt.Errorf("maprender: source and map are required")
 	}
@@ -74,9 +100,13 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 		ChunkSize: chunkSize,
 		Objects:   append([]world.Object(nil), mapData.Objects...),
 	}
-	chunksByLayer := make(map[world.TileLayer]map[int]map[[2]int]*draftChunk)
+	type indexedChunk struct {
+		bounds image.Rectangle
+		draws  []chunkDraw
+	}
+	chunksByLayer := make(map[world.TileLayer]map[int]map[[2]int]*indexedChunk)
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
-		depths := make(map[int]map[[2]int]*draftChunk)
+		depths := make(map[int]map[[2]int]*indexedChunk)
 		chunksByLayer[layer] = depths
 		for _, placement := range mapData.Tiles {
 			if placement.Layer != layer {
@@ -86,23 +116,43 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 			if tile == nil {
 				continue
 			}
-			pixels, imageErr := tile.ImageE()
-			if imageErr != nil {
-				return nil, fmt.Errorf("maprender: decode %q tile %d: %w", placement.Reference.Path, placement.Reference.Index, imageErr)
+			width, height := int(tile.Width), int(tile.Height)
+			if height < 0 {
+				height = -height
 			}
-			if pixels == nil {
+			if width <= 0 || height <= 0 {
 				continue
 			}
 			originX := mapData.HeightTiles*world.TilePixelWidth/2 + world.PreviewMargin + (placement.X-placement.Y)*world.TilePixelWidth/2
 			originY := world.PreviewMargin + (placement.X+placement.Y)*world.TilePixelHeight/2
-			destination := pixels.Bounds().Add(image.Pt(originX-world.TilePixelWidth/2, originY+tileYAdjust(tile, placement.Layer)))
+			destination := image.Rect(0, 0, width, height).Add(image.Pt(originX-world.TilePixelWidth/2, originY+tileYAdjust(tile, placement.Layer)))
+			clipped := destination.Intersect(image.Rect(0, 0, set.Width, set.Height))
+			if clipped.Empty() {
+				continue
+			}
 			depth := world.TileDepth(layer, placement.X, placement.Y)
 			chunks := depths[depth]
 			if chunks == nil {
-				chunks = make(map[[2]int]*draftChunk)
+				chunks = make(map[[2]int]*indexedChunk)
 				depths[depth] = chunks
 			}
-			drawIntoTightChunks(chunks, chunkSize, set.Width, set.Height, destination, pixels)
+			firstColumn, lastColumn := clipped.Min.X/chunkSize, (clipped.Max.X-1)/chunkSize
+			firstRow, lastRow := clipped.Min.Y/chunkSize, (clipped.Max.Y-1)/chunkSize
+			for row := firstRow; row <= lastRow; row++ {
+				for column := firstColumn; column <= lastColumn; column++ {
+					cell := image.Rect(column*chunkSize, row*chunkSize, min((column+1)*chunkSize, set.Width), min((row+1)*chunkSize, set.Height))
+					occupied := clipped.Intersect(cell)
+					key := [2]int{column, row}
+					indexed := chunks[key]
+					if indexed == nil {
+						indexed = &indexedChunk{bounds: occupied}
+						chunks[key] = indexed
+					} else {
+						indexed.bounds = indexed.bounds.Union(occupied)
+					}
+					indexed.draws = append(indexed.draws, chunkDraw{tile: tile, destination: destination})
+				}
+			}
 		}
 	}
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
@@ -124,16 +174,47 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 				return keys[i][0] < keys[j][0]
 			})
 			for _, key := range keys {
-				draft := chunks[key]
-				pixels, origin, ok := trimTransparentMargins(draft)
-				if !ok {
-					continue
-				}
-				set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: origin.X, Y: origin.Y, Layer: layer, Depth: depth, Pixels: pixels})
+				indexed := chunks[key]
+				set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: indexed.bounds.Min.X, Y: indexed.bounds.Min.Y, Width: indexed.bounds.Dx(), Height: indexed.bounds.Dy(), Layer: layer, Depth: depth})
+				set.draws = append(set.draws, indexed.draws)
 			}
 		}
 	}
 	return set, nil
+}
+
+// Materialize rasterizes one indexed depth chunk. Pixels are returned to the
+// caller rather than retained by Set; the presentation cache therefore owns
+// residency and can evict distant chunks independently.
+func (set *Set) Materialize(index int) (Chunk, error) {
+	if set == nil || index < 0 || index >= len(set.Chunks) || index >= len(set.draws) {
+		return Chunk{}, fmt.Errorf("maprender: chunk %d out of range", index)
+	}
+	metadata := set.Chunks[index]
+	key := [2]int{metadata.Column, metadata.Row}
+	drafts := make(map[[2]int]*draftChunk)
+	for _, operation := range set.draws[index] {
+		pixels, err := operation.tile.ImageE()
+		if err != nil {
+			return Chunk{}, fmt.Errorf("maprender: decode visible tile graphics: %w", err)
+		}
+		if pixels != nil {
+			drawIntoTightChunks(drafts, set.ChunkSize, set.Width, set.Height, operation.destination, pixels)
+		}
+	}
+	pixels, origin, ok := trimTransparentMargins(drafts[key])
+	if !ok {
+		// Metadata is conservative because indexing intentionally avoids pixel
+		// decoding. A DT1's rectangular bounds can overlap a cell while all of
+		// its opaque pixels live next door. Keep the stable index with a harmless
+		// transparent texel instead of turning camera admission into an error.
+		pixels = image.NewRGBA(image.Rect(0, 0, 1, 1))
+		origin = image.Pt(metadata.X, metadata.Y)
+	}
+	metadata.X, metadata.Y = origin.X, origin.Y
+	metadata.Width, metadata.Height = pixels.Bounds().Dx(), pixels.Bounds().Dy()
+	metadata.Pixels = pixels
+	return metadata, nil
 }
 
 // trimTransparentMargins removes the empty padding carried by DT1 sprites.

@@ -50,6 +50,7 @@ type renderAssetCache struct {
 	encoded     *cachepkg.Cache
 	decoded     *cachepkg.Cache
 	composed    *cachepkg.Cache
+	world       *cachepkg.Cache
 	inflight    map[string]*assetDecodeFlight
 	decodeCalls uint64
 	decodeTime  time.Duration
@@ -69,13 +70,15 @@ type assetDecodeFlight struct {
 // renderer state. Cache weight estimates retained decoded bytes, while retained
 // texture bytes estimates expanded RGBA residency.
 type RenderDiagnostics struct {
-	Decoded     cachepkg.Stats
-	Encoded     cachepkg.Stats
-	Composed    cachepkg.Stats
-	Retained    render.Diagnostics
-	DecodeCalls uint64
-	DecodeTime  time.Duration
-	Stages      map[string]DecodeStageDiagnostics
+	Decoded         cachepkg.Stats
+	Encoded         cachepkg.Stats
+	Composed        cachepkg.Stats
+	World           cachepkg.Stats
+	Retained        render.Diagnostics
+	DecodeCalls     uint64
+	DecodeTime      time.Duration
+	PreloadsPending int
+	Stages          map[string]DecodeStageDiagnostics
 }
 
 // DecodeStageDiagnostics separates file parsing, direction decoding, and
@@ -106,11 +109,13 @@ func NewRenderCapability(runtime *Runtime, composer *render.Composer, assets fs.
 		encodedAssetBudget  = 32 * 1024 * 1024
 		decodedAssetBudget  = 128 * 1024 * 1024
 		composedAssetBudget = 352 * 1024 * 1024
+		worldChunkBudget    = 96 * 1024 * 1024
 	)
 	cache := &renderAssetCache{
 		encoded:  cachepkg.New(encodedAssetBudget),
 		decoded:  cachepkg.New(decodedAssetBudget),
 		composed: cachepkg.New(composedAssetBudget),
+		world:    cachepkg.New(worldChunkBudget),
 		inflight: make(map[string]*assetDecodeFlight),
 		stages:   make(map[string]DecodeStageDiagnostics),
 	}
@@ -148,8 +153,8 @@ func (r *RenderCapability) Diagnostics() RenderDiagnostics {
 	for name, stage := range r.cache.stages {
 		stages[name] = stage
 	}
-	encoded, decoded, composed := r.cache.encoded.Diagnostics(), r.cache.decoded.Diagnostics(), r.cache.composed.Diagnostics()
-	return RenderDiagnostics{Decoded: combinedCacheStats(encoded, decoded, composed), Encoded: encoded, Composed: composed, Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime, Stages: stages}
+	encoded, decoded, composed, world := r.cache.encoded.Diagnostics(), r.cache.decoded.Diagnostics(), r.cache.composed.Diagnostics(), r.cache.world.Diagnostics()
+	return RenderDiagnostics{Decoded: combinedCacheStats(encoded, decoded, composed, world), Encoded: encoded, Composed: composed, World: world, Retained: r.composer.Diagnostics(), DecodeCalls: r.cache.decodeCalls, DecodeTime: r.cache.decodeTime, PreloadsPending: r.preloads.Pending(), Stages: stages}
 }
 
 func combinedCacheStats(stats ...cachepkg.Stats) cachepkg.Stats {
@@ -467,13 +472,16 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 	c.encoded.InvalidateNamespace("encoded", c.generation)
 	c.decoded.InvalidateNamespace("decoded", c.generation)
 	c.composed.InvalidateNamespace("composed", c.generation)
+	c.world.InvalidateNamespace("world", c.generation)
 }
 
 func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
 	switch {
+	case strings.HasPrefix(key, "world-chunk\x00"):
+		return c.world, "world"
 	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "dt1-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
 		return c.encoded, "encoded"
-	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"), strings.HasPrefix(key, "ds1\x00"), strings.HasPrefix(key, "ds1-chunks\x00"), strings.HasPrefix(key, "world-chunks\x00"):
+	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"), strings.HasPrefix(key, "ds1\x00"), strings.HasPrefix(key, "ds1-chunks\x00"):
 		return c.composed, "composed"
 	default:
 		return c.decoded, "decoded"
@@ -891,20 +899,38 @@ func (c *renderAssetCache) loadWorldChunks(assets fs.FS, world *gameworld.Map, p
 	}
 	key := fmt.Sprintf("world-chunks\x00%p\x00%s\x00%d", world, palette, chunkSize)
 	value, err := c.load(assets, key, func() (any, int, error) {
-		chunks, err := maprender.Compose(assets, world, palette, chunkSize)
+		chunks, err := maprender.Index(assets, world, palette, chunkSize)
 		if err != nil {
 			return nil, 0, err
 		}
-		weight := 0
-		for _, chunk := range chunks.Chunks {
-			weight += imageWeight(chunk.Pixels)
-		}
-		return chunks, max(weight, 1), nil
+		// The index retains placement recipes and decoded DT1 block metadata, not
+		// expanded RGBA. This estimate accounts for spatial/depth bookkeeping;
+		// each visible raster is weighed separately in the composed cache.
+		return chunks, max(len(chunks.Chunks)*256, 1), nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return value.(*maprender.Set), nil
+}
+
+func (c *renderAssetCache) loadWorldChunk(assets fs.FS, world *gameworld.Map, palette string, chunkSize, index int) (maprender.Chunk, error) {
+	set, err := c.loadWorldChunks(assets, world, palette, chunkSize)
+	if err != nil {
+		return maprender.Chunk{}, err
+	}
+	key := fmt.Sprintf("world-chunk\x00%p\x00%s\x00%d\x00%d", world, palette, chunkSize, index)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		chunk, materializeErr := set.Materialize(index)
+		if materializeErr != nil {
+			return nil, 0, materializeErr
+		}
+		return chunk, max(imageWeight(chunk.Pixels), 1), nil
+	})
+	if err != nil {
+		return maprender.Chunk{}, err
+	}
+	return value.(maprender.Chunk), nil
 }
 
 func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
@@ -918,8 +944,8 @@ func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
 		entry.RawSetString("index", lua.LNumber(index))
 		entry.RawSetString("x", lua.LNumber(chunk.X))
 		entry.RawSetString("y", lua.LNumber(chunk.Y))
-		entry.RawSetString("width", lua.LNumber(chunk.Pixels.Bounds().Dx()))
-		entry.RawSetString("height", lua.LNumber(chunk.Pixels.Bounds().Dy()))
+		entry.RawSetString("width", lua.LNumber(chunk.Width))
+		entry.RawSetString("height", lua.LNumber(chunk.Height))
 		entry.RawSetString("layer", lua.LNumber(chunk.Layer))
 		entry.RawSetString("layer_name", lua.LString(chunk.Layer.String()))
 		entry.RawSetString("depth", lua.LNumber(chunk.Depth))
@@ -947,7 +973,13 @@ func (c *renderAssetCache) loadDS1Collision(assets fs.FS, name string, tiles []s
 
 func (n *ownedRenderNode) release() error {
 	n.once.Do(func() {
-		n.err = n.composer.Destroy(n.id)
+		// Destroying a retained parent recursively invalidates every child node.
+		// Scopes still own those child wrappers and release them independently;
+		// an already-gone generation is successful cleanup, not a stale-handle
+		// failure. Child-owned resources remain explicitly released below.
+		if n.composer.Exists(n.id) {
+			n.err = n.composer.Destroy(n.id)
+		}
 		if n.resource != (render.ResourceID{}) {
 			n.err = errors.Join(n.err, n.composer.DestroyResource(n.resource))
 			n.resource = render.ResourceID{}
@@ -1420,6 +1452,7 @@ func (r *RenderCapability) Module() Module {
 		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
 		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
+		"preload_release":      commandHelp("dm.render.preload_release(job)", "Release bookkeeping for a completed preload job."),
 		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
 		"world_chunks":         commandHelp("dm.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
@@ -1562,12 +1595,17 @@ func (r *RenderCapability) Module() Module {
 				state.Push(result)
 				return 1
 			},
+			"preload_release": func(state *lua.LState) int {
+				state.Push(lua.LBool(preloads.Forget(uint64(state.CheckInt(1)))))
+				return 1
+			},
 			"diagnostics": func(state *lua.LState) int {
 				cache.mu.Lock()
 				encoded := cache.encoded.Diagnostics()
 				decodedTier := cache.decoded.Diagnostics()
 				composed := cache.composed.Diagnostics()
-				decoded := combinedCacheStats(encoded, decodedTier, composed)
+				worldTier := cache.world.Diagnostics()
+				decoded := combinedCacheStats(encoded, decodedTier, composed, worldTier)
 				decodeCalls, decodeTime := cache.decodeCalls, cache.decodeTime
 				stages := make(map[string]DecodeStageDiagnostics, len(cache.stages))
 				for name, stage := range cache.stages {
@@ -1585,9 +1623,12 @@ func (r *RenderCapability) Module() Module {
 				result.RawSetString("encoded_weight", lua.LNumber(encoded.Weight))
 				result.RawSetString("direction_weight", lua.LNumber(decodedTier.Weight))
 				result.RawSetString("composed_weight", lua.LNumber(composed.Weight))
+				result.RawSetString("world_chunk_weight", lua.LNumber(worldTier.Weight))
+				result.RawSetString("world_chunk_budget", lua.LNumber(worldTier.Budget))
 				result.RawSetString("encoded_evictions", lua.LNumber(encoded.Evictions))
 				result.RawSetString("direction_evictions", lua.LNumber(decodedTier.Evictions))
 				result.RawSetString("composed_evictions", lua.LNumber(composed.Evictions))
+				result.RawSetString("world_chunk_evictions", lua.LNumber(worldTier.Evictions))
 				result.RawSetString("active_nodes", lua.LNumber(retained.ActiveNodes))
 				result.RawSetString("active_resources", lua.LNumber(retained.ActiveResources))
 				result.RawSetString("pending_commands", lua.LNumber(retained.Pending))
@@ -1969,7 +2010,9 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			world := checkWorldMap(state, 2)
 			chunkIndex := state.CheckInt(4)
-			chunks, err := node.cache.loadWorldChunks(node.assets, world, state.CheckString(3), state.OptInt(5, maprender.DefaultChunkSize))
+			palette := state.CheckString(3)
+			chunkSize := state.OptInt(5, maprender.DefaultChunkSize)
+			chunks, err := node.cache.loadWorldChunks(node.assets, world, palette, chunkSize)
 			if err != nil {
 				state.RaiseError("rendering world chunks: %v", err)
 				return 0
@@ -1978,7 +2021,11 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("world chunk %d out of range [0,%d)", chunkIndex, len(chunks.Chunks))
 				return 0
 			}
-			chunk := chunks.Chunks[chunkIndex]
+			chunk, err := node.cache.loadWorldChunk(node.assets, world, palette, chunkSize, chunkIndex)
+			if err != nil {
+				state.RaiseError("rendering world chunk %d: %v", chunkIndex, err)
+				return 0
+			}
 			if err := node.setImage(chunk.Pixels); err != nil {
 				state.RaiseError("updating world chunk node: %v", err)
 				return 0

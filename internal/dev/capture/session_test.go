@@ -62,14 +62,14 @@ func TestSessionRetriesBlankFramebuffer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"loading"}, 1, false)
 	if len(session.results) != 0 {
 		t.Fatalf("blank frame was captured: %#v", session.results)
 	}
 	if session.Complete() {
 		t.Fatal("session completed after a rejected blank frame")
 	}
-	session.Observe([]string{"loading"}, 1)
+	session.Observe([]string{"loading"}, 1, false)
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestSessionCloseRejectsIncompleteCapture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"death"}, 1)
+	session.Observe([]string{"death"}, 1, false)
 	err = session.Close()
 	if err == nil || !strings.Contains(err.Error(), "missing scenes: title") {
 		t.Fatalf("Close error = %v, want missing title", err)
@@ -98,8 +98,8 @@ func TestObserveReportsRequestedSceneThatTransitionsBeforeCapture(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"}, 1)
-	session.Observe([]string{"title"}, 2)
+	session.Observe([]string{"loading"}, 1, false)
+	session.Observe([]string{"title"}, 2, false)
 	if session.err == nil || !strings.Contains(session.err.Error(), "transitioned before") {
 		t.Fatalf("expected transition error, got %v", session.err)
 	}
@@ -112,11 +112,11 @@ func TestSessionCapturesFirstStableRequestedScene(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"loading"}, 1)
-	session.Observe([]string{"loading"}, 1)
-	session.Observe([]string{"loading"}, 1)
-	session.Observe([]string{"title"}, 2)
-	session.Observe([]string{"title"}, 2)
+	session.Observe([]string{"loading"}, 1, false)
+	session.Observe([]string{"loading"}, 1, false)
+	session.Observe([]string{"loading"}, 1, false)
+	session.Observe([]string{"title"}, 2, false)
+	session.Observe([]string{"title"}, 2, false)
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -139,14 +139,33 @@ func TestSessionRestartsSettleWindowAfterStructuralChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	session.Observe([]string{"vendor"}, 10)
-	session.Observe([]string{"vendor"}, 11)
+	session.Observe([]string{"vendor"}, 10, false)
+	session.Observe([]string{"vendor"}, 11, false)
 	if capturer.calls != 0 {
 		t.Fatal("captured immediately after a late structural change")
 	}
-	session.Observe([]string{"vendor"}, 11)
+	session.Observe([]string{"vendor"}, 11, false)
 	if capturer.calls != 1 || !session.Complete() {
 		t.Fatalf("stable revised scene was not captured: calls=%d", capturer.calls)
+	}
+}
+
+func TestSessionWaitsForBackgroundSceneAssembly(t *testing.T) {
+	capturer := &fakeScreenshotter{}
+	session, err := New(t.TempDir(), "game_world", 2, capturer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 10 {
+		session.Observe([]string{"game_world"}, 10, true)
+	}
+	if capturer.calls != 0 {
+		t.Fatal("captured while world residency work was pending")
+	}
+	session.Observe([]string{"game_world"}, 10, false)
+	session.Observe([]string{"game_world"}, 10, false)
+	if capturer.calls != 1 || !session.Complete() {
+		t.Fatalf("settled world was not captured: calls=%d", capturer.calls)
 	}
 }
 

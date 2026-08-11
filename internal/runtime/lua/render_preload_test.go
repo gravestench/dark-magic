@@ -62,6 +62,30 @@ func TestLuaPreloadRequestsPreservesAuthoritativeWorld(t *testing.T) {
 	}
 }
 
+func TestLuaPreloadRequestsPreservesVisibleWorldChunk(t *testing.T) {
+	state := lua.NewState()
+	defer state.Close()
+	world := &gameworld.Map{WidthTiles: 80, HeightTiles: 80}
+	userData := state.NewUserData()
+	userData.Value = world
+	definition := state.NewTable()
+	definition.RawSetString("kind", lua.LString("world_chunk"))
+	definition.RawSetString("palette", lua.LString("act1.pl2"))
+	definition.RawSetString("world", userData)
+	definition.RawSetString("chunk_index", lua.LNumber(37))
+	definition.RawSetString("chunk_size", lua.LNumber(256))
+	table := state.NewTable()
+	table.Append(definition)
+	state.Push(table)
+	requests, err := luaPreloadRequests(state, state.GetTop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 1 || requests[0].World != world || requests[0].ChunkIndex != 37 || requests[0].ChunkSize != 256 {
+		t.Fatalf("visible world chunk request = %#v", requests)
+	}
+}
+
 func TestLuaPreloadRequestsPreservesChunkGeometry(t *testing.T) {
 	state := lua.NewState()
 	defer state.Close()
@@ -80,5 +104,22 @@ func TestLuaPreloadRequestsPreservesChunkGeometry(t *testing.T) {
 	request := requests[0]
 	if request.ChunkSize != 256 || len(request.Tiles) != 2 || request.Tiles[1] != "walls.dt1" {
 		t.Fatalf("chunk request = %#v", request)
+	}
+}
+
+func TestPreloaderForgetsOnlyCompletedJobs(t *testing.T) {
+	preloader := newAssetPreloader(nil, nil, nil)
+	preloader.mu.Lock()
+	preloader.jobs[7] = &assetPreloadJob{total: 2, completed: 1}
+	preloader.jobs[8] = &assetPreloadJob{total: 1, completed: 1}
+	preloader.mu.Unlock()
+	if preloader.Forget(7) {
+		t.Fatal("forgot an active preload job")
+	}
+	if !preloader.Forget(8) {
+		t.Fatal("did not forget completed preload job")
+	}
+	if _, ok := preloader.Status(8); ok {
+		t.Fatal("forgotten preload job still has status")
 	}
 }

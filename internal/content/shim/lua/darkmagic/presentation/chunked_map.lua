@@ -26,10 +26,43 @@ local function clear_nodes(state)
     end
 end
 
+local function queue_chunk(state, chunk)
+    local key = chunk.index + 1
+    state.pending[key] = render.preload({{
+        kind = "world_chunk",
+        world = state.recipe.world,
+        palette = state.recipe.palette,
+        chunk_index = chunk.index,
+        chunk_size = state.chunk_size,
+    }})
+end
+
+local function admit_chunk(state, chunk, key)
+    local node = render.create("world", state.root)
+    local x, y, width, height
+    if state.recipe.world then
+        x, y, width, height = node:set_world_chunk(
+            state.recipe.world, state.recipe.palette, chunk.index, state.chunk_size
+        )
+    else
+        x, y, width, height = node:set_ds1_chunk(
+            state.recipe.ds1, state.recipe.dt1, state.recipe.palette,
+            chunk.index, state.chunk_size
+        )
+    end
+    node:set_position(
+        x - state.set.width / 2 + width / 2,
+        y - state.set.height / 2 + height / 2
+    )
+    node:set_z(chunk.depth)
+    state.nodes[key] = node
+end
+
 local function finish_preload(state)
     if not state.job then return end
     local status = render.preload_status(state.job)
     if not status or not status.done then return end
+    render.preload_release(state.job)
     state.job = nil
     if status.failed > 0 then
         state.error = tostring(status.errors[1] or "DS1 chunk preload failed")
@@ -66,22 +99,31 @@ local function refresh_nodes(state, world_view)
             and screen_top + chunk.height >= top - state.margin
             and screen_top <= bottom + state.margin
         local key = chunk.index + 1
-        if visible and not state.nodes[key] and admitted < state.admit_per_frame then
-            local node = render.create("world", state.root)
-            if state.recipe.world then
-                node:set_world_chunk(state.recipe.world, state.recipe.palette, chunk.index, state.chunk_size)
-            else
-                node:set_ds1_chunk(
-                    state.recipe.ds1, state.recipe.dt1, state.recipe.palette,
-                    chunk.index, state.chunk_size
-                )
+        if visible and not state.nodes[key] and state.pending[key] then
+            local status = render.preload_status(state.pending[key])
+            if status and status.done then
+                if status.failed > 0 then
+                    render.preload_release(state.pending[key])
+                    state.pending[key] = nil
+                    state.failed[key] = true
+                    state.error = tostring(status.errors[1] or "world chunk preload failed")
+                elseif admitted < state.admit_per_frame then
+                    -- This is now a cache hit: raster work happened on a bounded
+                    -- preload worker, never inside the scene update deadline.
+                    render.preload_release(state.pending[key])
+                    state.pending[key] = nil
+                    admit_chunk(state, chunk, key)
+                    admitted = admitted + 1
+                end
             end
-            node:set_position(
-                local_left + chunk.width / 2,
-                local_top + chunk.height / 2
-            )
-            node:set_z(chunk.depth)
-            state.nodes[key] = node
+        elseif visible and not state.nodes[key] and not state.pending[key] and not state.failed[key]
+            and admitted < state.admit_per_frame then
+            if state.recipe.world then
+                queue_chunk(state, chunk)
+            else
+                -- DS1 lab recipes are already fully composed by their preload.
+                admit_chunk(state, chunk, key)
+            end
             admitted = admitted + 1
         elseif not visible and state.nodes[key] then
             state.nodes[key]:destroy()
@@ -98,6 +140,8 @@ function chunked_map.create(parent, recipe, options)
         recipe = assert(recipe, "chunked map recipe is required"),
         root = render.create("world", parent),
         nodes = {},
+        pending = {},
+        failed = {},
         chunk_size = options.chunk_size or 512,
         margin = options.margin or 96,
         admit_per_frame = options.admit_per_frame or 2,

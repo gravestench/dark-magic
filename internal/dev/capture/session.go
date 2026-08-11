@@ -85,7 +85,7 @@ func New(directory, scenes string, settleFrames int, capturer Screenshotter) (*S
 	return &Session{directory: directory, wanted: wanted, captured: make(map[string]bool), settle: settleFrames, capturer: capturer}, nil
 }
 
-func (s *Session) Observe(stack []string, structuralRevision uint64) {
+func (s *Session) Observe(stack []string, structuralRevision uint64, busy bool) {
 	if s.err != nil || len(stack) == 0 {
 		return
 	}
@@ -102,6 +102,13 @@ func (s *Session) Observe(stack []string, structuralRevision uint64) {
 		// scene first appears. Begin the stability window again instead of
 		// capturing a partial scene. Texture/text updates do not reset it.
 		s.revision, s.frames = structuralRevision, 0
+	}
+	if busy {
+		// Background CPU residency is part of scene assembly even though it does
+		// not mutate retained topology until completion. Never certify a partial
+		// frame merely because a worker took longer than the settle window.
+		s.frames = 0
+		return
 	}
 	s.frames++
 	if !s.wanted[scene] || s.captured[scene] || s.frames < s.settle {

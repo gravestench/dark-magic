@@ -28,6 +28,7 @@ type AssetPreloadRequest struct {
 	Components map[string]string
 	Direction  int
 	Frame      int
+	ChunkIndex int
 	ChunkSize  int
 	Anchor     string
 	World      *gameworld.Map
@@ -142,6 +143,27 @@ func (p *assetPreloader) Status(id uint64) (AssetPreloadStatus, bool) {
 	}, true
 }
 
+func (p *assetPreloader) Pending() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	pending := 0
+	for _, job := range p.jobs {
+		pending += job.total - job.completed
+	}
+	return pending
+}
+
+func (p *assetPreloader) Forget(id uint64) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	job, ok := p.jobs[id]
+	if !ok || job.completed != job.total {
+		return false
+	}
+	delete(p.jobs, id)
+	return true
+}
+
 func (p *assetPreloader) load(request AssetPreloadRequest) error {
 	switch request.Kind {
 	case "image":
@@ -234,6 +256,16 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		_, err := p.cache.loadWorldChunks(p.assets, request.World, request.Palette, chunkSize)
 		return err
+	case "world_chunk":
+		chunkSize := request.ChunkSize
+		if chunkSize <= 0 {
+			chunkSize = maprender.DefaultChunkSize
+		}
+		if request.World == nil {
+			return fmt.Errorf("world map is required")
+		}
+		_, err := p.cache.loadWorldChunk(p.assets, request.World, request.Palette, chunkSize, request.ChunkIndex)
+		return err
 	default:
 		return fmt.Errorf("unsupported asset kind %q", request.Kind)
 	}
@@ -274,6 +306,9 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 		if value, ok := definition.RawGetString("chunk_size").(lua.LNumber); ok {
 			request.ChunkSize = int(value)
 		}
+		if value, ok := definition.RawGetString("chunk_index").(lua.LNumber); ok {
+			request.ChunkIndex = int(value)
+		}
 		request.Anchor = stringField("anchor")
 		if request.Anchor == "" {
 			request.Anchor = "offsets"
@@ -302,7 +337,7 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 			if request.Table == "" || request.Sheet == "" {
 				return nil, fmt.Errorf("request %d font table and sheet are required", item)
 			}
-		} else if request.Kind == "world_chunks" {
+		} else if request.Kind == "world_chunks" || request.Kind == "world_chunk" {
 			if request.World == nil {
 				return nil, fmt.Errorf("request %d world is required", item)
 			}
