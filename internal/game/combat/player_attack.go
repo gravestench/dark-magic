@@ -21,7 +21,7 @@ type PathFinder interface {
 // RegisterPlayerBasicAttack converts the reviewed general Attack skill effect
 // into the same melee request consumed for monsters. It never applies damage;
 // the combat-phase transaction still revalidates target, range, hit, and life.
-func RegisterPlayerBasicAttack(engine *gameecs.Engine, skillID int64, paths PathFinder) error {
+func RegisterPlayerBasicAttack(engine *gameecs.Engine, skillID int64, paths PathFinder, timings AttackTimingResolver) error {
 	if engine == nil || skillID < 0 {
 		return fmt.Errorf("combat: player basic attack requires an engine and skill ID")
 	}
@@ -29,7 +29,7 @@ func RegisterPlayerBasicAttack(engine *gameecs.Engine, skillID int64, paths Path
 	if err != nil {
 		return err
 	}
-	casts, receipts, controls, approaches, velocities, colliders, animations, movementModes, err := registerPlayerAttackStores(engine)
+	casts, receipts, controls, approaches, attackAnimations, velocities, colliders, animations, movementModes, appearances, err := registerPlayerAttackStores(engine)
 	if err != nil {
 		return err
 	}
@@ -42,52 +42,63 @@ func RegisterPlayerBasicAttack(engine *gameecs.Engine, skillID int64, paths Path
 	}); err != nil {
 		return err
 	}
-	return engine.Register(gameecs.Definition{
+	if err := engine.Register(gameecs.Definition{
 		ID: "combat.player_attack_approach", Phase: gameecs.PhasePreSimulate, After: []string{"combat.player_basic_attack"},
 		All:   []akara.ComponentType{approaches, positions, locations, profiles, velocities},
-		Read:  []akara.ComponentType{approaches, positions, locations, profiles, selectables, colliders, movementModes},
-		Write: []akara.ComponentType{approaches, velocities, animations, requests},
+		Read:  []akara.ComponentType{approaches, positions, locations, profiles, selectables, colliders, movementModes, appearances},
+		Write: []akara.ComponentType{approaches, attackAnimations, velocities, animations},
 		Update: func(context gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer) error {
-			return updateAttackApproaches(context, entities, commands, paths, approaches, requests, selectables, positions, locations, profiles, velocities, colliders, animations, movementModes)
+			return updateAttackApproaches(context, entities, commands, paths, timings, approaches, attackAnimations, selectables, positions, locations, profiles, velocities, colliders, animations, movementModes, appearances)
 		},
-	})
+	}); err != nil {
+		return err
+	}
+	return registerAttackAnimationSystem(engine, requests, attackAnimations, animations)
 }
 
-func registerPlayerAttackStores(engine *gameecs.Engine) (casts, receipts, controls, approaches, velocities, colliders, animations, movementModes *akara.DynamicStore, err error) {
+func registerPlayerAttackStores(engine *gameecs.Engine) (casts, receipts, controls, approaches, attackAnimations, velocities, colliders, animations, movementModes, appearances *akara.DynamicStore, err error) {
 	casts, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: gameskill.CastEventComponent, Version: 1, Fields: []akara.Field{
 		{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "player", Kind: akara.FieldString},
 		{Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64}, {Name: "behavior", Kind: akara.FieldString},
 		{Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}, {Name: "reason", Kind: akara.FieldString},
 	}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	receipts, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: BasicAttackReceipt, Version: 1, Fields: []akara.Field{{Name: "processed", Kind: akara.FieldBool}}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	controls, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	approaches, err = akara.RegisterSchema(engine.World(), attackApproachSchema())
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	attackAnimations, err = akara.RegisterSchema(engine.World(), attackAnimationSchema())
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	velocities, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	colliders, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	animations, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	movementModes, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}})
-	return casts, receipts, controls, approaches, velocities, colliders, animations, movementModes, err
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	appearances, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}})
+	return casts, receipts, controls, approaches, attackAnimations, velocities, colliders, animations, movementModes, appearances, err
 }
 
 func translatePlayerAttacks(entities []akara.Entity, commands *akara.CommandBuffer, skillID int64, casts, receipts, controls, approaches *akara.DynamicStore) error {

@@ -26,7 +26,7 @@ func newAttackApproach(targetID string, tick int64) map[string]any {
 // updateAttackApproaches owns the pending click-to-attack action. The target is
 // resolved again every tick: disappearing, dying, or changing zone cancels the
 // action instead of letting stale presentation state cause damage.
-func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer, paths PathFinder, approaches, requests, selectables, positions, locations, profiles, velocities, colliders, animations, movementModes *akara.DynamicStore) error {
+func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer, paths PathFinder, timings AttackTimingResolver, approaches, attackAnimations, selectables, positions, locations, profiles, velocities, colliders, animations, movementModes, appearances *akara.DynamicStore) error {
 	for _, attacker := range entities {
 		approach, _ := approaches.Get(attacker)
 		targetID, _ := approach.Get("target_id")
@@ -47,7 +47,19 @@ func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, co
 			if err := stopAttackApproach(attacker, commands, approaches, velocities, animations); err != nil {
 				return err
 			}
-			commands.AddDynamic(requests, attacker, map[string]any{"target_id": target.id, "request_tick": int64(context.Tick)})
+			timing, err := resolveAttackTiming(attacker, timings, appearances)
+			if err != nil {
+				return err
+			}
+			commands.AddDynamic(attackAnimations, attacker, newAttackAnimation(target.id, context.Tick, timing))
+			if animation, present := animations.Get(attacker); present {
+				if err := animation.Set("mode", "A1"); err != nil {
+					return err
+				}
+				if err := animation.Set("direction", logicalDirection(target.x-ax.(float64), target.y-ay.(float64))); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		waypoint, ok, err := approachWaypoint(approach, ax.(float64), ay.(float64), target, attackRange, colliderRadius(colliders, attacker), paths)

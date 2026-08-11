@@ -7,9 +7,12 @@ package action
 
 import "github.com/gravestench/akara"
 
-const AttackApproachComponent = "dm.combat.attack_approach"
+const (
+	AttackApproachComponent  = "dm.combat.attack_approach"
+	AttackAnimationComponent = "dm.combat.attack_animation"
+)
 
-var exclusiveComponents = []string{AttackApproachComponent}
+var exclusiveComponents = []string{AttackApproachComponent, AttackAnimationComponent}
 
 // CancelExclusive removes pending actions which cannot coexist with a new
 // movement or interaction intent. The list intentionally lives in one place so
