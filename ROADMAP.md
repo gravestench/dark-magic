@@ -1420,10 +1420,11 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 - [x] Make MPQ archive and entry access positional and concurrency-safe, verify
   it under the race detector against an owned real archive, and adopt the new
   APIs at Dark Magic's content/decode boundary.
-- [ ] Retain lazy codec files in scene/world caches so only requested DC6 frames
-  and DT1 tiles become resident. DCC now retains encoded metadata separately and
-  decodes only the requested direction; finish the same adoption for DC6/DT1 and
-  measure each tier against the M25 cache and warmup diagnostics.
+- [x] Retain lazy codec files at scene/world boundaries so DC6 frame requests
+  decode one frame, DC6/DCC animations decode one requested direction, world
+  collision consumes metadata-only DT1 tiles, and DS1 previews decode block
+  pixels only for keys used by the stamp. Encoded, directional, and composed
+  residency is measured in separate M25 cache tiers.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.

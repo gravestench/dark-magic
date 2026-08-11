@@ -215,11 +215,18 @@ func FrameImage(asset *dc6.DC6, frame *dc6.Frame) (*image.RGBA, error) {
 		return nil, fmt.Errorf("dc6: frame index data has %d bytes, need %d", len(frame.IndexData), pixels)
 	}
 	palette := asset.Palette()
+	colors := make([]color.RGBA, len(palette))
+	for index, value := range palette {
+		colors[index] = color.RGBAModel.Convert(value).(color.RGBA)
+	}
 	result := image.NewRGBA(image.Rect(0, 0, int(frame.Width), int(frame.Height)))
-	for y := 0; y < int(frame.Height); y++ {
-		for x := 0; x < int(frame.Width); x++ {
-			result.Set(x, y, palette[frame.IndexData[y*int(frame.Width)+x]])
+	for pixelIndex, paletteIndex := range frame.IndexData[:pixels] {
+		if int(paletteIndex) >= len(colors) {
+			return nil, fmt.Errorf("dc6: palette index %d is outside %d colors", paletteIndex, len(colors))
 		}
+		converted := colors[paletteIndex]
+		offset := pixelIndex * 4
+		result.Pix[offset], result.Pix[offset+1], result.Pix[offset+2], result.Pix[offset+3] = converted.R, converted.G, converted.B, converted.A
 	}
 	return result, nil
 }

@@ -100,13 +100,15 @@ Magic's build contract.
   compatibility buffer fallback. COF, DS1, PL2, palette, and localization
   loaders consume streams directly.
 - The pass is published as `bitstream` v0.3.0 and v0.2.0 for COF, DC6, DCC,
-  DS1, DT1, GPL, MPQ, PL2, TBL, TSV, and WAV. Dark Magic depends on the stable
-  tags, not checkout paths or pseudo-versions.
+  DS1, GPL, MPQ, PL2, TBL, TSV, and WAV. DT1 v0.3.0 adds metadata-only tile
+  indexing. Dark Magic depends on stable tags, not checkout paths or
+  pseudo-versions.
 
-The next performance step is selective residency in the engine caches: retain
-lazy DC6/DCC/DT1 file handles long enough to decode only requested frames,
-directions, and tiles. The codec boundary no longer requires another redesign
-for that work.
+Dark Magic now performs selective residency at the engine boundary. DC6 frame
+requests decode one frame, DC6/DCC animations decode one requested direction,
+world collision reads DT1 metadata without block pixels, and DS1 previews decode
+only DT1 tile keys used by the stamp. Encoded metadata, directional payloads,
+and composed RGBA output have separate bounded cache tiers.
 
 ## Historical reverse-engineering research
 

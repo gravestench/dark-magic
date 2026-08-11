@@ -145,15 +145,6 @@ func TestAssetWeightReadsAssetContents(t *testing.T) {
 	}
 }
 
-func TestDC6DecodedWeightCountsRetainedFrameBuffers(t *testing.T) {
-	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
-		{FrameData: []byte{1, 2}, Terminator: []byte{3, 4, 5}, IndexData: []byte{6, 7, 8, 9}},
-	}}}}
-	if got := dc6DecodedWeight(asset); got != 9 {
-		t.Fatalf("decoded weight = %d, want 9", got)
-	}
-}
-
 func TestRenderNodesBelongToLuaComponentScope(t *testing.T) {
 	t.Parallel()
 
@@ -547,6 +538,43 @@ func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
 	stage := capability.Diagnostics().Stages["dc6-animation"]
 	if stage.Calls != 1 || stage.Time <= 0 {
 		t.Fatalf("dc6 animation stage diagnostics = %#v", stage)
+	}
+	diagnostics := capability.Diagnostics()
+	if got := diagnostics.Stages["dc6-file"].Calls; got != 1 {
+		t.Fatalf("lazy DC6 file opens = %d, want 1", got)
+	}
+	if got := diagnostics.Stages["dc6-direction"].Calls; got != 1 {
+		t.Fatalf("decoded DC6 directions = %d, want 1", got)
+	}
+	if got := diagnostics.Stages["dc6"].Calls; got != 0 {
+		t.Fatalf("full DC6 decodes = %d, want 0", got)
+	}
+	if diagnostics.Encoded.Weight == 0 {
+		t.Fatal("lazy DC6 file was not retained in the encoded cache tier")
+	}
+}
+
+func TestDC6DirectionLoadingDoesNotDecodeOtherDirections(t *testing.T) {
+	palette := make([]byte, 256*3)
+	data := make([]byte, 70+32)
+	put := func(offset int, value uint32) { binary.LittleEndian.PutUint32(data[offset:offset+4], value) }
+	put(0, 6)
+	put(16, 2)
+	put(20, 1)
+	put(24, 32)
+	put(28, 70)
+	put(36, 1)
+	put(40, 1)
+	put(60, 3)
+	data[64], data[65], data[66] = 1, 1, 0x80
+	assets := fstest.MapFS{"two.dc6": {Data: data}, "pal.dat": {Data: palette}}
+	capability := NewRenderCapability(New(), &render.Composer{}, assets)
+
+	if _, err := capability.cache.loadDC6Direction(assets, "two.dc6", "pal.dat", 0); err != nil {
+		t.Fatalf("valid requested direction failed: %v", err)
+	}
+	if _, err := capability.cache.loadDC6Direction(assets, "two.dc6", "pal.dat", 1); err == nil {
+		t.Fatal("malformed second direction unexpectedly decoded")
 	}
 }
 

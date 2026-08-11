@@ -87,36 +87,37 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 		if err != nil {
 			return nil, fmt.Errorf("world: open %q: %w", path, err)
 		}
-		var tiles *dt1.DT1
+		var opened *dt1.File
 		if reader, ok := file.(io.ReaderAt); ok {
 			info, statErr := file.Stat()
 			if statErr == nil {
-				opened, openErr := dt1.Open(reader, info.Size())
-				if openErr == nil {
-					tiles, err = opened.Decode()
-				} else {
-					err = openErr
-				}
+				opened, err = dt1.Open(reader, info.Size())
 			}
 		}
-		if tiles == nil && err == nil {
+		if opened == nil && err == nil {
 			data, readErr := io.ReadAll(file)
 			if readErr != nil {
 				err = readErr
 			} else {
-				tiles, err = dt1.FromBytes(data)
+				opened, err = dt1.OpenBytes(data)
 			}
 		}
-		closeErr := file.Close()
 		if err != nil {
+			_ = file.Close()
 			return nil, fmt.Errorf("world: decode DT1 %q: %w", path, err)
 		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("world: close DT1 %q: %w", path, closeErr)
-		}
-		for _, tile := range tiles.Tiles {
+		for index := 0; index < opened.NumTiles(); index++ {
+			tile, metadataErr := opened.TileMetadata(index)
+			if metadataErr != nil {
+				_ = file.Close()
+				return nil, fmt.Errorf("world: index DT1 %q tile %d: %w", path, index, metadataErr)
+			}
 			key := tileKey{kind: tile.Type, style: tile.Style, sequence: tile.Sequence}
 			lookup[key] = append(lookup[key], tile)
+		}
+		closeErr := file.Close()
+		if closeErr != nil {
+			return nil, fmt.Errorf("world: close DT1 %q: %w", path, closeErr)
 		}
 	}
 	result := &Map{

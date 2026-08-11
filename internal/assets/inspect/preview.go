@@ -107,27 +107,53 @@ func TexturedDS1Preview(source fs.FS, ds1Path string, dt1Paths []string, palette
 		palette = paletteData.BasePalette
 	}
 
+	needed := texturedDS1TileKeys(stamp)
 	lookup := make(map[tileKey][]*dt1.Tile)
 	for _, path := range dt1Paths {
 		file, err := source.Open(path)
 		if err != nil {
 			return nil, fmt.Errorf("opening DT1 asset %q: %w", path, err)
 		}
-		data, readErr := io.ReadAll(file)
-		file.Close()
-		if readErr != nil {
-			return nil, fmt.Errorf("reading DT1 asset %q: %w", path, readErr)
+		var tileset *dt1.File
+		if reader, ok := file.(io.ReaderAt); ok {
+			if info, statErr := file.Stat(); statErr == nil {
+				tileset, err = dt1.Open(reader, info.Size())
+			}
 		}
-		tileset, err := dt1.FromBytes(data)
+		if tileset == nil && err == nil {
+			data, readErr := io.ReadAll(file)
+			if readErr != nil {
+				err = readErr
+			} else {
+				tileset, err = dt1.OpenBytes(data)
+			}
+		}
 		if err != nil {
-			return nil, fmt.Errorf("decoding DT1 asset %q: %w", path, err)
+			_ = file.Close()
+			return nil, fmt.Errorf("opening DT1 index %q: %w", path, err)
 		}
 		if palette != nil {
 			tileset.SetPalette(palette)
 		}
-		for _, tile := range tileset.Tiles {
-			key := tileKey{tileType: tile.Type, style: tile.Style, sequence: tile.Sequence}
+		for index := 0; index < tileset.NumTiles(); index++ {
+			metadata, metadataErr := tileset.TileMetadata(index)
+			if metadataErr != nil {
+				_ = file.Close()
+				return nil, fmt.Errorf("indexing DT1 asset %q tile %d: %w", path, index, metadataErr)
+			}
+			key := tileKey{tileType: metadata.Type, style: metadata.Style, sequence: metadata.Sequence}
+			if _, used := needed[key]; !used {
+				continue
+			}
+			tile, decodeErr := tileset.DecodeTile(index)
+			if decodeErr != nil {
+				_ = file.Close()
+				return nil, fmt.Errorf("decoding DT1 asset %q tile %d: %w", path, index, decodeErr)
+			}
 			lookup[key] = append(lookup[key], tile)
+		}
+		if closeErr := file.Close(); closeErr != nil {
+			return nil, fmt.Errorf("closing DT1 asset %q: %w", path, closeErr)
 		}
 	}
 
@@ -189,6 +215,36 @@ func TexturedDS1Preview(source fs.FS, ds1Path string, dt1Paths []string, palette
 		return nil, fmt.Errorf("encoding textured DS1 preview: %w", err)
 	}
 	return output.Bytes(), nil
+}
+
+func texturedDS1TileKeys(stamp *ds1.DS1) map[tileKey]struct{} {
+	result := make(map[tileKey]struct{})
+	for _, row := range stamp.Tiles {
+		for _, record := range row {
+			for _, floor := range record.Floors {
+				if !floor.Hidden && floor.Prop1 != 0 {
+					result[tileKey{tileType: 0, style: int32(floor.Style), sequence: int32(floor.Sequence)}] = struct{}{}
+				}
+			}
+			for _, shadow := range record.Shadows {
+				if !shadow.Hidden && shadow.Prop1 != 0 {
+					result[tileKey{tileType: 13, style: int32(shadow.Style), sequence: int32(shadow.Sequence)}] = struct{}{}
+				}
+			}
+			for _, wall := range record.Walls {
+				if wall.Hidden || wall.Prop1 == 0 {
+					continue
+				}
+				key := tileKey{tileType: int32(wall.Type), style: int32(wall.Style), sequence: int32(wall.Sequence)}
+				result[key] = struct{}{}
+				if key.tileType == 3 {
+					key.tileType = 4
+					result[key] = struct{}{}
+				}
+			}
+		}
+	}
+	return result
 }
 
 func drawWall(canvas *image.RGBA, lookup map[tileKey][]*dt1.Tile, wall ds1.WallRecord, x, y int, origin image.Point) {

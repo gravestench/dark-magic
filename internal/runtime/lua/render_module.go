@@ -183,6 +183,15 @@ type preparedDC6Frame struct {
 	frame *dc6.Frame
 }
 
+type preparedDC6File struct {
+	file    *dc6.File
+	palette color.Palette
+}
+
+type preparedDC6Direction struct {
+	asset *dc6.DC6
+}
+
 type preparedDC6Animation struct {
 	frames []image.Image
 	bounds image.Rectangle
@@ -403,9 +412,9 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 
 func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
 	switch {
-	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
+	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
 		return c.encoded, "encoded"
-	case strings.HasPrefix(key, "cof-animation\x00"):
+	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"):
 		return c.composed, "composed"
 	default:
 		return c.decoded, "decoded"
@@ -429,16 +438,6 @@ func assetWeight(assets fs.FS, names ...string) int {
 		return 1
 	}
 	return weight
-}
-
-func dc6DecodedWeight(asset *dc6.DC6) int {
-	weight := 0
-	for _, direction := range asset.Directions {
-		for _, frame := range direction.Frames {
-			weight += len(frame.FrameData) + len(frame.Terminator) + len(frame.IndexData)
-		}
-	}
-	return max(weight, 1)
 }
 
 func dccDirectionWeight(direction *dcc.Direction) int {
@@ -588,36 +587,91 @@ func (c *renderAssetCache) loadDCCDirection(assets fs.FS, name, palette string, 
 	return value.(preparedDCCDirection), nil
 }
 
-func (c *renderAssetCache) loadDC6(assets fs.FS, name, palette string) (*dc6.DC6, error) {
+func (c *renderAssetCache) loadDC6File(assets fs.FS, name, palette string) (preparedDC6File, error) {
 	key := name + "\x00" + palette
-	value, err := c.load(assets, "dc6\x00"+key, func() (any, int, error) {
-		asset, err := assetdecode.DC6(assets, name, palette)
+	value, err := c.load(assets, "dc6-file\x00"+key, func() (any, int, error) {
+		asset, err := assets.Open(name)
 		if err != nil {
 			return nil, 0, err
 		}
-		return asset, dc6DecodedWeight(asset), nil
+		defer asset.Close()
+		encoded, err := io.ReadAll(asset)
+		if err != nil {
+			return nil, 0, err
+		}
+		opened, err := dc6.OpenBytes(encoded)
+		if err != nil {
+			return nil, 0, err
+		}
+		defaults := &dc6.DC6{}
+		defaults.SetPalette(nil)
+		colors := append(color.Palette(nil), defaults.Palette()...)
+		if palette != "" {
+			colors, err = assetdecode.Palette(assets, palette)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+		opened.SetPalette(colors)
+		return preparedDC6File{file: opened, palette: colors}, max(len(encoded)+len(colors)*4, 1), nil
 	})
 	if err != nil {
-		return nil, err
+		return preparedDC6File{}, err
 	}
-	return value.(*dc6.DC6), nil
+	return value.(preparedDC6File), nil
+}
+
+func (c *renderAssetCache) loadDC6Direction(assets fs.FS, name, palette string, direction int) (preparedDC6Direction, error) {
+	key := fmt.Sprintf("dc6-direction\x00%s\x00%s\x00%d", name, palette, direction)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		opened, err := c.loadDC6File(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		if direction < 0 || direction >= opened.file.Directions() {
+			return nil, 0, fmt.Errorf("dc6: direction %d out of range [0,%d)", direction, opened.file.Directions())
+		}
+		decoded := &dc6.DC6{Directions: []*dc6.Direction{{Frames: make([]*dc6.Frame, opened.file.FramesPerDirection())}}}
+		decoded.SetPalette(opened.palette)
+		weight := 1
+		for frameIndex := range decoded.Directions[0].Frames {
+			frame, err := opened.file.DecodeFrame(direction, frameIndex)
+			if err != nil {
+				return nil, 0, err
+			}
+			decoded.Directions[0].Frames[frameIndex] = frame
+			weight += len(frame.FrameData) + len(frame.IndexData)
+		}
+		return preparedDC6Direction{asset: decoded}, weight, nil
+	})
+	if err != nil {
+		return preparedDC6Direction{}, err
+	}
+	return value.(preparedDC6Direction), nil
 }
 
 func (c *renderAssetCache) loadDC6Frame(assets fs.FS, name, palette string, direction, frameIndex int) (preparedDC6Frame, error) {
 	key := fmt.Sprintf("dc6-frame\x00%s\x00%s\x00%d\x00%d", name, palette, direction, frameIndex)
 	value, err := c.load(assets, key, func() (any, int, error) {
-		asset, err := c.loadDC6(assets, name, palette)
+		opened, err := c.loadDC6File(assets, name, palette)
 		if err != nil {
 			return nil, 0, err
 		}
-		frame, err := assetdecode.Frame(asset, direction, frameIndex)
+		frame, err := opened.file.DecodeFrame(direction, frameIndex)
 		if err != nil {
 			return nil, 0, err
 		}
+		asset := &dc6.DC6{}
+		asset.SetPalette(opened.palette)
 		decoded, err := assetdecode.FrameImage(asset, frame)
 		if err != nil {
 			return nil, 0, err
 		}
+		// The prepared image owns the pixels now. Keep only placement metadata on
+		// the frame rather than retaining a second indexed/encoded copy.
+		frame.FrameData = nil
+		frame.IndexData = nil
+		frame.Terminator = nil
 		return preparedDC6Frame{image: decoded, frame: frame}, imageWeight(decoded), nil
 	})
 	if err != nil {
@@ -629,11 +683,11 @@ func (c *renderAssetCache) loadDC6Frame(assets fs.FS, name, palette string, dire
 func (c *renderAssetCache) loadDC6Combined(assets fs.FS, name, palette string, direction int) ([]image.Image, error) {
 	key := fmt.Sprintf("dc6-combined\x00%s\x00%s\x00%d", name, palette, direction)
 	value, err := c.load(assets, key, func() (any, int, error) {
-		asset, err := c.loadDC6(assets, name, palette)
+		prepared, err := c.loadDC6Direction(assets, name, palette, direction)
 		if err != nil {
 			return nil, 0, err
 		}
-		pages, err := combinedDC6Pages(asset, direction)
+		pages, err := combinedDC6Pages(prepared.asset, 0)
 		return pages, imagesWeight(pages), err
 	})
 	if err != nil {
@@ -649,11 +703,11 @@ func (c *renderAssetCache) loadDC6Animation(assets fs.FS, name, palette string, 
 	}
 	key := fmt.Sprintf("dc6-animation\x00%s\x00%s\x00%d\x00%s\x00%s", name, palette, direction, anchorMode, boundsKey)
 	value, err := c.load(assets, key, func() (any, int, error) {
-		asset, err := c.loadDC6(assets, name, palette)
+		prepared, err := c.loadDC6Direction(assets, name, palette, direction)
 		if err != nil {
 			return nil, 0, err
 		}
-		frames, bounds, err := normalizedDC6Frames(asset, direction, anchorMode, sharedBounds...)
+		frames, bounds, err := normalizedDC6Frames(prepared.asset, 0, anchorMode, sharedBounds...)
 		return preparedDC6Animation{frames: frames, bounds: bounds}, imagesWeight(frames), err
 	})
 	if err != nil {
@@ -1286,21 +1340,17 @@ func (r *RenderCapability) Module() Module {
 					state.RaiseError("render asset filesystem is unavailable")
 					return 0
 				}
-				asset, err := cache.loadDC6(assets, state.CheckString(1), state.OptString(2, ""))
+				direction := state.OptInt(3, 0)
+				prepared, err := cache.loadDC6Direction(assets, state.CheckString(1), state.OptString(2, ""), direction)
 				if err != nil {
 					state.RaiseError("%v", err)
 					return 0
 				}
-				direction := state.OptInt(3, 0)
-				if direction < 0 || direction >= len(asset.Directions) {
-					state.ArgError(3, "direction is out of range")
-					return 0
-				}
 				var bounds image.Rectangle
 				if state.OptString(4, "offsets") == "first-frame" {
-					bounds = dc6FixedAnimationBounds(asset, direction)
+					bounds = dc6FixedAnimationBounds(prepared.asset, 0)
 				} else {
-					bounds = dc6AnimationBounds(asset, direction)
+					bounds = dc6AnimationBounds(prepared.asset, 0)
 				}
 				state.Push(lua.LNumber(bounds.Min.X))
 				state.Push(lua.LNumber(bounds.Min.Y))
@@ -1643,12 +1693,12 @@ func registerRenderNodeType(state *lua.LState) {
 			fileName := state.CheckString(2)
 			paletteName := state.OptString(3, "")
 			direction := state.OptInt(4, 0)
-			asset, err := node.cache.loadDC6(node.assets, fileName, paletteName)
+			prepared, err := node.cache.loadDC6Direction(node.assets, fileName, paletteName, direction)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
 			}
-			decoded, err := horizontalDC6Strip(asset, direction)
+			decoded, err := horizontalDC6Strip(prepared.asset, 0)
 			if err != nil {
 				state.RaiseError("%v", err)
 				return 0
