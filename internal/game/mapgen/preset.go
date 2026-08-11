@@ -57,6 +57,9 @@ func (generator *PresetGenerator) Generate(request Request) (*Zone, error) {
 		DS1Path: assetPath(variants[variant]), TilePaths: tiles, Variant: variant,
 		Populate: preset.Populate != 0, LogicalWalls: preset.Logicals != 0,
 	}
+	if request.Act == 1 && request.LevelID == 1 {
+		stamp.Role = actOneTownRole(stamp.DS1Path)
+	}
 	return NewZone(Definition{
 		Request: request, Kind: Preset, Bounds: Bounds{Width: width, Height: height},
 		Stamps: []Stamp{stamp}, Rooms: []Room{{ID: 1, Width: width, Height: height, StampID: 1}},
@@ -79,9 +82,13 @@ func presetForLevel(records []model.LevelPreset, levelID int) (model.LevelPreset
 
 func presetFiles(record model.LevelPreset) []string {
 	files := []string{record.File1, record.File2, record.File3, record.File4, record.File5, record.File6}
-	// Static whole-level presets use Files=0 while still naming File1. Positive
-	// Files is the variant count used by generated preset pieces.
-	limit := min(max(record.Files, 1), len(files))
+	// Files=0 does not mean File1-only. Static whole-level presets can still
+	// author several alternatives; Rogue Encampment is the important example.
+	// In that form every non-zero File field is an eligible variant.
+	limit := len(files)
+	if record.Files > 0 {
+		limit = min(record.Files, len(files))
+	}
 	result := make([]string, 0, limit)
 	for _, value := range files[:limit] {
 		value = strings.TrimSpace(value)
@@ -90,6 +97,18 @@ func presetFiles(record model.LevelPreset) []string {
 		}
 	}
 	return result
+}
+
+func actOneTownRole(ds1Path string) string {
+	name := strings.ToLower(path.Base(ds1Path))
+	for marker, direction := range map[string]string{
+		"townn": "north", "towne": "east", "towns": "south", "townw": "west",
+	} {
+		if strings.HasPrefix(name, marker) {
+			return "act1-town:exit-" + direction
+		}
+	}
+	return "act1-town"
 }
 
 func levelSize(level model.LevelData, difficulty Difficulty) (int, int) {

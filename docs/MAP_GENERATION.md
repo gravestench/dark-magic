@@ -169,6 +169,14 @@ Dark Magic should preserve this conceptual split rather than building a single g
 
 A preset level selects a `LvlPrest` record and one of its DS1 files. A preset can be built as a single room or subdivided into 8x8-tile rooms.
 
+`Files=0` is not a universal File1-only rule. Rogue Encampment is a static
+whole-level preset with four populated file fields: `TownN1`, `TownE1`,
+`TownS1`, and `TownW1`. Their cardinal letter records the sole wilderness exit.
+Dark Magic admits every populated field as a deterministic alternative and
+retains that exit direction as stamp role data. Each layout authors act-local
+static object 2 (`RogueBonfire`); session entry searches collision near that
+landmark rather than spawning at an arbitrary map center.
+
 Room creation preserves the preset's DT1 mask and generated grid flags. Once a room is activated/constructed:
 
 1. the DS1 is loaded if not already cached;

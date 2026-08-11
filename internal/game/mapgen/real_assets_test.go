@@ -43,6 +43,25 @@ func TestActOnePresetRecipeAgainstOwnedAssets(t *testing.T) {
 		}
 		_ = file.Close()
 	}
+	townRoles := map[string]bool{}
+	for seed := uint64(0); seed < 128 && len(townRoles) < 4; seed++ {
+		town, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{
+			Version: mapgen.ContractVersion, Seed: seed, Act: 1, LevelID: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		townStamp := town.Stamps()[0]
+		townRoles[townStamp.Role] = true
+		file, err := source.Open(townStamp.DS1Path)
+		if err != nil {
+			t.Fatalf("generated town DS1 %q is unavailable: %v", townStamp.DS1Path, err)
+		}
+		_ = file.Close()
+	}
+	if len(townRoles) != 4 {
+		t.Fatalf("production town selected %d cardinal roles: %#v", len(townRoles), townRoles)
+	}
 	maze, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{
 		Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9,
 	})

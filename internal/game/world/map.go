@@ -239,9 +239,25 @@ func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 // entry. The expanding square search prevents an authored wall at the exact
 // center from trapping a newly admitted player.
 func (m *Map) OpenPointNearCenter() (float64, float64, bool) {
-	centerX, centerY := m.WidthSubtiles/2, m.HeightSubtiles/2
+	return m.openPointNear(m.WidthSubtiles/2, m.HeightSubtiles/2, 0)
+}
+
+// ActOneTownEntry returns a deterministic open point near the authored Rogue
+// Encampment bonfire. The bonfire is the stable town landmark shared by all
+// four cardinal layouts; using it avoids tying session entry to screen pixels
+// or to whichever shape happens to surround the map's numeric center.
+func (m *Map) ActOneTownEntry() (float64, float64, bool) {
+	for _, object := range m.Objects {
+		if object.Type == ObjectTypeStatic && object.ID == 2 { // act-local RogueBonfire
+			return m.openPointNear(int(object.X), int(object.Y), 4)
+		}
+	}
+	return 0, 0, false
+}
+
+func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64, bool) {
 	limit := max(m.WidthSubtiles, m.HeightSubtiles)
-	for radius := 0; radius <= limit; radius++ {
+	for radius := firstRadius; radius <= limit; radius++ {
 		for y := centerY - radius; y <= centerY+radius; y++ {
 			for x := centerX - radius; x <= centerX+radius; x++ {
 				if radius > 0 && x != centerX-radius && x != centerX+radius && y != centerY-radius && y != centerY+radius {
