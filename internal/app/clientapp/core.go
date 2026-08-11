@@ -24,6 +24,7 @@ import (
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
+	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -152,6 +153,9 @@ func (app *application) buildOfflineSession() error {
 }
 
 func (app *application) registerOfflineCommands() error {
+	if err := gamestate.Register(app.entitySimulation); err != nil {
+		return wrap("register timed state engine", err)
+	}
 	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
 		return wrap("register skill intent consumer", err)
 	}
