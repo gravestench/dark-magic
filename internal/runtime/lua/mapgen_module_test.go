@@ -32,3 +32,33 @@ func TestMapgenModuleExposesPresetValueSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMapgenModuleExposesMazeTopology(t *testing.T) {
+	runtime := New()
+	fixture := mapgenCatalogStub{snapshot: mazeModuleFixture()}
+	if err := runtime.RegisterModule(MapgenModule(fixture)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("dm.mapgen/v1").maze(9,42); assert(z.kind=="maze" and #z.rooms==4 and #z.links>=3 and #z.stamps==4)`)}}
+	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func mazeModuleFixture() gamedata.Snapshot {
+	result := gamedata.Snapshot{
+		LevelsByID:       map[int]model.LevelData{9: {Id: 9, DrlgType: 1, LevelType: 3}},
+		LevelMazeByLevel: map[int]model.LevelMazeData{9: {Level: 9, Rooms: 4, RoomsN: 4, RoomsH: 4, SizeX: 24, SizeY: 24}},
+		LevelPresetByDef: map[int]model.LevelPreset{},
+		LevelTypes:       []model.LevelType{{}, {}, {}, {File1: "Act1/Caves/floor.dt1"}},
+	}
+	for mask := 1; mask <= 15; mask++ {
+		record := model.LevelPreset{Def: 52 + mask, SizeX: 24, SizeY: 24, Files: 1, File1: "Act1/Caves/room.ds1", Dt1Mask: 1}
+		result.LevelPresetByDef[record.Def] = record
+	}
+	return result
+}

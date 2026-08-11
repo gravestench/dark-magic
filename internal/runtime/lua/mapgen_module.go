@@ -13,6 +13,7 @@ import (
 func MapgenModule(catalog gameDataSnapshotter) Module {
 	return Module{Name: "dm.mapgen/v1", Help: documentedModule("Generate deterministic renderer-independent zone recipes.", map[string]CommandHelp{
 		"preset": commandHelp("dm.mapgen.preset(level_id, seed [, difficulty])", "Generate a typed preset zone and return its canonical value snapshot."),
+		"maze":   commandHelp("dm.mapgen.maze(level_id, seed [, difficulty])", "Generate a typed maze zone and return rooms, links, recipes, and trace."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"preset": func(state *lua.LState) int {
@@ -28,6 +29,26 @@ func MapgenModule(catalog gameDataSnapshotter) Module {
 				zone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{
 					Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)),
 					Act: uint8(level.Act + 1), LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(3, 0)),
+				})
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				state.Push(zoneToLua(state, zone))
+				return 1
+			},
+			"maze": func(state *lua.LState) int {
+				snapshot, err := catalog.Snapshot()
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				levelID := state.CheckInt(1)
+				level, found := snapshot.LevelsByID[levelID]
+				if !found {
+					return pushLuaError(state, fmt.Errorf("mapgen: level %d is absent from Levels", levelID))
+				}
+				zone, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{
+					Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)), Act: uint8(level.Act + 1),
+					LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(3, 0)),
 				})
 				if err != nil {
 					return pushLuaError(state, err)
@@ -69,6 +90,26 @@ func zoneToLua(state *lua.LState, zone *mapgen.Zone) *lua.LTable {
 		stamps.Append(item)
 	}
 	result.RawSetString("stamps", stamps)
+	rooms := state.NewTable()
+	for _, room := range zone.Rooms() {
+		item := state.NewTable()
+		setLuaInteger(item, "id", int(room.ID))
+		setLuaInteger(item, "x", room.X)
+		setLuaInteger(item, "y", room.Y)
+		setLuaInteger(item, "width", room.Width)
+		setLuaInteger(item, "height", room.Height)
+		setLuaInteger(item, "stamp_id", int(room.StampID))
+		rooms.Append(item)
+	}
+	result.RawSetString("rooms", rooms)
+	links := state.NewTable()
+	for _, link := range zone.Links() {
+		item := state.NewTable()
+		setLuaInteger(item, "from", int(link.From))
+		setLuaInteger(item, "to", int(link.To))
+		links.Append(item)
+	}
+	result.RawSetString("links", links)
 	trace := state.NewTable()
 	for _, line := range zone.Trace() {
 		trace.Append(lua.LString(line))

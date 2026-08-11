@@ -391,11 +391,12 @@ DT1 files from its directory. Equivalent
 captures. The scenes can be captured as `dt1_lab` and `ds1_lab` through the
 ordinary capture flags.
 
-`--start-scene=mapgen_lab` opens the pointer-driven generation proof. It starts
-with the typed Act I Tristram preset and shows the selected DS1/DT1 recipe,
-checksum, and decision trace without materializing renderer assets. Click its
-seed controls to produce another deterministic zone recipe; DS1 Lab remains the
-separate, lazy materialization tool.
+`--start-scene=mapgen_lab` opens the pointer-driven generation proof. It shows
+the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and
+decision trace without materializing renderer assets. Click its seed controls
+to produce another deterministic zone; DS1 Lab remains the separate, lazy
+materialization tool. The `dm.mapgen/v1` capability also retains the earlier
+typed Act I Tristram preset proof.
 
 DS1 Lab composes sparse 512x512 CPU chunks split into floor, lower-wall,
 shadow, upper-wall, and roof passes. Tab isolates those passes, including the
