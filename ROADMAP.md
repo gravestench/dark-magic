@@ -987,6 +987,9 @@ complete until its actions are driven by authoritative game state and commands.
     The outdoor recipe also reserves a deterministic contiguous coarse-cell
     route between explicit town-entry and next-level edge anchors. Authored
     path/bridge/cliff selection must now realize that semantic route visually.
+    The route is now rasterized into validated tile-resolution `PathTile` facts
+    in the immutable zone checksum. D2MOO confirms the visual dirt path is a
+    later 3x3-neighbor floor-identity pass, not a sequence of DS1 stamps.
 
 ## M21: Diablo simulation
 

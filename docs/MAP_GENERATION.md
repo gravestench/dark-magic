@@ -271,6 +271,14 @@ navigation data. Route cells still use ordinary fill DS1s today; later path,
 river/bridge, and cliff selectors consume the semantic corridor instead of
 trying to rediscover it from the rendered map.
 
+That coarse route is also rasterized into an immutable, canonically ordered
+tile-resolution path. D2MOO's `DRLG_OUTDOORS_GenerateDirtPath` confirms why this
+is a separate contract: it examines each path tile's 3x3 neighborhood and
+replaces the floor identity with an Act I dirt-path sequence. It does not place
+a chain of DS1 files. The materializer's next outdoor pass must therefore map
+these semantic tiles to DT1 `(main-index, sub-index)` identities, then rebuild
+collision from the chosen metadata before publishing the world.
+
 ## Preset variant selection
 
 `LvlPrest` can name multiple DS1 files. D2MOO uses deterministic level RNG to select file variants. In some outdoor paths it keeps per-preset build state and cycles the selected file after a seeded starting point, reducing immediate repetition.

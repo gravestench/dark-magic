@@ -56,6 +56,35 @@ func TestBloodMoorBuildsDeterministicCoarseGridJoinedToTown(t *testing.T) {
 	if routeCells != 10 {
 		t.Fatalf("route cells = %d, want 10", routeCells)
 	}
+	paths := left.Paths()
+	pathSet := make(map[PathTile]bool, len(paths))
+	for _, tile := range paths {
+		pathSet[tile] = true
+	}
+	if !pathSet[PathTile{X: warp.X, Y: warp.Y}] || !pathSet[PathTile{X: next.X, Y: next.Y}] {
+		t.Fatal("tile path does not join both authored edge anchors")
+	}
+	visited := map[PathTile]bool{}
+	queue := []PathTile{{X: warp.X, Y: warp.Y}}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				nextTile := PathTile{X: current.X + dx, Y: current.Y + dy}
+				if pathSet[nextTile] && !visited[nextTile] {
+					queue = append(queue, nextTile)
+				}
+			}
+		}
+	}
+	if len(visited) != len(paths) {
+		t.Fatalf("connected path = %d/%d tiles", len(visited), len(paths))
+	}
 }
 
 func TestBloodMoorRejectsTownWithoutCardinalExit(t *testing.T) {
