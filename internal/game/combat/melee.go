@@ -36,10 +36,11 @@ func (policy BasicMeleePolicy) validate() error {
 }
 
 func eventSchema() akara.Schema {
-	return akara.Schema{Name: CombatEvent, Version: 1, Fields: []akara.Field{
+	return akara.Schema{Name: CombatEvent, Version: 2, Fields: []akara.Field{
 		{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64},
 		{Name: "attacker_id", Kind: akara.FieldString}, {Name: "target_id", Kind: akara.FieldString},
 		{Name: "hit", Kind: akara.FieldBool}, {Name: "physical", Kind: akara.FieldInt64},
+		{Name: "damage_channel", Kind: akara.FieldString}, {Name: "damage", Kind: akara.FieldInt64},
 		{Name: "remaining_health", Kind: akara.FieldInt64},
 	}}
 }
@@ -227,8 +228,18 @@ func ApplyPhysical(engine *gameecs.Engine, entity akara.Entity, damage Amount) (
 // ApplyConfirmedPhysical records contact resolved by an authoritative caller,
 // then applies damage through combat's health owner and emits standard events.
 func ApplyConfirmedPhysical(engine *gameecs.Engine, commands *akara.CommandBuffer, tick uint64, attackerID, targetID string, target akara.Entity, damage Amount) (Amount, bool, error) {
+	return ApplyConfirmedDamage(engine, commands, tick, attackerID, targetID, target, Physical, damage)
+}
+
+// ApplyConfirmedDamage preserves the semantic damage channel while applying
+// the already-resolved amount to the target's shared life authority. Resistance
+// and absorb belong before this boundary once their stat-source pipeline lands.
+func ApplyConfirmedDamage(engine *gameecs.Engine, commands *akara.CommandBuffer, tick uint64, attackerID, targetID string, target akara.Entity, channel Channel, damage Amount) (Amount, bool, error) {
 	if commands == nil || attackerID == "" || targetID == "" {
 		return 0, false, fmt.Errorf("combat: confirmed impact requires commands and identities")
+	}
+	if !channel.valid() || damage < 0 {
+		return 0, false, fmt.Errorf("combat: confirmed impact requires a valid channel and non-negative damage")
 	}
 	_, events, _, _, _, _, _, err := registerMeleeStores(engine)
 	if err != nil {
@@ -238,10 +249,10 @@ func ApplyConfirmedPhysical(engine *gameecs.Engine, commands *akara.CommandBuffe
 	if err != nil {
 		return 0, false, err
 	}
-	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, tick, attackerID, targetID, true, 0, 0)})
-	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventDamageApplied, tick, attackerID, targetID, true, damage.Raw(), remaining.Raw())})
+	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: channelEventValues(EventHitResolved, tick, attackerID, targetID, true, channel, 0, remaining.Raw())})
+	commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: channelEventValues(EventDamageApplied, tick, attackerID, targetID, true, channel, damage.Raw(), remaining.Raw())})
 	if died {
-		commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: eventValues(EventUnitDied, tick, attackerID, targetID, true, damage.Raw(), 0)})
+		commands.CreateDynamic(engine.World(), map[*akara.DynamicStore]map[string]any{events: channelEventValues(EventUnitDied, tick, attackerID, targetID, true, channel, damage.Raw(), 0)})
 	}
 	return remaining, died, nil
 }
@@ -258,5 +269,13 @@ func stableRoll(domain string, tick uint64, attacker, target string) uint64 {
 }
 
 func eventValues(kind string, tick uint64, attacker, target string, hit bool, physical, remaining int64) map[string]any {
-	return map[string]any{"kind": kind, "tick": int64(tick), "attacker_id": attacker, "target_id": target, "hit": hit, "physical": physical, "remaining_health": remaining}
+	return channelEventValues(kind, tick, attacker, target, hit, Physical, physical, remaining)
+}
+
+func channelEventValues(kind string, tick uint64, attacker, target string, hit bool, channel Channel, damage, remaining int64) map[string]any {
+	physical := int64(0)
+	if channel == Physical {
+		physical = damage
+	}
+	return map[string]any{"kind": kind, "tick": int64(tick), "attacker_id": attacker, "target_id": target, "hit": hit, "physical": physical, "damage_channel": channel.String(), "damage": damage, "remaining_health": remaining}
 }
