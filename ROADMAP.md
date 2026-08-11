@@ -1354,8 +1354,8 @@ data owners; they do not introduce parallel gameplay authorities.
   than pathfinding every tick, follows a moving same-zone target, and cancels
   cleanly when that target disappears or becomes unreachable. Complete this
   checkpoint by deriving the active player profile from authoritative
-  equipment/stat sources, defining explicit player-input cancellation, driving
-  the correct attack animation/event boundary, and adding an asset-backed
+  equipment/stat sources, driving the correct attack animation/event boundary,
+  and adding an asset-backed
   pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.

@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gravestench/akara"
+	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -155,6 +156,12 @@ func RegisterMovement(session *Session) error {
 				}
 				if player != command.Player {
 					continue
+				}
+				// Idle snapshots keep the current action alive. Only a real
+				// directional input or a newly clicked ground target says the
+				// player intends to stop approaching an attack target.
+				if payload.Target != nil || payload.X != 0 || payload.Y != 0 {
+					gameaction.CancelExclusive(engine.World(), entity)
 				}
 				velocity, found := velocities.Get(entity)
 				if !found {

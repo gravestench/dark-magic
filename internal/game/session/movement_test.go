@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gravestench/akara"
+	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -52,6 +53,13 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	if _, err := positions.Set(entity, map[string]any{"x": 10.0, "y": 20.0}); err != nil {
 		t.Fatal(err)
 	}
+	pendingActions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: gameaction.AttackApproachComponent, Fields: []akara.Field{{Name: "target_id", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pendingActions.Set(entity, map[string]any{"target_id": "monster:fallen"}); err != nil {
+		t.Fatal(err)
+	}
 	session, err := New(engine, Config{})
 	if err != nil {
 		t.Fatal(err)
@@ -88,6 +96,9 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	if direction, _ := animationState.Get("direction"); direction != int64(3) {
 		t.Fatalf("animation direction = %v, want east/3", direction)
 	}
+	if pendingActions.Has(entity) {
+		t.Fatal("explicit movement did not cancel pending attack approach")
+	}
 	payload, _ = json.Marshal(MovePayload{X: 1, Y: 1})
 	if err := session.Submit(simulation.Command{Tick: 3, Player: "alpha", Sequence: 2, Kind: MoveCommand, Payload: payload}); err != nil {
 		t.Fatal(err)
@@ -111,6 +122,19 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	y, _ = velocity.Get("y")
 	if x != float64(10) || y != float64(0) {
 		t.Fatalf("target velocity = %v,%v", x, y)
+	}
+	if _, err := pendingActions.Set(entity, map[string]any{"target_id": "monster:new-target"}); err != nil {
+		t.Fatal(err)
+	}
+	idlePayload, _ := json.Marshal(MovePayload{})
+	if err := session.Submit(simulation.Command{Tick: 5, Player: "alpha", Sequence: 4, Kind: MoveCommand, Payload: idlePayload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if !pendingActions.Has(entity) {
+		t.Fatal("idle movement snapshot canceled pending attack approach")
 	}
 }
 
