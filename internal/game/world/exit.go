@@ -17,11 +17,11 @@ func (m *Map) AuthoredExitAnchors() []ExitAnchor {
 		return nil
 	}
 	result := make([]ExitAnchor, 0)
-	for _, tile := range m.Tiles {
-		if tile.Identity.Orientation != 10 && tile.Identity.Orientation != 11 {
+	for _, tile := range m.SpecialTiles {
+		if tile.Orientation != 10 && tile.Orientation != 11 {
 			continue
 		}
-		result = append(result, ExitAnchor{X: float64(tile.X*SubtilesPerTile) + 2.5, Y: float64(tile.Y*SubtilesPerTile) + 2.5, Orientation: tile.Identity.Orientation})
+		result = append(result, ExitAnchor{X: float64(tile.X*SubtilesPerTile) + 2.5, Y: float64(tile.Y*SubtilesPerTile) + 2.5, Orientation: tile.Orientation})
 	}
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Y == result[j].Y {

@@ -238,6 +238,23 @@ shared edge—including tiles, objects, and collision—before joining adjacent
 rooms, rather than allowing neighboring stamps to overlap or compensating later
 in rendering and movement code.
 
+### Authored special tiles
+
+DS1 wall orientations 10 and 11 are special semantic cells, not merely unusual
+wall graphics. World decoding promotes every such cell into a renderer-neutral
+fact containing tile coordinates, orientation, main index, sub-index, and the
+authored hidden flag. Materialization offsets and clips those facts with the
+same room footprint used for ordinary tile placements. This means an invisible
+transition marker survives even when there is no DT1 graphic to select, while a
+visible special cell may still have a separate presentation placement.
+
+The three identity fields must remain intact. Recovered legacy definitions use
+their combinations for distinct meanings including map entry, town entry,
+corpse location, and town-portal location. The decoder therefore does not call
+every orientation-10/11 record a resolved warp. Destination, selection bounds,
+arrival offset, and direction are later joins against level and typed `LvlWarp`
+data. Presentation must not infer those facts from pixels or filenames.
+
 ## Outdoor levels
 
 Outdoor generation is not one simple noise/grid algorithm. D2MOO shows a shared outdoor grid plus many Act/level-specific generators and hard-coded required placements.

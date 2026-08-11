@@ -29,6 +29,7 @@ func materializerFixture(t *testing.T) *Materializer {
 	materializer.load = func(_ fs.FS, name string, _ []string, _ ...ObjectResolver) (*Map, error) {
 		result := &Map{WidthTiles: 2, HeightTiles: 2, WidthSubtiles: 10, HeightSubtiles: 10, Act: 1, flags: make([]Flags, 100)}
 		result.Tiles = []TilePlacement{{X: 0, Y: 1}}
+		result.SpecialTiles = []SpecialTile{{X: 1, Y: 0, Orientation: 10, MainIndex: 30, Hidden: true}}
 		result.Objects = []Object{{X: 2, Y: 3}}
 		if name == "two.ds1" {
 			result.flags[3*10+4].BlockWalk = true
@@ -43,6 +44,7 @@ func TestMaterializerClipsDS1SharedTerminalEdge(t *testing.T) {
 	materializer.load = func(_ fs.FS, _ string, _ []string, _ ...ObjectResolver) (*Map, error) {
 		result := &Map{WidthTiles: 3, HeightTiles: 3, WidthSubtiles: 15, HeightSubtiles: 15, flags: make([]Flags, 225)}
 		result.Tiles = []TilePlacement{{X: 1, Y: 1}, {X: 2, Y: 1}, {X: 1, Y: 2}}
+		result.SpecialTiles = []SpecialTile{{X: 1, Y: 1, Orientation: 10}, {X: 2, Y: 1, Orientation: 11}}
 		result.flags[14*15+14].BlockWalk = true
 		return result, nil
 	}
@@ -51,6 +53,9 @@ func TestMaterializerClipsDS1SharedTerminalEdge(t *testing.T) {
 	}
 	if len(materializer.assembled.Tiles) != 1 {
 		t.Fatalf("terminal tiles were retained: %#v", materializer.assembled.Tiles)
+	}
+	if len(materializer.assembled.SpecialTiles) != 1 || materializer.assembled.SpecialTiles[0].X != 1 {
+		t.Fatalf("terminal special tiles were retained: %#v", materializer.assembled.SpecialTiles)
 	}
 	if flags, _ := materializer.assembled.FlagsAt(9, 9); flags.BlockWalk {
 		t.Fatal("terminal collision leaked into room footprint")
@@ -80,6 +85,9 @@ func TestMaterializerPublishesOnlyCompleteShiftedMap(t *testing.T) {
 	}
 	if result.WidthTiles != 4 || len(result.Tiles) != 2 || result.Tiles[1].X != 2 || result.Objects[1].X != 12 {
 		t.Fatalf("materialized map = %#v", result)
+	}
+	if len(result.SpecialTiles) != 2 || result.SpecialTiles[1].X != 3 || result.SpecialTiles[1].Y != 0 || !result.SpecialTiles[1].Hidden {
+		t.Fatalf("shifted special tiles = %#v", result.SpecialTiles)
 	}
 	flags, ok := result.FlagsAt(14, 3)
 	if !ok || !flags.BlockWalk {
@@ -118,11 +126,13 @@ func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
 	}
 	materializer.load = func(_ fs.FS, name string, _ []string, _ ...ObjectResolver) (*Map, error) {
 		identity := TileIdentity{MainIndex: 1}
+		special := SpecialTile{Orientation: 10, MainIndex: 30}
 		if name == "river.ds1" {
 			identity.MainIndex = 2
+			special.MainIndex = 31
 		}
 		return &Map{WidthTiles: 1, HeightTiles: 1, WidthSubtiles: 5, HeightSubtiles: 5,
-			flags: make([]Flags, 25), Tiles: []TilePlacement{{Layer: LayerFloor, Identity: identity}}}, nil
+			flags: make([]Flags, 25), Tiles: []TilePlacement{{Layer: LayerFloor, Identity: identity}}, SpecialTiles: []SpecialTile{special}}, nil
 	}
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
@@ -136,5 +146,8 @@ func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
 	}
 	if len(result.Tiles) != 1 || result.Tiles[0].Identity.MainIndex != 2 {
 		t.Fatalf("overlay tiles = %#v", result.Tiles)
+	}
+	if len(result.SpecialTiles) != 1 || result.SpecialTiles[0].MainIndex != 31 {
+		t.Fatalf("overlay special tiles = %#v", result.SpecialTiles)
 	}
 }
