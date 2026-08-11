@@ -211,8 +211,9 @@ func (app *application) registerOfflineCommands() error {
 	if !found {
 		return errors.New("create offline player entry source: map has no open spawn subtile")
 	}
-	entry, err := gameplayer.NewEntrySourceAt(app.entitySimulation, app.saves, "local-player",
-		spawnX, spawnY, float64(worldMap.WidthSubtiles), float64(worldMap.HeightSubtiles), skillProvider)
+	request := app.gameWorldZone.Request()
+	entry, err := gameplayer.NewEntrySourceAtLocation(app.entitySimulation, app.saves, "local-player",
+		spawnX, spawnY, float64(worldMap.WidthSubtiles), float64(worldMap.HeightSubtiles), int64(request.Act), int64(request.LevelID), skillProvider)
 	if err != nil {
 		return wrap("create offline player entry source", err)
 	}
