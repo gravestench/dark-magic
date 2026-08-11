@@ -30,11 +30,12 @@ type MoveTarget struct{ X, Y float64 }
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
 type MovementController struct {
-	running  atomic.Bool
-	sequence atomic.Uint64
-	mu       sync.Mutex
-	skills   map[string]int64
-	target   *MoveTarget
+	running   atomic.Bool
+	sequence  atomic.Uint64
+	mu        sync.Mutex
+	skills    map[string]int64
+	skillUses []UseSkillPayload
+	target    *MoveTarget
 }
 
 func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
@@ -52,6 +53,25 @@ func (controller *MovementController) AssignSkill(slot string, skillID int64) er
 	}
 	controller.skills[slot] = skillID
 	return nil
+}
+
+func (controller *MovementController) UseSkill(side string, x, y float64, targetID string) error {
+	side = strings.ToLower(strings.TrimSpace(side))
+	if side != "left" && side != "right" || math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
+		return fmt.Errorf("game session: skill use requires left/right side and finite target")
+	}
+	controller.mu.Lock()
+	controller.skillUses = append(controller.skillUses, UseSkillPayload{Side: side, TargetX: x, TargetY: y, TargetID: strings.TrimSpace(targetID)})
+	controller.mu.Unlock()
+	return nil
+}
+
+func (controller *MovementController) drainSkillUses() []UseSkillPayload {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	result := controller.skillUses
+	controller.skillUses = nil
+	return result
 }
 
 func (controller *MovementController) SetMoveTarget(x, y float64) error {

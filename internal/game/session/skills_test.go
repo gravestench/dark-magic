@@ -17,11 +17,19 @@ func TestSkillSourceAppliesAuthoritativeAssignments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	intents, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.skill_intent", Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	entity := engine.World().MustCreateEntity()
 	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
 		t.Fatal(err)
 	}
 	assignment, err := assignments.Set(entity, map[string]any{"left": int64(0), "right": int64(0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intent, err := intents.Set(entity, map[string]any{"side": "", "skill_id": int64(0), "target_x": 0.0, "target_y": 0.0, "target_id": ""})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,6 +77,28 @@ func TestSkillSourceAppliesAuthoritativeAssignments(t *testing.T) {
 	}
 	if commands := source.Commands(2); commands != nil {
 		t.Fatalf("drained request emitted again: %#v", commands)
+	}
+	if err := controller.UseSkill("left", 12.5, 9.25, "fallen:7"); err != nil {
+		t.Fatal(err)
+	}
+	commands = source.Commands(2)
+	if len(commands) != 1 || commands[0].Kind != UseSkillCommand {
+		t.Fatalf("skill-use commands = %#v", commands)
+	}
+	if err := session.Submit(commands[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if side, _ := intent.Get("side"); side != "left" {
+		t.Fatalf("intent side = %v", side)
+	}
+	if skill, _ := intent.Get("skill_id"); skill != int64(42) {
+		t.Fatalf("intent skill = %v", skill)
+	}
+	if target, _ := intent.Get("target_id"); target != "fallen:7" {
+		t.Fatalf("intent target = %v", target)
 	}
 }
 

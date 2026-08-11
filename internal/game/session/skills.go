@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/gravestench/akara"
@@ -12,15 +13,25 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const AssignSkillsCommand = "player.assign_skills"
+const (
+	AssignSkillsCommand = "player.assign_skills"
+	UseSkillCommand     = "player.use_skill"
+)
 
 type AssignSkillsPayload struct {
 	Left  *int64 `json:"left,omitempty"`
 	Right *int64 `json:"right,omitempty"`
 }
 
+type UseSkillPayload struct {
+	Side     string  `json:"side"`
+	TargetX  float64 `json:"target_x"`
+	TargetY  float64 `json:"target_y"`
+	TargetID string  `json:"target_id,omitempty"`
+}
+
 func RegisterSkillAssignments(session *Session) error {
-	return session.Register(AssignSkillsCommand, CommandHandler{
+	if err := session.Register(AssignSkillsCommand, CommandHandler{
 		Validate: func(command simulation.Command) error {
 			_, err := decodeAssignSkills(command.Payload)
 			return err
@@ -67,6 +78,61 @@ func RegisterSkillAssignments(session *Session) error {
 			}
 			return nil
 		},
+	}); err != nil {
+		return err
+	}
+	return session.Register(UseSkillCommand, CommandHandler{
+		Validate: func(command simulation.Command) error { _, err := decodeUseSkill(command.Payload); return err },
+		Apply: func(engine *gameecs.Engine, command simulation.Command) error {
+			payload, err := decodeUseSkill(command.Payload)
+			if err != nil {
+				return err
+			}
+			controls, found := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+			if !found {
+				return nil
+			}
+			assignments, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_assignment")
+			if !found {
+				return nil
+			}
+			intents, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_intent")
+			if !found {
+				return nil
+			}
+			for _, entity := range controls.Entities() {
+				control, _ := controls.Get(entity)
+				player, _ := control.Get("player")
+				if player != command.Player {
+					continue
+				}
+				assignment, present := assignments.Get(entity)
+				if !present {
+					continue
+				}
+				assigned, err := assignment.Get(payload.Side)
+				if err != nil {
+					return err
+				}
+				skillID := assigned.(int64)
+				if !learnedSkillAllows(engine, entity, skillID, payload.Side) {
+					if skillID == 0 {
+						return nil
+					}
+					return fmt.Errorf("assigned %s skill %d is not learned or allowed", payload.Side, skillID)
+				}
+				intent, present := intents.Get(entity)
+				if !present {
+					continue
+				}
+				for field, value := range map[string]any{"side": payload.Side, "skill_id": skillID, "target_x": payload.TargetX, "target_y": payload.TargetY, "target_id": payload.TargetID} {
+					if err := intent.Set(field, value); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -102,18 +168,46 @@ func NewSkillSource(controller *MovementController, player string) (*SkillSource
 
 func (source *SkillSource) Commands(tick uint64) []simulation.Command {
 	requests := source.controller.drainSkills()
-	if len(requests) == 0 {
+	commands := make([]simulation.Command, 0, 1)
+	if len(requests) > 0 {
+		payload := AssignSkillsPayload{}
+		if value, found := requests["left"]; found {
+			payload.Left = &value
+		}
+		if value, found := requests["right"]; found {
+			payload.Right = &value
+		}
+		encoded, _ := json.Marshal(payload)
+		commands = append(commands, simulation.Command{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.controller.nextSequence(), Kind: AssignSkillsCommand, Payload: encoded})
+	}
+	for _, payload := range source.controller.drainSkillUses() {
+		encoded, _ := json.Marshal(payload)
+		commands = append(commands, simulation.Command{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.controller.nextSequence(), Kind: UseSkillCommand, Payload: encoded})
+	}
+	if len(commands) == 0 {
 		return nil
 	}
-	payload := AssignSkillsPayload{}
-	if value, found := requests["left"]; found {
-		payload.Left = &value
+	return commands
+}
+
+func decodeUseSkill(encoded []byte) (UseSkillPayload, error) {
+	var payload UseSkillPayload
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		return payload, err
 	}
-	if value, found := requests["right"]; found {
-		payload.Right = &value
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return payload, fmt.Errorf("skill use payload has trailing data")
 	}
-	encoded, _ := json.Marshal(payload)
-	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.controller.nextSequence(), Kind: AssignSkillsCommand, Payload: encoded}}
+	payload.Side, payload.TargetID = strings.ToLower(strings.TrimSpace(payload.Side)), strings.TrimSpace(payload.TargetID)
+	if payload.Side != "left" && payload.Side != "right" {
+		return payload, fmt.Errorf("skill use side must be left or right")
+	}
+	if math.IsNaN(payload.TargetX) || math.IsNaN(payload.TargetY) || math.IsInf(payload.TargetX, 0) || math.IsInf(payload.TargetY, 0) {
+		return payload, fmt.Errorf("skill target must be finite")
+	}
+	return payload, nil
 }
 
 func decodeAssignSkills(encoded []byte) (AssignSkillsPayload, error) {

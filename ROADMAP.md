@@ -930,10 +930,15 @@ complete until its actions are driven by authoritative game state and commands.
     and admit coordinate-authored interactions only after authoritative range
     and DT1 line-of-sight checks. Primary clicks approach a selected object and
     stop before requesting interaction; Lua never chooses the trusted target ID.
-  - [ ] M20.14b: Add authoritative hostile/item/portal selectable kinds and
-    dispatch primary versus secondary assigned-skill intents without coupling
-    pointer devices to combat rules.
-  - [ ] M20.14c: Replace direct approach with entity-size-aware path requests,
+  - [x] M20.14b: Normalize the secondary mouse button and dispatch its world
+    target as a replayable assigned-skill command without coupling the device to
+    combat rules. Authority resolves the currently assigned, learned, side-
+    allowed skill and records its semantic coordinate/optional entity target in
+    ECS state. Empty skill wells safely no-op; invalid non-empty assignments are
+    rejected. Hostile/item/portal classification remains M20.14c input.
+  - [ ] M20.14c: Add hostile, item, and portal selectable kinds; dispatch a
+    primary click to interaction or the assigned primary skill by target kind;
+    and replace direct approach with entity-size-aware path requests,
     interaction stopping distance, unreachable-target cancellation, and hover/
     selection presentation sourced from the same selector.
 

@@ -12,6 +12,7 @@ func PlayerControlModule(controller *gamesession.MovementController) Module {
 		"request_running": commandHelp("dm.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
 		"assign_skill":    commandHelp("dm.player.assign_skill(slot, skill_id)", "Request an authoritative left or right skill assignment."),
 		"request_move":    commandHelp("dm.player.request_move(x, y)", "Request movement toward an authoritative world-subtile target."),
+		"request_skill":   commandHelp("dm.player.request_skill(side, x, y, target_id?)", "Request assigned-skill use at an authoritative world target."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"request_running": func(state *lua.LState) int {
@@ -26,6 +27,16 @@ func PlayerControlModule(controller *gamesession.MovementController) Module {
 			},
 			"request_move": func(state *lua.LState) int {
 				if err := controller.SetMoveTarget(float64(state.CheckNumber(1)), float64(state.CheckNumber(2))); err != nil {
+					state.RaiseError("%v", err)
+				}
+				return 0
+			},
+			"request_skill": func(state *lua.LState) int {
+				targetID := ""
+				if state.GetTop() >= 4 {
+					targetID = state.CheckString(4)
+				}
+				if err := controller.UseSkill(state.CheckString(1), float64(state.CheckNumber(2)), float64(state.CheckNumber(3)), targetID); err != nil {
 					state.RaiseError("%v", err)
 				}
 				return 0

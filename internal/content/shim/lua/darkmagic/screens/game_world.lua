@@ -301,7 +301,7 @@ return {
 				self.player.request_move(target_world_x, target_world_y)
 			end
 		end
-		if self.pending_interaction then
+        if self.pending_interaction then
 			local selected = self.pending_interaction
 			local dx, dy = hero_x - selected.x, hero_y - selected.y
 			if dx * dx + dy * dy <= 16 and self.world:line_clear(hero_x, hero_y, selected.x, selected.y) then
@@ -310,6 +310,14 @@ return {
 				self.pending_interaction = nil
 			end
         end
+		if self.player and self.world and in_world and not self.__darkmagic_item_held
+			and input.pressed("pointer_secondary") then
+			local skill_x, skill_y = self.world:screen_to_subtile(
+				pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
+			)
+			local selected = self.world:selectable_at(skill_x, skill_y)
+			self.player.request_skill("right", skill_x, skill_y, selected and selected.id or "")
+		end
 
         -- Hero screen position is target anchor plus hero-to-camera relative offset.
         self.hero:set_position(hero_screen_x, hero_screen_y)

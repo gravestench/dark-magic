@@ -202,6 +202,11 @@ selected facts, but authoritative interaction re-runs selection, owner range,
 and DT1 line-of-sight checks before changing context. Client-provided target IDs
 remain a compatibility/admin surface, not the pointer gameplay trust boundary.
 
+Native mouse buttons are normalized before Lua sees them. Secondary world input
+submits a semantic coordinate and optional selected-entity ID; the fixed-tick
+skill command resolves the authoritative assignment and learned/side-allowed
+skill, then records the intent in ECS for later cast/cost/timing systems.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and
