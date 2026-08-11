@@ -29,6 +29,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"shell_toggle":    actionState(s.KeyState(rl.KeyGrave)),
 			"shell_lua":       actionState(s.KeyState(rl.KeyF1)),
 			"shell_logs":      actionState(s.KeyState(rl.KeyF2)),
+			"debug_collision": actionState(s.KeyState(rl.KeyF3)),
 			"pointer_primary": pointer,
 			"confirm":         confirm,
 			"cancel":          cancel,

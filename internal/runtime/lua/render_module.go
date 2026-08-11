@@ -885,6 +885,22 @@ func (c *renderAssetCache) loadDS1Chunks(assets fs.FS, name string, tiles []stri
 	return value.(*maprender.Set), nil
 }
 
+func (c *renderAssetCache) loadDS1Collision(assets fs.FS, name string, tiles []string) (image.Image, error) {
+	key := "ds1-collision\x00" + name + "\x00" + strings.Join(tiles, "\x00")
+	value, err := c.load(assets, key, func() (any, int, error) {
+		mapData, err := gameworld.Load(assets, name, tiles)
+		if err != nil {
+			return nil, 0, err
+		}
+		overlay := maprender.CollisionImage(mapData)
+		return overlay, imageWeight(overlay), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(image.Image), nil
+}
+
 func (n *ownedRenderNode) release() error {
 	n.once.Do(func() {
 		n.err = n.composer.Destroy(n.id)
@@ -1381,6 +1397,7 @@ func (r *RenderCapability) Module() Module {
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_ds1_chunk":              commandHelp("node:set_ds1_chunk(map, tiles, palette, chunk_index [, chunk_size])", "Render one sparse DS1 map chunk and return its map-space geometry."),
+		"set_ds1_collision":          commandHelp("node:set_ds1_collision(map, tiles)", "Render a diagnostic DT1 subtile collision overlay for a DS1 map."),
 		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
 		"set_dc6_combined":           commandHelp("node:set_dc6_combined(path [, options])", "Reconstruct and render one tiled DC6 page."),
@@ -1876,6 +1893,36 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(chunks.Height))
 			state.Push(lua.LNumber(len(chunks.Chunks)))
 			return 7
+		},
+		"set_ds1_collision": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			mapName := state.CheckString(2)
+			tileTable := state.CheckTable(3)
+			tiles := make([]string, 0, tileTable.Len())
+			for index := 1; index <= tileTable.Len(); index++ {
+				value, ok := tileTable.RawGetInt(index).(lua.LString)
+				if !ok || value == "" {
+					state.RaiseError("DS1 tile %d must be a non-empty path", index)
+					return 0
+				}
+				tiles = append(tiles, string(value))
+			}
+			decoded, err := node.cache.loadDS1Collision(node.assets, mapName, tiles)
+			if err != nil {
+				state.RaiseError("rendering DS1 collision %q: %v", mapName, err)
+				return 0
+			}
+			if err := node.setImage(decoded); err != nil {
+				state.RaiseError("updating DS1 collision node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(decoded.Bounds().Dx()))
+			state.Push(lua.LNumber(decoded.Bounds().Dy()))
+			return 2
 		},
 		"set_dt1": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)
