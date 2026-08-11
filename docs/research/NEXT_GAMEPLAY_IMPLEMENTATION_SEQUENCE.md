@@ -162,9 +162,12 @@ full command-log replay, and checksum-stable observation. Live monster visuals
 now consume copied identity, joined MonStats2 component recipes, derived display
 mode/facing, and world position; death/missile events enter an observe-once
 value queue, and the death cue resolves the authored MonSounds/Sounds record.
-The remaining gate is concrete missile art/audio projection. Do not mark it
-complete until those adapters also consume copied facts without writing
-simulation state.
+Missile definitions now also carry deliberately joined Missiles.txt DCC,
+direction, timing, offset, and Sounds.txt keys; retained projectiles consume
+copied live positions and observe-once spawn/hit audio cues. The remaining gate
+is registering the first production missile skill from an evidence-backed
+server-function/formula normalization rather than the acceptance fixture's
+explicit synthetic policy.
 
 ## Breadth queue after the first simulation loop
 

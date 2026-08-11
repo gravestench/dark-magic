@@ -136,7 +136,16 @@ end
 -- presenting one durable event more than once; observation itself is read-only.
 function M.semantic_cues()
     local result = {}
-    for _, entity in ipairs(ecs.query({ any = { "dm.monster.death_event", "dm.missile.event" } })) do
+    local entities, known = {}, {}
+    for _, component in ipairs({"dm.monster.death_event", "dm.missile.event"}) do
+        local ok, matches = pcall(ecs.query, {all = {component}})
+        if ok then
+            for _, entity in ipairs(matches) do
+                if not known[entity:id()] then entities[#entities + 1] = entity; known[entity:id()] = true end
+            end
+        end
+    end
+    for _, entity in ipairs(entities) do
         local kind, values
         local death = ecs.get(entity, "dm.monster.death_event")
         if death then kind, values = "monster_death", death:snapshot() end
@@ -154,6 +163,27 @@ function M.semantic_cues()
             values.cue_type = kind
             result[#result + 1] = values
         end
+    end
+    return result
+end
+
+-- Copy live projectile instances separately from their semantic spawn/hit
+-- events. A renderer follows these values; it never predicts or advances them.
+function M.missile_snapshots()
+    local result = {}
+    local ok, entities = pcall(ecs.query, { all = {
+        "dm.missile.instance", "dm.world.position", "dm.world.location",
+    } })
+    if not ok then return result end
+    for _, entity in ipairs(entities) do
+        local snapshot = ecs.get(entity, "dm.missile.instance"):snapshot()
+        local position = ecs.get(entity, "dm.world.position")
+        local location = ecs.get(entity, "dm.world.location")
+        snapshot.entity_id = entity:id()
+        snapshot.owner_entity = nil
+        snapshot.x, snapshot.y = position:get("x"), position:get("y")
+        snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
+        result[#result + 1] = snapshot
     end
     return result
 end

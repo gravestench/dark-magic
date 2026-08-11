@@ -25,6 +25,7 @@ local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
 local player_composite = require("darkmagic.gameplay.player_composite")
 local monster_composite = require("darkmagic.gameplay.monster_composite")
+local missile_presentation = require("darkmagic.gameplay.missile_presentation")
 local chunked_map = require("darkmagic.presentation.chunked_map")
 local tooltip = require("darkmagic.ui.tooltip")
 local text = require("darkmagic.ui.text")
@@ -39,6 +40,13 @@ local function destroy_monsters(self)
 	self.monsters = {}
 end
 
+local function destroy_missiles(self)
+	for _, missile in pairs(self.missiles or {}) do
+		if missile.node and missile.node:exists() then missile.node:destroy() end
+	end
+	self.missiles = {}
+end
+
 local function install_current_world(self)
 	local world_capability = self.world_capability
 	if not world_capability then
@@ -51,6 +59,7 @@ local function install_current_world(self)
 	assert(next_world and recipe, "session world is unavailable")
 	if self.hero and self.hero:exists() then self.hero:destroy() end
 	destroy_monsters(self)
+	destroy_missiles(self)
 	self.collision_node, self.collision_region_key = nil, nil
 	self.tile_debug_node, self.tile_debug_region_key = nil, nil
 	self.hero_origin = nil
@@ -244,7 +253,54 @@ local function observe_semantic_cues(self)
 					end
 				end
 			end
+			if cue.cue_type == "missile" and cue.sound and cue.sound ~= "" then
+				pcall(audio.play_record, cue.sound, cue.tick or 0)
+			end
 		end
+	end
+end
+
+local function update_missiles(self)
+	if not self.map or not self.world then return end
+	self.missiles = self.missiles or {}
+	local seen = {}
+	for _, snapshot in ipairs(self.gameplay_world.missile_snapshots()) do
+		if snapshot.level_id == self.world_level_id then
+			local key = tostring(snapshot.entity_id)
+			seen[key] = true
+			local missile = self.missiles[key]
+			if not missile then
+				missile = {node=render.create("world", self.map.root)}
+				missile.node:set_visible(false)
+				self.missiles[key] = missile
+			end
+			local recipe = missile_presentation.resolve(snapshot)
+			if recipe and not missile.pending_job and not missile.ready then
+				missile.recipe = recipe
+				missile.pending_job = render.preload({{kind="dcc", path=recipe.path,
+					palette=recipe.palette, direction=recipe.direction}})
+			end
+			if missile.pending_job then
+				local status = render.preload_status(missile.pending_job)
+				if status.done then
+					if status.failed == 0 then
+						local ready = missile.recipe
+						missile.node:set_dcc_animation(ready.path, ready.palette,
+							ready.direction, ready.frames_per_second, ready.loop)
+						missile.node:set_visible(true)
+						missile.ready = true
+					end
+					missile.pending_job = nil
+				end
+			end
+			local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+			missile.node:set_position(x - self.world_canvas_width / 2 + snapshot.offset_x,
+				y - self.world_canvas_height / 2 + snapshot.offset_y - snapshot.offset_z)
+			missile.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y) + snapshot.offset_z)
+		end
+	end
+	for key, missile in pairs(self.missiles) do
+		if not seen[key] then missile.node:destroy(); self.missiles[key] = nil end
 	end
 end
 
@@ -323,6 +379,7 @@ return {
 		if render.assets_available() then install_current_world(self) end
 		if render.assets_available() then
 			update_monsters(self, elapsed)
+			update_missiles(self)
 			observe_semantic_cues(self)
 		end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
@@ -595,6 +652,7 @@ return {
         -- helper intentionally leaves session-owned hero authority alone.
         self.gameplay_world.destroy(self.gameplay)
 		destroy_monsters(self)
+		destroy_missiles(self)
         chunked_map.destroy(self.map)
     end,
 }
