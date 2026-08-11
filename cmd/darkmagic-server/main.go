@@ -15,6 +15,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
 	"github.com/gravestench/dark-magic/internal/logging"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
@@ -44,6 +45,14 @@ func main() {
 	}
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		slog.Error("registering authoritative movement commands", "error", err)
+		return
+	}
+	if err := gamesession.RegisterSkillAssignments(authority); err != nil {
+		slog.Error("registering authoritative skill commands", "error", err)
+		return
+	}
+	if err := gameskill.RegisterIntentConsumer(engine); err != nil {
+		slog.Error("registering authoritative skill intent consumer", "error", err)
 		return
 	}
 	sessionContext, stopSession := context.WithCancel(ctx)
