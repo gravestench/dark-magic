@@ -43,6 +43,20 @@ renderable room/world representation
 
 DS1 decoding is only one stage in this pipeline.
 
+### Logical tile selection boundary
+
+A DS1 cell requests a logical `(orientation, main-index, sub-index)` identity;
+it never stores a physical DT1 record number. The immutable world tile catalog
+groups DT1 metadata by that identity and deterministically chooses one physical
+record using its positive rarity as weight. The resulting placement retains the
+DT1 path and record index so presentation can decode graphics lazily, while
+collision and generation consume copied metadata without touching pixels.
+
+The coordinate hash includes both axes independently. Multiplying `x*y` is not
+a valid seed because every cell on either zero axis would receive the same
+choice. Likewise, a zero-rarity record is not eligible when a group contains any
+positive-rarity record; an all-zero group falls back to its first authored entry.
+
 ## Deterministic RNG
 
 D2MOO reconstructs the 1.10f seed state as two 32-bit values:

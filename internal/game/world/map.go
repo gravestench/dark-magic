@@ -4,11 +4,9 @@ package world
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 
 	"github.com/gravestench/ds1"
-	"github.com/gravestench/dt1"
 )
 
 // SubtilesPerTile is the fixed collision resolution encoded by DT1 tiles.
@@ -61,10 +59,30 @@ type Map struct {
 	WidthSubtiles, HeightSubtiles int
 	Act                           int
 	Objects                       []Object
+	Tiles                         []TilePlacement
 	flags                         []Flags
 }
 
-type tileKey struct{ kind, style, sequence int32 }
+// TileLayer is the stable global-pass order used by legacy map presentation.
+// It is data, not a renderer Z value, so adapters remain free to batch chunks.
+type TileLayer uint8
+
+const (
+	LayerFloor TileLayer = iota
+	LayerLowerWall
+	LayerShadow
+	LayerUpperWall
+	LayerRoof
+)
+
+// TilePlacement is one deterministic DS1-cell-to-DT1 selection. Presentation
+// decodes Reference.Path/Index; collision consumes only copied metadata.
+type TilePlacement struct {
+	X, Y      int
+	Layer     TileLayer
+	Identity  TileIdentity
+	Reference TileReference
+}
 
 // Load joins one DS1 stamp with its DT1 collision definitions. It decodes no
 // renderer textures and performs no entity spawning.
@@ -81,44 +99,9 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 	if closeErr != nil {
 		return nil, fmt.Errorf("world: close DS1 %q: %w", stampPath, closeErr)
 	}
-	lookup := make(map[tileKey][]*dt1.Tile)
-	for _, path := range tilePaths {
-		file, err := source.Open(path)
-		if err != nil {
-			return nil, fmt.Errorf("world: open %q: %w", path, err)
-		}
-		var opened *dt1.File
-		if reader, ok := file.(io.ReaderAt); ok {
-			info, statErr := file.Stat()
-			if statErr == nil {
-				opened, err = dt1.Open(reader, info.Size())
-			}
-		}
-		if opened == nil && err == nil {
-			data, readErr := io.ReadAll(file)
-			if readErr != nil {
-				err = readErr
-			} else {
-				opened, err = dt1.OpenBytes(data)
-			}
-		}
-		if err != nil {
-			_ = file.Close()
-			return nil, fmt.Errorf("world: decode DT1 %q: %w", path, err)
-		}
-		for index := 0; index < opened.NumTiles(); index++ {
-			tile, metadataErr := opened.TileMetadata(index)
-			if metadataErr != nil {
-				_ = file.Close()
-				return nil, fmt.Errorf("world: index DT1 %q tile %d: %w", path, index, metadataErr)
-			}
-			key := tileKey{kind: tile.Type, style: tile.Style, sequence: tile.Sequence}
-			lookup[key] = append(lookup[key], tile)
-		}
-		closeErr := file.Close()
-		if closeErr != nil {
-			return nil, fmt.Errorf("world: close DT1 %q: %w", path, closeErr)
-		}
+	catalog, err := LoadTileCatalog(source, tilePaths)
+	if err != nil {
+		return nil, err
 	}
 	result := &Map{
 		WidthTiles: int(stamp.Width), HeightTiles: int(stamp.Height), Act: int(stamp.Act),
@@ -137,12 +120,24 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 		for tileX, record := range row {
 			for _, floor := range record.Floors {
 				if !floor.Hidden && floor.Prop1 != 0 {
-					result.apply(tileX, tileY, choose(lookup[tileKey{style: int32(floor.Style), sequence: int32(floor.Sequence)}], tileX, tileY))
+					result.addTile(catalog, tileX, tileY, LayerFloor, TileIdentity{MainIndex: int32(floor.Style), SubIndex: int32(floor.Sequence)})
 				}
 			}
 			for _, wall := range record.Walls {
 				if !wall.Hidden && wall.Prop1 != 0 {
-					result.apply(tileX, tileY, choose(lookup[tileKey{kind: int32(wall.Type), style: int32(wall.Style), sequence: int32(wall.Sequence)}], tileX, tileY))
+					identity := TileIdentity{Orientation: int32(wall.Type), MainIndex: int32(wall.Style), SubIndex: int32(wall.Sequence)}
+					layer := LayerUpperWall
+					if identity.Orientation >= 16 && identity.Orientation <= 19 {
+						layer = LayerLowerWall
+					} else if identity.Orientation == 15 {
+						layer = LayerRoof
+					}
+					result.addTile(catalog, tileX, tileY, layer, identity)
+				}
+			}
+			for _, shadow := range record.Shadows {
+				if !shadow.Hidden && shadow.Prop1 != 0 {
+					result.addTile(catalog, tileX, tileY, LayerShadow, TileIdentity{Orientation: 13, MainIndex: int32(shadow.Style), SubIndex: int32(shadow.Sequence)})
 				}
 			}
 		}
@@ -164,35 +159,18 @@ func resolveObject(act int, objectType, id, x, y, flags int32, resolver ObjectRe
 	return result
 }
 
-func choose(tiles []*dt1.Tile, x, y int) *dt1.Tile {
-	if len(tiles) == 0 {
-		return nil
-	}
-	weight := 0
-	for _, tile := range tiles {
-		weight += int(tile.RarityFrameIndex)
-	}
-	if weight <= 0 {
-		return tiles[0]
-	}
-	seed := uint64(x) * uint64(y)
-	seed ^= seed << 13
-	seed ^= seed >> 17
-	seed ^= seed << 5
-	random, sum := int(seed%uint64(weight)), 0
-	for _, tile := range tiles {
-		sum += int(tile.RarityFrameIndex)
-		if sum >= random {
-			return tile
-		}
-	}
-	return tiles[0]
-}
-
-func (m *Map) apply(tileX, tileY int, tile *dt1.Tile) {
-	if tile == nil {
+func (m *Map) addTile(catalog *TileCatalog, tileX, tileY int, layer TileLayer, identity TileIdentity) {
+	reference, found := catalog.Select(identity, tileX, tileY, 0)
+	if !found {
 		return
 	}
+	m.Tiles = append(m.Tiles, TilePlacement{X: tileX, Y: tileY, Layer: layer, Identity: identity, Reference: reference})
+	if layer != LayerShadow && layer != LayerRoof {
+		m.apply(tileX, tileY, reference)
+	}
+}
+
+func (m *Map) apply(tileX, tileY int, tile TileReference) {
 	for index, source := range tile.SubTileFlags {
 		x := tileX*SubtilesPerTile + index%SubtilesPerTile
 		y := tileY*SubtilesPerTile + index/SubtilesPerTile
