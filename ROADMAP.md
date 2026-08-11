@@ -1297,9 +1297,23 @@ data owners; they do not introduce parallel gameplay authorities.
   Terrain masks, acceleration, homing, piercing/bounce/explosion policies,
   formula-derived retail definitions, and presentation projection remain
   later verified behavior families.
-- [ ] **M21.10: Blood Moor population slice.** Derive an inspectable deterministic
-  ordinary-pack plan from generated world content and materialize it without
-  coupling simulation residency to render culling.
+- [x] **M21.10: Blood Moor population slice.** A canonical population planner
+  now joins the generated zone seed/checksum, populated room/stamp facts,
+  authored `Levels` density/monster lists/WarpDist, joined
+  MonStats/MonStats2/MonLvl definitions, and MonStats group-size/rarity facts.
+  Purpose-named per-room streams produce inspectable spawn recipes and a trace
+  containing density rolls, suppression, family/group selection, placement,
+  and fallback decisions. Collision-aware world placement happens before
+  privileged spawn commands materialize ordinary hostiles on tick one, wholly
+  independent of camera/chunk residency. Synthetic tests prove canonical
+  planning, seed variation, command/replay materialization, and populated-stamp
+  filtering; an owned-MPQ acceptance test proves the real generated Blood Moor
+  contains authoritative level-2 monsters. Because the exact legacy room
+  density algorithm remains unresolved, `synthetic.room_density_v1` explicitly
+  guarantees one pack for a nonzero-density zone and records when it must relax
+  the coarse policy's over-broad WarpDist exclusion. Exact density, room
+  eligibility, unique/champion selection, collision packing, and inactive-room
+  lifecycle remain later verified policies.
 - [ ] **M21.11: Monster death transaction.** Join lethal resolution to stable
   kill/death events, XP attribution, deterministic loot, quest-event surface,
   corpse state, and active/inactive lifecycle. Death must be atomic and
