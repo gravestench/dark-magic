@@ -58,7 +58,7 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	if err := gameskill.RegisterCastLifecycle(engine, registry); err != nil {
 		t.Fatal(err)
 	}
-	if err := RegisterPlayerBasicAttack(engine, 0); err != nil {
+	if err := RegisterPlayerBasicAttack(engine, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := RegisterBasicMelee(engine, BasicMeleePolicy{HitChance: 100}); err != nil {
@@ -72,16 +72,40 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	mustSetEntity(t, stores.locations, player, map[string]any{"act": int64(1), "level_id": int64(2)})
 	mustSetEntity(t, stores.profiles, player, map[string]any{"range": 2.0, "physical_min": MustWhole(2).Raw(), "physical_max": MustWhole(2).Raw()})
 	mustSetEntity(t, stores.playerVitals, player, map[string]any{"health": int64(10), "max_health": int64(10), "mana": int64(0), "max_mana": int64(0), "mana_raw": int64(0), "max_mana_raw": int64(0)})
+	velocities, _ := akara.GetDynamicStore(engine.World(), "dm.world.velocity")
+	mustSetEntity(t, velocities, player, map[string]any{"x": 0.0, "y": 0.0})
 	controls, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	mustSetEntity(t, controls, player, map[string]any{"player": "hero"})
 	mustSetEntity(t, stores.selectables, target, map[string]any{"id": "monster:fallen", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 0.5, "priority": int64(20)})
-	mustSetEntity(t, stores.positions, target, map[string]any{"x": 3.0, "y": 2.0})
+	mustSetEntity(t, stores.positions, target, map[string]any{"x": 8.0, "y": 2.0})
 	mustSetEntity(t, stores.locations, target, map[string]any{"act": int64(1), "level_id": int64(2)})
 	mustSetEntity(t, stores.monsterStats, target, map[string]any{"level": int64(1), "health": MustWhole(5).Raw(), "max_health": MustWhole(5).Raw(), "defense": int64(0), "attack_rating": int64(0), "physical_min": int64(0), "physical_max": int64(0), "experience": int64(0)})
 	requests, _, _, _, _, _ := gameskillStores(t, engine)
-	mustSetEntity(t, requests, player, map[string]any{"player": "hero", "side": "left", "skill_id": int64(0), "skill_level": int64(1), "target_x": 3.0, "target_y": 2.0, "target_id": "monster:fallen", "request_tick": int64(1)})
+	mustSetEntity(t, requests, player, map[string]any{"player": "hero", "side": "left", "skill_id": int64(0), "skill_level": int64(1), "target_x": 8.0, "target_y": 2.0, "target_id": "monster:fallen", "request_tick": int64(1)})
 
 	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	// The skill effect records a pending action at the pre-simulation barrier.
+	// The following fixed tick revalidates its target and admits the hit.
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	velocity, _ := velocities.Get(player)
+	velocityX, _ := velocity.Get("x")
+	if velocityX.(float64) <= 0 {
+		t.Fatalf("approach velocity x = %v, want movement toward target", velocityX)
+	}
+	targetStats, _ := stores.monsterStats.Get(target)
+	before, _ := targetStats.Get("health")
+	if before != MustWhole(5).Raw() {
+		t.Fatalf("out-of-range target health = %v, want unchanged", before)
+	}
+	playerPosition, _ := stores.positions.Get(player)
+	if err := playerPosition.Set("x", 7.0); err != nil {
 		t.Fatal(err)
 	}
 	if err := engine.Update(time.Second / 25); err != nil {

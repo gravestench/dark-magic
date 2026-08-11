@@ -34,9 +34,10 @@ The milestone-number order is historical, not a strict dependency graph. The
 M21.1-M21.12 authority spine and its first production Fire Bolt are complete.
 The active dependency queue, reassessed after that gate, is:
 
-1. **M21.13 — player combat:** route pointer-selected Attack through the shared
-   cast/melee transaction, then add approach-to-range, attack animation events,
-   and equipment-derived damage without creating another combat authority.
+1. **M21.13 — player combat:** finish attack animation events and
+   equipment-derived damage on the shared pointer-selected Attack transaction.
+   Its checkpointed pending action now follows a still-valid target through the
+   collision-aware world pathfinder and admits melee only after reaching range.
 2. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
    evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
    resistance, death/corpse consequences, and difficulty rules.
@@ -1348,10 +1349,14 @@ data owners; they do not introduce parallel gameplay authorities.
   act/level, range, deterministic hit/damage, health mutation, and semantic
   events have one authority. Player admission snapshots a deliberately narrow
   1-2 physical unarmed fallback; monster admission copies its joined authored
-  damage/range. Complete this checkpoint by deriving the active player profile
-  from authoritative equipment/stat sources, moving into range while an attack
-  target remains valid, driving the correct attack animation/event boundary,
-  and adding an asset-backed pointer-to-hit acceptance capture. The current
+  damage/range. An out-of-range effect now becomes checkpointed approach state:
+  it retains the target identity, caches one collision-aware waypoint rather
+  than pathfinding every tick, follows a moving same-zone target, and cancels
+  cleanly when that target disappears or becomes unreachable. Complete this
+  checkpoint by deriving the active player profile from authoritative
+  equipment/stat sources, defining explicit player-input cancellation, driving
+  the correct attack animation/event boundary, and adding an asset-backed
+  pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.
 

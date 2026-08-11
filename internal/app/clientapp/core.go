@@ -186,15 +186,15 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
 		return wrap("register production skill lifecycle", err)
 	}
-	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID); err != nil {
-		return wrap("register player basic attack", err)
-	}
 	if err := gamemissile.Register(app.entitySimulation, missileRegistry); err != nil {
 		return wrap("register production missiles", err)
 	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
+	}
+	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID, bloodMoor); err != nil {
+		return wrap("register player basic attack", err)
 	}
 	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {
 		return wrap("register monster AI", err)
