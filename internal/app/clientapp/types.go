@@ -51,6 +51,7 @@ type Options struct {
 	StartScene            string
 	StartOverlays         string
 	FixtureCharacters     int
+	FixtureWorldLevel     int
 	OutputPalette         string
 	ViewportFit           string
 	BorderlessFullscreen  bool
@@ -147,6 +148,7 @@ type application struct {
 	worldMu              sync.RWMutex
 	gameWorlds           map[int]*gameworld.Map
 	gameWorldZones       map[int]*mapgen.Zone
+	gameWorldSpawns      map[int][2]float64
 	activeWorldLevel     int
 	loading              *loadcore.Coordinator
 

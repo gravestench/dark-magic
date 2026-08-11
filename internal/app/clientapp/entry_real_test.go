@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
@@ -40,6 +41,19 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	}
 	if len(chunks.Chunks) == 0 {
 		t.Fatal("Blood Moor produced no indexed presentation chunks")
+	}
+	pathTiles := make(map[[2]int]bool)
+	for _, tile := range app.gameWorldZones[2].Paths() {
+		pathTiles[[2]int{tile.X, tile.Y}] = true
+	}
+	realizedPathFloors := 0
+	for _, tile := range app.gameWorlds[2].Tiles {
+		if tile.Layer == gameworld.LayerFloor && tile.Identity.MainIndex == 0 && tile.Identity.SubIndex != 0 && pathTiles[[2]int{tile.X, tile.Y}] {
+			realizedPathFloors++
+		}
+	}
+	if realizedPathFloors == 0 {
+		t.Fatal("Blood Moor semantic route produced no realized dirt-path floors")
 	}
 	for index, chunk := range chunks.Chunks {
 		if chunk.Pixels != nil {
