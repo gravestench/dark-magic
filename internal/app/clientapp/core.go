@@ -13,6 +13,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
+	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
@@ -160,6 +161,21 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
 		return wrap("register skill intent consumer", err)
+	}
+	bloodMoor := app.gameWorlds[2]
+	if bloodMoor == nil {
+		return errors.New("register hostile simulation: Blood Moor world is unavailable")
+	}
+	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {
+		return wrap("register monster AI", err)
+	}
+	if err := gamemonster.RegisterMovement(app.entitySimulation, bloodMoor); err != nil {
+		return wrap("register monster movement", err)
+	}
+	// This fixed hit chance remains explicitly synthetic until the verified
+	// attacker/defender chance-to-hit formula replaces the M21 scaffold.
+	if err := gamecombat.RegisterBasicMelee(app.entitySimulation, gamecombat.BasicMeleePolicy{HitChance: 75}); err != nil {
+		return wrap("register basic melee combat", err)
 	}
 	lootCatalog, err := gameloot.CatalogFromRecords(app.gameData)
 	if err != nil {

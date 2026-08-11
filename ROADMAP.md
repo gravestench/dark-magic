@@ -1346,6 +1346,22 @@ hostile that acquires and paths to the player, exchanges a basic attack, emits
 death and loot events, and reproduces the same result after replay/checkpoint
 restore while Lua only submits intents and presents copied facts.
 
+- [x] Prove the renderer-independent authority spine with one command-admitted
+  player and one deterministic generated-population hostile: acquisition,
+  fixed-step chase movement, hostile melee, assigned cast lifecycle, straight
+  missile impact, timed-state expiration, atomic death, XP/loot/corpse/quest
+  surfaces, midpoint checkpoint restoration, full initial-snapshot command-log
+  replay, and non-mutating semantic observation. Production now registers
+  hostile AI, collision-aware movement, and the explicitly synthetic M21 melee
+  policy. Missile combat sources snapshot the caster's canonical selectable ID
+  so death credit reaches the correct player.
+- [ ] Complete the presentation/audio half of the gate: project live monster
+  appearance/mode/position and missile/death semantic cues into renderer/audio
+  adapters through copied read models, with no simulation writes from either
+  consumer. Normalized player combat definitions also remain explicit
+  scaffolding in the acceptance fixture until evidence-backed skill behaviors
+  replace them in production.
+
 ## M22: Client and game-session networking
 
 M22 has a working deterministic session/replay foundation; transport, remote

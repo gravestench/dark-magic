@@ -133,6 +133,13 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 	return nil
 }
 
+// ApplySpawnCommand reuses the trusted materializer for replay reconstruction.
+// Admission and authority checks remain Session responsibilities before a
+// command enters the canonical log.
+func ApplySpawnCommand(engine *gameecs.Engine, command simulation.Command) error {
+	return materialize(engine, command)
+}
+
 type stores struct {
 	identity, stats, appearance, ai, position, velocity, location, collider, selectable *akara.DynamicStore
 }
