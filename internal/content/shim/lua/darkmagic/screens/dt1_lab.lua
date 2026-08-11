@@ -75,7 +75,7 @@ function lab:create()
     self.palette = palettes[self.palette_index]
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".dt1") or {}
-    self.random_state = 1
+    self.random_state = dev.seed()
     self.total, self.dirty = 0, true
 end
 

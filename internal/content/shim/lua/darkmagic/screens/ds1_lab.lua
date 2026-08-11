@@ -12,6 +12,8 @@ local palettes = {
     "data/global/palette/ACT3/pal.pl2", "data/global/palette/ACT4/pal.pl2",
     "data/global/palette/ACT5/pal.pl2",
 }
+local zoom_step = 0.05
+local preview = {left=40, top=95, right=760, bottom=525}
 
 local function label(root, value, y, style)
     local node = render.create("hud", root)
@@ -43,6 +45,16 @@ local function act_from_path(path)
     local matched = tostring(path or ""):lower():match("/act([1-5])/")
     if not matched then return nil end
     return tonumber(matched)
+end
+
+local function quantized_zoom(value)
+    local snapped = math.floor(value / zoom_step + 0.5) * zoom_step
+    return math.max(zoom_step, math.min(4, snapped))
+end
+
+local function quantized_fit(value)
+    local snapped = math.floor(value / zoom_step) * zoom_step
+    return math.max(zoom_step, math.min(4, snapped))
 end
 
 function lab:infer_palette()
@@ -92,7 +104,7 @@ function lab:create()
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
-    self.help = label(self.root, "Arrows: pan   Home/End: zoom   Page Up/Down: palette   Space: fit   Enter: random DS1", 565)
+    self.help = label(self.root, "Arrows/drag: pan   Home/End: zoom 0.05   Page Up/Down: palette   Space: fit   Enter: random DS1", 565)
     self.path = tostring(dev.option("ds1_path") or "")
     self.tiles = split_paths(dev.option("ds1_tiles"))
     self.palette = tostring(dev.option("ds1_palette") or "")
@@ -100,13 +112,16 @@ function lab:create()
     self.palette = palettes[self.palette_index]
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
-    self.random_state = 1
+    self.random_state = dev.seed()
     self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
+    self.dragging, self.drag_x, self.drag_y = false, 0, 0
     self:queue_preview()
 end
 
 function lab:fit()
-    self.zoom = math.min(1, 720 / math.max(1, self.width), 430 / math.max(1, self.height))
+    -- Fit always rounds downward so snapping never makes the map overflow the
+    -- viewport it was supposed to fit inside.
+    self.zoom = quantized_fit(math.min(1, 720 / math.max(1, self.width), 430 / math.max(1, self.height)))
     self.pan_x, self.pan_y = 0, 0
 end
 
@@ -168,9 +183,25 @@ function lab:update()
     if input.pressed("right") then self.pan_x = self.pan_x + 24; moved = true end
     if input.pressed("up") then self.pan_y = self.pan_y - 24; moved = true end
     if input.pressed("down") then self.pan_y = self.pan_y + 24; moved = true end
-    if input.pressed("home") then self.zoom = math.max(0.05, self.zoom / 1.25); moved = true end
-    if input.pressed("end") then self.zoom = math.min(4, self.zoom * 1.25); moved = true end
+    if input.pressed("home") then self.zoom = quantized_zoom(self.zoom - zoom_step); moved = true end
+    if input.pressed("end") then self.zoom = quantized_zoom(self.zoom + zoom_step); moved = true end
     if input.pressed("space") then self:fit(); moved = true end
+
+    local pointer_x, pointer_y = input.cursor()
+    if input.pressed("pointer_primary")
+        and pointer_x >= preview.left and pointer_x <= preview.right
+        and pointer_y >= preview.top and pointer_y <= preview.bottom then
+        self.dragging, self.drag_x, self.drag_y = true, pointer_x, pointer_y
+    elseif input.released("pointer_primary") then
+        self.dragging = false
+    end
+    if self.dragging and input.down("pointer_primary") then
+        local delta_x, delta_y = pointer_x - self.drag_x, pointer_y - self.drag_y
+        if delta_x ~= 0 or delta_y ~= 0 then
+            self.pan_x, self.pan_y = self.pan_x + delta_x, self.pan_y + delta_y
+            self.drag_x, self.drag_y, moved = pointer_x, pointer_y, true
+        end
+    end
     if moved then
         self:position_map()
         text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.2fx   [green]ACT%d", file_name(self.path), self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
@@ -40,6 +41,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.WorldModule(app.options.Content, app.worldObjectResolver),
 		modruntime.InputModule(app.inputState),
 		modruntime.DevModule(map[string]any{
+			"random_seed":     int(time.Now().UnixNano()%2147483646) + 1,
 			"composite_token": app.options.CompositeLab.Token, "composite_mode": app.options.CompositeLab.Mode,
 			"composite_weapon": app.options.CompositeLab.WeaponClass, "composite_direction": app.options.CompositeLab.Direction,
 			"composite_frame": app.options.CompositeLab.Frame, "composite_components": app.options.CompositeLab.Components,
