@@ -58,7 +58,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"dm.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "dm.records/v1": {"load", "reload", "loaded"},
 		"dm.settings/v1":  {"get", "save", "set", "status"},
 		"dm.video/v1":     {"available", "play"},
-		"dm.game_data/v1": {"character_class", "skill", "unique_titles"},
+		"dm.game_data/v1": {"character_class", "missiles", "monsters", "skill", "unique_titles"},
 		"dm.locale/v1":    {"text"}, "dm.loot/v1": {"event_seed", "roll"},
 		"dm.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
 		"dm.player/v1":     {"assign_skill", "request_running"},

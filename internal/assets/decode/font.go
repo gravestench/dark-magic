@@ -137,8 +137,11 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 		}
 		for _, code := range line {
 			if next, ok := runs[runIndex]; ok {
-				currentTint = next.fallback
-				currentTransform = next.transform
+				if next.reset {
+					currentTint, currentTransform = tint, -1
+				} else {
+					currentTint, currentTransform = next.fallback, next.transform
+				}
 			}
 			runIndex++
 			glyph, ok := f.glyph(code)
@@ -168,6 +171,7 @@ func (f *BitmapFont) Render(text string, tint color.Color, maxWidth int, align s
 type textColorRun struct {
 	transform int
 	fallback  color.Color
+	reset     bool
 }
 
 var namedTextColors = map[string]textColorRun{
@@ -186,8 +190,9 @@ var namedTextColors = map[string]textColorRun{
 }
 
 // parseColorTokens removes the label tokens used by Diablo UI strings and
-// records the visible-rune position where each color run begins. Unknown
-// bracketed tokens are removed just like the established UI behavior.
+// records the visible-rune position where each color run begins. `[/]`,
+// `[/color]`, and `[reset]` restore the caller's original tint, allowing a
+// small colored phrase without requiring another hard-coded color token.
 func parseColorTokens(text string) (string, map[int]textColorRun) {
 	var clean strings.Builder
 	colors := make(map[int]textColorRun)
@@ -195,7 +200,10 @@ func parseColorTokens(text string) (string, map[int]textColorRun) {
 	for len(text) > 0 {
 		if text[0] == '[' {
 			if end := strings.IndexByte(text, ']'); end >= 0 {
-				if next, ok := namedTextColors[strings.ToLower(text[1:end])]; ok {
+				token := strings.ToLower(strings.TrimSpace(text[1:end]))
+				if token == "/" || token == "reset" || strings.HasPrefix(token, "/") {
+					colors[visible] = textColorRun{reset: true}
+				} else if next, ok := namedTextColors[token]; ok {
 					colors[visible] = next
 				}
 				text = text[end+1:]

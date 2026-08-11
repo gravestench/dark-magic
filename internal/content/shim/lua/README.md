@@ -50,7 +50,7 @@ Do **not** begin with the largest file. This order builds one idea at a time:
 11. `darkmagic/screens/game_world.lua` — the world scene joins simulation, presentation, HUD, and overlays.
 12. `darkmagic/ui/game_hud.lua` — a larger capstone example.
 13. `darkmagic/screens/ui_lab.lua` — a playground showing the reusable widgets together.
-14. `darkmagic/screens/dt1_lab.lua`, `ds1_lab.lua`, and `mapgen_lab.lua` — lazy, asset-backed tile, map, and generated-zone inspection scenes.
+14. `darkmagic/screens/composite_lab.lua`, `monster_lab.lua`, `missile_lab.lua`, `dt1_lab.lua`, `ds1_lab.lua`, and `mapgen_lab.lua` — asset-backed animation, tile, map, and generated-zone inspection scenes.
 
 After that, browse whichever overlay or widget resembles the thing you want to make.
 

@@ -56,6 +56,8 @@ func TestGameDataModuleExposesTypedCopies(t *testing.T) {
 			assert(skill.name_key == "StrFireBolt" and skill.short_key == "StrFireBoltShort")
 			assert(skill.list_row == 1 and skill.left_allowed and not skill.passive)
 			assert(data.skill(999) == nil)
+			assert(#data.monsters() == 0)
+			assert(#data.missiles() == 0)
 		`)
 	}); err != nil {
 		t.Fatal(err)

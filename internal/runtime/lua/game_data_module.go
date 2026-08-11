@@ -1,10 +1,13 @@
 package modruntime
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
+	gamemissile "github.com/gravestench/dark-magic/internal/game/missile"
+	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -20,6 +23,8 @@ func GameDataModule(catalog gameDataSnapshotter) Module {
 		"character_class": commandHelp("dm.game_data.character_class(class)", "Return the typed starting data for a character class."),
 		"unique_titles":   commandHelp("dm.game_data.unique_titles()", "Return the available unique-item titles."),
 		"skill":           commandHelp("dm.game_data.skill(id)", "Return typed skill icon, eligibility, and localization metadata."),
+		"monsters":        commandHelp("dm.game_data.monsters()", "Return coherent ordinary-monster presentation recipes for development inspection."),
+		"missiles":        commandHelp("dm.game_data.missiles()", "Return coherent missile presentation recipes for development inspection."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"character_class": func(state *lua.LState) int {
@@ -105,6 +110,75 @@ func GameDataModule(catalog gameDataSnapshotter) Module {
 				result.RawSetString("list_row", lua.LNumber(description.ListRow))
 				result.RawSetString("left_allowed", lua.LBool(strings.TrimSpace(skill.LeftSkill) == "1"))
 				result.RawSetString("passive", lua.LBool(strings.TrimSpace(skill.Passive) == "1"))
+				state.Push(result)
+				return 1
+			},
+			"monsters": func(state *lua.LState) int {
+				snapshot, err := catalog.Snapshot()
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				ids := make([]string, 0, len(snapshot.MonstersByID))
+				for id := range snapshot.MonstersByID {
+					ids = append(ids, id)
+				}
+				sort.Strings(ids)
+				result := state.NewTable()
+				for _, id := range ids {
+					definition, err := gamemonster.FromCatalog(snapshot, id, gamemonster.Normal)
+					if err != nil || len(definition.Components) == 0 {
+						continue
+					}
+					entry := state.NewTable()
+					entry.RawSetString("id", lua.LString(definition.ID))
+					entry.RawSetString("token", lua.LString(definition.Token))
+					entry.RawSetString("weapon_class", lua.LString(definition.WeaponClass))
+					entry.RawSetString("name_key", lua.LString(definition.NameKey))
+					keys := make([]string, 0, len(definition.Components))
+					for key := range definition.Components {
+						keys = append(keys, key)
+					}
+					sort.Strings(keys)
+					parts := make([]string, 0, len(keys))
+					for _, key := range keys {
+						parts = append(parts, key+"="+definition.Components[key])
+					}
+					entry.RawSetString("components", lua.LString(strings.Join(parts, ",")))
+					result.Append(entry)
+				}
+				state.Push(result)
+				return 1
+			},
+			"missiles": func(state *lua.LState) int {
+				snapshot, err := catalog.Snapshot()
+				if err != nil {
+					return pushLuaError(state, err)
+				}
+				ids := make([]string, 0, len(snapshot.MissilesByName))
+				for id := range snapshot.MissilesByName {
+					ids = append(ids, id)
+				}
+				sort.Strings(ids)
+				result := state.NewTable()
+				for _, id := range ids {
+					recipe, err := gamemissile.PresentationFromCatalog(snapshot, id)
+					if err != nil {
+						continue
+					}
+					entry := state.NewTable()
+					entry.RawSetString("id", lua.LString(recipe.MissileID))
+					entry.RawSetString("dcc", lua.LString(recipe.DCC))
+					entry.RawSetString("palette", lua.LString(recipe.Palette))
+					entry.RawSetString("directions", lua.LNumber(recipe.Directions))
+					entry.RawSetString("frames_per_second", lua.LNumber(recipe.FramesPerSecond))
+					entry.RawSetString("loop", lua.LBool(recipe.Loop))
+					entry.RawSetString("travel_sound", lua.LString(recipe.TravelSound))
+					entry.RawSetString("hit_sound", lua.LString(recipe.HitSound))
+					entry.RawSetString("offset_x", lua.LNumber(recipe.OffsetX))
+					entry.RawSetString("offset_y", lua.LNumber(recipe.OffsetY))
+					entry.RawSetString("offset_z", lua.LNumber(recipe.OffsetZ))
+					result.Append(entry)
+				}
 				state.Push(result)
 				return 1
 			},
