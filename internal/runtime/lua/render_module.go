@@ -1,7 +1,6 @@
 package modruntime
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -425,7 +424,7 @@ func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
 	switch {
 	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "dt1-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
 		return c.encoded, "encoded"
-	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"):
+	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"), strings.HasPrefix(key, "ds1\x00"):
 		return c.composed, "composed"
 	default:
 		return c.decoded, "decoded"
@@ -798,15 +797,11 @@ func (c *renderAssetCache) loadDT1Tile(assets fs.FS, name, palette string, index
 func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, palette string) (image.Image, error) {
 	key := name + "\x00" + strings.Join(tiles, "\x00") + "\x00" + palette
 	value, err := c.load(assets, "ds1\x00"+key, func() (any, int, error) {
-		preview, err := assetinspect.TexturedDS1Preview(assets, name, tiles, palette)
+		preview, err := assetinspect.TexturedDS1Image(assets, name, tiles, palette)
 		if err != nil {
 			return nil, 0, err
 		}
-		decoded, _, err := image.Decode(bytes.NewReader(preview))
-		if err != nil {
-			return nil, 0, err
-		}
-		return decoded, decoded.Bounds().Dx() * decoded.Bounds().Dy() * 4, nil
+		return preview, imageWeight(preview), nil
 	})
 	if err != nil {
 		return nil, err
