@@ -26,10 +26,15 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
 - M21.10 an inspectable deterministic Blood Moor population plan derived from
   generated-zone and typed monster/level facts, collision-aware placement, and
   privileged replayable materialization independent of renderer residency.
+- M21.11 a single effects-phase monster-death commit that consumes lethal
+  combat output once, records corpse/lifecycle state, disables live-unit
+  behavior, attributes lethal-player XP, rolls the authored treasure class,
+  and emits stable kill/loot/quest/presentation facts with replay-equivalent
+  checkpoint restoration.
 
 Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
 
-## Immediate queue: M21.11 through M21.12
+## Immediate queue: M21.12
 
 ### Completed: M21.8 timed state engine
 
@@ -90,7 +95,7 @@ The first explicitly synthetic room-density policy now proves this separation
 and records every suppression/fallback decision. Exact retail density, room
 eligibility, and pack-quality behavior remain verification work.
 
-### 1. M21.11: monster death transaction
+### Completed: M21.11 monster death transaction
 
 Goal: replace the current minimal lethal consequence with one atomic semantic death transaction.
 
@@ -106,9 +111,12 @@ Join, in deterministic order:
 - active/inactive lifecycle state;
 - semantic presentation/audio cues.
 
-Death is not merely `hp <= 0`; it is an authoritative transition whose consequences replay together.
+Death is not merely `hp <= 0`; it is an authoritative transition whose
+consequences replay together. The initial policy is now complete. It explicitly
+leaves party/owned-unit attribution, corpse expiry/skills, and authoritative
+world-item materialization to their existing future owners.
 
-### 2. M21.12: owned-unit relation
+### 1. M21.12: owned-unit relation
 
 Goal: establish generic ownership before summons, pets, traps, minions, and hirelings each invent separate owner/attribution models.
 

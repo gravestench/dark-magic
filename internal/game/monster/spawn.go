@@ -115,7 +115,7 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		store  *akara.DynamicStore
 		values map[string]any
 	}{
-		{stores.identity, map[string]any{"spawn_id": spawn.SpawnID, "definition_id": spawn.Definition.ID, "base_id": spawn.Definition.BaseID, "graphics_id": spawn.Definition.GraphicsID, "seed": hex.EncodeToString(seed)}},
+		{stores.identity, map[string]any{"spawn_id": spawn.SpawnID, "definition_id": spawn.Definition.ID, "base_id": spawn.Definition.BaseID, "graphics_id": spawn.Definition.GraphicsID, "seed": hex.EncodeToString(seed), "treasure_class": spawn.Definition.TreasureClass}},
 		{stores.stats, map[string]any{"level": spawn.Definition.Level, "health": life.Raw(), "max_health": life.Raw(), "defense": spawn.Definition.Defense, "attack_rating": spawn.Definition.AttackRating, "physical_min": spawn.Definition.PhysicalMin.Raw(), "physical_max": spawn.Definition.PhysicalMax.Raw(), "experience": spawn.Definition.Experience}},
 		{stores.appearance, map[string]any{"token": spawn.Definition.Token, "mode": "NU", "weapon_class": spawn.Definition.WeaponClass, "name_key": spawn.Definition.NameKey}},
 		{stores.ai, map[string]any{"behavior": spawn.Definition.AI, "state": AIIdle, "target_id": "", "next_think_tick": int64(command.Tick), "think_interval": int64(spawn.Definition.ThinkInterval), "aggro_radius": spawn.Definition.AggroRadius, "attack_range": spawn.Definition.AttackRange, "speed": float64(spawn.Definition.Velocity)}},
@@ -139,7 +139,7 @@ type stores struct {
 
 func registerStores(world *akara.World) (stores, error) {
 	schemas := []akara.Schema{
-		{Name: "dm.monster.identity", Version: 1, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}}},
+		{Name: "dm.monster.identity", Version: 2, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}, {Name: "treasure_class", Kind: akara.FieldString}}},
 		{Name: "dm.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: "dm.monster.appearance", Version: 1, Fields: []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}, {Name: "name_key", Kind: akara.FieldString}}},
 		aiSchema(),

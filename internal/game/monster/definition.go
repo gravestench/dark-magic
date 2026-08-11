@@ -42,6 +42,7 @@ type Definition struct {
 	PhysicalMin    gamecombat.Amount `json:"physical_min"`
 	PhysicalMax    gamecombat.Amount `json:"physical_max"`
 	Experience     int64             `json:"experience"`
+	TreasureClass  string            `json:"treasure_class"`
 	ColliderRadius float64           `json:"collider_radius"`
 	SelectRadius   float64           `json:"select_radius"`
 	Velocity       int64             `json:"velocity"`
@@ -182,6 +183,7 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		Token: strings.ToUpper(strings.TrimSpace(stats.Code)), WeaponClass: strings.ToUpper(strings.TrimSpace(graphics.BaseWeapon)),
 		Level: int64(effectiveLevel), LifeMin: lifeMin, LifeMax: lifeMax, Defense: int64(values.defense), AttackRating: int64(values.attack),
 		PhysicalMin: damageMin, PhysicalMax: damageMax, Experience: int64(values.experience),
+		TreasureClass:  treasureClass(stats, difficulty),
 		ColliderRadius: diameter / 2, SelectRadius: diameter / 2, Velocity: int64(stats.Velocity), Killable: stats.Killable,
 		ThinkInterval: uint64(thinkInterval), AggroRadius: float64(aggroRadius), AttackRange: float64(attackRange),
 		MinGroup: authoredPositive(stats.MinGrp, 1), MaxGroup: authoredPositive(stats.MaxGrp, 1),
@@ -194,6 +196,17 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		definition.MonLvlLevel = level.Level
 	}
 	return definition, nil
+}
+
+func treasureClass(stats models.MonsterStats, difficulty Difficulty) string {
+	switch difficulty {
+	case Nightmare:
+		return strings.TrimSpace(stats.TreasureClass1Nightmare)
+	case Hell:
+		return strings.TrimSpace(stats.TreasureClass1Hell)
+	default:
+		return strings.TrimSpace(stats.TreasureClass1)
+	}
 }
 
 func authoredPositive(value string, fallback int) int {

@@ -92,6 +92,28 @@ func TestRollDamageKeepsWholeAuthoredEndpoints(t *testing.T) {
 	}
 }
 
+func TestPhysicalDamageReportsOnlyTheLethalTransition(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	if err := RegisterBasicMelee(engine, BasicMeleePolicy{HitChance: 100}); err != nil {
+		t.Fatal(err)
+	}
+	stores := meleeTestStores(t, engine)
+	target := engine.World().MustCreateEntity()
+	setMeleeTarget(t, stores, target, "player:hero", 1, 1, 1)
+	_, firstDied, err := applyPhysical(target, MustWhole(1), stores.monsterStats, stores.playerVitals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, secondDied, err := applyPhysical(target, MustWhole(1), stores.monsterStats, stores.playerVitals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !firstDied || secondDied {
+		t.Fatalf("death transitions = first:%t second:%t", firstDied, secondDied)
+	}
+}
+
 type meleeStores struct {
 	requests, events, selectables, positions, locations, monsterStats, playerVitals *akara.DynamicStore
 }
