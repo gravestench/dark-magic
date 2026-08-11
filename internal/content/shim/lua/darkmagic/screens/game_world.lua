@@ -30,6 +30,12 @@ local tooltip = require("darkmagic.ui.tooltip")
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
 
+local function selectable_at(self, x, y)
+	local spawned = self.targeting and self.targeting.selectable_at(x, y) or nil
+	if spawned and spawned.owner ~= "local-player" then return spawned end
+	return self.world and self.world:selectable_at(x, y) or nil
+end
+
 return {
     create = function(self)
         -- Ordinary Lua helper defining/binding ECS world presentation behavior.
@@ -84,7 +90,8 @@ return {
             -- path that actually needs them.
             local player = require("dm.player/v1")
             self.player = player
-			self.interaction = require("dm.interaction/v1")
+            self.interaction = require("dm.interaction/v1")
+			self.targeting = require("dm.targeting/v1")
             local items = require("dm.items/v1")
             self.items = items
             self.game_data = require("dm.game_data/v1")
@@ -293,7 +300,7 @@ return {
 			local hover = nil
 			if self.world and in_world and not self.__darkmagic_item_held then
 				local hover_x, hover_y = self.world:screen_to_subtile(pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y)
-				hover = self.world:selectable_at(hover_x, hover_y)
+				hover = selectable_at(self, hover_x, hover_y)
 			end
 			self.world_hover_tip:set_visible(hover ~= nil)
 			if hover then self.world_hover_tip:set_text(hover.label ~= "" and hover.label or hover.kind);self.world_hover_tip:set_position(pointer_x+16,pointer_y+18) end
@@ -303,10 +310,18 @@ return {
             local target_world_x, target_world_y = self.world:screen_to_subtile(
                 pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
             )
-			local selected = self.world:selectable_at(target_world_x, target_world_y)
+			local selected = selectable_at(self, target_world_x, target_world_y)
 			if selected and input.pressed("pointer_primary") then
-				self.pending_interaction = selected
-				self.player.request_move(selected.x, selected.y, 3.5)
+				if selected.kind == "hostile" then
+					self.pending_interaction = nil
+					self.player.request_skill("left", selected.x, selected.y, selected.id)
+				elseif selected.kind == "static-object" or selected.kind == "dynamic-object" then
+					self.pending_interaction = selected
+					self.player.request_move(selected.x, selected.y, 3.5)
+				else
+					self.pending_interaction = nil
+					self.player.request_move(selected.x, selected.y, selected.radius or 0)
+				end
 			else
 				self.pending_interaction = nil
 				self.player.request_move(target_world_x, target_world_y)
@@ -330,7 +345,7 @@ return {
 			local skill_x, skill_y = self.world:screen_to_subtile(
 				pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
 			)
-			local selected = self.world:selectable_at(skill_x, skill_y)
+			local selected = selectable_at(self, skill_x, skill_y)
 			self.player.request_skill("right", skill_x, skill_y, selected and selected.id or "")
 		end
 

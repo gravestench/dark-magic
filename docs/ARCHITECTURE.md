@@ -213,6 +213,12 @@ diagonals cannot cut blocked corners, occupied interaction targets use reachable
 stopping rings, and unreachable requests cancel explicitly. Selection kinds
 must come from spawned authoritative definitions—not DS1-name heuristics.
 
+Live selectable entities attach `dm.world.selectable` beside their authoritative
+position. Its explicit kind is one of player, NPC, hostile, item, portal,
+missile, or scenery. The targeting capability returns copied hit facts and
+filters the locally owned player in presentation; it does not expose ECS stores
+or infer classifications from asset labels.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and

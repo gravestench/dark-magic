@@ -86,6 +86,17 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if item, _ := belt.Get("slot_16"); item != "" {
 		t.Fatalf("initial belt slot 16 = %v, want empty", item)
 	}
+	selectableStore, found := akara.GetDynamicStore(engine.World(), "dm.world.selectable")
+	if !found {
+		t.Fatal("selectable store was not materialized")
+	}
+	selectable, present := selectableStore.Get(entity)
+	if !present {
+		t.Fatal("player lacks selectable component")
+	}
+	if kind, _ := selectable.Get("kind"); kind != "player" {
+		t.Fatalf("selectable kind = %v", kind)
+	}
 	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
 	if !found || learned.Len() != 1 {
 		t.Fatalf("learned skills = %v, %v", learned, found)
