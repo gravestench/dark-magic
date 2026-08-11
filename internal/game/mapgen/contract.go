@@ -127,6 +127,13 @@ type Spawn struct {
 	X, Y     int
 }
 
+// PathTile reserves one world-tile cell for a generated semantic route.
+// Materialization may realize it with level-specific DT1 floor identities;
+// simulation and tests can reason about connectivity before assets are loaded.
+type PathTile struct {
+	X, Y int
+}
+
 // Definition is the mutable input accepted by NewZone. The constructor copies,
 // validates, and canonicalizes it before exposing an immutable Zone.
 type Definition struct {
@@ -138,6 +145,7 @@ type Definition struct {
 	Links   []Link
 	Warps   []Warp
 	Spawns  []Spawn
+	Paths   []PathTile
 	Trace   []string
 }
 
@@ -199,6 +207,16 @@ func validateDefinition(def Definition) error {
 			return fmt.Errorf("%w: duplicate warp %d", ErrZone, warp.ID)
 		}
 		warpIDs[warp.ID] = struct{}{}
+	}
+	seenPath := make(map[PathTile]struct{}, len(def.Paths))
+	for _, tile := range def.Paths {
+		if tile.X < def.Bounds.X || tile.Y < def.Bounds.Y || tile.X >= def.Bounds.X+def.Bounds.Width || tile.Y >= def.Bounds.Y+def.Bounds.Height {
+			return fmt.Errorf("%w: out-of-bounds path tile %d,%d", ErrZone, tile.X, tile.Y)
+		}
+		if _, duplicate := seenPath[tile]; duplicate {
+			return fmt.Errorf("%w: duplicate path tile %d,%d", ErrZone, tile.X, tile.Y)
+		}
+		seenPath[tile] = struct{}{}
 	}
 	return nil
 }

@@ -68,6 +68,24 @@ func TestZoneRejectsDanglingRoomStamp(t *testing.T) {
 	}
 }
 
+func TestZoneCopiesAndValidatesPathTiles(t *testing.T) {
+	definition := validDefinition()
+	definition.Paths = []PathTile{{X: 1, Y: 2}}
+	zone, err := NewZone(definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := zone.Paths()
+	paths[0].X = 99
+	if zone.Paths()[0].X != 1 {
+		t.Fatal("path accessor leaked mutable state")
+	}
+	definition.Paths = []PathTile{{X: -1, Y: 0}}
+	if _, err := NewZone(definition); err == nil {
+		t.Fatal("accepted out-of-bounds path tile")
+	}
+}
+
 func TestRequestRejectsImplicitOrUnknownInputs(t *testing.T) {
 	for _, request := range []Request{
 		{Act: 1, LevelID: 1},

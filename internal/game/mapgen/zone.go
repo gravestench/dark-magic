@@ -20,15 +20,16 @@ func NewZone(definition Definition) (*Zone, error) {
 	return &Zone{definition: definition}, nil
 }
 
-func (zone *Zone) Request() Request { return zone.definition.Request }
-func (zone *Zone) Kind() Kind       { return zone.definition.Kind }
-func (zone *Zone) Bounds() Bounds   { return zone.definition.Bounds }
-func (zone *Zone) Stamps() []Stamp  { return cloneDefinition(zone.definition).Stamps }
-func (zone *Zone) Rooms() []Room    { return append([]Room(nil), zone.definition.Rooms...) }
-func (zone *Zone) Links() []Link    { return append([]Link(nil), zone.definition.Links...) }
-func (zone *Zone) Warps() []Warp    { return append([]Warp(nil), zone.definition.Warps...) }
-func (zone *Zone) Spawns() []Spawn  { return append([]Spawn(nil), zone.definition.Spawns...) }
-func (zone *Zone) Trace() []string  { return append([]string(nil), zone.definition.Trace...) }
+func (zone *Zone) Request() Request  { return zone.definition.Request }
+func (zone *Zone) Kind() Kind        { return zone.definition.Kind }
+func (zone *Zone) Bounds() Bounds    { return zone.definition.Bounds }
+func (zone *Zone) Stamps() []Stamp   { return cloneDefinition(zone.definition).Stamps }
+func (zone *Zone) Rooms() []Room     { return append([]Room(nil), zone.definition.Rooms...) }
+func (zone *Zone) Links() []Link     { return append([]Link(nil), zone.definition.Links...) }
+func (zone *Zone) Warps() []Warp     { return append([]Warp(nil), zone.definition.Warps...) }
+func (zone *Zone) Spawns() []Spawn   { return append([]Spawn(nil), zone.definition.Spawns...) }
+func (zone *Zone) Paths() []PathTile { return append([]PathTile(nil), zone.definition.Paths...) }
+func (zone *Zone) Trace() []string   { return append([]string(nil), zone.definition.Trace...) }
 
 // MarshalJSON is the canonical, versioned representation used by replays,
 // diagnostics, and server/client verification.
@@ -53,6 +54,7 @@ func cloneDefinition(source Definition) Definition {
 	result.Links = append([]Link(nil), source.Links...)
 	result.Warps = append([]Warp(nil), source.Warps...)
 	result.Spawns = append([]Spawn(nil), source.Spawns...)
+	result.Paths = append([]PathTile(nil), source.Paths...)
 	result.Trace = append([]string(nil), source.Trace...)
 	return result
 }
@@ -76,4 +78,10 @@ func canonicalize(definition *Definition) {
 	})
 	sort.Slice(definition.Warps, func(i, j int) bool { return definition.Warps[i].ID < definition.Warps[j].ID })
 	sort.Slice(definition.Spawns, func(i, j int) bool { return definition.Spawns[i].ID < definition.Spawns[j].ID })
+	sort.Slice(definition.Paths, func(i, j int) bool {
+		if definition.Paths[i].Y == definition.Paths[j].Y {
+			return definition.Paths[i].X < definition.Paths[j].X
+		}
+		return definition.Paths[i].Y < definition.Paths[j].Y
+	})
 }

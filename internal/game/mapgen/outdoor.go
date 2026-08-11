@@ -54,6 +54,7 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 	entry := townEdgeWarp(width, height, townDirection)
 	exit := nextLevelEdgeWarp(width, height, entry.Direction)
 	route := outdoorRoute(request.Seed, columns, rows, entry.Direction)
+	path := outdoorPathTiles(route, columns, rows, entry, exit)
 	stamps := make([]Stamp, 0, columns*rows)
 	rooms := make([]Room, 0, columns*rows)
 	links := make([]Link, 0, (columns-1)*rows+(rows-1)*columns)
@@ -82,12 +83,85 @@ func (generator *ActOneOutdoorGenerator) generate(request Request, townDirection
 			}
 		}
 	}
-	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Trace: []string{
+	return NewZone(Definition{Request: request, Kind: Outdoor, Bounds: Bounds{Width: width, Height: height}, Stamps: stamps, Rooms: rooms, Links: links, Warps: []Warp{entry, exit}, Paths: path, Trace: []string{
 		fmt.Sprintf("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", request.LevelID, columns, rows),
 		"authored 8x8 Blood Moor fill presets selected by independent cell streams",
 		fmt.Sprintf("Rogue Encampment joins the %s Blood Moor edge", oppositeDirection(townDirection)),
 		fmt.Sprintf("a deterministic %d-cell route joins town to the opposite next-level edge", len(route)),
 	}})
+}
+
+func outdoorPathTiles(route map[[2]int]bool, columns, rows int, entry, exit Warp) []PathTile {
+	points := []PathTile{{X: entry.X, Y: entry.Y}}
+	horizontal := entry.Direction == "west" || entry.Direction == "east"
+	forward := entry.Direction == "west" || entry.Direction == "north"
+	length := rows
+	if horizontal {
+		length = columns
+	}
+	for step := 0; step < length; step++ {
+		axis := step
+		if !forward {
+			axis = length - step - 1
+		}
+		for cell := range route {
+			cellAxis := cell[1]
+			if horizontal {
+				cellAxis = cell[0]
+			}
+			if cellAxis == axis {
+				points = append(points, PathTile{X: cell[0]*actOneOutdoorCellSize + actOneOutdoorCellSize/2, Y: cell[1]*actOneOutdoorCellSize + actOneOutdoorCellSize/2})
+				break
+			}
+		}
+	}
+	points = append(points, PathTile{X: exit.X, Y: exit.Y})
+	seen := map[PathTile]bool{}
+	for index := 1; index < len(points); index++ {
+		rasterPath(points[index-1], points[index], seen)
+	}
+	result := make([]PathTile, 0, len(seen))
+	for tile := range seen {
+		result = append(result, tile)
+	}
+	return result
+}
+
+// rasterPath is an integer Bresenham walk. Diagonal steps are legal because
+// the legacy dirt-path realization selects art from all eight neighbors.
+func rasterPath(from, to PathTile, result map[PathTile]bool) {
+	x, y := from.X, from.Y
+	dx, dy := absInt(to.X-x), -absInt(to.Y-y)
+	sx, sy := -1, -1
+	if x < to.X {
+		sx = 1
+	}
+	if y < to.Y {
+		sy = 1
+	}
+	err := dx + dy
+	for {
+		result[PathTile{X: x, Y: y}] = true
+		if x == to.X && y == to.Y {
+			return
+		}
+		twice := 2 * err
+		if twice >= dy {
+			err += dy
+			x += sx
+		}
+		if twice <= dx {
+			err += dx
+			y += sy
+		}
+	}
+}
+
+func absInt(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 func (generator *ActOneOutdoorGenerator) outdoorStamp(request Request, level model.LevelData, preset model.LevelPreset, id uint32, x, y int) (Stamp, error) {
