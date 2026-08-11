@@ -207,6 +207,12 @@ submits a semantic coordinate and optional selected-entity ID; the fixed-tick
 skill command resolves the authoritative assignment and learned/side-allowed
 skill, then records the intent in ECS for later cast/cost/timing systems.
 
+Pointer movement paths are deterministic eight-way subtile paths over the same
+DT1 collision queried by integration. Entity radius affects passability,
+diagonals cannot cut blocked corners, occupied interaction targets use reachable
+stopping rings, and unreachable requests cancel explicitly. Selection kinds
+must come from spawned authoritative definitions—not DS1-name heuristics.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and

@@ -936,11 +936,15 @@ complete until its actions are driven by authoritative game state and commands.
     allowed skill and records its semantic coordinate/optional entity target in
     ECS state. Empty skill wells safely no-op; invalid non-empty assignments are
     rejected. Hostile/item/portal classification remains M20.14c input.
-  - [ ] M20.14c: Add hostile, item, and portal selectable kinds; dispatch a
-    primary click to interaction or the assigned primary skill by target kind;
-    and replace direct approach with entity-size-aware path requests,
-    interaction stopping distance, unreachable-target cancellation, and hover/
-    selection presentation sourced from the same selector.
+  - [x] M20.14c: Replace direct approach with deterministic entity-size-aware
+    eight-way A*, diagonal corner protection, occupied-target stopping radii,
+    unreachable-target cancellation, and hover presentation sourced from the
+    same selector. Fixed-tick commands record successive authoritative
+    waypoints, while DT1 collision remains the movement and path source.
+  - [ ] M20.14d: Materialize hostile, NPC, item, portal, missile, and scenery
+    kinds from authoritative spawned entity definitions; dispatch primary click
+    to interaction, pickup, movement, or the assigned primary skill by kind.
+    Do not infer hostility from a DS1 dynamic-object number or display string.
 
 ## M21: Diablo simulation
 

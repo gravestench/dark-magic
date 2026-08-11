@@ -25,6 +25,7 @@ local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
 local player_composite = require("darkmagic.gameplay.player_composite")
 local chunked_map = require("darkmagic.presentation.chunked_map")
+local tooltip = require("darkmagic.ui.tooltip")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
@@ -64,6 +65,7 @@ return {
         -- Map bands and standing entities share one parent so their baseline
         -- depths can interleave. A parent-level z can never provide occlusion.
         self.hero = render.create("world", self.map and self.map.root or self.root)
+		if render.assets_available() then self.world_hover_tip = tooltip.create(self.root, "", 0, 0, {origin_x="left",origin_y="top",alpha=190}) end
 
         local character = saves.selected()
 
@@ -287,6 +289,15 @@ return {
         elseif world_view == "none" then
             in_world = false
         end
+		if self.world_hover_tip then
+			local hover = nil
+			if self.world and in_world and not self.__darkmagic_item_held then
+				local hover_x, hover_y = self.world:screen_to_subtile(pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y)
+				hover = self.world:selectable_at(hover_x, hover_y)
+			end
+			self.world_hover_tip:set_visible(hover ~= nil)
+			if hover then self.world_hover_tip:set_text(hover.label ~= "" and hover.label or hover.kind);self.world_hover_tip:set_position(pointer_x+16,pointer_y+18) end
+		end
         if self.player and self.world and in_world and not self.__darkmagic_item_held
             and (input.pressed("pointer_primary") or (input.down("pointer_primary") and not self.pending_interaction)) then
             local target_world_x, target_world_y = self.world:screen_to_subtile(
@@ -295,18 +306,22 @@ return {
 			local selected = self.world:selectable_at(target_world_x, target_world_y)
 			if selected and input.pressed("pointer_primary") then
 				self.pending_interaction = selected
-				self.player.request_move(selected.x, selected.y)
+				self.player.request_move(selected.x, selected.y, 3.5)
 			else
 				self.pending_interaction = nil
 				self.player.request_move(target_world_x, target_world_y)
 			end
 		end
-        if self.pending_interaction then
+		if self.pending_interaction then
 			local selected = self.pending_interaction
 			local dx, dy = hero_x - selected.x, hero_y - selected.y
 			if dx * dx + dy * dy <= 16 and self.world:line_clear(hero_x, hero_y, selected.x, selected.y) then
 				self.interaction.open_at(selected.x, selected.y)
 				self.player.request_move(hero_x, hero_y)
+				self.pending_interaction = nil
+			elseif not self.player.movement_pending() then
+				-- Authority could not find a route. Do not leave a ghost interaction
+				-- that unexpectedly fires after some unrelated later movement.
 				self.pending_interaction = nil
 			end
         end

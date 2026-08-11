@@ -180,6 +180,7 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("load offline entry map", err)
 	}
+	movementSource.SetNavigation(worldMap)
 	app.interactionAuthority.ConfigureWorld(worldMap)
 	selectables := worldMap.Selectables()
 	interactionTargets := make([]gameinteraction.Target, 0, len(selectables))
