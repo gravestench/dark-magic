@@ -655,13 +655,39 @@ func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 	}
 }
 
-func TestChunkSetsUseComposedCacheBudget(t *testing.T) {
+func TestChunkResourcesUseTheirResidencyCacheBudgets(t *testing.T) {
 	capability := NewRenderCapability(New(), &render.Composer{}, fstest.MapFS{})
-	for _, key := range []string{"ds1-chunks\x00map", "world-chunks\x00world"} {
-		tier, namespace := capability.cache.tier(key)
-		if tier != capability.cache.composed || namespace != "composed" {
-			t.Fatalf("%q uses %q cache tier", key, namespace)
-		}
+	tier, namespace := capability.cache.tier("ds1-chunks\x00map")
+	if tier != capability.cache.composed || namespace != "composed" {
+		t.Fatalf("DS1 chunk set uses %q cache tier", namespace)
+	}
+	tier, namespace = capability.cache.tier("world-chunk\x00world\x000")
+	if tier != capability.cache.world || namespace != "world" {
+		t.Fatalf("visible world chunk uses %q cache tier", namespace)
+	}
+	tier, namespace = capability.cache.tier("world-chunks\x00world")
+	if tier != capability.cache.decoded || namespace != "decoded" {
+		t.Fatalf("world chunk index uses %q cache tier", namespace)
+	}
+}
+
+func TestOwnedRenderNodeReleaseToleratesRecursiveParentDestruction(t *testing.T) {
+	var composer render.Composer
+	parentID, err := composer.Create(render.NodeID{}, render.LayerWorld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	childID, err := composer.Create(parentID, render.LayerWorld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := &ownedRenderNode{composer: &composer, id: parentID}
+	child := &ownedRenderNode{composer: &composer, id: childID}
+	if err := parent.release(); err != nil {
+		t.Fatal(err)
+	}
+	if err := child.release(); err != nil {
+		t.Fatalf("releasing recursively destroyed child: %v", err)
 	}
 }
 

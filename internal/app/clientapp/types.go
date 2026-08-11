@@ -89,7 +89,7 @@ type Profile interface {
 
 // Capture observes completed frames and writes the requested screenshots.
 type Capture interface {
-	Observe([]string, uint64)
+	Observe([]string, uint64, bool)
 	Complete() bool
 	Close() error
 }
@@ -113,16 +113,17 @@ type application struct {
 	profile       content.PresentationProfile
 	presentation  content.PresentationBootstrap
 
-	renderer       *raylibrenderer.Service
-	rendererConfig raylibrenderer.Config
-	input          *raylibinput.Service
-	inputState     *inputstate.Store
-	locale         *localization.Locale
-	scripts        *modruntime.Runtime
-	composer       *render.Composer
-	mixer          *audio.Mixer
-	navigator      *navigation.Manager
-	scenes         *modruntime.Scenes
+	renderer         *raylibrenderer.Service
+	rendererConfig   raylibrenderer.Config
+	input            *raylibinput.Service
+	inputState       *inputstate.Store
+	locale           *localization.Locale
+	scripts          *modruntime.Runtime
+	composer         *render.Composer
+	mixer            *audio.Mixer
+	navigator        *navigation.Manager
+	scenes           *modruntime.Scenes
+	renderCapability *modruntime.RenderCapability
 
 	records              *recordstore.Store
 	gameData             *gamedata.Catalog

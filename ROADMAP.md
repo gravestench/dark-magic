@@ -868,6 +868,11 @@ complete until its actions are driven by authoritative game state and commands.
   is queued off-thread, camera-near textures are admitted gradually and culled
   against the unobscured left/right view, and map placement derives exclusively
   from absolute authoritative camera coordinates without a scene-entry baseline.
+- [x] M20.4a: Replace eager whole-zone raster composition with a lightweight
+  DT1 placement/depth index. The camera queues only chunks intersecting its
+  unobscured viewport plus a prefetch margin; bounded workers rasterize those
+  chunks before Lua admits their retained nodes, and conservative index bounds
+  are replaced with exact transparent-trimmed bounds at admission.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue
@@ -1164,6 +1169,10 @@ authority, persistence separation, and resilience acceptance remain open.
   texture identities, split encoded/direction/composed CPU cache budgets, and
   report cold work by stage. The real unarmed-player fixture fell from roughly
   1.4 seconds to about 0.7 seconds on the development machine.
+- [x] Give generated-world rasters an independent 96 MiB working-set cache and
+  keep whole-zone RGBA out of preload residency. Production Blood Moor now
+  indexes without expanded pixels, while a bounded camera-near sample stays
+  below 16 MiB and cold chunk rasterization remains off the Lua update thread.
 
 ## M26: Native frame-path profiling follow-up
 

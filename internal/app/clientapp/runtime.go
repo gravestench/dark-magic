@@ -88,6 +88,7 @@ func (app *application) registerVideoModule() error {
 
 func (app *application) registerPresentationModules() error {
 	renderCapability := modruntime.NewRenderCapability(app.scripts, app.composer, app.options.Content)
+	app.renderCapability = renderCapability
 	if app.options.Profile != nil {
 		app.options.Profile.SetDiagnostics(func() any {
 			return map[string]any{

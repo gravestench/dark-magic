@@ -34,19 +34,32 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
-	chunks, err := maprender.Compose(assets, app.gameWorlds[2], "data/global/palette/ACT1/pal.pl2", maprender.DefaultChunkSize)
+	chunks, err := maprender.Index(assets, app.gameWorlds[2], "data/global/palette/ACT1/pal.pl2", maprender.DefaultChunkSize)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(chunks.Chunks) == 0 {
+		t.Fatal("Blood Moor produced no indexed presentation chunks")
+	}
+	for index, chunk := range chunks.Chunks {
+		if chunk.Pixels != nil {
+			t.Fatalf("indexed chunk %d eagerly retained expanded pixels", index)
+		}
+	}
 	weight := 0
-	for _, chunk := range chunks.Chunks {
+	visibleSample := min(16, len(chunks.Chunks))
+	for index := 0; index < visibleSample; index++ {
+		chunk, materializeErr := chunks.Materialize(index)
+		if materializeErr != nil {
+			t.Fatal(materializeErr)
+		}
 		weight += chunk.Pixels.Bounds().Dx() * chunk.Pixels.Bounds().Dy() * 4
 	}
-	// A world chunk set must fit the composed-resource cache as one entry. The
-	// margin leaves room for active character and interface compositions.
-	const maximumWorldChunkBytes = 300 * 1024 * 1024
+	// Camera residency owns only a nearby working set. This catches accidental
+	// return to full-map RGBA composition without coupling the test to a window.
+	const maximumWorldChunkBytes = 16 * 1024 * 1024
 	if weight > maximumWorldChunkBytes {
-		t.Fatalf("Blood Moor chunk residency = %d MiB across %d chunks, want <= 300 MiB", weight/(1024*1024), len(chunks.Chunks))
+		t.Fatalf("Blood Moor sample residency = %d MiB across %d chunks, want <= 16 MiB", weight/(1024*1024), visibleSample)
 	}
 	t.Cleanup(func() {
 		app.loading.Close()
