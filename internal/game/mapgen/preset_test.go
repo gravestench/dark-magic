@@ -60,3 +60,27 @@ func TestAssetPathNormalizesLegacySeparators(t *testing.T) {
 		t.Fatalf("path = %q", got)
 	}
 }
+
+func TestStaticTownPresetUsesEveryAuthoredVariantAndCarriesExit(t *testing.T) {
+	fixture := presetFixture()
+	fixture.LevelPresets[0].Files = 0
+	fixture.LevelPresets[0].File1 = `Act1\Town\TownN1.ds1`
+	fixture.LevelPresets[0].File2 = `Act1\Town\TownE1.ds1`
+	fixture.LevelPresets[0].File3 = `Act1\Town\TownS1.ds1`
+	fixture.LevelPresets[0].File4 = `Act1\Town\TownW1.ds1`
+
+	seen := map[string]bool{}
+	for seed := uint64(0); seed < 128 && len(seen) < 4; seed++ {
+		zone, err := NewPresetGenerator(fixture).Generate(Request{Version: ContractVersion, Seed: seed, Act: 1, LevelID: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		stamp := zone.Stamps()[0]
+		seen[stamp.Role] = true
+	}
+	for _, role := range []string{"act1-town:exit-north", "act1-town:exit-east", "act1-town:exit-south", "act1-town:exit-west"} {
+		if !seen[role] {
+			t.Errorf("never selected %q; roles = %#v", role, seen)
+		}
+	}
+}

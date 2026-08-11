@@ -947,6 +947,21 @@ complete until its actions are driven by authoritative game state and commands.
     player; and dispatch hostile primary clicks to assigned primary-skill intent.
     Future monster, drop, portal, and missile spawners attach these components;
     no hostility is inferred from a DS1 number or display string.
+- [ ] M20.15: Generate and enter Act I Rogue Encampment as the first production
+  session-owned zone.
+  - [x] M20.15a: Correct static `LvlPrest.Files=0` alternative handling, select
+    all four `TownN1/E1/S1/W1` layouts deterministically, retain their cardinal
+    wilderness-exit role, and derive an open player-entry point near the
+    authored RogueBonfire instead of the map center.
+  - [ ] M20.15b: Replace the fixed presentation fixture with the generated town
+    recipe, materialize it incrementally, and publish it atomically to the
+    authoritative session and chunked renderer.
+  - [ ] M20.15c: Route character creation, game join, and same-act game entry to
+    the town campfire anchor; preserve character/session identity independently
+    of the selected town layout.
+  - [ ] M20.15d: Join the selected cardinal town edge to the first generated
+    wilderness zone and validate bidirectional transition, collision, camera,
+    depth, and pointer navigation across the seam.
 
 ## M21: Diablo simulation
 
