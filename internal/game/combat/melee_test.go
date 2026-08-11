@@ -6,6 +6,7 @@ import (
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
 	"github.com/gravestench/dark-magic/internal/game/targeting"
 )
 
@@ -41,6 +42,73 @@ func TestBasicMeleeAppliesDamageAndEmitsDeath(t *testing.T) {
 		if kind != wantKinds[index] {
 			t.Fatalf("event %d = %v, want %s", index, kind, wantKinds[index])
 		}
+	}
+}
+
+func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	registry, err := gameskill.NewRegistry(gameskill.Definition{
+		SkillID: 0, Behavior: gameskill.BehaviorBasicMelee, TargetPolicy: gameskill.TargetUnit,
+		EffectDelay: 1, CompleteDelay: 2, Interruptible: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gameskill.RegisterCastLifecycle(engine, registry); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterPlayerBasicAttack(engine, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterBasicMelee(engine, BasicMeleePolicy{HitChance: 100}); err != nil {
+		t.Fatal(err)
+	}
+	stores := meleeTestStores(t, engine)
+	player := engine.World().MustCreateEntity()
+	target := engine.World().MustCreateEntity()
+	mustSetEntity(t, stores.selectables, player, map[string]any{"id": "player:hero", "kind": targeting.KindPlayer, "label": "Hero", "owner": "hero", "radius": 1.0, "priority": int64(10)})
+	mustSetEntity(t, stores.positions, player, map[string]any{"x": 2.0, "y": 2.0})
+	mustSetEntity(t, stores.locations, player, map[string]any{"act": int64(1), "level_id": int64(2)})
+	mustSetEntity(t, stores.profiles, player, map[string]any{"range": 2.0, "physical_min": MustWhole(2).Raw(), "physical_max": MustWhole(2).Raw()})
+	mustSetEntity(t, stores.playerVitals, player, map[string]any{"health": int64(10), "max_health": int64(10), "mana": int64(0), "max_mana": int64(0), "mana_raw": int64(0), "max_mana_raw": int64(0)})
+	controls, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	mustSetEntity(t, controls, player, map[string]any{"player": "hero"})
+	mustSetEntity(t, stores.selectables, target, map[string]any{"id": "monster:fallen", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 0.5, "priority": int64(20)})
+	mustSetEntity(t, stores.positions, target, map[string]any{"x": 3.0, "y": 2.0})
+	mustSetEntity(t, stores.locations, target, map[string]any{"act": int64(1), "level_id": int64(2)})
+	mustSetEntity(t, stores.monsterStats, target, map[string]any{"level": int64(1), "health": MustWhole(5).Raw(), "max_health": MustWhole(5).Raw(), "defense": int64(0), "attack_rating": int64(0), "physical_min": int64(0), "physical_max": int64(0), "experience": int64(0)})
+	requests, _, _, _, _, _ := gameskillStores(t, engine)
+	mustSetEntity(t, requests, player, map[string]any{"player": "hero", "side": "left", "skill_id": int64(0), "skill_level": int64(1), "target_x": 3.0, "target_y": 2.0, "target_id": "monster:fallen", "request_tick": int64(1)})
+
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	stats, _ := stores.monsterStats.Get(target)
+	health, _ := stats.Get("health")
+	if health != MustWhole(3).Raw() {
+		t.Fatalf("monster health = %v, want %d", health, MustWhole(3).Raw())
+	}
+}
+
+func gameskillStores(t *testing.T, engine *gameecs.Engine) (*akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore) {
+	t.Helper()
+	requests, _ := akara.GetDynamicStore(engine.World(), gameskill.CastRequestComponent)
+	states, _ := akara.GetDynamicStore(engine.World(), gameskill.CastStateComponent)
+	events, _ := akara.GetDynamicStore(engine.World(), gameskill.CastEventComponent)
+	vitals, _ := akara.GetDynamicStore(engine.World(), "dm.player.vitals")
+	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
+	controls, _ := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+	return requests, states, events, vitals, selectables, controls
+}
+
+func mustSetEntity(t *testing.T, store *akara.DynamicStore, entity akara.Entity, values map[string]any) {
+	t.Helper()
+	if _, err := store.Set(entity, values); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -115,7 +183,7 @@ func TestPhysicalDamageReportsOnlyTheLethalTransition(t *testing.T) {
 }
 
 type meleeStores struct {
-	requests, events, selectables, positions, locations, monsterStats, playerVitals *akara.DynamicStore
+	requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals *akara.DynamicStore
 }
 
 func meleeTestStores(t *testing.T, engine *gameecs.Engine) meleeStores {
@@ -125,9 +193,10 @@ func meleeTestStores(t *testing.T, engine *gameecs.Engine) meleeStores {
 	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
 	positions, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
 	locations, _ := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	profiles, _ := akara.GetDynamicStore(engine.World(), MeleeProfile)
 	monsterStats, _ := akara.GetDynamicStore(engine.World(), "dm.monster.stats")
 	playerVitals, _ := akara.GetDynamicStore(engine.World(), "dm.player.vitals")
-	return meleeStores{requests, events, selectables, positions, locations, monsterStats, playerVitals}
+	return meleeStores{requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals}
 }
 
 func setMeleeAttacker(t *testing.T, stores meleeStores, entity akara.Entity, id, target string, x, y float64, damage Amount) {
@@ -137,7 +206,8 @@ func setMeleeAttacker(t *testing.T, stores meleeStores, entity akara.Entity, id,
 			t.Fatal(err)
 		}
 	}
-	mustSet(stores.requests, map[string]any{"target_id": target, "request_tick": int64(1), "range": 2.0})
+	mustSet(stores.requests, map[string]any{"target_id": target, "request_tick": int64(1)})
+	mustSet(stores.profiles, map[string]any{"range": 2.0, "physical_min": damage.Raw(), "physical_max": damage.Raw()})
 	mustSet(stores.selectables, map[string]any{"id": id, "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 1.0, "priority": int64(20)})
 	mustSet(stores.positions, map[string]any{"x": x, "y": y})
 	mustSet(stores.locations, map[string]any{"act": int64(1), "level_id": int64(2)})

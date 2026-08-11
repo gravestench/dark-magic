@@ -171,7 +171,11 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("normalize Fire Bolt", err)
 	}
-	skillRegistry, err := gameskill.NewRegistry(fireBoltSkill)
+	basicAttackSkill := gameskill.Definition{
+		SkillID: 0, Behavior: gameskill.BehaviorBasicMelee, TargetPolicy: gameskill.TargetUnit,
+		EffectDelay: 1, CompleteDelay: 2, Interruptible: true,
+	}
+	skillRegistry, err := gameskill.NewRegistry(basicAttackSkill, fireBoltSkill)
 	if err != nil {
 		return wrap("build production skill registry", err)
 	}
@@ -181,6 +185,9 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
 		return wrap("register production skill lifecycle", err)
+	}
+	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID); err != nil {
+		return wrap("register player basic attack", err)
 	}
 	if err := gamemissile.Register(app.entitySimulation, missileRegistry); err != nil {
 		return wrap("register production missiles", err)

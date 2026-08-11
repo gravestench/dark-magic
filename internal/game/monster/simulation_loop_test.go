@@ -64,6 +64,7 @@ func TestGeneratedBloodMoorSimulationLoopRestoresExactly(t *testing.T) {
 		CharacterID: "acceptance-hero", Player: "hero", Name: "Hero", Class: "Amazon",
 		Level: 1, Health: 100, MaxHealth: 100, Mana: 10, MaxMana: 10,
 		Token: "AM", Palette: "data/global/palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH",
+		MeleeRange: 2, PhysicalMinRaw: gamecombat.MustWhole(1).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(2).Raw(),
 		X: plan.Spawns[0].X - 0.5, Y: plan.Spawns[0].Y, WorldWidth: 200, WorldHeight: 200, Act: 1, LevelID: 2,
 		Skills: []gameplayer.Skill{{ID: acceptanceSkillID, Level: 1, ListRow: 0, RightAllowed: true}},
 	}

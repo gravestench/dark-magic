@@ -31,21 +31,22 @@ legacy arithmetic and patch-sensitive behavior graduate only through the
 executable probes tracked in the foundation and combat verification queues.
 
 The milestone-number order is historical, not a strict dependency graph. The
-active dependency queue, reassessed after the foundation and combat/simulation
-research imports, is:
+M21.1-M21.12 authority spine and its first production Fire Bolt are complete.
+The active dependency queue, reassessed after that gate, is:
 
-1. **M21.1 — shared stat/effect sources:** establish stable, layered provenance
-   before combat, equipment, skills, states, and monster modifiers can disagree
-   about where a value came from.
-2. **M21.2 — fixed-point combat vocabulary:** add explicit damage channels,
-   conversion, rounding, and synthetic vectors without claiming unverified
-   legacy formulas.
-3. **M21.3-M21.5 — first hostile vertical slice:** materialize one typed Blood
-   Moor monster, schedule its intent, and resolve one basic melee transaction.
-4. **M21.6-M21.9 — skills, states, and missiles:** consume the existing skill
-   intent through deterministic cast, timed-state, and straight-missile paths.
-5. **M21.10-M21.12 — population, death, and ownership:** connect deterministic
-   packs, semantic death events, loot/XP/corpse consequences, and owned units.
+1. **M21.13 — player combat:** route pointer-selected Attack through the shared
+   cast/melee transaction, then add approach-to-range, attack animation events,
+   and equipment-derived damage without creating another combat authority.
+2. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
+   evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
+   resistance, death/corpse consequences, and difficulty rules.
+3. **M19/M21 item-stat activation:** project equipped weapons, armor, charms,
+   sockets, sets, runewords, charges, auras, and procs into the shared stat-source
+   authority while preserving container and source identity.
+4. **M21 world interactions:** extend the existing command boundary through one
+   door, chest, shrine, waypoint, portal, and then record-driven NPC services.
+5. **M22 networking:** carry the proven replay/checkpoint authority over
+   transport without moving simulation decisions into clients.
 
 M18/M19 UI, item, save, and presentation work remains active where it supplies
 one of those vertical slices. Independent M26/M27 work should proceed only when
@@ -1243,7 +1244,7 @@ data owners; they do not introduce parallel gameplay authorities.
   an explicit exact adapter that rejects fractional write-back rather than
   rounding silently. The hit policy is Dark Magic scaffolding—not a legacy
   chance-to-hit claim—and defense, block, avoidance, mitigation, criticals,
-  leech, secondary states, player attacks, and the full death transaction stay
+  leech, secondary states, and the full death transaction stay
   in their documented verification/dependency queues.
 - [x] **M21.6: Consume assigned skill intent.** Resolve the existing
   `dm.player.skill_intent` into one deterministic cast request with assigned
@@ -1340,6 +1341,19 @@ data owners; they do not introduce parallel gameplay authorities.
   player owner. One concrete summon skill, expiration/despawn execution,
   owner-death/zone-transition behavior, mutable stat-derived limits, and
   durable hireling records remain subsequent behavior layers.
+- [ ] **M21.13: Player basic attack.** The first increment routes pointer-picked
+  general Attack (skill ID 0) through cast start/effect/complete and translates
+  its effect into the same combat-phase melee request used by monster AI.
+  Players and monsters now carry a shared fixed-point melee profile, so target,
+  act/level, range, deterministic hit/damage, health mutation, and semantic
+  events have one authority. Player admission snapshots a deliberately narrow
+  1-2 physical unarmed fallback; monster admission copies its joined authored
+  damage/range. Complete this checkpoint by deriving the active player profile
+  from authoritative equipment/stat sources, moving into range while an attack
+  target remains valid, driving the correct attack animation/event boundary,
+  and adding an asset-backed pointer-to-hit acceptance capture. The current
+  75-percent production hit chance remains explicitly synthetic pending the
+  verified attack-rating/defense formula.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits
