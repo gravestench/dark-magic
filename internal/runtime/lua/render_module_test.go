@@ -655,6 +655,16 @@ func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 	}
 }
 
+func TestChunkSetsUseComposedCacheBudget(t *testing.T) {
+	capability := NewRenderCapability(New(), &render.Composer{}, fstest.MapFS{})
+	for _, key := range []string{"ds1-chunks\x00map", "world-chunks\x00world"} {
+		tier, namespace := capability.cache.tier(key)
+		if tier != capability.cache.composed || namespace != "composed" {
+			t.Fatalf("%q uses %q cache tier", key, namespace)
+		}
+	}
+}
+
 func TestAnimationSharesIdenticalRGBAFrames(t *testing.T) {
 	composer := &render.Composer{}
 	nodeID, err := composer.Create(render.NodeID{}, render.LayerHUD)

@@ -294,6 +294,23 @@ func TestComposerOrdersLayersThenZThenCreation(t *testing.T) {
 	}
 }
 
+func TestComposerExistsRejectsDestroyedGeneration(t *testing.T) {
+	var composer Composer
+	node, err := composer.Create(NodeID{}, LayerWorld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !composer.Exists(node) {
+		t.Fatal("new node does not exist")
+	}
+	if err := composer.Destroy(node); err != nil {
+		t.Fatal(err)
+	}
+	if composer.Exists(node) {
+		t.Fatal("destroyed node still exists")
+	}
+}
+
 func TestComposerRetainsFailedDrainForRetry(t *testing.T) {
 	t.Parallel()
 

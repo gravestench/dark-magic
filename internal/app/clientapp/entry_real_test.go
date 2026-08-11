@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
+	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 )
 
 // This is the complete offline admission seam exercised with production data:
@@ -32,6 +33,20 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	}
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
+	}
+	chunks, err := maprender.Compose(assets, app.gameWorlds[2], "data/global/palette/ACT1/pal.pl2", maprender.DefaultChunkSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	weight := 0
+	for _, chunk := range chunks.Chunks {
+		weight += chunk.Pixels.Bounds().Dx() * chunk.Pixels.Bounds().Dy() * 4
+	}
+	// A world chunk set must fit the composed-resource cache as one entry. The
+	// margin leaves room for active character and interface compositions.
+	const maximumWorldChunkBytes = 300 * 1024 * 1024
+	if weight > maximumWorldChunkBytes {
+		t.Fatalf("Blood Moor chunk residency = %d MiB across %d chunks, want <= 300 MiB", weight/(1024*1024), len(chunks.Chunks))
 	}
 	t.Cleanup(func() {
 		app.loading.Close()
