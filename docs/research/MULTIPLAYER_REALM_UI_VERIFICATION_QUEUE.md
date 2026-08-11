@@ -1,0 +1,166 @@
+# Multiplayer/realm/UI verification queue
+
+This queue consolidates empirical work for parties/PvP/trade, legacy realm/protocol compatibility, networking behavior and UI-visible gameplay contracts.
+
+## P0: architecture-shaping probes
+
+- Bind two synthetic remote principals to one authoritative Dark Magic `Session` and prove local and remote movement commands produce identical replay/checkpoint results.
+- Define a canonical `SessionPlayerID`/CharacterID/AccountID separation and spoofing rejection vectors.
+- Capture one original 1.10f party invite/accept/leave sequence including relationship/roster events.
+- Capture one original 1.10f hostility declaration including level/town restrictions, cooldown timing, target party propagation and declarer party removal.
+- Capture one complete two-player trade from initiation through offer changes, dual acceptance, item/gold exchange and cancellation-on-change behavior.
+- Build a character lease/CAS simulation proving two game workers cannot commit the same durable revision concurrently.
+- Define the first versioned per-client world/player snapshot and prove private inventory/hidden server facts are filtered.
+- Map current Lua HUD/item/quest/interaction reads to explicit semantic view models and remove one direct/raw state dependency if any remains.
+- Pin the broad historical gateway/realm/game-server connection/service responsibilities for one target original client version before implementing any legacy packet adapter.
+
+## P1: party/social
+
+- party invite/cancel/accept state transitions;
+- party size/ID lifecycle;
+- leader semantics if any;
+- same-level/proximity eligibility for XP/quest/gold/NoDrop;
+- party XP formula and member-level weighting;
+- gold sharing range/overflow;
+- party quest-credit representative cases;
+- player location/health visibility to party UI;
+- Hardcore corpse-loot permission directionality/persistence;
+- ignore/squelch/chat behavior;
+- disconnect/reconnect party state.
+
+## P1: hostility and PvP
+
+- minimum level/town restrictions across target patches;
+- 60-second hostility delay semantics and reset;
+- unhostile/remove-hostility rules;
+- hostility propagation to target party;
+- same-party hostility/automatic leave;
+- town combat/skill/missile restrictions;
+- PvP damage scalar/order;
+- PvP life/mana leech;
+- crushing blow/Open Wounds/poison/stun/hit-recovery;
+- minion/hireling/trap hostility and attribution;
+- PvP death gold/XP/corpse/ear rules;
+- hostile portal/waypoint/party interactions.
+
+## P1: player trade
+
+- trade initiation location/range/town requirements;
+- trade request/accept/cancel state machine;
+- offer inventory/grid rules;
+- item/gold offer update semantics;
+- acceptance reset after offer change and any delay;
+- item visibility/tooltip identified state to counterparty;
+- gold limits/overflow;
+- destination inventory-full behavior;
+- quest/nontradeable/socket-parent/corpse/held restrictions;
+- durability/charge/personalization preservation;
+- death/hostility/zone transition during trade;
+- disconnect cancellation/return;
+- simultaneous action ordering/race behavior.
+
+## P1: modern network/session
+
+- command tick lead/lag policy under latency/jitter;
+- sequence replay/duplicate rejection;
+- deterministic same-tick ordering across clients;
+- interest-management room/level rules;
+- snapshot/delta schema and reconciliation;
+- semantic event ack/recovery;
+- movement prediction correction thresholds;
+- skill/combat prediction policy;
+- reconnect grace period;
+- game checkpoint persistence/restore;
+- stale GameRules/content fingerprint rejection;
+- rate limits and malformed message handling;
+- admin/system command isolation/audit.
+
+## P1: realm/persistence control plane
+
+- character create/delete/rename/convert rules;
+- Classic/Expansion/Hardcore/Ladder mode compatibility;
+- per-account character count/list order;
+- game create/list/join metadata and password/private behavior;
+- game-worker registration/capacity/allocation;
+- character lease acquire/renew/release timeout;
+- CAS durable commit and stale revision behavior;
+- server crash during active lease;
+- disconnect versus explicit game leave;
+- game idle/lifetime/destruction;
+- durable save extraction from transient checkpoint;
+- ladder update from committed revision;
+- realm-wide special-event delivery;
+- audit/admin/moderation surfaces.
+
+## P1: legacy protocol adapters
+
+These are implementation blockers only if original-client compatibility becomes a near-term goal:
+
+- BNCS authentication/chat/session states for target client;
+- realm/MCP character list/create/delete/game list/create/join states;
+- D2GS handshake/game join/gameplay unit state;
+- character lock/load/save/release inter-server protocol;
+- server/version/checksum negotiation;
+- original command anti-cheat validation;
+- packet field units/endianness/string limits;
+- fragmentation/compression if present;
+- original interest/unit update behavior;
+- disconnect/error codes;
+- compatibility with expansion/classic client versions.
+
+## P1: UI-visible gameplay state
+
+- HUD life/mana/stamina/XP rounding;
+- character sheet derived stat display;
+- skill tooltip calculations and client/server differences;
+- item tooltip ordering/localization;
+- identified/unidentified information;
+- set/runeword/socket property display;
+- ground item label visibility/ownership;
+- quest log state/objective transitions;
+- waypoint list ordering/locks;
+- NPC dialogue choice ordering;
+- vendor price/stock refresh presentation;
+- party roster location/health/hostility fields;
+- trade item/acceptance/status fields;
+- automap exploration/party/portal/quest markers;
+- target monster name/HP/unique/immunity information;
+- death/corpse/Hardcore UI;
+- game list/create/join fields;
+- command rejection/error messages;
+- prediction/correction presentation.
+
+## P2: social/realm extensions
+
+These are useful modern features but not baseline Diablo gameplay blockers:
+
+- friends/presence service;
+- account-wide stash/profile if a later target/mod wants it;
+- matchmaking/regions/worker autoscaling;
+- moderation/reporting;
+- replay spectator service;
+- server browser richer filters;
+- modern encryption/session-token transport;
+- web/admin dashboards.
+
+Keep them behind semantic realm/game APIs rather than pushing them into simulation.
+
+## Probe artifact standard
+
+Each completed probe should record:
+
+```text
+probe ID/title
+target client/server/content version
+topology/accounts/characters/game setup
+exact command/action sequence
+raw packet/log/save capture when lawful/needed
+normalized state transitions
+server tick/time relationships
+security/privacy expectations
+known patch differences
+confidence upgrade
+primary research doc updated
+```
+
+Keep credentials/private account data and proprietary captures outside Git. Commit sanitized schemas, semantic traces, hashes, fixtures and test vectors.
