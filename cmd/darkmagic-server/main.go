@@ -16,6 +16,7 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
+	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	"github.com/gravestench/dark-magic/internal/logging"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
@@ -53,6 +54,10 @@ func main() {
 	}
 	if err := gameskill.RegisterIntentConsumer(engine); err != nil {
 		slog.Error("registering authoritative skill intent consumer", "error", err)
+		return
+	}
+	if err := gamestate.Register(engine); err != nil {
+		slog.Error("registering authoritative timed state engine", "error", err)
 		return
 	}
 	sessionContext, stopSession := context.WithCancel(ctx)

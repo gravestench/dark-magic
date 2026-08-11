@@ -1272,9 +1272,17 @@ data owners; they do not introduce parallel gameplay authorities.
   without crashing the session, and interruption never depends on renderer
   frames. Retail behavior mappings, formula-derived costs/timing, cooldowns,
   refunds, and concrete effects remain explicit later checkpoints/probes.
-- [ ] **M21.8: Timed state engine.** Add source-tagged instances, deterministic
-  refresh/stack policy, scheduled expiration, semantic apply/remove events, and
-  checkpoint/replay coverage; prove one simple refreshable control state first.
+- [x] **M21.8: Timed state engine.** Source-tagged ECS instances now use the
+  authoritative `(target, state, source)` identity and install in both offline
+  and standalone-server compositions. The deliberately narrow first policy,
+  `refresh_same_source`, refreshes the exclusive expiration deadline for the
+  same source while keeping different sources independent. Stable request
+  order folds repeated same-tick operations, request processing wins over
+  expiration at the same tick, and semantic applied/refreshed/removed events
+  distinguish explicit removal from expiry. Snapshot/restore tests reproduce
+  expiration exactly. Additive stacks, strongest/longest-wins arbitration,
+  aura ownership, dispel classes, and state-contributed stat modifiers remain
+  later policy modules rather than hidden behavior in this foundation.
 - [ ] **M21.9: Straight missile slice.** Run cast, authoritative missile motion,
   collision, combat impact, hit memory, lifetime, and removal through one
   deterministic vertical slice with the required source stats snapshotted at
