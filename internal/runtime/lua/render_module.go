@@ -1729,6 +1729,12 @@ func registerRenderNodeType(state *lua.LState) {
 			metadata.RawSetString("type", lua.LNumber(prepared.tile.Type))
 			metadata.RawSetString("style", lua.LNumber(prepared.tile.Style))
 			metadata.RawSetString("sequence", lua.LNumber(prepared.tile.Sequence))
+			// These are the names used by the map-selection algorithm and by
+			// modern reference implementations. Keep the historical aliases
+			// above because existing shim scripts may still use them.
+			metadata.RawSetString("orientation", lua.LNumber(prepared.tile.Type))
+			metadata.RawSetString("main_index", lua.LNumber(prepared.tile.Style))
+			metadata.RawSetString("sub_index", lua.LNumber(prepared.tile.Sequence))
 			metadata.RawSetString("direction", lua.LNumber(prepared.tile.Direction))
 			metadata.RawSetString("rarity", lua.LNumber(prepared.tile.RarityFrameIndex))
 			metadata.RawSetString("blocks", lua.LNumber(len(prepared.tile.Blocks)))

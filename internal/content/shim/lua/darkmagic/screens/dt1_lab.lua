@@ -18,6 +18,27 @@ local zoom_step = 0.05
 local tiles_per_frame = 2
 local lab = {}
 
+-- Paul Siramy and Riiablo call this field "orientation". The old codec name
+-- "type" is retained in the API, but these names explain what each value does
+-- when a DS1 cell asks the DT1 collection for artwork.
+local orientation_names = {
+    [0]="floor", [1]="left wall", [2]="right wall",
+    [3]="right half of north corner", [4]="left half of north corner",
+    [5]="left wall end", [6]="right wall end", [7]="south corner",
+    [8]="left wall with door", [9]="right wall with door",
+    [10]="special I", [11]="special II", [12]="pillar/object",
+    [13]="shadow", [14]="tree/object", [15]="roof",
+    [16]="lower left wall", [17]="lower right wall",
+    [18]="lower north corner", [19]="lower south corner",
+}
+
+-- Equal lookup keys receive equal quiet background colors. This makes records
+-- which are rarity-weighted alternatives visible as a group without labels.
+local group_colors = {
+    {38, 61, 78}, {67, 48, 75}, {65, 61, 35},
+    {37, 69, 54}, {76, 45, 39}, {48, 50, 77},
+}
+
 local function text_backdrop(root, top, height)
     local node = render.create("hud", root)
     node:fill_rect(800, height, 0, 0, 0, 128)
@@ -66,6 +87,8 @@ function lab:destroy_tiles()
     end
     self.tile_nodes = {}
     self.tile_metadata = {}
+    self.tile_groups = {}
+    self.group_count = 0
     if self.tile_tooltip then self.tile_tooltip:set_visible(false) end
 end
 
@@ -179,6 +202,25 @@ function lab:add_tile(index)
     end
 
     local x, y = self:tile_position(index)
+    local orientation = metadata.orientation or metadata.type
+    local main_index = metadata.main_index or metadata.style
+    local sub_index = metadata.sub_index or metadata.sequence
+    local key = string.format("%d/%d/%d", orientation, main_index, sub_index)
+    local group = self.tile_groups[key]
+    if not group then
+        self.group_count = self.group_count + 1
+        group = {id=self.group_count, members={}}
+        self.tile_groups[key] = group
+    end
+    table.insert(group.members, index)
+
+    local color = group_colors[((group.id - 1) % #group_colors) + 1]
+    local group_backdrop = render.create("hud", self.gallery)
+    group_backdrop:fill_rect(cell.width - 8, cell.height - 8, color[1], color[2], color[3], 72)
+    group_backdrop:set_position(x, y)
+    group_backdrop:set_z(-2)
+    table.insert(self.tile_nodes, group_backdrop)
+
     local scale = math.min(1.5, cell.image_width / math.max(1, width), cell.image_height / math.max(1, height))
     image_node:set_scale(scale, scale)
     image_node:set_position(x, y - 18)
@@ -194,12 +236,25 @@ function lab:add_tile(index)
         table.insert(self.tile_nodes, selection)
     end
 
-    local value = string.format(
-        "[gold]#%d [white]type/style/seq %d/%d/%d\n[blue]dir %d [white]rarity %d  blocks %d  %dx%d",
-        index, metadata.type, metadata.style, metadata.sequence,
-        metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height)
-    self.tile_metadata[index + 1] = value
+    self.tile_metadata[index + 1] = {
+        index=index, orientation=orientation, main_index=main_index, sub_index=sub_index,
+        direction=metadata.direction, rarity=metadata.rarity, blocks=metadata.blocks,
+        width=metadata.tile_width, height=metadata.tile_height, group=group,
+    }
     return true
+end
+
+function lab:tooltip_value(index)
+    local item = self.tile_metadata[index + 1]
+    local variant_index = 1
+    for position, member in ipairs(item.group.members) do
+        if member == index then variant_index = position; break end
+    end
+    return string.format(
+        "[gold]tile #%d\n[white]orientation/type: %d - %s\nmain/style: %d\nsub/sequence: %d\n[blue]variant %d of %d [white](rarity %d)\ndirection: %d   blocks: %d   source: %dx%d",
+        index, item.orientation, orientation_names[item.orientation] or "unknown",
+        item.main_index, item.sub_index, variant_index, #item.group.members, item.rarity,
+        item.direction, item.blocks, item.width, item.height)
 end
 
 function lab:hovered_tile(pointer_x, pointer_y)
@@ -225,7 +280,7 @@ function lab:update_tooltip(pointer_x, pointer_y)
     end
     if self.hovered_index ~= index then
         self.hovered_index = index
-        self.tile_tooltip:set_text(self.tile_metadata[index + 1])
+        self.tile_tooltip:set_text(self:tooltip_value(index))
     end
     self.tile_tooltip:set_position(pointer_x + 16, pointer_y + 18)
     self.tile_tooltip:set_visible(true)
@@ -238,6 +293,9 @@ function lab:build_some_tiles()
         self.build_index = self.build_index + 1
         if self.build_index >= self.total then
             self.building = false
+            -- Force a hovered tooltip to refresh now that every variant count
+            -- is final rather than showing the partial count from assembly.
+            self.hovered_index = nil
             -- Grid view is the stable default. Focusing one readable tile is an
             -- explicit view change, never a surprising final loading phase.
             self:set_view(self.view_mode)
