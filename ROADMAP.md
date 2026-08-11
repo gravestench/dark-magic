@@ -892,6 +892,9 @@ complete until its actions are driven by authoritative game state and commands.
   last-frame draw-call, scene-node traversal, subtree-culling, and texture-update
   counters. Backend batching or instancing is now gated on measured game-world
   workload instead of total map-placement counts.
+- [x] M20.4e: Clamp overlay-shifted presentation cameras to finite map-canvas
+  bounds. Side panels still reframe the player into the visible half, but can no
+  longer pull an authored zone edge onscreen as a persistent black strip.
 - [x] M20.5: Correct DT1's bottom-to-top 5x5 subtile-row mapping at the world
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue

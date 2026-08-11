@@ -280,6 +280,7 @@ return {
         -- Hero normally targets manifest center. Side overlays ask the world to
         -- frame into the unobscured half instead.
         local target_x = screen.hero.screen_x
+        local target_y = screen.hero.screen_y
         if world_view == "left" then
             target_x = manifest.resolution.width / 4
         elseif world_view == "right" then
@@ -301,10 +302,12 @@ return {
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
             -- culling and placement. Re-entering the scene cannot accumulate drift.
-            local _, map_error = chunked_map.update(
-                self.map, camera_pixel_x, camera_pixel_y, target_x, screen.hero.screen_y, world_view
+            local _, map_error, effective_target_x, effective_target_y = chunked_map.update(
+                self.map, camera_pixel_x, camera_pixel_y, target_x, target_y, world_view
             )
             if map_error then error("updating world map: " .. tostring(map_error)) end
+            target_x = effective_target_x or target_x
+            target_y = effective_target_y or target_y
         end
 
         -- Legacy gameplay is pointer-authored. Reverse-project only the visible
@@ -322,7 +325,7 @@ return {
 		if self.world_hover_tip then
 			local hover = nil
 			if self.world and in_world and not self.__darkmagic_item_held then
-				local hover_x, hover_y = self.world:screen_to_subtile(pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y)
+				local hover_x, hover_y = self.world:screen_to_subtile(pointer_x, pointer_y, camera_x, camera_y, target_x, target_y)
 				hover = selectable_at(self, hover_x, hover_y)
 			end
 			self.world_hover_tip:set_visible(hover ~= nil)
@@ -331,7 +334,7 @@ return {
         if self.player and self.world and in_world and not self.__darkmagic_item_held
             and (input.pressed("pointer_primary") or (input.down("pointer_primary") and not self.pending_interaction)) then
             local target_world_x, target_world_y = self.world:screen_to_subtile(
-                pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
+                pointer_x, pointer_y, camera_x, camera_y, target_x, target_y
             )
 			local selected = selectable_at(self, target_world_x, target_world_y)
 			if selected and input.pressed("pointer_primary") then
@@ -366,7 +369,7 @@ return {
 		if self.player and self.world and in_world and not self.__darkmagic_item_held
 			and input.pressed("pointer_secondary") then
 			local skill_x, skill_y = self.world:screen_to_subtile(
-				pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
+				pointer_x, pointer_y, camera_x, camera_y, target_x, target_y
 			)
 			local selected = selectable_at(self, skill_x, skill_y)
 			self.player.request_skill("right", skill_x, skill_y, selected and selected.id or "")

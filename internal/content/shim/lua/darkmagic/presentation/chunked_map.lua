@@ -11,6 +11,7 @@
 -- dm.world/v1 for collision, objects, projection, and authoritative positions.
 
 local render = require("dm.render/v1")
+local camera_bounds = require("darkmagic.presentation.camera_bounds")
 
 local chunked_map = {}
 
@@ -235,12 +236,22 @@ function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world
     local width = state.set and state.set.width or state.canvas_width
     local height = state.set and state.set.height or state.canvas_height
     if not width or not height then return false, state.error end
-    state.root_x = target_x + width / 2 - camera_x
-    state.root_y = target_y + height / 2 - camera_y
+    local wanted_root_x = target_x + width / 2 - camera_x
+    local wanted_root_y = target_y + height / 2 - camera_y
+    -- Overlay anchoring may move the desired camera by a quarter screen. Near
+    -- a finite zone edge that would reveal black even when every nearby tile is
+    -- resident. Clamp the map's center so its authored canvas continues to
+    -- cover the whole physical viewport behind translucent panel artwork.
+    state.root_x = camera_bounds.clamp_center(wanted_root_x, width, state.viewport_width)
+    state.root_y = camera_bounds.clamp_center(wanted_root_y, height, state.viewport_height)
     state.root:set_position(state.root_x, state.root_y)
     if not state.set then return false, state.error end
     refresh_nodes(state)
-    return true, nil
+    -- Reverse projection must use the anchor the clamped camera actually drew,
+    -- or pointer targets drift away from the visible floor near zone edges.
+    local effective_target_x = camera_bounds.anchor_for_center(state.root_x, width, camera_x)
+    local effective_target_y = camera_bounds.anchor_for_center(state.root_y, height, camera_y)
+    return true, nil, effective_target_x, effective_target_y
 end
 
 function chunked_map.destroy(state)
