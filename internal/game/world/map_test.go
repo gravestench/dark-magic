@@ -89,3 +89,15 @@ func TestApplyIgnoresTileOutsideMap(t *testing.T) {
 	m.apply(-1, 0, reference)
 	m.apply(1, 0, reference)
 }
+
+func TestTileLayerNamesAreStablePresentationFacts(t *testing.T) {
+	want := []string{"floor", "lower-wall", "shadow", "upper-wall", "roof"}
+	for layer, name := range want {
+		if got := TileLayer(layer).String(); got != name {
+			t.Fatalf("layer %d = %q, want %q", layer, got, name)
+		}
+	}
+	if got := TileLayer(255).String(); got != "unknown" {
+		t.Fatalf("unknown layer = %q", got)
+	}
+}

@@ -859,8 +859,11 @@ complete until its actions are driven by authoritative game state and commands.
   textures; at most two newly visible chunks become demand-resident per frame,
   and chunks outside the viewport margin release their retained nodes. The game
   world migration remains the explicit M20.4 checkpoint.
-- [ ] M20.3: Present floor, lower-wall, shadow, upper-wall, roof, corner-pair,
-  and object layers explicitly; add DS1 Lab inspection controls and fixtures.
+- [x] M20.3: Present floor, lower-wall, shadow, upper-wall, roof, and north-corner
+  pairs explicitly. DS1 Lab isolates each tile pass with Tab, reports
+  demand-resident versus total chunks and authored object placements, and is
+  verified against the Act I Barracks fixture. Objects remain semantic
+  placements for authoritative systems rather than pixels baked into chunks.
 - [ ] M20.4: Migrate `game_world` to the shared chunked adapter and derive its
   camera exclusively from authoritative player/world coordinates.
 

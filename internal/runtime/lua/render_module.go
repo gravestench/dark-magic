@@ -1385,9 +1385,22 @@ func (r *RenderCapability) Module() Module {
 					entry.RawSetString("y", lua.LNumber(chunk.Y))
 					entry.RawSetString("width", lua.LNumber(chunk.Pixels.Bounds().Dx()))
 					entry.RawSetString("height", lua.LNumber(chunk.Pixels.Bounds().Dy()))
+					entry.RawSetString("layer", lua.LNumber(chunk.Layer))
+					entry.RawSetString("layer_name", lua.LString(chunk.Layer.String()))
 					entries.RawSetInt(index+1, entry)
 				}
 				result.RawSetString("chunks", entries)
+				objects := state.NewTable()
+				for index, object := range chunks.Objects {
+					entry := state.NewTable()
+					entry.RawSetString("type", lua.LNumber(object.Type))
+					entry.RawSetString("id", lua.LNumber(object.ID))
+					entry.RawSetString("x", lua.LNumber(object.X))
+					entry.RawSetString("y", lua.LNumber(object.Y))
+					entry.RawSetString("flags", lua.LNumber(object.Flags))
+					objects.RawSetInt(index+1, entry)
+				}
+				result.RawSetString("objects", objects)
 				state.Push(result)
 				return 1
 			},
