@@ -236,7 +236,11 @@ func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 	if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
 		return Flags{}, false
 	}
-	return m.flags[y*m.WidthSubtiles+x], true
+	index := y*m.WidthSubtiles + x
+	if index < 0 || index >= len(m.flags) {
+		return Flags{}, false
+	}
+	return m.flags[index], true
 }
 
 // OpenPointNearCenter returns a deterministic unblocked subtile for fixture

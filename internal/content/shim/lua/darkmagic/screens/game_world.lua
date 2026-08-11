@@ -26,6 +26,7 @@ local game_hud = require("darkmagic.ui.game_hud")
 local player_composite = require("darkmagic.gameplay.player_composite")
 local chunked_map = require("darkmagic.presentation.chunked_map")
 local tooltip = require("darkmagic.ui.tooltip")
+local text = require("darkmagic.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
@@ -41,6 +42,9 @@ local function install_current_world(self)
 	local next_world, recipe = world_capability.current()
 	assert(next_world and recipe, "session world is unavailable")
 	if self.hero and self.hero:exists() then self.hero:destroy() end
+	self.collision_node, self.collision_region_key = nil, nil
+	self.tile_debug_node, self.tile_debug_region_key = nil, nil
+	self.hero_origin = nil
 	if self.map then chunked_map.destroy(self.map) end
 	self.world, self.world_recipe, self.world_level_id = next_world, recipe, recipe.level_id
 	recipe.palette = screen.map.palette
@@ -62,6 +66,75 @@ local function install_current_world(self)
 	self.hero_composite_key = nil
 	if self.gameplay then self.gameplay_world.set_collision(self.gameplay, next_world) end
 	return true
+end
+
+local function place_region_node(self, node, x, y, width, height)
+	node:set_position(x - self.world_canvas_width / 2 + width / 2,
+		y - self.world_canvas_height / 2 + height / 2)
+end
+
+local function refresh_collision_overlay(self, hero_x, hero_y)
+    if not self.collision_visible or not self.world or not self.map then return end
+    local cell_x, cell_y = math.floor(hero_x / 5), math.floor(hero_y / 5)
+    local key = string.format("%d:%d", cell_x, cell_y)
+    if key == self.collision_region_key then return end
+    self.collision_region_key = key
+    if not self.collision_node then
+        self.collision_node = render.create("world", self.map.root)
+        self.collision_node:set_z(900000)
+    end
+    local radius = 30
+    local x, y, width, height = self.collision_node:set_world_collision_region(
+        self.world, math.floor(hero_x) - radius, math.floor(hero_y) - radius,
+        math.floor(hero_x) + radius + 1, math.floor(hero_y) + radius + 1
+    )
+    place_region_node(self, self.collision_node, x, y, width, height)
+end
+
+local function refresh_tile_overlay(self, hero_x, hero_y)
+	if not self.tile_debug_visible or not self.world or not self.map then return end
+	local cell_x, cell_y = math.floor(hero_x / 5), math.floor(hero_y / 5)
+	local key = string.format("%d:%d", cell_x, cell_y)
+	if key == self.tile_debug_region_key then return end
+	self.tile_debug_region_key = key
+	if not self.tile_debug_node then
+		self.tile_debug_node = render.create("world", self.map.root)
+		self.tile_debug_node:set_z(900001)
+	end
+	local radius = 30
+	local x, y, width, height = self.tile_debug_node:set_world_tile_region(
+		self.world, math.floor(hero_x) - radius, math.floor(hero_y) - radius,
+		math.floor(hero_x) + radius + 1, math.floor(hero_y) + radius + 1)
+	place_region_node(self, self.tile_debug_node, x, y, width, height)
+end
+
+local function create_cross(layer, parent, z, r, g, b)
+	local horizontal, vertical = render.create(layer, parent), render.create(layer, parent)
+	horizontal:fill_rect(17, 3, r, g, b, 255); vertical:fill_rect(3, 17, r, g, b, 255)
+	horizontal:set_z(z); vertical:set_z(z)
+	return {horizontal=horizontal, vertical=vertical}
+end
+
+local function set_cross(marker, visible, x, y)
+	marker.horizontal:set_visible(visible); marker.vertical:set_visible(visible)
+	if visible then marker.horizontal:set_position(x, y); marker.vertical:set_position(x, y) end
+end
+
+local function update_debug_legend(self)
+	local active = self.collision_visible or self.tile_debug_visible or self.origins_visible
+	if active and not self.debug_legend then
+		self.debug_legend = render.create("hud", self.root)
+		self.debug_legend:set_z(1000000)
+	end
+	if not self.debug_legend then return end
+	self.debug_legend:set_visible(active)
+	if not active then return end
+	text.set(self.debug_legend, "font_lab_color", string.format(
+		"[gold]WORLD DEBUG  [white]F3 collision %s  F4 tiles %s  F5 origins %s",
+		self.collision_visible and "[green]ON" or "[red]off",
+		self.tile_debug_visible and "[green]ON" or "[red]off",
+		self.origins_visible and "[green]ON" or "[red]off"), 760, "center")
+	self.debug_legend:set_position(400, 18)
 end
 
 local function selectable_at(self, x, y)
@@ -276,6 +349,20 @@ return {
         -- ECS positions are semantic SUBTILES until this exact presentation boundary.
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
+		if input.pressed("debug_collision") then
+			self.collision_visible = not self.collision_visible
+			self.collision_region_key = nil
+			if self.collision_node then self.collision_node:set_visible(self.collision_visible) end
+		end
+		if input.pressed("debug_map_tiles") then
+			self.tile_debug_visible = not self.tile_debug_visible
+			self.tile_debug_region_key = nil
+			if self.tile_debug_node then self.tile_debug_node:set_visible(self.tile_debug_visible) end
+		end
+		if input.pressed("debug_origins") then self.origins_visible = not self.origins_visible end
+		update_debug_legend(self)
+		refresh_collision_overlay(self, hero_x, hero_y)
+		refresh_tile_overlay(self, hero_x, hero_y)
 
         -- Hero normally targets manifest center. Side overlays ask the world to
         -- frame into the unobscured half instead.
@@ -296,8 +383,12 @@ return {
             hero_screen_x = hero_screen_x - self.world_canvas_width / 2
             hero_screen_y = hero_screen_y - self.world_canvas_height / 2
             camera_pixel_x, camera_pixel_y = self.world:subtile_to_pixel(camera_x, camera_y)
-            self.hero:set_z(self.world:entity_depth(hero_x, hero_y))
-        end
+			self.hero:set_z(self.world:entity_depth(hero_x, hero_y))
+		end
+		if self.origins_visible and not self.hero_origin and self.map then self.hero_origin = create_cross("world", self.map.root, 900002, 255, 64, 255) end
+		if self.hero_origin then set_cross(self.hero_origin, self.origins_visible == true, hero_screen_x, hero_screen_y) end
+		if self.origins_visible and not self.camera_origin then self.camera_origin = create_cross("hud", self.root, 999999, 64, 255, 64) end
+		if self.camera_origin then set_cross(self.camera_origin, self.origins_visible == true, target_x, target_y) end
 
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
