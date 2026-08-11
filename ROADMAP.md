@@ -1060,8 +1060,10 @@ complete until its actions are driven by authoritative game state and commands.
     realized with authored LvlPrest 17 `StnClf3.ds1` sections, leaves a stable
     route opening, and avoids overlapping the river band. MPQ-backed acceptance
     proves blocked river and cliff collision plus open bridge terrain.
-    Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
-    tile placements, and a production-asset seam contract verifies the selected
+    DS1 orientation-10/11 cells are now promoted into dedicated renderer-neutral
+    special-tile facts retaining coordinates, orientation, style, sequence, and
+    hidden state. Materialization clips and offsets them independently from any
+    optional DT1 graphic. A production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
     subtile coordinates without asking presentation to infer either endpoint.
     A trusted fixed-tick `system.world.transition` command now requires the
@@ -1079,6 +1081,11 @@ complete until its actions are driven by authoritative game state and commands.
     rasterized into validated tile-resolution `PathTile` facts in the immutable
     zone checksum. Materialization applies D2MOO's verified 3x3-neighbor
     floor-identity pass and rebuilds collision from the selected DT1 metadata.
+  - [x] M20.15e: Separate raw authored DS1 special cells from render placements.
+    Exit discovery and town/wilderness seam construction now consume immutable
+    special-tile facts instead of scanning the renderer-facing tile list. This
+    preserves invisible markers and their full `(orientation, style, sequence)`
+    identity for the upcoming typed `LvlWarp`/level-data destination join.
 
 ## M21: Diablo simulation
 

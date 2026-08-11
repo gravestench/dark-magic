@@ -163,6 +163,29 @@ func (target *Map) place(source *Map, offsetX, offsetY, width, height int, overl
 		target.Tiles = kept
 	}
 	target.Tiles = append(target.Tiles, placements...)
+	specials := make([]SpecialTile, 0, len(source.SpecialTiles))
+	replacedSpecialCells := make(map[[2]int]struct{}, len(source.SpecialTiles))
+	for _, special := range source.SpecialTiles {
+		if special.X < 0 || special.Y < 0 || special.X >= width || special.Y >= height {
+			continue
+		}
+		special.X += offsetX
+		special.Y += offsetY
+		if overlay {
+			replacedSpecialCells[[2]int{special.X, special.Y}] = struct{}{}
+		}
+		specials = append(specials, special)
+	}
+	if overlay {
+		kept := target.SpecialTiles[:0]
+		for _, special := range target.SpecialTiles {
+			if _, replace := replacedSpecialCells[[2]int{special.X, special.Y}]; !replace {
+				kept = append(kept, special)
+			}
+		}
+		target.SpecialTiles = kept
+	}
+	target.SpecialTiles = append(target.SpecialTiles, specials...)
 	// DS1 object coordinates use the same 5x5 subtile grid as gameplay facts.
 	objectOffsetX := int32(offsetX * SubtilesPerTile)
 	objectOffsetY := int32(offsetY * SubtilesPerTile)

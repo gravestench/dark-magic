@@ -61,10 +61,25 @@ type Map struct {
 	Act                           int
 	Objects                       []Object
 	Tiles                         []TilePlacement
+	SpecialTiles                  []SpecialTile
 	flags                         []Flags
 	selectorOnce                  sync.Once
 	selector                      *Selector
 	selectorErr                   error
+}
+
+// SpecialTile is an authored DS1 orientation-10/11 cell. These cells carry
+// level-transition and other map semantics even when their visual tile is
+// hidden. MainIndex and SubIndex are intentionally preserved: orientation
+// alone cannot distinguish ordinary exits from map-entry, town-entry, corpse,
+// or town-portal markers.
+//
+// This is a raw authored fact, not a resolved destination. Joining it to level
+// and LvlWarp records belongs to map generation, not DS1 decoding.
+type SpecialTile struct {
+	X, Y                             int
+	Orientation, MainIndex, SubIndex int32
+	Hidden                           bool
 }
 
 // TileLayer is the stable global-pass order used by legacy map presentation.
@@ -157,11 +172,14 @@ func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolver Ob
 			}
 			for _, wall := range record.Walls {
 				identity := TileIdentity{Orientation: int32(wall.Type), MainIndex: int32(wall.Style), SubIndex: int32(wall.Sequence)}
-				if wall.Hidden && (identity.Orientation == 10 || identity.Orientation == 11) {
-					// Exit cells are often deliberately invisible. Preserve their
-					// authored gameplay identity without resolving/drawing a DT1.
-					result.Tiles = append(result.Tiles, TilePlacement{X: tileX, Y: tileY, Layer: LayerUpperWall, Identity: identity})
-				} else if !wall.Hidden && wall.Prop1 != 0 {
+				if identity.Orientation == 10 || identity.Orientation == 11 {
+					result.SpecialTiles = append(result.SpecialTiles, SpecialTile{
+						X: tileX, Y: tileY,
+						Orientation: identity.Orientation, MainIndex: identity.MainIndex, SubIndex: identity.SubIndex,
+						Hidden: wall.Hidden,
+					})
+				}
+				if !wall.Hidden && wall.Prop1 != 0 {
 					layer := LayerUpperWall
 					if identity.Orientation >= 16 && identity.Orientation <= 19 {
 						layer = LayerLowerWall

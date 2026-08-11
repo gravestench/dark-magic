@@ -3,8 +3,8 @@ package world
 import "testing"
 
 func TestAuthoredExitAnchorsUseSemanticOrientations(t *testing.T) {
-	m := &Map{WidthSubtiles: 20, HeightSubtiles: 20, flags: make([]Flags, 400), Tiles: []TilePlacement{
-		{X: 3, Y: 1, Identity: TileIdentity{Orientation: 11}}, {X: 1, Y: 3, Identity: TileIdentity{Orientation: 10}}, {X: 0, Y: 0, Identity: TileIdentity{Orientation: 2}},
+	m := &Map{WidthSubtiles: 20, HeightSubtiles: 20, flags: make([]Flags, 400), SpecialTiles: []SpecialTile{
+		{X: 3, Y: 1, Orientation: 11}, {X: 1, Y: 3, Orientation: 10}, {Orientation: 2},
 	}}
 	anchors := m.AuthoredExitAnchors()
 	if len(anchors) != 2 || anchors[0].Orientation != 11 || anchors[1].Orientation != 10 {
