@@ -96,8 +96,8 @@ function lab:queue_preview()
         palette = self.palette,
     }})
     self.dirty = false
-    text.set(self.status, "font_lab_color", "[gold]LOADING [blue]" .. file_name(self.path), 760, "center")
-    text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
+    text.set(self.status, "font_lab_color", "[gold]LOADING[/] [blue]" .. file_name(self.path) .. "[/]", 760, "center")
+    text.set(self.detail, "font_lab_color", "[white]" .. self.path .. "[/]", 760, "center")
 end
 
 function lab:random_asset()
@@ -191,7 +191,7 @@ end
 function lab:update_status()
     if not self.chunk_set then return end
     text.set(self.status, "font_lab_color", string.format(
-        "[blue]%s   [white]%dx%d   chunks %d/%d   objects %d   [gold]%s   [white]zoom %.3fx   [green]ACT%d",
+        "[blue]%s[/]   [white]%dx%d[/]   chunks %d/%d   objects %d   [gold]%s[/]   [white]zoom %.3fx[/]   [green]ACT%d[/]",
         file_name(self.path), self.width, self.height, self:active_chunk_count(),
         #self.chunk_set.chunks, #(self.chunk_set.objects or {}), layer_names[self.layer_view + 1], self.zoom, self.palette_index), 760, "center")
 end

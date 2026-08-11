@@ -19,12 +19,23 @@ function M.direction(velocity_x, velocity_y, directions)
     return logical % directions
 end
 
+function M.logical_direction(logical, directions)
+    if directions <= 1 then return 0 end
+    if directions == 8 then
+        local cof = logical_to_cof[(logical % 8) + 1]
+        return cof_to_dcc[cof + 1]
+    end
+    return logical % directions
+end
+
 function M.resolve(snapshot)
     if not snapshot.dcc or snapshot.dcc == "" then return nil end
     return {
         path = snapshot.dcc,
         palette = snapshot.palette ~= "" and snapshot.palette or "data/global/palette/units/pal.dat",
-        direction = M.direction(snapshot.velocity_x, snapshot.velocity_y, snapshot.directions),
+        direction = snapshot.logical_direction ~= nil
+            and M.logical_direction(snapshot.logical_direction, snapshot.directions)
+            or M.direction(snapshot.velocity_x, snapshot.velocity_y, snapshot.directions),
         frames_per_second = snapshot.frames_per_second > 0 and snapshot.frames_per_second or 25,
         loop = snapshot.loop and "loop" or "once",
     }

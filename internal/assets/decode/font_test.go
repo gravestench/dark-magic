@@ -172,6 +172,24 @@ func TestBitmapFontPrefersPL2TextTransformOverRGBFallback(t *testing.T) {
 	}
 }
 
+func TestBitmapFontColorScopeRestoresCallerTint(t *testing.T) {
+	t.Parallel()
+	frame := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	frame.SetRGBA(0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+	font := &BitmapFont{Glyphs: map[rune]Glyph{'A': {Width: 1, Height: 1, Frame: 0}}, Frames: []image.Image{frame}, LineHeight: 1}
+	base := color.RGBA{R: 100, G: 120, B: 140, A: 255}
+	rendered, err := font.Render("[red]A[/]A[green]A[/green]A", base, 0, "left")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []color.RGBA{{R: 0xff, G: 0x4d, B: 0x4d, A: 0xff}, base, {G: 0xff, A: 0xff}, base}
+	for x, expected := range want {
+		if got := color.RGBAModel.Convert(rendered.At(x, 0)).(color.RGBA); got != expected {
+			t.Fatalf("pixel %d = %#v, want %#v", x, got, expected)
+		}
+	}
+}
+
 func TestBitmapFontWhiteKeepsPaletteAuthoredGlyph(t *testing.T) {
 	t.Parallel()
 

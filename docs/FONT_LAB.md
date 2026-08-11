@@ -20,6 +20,11 @@ to go back, and Escape to return to the main menu. The five pages cover:
 4. the same glyphs and color slot under different contextual PL2 files;
 5. alignment, wrapping, multiline layout, and inline-color continuity.
 
+Inline colors can be scoped explicitly. `[red]danger[/]` colors only `danger`
+and restores the caller's original tint afterward. `[/color]` and `[reset]`
+are readable aliases for `[/]`. A color token without a reset remains active
+for the rest of the string for compatibility with existing shim content.
+
 When reporting a visual mismatch, include the page number and the visible row or
 style label. That makes the suspect font, source palette, PL2 transform, color
 slot, and layout path unambiguous.

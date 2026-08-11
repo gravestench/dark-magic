@@ -157,10 +157,10 @@ local function update_debug_legend(self)
 	end
 	if not self.debug_legend then return end
 	text.set(self.debug_legend, "font_lab_color", string.format(
-		"[gold]WORLD DEBUG  [white]F3 collision %s  F4 tiles %s  F5 origins %s",
-		self.collision_visible and "[green]ON" or "[red]off",
-		self.tile_debug_visible and "[green]ON" or "[red]off",
-		self.origins_visible and "[green]ON" or "[red]off"), 760, "center")
+		"[gold]WORLD DEBUG[/]  [white]F3 collision[/] %s  [white]F4 tiles[/] %s  [white]F5 origins[/] %s",
+		self.collision_visible and "[green]ON[/]" or "[red]off[/]",
+		self.tile_debug_visible and "[green]ON[/]" or "[red]off[/]",
+		self.origins_visible and "[green]ON[/]" or "[red]off[/]"), 760, "center")
 	self.debug_legend:set_position(400, 18)
 end
 
