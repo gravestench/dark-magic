@@ -184,6 +184,48 @@ func TestExistsWalkAndInvalidation(t *testing.T) {
 	}
 }
 
+func TestListCombinesDirectoryAndFlatArchiveIndexes(t *testing.T) {
+	t.Parallel()
+
+	directory := fstest.MapFS{
+		"data/global/tiles/local.ds1":  &fstest.MapFile{},
+		"data/global/tiles/shared.dt1": &fstest.MapFile{},
+	}
+	archive := &testListedFS{
+		FS: fstest.MapFS{
+			"data/global/tiles/shared.dt1":  &fstest.MapFile{},
+			"data/global/tiles/archive.dt1": &fstest.MapFile{},
+		},
+		paths: []string{
+			`data\global\tiles\shared.dt1`,
+			`data\global\tiles\archive.dt1`,
+			`data\global\other\ignored.dt1`,
+		},
+	}
+	contentFS, err := New(
+		Layer{Name: "directory", FS: directory},
+		Layer{Name: "archive", FS: archive},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := contentFS.List(`data\global\tiles`, ".DT1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"data/global/tiles/archive.dt1", "data/global/tiles/shared.dt1"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("list = %v, want %v", got, want)
+	}
+}
+
+type testListedFS struct {
+	fs.FS
+	paths []string
+}
+
+func (f *testListedFS) Paths() []string { return append([]string(nil), f.paths...) }
+
 func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
 	mods := t.TempDir()
 	if err := os.WriteFile(filepath.Join(mods, "boot.lua"), []byte("mod boot"), 0o600); err != nil {
@@ -242,5 +284,34 @@ func TestFromEnvironmentRejectsEmptyMPQDirectoryEntry(t *testing.T) {
 	t.Setenv("MPQ_DIRECTORY", t.TempDir()+",")
 	if _, err := FromEnvironment(); err == nil || !strings.Contains(err.Error(), "entry 2 is empty") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
+	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
+	if directory == "" {
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
+	}
+	t.Setenv("DARK_MAGIC_MOD_DIRECTORY", "")
+	t.Setenv("MPQ_DIRECTORY", directory)
+	contentFS, err := FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		for _, layer := range contentFS.snapshot() {
+			_ = Close(layer.FS)
+		}
+	}()
+
+	for _, suffix := range []string{".dt1", ".ds1"} {
+		paths, listErr := contentFS.List("data/global/tiles", suffix)
+		if listErr != nil {
+			t.Fatalf("list %s: %v", suffix, listErr)
+		}
+		if len(paths) == 0 {
+			t.Fatalf("no %s assets found in mounted MPQs", suffix)
+		}
+		t.Logf("found %d %s assets", len(paths), suffix)
 	}
 }

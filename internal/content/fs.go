@@ -266,6 +266,62 @@ func (f *FS) Walk(root string, visit fs.WalkDirFunc) error {
 	return fs.WalkDir(f, root, visit)
 }
 
+// List returns every mounted file below root, optionally filtered by a
+// case-insensitive suffix. Ordinary filesystems are walked normally. Archive
+// adapters may expose a flat path index when their format has no ReadDir API.
+// Higher-priority layers win when the same path appears more than once.
+func (f *FS) List(root, suffix string) ([]string, error) {
+	cleanRoot, err := Normalize(root)
+	if err != nil {
+		return nil, err
+	}
+	lowerSuffix := strings.ToLower(strings.TrimSpace(suffix))
+	seen := make(map[string]struct{})
+	result := make([]string, 0)
+	add := func(name string) {
+		clean, normalizeErr := Normalize(name)
+		if normalizeErr != nil || !pathBelow(cleanRoot, clean) {
+			return
+		}
+		if lowerSuffix != "" && !strings.HasSuffix(strings.ToLower(clean), lowerSuffix) {
+			return
+		}
+		key := strings.ToLower(clean)
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		result = append(result, clean)
+	}
+
+	for _, layer := range f.snapshot() {
+		if indexed, ok := layer.FS.(interface{ Paths() []string }); ok {
+			for _, name := range indexed.Paths() {
+				add(name)
+			}
+			continue
+		}
+		walkErr := fs.WalkDir(layer.FS, cleanRoot, func(name string, entry fs.DirEntry, visitErr error) error {
+			if visitErr != nil {
+				return visitErr
+			}
+			if !entry.IsDir() {
+				add(name)
+			}
+			return nil
+		})
+		if walkErr != nil && !errors.Is(walkErr, fs.ErrNotExist) {
+			return nil, fmt.Errorf("content: list %q from layer %q: %w", cleanRoot, layer.Name, walkErr)
+		}
+	}
+	sort.Strings(result)
+	return result, nil
+}
+
+func pathBelow(root, name string) bool {
+	return root == "." || name == root || strings.HasPrefix(name, root+"/")
+}
+
 // Invalidate publishes a normalized development-time content change. The FS
 // does not cache bytes itself; consumers use this signal to invalidate decoded
 // records, required Lua modules, and other derived resources.
