@@ -110,6 +110,32 @@ func TestAlternateWeaponSetsHaveIndependentHandSlots(t *testing.T) {
 	}
 }
 
+func TestActiveMeleeUsesOnlySelectedWeaponSet(t *testing.T) {
+	primary := Melee{Range: 2, PhysicalMinRaw: 512, PhysicalMaxRaw: 1024, WeaponClass: "1hs"}
+	alternate := Melee{Range: 4, PhysicalMinRaw: 1280, PhysicalMaxRaw: 1536, WeaponClass: "2hs"}
+	state, err := NewState(Layout{ActiveWeaponSet: 1}, []Item{
+		{ID: "primary", Code: "ssd", Width: 1, Height: 3, BodySlots: []string{"rarm"}, Melee: primary},
+		{ID: "alternate", Code: "gis", Width: 2, Height: 4, BodySlots: []string{"rarm"}, Melee: alternate},
+	}, map[string]Placement{
+		"primary":   {Container: ContainerEquipment, Slot: "rarm", WeaponSet: 0},
+		"alternate": {Container: ContainerEquipment, Slot: "rarm", WeaponSet: 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, found := state.ActiveMelee()
+	if !found || got != alternate {
+		t.Fatalf("active melee = %#v, %v, want alternate %#v", got, found, alternate)
+	}
+	if err := state.SelectWeaponSet(0); err != nil {
+		t.Fatal(err)
+	}
+	got, found = state.ActiveMelee()
+	if !found || got != primary {
+		t.Fatalf("active melee = %#v, %v, want primary %#v", got, found, primary)
+	}
+}
+
 func TestPlaceHeldSwapsEquipmentAndBeltSlots(t *testing.T) {
 	items := []Item{
 		{ID: "held-ring", Code: "rin", Width: 1, Height: 1, BodySlots: []string{"lring"}},

@@ -90,6 +90,25 @@ func (state *State) SelectWeaponSet(set int) error {
 	return nil
 }
 
+// ActiveMelee returns the active right-hand weapon, then the active left hand.
+// This deterministic preference is the first equipment slice. True dual-wield
+// attack alternation belongs to the later attack-mode transaction.
+func (state *State) ActiveMelee() (Melee, bool) {
+	for _, slot := range []string{"rarm", "larm"} {
+		for id, placement := range state.placements {
+			if placement.Container != ContainerEquipment || placement.Slot != slot ||
+				placement.WeaponSet != state.layout.ActiveWeaponSet {
+				continue
+			}
+			profile := state.items[id].Melee
+			if profile.Range > 0 && profile.PhysicalMinRaw >= 0 && profile.PhysicalMaxRaw >= profile.PhysicalMinRaw {
+				return profile, true
+			}
+		}
+	}
+	return Melee{}, false
+}
+
 // Snapshot returns copies suitable for UI, persistence, or network snapshots.
 // Callers may edit the returned maps without changing authority.
 func (state *State) Snapshot() (Layout, map[string]Item, map[string]Placement) {

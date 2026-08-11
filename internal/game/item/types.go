@@ -40,6 +40,18 @@ type Item struct {
 	BaseCost        int64
 	AppliedServices []string
 	Presentation    Presentation
+	// Melee is the normalized base-weapon contribution admitted with this item.
+	// Affixes, sockets, attributes, and buffs remain separate stat sources.
+	Melee Melee
+}
+
+// Melee contains renderer-free weapon facts used to project an active hand
+// into combat. Raw damage uses Dark Magic's shared 24.8 fixed-point scale.
+type Melee struct {
+	Range          float64
+	PhysicalMinRaw int64
+	PhysicalMaxRaw int64
+	WeaponClass    string
 }
 
 // Presentation keeps the two original views explicit. World drops may animate

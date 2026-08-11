@@ -177,6 +177,18 @@ func (authority *Authority) Snapshot(owner string) (Layout, map[string]Item, map
 	return layout, items, placements, nil
 }
 
+// ActiveMelee copies the weapon facts selected by the owner's active hand set.
+func (authority *Authority) ActiveMelee(owner string) (Melee, bool, error) {
+	authority.mu.RLock()
+	defer authority.mu.RUnlock()
+	state, found := authority.players[owner]
+	if !found {
+		return Melee{}, false, fmt.Errorf("item: unknown owner %q", owner)
+	}
+	profile, equipped := state.ActiveMelee()
+	return profile, equipped, nil
+}
+
 // Export creates a self-contained archive suitable for disconnect recovery,
 // durable saves, or transfer to another realm process.
 func (authority *Authority) Export(owner string) ([]byte, error) {
