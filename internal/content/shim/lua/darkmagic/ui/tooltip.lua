@@ -35,10 +35,30 @@ function tooltip.create(root, value, x, y, options)
     local result = {
         background = render.create(layer, root),
         label = render.create(layer, root),
+        x = x,
+        y = y,
     }
 
     -- Lua can assign two locals from one comma-separated expression.
     local padding_x, padding_y = options.padding_x or 4, options.padding_y or 2
+
+    function result:place()
+        if not self.width then return end
+        local left = anchored_start(self.x, self.width, options.origin_x or "center")
+        local top = anchored_start(self.y, self.height, options.origin_y or "bottom")
+        left = math.max(0, math.min(manifest.resolution.width - self.width, left))
+        top = math.max(0, math.min(manifest.resolution.height - self.height, top))
+        self.background:set_position(left + self.width / 2, top + self.height / 2)
+        self.label:set_position(left + self.width / 2, top + padding_y + self.text_height / 2)
+    end
+
+    -- Moving a tooltip must not recreate its bitmap text or backing texture.
+    -- This is useful for pointer-following inspection labels.
+    function result:set_position(next_x, next_y)
+        if self.x == next_x and self.y == next_y then return end
+        self.x, self.y = next_x, next_y
+        self:place()
+    end
 
     function result:set_text(next_value)
         -- Avoid rebuilding identical retained text/backing.
@@ -56,22 +76,9 @@ function tooltip.create(root, value, x, y, options)
         )
 
         -- Add padding around the measured content.
-        local width, height = text_width + padding_x * 2, text_height + padding_y * 2
-
-        -- Convert caller's chosen anchor semantics into a top-left box.
-        local left = anchored_start(x, width, options.origin_x or "center")
-        local top = anchored_start(y, height, options.origin_y or "bottom")
-
-        -- Clamp the entire tooltip into the logical viewport. This prevents an
-        -- edge-of-screen item from putting its tooltip partly off-screen.
-        left = math.max(0, math.min(manifest.resolution.width - width, left))
-        top = math.max(0, math.min(manifest.resolution.height - height, top))
-
-        self.background:fill_rect(width, height, 0, 0, 0, options.alpha or 200)
-        self.background:set_position(left + width / 2, top + height / 2)
-
-        -- Text is centered horizontally; vertically it starts after top padding.
-        self.label:set_position(left + width / 2, top + padding_y + text_height / 2)
+        self.width, self.height, self.text_height = text_width + padding_x * 2, text_height + padding_y * 2, text_height
+        self.background:fill_rect(self.width, self.height, 0, 0, 0, options.alpha or 200)
+        self:place()
     end
 
     function result:set_visible(visible)

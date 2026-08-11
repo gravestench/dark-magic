@@ -184,6 +184,7 @@
     "font_lab_formal11": {"font":"formal11_units","transform":"sky","text_color":"white"},
     "font_lab_formal12": {"font":"formal12_sky","transform":"sky","text_color":"white"},
     "font_lab_color": {"font":"font16","transform":"sky","text_color":"white"},
+    "dt1_lab_tooltip": {"font":"font16","text_color":"white"},
     "font_lab_gold_sky": {"font":"font16","transform":"sky","text_color":"gold"},
     "font_lab_gold_fechar": {"font":"font16","transform":"fechar","text_color":"gold"},
     "font_lab_gold_act1": {"font":"font16","transform":"act1","text_color":"gold"},
