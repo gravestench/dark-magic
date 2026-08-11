@@ -256,6 +256,28 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		_, err := p.cache.loadWorldChunks(p.assets, request.World, request.Palette, chunkSize)
 		return err
+	case "world_tiles":
+		if request.World == nil {
+			return fmt.Errorf("world map is required")
+		}
+		_, err := p.cache.loadWorldTiles(p.assets, request.World, request.Palette)
+		return err
+	case "world_tile":
+		if request.World == nil {
+			return fmt.Errorf("world map is required")
+		}
+		set, err := p.cache.loadWorldTiles(p.assets, request.World, request.Palette)
+		if err != nil {
+			return err
+		}
+		if request.ChunkIndex < 0 || request.ChunkIndex >= len(set.Draws) {
+			return fmt.Errorf("world tile draw %d out of range", request.ChunkIndex)
+		}
+		pixels, err := p.cache.loadWorldTileGraphic(p.assets, request.World, request.Palette, set.Draws[request.ChunkIndex].Graphic)
+		if err == nil {
+			p.warm(pixels)
+		}
+		return err
 	case "world_chunk":
 		chunkSize := request.ChunkSize
 		if chunkSize <= 0 {
@@ -337,7 +359,7 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 			if request.Table == "" || request.Sheet == "" {
 				return nil, fmt.Errorf("request %d font table and sheet are required", item)
 			}
-		} else if request.Kind == "world_chunks" || request.Kind == "world_chunk" {
+		} else if request.Kind == "world_chunks" || request.Kind == "world_chunk" || request.Kind == "world_tiles" || request.Kind == "world_tile" {
 			if request.World == nil {
 				return nil, fmt.Errorf("request %d world is required", item)
 			}

@@ -3,7 +3,9 @@
 -- Think of a DS1 as a very large sheet of paper. Uploading that whole sheet to
 -- the GPU is wasteful when the window can see only a small rectangle. This
 -- helper keeps the paper's coordinates, but creates retained render nodes only
--- for the little 512x512 squares near the camera.
+-- for pictures near the camera. Runtime worlds borrow one texture for every
+-- unique DT1 graphic and place it many times. DS1 Lab intentionally keeps the
+-- older 512x512 composed chunks because inspecting composition is its job.
 --
 -- This module owns pictures, never gameplay facts. Callers still use
 -- dm.world/v1 for collision, objects, projection, and authoritative positions.
@@ -26,14 +28,13 @@ local function clear_nodes(state)
     end
 end
 
-local function queue_chunk(state, chunk)
-    local key = chunk.index + 1
+local function queue_tile(state, draw)
+    local key = draw.index + 1
     state.pending[key] = render.preload({{
-        kind = "world_chunk",
+        kind = "world_tile",
         world = state.recipe.world,
         palette = state.recipe.palette,
-        chunk_index = chunk.index,
-        chunk_size = state.chunk_size,
+        chunk_index = draw.index,
     }})
 end
 
@@ -41,8 +42,8 @@ local function admit_chunk(state, chunk, key)
     local node = render.create("world", state.root)
     local x, y, width, height
     if state.recipe.world then
-        x, y, width, height = node:set_world_chunk(
-            state.recipe.world, state.recipe.palette, chunk.index, state.chunk_size
+        x, y, width, height = node:set_world_tile(
+            state.recipe.world, state.recipe.palette, chunk.index
         )
     else
         x, y, width, height = node:set_ds1_chunk(
@@ -70,7 +71,7 @@ local function finish_preload(state)
     end
     local ok, result = pcall(function()
         if state.recipe.world then
-            return render.world_chunks(state.recipe.world, state.recipe.palette, state.chunk_size)
+            return render.world_tiles(state.recipe.world, state.recipe.palette)
         end
         return render.ds1_chunks(state.recipe.ds1, state.recipe.dt1, state.recipe.palette, state.chunk_size)
     end)
@@ -87,7 +88,8 @@ local function refresh_nodes(state, world_view)
         world_view, state.viewport_width, state.viewport_height
     )
     local admitted = 0
-    for _, chunk in ipairs(state.set.chunks) do
+    local entries = state.set.draws or state.set.chunks
+    for _, chunk in ipairs(entries) do
         -- Chunk coordinates begin at the map's top-left. Render children are
         -- centered around their parent, so translate once into centered space.
         local local_left = chunk.x - state.set.width / 2
@@ -119,12 +121,19 @@ local function refresh_nodes(state, world_view)
         elseif visible and not state.nodes[key] and not state.pending[key] and not state.failed[key]
             and admitted < state.admit_per_frame then
             if state.recipe.world then
-                queue_chunk(state, chunk)
+                -- Decode each unique visible DT1 graphic on a bounded worker;
+                -- repeated placements join the same cache flight.
+                queue_tile(state, chunk)
             else
-                -- DS1 lab recipes are already fully composed by their preload.
                 admit_chunk(state, chunk, key)
             end
             admitted = admitted + 1
+        elseif not visible and state.pending[key] then
+            local status = render.preload_status(state.pending[key])
+            if status and status.done then
+                render.preload_release(state.pending[key])
+                state.pending[key] = nil
+            end
         elseif not visible and state.nodes[key] then
             state.nodes[key]:destroy()
             state.nodes[key] = nil
@@ -144,7 +153,10 @@ function chunked_map.create(parent, recipe, options)
         failed = {},
         chunk_size = options.chunk_size or 512,
         margin = options.margin or 96,
-        admit_per_frame = options.admit_per_frame or 2,
+        -- Tile placements are much smaller than 512px composed chunks. Admit a
+        -- useful screenful quickly; the renderer's byte budget still governs
+        -- actual native uploads and prevents one frame from monopolizing them.
+        admit_per_frame = options.admit_per_frame or (recipe.world and 32 or 2),
         viewport_width = options.viewport_width or 800,
         viewport_height = options.viewport_height or 600,
         canvas_width = options.canvas_width,
@@ -154,7 +166,7 @@ function chunked_map.create(parent, recipe, options)
     }
     state.root:set_z(options.z or 0)
     local request = {
-        kind = recipe.world and "world_chunks" or "ds1_chunks",
+        kind = recipe.world and "world_tiles" or "ds1_chunks",
         path = recipe.ds1,
         tiles = recipe.dt1,
         world = recipe.world,
