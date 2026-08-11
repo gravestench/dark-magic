@@ -1355,7 +1355,7 @@ restore while Lua only submits intents and presents copied facts.
   hostile AI, collision-aware movement, and the explicitly synthetic M21 melee
   policy. Missile combat sources snapshot the caster's canonical selectable ID
   so death credit reaches the correct player.
-- [ ] Complete the presentation/audio half of the gate: project live monster
+- [x] Complete the presentation/audio half of the gate: project live monster
   appearance/mode/position and missile/death semantic cues into renderer/audio
   adapters through copied read models, with no simulation writes from either
   consumer. Live monster retained composites now consume joined MonStats2 body
@@ -1366,11 +1366,14 @@ restore while Lua only submits intents and presents copied facts.
   death records reach the audio catalog. Missile definitions can now carry a
   joined `Missiles.txt` DCC/direction/rate/offset and travel/hit sound recipe;
   live instances render from copied position facts after background decode, and
-  semantic spawn/hit cues reach the audio catalog. Production registration of
-  an evidence-backed player missile skill remains before this gate is complete.
-  Normalized player combat definitions also remain explicit
-  scaffolding in the acceptance fixture until evidence-backed skill behaviors
-  replace them in production.
+  semantic spawn/hit cues reach the audio catalog. Production now promotes the
+  reviewed level-one Fire Bolt join from Skills.txt and Missiles.txt into the
+  authoritative cast/missile registries: its 2.5-mana fixed-point cost, 3-6
+  fire damage, velocity, lifetime, collision diameter, DCC recipe, directions,
+  and travel/impact sounds remain source-authored facts. Unknown behavior rows
+  fail normalization instead of silently borrowing Fire Bolt semantics. The
+  broader acceptance fixture remains useful scaffolding for behavior families;
+  it is no longer the only registered player missile path.
 
 ## M22: Client and game-session networking
 
