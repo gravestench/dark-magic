@@ -146,6 +146,7 @@ func registerWorldMapType(state *lua.LState) {
 			result := state.NewTable()
 			result.RawSetString("id", lua.LString(selected.ID))
 			result.RawSetString("kind", lua.LString(selected.Kind))
+			result.RawSetString("label", lua.LString(selected.Label))
 			result.RawSetString("x", lua.LNumber(selected.X))
 			result.RawSetString("y", lua.LNumber(selected.Y))
 			result.RawSetString("radius", lua.LNumber(selected.Radius))

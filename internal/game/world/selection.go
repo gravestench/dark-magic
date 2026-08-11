@@ -10,10 +10,10 @@ import (
 // world. Presentation may highlight it, but authority decides what activating
 // the selected ID means.
 type Selectable struct {
-	ID, Kind string
-	X, Y     float64
-	Radius   float64
-	Priority int
+	ID, Kind, Label string
+	X, Y            float64
+	Radius          float64
+	Priority        int
 }
 
 // Selector is a small uniform-grid index. A pointer query only examines nearby
@@ -103,9 +103,13 @@ func (m *Map) Selectables() []Selectable {
 		if object.Type == ObjectTypeDynamic {
 			kind = "dynamic-object"
 		}
+		label := object.Description
+		if label == "" {
+			label = object.Class
+		}
 		result = append(result, Selectable{
 			ID: fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index), Kind: kind,
-			X: float64(object.X), Y: float64(object.Y), Radius: 1.5,
+			Label: label, X: float64(object.X), Y: float64(object.Y), Radius: 1.5,
 		})
 	}
 	return result

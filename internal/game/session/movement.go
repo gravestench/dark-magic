@@ -13,6 +13,7 @@ import (
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 )
 
@@ -25,7 +26,7 @@ type MovePayload struct {
 	Target  *MoveTarget `json:"target,omitempty"`
 }
 
-type MoveTarget struct{ X, Y float64 }
+type MoveTarget struct{ X, Y, StopRadius float64 }
 
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
@@ -40,7 +41,12 @@ type MovementController struct {
 
 func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
 func (controller *MovementController) Running() bool           { return controller.running.Load() }
-func (controller *MovementController) nextSequence() uint64    { return controller.sequence.Add(1) }
+func (controller *MovementController) HasMoveTarget() bool {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return controller.target != nil
+}
+func (controller *MovementController) nextSequence() uint64 { return controller.sequence.Add(1) }
 
 func (controller *MovementController) AssignSkill(slot string, skillID int64) error {
 	if slot != "left" && slot != "right" || skillID < 0 {
@@ -75,12 +81,19 @@ func (controller *MovementController) drainSkillUses() []UseSkillPayload {
 }
 
 func (controller *MovementController) SetMoveTarget(x, y float64) error {
+	return controller.SetMoveTargetWithRadius(x, y, 0)
+}
+
+func (controller *MovementController) SetMoveTargetWithRadius(x, y, stopRadius float64) error {
 	if math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
 		return fmt.Errorf("game session: movement target must be finite")
 	}
+	if stopRadius < 0 || math.IsNaN(stopRadius) || math.IsInf(stopRadius, 0) {
+		return fmt.Errorf("game session: movement stop radius must be non-negative and finite")
+	}
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
-	controller.target = &MoveTarget{X: x, Y: y}
+	controller.target = &MoveTarget{X: x, Y: y, StopRadius: stopRadius}
 	return nil
 }
 
@@ -229,11 +242,20 @@ func movementDirection(x, y int) int64 {
 // MovementSource turns the latest native input snapshot into one replayable
 // command per active gameplay tick.
 type MovementSource struct {
-	engine  *gameecs.Engine
-	input   *inputstate.Store
-	player  string
-	focusID string
-	control *MovementController
+	engine     *gameecs.Engine
+	input      *inputstate.Store
+	player     string
+	focusID    string
+	control    *MovementController
+	navigation *gameworld.Map
+	path       []gameworld.Point
+	pathTarget *MoveTarget
+}
+
+func (source *MovementSource) SetNavigation(world *gameworld.Map) {
+	source.navigation = world
+	source.path = nil
+	source.pathTarget = nil
 }
 
 func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string, controllers ...*MovementController) (*MovementSource, error) {
@@ -256,6 +278,13 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 	}
 	x, y := 0, 0
 	target := source.control.moveTarget()
+	if target == nil {
+		source.path = nil
+		source.pathTarget = nil
+	}
+	if target != nil && source.navigation != nil {
+		target = source.pathWaypoint(target)
+	}
 	owner := source.input.Owner()
 	if owner.Domain == inputstate.FocusScene && (owner.ID == source.focusID || source.input.Gameplay()) {
 		if source.input.Action("toggle_run").Pressed {
@@ -280,6 +309,68 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 	}
 	payload, _ := json.Marshal(MovePayload{X: x, Y: y, Running: source.control.Running(), Target: target})
 	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.control.nextSequence(), Kind: MoveCommand, Payload: payload}}
+}
+
+func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
+	positions, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.position")
+	if !ok {
+		return target
+	}
+	controls, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.player_control")
+	if !ok {
+		return target
+	}
+	var current gameworld.Point
+	found := false
+	var radius float64
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		player, _ := control.Get("player")
+		if player != source.player {
+			continue
+		}
+		position, present := positions.Get(entity)
+		if !present {
+			continue
+		}
+		x, _ := position.Get("x")
+		y, _ := position.Get("y")
+		current = gameworld.Point{X: x.(float64), Y: y.(float64)}
+		found = true
+		if colliders, present := akara.GetDynamicStore(source.engine.World(), "dm.world.collider"); present {
+			if collider, exists := colliders.Get(entity); exists {
+				value, _ := collider.Get("radius")
+				radius = value.(float64)
+			}
+		}
+		break
+	}
+	if !found {
+		return target
+	}
+	changed := source.pathTarget == nil || source.pathTarget.X != target.X || source.pathTarget.Y != target.Y || source.pathTarget.StopRadius != target.StopRadius
+	if changed {
+		path, err := source.navigation.FindPath(gameworld.PathRequest{Start: current, Goal: gameworld.Point{X: target.X, Y: target.Y}, Radius: radius, StopRadius: target.StopRadius})
+		if err != nil {
+			source.control.clearMoveTarget()
+			source.path = nil
+			source.pathTarget = nil
+			return &MoveTarget{X: current.X, Y: current.Y}
+		}
+		source.path = path
+		copyTarget := *target
+		source.pathTarget = &copyTarget
+	}
+	for len(source.path) > 1 && math.Hypot(current.X-source.path[1].X, current.Y-source.path[1].Y) <= 0.3 {
+		source.path = source.path[1:]
+	}
+	if len(source.path) <= 1 {
+		source.control.clearMoveTarget()
+		source.path = nil
+		source.pathTarget = nil
+		return &MoveTarget{X: current.X, Y: current.Y}
+	}
+	return &MoveTarget{X: source.path[1].X, Y: source.path[1].Y}
 }
 
 func decodeMove(encoded []byte) (MovePayload, error) {
