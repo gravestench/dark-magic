@@ -104,6 +104,13 @@ func TestScaleHotPathDoesNotAllocate(t *testing.T) {
 	}
 }
 
+func TestMultiplyDivideSupportsWholeAuthoritativeValues(t *testing.T) {
+	got, err := MultiplyDivide(9, 186, 100, RoundTowardZero)
+	if err != nil || got != 16 {
+		t.Fatalf("9 * 186 / 100 = %d, err=%v", got, err)
+	}
+}
+
 func assertWhole(t *testing.T, amount Amount, rounding Rounding, want int64) {
 	t.Helper()
 	got, err := amount.Whole(rounding)

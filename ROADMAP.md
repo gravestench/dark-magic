@@ -1205,10 +1205,21 @@ data owners; they do not introduce parallel gameplay authorities.
   and mana channels separate. Synthetic positive, negative, half-unit, overflow,
   channel-order, and bundle vectors lock down mechanism without claiming any
   unverified hit, resistance, absorb, leech, or PvP formula.
-- [ ] **M21.3: Ordinary hostile materialization.** Build one deterministic Blood
+- [x] **M21.3: Ordinary hostile materialization.** Build one deterministic Blood
   Moor hostile from typed MonStats/MonLvl facts with stable identity/seed,
   effective base stats, collider, targetable presentation snapshot, and no
-  sophisticated AI.
+  sophisticated AI. Raw `MonStats.txt` and `MonStats2.txt` records remain
+  separate for legacy provenance, but gameplay consumes one joined monster
+  definition so the old 255-column Excel limitation does not become an engine
+  boundary. The catalog now indexes `MonLvl.txt` by level; the monster domain
+  selects difficulty columns, applies the independently corroborated
+  `MonLvl * MonStats / 100` integer relationship (or direct `noRatio` values),
+  and preserves every source ID. A privileged deterministic spawn command
+  materializes identity, effective fixed-point life/damage, defense, attack
+  rating, experience, appearance, location, collider, and hostile pointer
+  selection components. Synthetic join, difficulty, direct-value, authority,
+  deterministic-life, and target-resolution tests avoid asserting later
+  player-count, ladder, boss, quality, AI, hit, or death policies.
 - [ ] **M21.4: Scheduled basic monster AI.** Implement the deterministic loop
   `idle -> acquire hostile -> path toward -> request basic attack`. AI chooses
   intent and owns checkpointed next-think/memory state; it never mutates HP.
