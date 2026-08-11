@@ -109,7 +109,7 @@ func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
 	if err := saves.Select("amazon-hero"); err != nil {
 		t.Fatal(err)
 	}
-	source, err := NewEntrySource(engine, saves, "local-player", 100, 80, nil)
+	source, err := NewEntrySourceAt(engine, saves, "local-player", 12, 13, 100, 80, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,5 +122,16 @@ func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
 	identities, found := akara.GetDynamicStore(engine.World(), "dm.player.identity")
 	if !found || identities.Len() != 1 {
 		t.Fatalf("identities = %v, %v", identities, found)
+	}
+	positions, found := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	if !found {
+		t.Fatal("position store is missing")
+	}
+	position, _ := positions.Get(identities.Entities()[0])
+	if x, _ := position.Get("x"); x != float64(12) {
+		t.Fatalf("spawn x = %v, want authored 12", x)
+	}
+	if y, _ := position.Get("y"); y != float64(13) {
+		t.Fatalf("spawn y = %v, want authored 13", y)
 	}
 }

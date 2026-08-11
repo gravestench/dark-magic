@@ -217,6 +217,28 @@ func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 	return m.flags[y*m.WidthSubtiles+x], true
 }
 
+// OpenPointNearCenter returns a deterministic unblocked subtile for fixture
+// entry. The expanding square search prevents an authored wall at the exact
+// center from trapping a newly admitted player.
+func (m *Map) OpenPointNearCenter() (float64, float64, bool) {
+	centerX, centerY := m.WidthSubtiles/2, m.HeightSubtiles/2
+	limit := max(m.WidthSubtiles, m.HeightSubtiles)
+	for radius := 0; radius <= limit; radius++ {
+		for y := centerY - radius; y <= centerY+radius; y++ {
+			for x := centerX - radius; x <= centerX+radius; x++ {
+				if radius > 0 && x != centerX-radius && x != centerX+radius && y != centerY-radius && y != centerY+radius {
+					continue
+				}
+				flags, inside := m.FlagsAt(x, y)
+				if inside && !flags.Blocked() {
+					return float64(x), float64(y), true
+				}
+			}
+		}
+	}
+	return 0, 0, false
+}
+
 // SubtileToPixel projects continuous DS1 subtile coordinates into the same
 // image-space diamond centers used by TexturedDS1Preview.
 func (m *Map) SubtileToPixel(x, y float64) (float64, float64) {

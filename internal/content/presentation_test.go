@@ -7,7 +7,7 @@ import (
 )
 
 func TestPresentationBootstrapComesFromManifest(t *testing.T) {
-	const manifest = `{"schema":"darkmagic.presentation/v1","palettes":{"loading":"palette.dat"},"screens":{"title":{"background":"title.dc6"},"game_loading":{"sheet":"loading.dc6","palette":"loading"}}}`
+	const manifest = `{"schema":"darkmagic.presentation/v1","palettes":{"loading":"palette.dat"},"screens":{"title":{"background":"title.dc6"},"game_loading":{"sheet":"loading.dc6","palette":"loading"},"game_world":{"map":{"ds1":"town.ds1","dt1":["floor.dt1"]}}}}`
 	source := fstest.MapFS{
 		presentationManifest: {Data: []byte(manifest)},
 		"title.dc6":          {Data: []byte("fixture")},
@@ -18,6 +18,9 @@ func TestPresentationBootstrapComesFromManifest(t *testing.T) {
 	}
 	if bootstrap.TitleBackground != "title.dc6" || len(bootstrap.LoadingAssets) != 2 || bootstrap.LoadingAssets[0] != "loading.dc6" || bootstrap.LoadingAssets[1] != "palette.dat" {
 		t.Fatalf("bootstrap = %#v", bootstrap)
+	}
+	if bootstrap.GameWorldMap.DS1 != "town.ds1" || len(bootstrap.GameWorldMap.DT1) != 1 || bootstrap.GameWorldMap.DT1[0] != "floor.dt1" {
+		t.Fatalf("game-world recipe = %#v", bootstrap.GameWorldMap)
 	}
 	if err := ValidateClientAssets(source); err != nil {
 		t.Fatal(err)

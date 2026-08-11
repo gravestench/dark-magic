@@ -14,6 +14,14 @@ const presentationManifest = "manifests/presentation.v1.json"
 type PresentationBootstrap struct {
 	TitleBackground string
 	LoadingAssets   []string
+	GameWorldMap    PresentationMapRecipe
+}
+
+// PresentationMapRecipe identifies the authored stamp used by the current
+// playable-world fixture. Geometry and collision still come from DS1/DT1.
+type PresentationMapRecipe struct {
+	DS1 string
+	DT1 []string
 }
 
 // LoadPresentationBootstrap reads startup facts from the versioned shim
@@ -34,6 +42,12 @@ func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 				Sheet   string `json:"sheet"`
 				Palette string `json:"palette"`
 			} `json:"game_loading"`
+			GameWorld struct {
+				Map struct {
+					DS1 string   `json:"ds1"`
+					DT1 []string `json:"dt1"`
+				} `json:"map"`
+			} `json:"game_world"`
 		} `json:"screens"`
 	}
 	if err := json.Unmarshal(data, &document); err != nil {
@@ -49,6 +63,10 @@ func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 	return PresentationBootstrap{
 		TitleBackground: document.Screens.Title.Background,
 		LoadingAssets:   []string{document.Screens.GameLoading.Sheet, loadingPalette},
+		GameWorldMap: PresentationMapRecipe{
+			DS1: document.Screens.GameWorld.Map.DS1,
+			DT1: append([]string(nil), document.Screens.GameWorld.Map.DT1...),
+		},
 	}, nil
 }
 

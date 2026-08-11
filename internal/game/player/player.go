@@ -67,22 +67,28 @@ type SkillProvider func(persistence.Character) []Skill
 // Selection remains shell state; after admission, ECS components are the live
 // gameplay state and Lua only observes them.
 type EntrySource struct {
-	engine        *gameecs.Engine
-	saves         *persistence.Store
-	player        string
-	width, height float64
-	sequence      uint64
-	skills        SkillProvider
+	engine         *gameecs.Engine
+	saves          *persistence.Store
+	player         string
+	width, height  float64
+	spawnX, spawnY float64
+	sequence       uint64
+	skills         SkillProvider
 }
 
 // NewEntrySource creates the offline adapter that emits one entry command for
 // the selected character. Remote sessions receive equivalent commands elsewhere.
 func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64, skills SkillProvider) (*EntrySource, error) {
+	return NewEntrySourceAt(engine, saves, player, width/2, height/2, width, height, skills)
+}
+
+// NewEntrySourceAt admits the player at a server-selected map coordinate.
+func NewEntrySourceAt(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64, skills SkillProvider) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
-	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 {
+	if engine == nil || saves == nil || player == "" || width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height {
 		return nil, fmt.Errorf("player: entry source requires engine, saves, player, and positive world bounds")
 	}
-	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, skills: skills}, nil
+	return &EntrySource{engine: engine, saves: saves, player: player, width: width, height: height, spawnX: x, spawnY: y, skills: skills}, nil
 }
 
 // Commands emits entry intent once; it never materializes ECS state directly.
@@ -92,7 +98,7 @@ func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 		return nil
 	}
 	source.sequence++
-	entry := EntryFromCharacter(character, source.player, source.width/2, source.height/2, source.width, source.height)
+	entry := EntryFromCharacter(character, source.player, source.spawnX, source.spawnY, source.width, source.height)
 	if source.skills != nil {
 		entry.Skills = source.skills(character)
 	}
