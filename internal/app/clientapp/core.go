@@ -240,6 +240,9 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
 		return wrap("register item commands", err)
 	}
+	if err := gameplayer.RegisterEquipmentProfile(app.entitySimulation, app.itemAuthority); err != nil {
+		return wrap("register equipped player melee profile", err)
+	}
 	if err := gametransition.Register(app.offlineSession, app.transitionAuthority); err != nil {
 		return wrap("register zone transition commands", err)
 	}
@@ -406,9 +409,10 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
 		weaponPresentation := gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation})
+		weaponMelee := gameitem.Melee{Range: float64(1 + weapon.RangeAdder), PhysicalMinRaw: gamecombat.MustWhole(int64(weapon.MinDam)).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(int64(weapon.MaxDam)).Raw(), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
+		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation})
+		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
 		placements["fixture-vendor-short-sword"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "weap", Page: 0}
 	}
 	if armor, found := snapshot.ArmorByCode["cap"]; found {

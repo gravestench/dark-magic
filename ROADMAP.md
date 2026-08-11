@@ -1357,9 +1357,10 @@ data owners; they do not introduce parallel gameplay authorities.
   it retains the target identity, caches one collision-aware waypoint rather
   than pathfinding every tick, follows a moving same-zone target, and cancels
   cleanly when that target disappears or becomes unreachable. Complete this
-  checkpoint by deriving the active player profile from authoritative
-  equipment/stat sources and adding an asset-backed
-  pointer-to-hit acceptance capture. The current
+  checkpoint now projects the active equipment hand set's typed base-weapon
+  range, physical damage, and weapon class into the player ECS profile before
+  combat. Finish affix/socket/attribute stat sources, true dual-wield attack
+  selection, and an asset-backed pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.
 
