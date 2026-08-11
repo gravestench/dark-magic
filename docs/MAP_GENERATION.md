@@ -362,6 +362,12 @@ opposite generated Blood Moor edge, and resolves both to walkable subtiles.
 This seam value is suitable for an authoritative transition command; neither
 transparent pixels nor generic open map borders are accepted as exits.
 
+The transition command is system/admin-authority only. It verifies current ECS
+level and distance from the source endpoint, then changes level, collision
+bounds, position, and velocity in one session step. Arrival points are resolved
+several subtiles inward from the destination edge so an admitted transition
+does not immediately retrigger in reverse.
+
 ## Automap implications
 
 Automap data uses level type + tile type/style/sequence ranges. Because hidden, linkage, exit, and roof semantics influence automap visibility, automap generation should consume semantic map tiles rather than screenshots or flattened render batches.
