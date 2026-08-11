@@ -97,6 +97,60 @@ function M.composite_snapshot(entity)
     return snapshot
 end
 
+-- Copy every live monster into ordinary Lua values. Retained presentation code
+-- may keep these tables for a frame; it never receives writable ECS component
+-- handles. Entity ID is included only as a stable presentation-node key.
+function M.monster_snapshots()
+    local result = {}
+    local entities = ecs.query({ all = {
+        "dm.monster.identity", "dm.monster.appearance", "dm.world.position",
+        "dm.world.velocity", "dm.world.location",
+    }})
+    for _, entity in ipairs(entities) do
+        local identity = ecs.get(entity, "dm.monster.identity"):snapshot()
+        local appearance = ecs.get(entity, "dm.monster.appearance"):snapshot()
+        local position = ecs.get(entity, "dm.world.position")
+        local velocity = ecs.get(entity, "dm.world.velocity")
+        local location = ecs.get(entity, "dm.world.location")
+        local ai = ecs.get(entity, "dm.monster.ai")
+        local mode = appearance.mode
+        if mode ~= "DT" and ai and ai:get("state") == "attack" then
+            mode = "A1"
+        elseif mode ~= "DT" and (velocity:get("x") ~= 0 or velocity:get("y") ~= 0) then
+            mode = "WL"
+        end
+        result[#result + 1] = {
+            entity_id = entity:id(), spawn_id = identity.spawn_id,
+            token = appearance.token, mode = mode,
+            weapon_class = appearance.weapon_class, components = appearance.components,
+            name_key = appearance.name_key, death_sound = appearance.death_sound,
+            x = position:get("x"), y = position:get("y"),
+            velocity_x = velocity:get("x"), velocity_y = velocity:get("y"),
+            act = location:get("act"), level_id = location:get("level_id"),
+        }
+    end
+    return result
+end
+
+-- Semantic events are also copied. Consumers can remember entity_id to avoid
+-- presenting one durable event more than once; observation itself is read-only.
+function M.semantic_cues()
+    local result = {}
+    for _, entity in ipairs(ecs.query({ any = { "dm.monster.death_event", "dm.missile.event" } })) do
+        local kind, values
+        local death = ecs.get(entity, "dm.monster.death_event")
+        if death then kind, values = "monster_death", death:snapshot() end
+        local missile = ecs.get(entity, "dm.missile.event")
+        if missile then kind, values = "missile", missile:snapshot() end
+        if values then
+            values.entity_id = entity:id()
+            values.cue_type = kind
+            result[#result + 1] = values
+        end
+    end
+    return result
+end
+
 -- Build one VALUE-ONLY HUD snapshot.
 --
 -- Live simulation facts come from ECS. Save metadata fills only fields whose

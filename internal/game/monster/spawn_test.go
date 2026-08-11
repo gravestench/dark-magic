@@ -16,6 +16,7 @@ func TestSpawnMaterializesDeterministicHostile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	definition.DeathSound = "fallen_death"
 	spawn, err := NewSpawn("blood-moor:1", definition, 42, 12, 13, 1, 2)
 	if err != nil {
 		t.Fatal(err)
@@ -48,6 +49,13 @@ func TestSpawnMaterializesDeterministicHostile(t *testing.T) {
 	health, _ := component.Get("health")
 	if health != rollLife(definition.LifeMin, definition.LifeMax, 42).Raw() {
 		t.Fatalf("health = %v", health)
+	}
+	appearance, _ := akara.GetDynamicStore(engine.World(), "dm.monster.appearance")
+	visual, _ := appearance.Get(identities.Entities()[0])
+	components, _ := visual.Get("components")
+	deathSound, _ := visual.Get("death_sound")
+	if components != "HD=LIT,TR=MED" || deathSound != "fallen_death" {
+		t.Fatalf("appearance recipe = %q, death sound = %q", components, deathSound)
 	}
 	hit, found := targeting.New(engine).HitAt(12, 13)
 	if !found || hit.Kind != targeting.KindHostile || hit.ID != "monster:blood-moor:1" {

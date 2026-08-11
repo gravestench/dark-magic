@@ -1358,7 +1358,13 @@ restore while Lua only submits intents and presents copied facts.
 - [ ] Complete the presentation/audio half of the gate: project live monster
   appearance/mode/position and missile/death semantic cues into renderer/audio
   adapters through copied read models, with no simulation writes from either
-  consumer. Normalized player combat definitions also remain explicit
+  consumer. Live monster retained composites now consume joined MonStats2 body
+  recipes, velocity/AI-derived presentation modes, world positions and durable
+  death mode; direction changes preserve playback, cold recipes preload, and
+  missing optional animations stay non-fatal. Death and missile ECS events now
+  cross a value-only, observe-once cue boundary, and authored MonSounds/Sounds
+  death records reach the audio catalog. Concrete missile art and its sound
+  record joins remain before this gate is complete. Normalized player combat definitions also remain explicit
   scaffolding in the acceptance fixture until evidence-backed skill behaviors
   replace them in production.
 
