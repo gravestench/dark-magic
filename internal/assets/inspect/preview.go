@@ -71,10 +71,12 @@ type tileKey struct {
 	sequence int32
 }
 
-// TexturedDS1Preview composes a DS1 stamp using matching DT1 tile graphics.
+// TexturedDS1Image composes a DS1 stamp using matching DT1 tile graphics.
 // Missing tile definitions retain a structural diamond so incomplete tileset
-// lists remain obvious instead of producing an empty image.
-func TexturedDS1Preview(source fs.FS, ds1Path string, dt1Paths []string, palettePath string) ([]byte, error) {
+// lists remain obvious instead of producing an empty image. Runtime callers use
+// the image directly so large maps do not pay for a PNG encode followed by an
+// immediate decode.
+func TexturedDS1Image(source fs.FS, ds1Path string, dt1Paths []string, palettePath string) (image.Image, error) {
 	stampFile, err := source.Open(ds1Path)
 	if err != nil {
 		return nil, fmt.Errorf("opening DS1 asset %q: %w", ds1Path, err)
@@ -210,8 +212,17 @@ func TexturedDS1Preview(source fs.FS, ds1Path string, dt1Paths []string, palette
 		}
 	}
 
+	return canvas, nil
+}
+
+// TexturedDS1Preview is the encoded form used by command-line inspection tools.
+func TexturedDS1Preview(source fs.FS, ds1Path string, dt1Paths []string, palettePath string) ([]byte, error) {
+	preview, err := TexturedDS1Image(source, ds1Path, dt1Paths, palettePath)
+	if err != nil {
+		return nil, err
+	}
 	var output bytes.Buffer
-	if err := png.Encode(&output, canvas); err != nil {
+	if err := png.Encode(&output, preview); err != nil {
 		return nil, fmt.Errorf("encoding textured DS1 preview: %w", err)
 	}
 	return output.Bytes(), nil
