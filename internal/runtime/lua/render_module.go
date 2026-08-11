@@ -224,6 +224,7 @@ type preparedCOFAnimation struct {
 	frames []image.Image
 	keys   []string
 	asset  *cof.COF
+	origin image.Point
 }
 
 type preparedDCCFile struct {
@@ -1287,17 +1288,17 @@ func (n *ownedRenderNode) requireAnimation() error {
 	return nil
 }
 
-func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, paths map[string]string) ([]image.Image, *cof.COF, error) {
+func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, paths map[string]string) ([]image.Image, *cof.COF, image.Rectangle, error) {
 	asset, err := n.cache.loadCOF(n.assets, cofName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, image.Rectangle{}, err
 	}
 	if direction < 0 || direction >= asset.NumberOfDirections {
-		return nil, nil, fmt.Errorf("COF direction %d is out of range", direction)
+		return nil, nil, image.Rectangle{}, fmt.Errorf("COF direction %d is out of range", direction)
 	}
 	dccDirection, err := dccDirectionForCOF(direction, asset.NumberOfDirections)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, image.Rectangle{}, err
 	}
 	layers := make(map[cof.CompositeType]cof.CofLayer, len(asset.CofLayers))
 	decoded := make(map[cof.CompositeType]preparedDCCDirection)
@@ -1308,7 +1309,7 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		}
 		component, err := n.cache.loadDCCDirection(n.assets, name, palette, dccDirection)
 		if err != nil {
-			return nil, nil, fmt.Errorf("COF layer %s: %w", layer.Type, err)
+			return nil, nil, image.Rectangle{}, fmt.Errorf("COF layer %s: %w", layer.Type, err)
 		}
 		layers[layer.Type], decoded[layer.Type] = layer, component
 	}
@@ -1328,26 +1329,28 @@ func (n *ownedRenderNode) cofFrames(cofName, palette string, direction int, path
 		}
 	}
 	if animationBounds.Empty() {
-		return nil, nil, errors.New("COF composition has no component animation bounds")
+		return nil, nil, image.Rectangle{}, errors.New("COF composition has no component animation bounds")
 	}
 
 	frames := make([]image.Image, asset.FramesPerDirection)
+	var canvas image.Rectangle
 	for frameIndex := range frames {
 		components := make(map[cof.CompositeType]compositeFrame, len(decoded))
 		for componentType, component := range decoded {
 			directionFrames := component.direction.Frames()
 			if frameIndex >= len(directionFrames) {
-				return nil, nil, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
+				return nil, nil, image.Rectangle{}, fmt.Errorf("COF layer %s lacks frame %d", componentType, frameIndex)
 			}
 			frame := directionFrames[frameIndex]
 			components[componentType] = compositeFrame{indices: frame.PixelData, palette: component.palette, bounds: frame.Bounds(), layer: layers[componentType]}
 		}
 		frames[frameIndex], err = composeCOFFrame(asset, direction, frameIndex, components, animationBounds)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, image.Rectangle{}, err
 		}
+		canvas = shadowCanvasBounds(animationBounds, components)
 	}
-	return frames, asset, nil
+	return frames, asset, canvas, nil
 }
 
 func compositeCacheKey(cofName, palette string, direction int, paths map[string]string) string {
@@ -1365,8 +1368,8 @@ func compositeCacheKey(cofName, palette string, direction int, paths map[string]
 func (n *ownedRenderNode) cachedCOFAnimation(cofName, palette string, direction int, paths map[string]string) (preparedCOFAnimation, error) {
 	key := compositeCacheKey(cofName, palette, direction, paths)
 	value, err := n.cache.load(n.assets, key, func() (any, int, error) {
-		frames, asset, err := n.cofFrames(cofName, palette, direction, paths)
-		return preparedCOFAnimation{frames: frames, asset: asset}, imagesWeight(frames), err
+		frames, asset, canvas, err := n.cofFrames(cofName, palette, direction, paths)
+		return preparedCOFAnimation{frames: frames, asset: asset, origin: image.Pt(-canvas.Min.X, -canvas.Min.Y)}, imagesWeight(frames), err
 	})
 	if err != nil {
 		return preparedCOFAnimation{}, err
@@ -1611,6 +1614,7 @@ func (r *RenderCapability) Module() Module {
 		"set_palette_quantization":   commandHelp("node:set_palette_quantization(path)", "Quantize the node through a display palette."),
 		"clear_palette_quantization": commandHelp("node:clear_palette_quantization()", "Disable node palette quantization."),
 		"set_visible":                commandHelp("node:set_visible(visible)", "Show or hide the node."),
+		"set_origin":                 commandHelp("node:set_origin(x, y)", "Set the normalized texture pivot used at the node position."),
 		"set_clip":                   commandHelp("node:set_clip(x, y, width, height)", "Set the node clip rectangle."),
 		"clear_clip":                 commandHelp("node:clear_clip()", "Remove the node clip rectangle."),
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
@@ -2040,6 +2044,14 @@ func registerRenderNodeType(state *lua.LState) {
 			visible := state.CheckBool(2)
 			if err := node.composer.Update(node.id, func(current *render.Node) { current.Visible = visible }); err != nil {
 				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
+		"set_origin": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			x, y := float64(state.CheckNumber(2)), float64(state.CheckNumber(3))
+			if err := node.composer.Update(node.id, func(current *render.Node) { current.OriginX, current.OriginY = x, y }); err != nil {
+				state.RaiseError("updating render node origin: %v", err)
 			}
 			return 0
 		},
@@ -2541,7 +2553,7 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			cofName, palette := state.CheckString(2), state.OptString(3, "")
 			direction, frameIndex := state.OptInt(4, 0), state.OptInt(5, 0)
-			frames, asset, err := node.cofFrames(cofName, palette, direction, luaComponentPaths(state, 6))
+			frames, asset, canvas, err := node.cofFrames(cofName, palette, direction, luaComponentPaths(state, 6))
 			if err != nil {
 				state.RaiseError("composing COF: %v", err)
 				return 0
@@ -2552,6 +2564,14 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			if err := node.setImage(frames[frameIndex]); err != nil {
 				state.RaiseError("updating COF render node: %v", err)
+				return 0
+			}
+			width, height := frames[frameIndex].Bounds().Dx(), frames[frameIndex].Bounds().Dy()
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.OriginX = float64(-canvas.Min.X) / float64(max(width, 1))
+				current.OriginY = float64(-canvas.Min.Y) / float64(max(height, 1))
+			}); err != nil {
+				state.RaiseError("updating COF ground origin: %v", err)
 				return 0
 			}
 			state.Push(lua.LNumber(frames[frameIndex].Bounds().Dx()))
@@ -2586,6 +2606,18 @@ func registerRenderNodeType(state *lua.LState) {
 			seek := time.Duration(float64(time.Second) * float64(state.OptNumber(8, 0)))
 			if err := node.setAnimationKeyed(prepared.frames, prepared.keys, duration, loop, seek); err != nil {
 				state.RaiseError("updating COF animation: %v", err)
+				return 0
+			}
+			// DCC bounds are authored around logical character origin (0,0), which
+			// is the feet/ground contact. The composed RGBA canvas may extend in
+			// every direction for limbs and shadows, so its visual center is not a
+			// valid world pivot.
+			width, height := prepared.frames[0].Bounds().Dx(), prepared.frames[0].Bounds().Dy()
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.OriginX = float64(prepared.origin.X) / float64(max(width, 1))
+				current.OriginY = float64(prepared.origin.Y) / float64(max(height, 1))
+			}); err != nil {
+				state.RaiseError("updating COF ground origin: %v", err)
 				return 0
 			}
 			events := state.NewTable()

@@ -381,7 +381,6 @@ return {
 			self.origins_visible = not self.origins_visible
 			if not self.origins_visible then
 				destroy_cross(self.hero_origin); self.hero_origin = nil
-				destroy_cross(self.camera_origin); self.camera_origin = nil
 			end
 		end
 		update_debug_legend(self)
@@ -411,8 +410,6 @@ return {
 		end
 		if self.origins_visible and not self.hero_origin and self.map then self.hero_origin = create_cross("world", self.map.root, 900002, 255, 64, 255) end
 		if self.hero_origin then set_cross(self.hero_origin, true, hero_screen_x, hero_screen_y) end
-		if self.origins_visible and not self.camera_origin then self.camera_origin = create_cross("hud", self.root, 999999, 64, 255, 64) end
-		if self.camera_origin then set_cross(self.camera_origin, true, target_x, target_y) end
 
         if self.map then
             -- Absolute authoritative camera coordinates determine both chunk
