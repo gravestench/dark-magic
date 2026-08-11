@@ -59,6 +59,18 @@ positive-rarity record; an all-zero group falls back to its first authored entry
 
 ## Deterministic RNG
 
+Dark Magic's executable boundary lives in `internal/game/mapgen`. A complete,
+versioned request is the only ambient input admitted to a generator. The output
+is an immutable, canonically ordered zone of tile-space facts and authored asset
+recipes; it deliberately contains no images, textures, renderer nodes, or screen
+coordinates. Purpose-named random streams keep topology, preset-variant, and
+population rolls independent, and every zone has a canonical SHA-256 checksum.
+
+The current general stream implementation is replay-stable Dark Magic policy.
+Exact legacy DRLG compatibility still requires the two-word seed arithmetic and
+call order below; generators claiming that fidelity must implement and test it
+explicitly rather than treating the general stream as a compatibility shortcut.
+
 D2MOO reconstructs the 1.10f seed state as two 32-bit values:
 
 ```text

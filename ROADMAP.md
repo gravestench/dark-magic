@@ -872,6 +872,17 @@ complete until its actions are driven by authoritative game state and commands.
   boundary, add exhaustive mapping/projection probes, and provide an F3 DS1 Lab
   collision overlay. Red marks walk blocking, orange player-only blocking, blue
   LOS, magenta jump, and yellow light blocking.
+- [x] M20.6: Establish a versioned deterministic generator request and immutable
+  zone contract. Canonical zones retain tile-space bounds, authored DS1/DT1
+  recipes, rooms, links, warps, spawns, and a generation trace without owning
+  images or native renderer resources. Purpose-named random streams isolate
+  topology, preset, and population decisions, while canonical serialization and
+  checksums make generation replay-verifiable across server and client.
+- [ ] M20.7: Prove one Act I preset level through typed LvlPrest/LvlTypes records
+  and expose the resulting zone recipe and trace in a pointer-driven Mapgen Lab.
+- [ ] M20.8: Generate the first deterministic LvlMaze room topology, verify
+  bounds/connectivity/stable checksums, and select only connection-compatible
+  preset chambers before expanding fidelity to special rooms and every act.
 
 ## M21: Diablo simulation
 
