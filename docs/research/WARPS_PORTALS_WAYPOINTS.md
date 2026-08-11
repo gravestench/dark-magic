@@ -103,6 +103,21 @@ VisualVariantMetadata
 
 Exact coordinate interpretation must remain tied to the map/coordinate research and verified with owned map fixtures.
 
+### Verified warp coordinate domains
+
+Riiablo's server map construction supplies a special cell at
+`tileCoordinate * 5` subtiles, then adds `LvlWarp.OffsetX/Y` to create the warp
+entity position. Arrival initially uses the destination warp entity position;
+`ExitWalkX/Y` is added to that position to form the automatic post-arrival walk
+target. These values therefore belong to authoritative world-subtile space.
+
+`SelectX/Y/DX/DY` is different. Riiablo copies it directly into a client-side
+local bounding box. A production Act I cave fixture resolves values
+`(-30, -120, 120, 150)`, disproving any interpretation as world subtiles. Dark
+Magic retains this rectangle in authored client-local units until the
+presentation adapter's screen-space transform is verified. It must never enter
+collision, pathfinding, or authoritative movement arithmetic.
+
 ## Stairs, trap doors, pads and gates
 
 D2MOO object behavior has distinct operation handlers for stairs, trap doors, teleport pads, gates and specialized doors.

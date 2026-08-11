@@ -27,6 +27,15 @@ func TestResolveLevelTransitionsJoinsMatchingVisibilitySlot(t *testing.T) {
 	if got.DestinationLevel != 9 || got.WarpID != 13 || got.Tile.SubIndex != 22 || got.SelectX != -2 || got.ExitWalkY != 5 || got.OffsetX != 6 || !got.LitVersion || !got.NoInteract || got.Direction != "b" || got.UniqueID != 99 {
 		t.Fatalf("transition = %#v", got)
 	}
+	geometry := got.Geometry()
+	want := WarpGeometry{
+		CellOrigin: SubtilePoint{X: 40, Y: 20}, EntityPosition: SubtilePoint{X: 46, Y: 27},
+		SelectionLocal: LocalSelectionBounds{MinX: -2, MinY: 3, MaxX: 8, MaxY: 15},
+		Arrival:        SubtilePoint{X: 46, Y: 27}, ExitWalkTarget: SubtilePoint{X: 50, Y: 32},
+	}
+	if geometry != want {
+		t.Fatalf("geometry = %#v, want %#v", geometry, want)
+	}
 }
 
 func TestResolveLevelTransitionsRejectsMissingTypedWarp(t *testing.T) {

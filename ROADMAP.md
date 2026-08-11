@@ -1092,6 +1092,12 @@ complete until its actions are driven by authoritative game state and commands.
     with shipped-data duplicate reporting. The join publishes destination and
     authored geometry without prematurely interpreting offset coordinate
     transforms. Styles 30-33 remain distinct entry/corpse/portal markers.
+  - [x] M20.15g: Verify and separate `LvlWarp` coordinate domains. DS1 tile
+    origins, entity offsets, destination arrival, and exit-walk targets now have
+    named subtile-space facts. Selection rectangles remain explicitly
+    client-local: a deterministic production Act I cave fixture proves their
+    large values are not world subtiles. No movement path consumes selection
+    geometry.
 
 ## M21: Diablo simulation
 
