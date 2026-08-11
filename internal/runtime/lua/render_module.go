@@ -885,6 +885,50 @@ func (c *renderAssetCache) loadDS1Chunks(assets fs.FS, name string, tiles []stri
 	return value.(*maprender.Set), nil
 }
 
+func (c *renderAssetCache) loadWorldChunks(assets fs.FS, world *gameworld.Map, palette string, chunkSize int) (*maprender.Set, error) {
+	if world == nil {
+		return nil, errors.New("world map is required")
+	}
+	key := fmt.Sprintf("world-chunks\x00%p\x00%s\x00%d", world, palette, chunkSize)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		chunks, err := maprender.Compose(assets, world, palette, chunkSize)
+		if err != nil {
+			return nil, 0, err
+		}
+		weight := 0
+		for _, chunk := range chunks.Chunks {
+			weight += imageWeight(chunk.Pixels)
+		}
+		return chunks, max(weight, 1), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(*maprender.Set), nil
+}
+
+func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
+	result := state.NewTable()
+	result.RawSetString("width", lua.LNumber(chunks.Width))
+	result.RawSetString("height", lua.LNumber(chunks.Height))
+	result.RawSetString("chunk_size", lua.LNumber(chunks.ChunkSize))
+	entries := state.NewTable()
+	for index, chunk := range chunks.Chunks {
+		entry := state.NewTable()
+		entry.RawSetString("index", lua.LNumber(index))
+		entry.RawSetString("x", lua.LNumber(chunk.X))
+		entry.RawSetString("y", lua.LNumber(chunk.Y))
+		entry.RawSetString("width", lua.LNumber(chunk.Pixels.Bounds().Dx()))
+		entry.RawSetString("height", lua.LNumber(chunk.Pixels.Bounds().Dy()))
+		entry.RawSetString("layer", lua.LNumber(chunk.Layer))
+		entry.RawSetString("layer_name", lua.LString(chunk.Layer.String()))
+		entry.RawSetString("depth", lua.LNumber(chunk.Depth))
+		entries.RawSetInt(index+1, entry)
+	}
+	result.RawSetString("chunks", entries)
+	state.Push(result)
+}
+
 func (c *renderAssetCache) loadDS1Collision(assets fs.FS, name string, tiles []string) (image.Image, error) {
 	key := "ds1-collision\x00" + name + "\x00" + strings.Join(tiles, "\x00")
 	value, err := c.load(assets, key, func() (any, int, error) {
@@ -1377,6 +1421,7 @@ func (r *RenderCapability) Module() Module {
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
 		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
 		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
+		"world_chunks":         commandHelp("dm.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
 		"asset_exists":         commandHelp("dm.render.asset_exists(path)", "Report whether a render asset exists."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
@@ -1397,6 +1442,7 @@ func (r *RenderCapability) Module() Module {
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
 		"set_ds1_chunk":              commandHelp("node:set_ds1_chunk(map, tiles, palette, chunk_index [, chunk_size])", "Render one sparse DS1 map chunk and return its map-space geometry."),
+		"set_world_chunk":            commandHelp("node:set_world_chunk(world, palette, chunk_index [, chunk_size])", "Render one sparse chunk from an assembled authoritative world map."),
 		"set_ds1_collision":          commandHelp("node:set_ds1_collision(map, tiles)", "Render a diagnostic DT1 subtile collision overlay for a DS1 map."),
 		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
@@ -1416,6 +1462,20 @@ func (r *RenderCapability) Module() Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"world_chunks": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				world := checkWorldMap(state, 1)
+				chunks, err := cache.loadWorldChunks(assets, world, state.CheckString(2), state.OptInt(3, maprender.DefaultChunkSize))
+				if err != nil {
+					state.RaiseError("rendering world chunks: %v", err)
+					return 0
+				}
+				pushChunkSet(state, chunks)
+				return 1
+			},
 			"ds1_chunks": func(state *lua.LState) int {
 				if assets == nil {
 					state.RaiseError("render asset filesystem is unavailable")
@@ -1884,6 +1944,37 @@ func registerRenderNodeType(state *lua.LState) {
 			chunk := chunks.Chunks[chunkIndex]
 			if err := node.setImage(chunk.Pixels); err != nil {
 				state.RaiseError("updating DS1 chunk node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(chunk.X))
+			state.Push(lua.LNumber(chunk.Y))
+			state.Push(lua.LNumber(chunk.Pixels.Bounds().Dx()))
+			state.Push(lua.LNumber(chunk.Pixels.Bounds().Dy()))
+			state.Push(lua.LNumber(chunks.Width))
+			state.Push(lua.LNumber(chunks.Height))
+			state.Push(lua.LNumber(len(chunks.Chunks)))
+			return 7
+		},
+		"set_world_chunk": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			world := checkWorldMap(state, 2)
+			chunkIndex := state.CheckInt(4)
+			chunks, err := node.cache.loadWorldChunks(node.assets, world, state.CheckString(3), state.OptInt(5, maprender.DefaultChunkSize))
+			if err != nil {
+				state.RaiseError("rendering world chunks: %v", err)
+				return 0
+			}
+			if chunkIndex < 0 || chunkIndex >= len(chunks.Chunks) {
+				state.RaiseError("world chunk %d out of range [0,%d)", chunkIndex, len(chunks.Chunks))
+				return 0
+			}
+			chunk := chunks.Chunks[chunkIndex]
+			if err := node.setImage(chunk.Pixels); err != nil {
+				state.RaiseError("updating world chunk node: %v", err)
 				return 0
 			}
 			state.Push(lua.LNumber(chunk.X))

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sync"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
@@ -29,6 +30,7 @@ type AssetPreloadRequest struct {
 	Frame      int
 	ChunkSize  int
 	Anchor     string
+	World      *gameworld.Map
 }
 
 // AssetPreloadStatus is an immutable snapshot suitable for loading screens,
@@ -222,6 +224,16 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 		_, err := p.cache.loadDS1Chunks(p.assets, request.Path, request.Tiles, request.Palette, chunkSize)
 		return err
+	case "world_chunks":
+		chunkSize := request.ChunkSize
+		if chunkSize <= 0 {
+			chunkSize = maprender.DefaultChunkSize
+		}
+		if request.World == nil {
+			return fmt.Errorf("world map is required")
+		}
+		_, err := p.cache.loadWorldChunks(p.assets, request.World, request.Palette, chunkSize)
+		return err
 	default:
 		return fmt.Errorf("unsupported asset kind %q", request.Kind)
 	}
@@ -245,6 +257,13 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 		request := AssetPreloadRequest{
 			Kind: stringField("kind"), Path: stringField("path"), Secondary: stringField("overlay"), Palette: stringField("palette"),
 			Table: stringField("table"), Sheet: stringField("sheet"), Transform: stringField("transform"),
+		}
+		if value, ok := definition.RawGetString("world").(*lua.LUserData); ok {
+			world, valid := value.Value.(*gameworld.Map)
+			if !valid {
+				return nil, fmt.Errorf("request %d world must be a dm.world map", item)
+			}
+			request.World = world
 		}
 		if value, ok := definition.RawGetString("direction").(lua.LNumber); ok {
 			request.Direction = int(value)
@@ -282,6 +301,10 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 		if request.Kind == "font" {
 			if request.Table == "" || request.Sheet == "" {
 				return nil, fmt.Errorf("request %d font table and sheet are required", item)
+			}
+		} else if request.Kind == "world_chunks" {
+			if request.World == nil {
+				return nil, fmt.Errorf("request %d world is required", item)
 			}
 		} else if request.Path == "" {
 			return nil, fmt.Errorf("request %d path is required", item)

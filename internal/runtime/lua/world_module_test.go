@@ -31,7 +31,7 @@ assert(string.find(err, "missing.ds1"))
 
 func TestSessionWorldModuleReturnsCurrentMapAndCopiedRecipe(t *testing.T) {
 	runtime := New()
-	current := CurrentWorld{Map: &gameworld.Map{WidthTiles: 56, HeightTiles: 40}, DS1: "town.ds1", DT1: []string{"floor.dt1"}}
+	current := CurrentWorld{Map: &gameworld.Map{WidthTiles: 56, HeightTiles: 40}, DS1: "town.ds1", DT1: []string{"floor.dt1"}, LevelID: 7}
 	if err := runtime.RegisterModule(SessionWorldModule(fstest.MapFS{}, func() CurrentWorld { return current })); err != nil {
 		t.Fatal(err)
 	}
@@ -44,6 +44,7 @@ local world = require("dm.world/v1")
 local map, recipe = world.current()
 assert(map:dimensions().width_tiles == 56)
 assert(recipe.ds1 == "town.ds1" and recipe.dt1[1] == "floor.dt1")
+assert(recipe.level_id == 7 and world.current_level() == 7)
 recipe.dt1[1] = "changed"
 `)}}
 	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {

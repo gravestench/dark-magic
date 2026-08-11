@@ -979,8 +979,11 @@ complete until its actions are driven by authoritative game state and commands.
     player's authoritative source level and proximity to that seam, then
     atomically updates destination level, inset arrival position, world bounds,
     and velocity. The local source detects the crossed endpoint without trusting
-    Lua and arrival inset prevents immediate bounce-back. Active-map adapter
-    switching and full presentation/input seam validation remain.
+    Lua and arrival inset prevents immediate bounce-back. The client now swaps
+    authoritative navigation, collision, spatial interaction selection, Lua
+    collision, camera projection facts, and sparse assembled-world rendering
+    when that command commits. Structural outdoor rules and an asset-backed
+    interactive seam capture remain before this checkpoint is complete.
 
 ## M21: Diablo simulation
 

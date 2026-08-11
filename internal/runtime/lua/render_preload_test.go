@@ -3,6 +3,7 @@ package modruntime
 import (
 	"testing"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -36,6 +37,28 @@ func TestLuaPreloadRequestsPreservesCompositeRecipe(t *testing.T) {
 	}
 	if request.Components["HD"] != "head.dcc" || request.Components["TR"] != "torso.dcc" {
 		t.Fatalf("request components = %#v", request.Components)
+	}
+}
+
+func TestLuaPreloadRequestsPreservesAuthoritativeWorld(t *testing.T) {
+	state := lua.NewState()
+	defer state.Close()
+	world := &gameworld.Map{WidthTiles: 80, HeightTiles: 80}
+	userData := state.NewUserData()
+	userData.Value = world
+	definition := state.NewTable()
+	definition.RawSetString("kind", lua.LString("world_chunks"))
+	definition.RawSetString("palette", lua.LString("act1.pl2"))
+	definition.RawSetString("world", userData)
+	table := state.NewTable()
+	table.Append(definition)
+	state.Push(table)
+	requests, err := luaPreloadRequests(state, state.GetTop())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 1 || requests[0].World != world {
+		t.Fatalf("world chunk request = %#v", requests)
 	}
 }
 

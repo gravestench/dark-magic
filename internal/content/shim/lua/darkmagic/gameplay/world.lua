@@ -83,6 +83,11 @@ function M.position(entity)
     return position:get("x"), position:get("y")
 end
 
+function M.set_collision(state, collision)
+	state.collision = collision
+	systems.set_collision(collision)
+end
+
 function M.composite_snapshot(entity)
     local appearance = assert(ecs.get(entity, "dm.player.appearance"))
     local animation = assert(ecs.get(entity, "dm.player.animation"))

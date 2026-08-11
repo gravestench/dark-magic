@@ -12,9 +12,10 @@ const worldMapType = "dm.world.map/v1"
 // CurrentWorld is the immutable authoritative map and the asset recipe used by
 // presentation to draw that same map. The slice is copied into Lua.
 type CurrentWorld struct {
-	Map *gameworld.Map
-	DS1 string
-	DT1 []string
+	Map     *gameworld.Map
+	DS1     string
+	DT1     []string
+	LevelID int
 }
 
 type CurrentWorldProvider func() CurrentWorld
@@ -34,8 +35,9 @@ func SessionWorldModule(source fs.FS, current CurrentWorldProvider, resolvers ..
 
 func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gameworld.ObjectResolver) Module {
 	return Module{Name: "dm.world/v1", Help: documentedModule("Decode immutable gameplay facts from authored world assets.", map[string]CommandHelp{
-		"load":    commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
-		"current": commandHelp("dm.world.current()", "Return the current session-owned map and its copied presentation recipe."),
+		"load":          commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
+		"current":       commandHelp("dm.world.current()", "Return the current session-owned map and its copied presentation recipe."),
+		"current_level": commandHelp("dm.world.current_level()", "Return the active authoritative level ID without allocating a map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
 		"dimensions":        commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
 		"canvas":            commandHelp("map:canvas()", "Return isometric world-pixel canvas dimensions."),
@@ -53,6 +55,19 @@ func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gamewo
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"current_level": func(state *lua.LState) int {
+				if current == nil {
+					state.Push(lua.LNil)
+					return 1
+				}
+				value := current()
+				if value.Map == nil {
+					state.Push(lua.LNil)
+				} else {
+					state.Push(lua.LNumber(value.LevelID))
+				}
+				return 1
+			},
 			"current": func(state *lua.LState) int {
 				if current == nil {
 					state.Push(lua.LNil)
@@ -66,6 +81,7 @@ func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gamewo
 				pushWorldMap(state, value.Map)
 				recipe := state.NewTable()
 				recipe.RawSetString("ds1", lua.LString(value.DS1))
+				setLuaInteger(recipe, "level_id", value.LevelID)
 				tiles := state.NewTable()
 				for _, path := range value.DT1 {
 					tiles.Append(lua.LString(path))

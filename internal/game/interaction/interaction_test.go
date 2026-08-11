@@ -7,6 +7,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
 func testAuthority(t *testing.T) *Authority {
@@ -201,5 +202,22 @@ func TestPlayerCannotOpenInteractionForAnotherOwner(t *testing.T) {
 	command, _ := Command(OpenCommand, Payload{Owner: "bob", Target: "act1-akara"}, "alice", 1, 1, simulation.AuthorityPlayer)
 	if _, err := decode(command, true); err == nil {
 		t.Fatal("cross-owner interaction was accepted")
+	}
+}
+
+func TestConfigureWorldExcludesTargetsFromInactiveZone(t *testing.T) {
+	const targetID = "ds1-object:1:42:0"
+	authority, err := NewAuthority(Target{ID: targetID, NPC: "Town NPC", X: 10, Y: 10, Radius: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	town := &gameworld.Map{Objects: []gameworld.Object{{Type: 1, ID: 42, X: 10, Y: 10, Resolved: true, Description: "Town NPC"}}}
+	authority.ConfigureWorld(town)
+	if _, err := authority.targetAt(10, 10); err != nil {
+		t.Fatalf("town target missing: %v", err)
+	}
+	authority.ConfigureWorld(&gameworld.Map{})
+	if _, err := authority.targetAt(10, 10); err == nil {
+		t.Fatal("target from inactive town remained pointer-selectable")
 	}
 }

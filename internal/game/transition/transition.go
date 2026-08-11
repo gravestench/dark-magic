@@ -23,7 +23,10 @@ const triggerRadius = 2.0
 type Payload struct {
 	DestinationLevel int `json:"destination_level"`
 }
-type Authority struct{ seam gameworld.Seam }
+type Authority struct {
+	seam     gameworld.Seam
+	observer func(int)
+}
 
 func NewAuthority(seam gameworld.Seam) (*Authority, error) {
 	if seam.Town.LevelID != 1 || seam.Wilderness.LevelID != 2 {
@@ -31,6 +34,11 @@ func NewAuthority(seam gameworld.Seam) (*Authority, error) {
 	}
 	return &Authority{seam: seam}, nil
 }
+
+// SetObserver installs an adapter notification after authoritative ECS state
+// has committed. The callback may switch caches/render inputs; it decides no
+// gameplay fact and therefore cannot veto the transition.
+func (authority *Authority) SetObserver(observer func(int)) { authority.observer = observer }
 
 func Register(session *gamesession.Session, authority *Authority) error {
 	if session == nil || authority == nil {
@@ -108,6 +116,9 @@ func (authority *Authority) apply(engine *gameecs.Engine, command simulation.Com
 					return err
 				}
 			}
+		}
+		if authority.observer != nil {
+			authority.observer(destination.LevelID)
 		}
 		return nil
 	}
