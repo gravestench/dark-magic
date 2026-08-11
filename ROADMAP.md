@@ -1314,10 +1314,19 @@ data owners; they do not introduce parallel gameplay authorities.
   the coarse policy's over-broad WarpDist exclusion. Exact density, room
   eligibility, unique/champion selection, collision packing, and inactive-room
   lifecycle remain later verified policies.
-- [ ] **M21.11: Monster death transaction.** Join lethal resolution to stable
-  kill/death events, XP attribution, deterministic loot, quest-event surface,
-  corpse state, and active/inactive lifecycle. Death must be atomic and
-  replayable, not merely `hp <= 0`.
+- [x] **M21.11: Monster death transaction.** An effects-phase commit point now
+  consumes combat's lethal event exactly once and atomically records a corpse
+  transaction, disables AI/collision/targetability, stops motion, selects the
+  death mode, attributes the authored XP value to the lethal player, rolls the
+  authored difficulty-specific treasure class from a monster/event-specific
+  seed, and emits stable kill, loot, quest, and presentation events. The typed
+  TreasureClassEx catalog and generated world seed are installed once by the
+  production composition root; checkpoint restoration reproduces the entire
+  result checksum. This first policy deliberately awards only the lethal
+  player and retains the corpse indefinitely. Party/owned-unit credit, assist
+  policy, corpse skills/expiry, unique death effects, and conversion of drop
+  recipes into authoritative `ContainerWorld` item instances remain their
+  explicitly owned follow-ups rather than hidden guesses in death handling.
 - [ ] **M21.12: Owned-unit relation.** Add explicit owner, category, limit,
   attribution, lifecycle, and checkpoint state before broad summons, pets, or
   hirelings.

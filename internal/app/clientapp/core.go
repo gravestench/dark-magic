@@ -20,6 +20,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
+	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
 	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -159,6 +160,17 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
 		return wrap("register skill intent consumer", err)
+	}
+	lootCatalog, err := gameloot.CatalogFromRecords(app.gameData)
+	if err != nil {
+		return wrap("build monster death loot catalog", err)
+	}
+	worldSeed := uint64(0)
+	if zone := app.gameWorldZones[2]; zone != nil {
+		worldSeed = zone.Request().Seed
+	}
+	if err := gamemonster.RegisterDeath(app.entitySimulation, gamemonster.DeathPolicy{WorldSeed: worldSeed, Loot: lootCatalog}); err != nil {
+		return wrap("register monster death transaction", err)
 	}
 	for name, register := range map[string]func(*gamesession.Session) error{
 		"movement commands": gamesession.RegisterMovement,

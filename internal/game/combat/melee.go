@@ -185,11 +185,12 @@ func rollDamage(minimum, maximum Amount, roll uint64) (Amount, error) {
 func applyPhysical(entity akara.Entity, damage Amount, monsterStats, playerVitals *akara.DynamicStore) (Amount, bool, error) {
 	if stats, ok := monsterStats.Get(entity); ok {
 		health, _ := stats.Get("health")
-		remaining := max(Amount(health.(int64))-damage, 0)
+		current := Amount(health.(int64))
+		remaining := max(current-damage, 0)
 		if err := stats.Set("health", remaining.Raw()); err != nil {
 			return 0, false, err
 		}
-		return remaining, remaining == 0, nil
+		return remaining, current > 0 && remaining == 0, nil
 	}
 	if vitals, ok := playerVitals.Get(entity); ok {
 		health, _ := vitals.Get("health")
@@ -205,7 +206,7 @@ func applyPhysical(entity akara.Entity, damage Amount, monsterStats, playerVital
 		if err := vitals.Set("health", whole); err != nil {
 			return 0, false, err
 		}
-		return remaining, remaining == 0, nil
+		return remaining, current > 0 && remaining == 0, nil
 	}
 	return 0, false, fmt.Errorf("combat: target has no health authority")
 }
