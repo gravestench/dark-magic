@@ -347,8 +347,10 @@ MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
   --dt1-palette=data/global/palette/ACT1/pal.dat --dt1-tile=0
 ```
 
-Left/Right selects adjacent tiles, Home/End moves ten tiles, and Up/Down changes
-between composite, floor-only, and wall-only views. The lab reports the DT1
+Left/Right selects adjacent tiles, Home/End moves ten tiles, Up/Down changes
+between composite, floor-only, and wall-only views, Page Up/Down cycles Act
+palettes, and Enter selects another mounted DT1 through a deterministic random
+sequence. The lab reports the DT1
 type, style, sequence, direction, rarity, and block count for the selected tile.
 
 Open a DS1 stamp with its authored DT1 sources using:
@@ -358,10 +360,12 @@ MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
   --start-scene=ds1_lab \
   --ds1-path=data/global/tiles/Act1/BARRACKS/barE.ds1 \
   --ds1-tiles=data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \
-  --ds1-palette=data/global/palette/ACT1/pal.dat
+  --ds1-palette=data/global/palette/ACT1/pal.pl2
 ```
 
-Arrow keys pan, Page Up/Down zooms, and Home fits the complete stamp. Equivalent
+Arrow keys pan, Home/End zooms, Space fits the complete stamp, Page Up/Down
+cycles Act palettes, and Enter deterministically selects a mounted DS1 plus the
+DT1 files from its directory. Equivalent
 `DARK_MAGIC_DT1_*` and `DARK_MAGIC_DS1_*` environment variables support repeatable
 captures. The scenes can be captured as `dt1_lab` and `ds1_lab` through the
 ordinary capture flags.

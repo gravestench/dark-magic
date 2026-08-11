@@ -1428,7 +1428,9 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 - [x] Provide integrated `dt1_lab` and `ds1_lab` scenes using the production Lua
   render capability. DT1 Lab browses lazy tiles and metadata across composite,
   floor, and wall views; DS1 Lab renders configured stamps with palette-aware
-  DT1 sources plus fit, zoom, pan, CLI recipes, and capture registration.
+  DT1 sources plus fit, zoom, pan, CLI recipes, and capture registration. Both
+  labs can deterministically select mounted assets and cycle Act palettes from
+  hotkeys without restarting the client.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.

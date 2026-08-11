@@ -3,6 +3,8 @@ package modruntime
 import (
 	"fmt"
 	"io/fs"
+	"sort"
+	"strings"
 
 	"github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/content"
@@ -15,6 +17,7 @@ func VFSModule(source *content.FS) Module {
 		"read_text": commandHelp("dm.vfs.read_text(path)", "Read an asset as text."),
 		"read":      commandHelp("dm.vfs.read(path)", "Read an asset as binary data."),
 		"source":    commandHelp("dm.vfs.source(path)", "Describe the layer and resolved path supplying an asset."),
+		"list":      commandHelp("dm.vfs.list(prefix[, suffix])", "List mounted asset paths below a prefix, optionally filtered by case-insensitive suffix."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"read_text": func(state *lua.LState) int {
@@ -54,6 +57,32 @@ func VFSModule(source *content.FS) Module {
 				result := state.NewTable()
 				result.RawSetString("layer", lua.LString(resolved.Layer))
 				result.RawSetString("path", lua.LString(resolved.Path))
+				state.Push(result)
+				return 1
+			},
+			"list": func(state *lua.LState) int {
+				prefix := strings.TrimSpace(state.CheckString(1))
+				suffix := strings.ToLower(strings.TrimSpace(state.OptString(2, "")))
+				paths := make([]string, 0)
+				err := fs.WalkDir(source, prefix, func(path string, entry fs.DirEntry, walkErr error) error {
+					if walkErr != nil {
+						return walkErr
+					}
+					if !entry.IsDir() && (suffix == "" || strings.HasSuffix(strings.ToLower(path), suffix)) {
+						paths = append(paths, path)
+					}
+					return nil
+				})
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				sort.Strings(paths)
+				result := state.NewTable()
+				for _, path := range paths {
+					result.Append(lua.LString(path))
+				}
 				state.Push(result)
 				return 1
 			},

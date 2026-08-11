@@ -4,8 +4,14 @@
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
+local vfs = require("dm.vfs/v1")
 
 local views = {"composite", "floor", "wall"}
+local palettes = {
+    "data/global/palette/ACT1/pal.dat", "data/global/palette/ACT2/pal.dat",
+    "data/global/palette/ACT3/pal.dat", "data/global/palette/ACT4/pal.dat",
+    "data/global/palette/ACT5/pal.dat",
+}
 local lab = {}
 
 local function label(root, value, y, style)
@@ -20,6 +26,19 @@ local function view_index(wanted)
     return 1
 end
 
+local function index_of(values, wanted)
+    wanted = tostring(wanted or ""):lower()
+    for index, value in ipairs(values) do if value:lower() == wanted then return index end end
+    return 1
+end
+
+function lab:random_asset()
+    if #self.assets == 0 then return end
+    self.random_state = (self.random_state * 48271) % 2147483647
+    self.path = self.assets[(self.random_state % #self.assets) + 1]
+    self.index, self.total, self.dirty = 0, 0, true
+end
+
 function lab:create()
     local dev = require("dm.dev/v1")
     self.root = render.create("hud")
@@ -28,11 +47,15 @@ function lab:create()
     self.title = label(self.root, "DT1 TILE LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 64, "font_lab_color")
     self.detail = label(self.root, "", 510, "font_lab_color")
-    self.help = label(self.root, "Left/Right: tile   Home/End: -/+10   Up/Down: composite/floor/wall", 560)
+    self.help = label(self.root, "Left/Right: tile   Home/End: -/+10   Up/Down: view   Page Up/Down: palette   Enter: random DT1", 560)
     self.path = tostring(dev.option("dt1_path") or "")
     self.palette = tostring(dev.option("dt1_palette") or "")
     self.index = math.max(0, tonumber(dev.option("dt1_tile")) or 0)
     self.view_index = view_index(tostring(dev.option("dt1_view") or "composite"))
+    self.palette_index = index_of(palettes, self.palette)
+    self.palette = palettes[self.palette_index]
+    self.assets = vfs.list("data/global/tiles", ".dt1") or {}
+    self.random_state = 1
     self.total, self.dirty = 0, true
 end
 
@@ -55,7 +78,7 @@ function lab:rebuild()
         self.tile_node:set_scale(scale, scale)
         self.tile_node:set_position(400 - width * scale / 2, 105 + (370 - height * scale) / 2)
         self.tile_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[white]tile %d / %d   [blue]%s   [white]%dx%d", self.index, self.total - 1, view, width, height), 760, "center")
+        text.set(self.status, "font_lab_color", string.format("[white]tile %d / %d   [blue]%s   [green]ACT%d   [white]%dx%d", self.index, self.total - 1, view, self.palette_index, width, height), 760, "center")
         text.set(self.detail, "font_lab_color", string.format("[white]type/style/sequence %d/%d/%d   dir %d   rarity %d   blocks %d   source %dx%d   roof %d", metadata.type, metadata.style, metadata.sequence, metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height, metadata.roof_height), 760, "center")
     else
         self.tile_node:set_visible(false)
@@ -78,6 +101,9 @@ function lab:update()
     end
     if input.pressed("up") then self.view_index = ((self.view_index - 2) % #views) + 1; self.dirty = true end
     if input.pressed("down") then self.view_index = (self.view_index % #views) + 1; self.dirty = true end
+    if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true end
+    if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true end
+    if input.pressed("confirm") then self:random_asset() end
     if self.dirty then self:rebuild() end
 end
 
