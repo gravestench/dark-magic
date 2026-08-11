@@ -14,6 +14,17 @@ local render = require("dm.render/v1")
 
 local chunked_map = {}
 
+local function residency_margin(recipe, options)
+    local requested = options.margin or 96
+    if not recipe.world then return requested end
+    -- A side panel moves the camera anchor by one viewport quarter in a single
+    -- update. Keep that future strip plus one legacy 160px tile resident before
+    -- the panel opens or closes; otherwise the parent transform moves first and
+    -- exposes black while the newly visible tile jobs catch up one frame later.
+    local panel_shift = (options.viewport_width or 800) / 4
+    return math.max(requested, panel_shift + 160)
+end
+
 -- Overlay world_view describes camera framing and pointer authority, not an
 -- opaque render clip. Legacy panels contain transparent holes and decorative
 -- edges, so the world must stay resident behind the whole physical viewport.
@@ -191,7 +202,7 @@ function chunked_map.create(parent, recipe, options)
         pending = {},
         failed = {},
         chunk_size = options.chunk_size or 512,
-        margin = options.margin or 96,
+        margin = residency_margin(recipe, options),
         -- Tile placements are much smaller than 512px composed chunks. Admit a
         -- useful screenful quickly; the renderer's byte budget still governs
         -- actual native uploads and prevents one frame from monopolizing them.
