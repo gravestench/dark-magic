@@ -7,12 +7,26 @@
 local ecs = require("dm.ecs/v1")
 local M = {}
 
-local function move_toward(position, target, speed, elapsed)
+local function logical_direction(dx, dy)
+    local x = dx == 0 and 0 or (dx > 0 and 1 or -1)
+    local y = dy == 0 and 0 or (dy > 0 and 1 or -1)
+    if x == 0 and y == 1 then return 0 end
+    if x == -1 and y == 0 then return 1 end
+    if x == 0 and y == -1 then return 2 end
+    if x == 1 and y == 0 then return 3 end
+    if x == 1 and y == 1 then return 4 end
+    if x == -1 and y == 1 then return 5 end
+    if x == -1 and y == -1 then return 6 end
+    return 7
+end
+
+local function move_toward(position, actor, target, elapsed)
     local dx = target.x - position:get("x")
     local dy = target.y - position:get("y")
     local distance = math.sqrt(dx * dx + dy * dy)
     if distance == 0 then return 0 end
-    local step = math.min(distance, speed * elapsed)
+    actor:set("direction", logical_direction(dx, dy))
+    local step = math.min(distance, actor:get("speed") * elapsed)
     position:set("x", position:get("x") + dx / distance * step)
     position:set("y", position:get("y") + dy / distance * step)
     return distance - step
@@ -23,15 +37,15 @@ function M.register()
         id = "darkmagic.lab.warp.resolve_move", phase = "movement",
         query = {all = {"dm.lab.warp.actor", "dm.lab.warp.move_intent", "dm.world.position"}},
         read = {"dm.lab.warp.actor", "dm.lab.warp.move_intent"},
-        write = {"dm.world.position", "dm.lab.warp.move_intent"},
+        write = {"dm.world.position", "dm.lab.warp.actor", "dm.lab.warp.move_intent"},
         update = function(context, entities, commands)
             for _, entity in ipairs(entities) do
                 local actor = ecs.get(entity, "dm.lab.warp.actor")
                 local intent = ecs.get(entity, "dm.lab.warp.move_intent")
                 local position = ecs.get(entity, "dm.world.position")
-                local remaining = move_toward(position, {
+                local remaining = move_toward(position, actor, {
                     x = intent:get("x"), y = intent:get("y"),
-                }, actor:get("speed"), context.delta_seconds)
+                }, context.delta_seconds)
                 if remaining <= 0.1 then
                     commands:remove(entity, "dm.lab.warp.move_intent")
                 end
@@ -42,7 +56,7 @@ function M.register()
         id="darkmagic.lab.warp.resolve_intent", phase="movement",
         query={all={"dm.lab.warp.actor","dm.lab.warp.intent","dm.lab.warp.state","dm.world.position"}},
         read={"dm.lab.warp.actor","dm.lab.warp.intent","dm.lab.warp.portal"},
-        write={"dm.lab.warp.state","dm.world.position","dm.lab.warp.intent"},
+        write={"dm.lab.warp.state","dm.world.position","dm.lab.warp.actor","dm.lab.warp.intent"},
         update=function(context,entities,commands)
             for _, entity in ipairs(entities) do
                 local actor = ecs.get(entity, "dm.lab.warp.actor")
@@ -57,10 +71,10 @@ function M.register()
                     commands:remove(entity, "dm.lab.warp.intent")
                 else
                     state:set("event", "walking to " .. target_portal:get("label"))
-                    local remaining = move_toward(position, {
+                    local remaining = move_toward(position, actor, {
                         x = target_position:get("x"),
                         y = target_position:get("y"),
-                    }, actor:get("speed"), context.delta_seconds)
+                    }, context.delta_seconds)
                     if remaining <= target_portal:get("radius") then
                         local destination_entity = target_portal:get("pair")
                         local destination_portal = ecs.get(destination_entity, "dm.lab.warp.portal")

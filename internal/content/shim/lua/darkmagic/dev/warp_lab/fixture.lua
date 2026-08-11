@@ -28,7 +28,7 @@ function M.create(a,b,spawn)
     })
     fixture.player = ecs.create({
         ["dm.world.position"] = {x = spawn.x, y = spawn.y},
-        ["dm.lab.warp.actor"] = {speed = 12},
+        ["dm.lab.warp.actor"] = {speed = 12, direction = 0},
         ["dm.lab.warp.state"] = {event = "ready: click a portal", warp_count = 0},
     })
     fixture.entities[#fixture.entities + 1] = fixture.player

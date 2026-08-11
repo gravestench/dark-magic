@@ -158,9 +158,10 @@ end
 
 function lab:update_actor(mode, elapsed)
     local position = self.ecs.get(self.fixture.player, "dm.world.position")
+    local actor = self.ecs.get(self.fixture.player, "dm.lab.warp.actor")
     local x, y = position:get("x"), position:get("y")
     local recipe = composite.recipe({token="AM", mode=mode, weapon_class="HTH",
-        direction=12, palette=character_palette})
+        direction=actor:get("direction"), palette=character_palette})
     self.playback = self.playback or composite.new_playback(recipe)
     composite.advance(self.playback, recipe, elapsed or 0)
     if recipe.key ~= self.actor_key then
