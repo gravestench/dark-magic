@@ -180,6 +180,30 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("load offline entry map", err)
 	}
+	app.interactionAuthority.ConfigureWorld(worldMap)
+	selectables := worldMap.Selectables()
+	interactionTargets := make([]gameinteraction.Target, 0, len(selectables))
+	objectsBySelectionID := make(map[string]gameworld.Object, len(worldMap.Objects))
+	for index, object := range worldMap.Objects {
+		objectsBySelectionID[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
+	}
+	for _, selected := range selectables {
+		object := objectsBySelectionID[selected.ID]
+		name := strings.TrimSpace(object.Description)
+		if name == "" {
+			name = strings.TrimSpace(object.Class)
+		}
+		if name == "" {
+			continue
+		}
+		interactionTargets = append(interactionTargets, gameinteraction.Target{
+			ID: selected.ID, NPC: name, X: selected.X, Y: selected.Y,
+			Radius: 4, SelectRadius: selected.Radius,
+		})
+	}
+	if err := app.interactionAuthority.AddTargets(interactionTargets...); err != nil {
+		return wrap("materialize authored interaction targets", err)
+	}
 	spawnX, spawnY, found := worldMap.OpenPointNearCenter()
 	if !found {
 		return errors.New("create offline player entry source: map has no open spawn subtile")

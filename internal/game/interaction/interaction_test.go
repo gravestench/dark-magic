@@ -162,6 +162,41 @@ func TestControllerPreservesInteractionIntentOrder(t *testing.T) {
 	}
 }
 
+func TestCoordinateInteractionIsSelectedAndCheckedByAuthority(t *testing.T) {
+	authority := testAuthority(t)
+	engine := gameecs.New()
+	materializeControlledPosition(t, engine, "alice", 10, 10)
+	if err := authority.openSpatialAt(engine, "alice", 10.5, 10); err != nil {
+		t.Fatal(err)
+	}
+	context, err := authority.Snapshot("alice")
+	if err != nil || context.TargetID != "act1-akara" {
+		t.Fatalf("context = %#v, %v", context, err)
+	}
+	if err := authority.openSpatialAt(engine, "alice", 40, 40); err == nil {
+		t.Fatal("empty coordinate selected a target")
+	}
+}
+
+func TestControllerPreservesCoordinateIntent(t *testing.T) {
+	controller := &Controller{}
+	if err := controller.OpenAt(12.5, 9.25); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewSource(controller, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands := source.Commands(3)
+	if len(commands) != 1 {
+		t.Fatalf("commands = %#v", commands)
+	}
+	payload, err := decode(commands[0], true)
+	if err != nil || !payload.At || payload.X != 12.5 || payload.Y != 9.25 {
+		t.Fatalf("payload = %#v, %v", payload, err)
+	}
+}
+
 func TestPlayerCannotOpenInteractionForAnotherOwner(t *testing.T) {
 	command, _ := Command(OpenCommand, Payload{Owner: "bob", Target: "act1-akara"}, "alice", 1, 1, simulation.AuthorityPlayer)
 	if _, err := decode(command, true); err == nil {

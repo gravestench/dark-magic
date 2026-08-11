@@ -196,6 +196,12 @@ camera transform, then the fixed-tick session records and admits the target;
 authoritative ECS position and collision determine movement. Future entity hit
 testing must turn that same target into explicit interaction or skill commands.
 
+Resolved authored DS1 objects enter a uniform-grid selection index as stable
+semantic footprints. Presentation may submit world coordinates and display the
+selected facts, but authoritative interaction re-runs selection, owner range,
+and DT1 line-of-sight checks before changing context. Client-provided target IDs
+remain a compatibility/admin surface, not the pointer gameplay trust boundary.
+
 Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
 typed, atomic generation and indexes live in `internal/game/data/catalog`, using
 schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and

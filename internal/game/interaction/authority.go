@@ -11,17 +11,19 @@ import (
 	"sync"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
 type Target struct {
-	ID         string   `json:"id"`
-	NPC        string   `json:"npc"`
-	Vendor     string   `json:"vendor,omitempty"`
-	Categories []string `json:"categories,omitempty"`
-	Services   []string `json:"services,omitempty"`
-	X          float64  `json:"x"`
-	Y          float64  `json:"y"`
-	Radius     float64  `json:"radius"`
+	ID           string   `json:"id"`
+	NPC          string   `json:"npc"`
+	Vendor       string   `json:"vendor,omitempty"`
+	Categories   []string `json:"categories,omitempty"`
+	Services     []string `json:"services,omitempty"`
+	X            float64  `json:"x"`
+	Y            float64  `json:"y"`
+	Radius       float64  `json:"radius"`
+	SelectRadius float64  `json:"select_radius,omitempty"`
 }
 
 type Context struct {
@@ -33,24 +35,69 @@ type Context struct {
 }
 
 type Authority struct {
-	mu      sync.RWMutex
-	targets map[string]Target
-	owners  map[string]Context
+	mu       sync.RWMutex
+	targets  map[string]Target
+	owners   map[string]Context
+	selector *gameworld.Selector
+	world    *gameworld.Map
 }
 
 func NewAuthority(targets ...Target) (*Authority, error) {
 	authority := &Authority{targets: make(map[string]Target, len(targets)), owners: make(map[string]Context)}
+	if err := authority.AddTargets(targets...); err != nil {
+		return nil, err
+	}
+	return authority, nil
+}
+
+// AddTargets materializes server-known selectable entities before simulation
+// starts. Pointer commands submit coordinates; this registry chooses the ID.
+func (authority *Authority) AddTargets(targets ...Target) error {
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
 	for _, target := range targets {
 		target = normalizeTarget(target)
-		if target.ID == "" || target.NPC == "" || target.Radius <= 0 || !finite(target.X) || !finite(target.Y) || !finite(target.Radius) {
-			return nil, fmt.Errorf("interaction: target ID, NPC, and positive radius are required")
+		if target.SelectRadius == 0 {
+			target.SelectRadius = 1.5
+		}
+		if target.ID == "" || target.NPC == "" || target.Radius <= 0 || target.SelectRadius <= 0 || !finite(target.X) || !finite(target.Y) || !finite(target.Radius) || !finite(target.SelectRadius) {
+			return fmt.Errorf("interaction: target ID, NPC, and positive range/select radii are required")
 		}
 		if _, exists := authority.targets[target.ID]; exists {
-			return nil, fmt.Errorf("interaction: duplicate target %q", target.ID)
+			return fmt.Errorf("interaction: duplicate target %q", target.ID)
 		}
 		authority.targets[target.ID] = target
 	}
-	return authority, nil
+	return authority.rebuildSelectorLocked()
+}
+
+func (authority *Authority) ConfigureWorld(world *gameworld.Map) {
+	authority.mu.Lock()
+	authority.world = world
+	authority.mu.Unlock()
+}
+
+func (authority *Authority) rebuildSelectorLocked() error {
+	items := make([]gameworld.Selectable, 0, len(authority.targets))
+	for _, target := range authority.targets {
+		items = append(items, gameworld.Selectable{ID: target.ID, Kind: "interaction", X: target.X, Y: target.Y, Radius: target.SelectRadius})
+	}
+	selector, err := gameworld.NewSelector(items, 8)
+	if err != nil {
+		return err
+	}
+	authority.selector = selector
+	return nil
+}
+
+func (authority *Authority) targetAt(x, y float64) (Target, error) {
+	authority.mu.RLock()
+	defer authority.mu.RUnlock()
+	selected, found := authority.selector.Hit(x, y)
+	if !found {
+		return Target{}, fmt.Errorf("interaction: no selectable target at %.2f,%.2f", x, y)
+	}
+	return authority.targets[selected.ID], nil
 }
 
 func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }

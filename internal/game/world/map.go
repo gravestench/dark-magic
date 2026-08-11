@@ -5,6 +5,7 @@ package world
 import (
 	"fmt"
 	"io/fs"
+	"sync"
 
 	"github.com/gravestench/ds1"
 )
@@ -61,6 +62,9 @@ type Map struct {
 	Objects                       []Object
 	Tiles                         []TilePlacement
 	flags                         []Flags
+	selectorOnce                  sync.Once
+	selector                      *Selector
+	selectorErr                   error
 }
 
 // TileLayer is the stable global-pass order used by legacy map presentation.
