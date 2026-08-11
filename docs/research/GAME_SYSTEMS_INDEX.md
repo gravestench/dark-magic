@@ -1,45 +1,59 @@
 # Diablo II gameplay systems research index
 
-Status: living research backlog. The index tracks research maturity, not implementation completion.
+Status: living research index. All 28 gameplay workstreams now have implementation-oriented baselines; this table tracks research maturity, not implementation completion.
 
 Research program: [GAME_SYSTEMS_RESEARCH_PROGRAM.md](GAME_SYSTEMS_RESEARCH_PROGRAM.md).
 Gameplay source inventory: [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md).
+Current implementation sequence: [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md).
 
 | # | Workstream | Primary document | Research status | Current-engine context | Dependencies | Open probes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 28 | Content loading, TXT/BIN compilation, localization, and modability | [GAME_DATA_LOADING_AND_LINKAGE.md](GAME_DATA_LOADING_AND_LINKAGE.md) | baseline | existing owner inspected; fidelity gaps documented | content/VFS, localization | 8 |
-| 24 | Time, RNG, simulation ticks, and determinism | [TIMING_RNG_AND_DETERMINISM.md](TIMING_RNG_AND_DETERMINISM.md) | baseline | existing owner inspected; fidelity gaps documented | session, ECS, replay | 10 |
-| 20 | Save games and persistent character state | [CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md](CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, items, quests | 12 |
-| 3 | Item stats, affixes, and property evaluation | [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, items, skills/states | 12 |
-| 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, item stats, persistence | 11 |
-| 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline | existing owner inspected; fidelity gaps documented | data linkage, timing, persistence, item stats, quests | 12 |
-| 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | session/item/player/targeting owners inspected; combat transaction slices documented | stats, timing, skills, items | 17 |
-| 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | existing `player.use_skill` admission inspected; execution/state/missile gap documented | timing, stats, combat, missiles/states | 22 |
-| 8 | Monsters, spawning, AI, and lifecycle | [MONSTERS_SPAWNING_AND_AI.md](MONSTERS_SPAWNING_AND_AI.md) | baseline | typed monster data/world/targeting inspected; population/AI/lifecycle gaps documented | timing, combat, world/pathfinding | 22 |
-| 18 | Hirelings, mercenaries, pets, and owned units | [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md) | baseline | hireling/pet data and hireling item container inspected; owned-unit/persistence gaps documented | monsters, items, skills, persistence | 24 |
-| 23 | Movement, collision, pathfinding, and room streaming | [MOVEMENT_COLLISION_AND_PATHFINDING.md](MOVEMENT_COLLISION_AND_PATHFINDING.md) | baseline | current deterministic A*, movement commands, zone transitions and diagnostics inspected; legacy path-type/streaming gaps documented | world, timing, monsters | 25 |
-| 2 | Item generation, treasure classes, and drops | [ITEM_GENERATION_AND_LOOT.md](ITEM_GENERATION_AND_LOOT.md) | baseline | M6 owner reconciled; context-sensitive quality/NoDrop gaps documented | data linkage, RNG, item system/stats | queued probes |
-| 4 | Unique, set, rare, crafted, and personalized items | [ITEM_QUALITIES_AND_SETS.md](ITEM_QUALITIES_AND_SETS.md) | baseline | durable recipe and conditional-source slices documented | item generation + stats | queued probes |
-| 5 | Sockets, gems, runes, jewels, and runewords | [SOCKETS_RUNES_GEMS_JEWELS.md](SOCKETS_RUNES_GEMS_JEWELS.md) | baseline | nested identity and recognition slices documented | item system + stats/qualities | queued probes |
-| 6 | Charms and inventory-dependent effects | [CHARMS_AND_CONTAINER_EFFECTS.md](CHARMS_AND_CONTAINER_EFFECTS.md) | baseline | container-conditioned source activation documented | item system + stats + containers | queued probes |
-| 19 | Horadric Cube and recipe engine | [HORADRIC_CUBE_AND_RECIPES.md](HORADRIC_CUBE_AND_RECIPES.md) | baseline | ordered matcher/transaction slices documented | item system + stats + recipes | queued probes |
-| 14 | Vendors, pricing, repair, gambling, and economy | [VENDORS_PRICING_AND_ECONOMY.md](VENDORS_PRICING_AND_ECONOMY.md) | baseline | existing commerce owner reconciled; quote/stock/gamble gaps documented | items + NPCs + difficulty | queued probes |
-| 7 | Quest items and scripted item interactions | [QUEST_ITEMS.md](QUEST_ITEMS.md) | baseline | item lifecycle/event boundary documented | items + quests + world objects | queued probes |
-| 21 | World objects and environmental interactions | [WORLD_OBJECTS_AND_INTERACTIONS.md](WORLD_OBJECTS_AND_INTERACTIONS.md) | baseline | selector/interaction/world owners reconciled; object-instance slices documented | world/map + quests + items | queued probes |
-| 22 | Shrines, wells, curses, buffs, and temporary states | [SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md](SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md) | baseline | shared timed stat-source dependency documented | stats/states + world objects | queued probes |
-| 10 | Warps, portals, waypoints, teleportation, and transitions | [WARPS_PORTALS_WAYPOINTS.md](WARPS_PORTALS_WAYPOINTS.md) | baseline | transition owner reconciled; endpoint/waypoint/portal slices documented | world/map + quests + persistence | queued probes |
-| 9 | NPCs, dialogue, gossip, services, and town state | [NPCS_DIALOGUE_AND_SERVICES.md](NPCS_DIALOGUE_AND_SERVICES.md) | baseline | interaction/item/quest ownership and capability snapshots documented | quests + vendors + dialogue/localization | queued probes |
-| 15 | Difficulty progression and game modes | [DIFFICULTY_AND_GAME_MODES.md](DIFFICULTY_AND_GAME_MODES.md) | baseline | immutable GameRules and first scalar consumers documented | progression + quests + loot + monsters | queued probes |
-| 27 | Endgame and special events | [ENDGAME_AND_SPECIAL_EVENTS.md](ENDGAME_AND_SPECIAL_EVENTS.md) | baseline | encounter/portal composition and version gates documented | quests + world + difficulty + combat | queued probes |
-| 17 | Multiplayer parties, hostility, trading, and shared progress | [MULTIPLAYER_PARTIES_PVP_AND_TRADE.md](MULTIPLAYER_PARTIES_PVP_AND_TRADE.md) | baseline | party/hostility/trade state and authority boundaries documented | session + items + quests + combat | queued probes |
-| 16 | Battle.net, realm servers, and responsibilities | [REALM_AND_BATTLENET_ARCHITECTURE.md](REALM_AND_BATTLENET_ARCHITECTURE.md) | baseline | lease/worker/directory/transport slices documented | session + persistence + multiplayer | queued probes |
-| 25 | UI-visible game-state contracts | [GAMEPLAY_UI_CONTRACTS.md](GAMEPLAY_UI_CONTRACTS.md) | baseline | revisioned semantic projection boundary documented | all authoritative snapshots | queued probes |
-| 26 | Audio, music, ambience, and gameplay cues | [GAMEPLAY_AUDIO_BEHAVIOR.md](GAMEPLAY_AUDIO_BEHAVIOR.md) | baseline | semantic event and non-authoritative soundscape slices documented | presentation + world/combat events | queued probes |
+| 24 | Time, RNG, simulation ticks, and determinism | [TIMING_RNG_AND_DETERMINISM.md](TIMING_RNG_AND_DETERMINISM.md) | baseline | fixed-tick session/replay/checkpoint owner exists; legacy timer/RNG details remain probes | session, ECS, replay | 10 |
+| 20 | Save games and persistent character state | [CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md](CHARACTER_PERSISTENCE_AND_SAVE_FORMAT.md) | baseline | existing owner inspected; loss-preserving `.d2s` adapter and trusted realm persistence remain open | data linkage, items, quests | 12 |
+| 3 | Item stats, affixes, and property evaluation | [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md) | baseline | M21.1 `dm.stats/v1` provenance/source authority implemented; ItemStatCost-derived operations remain gated by probes | data linkage, items, skills/states | 12 |
+| 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline | authoritative world/inventory/stash/Cube/equipment/hireling/belt/held/vendor/quest-service containers exist; richer item effect activation remains | data linkage, item stats, persistence | 11 |
+| 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline | authoritative player entry/progression/vitals/skill assignment exist; full progression/difficulty/save synchronization remains | data linkage, timing, persistence, item stats, quests | 12 |
+| 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | M21.2 fixed-point channels and M21.5 first melee transaction/event stream implemented; exact legacy combat/death policies remain probes | stats, timing, skills, items | 17 |
+| 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | `player.use_skill` already writes semantic intent; M21.6-M21.9 are the active cast/state/missile queue | timing, stats, combat, missiles/states | 22 |
+| 8 | Monsters, spawning, AI, and lifecycle | [MONSTERS_SPAWNING_AND_AI.md](MONSTERS_SPAWNING_AND_AI.md) | baseline | M21.3 ordinary-hostile materialization and M21.4 scheduled acquire/chase/attack AI implemented; population/quality/death/inactive lifecycle remain | timing, combat, world/pathfinding | 22 |
+| 18 | Hirelings, mercenaries, pets, and owned units | [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md) | baseline | hireling data/container support exists; generic ownership is active roadmap checkpoint M21.12 before broad pet/hireling behavior | monsters, items, skills, persistence | 24 |
+| 23 | Movement, collision, pathfinding, and room streaming | [MOVEMENT_COLLISION_AND_PATHFINDING.md](MOVEMENT_COLLISION_AND_PATHFINDING.md) | baseline | pointer-first movement, medium footprint, deterministic A*, DT1 collision, diagnostics and first zone seam are implemented; specialized legacy path types/streaming remain | world, timing, monsters | 25 |
+| 2 | Item generation, treasure classes, and drops | [ITEM_GENERATION_AND_LOOT.md](ITEM_GENERATION_AND_LOOT.md) | baseline | M6 owner reconciled; contextual quality/NoDrop/player-count integration with monster death remains | data linkage, RNG, item system/stats | queued probes |
+| 4 | Unique, set, rare, crafted, and personalized items | [ITEM_QUALITIES_AND_SETS.md](ITEM_QUALITIES_AND_SETS.md) | baseline | M6 special-item selection exists; durable recipes and conditional source activation remain | item generation + stats | queued probes |
+| 5 | Sockets, gems, runes, jewels, and runewords | [SOCKETS_RUNES_GEMS_JEWELS.md](SOCKETS_RUNES_GEMS_JEWELS.md) | baseline | nested identity and runeword recognition/source-lifecycle slices documented; authoritative container foundation exists | item system + stats/qualities | queued probes |
+| 6 | Charms and inventory-dependent effects | [CHARMS_AND_CONTAINER_EFFECTS.md](CHARMS_AND_CONTAINER_EFFECTS.md) | baseline | M21.1 now supplies the source model required for container-conditioned activation | item system + stats + containers | queued probes |
+| 19 | Horadric Cube and recipe engine | [HORADRIC_CUBE_AND_RECIPES.md](HORADRIC_CUBE_AND_RECIPES.md) | baseline | authoritative Cube container exists; ordered matcher and atomic transformation engine remain | item system + stats + recipes | queued probes |
+| 14 | Vendors, pricing, repair, gambling, and economy | [VENDORS_PRICING_AND_ECONOMY.md](VENDORS_PRICING_AND_ECONOMY.md) | baseline | server-owned vendor placement/buy/sell/service authority exists; full quote/stock/repair/gamble semantics remain | items + NPCs + difficulty | queued probes |
+| 7 | Quest items and scripted item interactions | [QUEST_ITEMS.md](QUEST_ITEMS.md) | baseline | quest-service container/transactions exist; complete generation/pickup/drop/consume/difficulty lifecycle remains | items + quests + world objects | queued probes |
+| 21 | World objects and environmental interactions | [WORLD_OBJECTS_AND_INTERACTIONS.md](WORLD_OBJECTS_AND_INTERACTIONS.md) | baseline | recovered world-object data plus interaction/world owners exist; generic object-instance/operation authority remains | world/map + quests + items | queued probes |
+| 22 | Shrines, wells, curses, buffs, and temporary states | [SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md](SHRINES_WELLS_AND_TEMPORARY_EFFECTS.md) | baseline | typed shrine data exists; M21.8 timed-state engine is the prerequisite for reusable shrine/buff behavior | stats/states + world objects | queued probes |
+| 10 | Warps, portals, waypoints, teleportation, and transitions | [WARPS_PORTALS_WAYPOINTS.md](WARPS_PORTALS_WAYPOINTS.md) | baseline | trusted Act I transition owner/seam exists; generalized endpoints, waypoint state and dynamic portals remain | world/map + quests + persistence | queued probes |
+| 9 | NPCs, dialogue, gossip, services, and town state | [NPCS_DIALOGUE_AND_SERVICES.md](NPCS_DIALOGUE_AND_SERVICES.md) | baseline | server-owned interaction context, vendor categories/services and range revalidation exist; dialogue/quest capability snapshots remain | quests + vendors + dialogue/localization | queued probes |
+| 15 | Difficulty progression and game modes | [DIFFICULTY_AND_GAME_MODES.md](DIFFICULTY_AND_GAME_MODES.md) | baseline | typed DifficultyLevels facts exist; immutable session-wide GameRules and consumers remain | progression + quests + loot + monsters | queued probes |
+| 27 | Endgame and special events | [ENDGAME_AND_SPECIAL_EVENTS.md](ENDGAME_AND_SPECIAL_EVENTS.md) | baseline | encounter/portal composition and version gates documented; campaign/special-event controllers remain | quests + world + difficulty + combat | queued probes |
+| 17 | Multiplayer parties, hostility, trading, and shared progress | [MULTIPLAYER_PARTIES_PVP_AND_TRADE.md](MULTIPLAYER_PARTIES_PVP_AND_TRADE.md) | baseline | authoritative session/item primitives exist; party/hostility/trade state machines remain future M22-era breadth | session + items + quests + combat | queued probes |
+| 16 | Battle.net, realm servers, and responsibilities | [REALM_AND_BATTLENET_ARCHITECTURE.md](REALM_AND_BATTLENET_ARCHITECTURE.md) | baseline | `darkmagic-server` owns the transport-independent Session and `darkmagic-realm` exists as a control-plane shell; leases/directory/storage/transports remain | session + persistence + multiplayer | queued probes |
+| 25 | UI-visible game-state contracts | [GAMEPLAY_UI_CONTRACTS.md](GAMEPLAY_UI_CONTRACTS.md) | baseline | Lua already follows snapshot -> intent -> authority -> next snapshot; stable revisioned gameplay projections remain to formalize | all authoritative snapshots | queued probes |
+| 26 | Audio, music, ambience, and gameplay cues | [GAMEPLAY_AUDIO_BEHAVIOR.md](GAMEPLAY_AUDIO_BEHAVIOR.md) | baseline | mixer/buses/groups/fades/streaming and typed Sounds resolver exist; rich Sounds semantics, semantic cue bridge, soundscapes and positional tracking remain | presentation + world/combat events | queued probes |
+
+## Implementation cursor
+
+The research program has now produced a baseline for every indexed workstream. Implementation has also consumed part of the combat handoff:
+
+- M21.1 shared stat/effect sources: implemented.
+- M21.2 fixed-point combat vocabulary: implemented.
+- M21.3 ordinary hostile materialization: implemented.
+- M21.4 scheduled basic monster AI: implemented.
+- M21.5 basic melee transaction: implemented.
+- M21.6 assigned skill intent consumption: next active dependency.
+
+Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for the reconciled queue beginning at M21.6 and for the post-first-loop ordering across items, world interactions, audio, UI, networking, and realm persistence. `ROADMAP.md` remains authoritative for checkbox completion.
 
 ## Current implementation handoffs
 
-- [FOUNDATION_HANDOFF_FOR_CODEX.md](FOUNDATION_HANDOFF_FOR_CODEX.md) turns the first six foundation baselines into bounded implementation checkpoints.
-- [COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md](COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md) orders the combat/skill/monster/movement/owned-unit vertical slices.
+- [FOUNDATION_HANDOFF_FOR_CODEX.md](FOUNDATION_HANDOFF_FOR_CODEX.md) records the foundation slices; several have now graduated into M21 implementation.
+- [COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md](COMBAT_SIMULATION_HANDOFF_FOR_CODEX.md) remains the source-sensitive contract for M21.6-M21.12 and later combat fidelity.
 - [ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md](ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md) orders generated-item, source-activation, economy, quest-item, and audio slices.
 - [WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md](WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md) orders object, transition, NPC, difficulty, and endgame slices.
 - [MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md](MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md) orders party, trade, realm, transport, persistence, and UI projection slices.
