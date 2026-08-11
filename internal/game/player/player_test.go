@@ -191,3 +191,44 @@ func TestEntrySourceRecordsServerSelectedTown(t *testing.T) {
 		t.Fatalf("level = %v", level)
 	}
 }
+
+func TestRemoteAdmissionUsesServerSelectedTownDestination(t *testing.T) {
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := Register(session); err != nil {
+		t.Fatal(err)
+	}
+	destination, err := NewDestination(23, 17, 100, 80, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	character := persistence.Character{ID: "realm-amazon", Name: "RemoteHero", Class: "Amazon", Level: 1}
+	command, err := AdmissionCommand(character, "account:42", destination, nil, "system:join", 1, 1, simulation.AuthoritySystem)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	positions, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	locations, _ := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	entity := positions.Entities()[0]
+	position, _ := positions.Get(entity)
+	location, _ := locations.Get(entity)
+	x, _ := position.Get("x")
+	y, _ := position.Get("y")
+	level, _ := location.Get("level_id")
+	if x != float64(23) || y != float64(17) || level != int64(1) {
+		t.Fatalf("remote admission = (%v,%v) level=%v", x, y, level)
+	}
+	if _, err := AdmissionCommand(character, "account:42", destination, nil, "client", 2, 2, simulation.AuthorityPlayer); err == nil {
+		t.Fatal("client minted a trusted player-admission command")
+	}
+}
