@@ -27,6 +27,7 @@ type Chunk struct {
 	Column, Row int
 	X, Y        int
 	Layer       world.TileLayer
+	Depth       int
 	Pixels      *image.RGBA
 }
 
@@ -68,10 +69,10 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 		ChunkSize: chunkSize,
 		Objects:   append([]world.Object(nil), mapData.Objects...),
 	}
-	chunksByLayer := make(map[world.TileLayer]map[[2]int]*image.RGBA)
+	chunksByLayer := make(map[world.TileLayer]map[int]map[[2]int]*image.RGBA)
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
-		chunks := make(map[[2]int]*image.RGBA)
-		chunksByLayer[layer] = chunks
+		depths := make(map[int]map[[2]int]*image.RGBA)
+		chunksByLayer[layer] = depths
 		for _, placement := range mapData.Tiles {
 			if placement.Layer != layer {
 				continue
@@ -90,23 +91,36 @@ func Compose(source fs.FS, mapData *world.Map, palettePath string, chunkSize int
 			originX := mapData.HeightTiles*world.TilePixelWidth/2 + world.PreviewMargin + (placement.X-placement.Y)*world.TilePixelWidth/2
 			originY := world.PreviewMargin + (placement.X+placement.Y)*world.TilePixelHeight/2
 			destination := pixels.Bounds().Add(image.Pt(originX-world.TilePixelWidth/2, originY+tileYAdjust(tile, placement.Layer)))
+			depth := world.TileDepth(layer, placement.X, placement.Y)
+			chunks := depths[depth]
+			if chunks == nil {
+				chunks = make(map[[2]int]*image.RGBA)
+				depths[depth] = chunks
+			}
 			drawIntoChunks(chunks, chunkSize, set.Width, set.Height, destination, pixels)
 		}
 	}
 	for layer := world.LayerFloor; layer <= world.LayerRoof; layer++ {
-		chunks := chunksByLayer[layer]
-		keys := make([][2]int, 0, len(chunks))
-		for key := range chunks {
-			keys = append(keys, key)
+		depths := make([]int, 0, len(chunksByLayer[layer]))
+		for depth := range chunksByLayer[layer] {
+			depths = append(depths, depth)
 		}
-		sort.Slice(keys, func(i, j int) bool {
-			if keys[i][1] != keys[j][1] {
-				return keys[i][1] < keys[j][1]
+		sort.Ints(depths)
+		for _, depth := range depths {
+			chunks := chunksByLayer[layer][depth]
+			keys := make([][2]int, 0, len(chunks))
+			for key := range chunks {
+				keys = append(keys, key)
 			}
-			return keys[i][0] < keys[j][0]
-		})
-		for _, key := range keys {
-			set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: key[0] * chunkSize, Y: key[1] * chunkSize, Layer: layer, Pixels: chunks[key]})
+			sort.Slice(keys, func(i, j int) bool {
+				if keys[i][1] != keys[j][1] {
+					return keys[i][1] < keys[j][1]
+				}
+				return keys[i][0] < keys[j][0]
+			})
+			for _, key := range keys {
+				set.Chunks = append(set.Chunks, Chunk{Column: key[0], Row: key[1], X: key[0] * chunkSize, Y: key[1] * chunkSize, Layer: layer, Depth: depth, Pixels: chunks[key]})
+			}
 		}
 	}
 	return set, nil

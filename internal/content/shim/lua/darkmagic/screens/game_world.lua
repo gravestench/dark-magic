@@ -46,6 +46,7 @@ return {
             local world = require("dm.world/v1")
             self.world = assert(world.load(screen.map.ds1, screen.map.dt1))
             self.world_dimensions = self.world:dimensions()
+            self.world_canvas_width, self.world_canvas_height = self.world:canvas()
 
             -- Presentation receives the same recipe, but uploads only chunks near
             -- the camera. It remains a disposable picture of authoritative facts.
@@ -53,12 +54,16 @@ return {
                 z = screen.map.z,
                 viewport_width = manifest.resolution.width,
                 viewport_height = manifest.resolution.height,
+                canvas_width = self.world_canvas_width,
+                canvas_height = self.world_canvas_height,
             })
         end
 
         -- Hero sprite/composite is presentation only. The authoritative hero is
         -- a separate ECS entity admitted by the session and bound later.
-        self.hero = render.create("world", self.root)
+        -- Map bands and standing entities share one parent so their baseline
+        -- depths can interleave. A parent-level z can never provide occlusion.
+        self.hero = render.create("world", self.map and self.map.root or self.root)
 
         local character = saves.selected()
 
@@ -251,12 +256,13 @@ return {
         local hero_screen_x, hero_screen_y = target_x, screen.hero.screen_y
         local camera_pixel_x, camera_pixel_y = camera_x, camera_y
         if self.world then
-            -- Go owns projection, camera subtraction, and screen anchoring.
-            -- Lua supplies coordinates but never repeats isometric arithmetic.
-            hero_screen_x, hero_screen_y = self.world:subtile_to_screen(
-                hero_x, hero_y, camera_x, camera_y, target_x, screen.hero.screen_y
-            )
+            -- The hero is a sibling of map bands. Its local point is therefore
+            -- map-canvas space; their shared parent applies the camera once.
+            hero_screen_x, hero_screen_y = self.world:subtile_to_pixel(hero_x, hero_y)
+            hero_screen_x = hero_screen_x - self.world_canvas_width / 2
+            hero_screen_y = hero_screen_y - self.world_canvas_height / 2
             camera_pixel_x, camera_pixel_y = self.world:subtile_to_pixel(camera_x, camera_y)
+            self.hero:set_z(self.world:entity_depth(hero_x, hero_y))
         end
 
         if self.map then

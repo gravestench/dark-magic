@@ -909,8 +909,12 @@ complete until its actions are driven by authoritative game state and commands.
   world capability now exposes forward and inverse camera projection for future
   pointer intents; gameplay movement uses the same centered-cell sampling rule
   as authoritative map queries.
-- [ ] M20.12: Sort map passes, authored objects, characters, missiles, shadows,
-  roofs, and overlays through one explicit world-depth contract.
+- [x] M20.12: Sort map passes, authored objects, characters, missiles, shadows,
+  roofs, and overlays through one explicit world-depth contract. Floor remains
+  a globally batchable background; occluding map tiles are partitioned by their
+  projected baseline and share a retained parent with the player. The contract
+  supplies stable pass offsets around the same `x+y` entity baseline that future
+  objects, missiles, and world overlays consume.
 - [ ] M20.13: Route pointer-authored move, interact, and combat intents through
   the shared screen-to-world transform and authoritative collision/path query.
 

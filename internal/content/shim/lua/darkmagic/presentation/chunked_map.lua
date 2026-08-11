@@ -81,7 +81,7 @@ local function refresh_nodes(state, world_view)
                 local_left + chunk.width / 2,
                 local_top + chunk.height / 2
             )
-            node:set_z(chunk.layer)
+            node:set_z(chunk.depth)
             state.nodes[key] = node
             admitted = admitted + 1
         elseif not visible and state.nodes[key] then
@@ -104,10 +104,12 @@ function chunked_map.create(parent, recipe, options)
         admit_per_frame = options.admit_per_frame or 2,
         viewport_width = options.viewport_width or 800,
         viewport_height = options.viewport_height or 600,
+        canvas_width = options.canvas_width,
+        canvas_height = options.canvas_height,
         root_x = 0,
         root_y = 0,
     }
-    state.root:set_z(options.z or -100)
+    state.root:set_z(options.z or 0)
     state.job = render.preload({{
         kind = "ds1_chunks",
         path = recipe.ds1,
@@ -123,10 +125,13 @@ end
 -- produces the same map placement, including after scene re-entry.
 function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world_view)
     finish_preload(state)
-    if not state.set then return false, state.error end
-    state.root_x = target_x + state.set.width / 2 - camera_x
-    state.root_y = target_y + state.set.height / 2 - camera_y
+    local width = state.set and state.set.width or state.canvas_width
+    local height = state.set and state.set.height or state.canvas_height
+    if not width or not height then return false, state.error end
+    state.root_x = target_x + width / 2 - camera_x
+    state.root_y = target_y + height / 2 - camera_y
     state.root:set_position(state.root_x, state.root_y)
+    if not state.set then return false, state.error end
     refresh_nodes(state, world_view or "center")
     return true, nil
 end
