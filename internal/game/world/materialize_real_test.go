@@ -86,6 +86,9 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if !inside || flags.Blocked() {
 		t.Fatalf("town entry (%v,%v) is not open", x, y)
 	}
+	if anchors := worldMap.AuthoredExitAnchors(); len(anchors) == 0 {
+		t.Fatal("materialized town has no authored orientation-10/11 exit anchor")
+	}
 }
 
 func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
@@ -129,5 +132,25 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	warp := moor.Warps()[0]
 	if _, inside := worldMap.FlagsAt(warp.X*gameworld.SubtilesPerTile, warp.Y*gameworld.SubtilesPerTile); !inside {
 		t.Fatalf("town warp lies outside Blood Moor: %#v", warp)
+	}
+	townMaterializer, err := gameworld.NewMaterializer(source, town)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for townMaterializer.Progress().Completed < townMaterializer.Progress().Total {
+		if err := townMaterializer.Step(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	townMap, err := townMaterializer.Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	seam, err := gameworld.NewActOneTownMoorSeam(town, townMap, moor, worldMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seam.Town.LevelID != 1 || seam.Wilderness.LevelID != 2 {
+		t.Fatalf("production seam = %#v", seam)
 	}
 }

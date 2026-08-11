@@ -355,6 +355,13 @@ Warp creation combines:
 
 The runtime records representative warp/waypoint room centers in subtile coordinates after level generation. Exit cells can also create hidden linked floor tiles for lit-version warp behavior.
 
+Hidden DS1 wall cells with legacy orientation 10/11 remain semantic exit
+placements even when they have no renderable DT1 reference. The Act I seam
+contract selects the cardinal town anchor from those facts, pairs it with the
+opposite generated Blood Moor edge, and resolves both to walkable subtiles.
+This seam value is suitable for an authoritative transition command; neither
+transparent pixels nor generic open map borders are accepted as exits.
+
 ## Automap implications
 
 Automap data uses level type + tile type/style/sequence ranges. Because hidden, linkage, exit, and roof semantics influence automap visibility, automap generation should consume semantic map tiles rather than screenshots or flattened render batches.

@@ -971,6 +971,10 @@ complete until its actions are driven by authoritative game state and commands.
     explicit town-entry warp on the edge opposite the selected town exit.
     Structural rivers/cliffs/paths, live transition commands, and presentation
     seam validation remain before this checkpoint is complete.
+    Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
+    tile placements, and a production-asset seam contract verifies the selected
+    town anchor meets the generated opposite Blood Moor edge in walkable
+    subtile coordinates without asking presentation to infer either endpoint.
 
 ## M21: Diablo simulation
 
