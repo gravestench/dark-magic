@@ -156,6 +156,9 @@ func loadPalette(source fs.FS, path string) (color.Palette, error) {
 func decodeSelectedTiles(source fs.FS, placements []world.TilePlacement, palette color.Palette) (map[tileSourceKey]*dt1.Tile, error) {
 	needed := make(map[string]map[int]struct{})
 	for _, placement := range placements {
+		if placement.Reference.Path == "" {
+			continue
+		} // semantic-only hidden cell
 		indexes := needed[placement.Reference.Path]
 		if indexes == nil {
 			indexes = make(map[int]struct{})

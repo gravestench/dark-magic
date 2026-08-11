@@ -156,8 +156,12 @@ func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolver Ob
 				}
 			}
 			for _, wall := range record.Walls {
-				if !wall.Hidden && wall.Prop1 != 0 {
-					identity := TileIdentity{Orientation: int32(wall.Type), MainIndex: int32(wall.Style), SubIndex: int32(wall.Sequence)}
+				identity := TileIdentity{Orientation: int32(wall.Type), MainIndex: int32(wall.Style), SubIndex: int32(wall.Sequence)}
+				if wall.Hidden && (identity.Orientation == 10 || identity.Orientation == 11) {
+					// Exit cells are often deliberately invisible. Preserve their
+					// authored gameplay identity without resolving/drawing a DT1.
+					result.Tiles = append(result.Tiles, TilePlacement{X: tileX, Y: tileY, Layer: LayerUpperWall, Identity: identity})
+				} else if !wall.Hidden && wall.Prop1 != 0 {
 					layer := LayerUpperWall
 					if identity.Orientation >= 16 && identity.Orientation <= 19 {
 						layer = LayerLowerWall
@@ -240,6 +244,12 @@ func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 // center from trapping a newly admitted player.
 func (m *Map) OpenPointNearCenter() (float64, float64, bool) {
 	return m.openPointNear(m.WidthSubtiles/2, m.HeightSubtiles/2, 0)
+}
+
+// OpenPointNearSubtile is the exported collision-aware anchor resolver used by
+// generated warp/seam assembly. Inputs and outputs are gameplay subtiles.
+func (m *Map) OpenPointNearSubtile(x, y float64) (float64, float64, bool) {
+	return m.openPointNear(CollisionCell(x), CollisionCell(y), 0)
 }
 
 // ActOneTownEntry returns a deterministic open point near the authored Rogue
