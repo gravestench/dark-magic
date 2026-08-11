@@ -39,6 +39,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.VFSModule(app.options.Content),
 		modruntime.DataModule(app.options.Content, app.profile.ID),
 		modruntime.WorldModule(app.options.Content, app.worldObjectResolver),
+		modruntime.MapgenModule(app.gameData),
 		modruntime.InputModule(app.inputState),
 		modruntime.DevModule(map[string]any{
 			"random_seed":     int(time.Now().UnixNano()%2147483646) + 1,
