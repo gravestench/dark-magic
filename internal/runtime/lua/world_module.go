@@ -16,12 +16,15 @@ func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
 	return Module{Name: "dm.world/v1", Help: documentedModule("Decode immutable gameplay facts from authored world assets.", map[string]CommandHelp{
 		"load": commandHelp("dm.world.load(ds1_path, dt1_paths)", "Decode a DS1 stamp and its DT1 tilesets into an immutable map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
-		"dimensions":       commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
-		"flags":            commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
-		"blocked":          commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
-		"objects":          commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
-		"subtile_to_pixel": commandHelp("map:subtile_to_pixel(x, y)", "Project continuous DS1 subtile coordinates into rendered map pixels."),
-		"pixel_to_subtile": commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
+		"dimensions":        commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
+		"flags":             commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
+		"blocked":           commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
+		"blocked_position":  commandHelp("map:blocked_position(x, y)", "Sample collision at a continuous subtile-center position."),
+		"objects":           commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
+		"subtile_to_pixel":  commandHelp("map:subtile_to_pixel(x, y)", "Project continuous DS1 subtile coordinates into rendered map pixels."),
+		"pixel_to_subtile":  commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
+		"subtile_to_screen": commandHelp("map:subtile_to_screen(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Project a world subtile through a camera to screen space."),
+		"screen_to_subtile": commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -83,6 +86,11 @@ func registerWorldMapType(state *lua.LState) {
 			state.Push(lua.LBool(ok && flags.Blocked()))
 			return 1
 		},
+		"blocked_position": func(state *lua.LState) int {
+			flags, ok := checkWorldMap(state, 1).FlagsAtPosition(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
+			state.Push(lua.LBool(ok && flags.Blocked()))
+			return 1
+		},
 		"subtile_to_pixel": func(state *lua.LState) int {
 			x, y := checkWorldMap(state, 1).SubtileToPixel(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
 			state.Push(lua.LNumber(x))
@@ -93,6 +101,26 @@ func registerWorldMapType(state *lua.LState) {
 			x, y := checkWorldMap(state, 1).PixelToSubtile(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
 			state.Push(lua.LNumber(x))
 			state.Push(lua.LNumber(y))
+			return 2
+		},
+		"subtile_to_screen": func(state *lua.LState) int {
+			world := checkWorldMap(state, 1)
+			point := gameworld.Point{X: float64(state.CheckNumber(2)), Y: float64(state.CheckNumber(3))}
+			camera := gameworld.Point{X: float64(state.CheckNumber(4)), Y: float64(state.CheckNumber(5))}
+			anchor := gameworld.Point{X: float64(state.CheckNumber(6)), Y: float64(state.CheckNumber(7))}
+			result := world.Coordinates().SubtileToScreen(point, camera, anchor)
+			state.Push(lua.LNumber(result.X))
+			state.Push(lua.LNumber(result.Y))
+			return 2
+		},
+		"screen_to_subtile": func(state *lua.LState) int {
+			world := checkWorldMap(state, 1)
+			point := gameworld.Point{X: float64(state.CheckNumber(2)), Y: float64(state.CheckNumber(3))}
+			camera := gameworld.Point{X: float64(state.CheckNumber(4)), Y: float64(state.CheckNumber(5))}
+			anchor := gameworld.Point{X: float64(state.CheckNumber(6)), Y: float64(state.CheckNumber(7))}
+			result := world.Coordinates().ScreenToSubtile(point, camera, anchor)
+			state.Push(lua.LNumber(result.X))
+			state.Push(lua.LNumber(result.Y))
 			return 2
 		},
 		"objects": func(state *lua.LState) int {
