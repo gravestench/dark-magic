@@ -491,6 +491,38 @@ return { id = "screen.dc6", start = function(self)
 	}
 }
 
+func TestRenderCapabilityLazyDecodesDT1LabTile(t *testing.T) {
+	data := make([]byte, 276+96)
+	binary.LittleEndian.PutUint32(data[0:4], 7)
+	binary.LittleEndian.PutUint32(data[4:8], 6)
+	binary.LittleEndian.PutUint32(data[268:272], 1)
+	binary.LittleEndian.PutUint32(data[272:276], 276)
+	tile := data[276:]
+	binary.LittleEndian.PutUint32(tile[8:12], 0xffffffb0)
+	binary.LittleEndian.PutUint32(tile[12:16], 160)
+	binary.LittleEndian.PutUint32(tile[20:24], 2)
+	binary.LittleEndian.PutUint32(tile[24:28], 3)
+	binary.LittleEndian.PutUint32(tile[28:32], 4)
+	binary.LittleEndian.PutUint32(tile[72:76], uint32(len(data)))
+	assets := fstest.MapFS{"one.dt1": {Data: data}}
+	capability := NewRenderCapability(New(), &render.Composer{}, assets)
+
+	prepared, err := capability.cache.loadDT1Tile(assets, "one.dt1", "", 0, "composite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.total != 1 || prepared.tile.Type != 2 || prepared.tile.Style != 3 || prepared.tile.Sequence != 4 {
+		t.Fatalf("DT1 metadata = %#v, total %d", prepared.tile, prepared.total)
+	}
+	if prepared.image.Bounds().Dx() != 160 || prepared.image.Bounds().Dy() != 80 {
+		t.Fatalf("DT1 fallback bounds = %v", prepared.image.Bounds())
+	}
+	diagnostics := capability.Diagnostics()
+	if diagnostics.Stages["dt1-file"].Calls != 1 || diagnostics.Stages["dt1-tile"].Calls != 1 {
+		t.Fatalf("DT1 stage diagnostics = %#v", diagnostics.Stages)
+	}
+}
+
 func TestRenderCapabilityPreloadsAssetsAndReportsProgress(t *testing.T) {
 	palette := make([]byte, 256*3)
 	dc6Data := make([]byte, 16+8+4+32+3+3)

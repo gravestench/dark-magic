@@ -25,6 +25,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
 	dcc "github.com/gravestench/dcc/pkg"
+	dt1 "github.com/gravestench/dt1"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -190,6 +191,16 @@ type preparedDC6File struct {
 
 type preparedDC6Direction struct {
 	asset *dc6.DC6
+}
+
+type preparedDT1File struct {
+	file *dt1.File
+}
+
+type preparedDT1Tile struct {
+	image image.Image
+	tile  *dt1.Tile
+	total int
 }
 
 type preparedDC6Animation struct {
@@ -412,7 +423,7 @@ func (c *renderAssetCache) refresh(assets fs.FS) {
 
 func (c *renderAssetCache) tier(key string) (*cachepkg.Cache, string) {
 	switch {
-	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
+	case strings.HasPrefix(key, "dcc-file\x00"), strings.HasPrefix(key, "dc6-file\x00"), strings.HasPrefix(key, "dt1-file\x00"), strings.HasPrefix(key, "cof\x00"), strings.HasPrefix(key, "animdata\x00"):
 		return c.encoded, "encoded"
 	case strings.HasPrefix(key, "cof-animation\x00"), strings.HasPrefix(key, "dc6-animation\x00"), strings.HasPrefix(key, "dc6-combined\x00"):
 		return c.composed, "composed"
@@ -714,6 +725,74 @@ func (c *renderAssetCache) loadDC6Animation(assets fs.FS, name, palette string, 
 		return preparedDC6Animation{}, err
 	}
 	return value.(preparedDC6Animation), nil
+}
+
+func (c *renderAssetCache) loadDT1File(assets fs.FS, name, palette string) (preparedDT1File, error) {
+	key := name + "\x00" + palette
+	value, err := c.load(assets, "dt1-file\x00"+key, func() (any, int, error) {
+		asset, err := assets.Open(name)
+		if err != nil {
+			return nil, 0, err
+		}
+		defer asset.Close()
+		encoded, err := io.ReadAll(asset)
+		if err != nil {
+			return nil, 0, err
+		}
+		opened, err := dt1.OpenBytes(encoded)
+		if err != nil {
+			return nil, 0, err
+		}
+		if palette != "" {
+			colors, paletteErr := assetdecode.Palette(assets, palette)
+			if paletteErr != nil {
+				return nil, 0, paletteErr
+			}
+			opened.SetPalette(colors)
+		}
+		return preparedDT1File{file: opened}, max(len(encoded), 1), nil
+	})
+	if err != nil {
+		return preparedDT1File{}, err
+	}
+	return value.(preparedDT1File), nil
+}
+
+func (c *renderAssetCache) loadDT1Tile(assets fs.FS, name, palette string, index int, view string) (preparedDT1Tile, error) {
+	key := fmt.Sprintf("dt1-tile\x00%s\x00%s\x00%d\x00%s", name, palette, index, view)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		opened, err := c.loadDT1File(assets, name, palette)
+		if err != nil {
+			return nil, 0, err
+		}
+		tile, err := opened.file.DecodeTile(index)
+		if err != nil {
+			return nil, 0, err
+		}
+		var pixels image.Image
+		switch view {
+		case "floor":
+			pixels = tile.FloorImage()
+		case "wall":
+			pixels = tile.WallImage()
+		case "composite", "":
+			pixels = tile.Image()
+		default:
+			return nil, 0, fmt.Errorf("dt1: unknown view %q", view)
+		}
+		if pixels == nil {
+			height := int(tile.Height)
+			if height < 0 {
+				height = -height
+			}
+			pixels = image.NewRGBA(image.Rect(0, 0, max(1, int(tile.Width)), max(1, height)))
+		}
+		return preparedDT1Tile{image: pixels, tile: tile, total: opened.file.NumTiles()}, imageWeight(pixels), nil
+	})
+	if err != nil {
+		return preparedDT1Tile{}, err
+	}
+	return value.(preparedDT1Tile), nil
 }
 
 func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, palette string) (image.Image, error) {
@@ -1229,6 +1308,7 @@ func (r *RenderCapability) Module() Module {
 		"clear_clip":                 commandHelp("node:clear_clip()", "Remove the node clip rectangle."),
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
+		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
 		"set_dc6_combined":           commandHelp("node:set_dc6_combined(path [, options])", "Reconstruct and render one tiled DC6 page."),
 		"set_dc6_strip":              commandHelp("node:set_dc6_strip(path [, options])", "Join every frame in one DC6 direction horizontally."),
@@ -1629,6 +1709,37 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(decoded.Bounds().Dx()))
 			state.Push(lua.LNumber(decoded.Bounds().Dy()))
 			return 2
+		},
+		"set_dt1": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			prepared, err := node.cache.loadDT1Tile(node.assets, state.CheckString(2), state.OptString(3, ""), state.OptInt(4, 0), state.OptString(5, "composite"))
+			if err != nil {
+				state.RaiseError("rendering DT1 tile: %v", err)
+				return 0
+			}
+			if err := node.setImage(prepared.image); err != nil {
+				state.RaiseError("updating DT1 render node: %v", err)
+				return 0
+			}
+			metadata := state.NewTable()
+			metadata.RawSetString("total", lua.LNumber(prepared.total))
+			metadata.RawSetString("type", lua.LNumber(prepared.tile.Type))
+			metadata.RawSetString("style", lua.LNumber(prepared.tile.Style))
+			metadata.RawSetString("sequence", lua.LNumber(prepared.tile.Sequence))
+			metadata.RawSetString("direction", lua.LNumber(prepared.tile.Direction))
+			metadata.RawSetString("rarity", lua.LNumber(prepared.tile.RarityFrameIndex))
+			metadata.RawSetString("blocks", lua.LNumber(len(prepared.tile.Blocks)))
+			metadata.RawSetString("tile_width", lua.LNumber(prepared.tile.Width))
+			metadata.RawSetString("tile_height", lua.LNumber(prepared.tile.Height))
+			metadata.RawSetString("roof_height", lua.LNumber(prepared.tile.RoofHeight))
+			state.Push(lua.LNumber(prepared.image.Bounds().Dx()))
+			state.Push(lua.LNumber(prepared.image.Bounds().Dy()))
+			state.Push(metadata)
+			return 3
 		},
 		"set_dc6": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

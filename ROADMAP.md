@@ -1425,6 +1425,10 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
   collision consumes metadata-only DT1 tiles, and DS1 previews decode block
   pixels only for keys used by the stamp. Encoded, directional, and composed
   residency is measured in separate M25 cache tiers.
+- [x] Provide integrated `dt1_lab` and `ds1_lab` scenes using the production Lua
+  render capability. DT1 Lab browses lazy tiles and metadata across composite,
+  floor, and wall views; DS1 Lab renders configured stamps with palette-aware
+  DT1 sources plus fit, zoom, pan, CLI recipes, and capture registration.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.

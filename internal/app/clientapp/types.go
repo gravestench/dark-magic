@@ -50,6 +50,8 @@ type Options struct {
 	ViewportFit           string
 	PresentationProfileID string
 	CompositeLab          CompositeLabOptions
+	DT1Lab                DT1LabOptions
+	DS1Lab                DS1LabOptions
 	Logs                  *shell.LogBuffer
 }
 
@@ -59,6 +61,18 @@ type CompositeLabOptions struct {
 	Token, Mode, WeaponClass, Components string
 	Direction, Frame                     int
 	Random                               bool
+}
+
+// DT1LabOptions select one archive tileset and initial tile without coupling
+// ordinary gameplay configuration to developer tooling.
+type DT1LabOptions struct {
+	Path, Palette, View string
+	Tile                int
+}
+
+// DS1LabOptions select one map stamp and its comma-separated DT1 dependencies.
+type DS1LabOptions struct {
+	Path, Tiles, Palette string
 }
 
 // Profile is the tiny piece of the optional developer profiler the client uses.
