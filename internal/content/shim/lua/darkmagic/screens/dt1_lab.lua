@@ -4,6 +4,7 @@
 local render = require("dm.render/v1")
 local input = require("dm.input/v1")
 local text = require("darkmagic.ui.text")
+local tooltip = require("darkmagic.ui.tooltip")
 local vfs = require("dm.vfs/v1")
 
 local palettes = {
@@ -12,7 +13,7 @@ local palettes = {
     "data/global/palette/ACT5/pal.dat",
 }
 local preview = {left=40, top=95, right=760, bottom=525}
-local cell = {width=240, height=210, image_width=210, image_height=150}
+local cell = {width=240, height=180, image_width=210, image_height=150}
 local zoom_step = 0.05
 local tiles_per_frame = 2
 local lab = {}
@@ -64,6 +65,8 @@ function lab:destroy_tiles()
         if node:exists() then node:destroy() end
     end
     self.tile_nodes = {}
+    self.tile_metadata = {}
+    if self.tile_tooltip then self.tile_tooltip:set_visible(false) end
 end
 
 -- The gallery coordinate system is centered around zero. That means resetting
@@ -191,15 +194,41 @@ function lab:add_tile(index)
         table.insert(self.tile_nodes, selection)
     end
 
-    local caption = render.create("hud", self.gallery)
     local value = string.format(
         "[gold]#%d [white]type/style/seq %d/%d/%d\n[blue]dir %d [white]rarity %d  blocks %d  %dx%d",
         index, metadata.type, metadata.style, metadata.sequence,
         metadata.direction, metadata.rarity, metadata.blocks, metadata.tile_width, metadata.tile_height)
-    local _, caption_height = text.set(caption, "font_lab_caption", value, cell.width - 12, "center")
-    caption:set_position(x, y + cell.height / 2 - caption_height / 2 - 5)
-    table.insert(self.tile_nodes, caption)
+    self.tile_metadata[index + 1] = value
     return true
+end
+
+function lab:hovered_tile(pointer_x, pointer_y)
+    if self.total == 0 or self.zoom == 0 then return nil end
+    if pointer_x < preview.left or pointer_x > preview.right
+        or pointer_y < preview.top or pointer_y > preview.bottom then return nil end
+    local local_x = (pointer_x - (400 + self.pan_x)) / self.zoom
+    local local_y = (pointer_y - ((preview.top + preview.bottom) / 2 + self.pan_y)) / self.zoom
+    local column = math.floor((local_x + (self.columns - 1) * cell.width / 2 + cell.width / 2) / cell.width)
+    local row = math.floor((local_y + (self.rows - 1) * cell.height / 2 + cell.height / 2) / cell.height)
+    if column < 0 or column >= self.columns or row < 0 or row >= self.rows then return nil end
+    local index = row * self.columns + column
+    if index >= self.total or not self.tile_metadata[index + 1] then return nil end
+    return index
+end
+
+function lab:update_tooltip(pointer_x, pointer_y)
+    local index = not self.dragging and self:hovered_tile(pointer_x, pointer_y) or nil
+    if index == nil then
+        self.hovered_index = nil
+        self.tile_tooltip:set_visible(false)
+        return
+    end
+    if self.hovered_index ~= index then
+        self.hovered_index = index
+        self.tile_tooltip:set_text(self.tile_metadata[index + 1])
+    end
+    self.tile_tooltip:set_position(pointer_x + 16, pointer_y + 18)
+    self.tile_tooltip:set_visible(true)
 end
 
 function lab:build_some_tiles()
@@ -239,6 +268,11 @@ function lab:create()
     self.status = label(self.root, "", 64, "font_lab_color")
     self.source = label(self.root, "", 535, "font_lab_caption")
     self.help = label(self.root, "Tab: grid/tile view   Arrows/drag: pan   Scroll/Home/End: zoom   Space: fit   PgUp/PgDn: palette   Enter: random", 565)
+    -- This tooltip is a sibling of the transformed gallery, so its text stays
+    -- at ordinary screen scale regardless of gallery pan or zoom.
+    self.tile_tooltip = tooltip.create(self.root, "", 0, 0, {
+        style="dt1_lab_tooltip", max_width=310, origin_x="left", origin_y="top", alpha=192,
+    })
 
     self.path = tostring(dev.option("dt1_path") or "")
     self.palette = tostring(dev.option("dt1_palette") or "")
@@ -311,6 +345,7 @@ function lab:update()
         end
     end
     if moved then self:position_gallery(); self:update_status() end
+    self:update_tooltip(pointer_x, pointer_y)
 end
 
 return lab

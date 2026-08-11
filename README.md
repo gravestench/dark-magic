@@ -356,7 +356,8 @@ and initially fits the complete grid. Tab toggles between that grid and a
 readable 1x view centered on `--dt1-tile`. Arrow keys or pointer dragging pan
 the current view, scroll and Home/End zoom it, Space returns to and recenters
 the fitted grid, Page Up/Down cycles Act palettes, and Enter selects another mounted DT1
-through a deterministic random sequence. Each tile label reports its index,
+through a deterministic random sequence. Hovering a tile shows an unscaled,
+75%-opaque pointer tooltip reporting its index,
 type, style, sequence, direction, rarity, block count, and source dimensions.
 
 Open a DS1 stamp with its authored DT1 sources using:
