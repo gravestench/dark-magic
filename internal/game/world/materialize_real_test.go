@@ -87,3 +87,47 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 		t.Fatalf("town entry (%v,%v) is not open", x, y)
 	}
 }
+
+func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
+	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
+	if directory == "" {
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
+	}
+	t.Setenv("MPQ_DIRECTORY", directory)
+	source, err := content.FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	town, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	moor, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 2}, town.Stamps()[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	materializer, err := gameworld.NewMaterializer(source, moor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for materializer.Progress().Completed < materializer.Progress().Total {
+		if err := materializer.Step(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	worldMap, err := materializer.Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worldMap.WidthTiles != 80 || worldMap.HeightTiles != 80 || len(worldMap.Tiles) == 0 {
+		t.Fatalf("Blood Moor = %dx%d with %d tiles", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
+	}
+	warp := moor.Warps()[0]
+	if _, inside := worldMap.FlagsAt(warp.X*gameworld.SubtilesPerTile, warp.Y*gameworld.SubtilesPerTile); !inside {
+		t.Fatalf("town warp lies outside Blood Moor: %#v", warp)
+	}
+}

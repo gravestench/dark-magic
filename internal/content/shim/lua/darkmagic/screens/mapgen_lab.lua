@@ -33,7 +33,12 @@ end
 
 function lab:generate()
     local mapgen = require("dm.mapgen/v1")
-    local ok, zone = pcall(mapgen.maze, self.level_id, self.seed, self.difficulty)
+	local ok, zone
+	if self.mode == "moor" then
+		ok, zone = pcall(mapgen.outdoor, 2, self.seed, self.town_exit, self.difficulty)
+	else
+		ok, zone = pcall(mapgen.maze, 9, self.seed, self.difficulty)
+	end
     if not ok then
         text.set(self.status, "font_lab_color", "[red]GENERATION ERROR: [white]" .. tostring(zone), 720, "center")
         return
@@ -41,11 +46,11 @@ function lab:generate()
     self.zone = zone
     text.set(self.status, "font_lab_color", string.format(
         "[white]seed %d  [blue]level %d  [gold]%d rooms / %d links  [green]%s",
-        self.seed, self.level_id, #zone.rooms, #zone.links, zone.checksum:sub(1, 16)), 720, "center")
+		self.seed, zone.level_id, #zone.rooms, #zone.links, zone.checksum:sub(1, 16)), 720, "center")
     self:draw_topology(zone)
     local stamp = assert(zone.stamps[1], "maze zone has no chamber stamp")
     local _, recipe_height = text.set(self.recipe, "font_lab_color", string.format(
-        "[gold]ROOM 1 RECIPE  [white]preset %d  %s  (%d DT1 files)",
+		"[gold]STAMP 1 RECIPE  [white]preset %d  %s  (%d DT1 files)",
         stamp.preset_def, stamp.ds1, #stamp.dt1), 700, "left")
     self.recipe:set_position(400, 375 + recipe_height / 2)
     local _, trace_height = text.set(self.trace, "font_lab_color", "[gold]GENERATION TRACE\n[white]" .. table.concat(zone.trace, "\n"), 700, "left")
@@ -101,7 +106,8 @@ function lab:create()
     self.recipe = label(self.root, "", 50, 375, 700, "font_lab_color", "left")
     self.trace = label(self.root, "", 50, 420, 700, "font_lab_color", "left")
     label(self.root, "Pointer controls choose the seed. DS1 Lab materializes the emitted recipe.", 40, 565, 720, "font_lab_caption", "center")
-    self.level_id, self.difficulty = 9, 0 -- Act I Cave Level 1 maze
+	self.level_id, self.difficulty = 9, 0 -- Act I Cave Level 1 maze
+	self.mode, self.town_exit = "maze", "east"
     self.seed = require("dm.dev/v1").seed()
     self.controls = controls.new()
     add_pointer_button(self, "previous_seed", 48, "< SEED", function()
@@ -112,6 +118,10 @@ function lab:create()
         self.seed = self.seed + 1
         self:generate()
     end)
+	add_pointer_button(self, "mode", 340, "MAZE / MOOR", function()
+		self.mode = self.mode == "maze" and "moor" or "maze"
+		self:generate()
+	end)
     self.controls.focus = nil
     self:generate()
 end
