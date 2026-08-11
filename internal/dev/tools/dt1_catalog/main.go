@@ -91,11 +91,20 @@ func inspect(source *content.FS, path string) error {
 	if err != nil {
 		return fmt.Errorf("read %q: %w", path, err)
 	}
+	header, err := dt1.ProbeBytes(data)
+	if err != nil {
+		return fmt.Errorf("probe %q: %w", path, err)
+	}
+	fmt.Printf("%s (header %d.%d, %s)", path, header.Version, header.SubVersion, header.Layout)
+	if header.Layout != dt1.LayoutModern {
+		fmt.Println(" -- body intentionally not decoded")
+		return nil
+	}
 	decoded, err := dt1.OpenBytes(data)
 	if err != nil {
 		return fmt.Errorf("decode %q: %w", path, err)
 	}
-	fmt.Printf("%s (%d records)\n", path, decoded.NumTiles())
+	fmt.Printf(" (%d records)\n", decoded.NumTiles())
 	for index := 0; index < decoded.NumTiles(); index++ {
 		tile, err := decoded.TileMetadata(index)
 		if err != nil {

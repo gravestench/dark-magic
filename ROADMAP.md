@@ -1929,6 +1929,10 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
   DT1 sources plus fit, zoom, pan, CLI recipes, and capture registration. Both
   labs can deterministically select mounted assets and cycle Act palettes from
   hotkeys without restarting the client.
+- [x] Resolve DS1 Lab tile libraries from each stamp's authored `.tg1`
+  declaration instead of its whole directory, use native chunk depth for the
+  lower-wall/floor pass, and classify DT1 `4.1` preliminary leftovers through
+  the independent codec's header-only probe without applying `7.6` offsets.
 
 See [CODECS.md](CODECS.md) for the module-by-module plan. Codec repositories
 remain independent rather than being copied into this engine.
