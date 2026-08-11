@@ -15,6 +15,16 @@ local palettes = {
 local zoom_step = 0.05
 local preview = {left=40, top=95, right=760, bottom=525}
 
+-- Create these bands after the map node and before the labels. Retained nodes
+-- with the same layer draw in creation order, which keeps both the black
+-- backing and the text above even a very large, heavily panned map preview.
+local function text_backdrop(root, top, height)
+    local node = render.create("hud", root)
+    node:fill_rect(800, height, 0, 0, 0, 128)
+    node:set_position(400, top + height / 2)
+    return node
+end
+
 local function label(root, value, y, style)
     local node = render.create("hud", root)
     local _, height = text.set(node, style or "font_lab_caption", value, 760, "center")
@@ -105,6 +115,8 @@ function lab:create()
     self.root = render.create("hud")
     self.map_node = render.create("hud", self.root)
     self.map_node:set_visible(false)
+    self.top_text_backdrop = text_backdrop(self.root, 0, 94)
+    self.bottom_text_backdrop = text_backdrop(self.root, 525, 75)
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")

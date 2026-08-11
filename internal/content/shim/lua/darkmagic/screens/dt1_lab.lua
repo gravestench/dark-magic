@@ -14,6 +14,16 @@ local palettes = {
 }
 local lab = {}
 
+-- Lab artwork can be bright, noisy, or nearly the same color as the bitmap
+-- font. Draw these simple translucent bands after the tile node, but before
+-- the labels, so the diagnostic text always remains the topmost content.
+local function text_backdrop(root, top, height)
+    local node = render.create("hud", root)
+    node:fill_rect(800, height, 0, 0, 0, 128)
+    node:set_position(400, top + height / 2)
+    return node
+end
+
 local function label(root, value, y, style)
     local node = render.create("hud", root)
     local _, height = text.set(node, style or "font_lab_caption", value, 760, "center")
@@ -66,6 +76,8 @@ function lab:create()
     self.root = render.create("hud")
     self.tile_node = render.create("hud", self.root)
     self.tile_node:set_position(400, 315)
+    self.top_text_backdrop = text_backdrop(self.root, 0, 94)
+    self.bottom_text_backdrop = text_backdrop(self.root, 470, 130)
     self.title = label(self.root, "DT1 TILE LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 64, "font_lab_color")
     self.source = label(self.root, "", 486, "font_lab_color")
