@@ -37,7 +37,11 @@ local function file_name(path)
 end
 
 local function act_from_path(path)
-    local matched = tostring(path or ""):lower():match("/act([1-5])/")
+    local normalized = tostring(path or ""):lower()
+    -- Lord of Destruction stores Act V map art beneath "Expansion" rather
+    -- than an "Act5" directory, but it still uses the Act V display palette.
+    if normalized:match("/expansion/") then return 5 end
+    local matched = normalized:match("/act([1-5])/")
     if not matched then return nil end
     return tonumber(matched)
 end
