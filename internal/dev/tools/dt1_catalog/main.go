@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	assetinspect "github.com/gravestench/dark-magic/internal/assets/inspect"
 	"github.com/gravestench/dark-magic/internal/content"
 	ds1 "github.com/gravestench/ds1/pkg"
 	"github.com/gravestench/dt1"
@@ -56,6 +57,13 @@ func inspectStamp(source *content.FS, path string) error {
 		return fmt.Errorf("decode %q: %w", path, err)
 	}
 	fmt.Printf("%s (%dx%d)\n", path, stamp.Width, stamp.Height)
+	dependencies, err := assetinspect.DS1TilePaths(source, path)
+	if err != nil {
+		return err
+	}
+	for _, dependency := range dependencies {
+		fmt.Printf("  library %s\n", dependency)
+	}
 	for y, row := range stamp.Tiles {
 		for x, record := range row {
 			for layer, floor := range record.Floors {

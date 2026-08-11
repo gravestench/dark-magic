@@ -1596,6 +1596,7 @@ func (r *RenderCapability) Module() Module {
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
 		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
 		"preload_release":      commandHelp("dm.render.preload_release(job)", "Release bookkeeping for a completed preload job."),
+		"ds1_dependencies":     commandHelp("dm.render.ds1_dependencies(map)", "Resolve the mounted DT1 libraries declared by a DS1 stamp."),
 		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
 		"world_chunks":         commandHelp("dm.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
 		"world_tiles":          commandHelp("dm.render.world_tiles(world, palette)", "Return shared DT1 graphic placement geometry for an authoritative world map."),
@@ -1644,6 +1645,23 @@ func (r *RenderCapability) Module() Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"ds1_dependencies": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				paths, err := assetinspect.DS1TilePaths(assets, state.CheckString(1))
+				if err != nil {
+					state.RaiseError("resolving DS1 dependencies: %v", err)
+					return 0
+				}
+				result := state.NewTable()
+				for index, path := range paths {
+					result.RawSetInt(index+1, lua.LString(path))
+				}
+				state.Push(result)
+				return 1
+			},
 			"world_tiles": func(state *lua.LState) int {
 				if assets == nil {
 					state.RaiseError("render asset filesystem is unavailable")

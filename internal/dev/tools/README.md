@@ -9,4 +9,6 @@ Magic product binaries. Run them from the repository root with `go run`:
   `-listfile ./docs/Diablo2UberListfile.txt` to separately audit community-listed
   paths against the selected local MPQ stack.
 - `./internal/dev/tools/mpq2file` extracts one asset from a supported content source.
+- `./internal/dev/tools/dt1_catalog` prints DT1 identities and, with `-stamps`,
+  the exact mounted DT1 libraries declared by each DS1 stamp.
 - `./internal/dev/tools/shim_pack` packages the redistributable Dark Magic shim.

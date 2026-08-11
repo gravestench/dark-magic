@@ -33,6 +33,23 @@ Riiablo's decoder identifies the first 32-bit value as `0x00000007`, uses a tota
 
 Historical tools commonly describe the file as "7.6". Treat the two leading 32-bit words independently until owned-asset probes establish the exact semantics of the second word across asset families.
 
+An owned-asset probe found two Act I Barracks files whose leading words are
+`4,1`: `barracks.dt1` and `gargtrap.dt1`. They do **not** use
+the modern `0x114` header layout. Bytes following the signature contain compact
+counts and pointer tables, so accepting `4,1` and continuing with modern offsets
+would be unsafe. They require a distinct, researched legacy decoder before they
+can be inspected as tile libraries. The other nine observed Barracks DT1 files
+use the modern `7,6` signature.
+
+Barracks DS1 stamps retain historical `.tg1` dependency names. The mounted game
+assets provide corresponding modern `.dt1` libraries. A probe of ordinary,
+Horadric Malus forge, and secret-room stamps showed that their declarations
+resolve to the modern `7,6` files such as `basewall.dt1`, `floor.dt1`, and
+`objects.dt1`; they do not declare every DT1 in the neighboring directory.
+Consumers must therefore resolve the DS1 declaration table instead of loading
+the entire directory. This distinction lets valid quest stamps render while the
+unrelated `4,1` files remain explicitly unsupported and available for research.
+
 ### Library header
 
 | Offset | Size | Meaning | Confidence |
