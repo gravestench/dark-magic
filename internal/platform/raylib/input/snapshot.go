@@ -10,6 +10,7 @@ import (
 // This adapter disappears when input is constructed directly by the new host.
 func (s *Service) Snapshot() inputstate.Frame {
 	x, y := s.MouseCursorState()
+	scrollX, scrollY := s.MouseWheelState()
 	pointer := actionState(s.MouseButtonState()[int32(rl.MouseButtonLeft)])
 	confirm := actionState(s.KeyState(rl.KeyEnter))
 	cancel := actionState(s.KeyState(rl.KeyEscape))
@@ -21,6 +22,8 @@ func (s *Service) Snapshot() inputstate.Frame {
 	return inputstate.Frame{
 		CursorX: float64(x),
 		CursorY: float64(y),
+		ScrollX: float64(scrollX),
+		ScrollY: float64(scrollY),
 		Text:    string(text),
 		Actions: map[string]inputstate.ActionState{
 			"shell_toggle":    actionState(s.KeyState(rl.KeyGrave)),

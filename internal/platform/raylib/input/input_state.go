@@ -52,6 +52,12 @@ func (s *Service) MouseButtonState() map[int32]InputState {
 	return cloneStates(s.mouseButtonStates)
 }
 
+func (s *Service) MouseWheelState() (x, y float32) {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+	return s.scroll.X, s.scroll.Y
+}
+
 func cloneStates(states map[int32]InputState) map[int32]InputState {
 	result := make(map[int32]InputState, len(states))
 	for key, state := range states {
@@ -81,6 +87,13 @@ func (s *Service) updateMouseCursorState() {
 	p := rl.GetMousePosition()
 	x, y, inside := s.renderer.ScreenToGame(int(p.X), int(p.Y))
 	s.cursor.X, s.cursor.Y = retainLogicalCursor(s.cursor.X, s.cursor.Y, x, y, inside)
+	s.mux.Unlock()
+}
+
+func (s *Service) updateMouseWheelState() {
+	s.mux.Lock()
+	delta := rl.GetMouseWheelMoveV()
+	s.scroll.X, s.scroll.Y = delta.X, delta.Y
 	s.mux.Unlock()
 }
 
