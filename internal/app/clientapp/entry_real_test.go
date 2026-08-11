@@ -92,6 +92,18 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
 		t.Fatal(err)
 	}
+	monsters, found := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.identity")
+	if !found || monsters.Len() == 0 {
+		t.Fatal("real Blood Moor population produced no authoritative monsters")
+	}
+	locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.location")
+	for _, entity := range monsters.Entities() {
+		location, _ := locations.Get(entity)
+		level, _ := location.Get("level_id")
+		if level != int64(2) {
+			t.Fatalf("Blood Moor monster level=%v", level)
+		}
+	}
 
 	wantX, wantY, found := app.gameWorlds[1].ActOneTownEntry()
 	if !found {
@@ -102,7 +114,6 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		t.Fatal("player identity store was not admitted")
 	}
 	positions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.position")
-	locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.location")
 	for _, entity := range identities.Entities() {
 		identity, _ := identities.Get(entity)
 		id, _ := identity.Get("character_id")

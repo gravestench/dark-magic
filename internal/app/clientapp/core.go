@@ -20,6 +20,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
+	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -163,6 +164,7 @@ func (app *application) registerOfflineCommands() error {
 		"movement commands": gamesession.RegisterMovement,
 		"skill commands":    gamesession.RegisterSkillAssignments,
 		"player commands":   gameplayer.Register,
+		"monster commands":  gamemonster.Register,
 	} {
 		if err := register(app.offlineSession); err != nil {
 			return wrap("register "+name, err)
@@ -176,6 +178,9 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gametransition.Register(app.offlineSession, app.transitionAuthority); err != nil {
 		return wrap("register zone transition commands", err)
+	}
+	if err := app.queueEntryPopulation(); err != nil {
+		return err
 	}
 	movement := &gamesession.MovementController{}
 	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
@@ -250,6 +255,26 @@ func (app *application) registerOfflineCommands() error {
 		return sequencer.Assign(commands)
 	}
 	app.playerControl = movement
+	return nil
+}
+
+func (app *application) queueEntryPopulation() error {
+	snapshot, err := app.gameData.Snapshot()
+	if err != nil {
+		return wrap("load Blood Moor population records", err)
+	}
+	plan, err := gamemonster.BuildBloodMoorPopulation(app.gameWorldZones[2], app.gameWorlds[2], snapshot)
+	if err != nil {
+		return wrap("plan Blood Moor population", err)
+	}
+	if err := gamemonster.SubmitPopulation(app.offlineSession, plan, "population", 1); err != nil {
+		return wrap("queue Blood Moor population", err)
+	}
+	checksum, err := plan.Checksum()
+	if err != nil {
+		return wrap("checksum Blood Moor population", err)
+	}
+	slog.Info("planned Blood Moor population", "spawns", len(plan.Spawns), "trace_entries", len(plan.Trace), "checksum", checksum)
 	return nil
 }
 

@@ -5,6 +5,7 @@ package monster
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
@@ -49,6 +50,9 @@ type Definition struct {
 	AttackRange    float64           `json:"attack_range"`
 	Killable       bool              `json:"killable"`
 	MonLvlLevel    int               `json:"mon_level_row"`
+	MinGroup       int               `json:"min_group"`
+	MaxGroup       int               `json:"max_group"`
+	Rarity         int               `json:"rarity"`
 }
 
 // FromCatalog resolves the raw legacy halves and their level baseline before
@@ -180,11 +184,24 @@ func JoinDefinition(stats models.MonsterStats, graphics models.MonsterStats2, le
 		PhysicalMin: damageMin, PhysicalMax: damageMax, Experience: int64(values.experience),
 		ColliderRadius: diameter / 2, SelectRadius: diameter / 2, Velocity: int64(stats.Velocity), Killable: stats.Killable,
 		ThinkInterval: uint64(thinkInterval), AggroRadius: float64(aggroRadius), AttackRange: float64(attackRange),
+		MinGroup: authoredPositive(stats.MinGrp, 1), MaxGroup: authoredPositive(stats.MaxGrp, 1),
+		Rarity: authoredPositive(stats.Rarity, 1),
+	}
+	if definition.MaxGroup < definition.MinGroup {
+		definition.MaxGroup = definition.MinGroup
 	}
 	if level != nil {
 		definition.MonLvlLevel = level.Level
 	}
 	return definition, nil
+}
+
+func authoredPositive(value string, fallback int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
 }
 
 func scale(base, ratio int) (int, error) {

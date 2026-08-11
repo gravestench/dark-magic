@@ -23,10 +23,13 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
 - M21.9 a headless straight-missile vertical slice with cast-effect creation,
   snapshotted damage and motion facts, swept unit contact, combat-owned impact,
   range/lifetime removal, semantic events, and replay-equivalent restoration.
+- M21.10 an inspectable deterministic Blood Moor population plan derived from
+  generated-zone and typed monster/level facts, collision-aware placement, and
+  privileged replayable materialization independent of renderer residency.
 
 Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
 
-## Immediate queue: M21.10 through M21.12
+## Immediate queue: M21.11 through M21.12
 
 ### Completed: M21.8 timed state engine
 
@@ -69,7 +72,7 @@ checkpointed cast, motion, swept unit collision, combat impact, and removal.
 Retail missile definitions and additional movement/contact policies remain
 implementation-driven verification work.
 
-### 1. M21.10: Blood Moor population slice
+### Completed: M21.10 Blood Moor population slice
 
 Goal: replace the hand-created hostile fixture with an inspectable deterministic population/spawn plan derived from generated-zone content.
 
@@ -83,9 +86,11 @@ zone population recipe
        -> presentation
 ```
 
-Do not make render culling decide whether a monster exists.
+The first explicitly synthetic room-density policy now proves this separation
+and records every suppression/fallback decision. Exact retail density, room
+eligibility, and pack-quality behavior remain verification work.
 
-### 2. M21.11: monster death transaction
+### 1. M21.11: monster death transaction
 
 Goal: replace the current minimal lethal consequence with one atomic semantic death transaction.
 
@@ -103,7 +108,7 @@ Join, in deterministic order:
 
 Death is not merely `hp <= 0`; it is an authoritative transition whose consequences replay together.
 
-### 3. M21.12: owned-unit relation
+### 2. M21.12: owned-unit relation
 
 Goal: establish generic ownership before summons, pets, traps, minions, and hirelings each invent separate owner/attribution models.
 
