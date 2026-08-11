@@ -4,6 +4,8 @@ This document records the external evidence used by Dark Magic's clean-room rese
 
 The goal is to recover observable format and runtime behavior, not to translate another engine. Facts extracted from implementation sources must be restated independently and corroborated where possible.
 
+Gameplay-system, save, item, stat, and timing sources are tracked separately in [../research/SYSTEMS_SOURCE_MATRIX.md](../research/SYSTEMS_SOURCE_MATRIX.md). Sources that inform both binary formats and gameplay may appear in both matrices with the role and inspected paths made explicit.
+
 ## Confidence labels
 
 - **verified**: direct binary observation or multiple independent sources agree.
