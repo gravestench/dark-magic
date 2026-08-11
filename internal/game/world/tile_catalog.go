@@ -28,6 +28,7 @@ type TileReference struct {
 	MaterialFlags dt1.MaterialFlags
 	Width         int32
 	Height        int32
+	YAdjust       int32
 	Rarity        int32
 	SubTileFlags  [25]dt1.SubTileFlags
 }
@@ -69,11 +70,17 @@ func LoadTileCatalog(source fs.FS, paths []string) (*TileCatalog, error) {
 				_ = file.Close()
 				return nil, fmt.Errorf("world: index DT1 %q tile %d: %w", path, index, metadataErr)
 			}
+			minimumBlockY, _, boundsErr := opened.TileBlockYBounds(index)
+			if boundsErr != nil {
+				_ = file.Close()
+				return nil, fmt.Errorf("world: read DT1 %q tile %d block bounds: %w", path, index, boundsErr)
+			}
 			references = append(references, TileReference{
 				Identity: TileIdentity{Orientation: tile.Type, MainIndex: tile.Style, SubIndex: tile.Sequence},
 				Path:     path, Index: index, Direction: tile.Direction, RoofHeight: tile.RoofHeight,
 				MaterialFlags: tile.MaterialFlags, Width: tile.Width, Height: tile.Height,
-				Rarity: tile.RarityFrameIndex, SubTileFlags: tile.SubTileFlags,
+				YAdjust: int32(minimumBlockY) + TilePixelHeight,
+				Rarity:  tile.RarityFrameIndex, SubTileFlags: tile.SubTileFlags,
 			})
 		}
 		if closeErr := file.Close(); closeErr != nil {

@@ -24,9 +24,9 @@ func (c Coordinates) SubtileToTile(point Point) Point {
 
 func (c Coordinates) SubtileToWorldPixel(point Point) Point {
 	originX := float64(c.HeightTiles*TilePixelWidth/2 + PreviewMargin)
-	// Integer world coordinates name collision-cell CENTERS. A DT1 floor tile
-	// is five subtiles tall, so the first center is half of one subtile diamond
-	// (8 px) below the tile's top—not half of the whole tile (40 px).
+	// The tile origin is its top isometric vertex, while an integer gameplay
+	// position names the CENTER of that subtile's 16x8 occupancy diamond. Riiablo
+	// applies this same half-subtile height when drawing filled walkable cells.
 	originY := float64(PreviewMargin + TilePixelHeight/(2*SubtilesPerTile))
 	return Point{
 		X: originX + (point.X-point.Y)*TilePixelWidth/(2*SubtilesPerTile),

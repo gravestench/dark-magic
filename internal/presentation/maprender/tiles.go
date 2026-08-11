@@ -195,9 +195,10 @@ func referenceYAdjust(reference world.TileReference, layer world.TileLayer) int 
 	if layer == world.LayerFloor {
 		return 0
 	}
-	// DT1 wall bounds extend upward from the tile baseline. The block minimum
-	// used by the diagnostic compositor is equivalent to -abs(Height).
-	return -absolute(int(reference.Height)) + world.TilePixelHeight
+	// OpenDiablo2 derives wall/object placement from the minimum block-header Y,
+	// not the DT1 tile header Height. TileCatalog obtains this compact metadata
+	// without decoding or reading pixel payloads.
+	return int(reference.YAdjust)
 }
 
 // Visible returns draw indexes intersecting a map-pixel viewport. Callers keep
