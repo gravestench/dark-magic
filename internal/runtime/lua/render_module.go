@@ -21,6 +21,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/assets/decode"
 	assetinspect "github.com/gravestench/dark-magic/internal/assets/inspect"
 	cachepkg "github.com/gravestench/dark-magic/internal/cache"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	dc6 "github.com/gravestench/dc6/pkg"
 	dcc "github.com/gravestench/dcc/pkg"
@@ -813,6 +815,29 @@ func (c *renderAssetCache) loadDS1(assets fs.FS, name string, tiles []string, pa
 	return value.(image.Image), nil
 }
 
+func (c *renderAssetCache) loadDS1Chunks(assets fs.FS, name string, tiles []string, palette string, chunkSize int) (*maprender.Set, error) {
+	key := fmt.Sprintf("ds1-chunks\x00%s\x00%s\x00%s\x00%d", name, strings.Join(tiles, "\x00"), palette, chunkSize)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		mapData, err := gameworld.Load(assets, name, tiles)
+		if err != nil {
+			return nil, 0, err
+		}
+		chunks, err := maprender.Compose(assets, mapData, palette, chunkSize)
+		if err != nil {
+			return nil, 0, err
+		}
+		weight := 0
+		for _, chunk := range chunks.Chunks {
+			weight += imageWeight(chunk.Pixels)
+		}
+		return chunks, max(weight, 1), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(*maprender.Set), nil
+}
+
 func (n *ownedRenderNode) release() error {
 	n.once.Do(func() {
 		n.err = n.composer.Destroy(n.id)
@@ -1288,6 +1313,7 @@ func (r *RenderCapability) Module() Module {
 		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
 		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
 		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
+		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
 		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
 		"asset_exists":         commandHelp("dm.render.asset_exists(path)", "Report whether a render asset exists."),
 		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
@@ -1307,6 +1333,7 @@ func (r *RenderCapability) Module() Module {
 		"clear_clip":                 commandHelp("node:clear_clip()", "Remove the node clip rectangle."),
 		"set_image":                  commandHelp("node:set_image(path)", "Render a decoded image asset."),
 		"set_ds1":                    commandHelp("node:set_ds1(map, tiles, palette)", "Render a DS1 map using mounted DT1 tiles and a palette."),
+		"set_ds1_chunk":              commandHelp("node:set_ds1_chunk(map, tiles, palette, chunk_index [, chunk_size])", "Render one sparse DS1 map chunk and return its map-space geometry."),
 		"set_dt1":                    commandHelp("node:set_dt1(path, palette, tile_index[, view])", "Render one lazy-decoded DT1 tile and return its dimensions and metadata."),
 		"set_dc6":                    commandHelp("node:set_dc6(path, frame [, options])", "Render one DC6 frame."),
 		"set_dc6_combined":           commandHelp("node:set_dc6_combined(path [, options])", "Reconstruct and render one tiled DC6 page."),
@@ -1325,6 +1352,45 @@ func (r *RenderCapability) Module() Module {
 	}}}), Loader: func(state *lua.LState) int {
 		registerRenderNodeType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"ds1_chunks": func(state *lua.LState) int {
+				if assets == nil {
+					state.RaiseError("render asset filesystem is unavailable")
+					return 0
+				}
+				mapName := state.CheckString(1)
+				tileTable := state.CheckTable(2)
+				tiles := make([]string, 0, tileTable.Len())
+				for index := 1; index <= tileTable.Len(); index++ {
+					value, ok := tileTable.RawGetInt(index).(lua.LString)
+					if !ok || value == "" {
+						state.RaiseError("DS1 tile %d must be a non-empty path", index)
+						return 0
+					}
+					tiles = append(tiles, string(value))
+				}
+				chunks, err := cache.loadDS1Chunks(assets, mapName, tiles, state.CheckString(3), state.OptInt(4, maprender.DefaultChunkSize))
+				if err != nil {
+					state.RaiseError("inspecting DS1 chunks %q: %v", mapName, err)
+					return 0
+				}
+				result := state.NewTable()
+				result.RawSetString("width", lua.LNumber(chunks.Width))
+				result.RawSetString("height", lua.LNumber(chunks.Height))
+				result.RawSetString("chunk_size", lua.LNumber(chunks.ChunkSize))
+				entries := state.NewTable()
+				for index, chunk := range chunks.Chunks {
+					entry := state.NewTable()
+					entry.RawSetString("index", lua.LNumber(index))
+					entry.RawSetString("x", lua.LNumber(chunk.X))
+					entry.RawSetString("y", lua.LNumber(chunk.Y))
+					entry.RawSetString("width", lua.LNumber(chunk.Pixels.Bounds().Dx()))
+					entry.RawSetString("height", lua.LNumber(chunk.Pixels.Bounds().Dy()))
+					entries.RawSetInt(index+1, entry)
+				}
+				result.RawSetString("chunks", entries)
+				state.Push(result)
+				return 1
+			},
 			"preload": func(state *lua.LState) int {
 				if assets == nil {
 					state.RaiseError("render asset filesystem is unavailable")
@@ -1708,6 +1774,48 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(decoded.Bounds().Dx()))
 			state.Push(lua.LNumber(decoded.Bounds().Dy()))
 			return 2
+		},
+		"set_ds1_chunk": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+			mapName := state.CheckString(2)
+			tileTable := state.CheckTable(3)
+			tiles := make([]string, 0, tileTable.Len())
+			for index := 1; index <= tileTable.Len(); index++ {
+				value, ok := tileTable.RawGetInt(index).(lua.LString)
+				if !ok || value == "" {
+					state.RaiseError("DS1 tile %d must be a non-empty path", index)
+					return 0
+				}
+				tiles = append(tiles, string(value))
+			}
+			chunkIndex := state.CheckInt(5)
+			chunkSize := state.OptInt(6, maprender.DefaultChunkSize)
+			chunks, err := node.cache.loadDS1Chunks(node.assets, mapName, tiles, state.CheckString(4), chunkSize)
+			if err != nil {
+				state.RaiseError("rendering DS1 chunks %q: %v", mapName, err)
+				return 0
+			}
+			if chunkIndex < 0 || chunkIndex >= len(chunks.Chunks) {
+				state.RaiseError("DS1 chunk %d out of range [0,%d)", chunkIndex, len(chunks.Chunks))
+				return 0
+			}
+			chunk := chunks.Chunks[chunkIndex]
+			if err := node.setImage(chunk.Pixels); err != nil {
+				state.RaiseError("updating DS1 chunk node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(chunk.X))
+			state.Push(lua.LNumber(chunk.Y))
+			state.Push(lua.LNumber(chunk.Pixels.Bounds().Dx()))
+			state.Push(lua.LNumber(chunk.Pixels.Bounds().Dy()))
+			state.Push(lua.LNumber(chunks.Width))
+			state.Push(lua.LNumber(chunks.Height))
+			state.Push(lua.LNumber(len(chunks.Chunks)))
+			return 7
 		},
 		"set_dt1": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

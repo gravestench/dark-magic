@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -210,6 +211,11 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		if err == nil {
 			p.warm(pixels)
 		}
+		return err
+	case "ds1_chunks":
+		// Composition is CPU-side preload work. Individual chunk textures become
+		// demand-resident only when a viewport creates their retained nodes.
+		_, err := p.cache.loadDS1Chunks(p.assets, request.Path, request.Tiles, request.Palette, maprender.DefaultChunkSize)
 		return err
 	default:
 		return fmt.Errorf("unsupported asset kind %q", request.Kind)

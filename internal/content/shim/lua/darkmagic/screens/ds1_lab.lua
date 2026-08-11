@@ -89,7 +89,7 @@ function lab:queue_preview()
         return
     end
     self.pending_job = render.preload({{
-        kind = "ds1",
+        kind = "ds1_chunks",
         path = self.path,
         tiles = self.tiles,
         palette = self.palette,
@@ -113,8 +113,11 @@ end
 function lab:create()
     local dev = require("dm.dev/v1")
     self.root = render.create("hud")
-    self.map_node = render.create("hud", self.root)
-    self.map_node:set_visible(false)
+    self.map_root = render.create("hud", self.root)
+    self.map_root:set_z(-100)
+    self.map_root:set_visible(false)
+    self.map_root:set_clip(preview.left, preview.top, preview.right - preview.left, preview.bottom - preview.top)
+    self.chunk_nodes = {}
     self.top_text_backdrop = text_backdrop(self.root, 0, 94)
     self.bottom_text_backdrop = text_backdrop(self.root, 525, 75)
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
@@ -143,11 +146,46 @@ function lab:fit()
 end
 
 function lab:position_map()
-    self.map_node:set_scale(self.zoom, self.zoom)
+    self.map_root:set_scale(self.zoom, self.zoom)
     -- The retained renderer anchors images at their center. Pan that center
     -- around the middle of the map preview instead of applying top-left layout
     -- math a second time.
-    self.map_node:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
+    self.map_root:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
+end
+
+function lab:clear_chunks()
+    for index, node in pairs(self.chunk_nodes) do
+        if node:exists() then node:destroy() end
+        self.chunk_nodes[index] = nil
+    end
+end
+
+-- Only chunks intersecting the viewport own render nodes and therefore demand
+-- native textures. A small margin avoids churn while panning near one edge.
+function lab:refresh_chunks()
+    if not self.chunk_set then return end
+    local center_x, center_y = 400 + self.pan_x, 95 + 430 / 2 + self.pan_y
+    local admitted = 0
+    for _, chunk in ipairs(self.chunk_set.chunks) do
+        local left = center_x + (chunk.x - self.width / 2) * self.zoom
+        local top = center_y + (chunk.y - self.height / 2) * self.zoom
+        local right = left + chunk.width * self.zoom
+        local bottom = top + chunk.height * self.zoom
+        local visible = right >= preview.left - 64 and left <= preview.right + 64
+            and bottom >= preview.top - 64 and top <= preview.bottom + 64
+        local key = chunk.index + 1
+        if visible and not self.chunk_nodes[key] and admitted < 2 then
+            local node = render.create("hud", self.map_root)
+            node:set_ds1_chunk(self.path, self.tiles, self.palette, chunk.index)
+            node:set_position(chunk.x + chunk.width / 2 - self.width / 2,
+                chunk.y + chunk.height / 2 - self.height / 2)
+            self.chunk_nodes[key] = node
+            admitted = admitted + 1
+        elseif not visible and self.chunk_nodes[key] then
+            self.chunk_nodes[key]:destroy()
+            self.chunk_nodes[key] = nil
+        end
+    end
 end
 
 function lab:set_zoom(value, anchor_x, anchor_y, continuous)
@@ -165,26 +203,31 @@ end
 
 function lab:rebuild()
     if self.path == "" or #self.tiles == 0 then
-        self.map_node:set_visible(false)
+        self.map_root:set_visible(false)
+        self:clear_chunks()
         text.set(self.status, "font_lab_color", "[gold]NO DS1 RECIPE SELECTED", 760, "center")
         text.set(self.detail, "font_lab_color", "[white]Pass --ds1-path and comma-separated --ds1-tiles (plus the act palette if needed)", 760, "center")
         self.dirty = false
         return
     end
-    local ok, width, height = pcall(function()
-        return self.map_node:set_ds1(self.path, self.tiles, self.palette)
+    local ok, chunks = pcall(function()
+        return render.ds1_chunks(self.path, self.tiles, self.palette)
     end)
     if ok then
-        self.width, self.height = width, height
+        self.chunk_set = chunks
+        self.width, self.height = chunks.width, chunks.height
+        self:clear_chunks()
         self:fit()
         self:position_map()
-        self.map_node:set_visible(true)
-        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), width, height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        self.map_root:set_visible(true)
+        self:refresh_chunks()
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d chunks   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), self.width, self.height, #chunks.chunks, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
         text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
     else
-        self.map_node:set_visible(false)
+        self.map_root:set_visible(false)
+        self:clear_chunks()
         text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
-        text.set(self.detail, "font_lab_color", "[white]" .. tostring(width), 760, "center")
+        text.set(self.detail, "font_lab_color", "[white]" .. tostring(chunks), 760, "center")
     end
     self.dirty = false
 end
@@ -195,7 +238,7 @@ function lab:update()
         if not status or not status.done then return end
         self.pending_job = nil
         if status.failed > 0 then
-            self.map_node:set_visible(false)
+            self.map_root:set_visible(false)
             text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
             text.set(self.detail, "font_lab_color", "[white]" .. tostring(status.errors[1] or "preview preload failed"), 760, "center")
             return
@@ -204,6 +247,7 @@ function lab:update()
         self.dirty = true
     end
     if self.dirty then self:rebuild() end
+    self:refresh_chunks()
     if input.pressed("confirm") then self:random_asset(); return end
     if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
     if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
@@ -249,7 +293,8 @@ function lab:update()
     end
     if moved then
         self:position_map()
-        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), self.width, self.height, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
+        self:refresh_chunks()
+        text.set(self.status, "font_lab_color", string.format("[blue]%s   [white]%dx%d   %d chunks   %d DT1 source%s   zoom %.3fx   [green]ACT%d", file_name(self.path), self.width, self.height, self.chunk_set and #self.chunk_set.chunks or 0, #self.tiles, #self.tiles == 1 and "" or "s", self.zoom, self.palette_index), 760, "center")
     end
 end
 
