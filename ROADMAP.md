@@ -784,6 +784,12 @@ complete until its actions are driven by authoritative game state and commands.
   sockets. Vendor stock is shown in paged category grids, but selling is an
   authoritative transaction that auto-arranges the transferred item instead of
   a pointer drop into a player-selected vendor cell. Current progress:
+  Treat a dead player's corpse as another durable authority-owned item
+  container. Death atomically transfers the equipped/carried item identities
+  that Diablo rules assign to the corpse; its world entity and contents survive
+  disconnect, reconnect, realm handoff, and server checkpoints until recovery.
+  Recovery transfers contents through ordinary validated container operations
+  and must never duplicate or silently discard an item.
   fixed-tick authority, copied Lua snapshots,
   backpack, stash, and cube grid interaction, canonical body-location
   interaction, four-slot belt interaction, and MPQ-backed item presentation
@@ -1026,6 +1032,10 @@ complete until its actions are driven by authoritative game state and commands.
     explicit town-entry warp on the edge opposite the selected town exit.
     Structural rivers/cliffs/bridges and presentation seam validation remain
     before this checkpoint is complete.
+    The immutable outdoor recipe now emits a continuous river, one explicit
+    passable bridge on the guaranteed route, and a cliff ridge with a three-tile
+    opening. Mapgen Lab renders these server-owned structural facts without asset
+    decoding. Legacy DT1 realization and interactive seam capture remain pending.
     Hidden DS1 orientation-10/11 exit cells are now retained as semantic-only
     tile placements, and a production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable

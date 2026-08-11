@@ -134,19 +134,29 @@ type PathTile struct {
 	X, Y int
 }
 
+// StructureTile reserves one world-tile cell for an outdoor structural layer.
+// Kind describes the simulation meaning; presentation later chooses suitable
+// DT1 artwork. Passable is authoritative and makes bridge openings explicit.
+type StructureTile struct {
+	X, Y     int
+	Kind     string
+	Passable bool
+}
+
 // Definition is the mutable input accepted by NewZone. The constructor copies,
 // validates, and canonicalizes it before exposing an immutable Zone.
 type Definition struct {
-	Request Request
-	Kind    Kind
-	Bounds  Bounds
-	Stamps  []Stamp
-	Rooms   []Room
-	Links   []Link
-	Warps   []Warp
-	Spawns  []Spawn
-	Paths   []PathTile
-	Trace   []string
+	Request    Request
+	Kind       Kind
+	Bounds     Bounds
+	Stamps     []Stamp
+	Rooms      []Room
+	Links      []Link
+	Warps      []Warp
+	Spawns     []Spawn
+	Paths      []PathTile
+	Structures []StructureTile
+	Trace      []string
 }
 
 func validateDefinition(def Definition) error {
@@ -217,6 +227,26 @@ func validateDefinition(def Definition) error {
 			return fmt.Errorf("%w: duplicate path tile %d,%d", ErrZone, tile.X, tile.Y)
 		}
 		seenPath[tile] = struct{}{}
+	}
+	seenStructure := make(map[[2]int]struct{}, len(def.Structures))
+	for _, tile := range def.Structures {
+		if tile.X < def.Bounds.X || tile.Y < def.Bounds.Y || tile.X >= def.Bounds.X+def.Bounds.Width || tile.Y >= def.Bounds.Y+def.Bounds.Height {
+			return fmt.Errorf("%w: out-of-bounds structure tile %d,%d", ErrZone, tile.X, tile.Y)
+		}
+		if tile.Kind != "river" && tile.Kind != "cliff" && tile.Kind != "bridge" {
+			return fmt.Errorf("%w: unknown structure kind %q", ErrZone, tile.Kind)
+		}
+		position := [2]int{tile.X, tile.Y}
+		if _, duplicate := seenStructure[position]; duplicate {
+			return fmt.Errorf("%w: overlapping structure tile %d,%d", ErrZone, tile.X, tile.Y)
+		}
+		seenStructure[position] = struct{}{}
+		if tile.Kind == "bridge" && !tile.Passable {
+			return fmt.Errorf("%w: bridge %d,%d must be passable", ErrZone, tile.X, tile.Y)
+		}
+		if tile.Kind != "bridge" && tile.Passable {
+			return fmt.Errorf("%w: %s %d,%d cannot be passable", ErrZone, tile.Kind, tile.X, tile.Y)
+		}
 	}
 	return nil
 }

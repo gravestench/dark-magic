@@ -127,6 +127,35 @@ func TestOutdoorRouteIsContiguousAcrossEveryCardinalPair(t *testing.T) {
 	}
 }
 
+func TestBloodMoorStructuresKeepRoutePassableAcrossEveryCardinalPair(t *testing.T) {
+	for _, direction := range []string{"north", "east", "south", "west"} {
+		entry := townEdgeWarp(80, 80, oppositeDirection(direction))
+		exit := nextLevelEdgeWarp(80, 80, entry.Direction)
+		path := outdoorPathTiles(outdoorRoute(42, 10, 10, entry.Direction), 10, 10, entry, exit)
+		pathSet := make(map[PathTile]bool, len(path))
+		for _, tile := range path {
+			pathSet[tile] = true
+		}
+		structures := outdoorStructures(42, 80, 80, entry.Direction, path)
+		bridges := 0
+		for _, tile := range structures {
+			onPath := pathSet[PathTile{X: tile.X, Y: tile.Y}]
+			if onPath && !tile.Passable {
+				t.Fatalf("%s route blocked by %s at %d,%d", direction, tile.Kind, tile.X, tile.Y)
+			}
+			if tile.Kind == "bridge" {
+				bridges++
+				if !onPath || !tile.Passable {
+					t.Fatalf("%s bridge is not a passable route crossing: %#v", direction, tile)
+				}
+			}
+		}
+		if bridges != 1 {
+			t.Fatalf("%s bridges = %d, want 1", direction, bridges)
+		}
+	}
+}
+
 func abs(value int) int {
 	if value < 0 {
 		return -value
