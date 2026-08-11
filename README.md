@@ -186,7 +186,9 @@ The project is under active architectural reconstruction and is not yet a
 playable Diablo II replacement. The application host, layered content system,
 retained renderer boundary, typed data catalog, deterministic loot foundation,
 Lua-defined Akara ECS, DS1/DT1 world decoding, and developer inspection tools
-are operational. Full world generation, Diablo combat and progression,
+are operational. The playable world presents DS1 maps through sparse,
+camera-culled texture chunks whose placement follows authoritative ECS camera
+coordinates; it does not allocate a full-map GPU texture. Full world generation, Diablo combat and progression,
 authoritative networking, and end-to-end gameplay remain in progress.
 
 See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and

@@ -27,6 +27,7 @@ type AssetPreloadRequest struct {
 	Components map[string]string
 	Direction  int
 	Frame      int
+	ChunkSize  int
 	Anchor     string
 }
 
@@ -215,7 +216,11 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 	case "ds1_chunks":
 		// Composition is CPU-side preload work. Individual chunk textures become
 		// demand-resident only when a viewport creates their retained nodes.
-		_, err := p.cache.loadDS1Chunks(p.assets, request.Path, request.Tiles, request.Palette, maprender.DefaultChunkSize)
+		chunkSize := request.ChunkSize
+		if chunkSize <= 0 {
+			chunkSize = maprender.DefaultChunkSize
+		}
+		_, err := p.cache.loadDS1Chunks(p.assets, request.Path, request.Tiles, request.Palette, chunkSize)
 		return err
 	default:
 		return fmt.Errorf("unsupported asset kind %q", request.Kind)
@@ -246,6 +251,9 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 		}
 		if value, ok := definition.RawGetString("frame").(lua.LNumber); ok {
 			request.Frame = int(value)
+		}
+		if value, ok := definition.RawGetString("chunk_size").(lua.LNumber); ok {
+			request.ChunkSize = int(value)
 		}
 		request.Anchor = stringField("anchor")
 		if request.Anchor == "" {

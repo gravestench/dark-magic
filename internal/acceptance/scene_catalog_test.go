@@ -66,6 +66,32 @@ func TestMessagesShellLeavesGameplayLive(t *testing.T) {
 	}
 }
 
+func TestGameWorldUsesChunkedAuthoritativeCameraAdapter(t *testing.T) {
+	t.Parallel()
+
+	root := repositoryRoot(t)
+	path := filepath.Join(root, "internal/content/shim/lua/darkmagic/screens/game_world.lua")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(contents)
+	for _, required := range []string{
+		`require("darkmagic.presentation.chunked_map")`,
+		"chunked_map.create(",
+		"chunked_map.update(",
+	} {
+		if !strings.Contains(source, required) {
+			t.Errorf("game_world is missing %q", required)
+		}
+	}
+	for _, retired := range []string{"set_ds1(", "initial_camera_x", "initial_camera_y"} {
+		if strings.Contains(source, retired) {
+			t.Errorf("game_world still contains retired full-map/baseline path %q", retired)
+		}
+	}
+}
+
 func readBootstrapLua(t *testing.T, root string) string {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(root, "internal/content/shim/lua/darkmagic/bootstrap/*.lua"))

@@ -552,10 +552,10 @@ complete until its actions are driven by authoritative game state and commands.
   is gone: the world scene now binds an optional selected-character COF/DCC
   appearance snapshot and keeps metadata-only characters invisible instead of
   fabricating world art. The Lua-authored world now owns an MPQ-backed DS1
-  presentation node decoded from manifest-selected DT1 tiles and an Act palette;
-  it follows deterministic camera displacement without transferring filesystem
-  or native renderer ownership into Lua. Tile semantics, collision, entities,
-  and streaming remain pending M20. The unused direct-Raylib compatibility world
+  presentation adapter decoded from manifest-selected DT1 tiles and an Act
+  palette; camera-near chunks follow absolute authoritative camera coordinates
+  without transferring filesystem or native renderer ownership into Lua. Tile
+  generation and entities remain pending M20. The unused direct-Raylib compatibility world
   package and its public renderer-object dependency have now been removed.
 - [ ] Assemble the 640x480 and 800x600 control panels, globes, stamina and
   experience bars, belt, skill buttons, minipanel, tooltips, and cursor states.
@@ -864,8 +864,10 @@ complete until its actions are driven by authoritative game state and commands.
   demand-resident versus total chunks and authored object placements, and is
   verified against the Act I Barracks fixture. Objects remain semantic
   placements for authoritative systems rather than pixels baked into chunks.
-- [ ] M20.4: Migrate `game_world` to the shared chunked adapter and derive its
-  camera exclusively from authoritative player/world coordinates.
+- [x] M20.4: Migrate `game_world` to the shared chunked adapter. CPU composition
+  is queued off-thread, camera-near textures are admitted gradually and culled
+  against the unobscured left/right view, and map placement derives exclusively
+  from absolute authoritative camera coordinates without a scene-entry baseline.
 
 ## M21: Diablo simulation
 
@@ -1424,10 +1426,10 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 
 - [x] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
 - [x] Avoid redundant pixel conversion and uploads when creating a texture.
-- [ ] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
-  The previous checked state described an intended optimization, but the audited
-  runtime `set_ds1` path still rasterizes and uploads one complete RGBA surface.
-  M20.2 owns the actual replacement.
+- [x] Chunk large DS1 maps into culled textures instead of one full-map GPU texture.
+  DS1 Lab and `game_world` now share sparse, layered CPU composition and
+  demand-resident retained nodes. The full-image composer remains only for the
+  command-line diagnostic PNG exporter.
 - [x] Cache scene child ordering until topology or Z-index changes.
 - [x] Avoid unconditional per-frame callback and input-map allocations.
 - [x] Pre-index dynamic loot candidates by item type and level.

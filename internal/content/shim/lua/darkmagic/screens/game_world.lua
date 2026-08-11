@@ -24,6 +24,7 @@ local saves = require("dm.save/v1")
 local data = require("dm.data/v1")
 local game_hud = require("darkmagic.ui.game_hud")
 local player_composite = require("darkmagic.gameplay.player_composite")
+local chunked_map = require("darkmagic.presentation.chunked_map")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
 local screen = manifest.screens.game_world
@@ -46,18 +47,13 @@ return {
             self.world = assert(world.load(screen.map.ds1, screen.map.dt1))
             self.world_dimensions = self.world:dimensions()
 
-            -- The render node below is a disposable PICTURE of the DS1. It is not
-            -- the simulation map authority and should never become collision state.
-            self.map = render.create("world", self.root)
-            local width, height = self.map:set_ds1(
-                screen.map.ds1,
-                screen.map.dt1,
-                screen.map.palette
-            )
-
-            self.map_width, self.map_height = width, height
-            self.map:set_z(screen.map.z)
-            self.map:set_position(screen.map.screen_x, screen.map.screen_y)
+            -- Presentation receives the same recipe, but uploads only chunks near
+            -- the camera. It remains a disposable picture of authoritative facts.
+            self.map = chunked_map.create(self.root, screen.map, {
+                z = screen.map.z,
+                viewport_width = manifest.resolution.width,
+                viewport_height = manifest.resolution.height,
+            })
         end
 
         -- Hero sprite/composite is presentation only. The authoritative hero is
@@ -107,9 +103,6 @@ return {
         -- This creates world helper state and attempts to bind the session-owned player.
         self.gameplay = self.gameplay_world.create(world_width, world_height, self.world, "local-player")
 
-        -- Camera-relative map movement uses the first bound camera position as a
-        -- baseline. Nil means "we have not observed the first position yet."
-        self.initial_camera_x, self.initial_camera_y = nil, nil
     end,
 
     update = function(self, elapsed, focused, input_allowed, world_view)
@@ -253,10 +246,6 @@ return {
             camera_x, camera_y = self.world:subtile_to_pixel(camera_x, camera_y)
         end
 
-        if not self.initial_camera_x then
-            self.initial_camera_x, self.initial_camera_y = camera_x, camera_y
-        end
-
         -- Hero normally targets manifest center. Side overlays ask the world to
         -- frame into the unobscured half instead.
         local target_x = screen.hero.screen_x
@@ -266,14 +255,11 @@ return {
             target_x = manifest.resolution.width * 3 / 4
         end
 
-        local view_offset_x = target_x - screen.hero.screen_x
-
         if self.map then
-            -- Move the map opposite camera delta. That creates the visual effect
-            -- of the camera moving through a world while the viewport stays still.
-            self.map:set_position(
-                screen.map.screen_x + view_offset_x - (camera_x - self.initial_camera_x),
-                screen.map.screen_y - (camera_y - self.initial_camera_y)
+            -- Absolute authoritative camera coordinates determine both chunk
+            -- culling and placement. Re-entering the scene cannot accumulate drift.
+            chunked_map.update(
+                self.map, camera_x, camera_y, target_x, screen.hero.screen_y, world_view
             )
         end
 
@@ -288,5 +274,6 @@ return {
         -- gameplay.world owns only its presentation camera entity; its destroy
         -- helper intentionally leaves session-owned hero authority alone.
         self.gameplay_world.destroy(self.gameplay)
+        chunked_map.destroy(self.map)
     end,
 }
