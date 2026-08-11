@@ -52,6 +52,27 @@ function lab:infer_palette()
     self.palette = palettes[act]
 end
 
+-- DS1 composition can decode many DT1 files. Queue that CPU work on the
+-- bounded asset workers so a cold random map cannot consume the Lua update
+-- deadline. The old complete preview remains visible until the new one is
+-- ready, which also avoids presenting a partially composed map.
+function lab:queue_preview()
+    if self.path == "" or #self.tiles == 0 then
+        self.pending_job = nil
+        self.dirty = true
+        return
+    end
+    self.pending_job = render.preload({{
+        kind = "ds1",
+        path = self.path,
+        tiles = self.tiles,
+        palette = self.palette,
+    }})
+    self.dirty = false
+    text.set(self.status, "font_lab_color", "[gold]LOADING [blue]" .. file_name(self.path), 760, "center")
+    text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
+end
+
 function lab:random_asset()
     if #self.assets == 0 then return end
     self.random_state = (self.random_state * 48271) % 2147483647
@@ -60,13 +81,14 @@ function lab:random_asset()
     local directory = self.path:match("^(.*)/[^/]+$") or "data/global/tiles"
     self.tiles = vfs.list(directory, ".dt1") or {}
     self.width, self.height = nil, nil
-    self.dirty = true
+    self:queue_preview()
 end
 
 function lab:create()
     local dev = require("dm.dev/v1")
     self.root = render.create("hud")
     self.map_node = render.create("hud", self.root)
+    self.map_node:set_visible(false)
     self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
     self.status = label(self.root, "", 62, "font_lab_color")
     self.detail = label(self.root, "", 535, "font_lab_color")
@@ -79,7 +101,8 @@ function lab:create()
     self:infer_palette()
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
     self.random_state = 1
-    self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, true
+    self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
+    self:queue_preview()
 end
 
 function lab:fit()
@@ -122,10 +145,23 @@ function lab:rebuild()
 end
 
 function lab:update()
+    if self.pending_job then
+        local status = render.preload_status(self.pending_job)
+        if not status or not status.done then return end
+        self.pending_job = nil
+        if status.failed > 0 then
+            self.map_node:set_visible(false)
+            text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
+            text.set(self.detail, "font_lab_color", "[white]" .. tostring(status.errors[1] or "preview preload failed"), 760, "center")
+            return
+        end
+        -- set_ds1 now performs a cheap cache lookup and retained-node update.
+        self.dirty = true
+    end
     if self.dirty then self:rebuild() end
     if input.pressed("confirm") then self:random_asset(); return end
-    if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true; return end
-    if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self.dirty = true; return end
+    if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
+    if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
     if not self.width then return end
     local moved = false
     if input.pressed("left") then self.pan_x = self.pan_x - 24; moved = true end
