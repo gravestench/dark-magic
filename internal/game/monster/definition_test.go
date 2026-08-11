@@ -12,10 +12,11 @@ func ordinaryFixture() (models.MonsterStats, models.MonsterStats2, models.Monste
 	stats := models.MonsterStats{
 		Id: "fallen", BaseId: "fallen", MonStatsEx: "fallen2", NameStr: "FallenName", MonType: "fallen", AI: "Fallen", Code: "FA",
 		Enabled: true, IsSpawn: true, Killable: true, Level: 2, Velocity: 6,
+		Aidel: 3, Aidist: 12,
 		MinHP: 101, MaxHP: 186, AC: 100, A1TH: 100, A1MinD: 100, A1MaxD: 200, Exp: 100,
 		MinHPN: 200, MaxHPN: 300, ACN: 150, A1THN: 160, A1MinDN: 170, A1MaxDN: 180, ExpN: 190,
 	}
-	graphics := models.MonsterStats2{Id: "fallen2", SizeX: 2, SizeY: 3, BaseWeapon: "hth"}
+	graphics := models.MonsterStats2{Id: "fallen2", SizeX: 2, SizeY: 3, MeleeRng: 2, BaseWeapon: "hth"}
 	level := models.MonsterLevelStats{Level: 2, Life: 9, Defense: 8, AttackRating: 7, Damage: 6, Experience: 5, LifeN: 10, DefenseN: 20, AttackRatingN: 30, DamageN: 40, ExperienceN: 50}
 	return stats, graphics, level
 }
@@ -37,6 +38,9 @@ func TestJoinDefinitionCombinesLegacyMonsterTables(t *testing.T) {
 	}
 	if definition.ColliderRadius != 1.5 || definition.Token != "FA" || definition.WeaponClass != "HTH" {
 		t.Fatalf("presentation = %#v", definition)
+	}
+	if definition.ThinkInterval != 3 || definition.AggroRadius != 12 || definition.AttackRange != 2 {
+		t.Fatalf("AI definition = %#v", definition)
 	}
 }
 
