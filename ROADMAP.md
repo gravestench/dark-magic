@@ -897,6 +897,19 @@ complete until its actions are driven by authoritative game state and commands.
   replace ordinary rooms with the direction-compatible Act I Cave Prev/Next
   LvlPrest definitions 83..90. Mapgen Lab distinguishes both roles while the
   immutable zone recipe exposes them to future warp materialization.
+- [x] M20.10: Materialize generated zones incrementally, one authored DS1 stamp
+  per cancellable step, while caching immutable DT1 catalogs shared by rooms.
+  The completed authoritative map is published atomically and contains no
+  images or native renderer resources. Composition clips the shared terminal
+  DS1 row and column to each generated room's logical LvlPrest footprint,
+  preventing neighboring collision, object, and tile facts from overlapping.
+- [ ] M20.11: Replace scene-local coordinate arithmetic with shared tile,
+  subtile, world-pixel, screen-pixel, and camera transforms. Derive collision
+  queries and the F3 diagnostic overlay from the same transform contract.
+- [ ] M20.12: Sort map passes, authored objects, characters, missiles, shadows,
+  roofs, and overlays through one explicit world-depth contract.
+- [ ] M20.13: Route pointer-authored move, interact, and combat intents through
+  the shared screen-to-world transform and authoritative collision/path query.
 
 ## M21: Diablo simulation
 

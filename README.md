@@ -398,6 +398,12 @@ to produce another deterministic zone; DS1 Lab remains the separate, lazy
 materialization tool. The `dm.mapgen/v1` capability also retains the earlier
 typed Act I Tristram preset proof.
 
+Generated zone recipes are decoded one stamp at a time by the renderer-neutral
+world materializer. It reuses DT1 catalogs across matching rooms, reports safe
+loading progress, and only publishes the completed tile/object/collision map.
+The extra shared terminal edge present in production DS1 room stamps is clipped
+to the generated room footprint during composition.
+
 DS1 Lab composes sparse 512x512 CPU chunks split into floor, lower-wall,
 shadow, upper-wall, and roof passes. Tab isolates those passes, including the
 paired north-corner records required by legacy stamps. The lab admits at most

@@ -104,6 +104,25 @@ type TilePlacement struct {
 // Load joins one DS1 stamp with its DT1 collision definitions. It decodes no
 // renderer textures and performs no entity spawning.
 func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
+	// Preserve the public loader's useful error ordering: the requested stamp is
+	// the primary resource, so report a missing DS1 before inspecting its DT1
+	// dependencies. Generated-zone materialization uses loadStamp directly after
+	// catalog lookup and therefore does not pay this existence probe per room.
+	if _, err := fs.Stat(source, stampPath); err != nil {
+		return nil, fmt.Errorf("world: open %q: %w", stampPath, err)
+	}
+	catalog, err := LoadTileCatalog(source, tilePaths)
+	if err != nil {
+		return nil, err
+	}
+	var resolver ObjectResolver
+	if len(resolvers) > 0 {
+		resolver = resolvers[0]
+	}
+	return loadStamp(source, stampPath, catalog, resolver)
+}
+
+func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolver ObjectResolver) (*Map, error) {
 	stampFile, err := source.Open(stampPath)
 	if err != nil {
 		return nil, fmt.Errorf("world: open %q: %w", stampPath, err)
@@ -116,19 +135,11 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 	if closeErr != nil {
 		return nil, fmt.Errorf("world: close DS1 %q: %w", stampPath, closeErr)
 	}
-	catalog, err := LoadTileCatalog(source, tilePaths)
-	if err != nil {
-		return nil, err
-	}
 	result := &Map{
 		WidthTiles: int(stamp.Width), HeightTiles: int(stamp.Height), Act: int(stamp.Act),
 		WidthSubtiles: int(stamp.Width) * SubtilesPerTile, HeightSubtiles: int(stamp.Height) * SubtilesPerTile,
 	}
 	result.flags = make([]Flags, result.WidthSubtiles*result.HeightSubtiles)
-	var resolver ObjectResolver
-	if len(resolvers) > 0 {
-		resolver = resolvers[0]
-	}
 	for _, object := range stamp.Objects {
 		decoded := resolveObject(result.Act, object.Type, object.ID, object.X, object.Y, object.Flags, resolver)
 		result.Objects = append(result.Objects, decoded)
