@@ -81,6 +81,7 @@ return {
             -- Require gameplay-facing capabilities only in the asset-backed HUD
             -- path that actually needs them.
             local player = require("dm.player/v1")
+            self.player = player
             local items = require("dm.items/v1")
             self.items = items
             self.game_data = require("dm.game_data/v1")
@@ -271,6 +272,26 @@ return {
             chunked_map.update(
                 self.map, camera_pixel_x, camera_pixel_y, target_x, screen.hero.screen_y, world_view
             )
+        end
+
+        -- Legacy gameplay is pointer-authored. Reverse-project only the visible
+        -- world portion; HUD and obscured overlay halves retain their own clicks.
+        local pointer_x, pointer_y = input.cursor()
+        local in_world = pointer_y >= 0
+            and pointer_y < (screen.world_input_bottom or manifest.resolution.height)
+        if world_view == "left" then
+            in_world = in_world and pointer_x < manifest.resolution.width / 2
+        elseif world_view == "right" then
+            in_world = in_world and pointer_x >= manifest.resolution.width / 2
+        elseif world_view == "none" then
+            in_world = false
+        end
+        if self.player and self.world and in_world and not self.__darkmagic_item_held
+            and input.down("pointer_primary") then
+            local target_world_x, target_world_y = self.world:screen_to_subtile(
+                pointer_x, pointer_y, camera_x, camera_y, target_x, screen.hero.screen_y
+            )
+            self.player.request_move(target_world_x, target_world_y)
         end
 
         -- Hero screen position is target anchor plus hero-to-camera relative offset.

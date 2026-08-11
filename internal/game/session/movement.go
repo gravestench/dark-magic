@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,10 +19,13 @@ import (
 const MoveCommand = "player.move"
 
 type MovePayload struct {
-	X       int  `json:"x"`
-	Y       int  `json:"y"`
-	Running bool `json:"running"`
+	X       int         `json:"x"`
+	Y       int         `json:"y"`
+	Running bool        `json:"running"`
+	Target  *MoveTarget `json:"target,omitempty"`
 }
+
+type MoveTarget struct{ X, Y float64 }
 
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
@@ -30,6 +34,7 @@ type MovementController struct {
 	sequence atomic.Uint64
 	mu       sync.Mutex
 	skills   map[string]int64
+	target   *MoveTarget
 }
 
 func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
@@ -47,6 +52,32 @@ func (controller *MovementController) AssignSkill(slot string, skillID int64) er
 	}
 	controller.skills[slot] = skillID
 	return nil
+}
+
+func (controller *MovementController) SetMoveTarget(x, y float64) error {
+	if math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
+		return fmt.Errorf("game session: movement target must be finite")
+	}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	controller.target = &MoveTarget{X: x, Y: y}
+	return nil
+}
+
+func (controller *MovementController) moveTarget() *MoveTarget {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.target == nil {
+		return nil
+	}
+	result := *controller.target
+	return &result
+}
+
+func (controller *MovementController) clearMoveTarget() {
+	controller.mu.Lock()
+	controller.target = nil
+	controller.mu.Unlock()
 }
 
 func (controller *MovementController) drainSkills() map[string]int64 {
@@ -103,7 +134,22 @@ func RegisterMovement(session *Session) error {
 				// Two full-speed axes would make diagonal movement sqrt(2) times
 				// faster. Normalize the vector before simulation sees it.
 				x, y := float64(payload.X), float64(payload.Y)
-				if payload.X != 0 && payload.Y != 0 {
+				if payload.Target != nil {
+					positions, positionsPresent := akara.GetDynamicStore(engine.World(), "dm.world.position")
+					if positionsPresent {
+						if position, found := positions.Get(entity); found {
+							currentX, _ := position.Get("x")
+							currentY, _ := position.Get("y")
+							x, y = payload.Target.X-currentX.(float64), payload.Target.Y-currentY.(float64)
+							distance := math.Hypot(x, y)
+							if distance <= 0.2 {
+								x, y = 0, 0
+							} else {
+								x, y = x/distance, y/distance
+							}
+						}
+					}
+				} else if payload.X != 0 && payload.Y != 0 {
 					const inverseSquareRootTwo = 0.7071067811865476
 					x *= inverseSquareRootTwo
 					y *= inverseSquareRootTwo
@@ -123,7 +169,7 @@ func RegisterMovement(session *Session) error {
 				}
 				if animationsPresent {
 					if animation, found := animations.Get(entity); found {
-						moving := payload.X != 0 || payload.Y != 0
+						moving := x != 0 || y != 0
 						mode := "NU"
 						if moving && payload.Running {
 							mode = "RN"
@@ -134,7 +180,8 @@ func RegisterMovement(session *Session) error {
 							return err
 						}
 						if moving {
-							if err := animation.Set("direction", movementDirection(payload.X, payload.Y)); err != nil {
+							directionX, directionY := sign(x), sign(y)
+							if err := animation.Set("direction", movementDirection(directionX, directionY)); err != nil {
 								return err
 							}
 						}
@@ -188,6 +235,7 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 		return nil
 	}
 	x, y := 0, 0
+	target := source.control.moveTarget()
 	owner := source.input.Owner()
 	if owner.Domain == inputstate.FocusScene && (owner.ID == source.focusID || source.input.Gameplay()) {
 		if source.input.Action("toggle_run").Pressed {
@@ -205,8 +253,12 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 		if action := source.input.Action("down"); action.Down || action.Pressed {
 			y++
 		}
+		if x != 0 || y != 0 {
+			source.control.clearMoveTarget()
+			target = nil
+		}
 	}
-	payload, _ := json.Marshal(MovePayload{X: x, Y: y, Running: source.control.Running()})
+	payload, _ := json.Marshal(MovePayload{X: x, Y: y, Running: source.control.Running(), Target: target})
 	return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthorityPlayer, Sequence: source.control.nextSequence(), Kind: MoveCommand, Payload: payload}}
 }
 
@@ -223,5 +275,18 @@ func decodeMove(encoded []byte) (MovePayload, error) {
 	if payload.X < -1 || payload.X > 1 || payload.Y < -1 || payload.Y > 1 {
 		return MovePayload{}, fmt.Errorf("movement axes must be between -1 and 1")
 	}
+	if payload.Target != nil && (math.IsNaN(payload.Target.X) || math.IsNaN(payload.Target.Y) || math.IsInf(payload.Target.X, 0) || math.IsInf(payload.Target.Y, 0)) {
+		return MovePayload{}, fmt.Errorf("movement target must be finite")
+	}
 	return payload, nil
+}
+
+func sign(value float64) int {
+	if value < 0 {
+		return -1
+	}
+	if value > 0 {
+		return 1
+	}
+	return 0
 }

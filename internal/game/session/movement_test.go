@@ -29,6 +29,10 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	entity := engine.World().MustCreateEntity()
 	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
 		t.Fatal(err)
@@ -43,6 +47,9 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	}
 	animationState, err := animations.Set(entity, map[string]any{"direction": int64(2), "mode": "NU"})
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := positions.Set(entity, map[string]any{"x": 10.0, "y": 20.0}); err != nil {
 		t.Fatal(err)
 	}
 	session, err := New(engine, Config{})
@@ -92,6 +99,18 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	y, _ := velocity.Get("y")
 	if magnitude := math.Hypot(x.(float64), y.(float64)); math.Abs(magnitude-10) > 1e-9 {
 		t.Fatalf("diagonal speed = %v, want normalized walk speed 10", magnitude)
+	}
+	payload, _ = json.Marshal(MovePayload{Target: &MoveTarget{X: 20, Y: 20}})
+	if err := session.Submit(simulation.Command{Tick: 4, Player: "alpha", Sequence: 3, Kind: MoveCommand, Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	x, _ = velocity.Get("x")
+	y, _ = velocity.Get("y")
+	if x != float64(10) || y != float64(0) {
+		t.Fatalf("target velocity = %v,%v", x, y)
 	}
 }
 
@@ -181,5 +200,34 @@ func TestMovementSourceAdmitsQueuedAndKeyboardRunIntent(t *testing.T) {
 	payload, err = decodeMove(source.Commands(2)[0].Payload)
 	if err != nil || payload.Running {
 		t.Fatalf("keyboard toggle payload = %#v, %v", payload, err)
+	}
+}
+
+func TestMovementSourceEmitsPointerWorldTarget(t *testing.T) {
+	engine := gameecs.New()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
+		t.Fatal(err)
+	}
+	var input inputstate.Store
+	input.Publish(inputstate.Frame{Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(12.5, 44.25); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewMovementSource(engine, &input, "alpha", "game_world", controller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := decodeMove(source.Commands(1)[0].Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload.Target == nil || payload.Target.X != 12.5 || payload.Target.Y != 44.25 {
+		t.Fatalf("pointer target payload = %#v", payload)
 	}
 }

@@ -915,8 +915,16 @@ complete until its actions are driven by authoritative game state and commands.
   projected baseline and share a retained parent with the player. The contract
   supplies stable pass offsets around the same `x+y` entity baseline that future
   objects, missiles, and world overlays consume.
-- [ ] M20.13: Route pointer-authored move, interact, and combat intents through
-  the shared screen-to-world transform and authoritative collision/path query.
+- [x] M20.13: Route pointer-authored ground movement through the shared inverse
+  camera transform and fixed-tick authoritative command stream. Held pointer
+  targets remain semantic subtiles, are replayable, derive velocity/facing from
+  live ECS position, and continue through the existing authoritative collision
+  integrator. HUD space, obscured overlay halves, and held-item input do not
+  leak movement.
+- [ ] M20.14: Materialize selectable world entities and resolve pointer targets
+  into move, interact, primary-skill, or secondary-skill commands by authority,
+  range, collision/path, and line-of-sight policy. Do not fake interaction by
+  treating every world click as non-spatial UI.
 
 ## M21: Diablo simulation
 
