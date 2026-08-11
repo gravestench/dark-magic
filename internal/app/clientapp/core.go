@@ -22,6 +22,7 @@ import (
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
+	gamemissile "github.com/gravestench/dark-magic/internal/game/missile"
 	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -161,6 +162,28 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
 		return wrap("register skill intent consumer", err)
+	}
+	combatData, err := app.gameData.Snapshot()
+	if err != nil {
+		return wrap("load player combat data", err)
+	}
+	fireBoltSkill, fireBoltMissile, err := gamemissile.FireBoltFromCatalog(combatData)
+	if err != nil {
+		return wrap("normalize Fire Bolt", err)
+	}
+	skillRegistry, err := gameskill.NewRegistry(fireBoltSkill)
+	if err != nil {
+		return wrap("build production skill registry", err)
+	}
+	missileRegistry, err := gamemissile.NewRegistry(fireBoltMissile)
+	if err != nil {
+		return wrap("build production missile registry", err)
+	}
+	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
+		return wrap("register production skill lifecycle", err)
+	}
+	if err := gamemissile.Register(app.entitySimulation, missileRegistry); err != nil {
+		return wrap("register production missiles", err)
 	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
