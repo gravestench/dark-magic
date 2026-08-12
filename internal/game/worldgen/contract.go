@@ -56,7 +56,10 @@ type Kind string
 
 // Bounds is a half-open rectangle in world-tile coordinates.
 type Bounds struct {
-	X, Y, Width, Height int
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 func (bounds Bounds) valid() bool { return bounds.Width > 0 && bounds.Height > 0 }
@@ -65,82 +68,89 @@ func (bounds Bounds) valid() bool { return bounds.Width > 0 && bounds.Height > 0
 // inputs selected from LvlTypes plus masks; they are asset identities, not
 // loaded graphics.
 type Stamp struct {
-	ID           uint32
-	PresetDef    int
-	Role         string
-	X, Y         int
-	Width        int
-	Height       int
-	DS1Path      string
-	TilePaths    []string
-	Variant      int
-	Populate     bool
-	LogicalWalls bool
-	Overlay      bool
+	ID           uint32   `json:"id"`
+	PresetDef    int      `json:"preset_def,omitempty"`
+	Role         string   `json:"role,omitempty"`
+	X            int      `json:"x"`
+	Y            int      `json:"y"`
+	Width        int      `json:"width"`
+	Height       int      `json:"height"`
+	DS1Path      string   `json:"ds1_path"`
+	TilePaths    []string `json:"tile_paths,omitempty"`
+	Variant      int      `json:"variant,omitempty"`
+	Populate     bool     `json:"populate,omitempty"`
+	LogicalWalls bool     `json:"logical_walls,omitempty"`
+	Overlay      bool     `json:"overlay,omitempty"`
 }
 
 // Room is a simulation-space rectangle. StampID is zero only for an unassigned
 // room in a diagnostic topology.
 type Room struct {
-	ID      uint32
-	X, Y    int
-	Width   int
-	Height  int
-	StampID uint32
+	ID      uint32 `json:"id"`
+	X       int    `json:"x"`
+	Y       int    `json:"y"`
+	Width   int    `json:"width"`
+	Height  int    `json:"height"`
+	StampID uint32 `json:"stamp_id,omitempty"`
 }
 
 // Link joins two rooms. From is always lower than To in canonical zones.
 type Link struct {
-	From, To uint32
+	From uint32 `json:"from"`
+	To   uint32 `json:"to"`
 }
 
 // Warp preserves an authored level transition without creating presentation UI.
 type Warp struct {
-	ID               uint32
-	Role             string
-	Direction        string
-	X, Y             int
-	DestinationLevel int
+	ID               uint32 `json:"id"`
+	Role             string `json:"role,omitempty"`
+	Direction        string `json:"direction"`
+	X                int    `json:"x"`
+	Y                int    `json:"y"`
+	DestinationLevel int    `json:"destination_level"`
 }
 
 // Spawn is an authoritative placement request recovered from an authored stamp.
 type Spawn struct {
-	ID       uint32
-	Kind     string
-	RecordID int
-	X, Y     int
+	ID       uint32 `json:"id"`
+	Kind     string `json:"kind"`
+	RecordID int    `json:"record_id"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
 }
 
 // PathTile reserves one world-tile cell for a generated semantic route.
 // Materialization may realize it with level-specific DT1 floor identities;
 // simulation and tests can reason about connectivity before assets are loaded.
 type PathTile struct {
-	X, Y int
+	X int `json:"x"`
+	Y int `json:"y"`
 }
 
 // StructureTile reserves one world-tile cell for an outdoor structural layer.
 // Kind describes the simulation meaning; presentation later chooses suitable
 // DT1 artwork. Passable is authoritative and makes bridge openings explicit.
 type StructureTile struct {
-	X, Y     int
-	Kind     string
-	Passable bool
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	Kind     string `json:"kind"`
+	Passable bool   `json:"passable"`
 }
 
 // Definition is the mutable input accepted by NewZone. The constructor copies,
 // validates, and canonicalizes it before exposing an immutable Zone.
 type Definition struct {
-	Request    Request
-	Kind       Kind
-	Bounds     Bounds
-	Stamps     []Stamp
-	Rooms      []Room
-	Links      []Link
-	Warps      []Warp
-	Spawns     []Spawn
-	Paths      []PathTile
-	Structures []StructureTile
-	Trace      []string
+	Request    Request         `json:"request"`
+	Kind       Kind            `json:"kind"`
+	Bounds     Bounds          `json:"bounds"`
+	Stamps     []Stamp         `json:"stamps,omitempty"`
+	Rooms      []Room          `json:"rooms,omitempty"`
+	Links      []Link          `json:"links,omitempty"`
+	Warps      []Warp          `json:"warps,omitempty"`
+	Spawns     []Spawn         `json:"spawns,omitempty"`
+	Paths      []PathTile      `json:"paths,omitempty"`
+	Structures []StructureTile `json:"structures,omitempty"`
+	Trace      []string        `json:"trace,omitempty"`
 }
 
 func validateDefinition(def Definition) error {

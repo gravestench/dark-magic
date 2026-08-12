@@ -16,8 +16,7 @@ type gameDataSnapshotter interface {
 // catalog ownership. Lua labs can inspect recipes while gameplay sessions can
 // use the same Go generator without a Lua VM.
 func MapgenModule(catalog gameDataSnapshotter) Module {
-	return Module{Name: "d2legacy.mapgen/v1", Help: documentedModule("Generate Diablo II zone recipes for the first-party mod.", map[string]CommandHelp{
-		"preset":  commandHelp("d2legacy.mapgen.preset(level_id, seed [, difficulty])", "Generate a typed preset zone and return its canonical value snapshot."),
+	return Module{Name: "d2legacy.mapgen.native/v1", Help: documentedModule("Temporary parity oracle while Diablo II map strategies move into Lua.", map[string]CommandHelp{
 		"maze":    commandHelp("d2legacy.mapgen.maze(level_id, seed [, difficulty])", "Generate a typed maze zone and return rooms, links, recipes, and trace."),
 		"outdoor": commandHelp("d2legacy.mapgen.outdoor(level_id, seed, town_exit [, difficulty])", "Generate Blood Moor joined to a north/east/south/west town exit."),
 	}), Loader: func(state *lua.LState) int {
@@ -29,26 +28,6 @@ func MapgenModule(catalog gameDataSnapshotter) Module {
 				}
 				levelID := state.CheckInt(1)
 				zone, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)), Act: 1, LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(4, 0))}, mapgen.Stamp{Role: "act1-town:exit-" + state.CheckString(3)})
-				if err != nil {
-					return pushLuaError(state, err)
-				}
-				state.Push(zoneToLua(state, zone))
-				return 1
-			},
-			"preset": func(state *lua.LState) int {
-				snapshot, err := catalog.Snapshot()
-				if err != nil {
-					return pushLuaError(state, err)
-				}
-				levelID := state.CheckInt(1)
-				level, found := snapshot.LevelsByID[levelID]
-				if !found {
-					return pushLuaError(state, fmt.Errorf("mapgen: level %d is absent from Levels", levelID))
-				}
-				zone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{
-					Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)),
-					Act: uint8(level.Act + 1), LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(3, 0)),
-				})
 				if err != nil {
 					return pushLuaError(state, err)
 				}
