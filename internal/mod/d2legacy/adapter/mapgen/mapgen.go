@@ -8,6 +8,7 @@ package mapgen
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -117,6 +118,55 @@ func (runtime *Runtime) generateFrom(ctx context.Context, module, function strin
 type EntryWorld struct {
 	Town, Wilderness *worldgen.Zone
 	Seam             SeamSpec
+}
+
+type entryWorldSnapshot struct {
+	Version    int                 `json:"version"`
+	Town       worldgen.Definition `json:"town"`
+	Wilderness worldgen.Definition `json:"wilderness"`
+	Seam       SeamSpec            `json:"seam"`
+}
+
+// Snapshot is the canonical durable envelope for the joined entry topology.
+// It stores admitted recipes and their Lua-authored seam, not generator state.
+func (world EntryWorld) Snapshot() ([]byte, error) {
+	if world.Town == nil || world.Wilderness == nil {
+		return nil, fmt.Errorf("d2legacy entry world is incomplete")
+	}
+	return json.Marshal(entryWorldSnapshot{Version: 1, Town: world.Town.Definition(),
+		Wilderness: world.Wilderness.Definition(), Seam: world.Seam})
+}
+
+func (world EntryWorld) Checksum() (string, error) {
+	encoded, err := world.Snapshot()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(encoded)), nil
+}
+
+// RestoreEntryWorld reconstructs validated immutable zones without rerunning
+// Diablo selection policy, exactly as a checkpoint/reconnect path requires.
+func RestoreEntryWorld(encoded []byte) (EntryWorld, error) {
+	var snapshot entryWorldSnapshot
+	if err := json.Unmarshal(encoded, &snapshot); err != nil {
+		return EntryWorld{}, err
+	}
+	if snapshot.Version != 1 {
+		return EntryWorld{}, fmt.Errorf("unsupported entry-world snapshot version %d", snapshot.Version)
+	}
+	town, err := worldgen.NewZone(snapshot.Town)
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("restore entry town: %w", err)
+	}
+	wilderness, err := worldgen.NewZone(snapshot.Wilderness)
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("restore entry wilderness: %w", err)
+	}
+	if town.Request().LevelID != snapshot.Seam.FirstLevel || wilderness.Request().LevelID != snapshot.Seam.SecondLevel {
+		return EntryWorld{}, fmt.Errorf("restore entry world: seam level identities do not match recipes")
+	}
+	return EntryWorld{Town: town, Wilderness: wilderness, Seam: snapshot.Seam}, nil
 }
 
 // SeamSpec is serialized policy chosen by d2legacy. Coordinates are tile
