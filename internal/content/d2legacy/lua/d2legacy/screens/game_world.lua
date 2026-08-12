@@ -175,7 +175,7 @@ end
 local function retained_monster(self, key)
 	local monster = self.monsters[key]
 	if monster then return monster end
-	monster = {node=render.create("world", self.map.root), direction=0}
+	monster = {node=render.create("world", self.map.root)}
 	monster.node:set_visible(false)
 	self.monsters[key] = monster
 	return monster
@@ -205,8 +205,6 @@ end
 
 local function update_monster(self, monster, snapshot, elapsed)
 	monster.spawn_id, monster.death_sound = snapshot.spawn_id, snapshot.death_sound
-	monster.direction = monster_composite.facing(monster.direction, snapshot.velocity_x, snapshot.velocity_y)
-	snapshot.direction = monster.direction
 	local composite = monster_composite.resolve(snapshot)
 	if composite and (not monster.playback or monster.playback.mode ~= composite.mode) then
 		monster.playback = monster_composite.new_playback(composite)

@@ -79,6 +79,7 @@ function M.apply(command)
         ["d2legacy.player.animation"]={direction=p.direction or 0,mode="NU"},
         ["d2legacy.world.position"]={x=p.x,y=p.y},
         ["d2legacy.world.velocity"]={x=0,y=0},
+        ["d2legacy.world.facing"]={direction=p.direction or 0,directions=16},
         ["d2legacy.player.movement_mode"]={running=false},
         ["d2legacy.player.skill_assignment"]={left=left,right=right},
         ["d2legacy.player.skill_intent"]={side="",skill_id=0,target_x=p.x,target_y=p.y,target_id=""},

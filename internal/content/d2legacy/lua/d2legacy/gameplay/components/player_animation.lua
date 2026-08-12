@@ -1,9 +1,9 @@
 -- Authoritative player movement choice and legacy composite selection.
 --
 -- Appearance answers “which body/equipment recipe should be drawn?” Animation
--- answers “what is that body doing right now?” They are deliberately separate:
--- changing a helmet should not rewrite facing, and turning should not rewrite
--- equipment.
+-- answers “what is that body doing right now?” Facing now has its own shared
+-- actor component; the direction field remains checkpoint-compatible legacy
+-- storage and is no longer consumed by production presentation.
 
 local ecs = require("engine.ecs/v1")
 
@@ -35,7 +35,7 @@ function M.register()
         name = "d2legacy.player.animation",
         version = 1,
         fields = {
-            { name = "direction", type = "i64" }, -- Logical eight-way direction; presentation maps legacy storage order.
+            { name = "direction", type = "i64" }, -- Deprecated; d2legacy.world.facing owns this fact.
             { name = "mode", type = "string" },   -- NU, WL, RN, and future modes.
         },
     })

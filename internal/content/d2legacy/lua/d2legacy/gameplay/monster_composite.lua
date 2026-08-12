@@ -26,18 +26,6 @@ local function component_path(token, component, visual, mode, weapon_class)
         token, component, token, component, visual, mode, weapon_class)
 end
 
--- Velocity is an authoritative world-space fact; facing memory is deliberately
--- presentation-owned. A stopped monster keeps looking the way it last moved,
--- but that visual memory cannot alter combat, collision, or replay checksums.
-function M.facing(previous, velocity_x, velocity_y)
-    if velocity_x == 0 and velocity_y == 0 then return previous or 0 end
-    local angle = math.atan(velocity_y, velocity_x)
-    local bucket = math.floor((angle + math.pi / 8) / (math.pi / 4)) % 8
-    -- Clockwise screen/world buckets -> the readable eight-way direction space
-    -- shared by player_composite. The resolver performs the legacy interleave.
-    return ({3, 4, 0, 5, 1, 6, 2, 7})[bucket + 1]
-end
-
 function M.resolve(snapshot)
     local token, mode = upper(snapshot.token), upper(snapshot.mode)
     local weapon_class = upper(snapshot.weapon_class)

@@ -61,6 +61,7 @@ function M.apply(command)
             aggro_radius=definition.aggro_radius,attack_range=definition.attack_range,speed=definition.velocity},
         ["d2legacy.world.position"]={x=spawn.x,y=spawn.y},
         ["d2legacy.world.velocity"]={x=0,y=0},
+        ["d2legacy.world.facing"]={direction=0,directions=8},
         ["d2legacy.world.location"]={act=spawn.act,level_id=spawn.level_id},
         ["d2legacy.world.collider"]={radius=definition.collider_radius},
         ["engine.world.velocity_mover"]={},
