@@ -5,7 +5,15 @@ package simulation
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
 )
+
+var ErrRandomStream = errors.New("simulation: invalid deterministic random stream")
 
 // Stream is one deterministic SplitMix64 random sequence. Streams should be
 // derived by stable purpose names so adding a roll in one subsystem cannot
@@ -52,4 +60,91 @@ func (stream *Stream) Uint64n(limit uint64) uint64 {
 			return value % limit
 		}
 	}
+}
+
+// RandomStreams owns all named random sequences used by one authoritative
+// session. A gameplay domain gets its own purpose-named stream so adding a loot
+// roll cannot change combat results. The registry, rather than the script VM,
+// owns the sequence state so checkpoints and replay can restore it exactly.
+type RandomStreams struct {
+	mu      sync.Mutex
+	seed    uint64
+	streams map[string]*Stream
+}
+
+type randomStreamsArchive struct {
+	Seed    uint64            `json:"seed"`
+	Streams map[string]uint64 `json:"streams"`
+}
+
+func NewRandomStreams(seed uint64) *RandomStreams {
+	return &RandomStreams{seed: seed, streams: make(map[string]*Stream)}
+}
+
+func (*RandomStreams) StateID() string { return "engine.authoritative_rng/v1" }
+
+// Register declares a stable purpose name before simulation begins. Requiring
+// registration catches misspellings instead of quietly creating a second
+// random sequence halfway through a session.
+func (registry *RandomStreams) Register(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("%w: purpose name is required", ErrRandomStream)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	if _, exists := registry.streams[name]; exists {
+		return fmt.Errorf("%w: purpose %q is already registered", ErrRandomStream, name)
+	}
+	registry.streams[name] = NewStream(registry.seed, name)
+	return nil
+}
+
+// Uint64n advances one registered stream and returns a value below limit.
+func (registry *RandomStreams) Uint64n(name string, limit uint64) (uint64, error) {
+	if limit == 0 {
+		return 0, fmt.Errorf("%w: limit must be greater than zero", ErrRandomStream)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	stream, found := registry.streams[name]
+	if !found {
+		return 0, fmt.Errorf("%w: unknown purpose %q", ErrRandomStream, name)
+	}
+	return stream.Uint64n(limit), nil
+}
+
+func (registry *RandomStreams) SnapshotState() ([]byte, error) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	states := make(map[string]uint64, len(registry.streams))
+	for name, stream := range registry.streams {
+		states[name] = stream.State()
+	}
+	return json.Marshal(randomStreamsArchive{Seed: registry.seed, Streams: states})
+}
+
+func (registry *RandomStreams) RestoreState(data []byte) error {
+	var archive randomStreamsArchive
+	if err := json.Unmarshal(data, &archive); err != nil {
+		return fmt.Errorf("%w: decode: %v", ErrRandomStream, err)
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	if archive.Seed != registry.seed || len(archive.Streams) != len(registry.streams) {
+		return fmt.Errorf("%w: seed or registration differs", ErrRandomStream)
+	}
+	names := make([]string, 0, len(registry.streams))
+	for name := range registry.streams {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		state, found := archive.Streams[name]
+		if !found {
+			return fmt.Errorf("%w: purpose %q is not registered by checkpoint", ErrRandomStream, name)
+		}
+		registry.streams[name] = RestoreStream(state)
+	}
+	return nil
 }

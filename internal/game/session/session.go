@@ -67,7 +67,7 @@ type Session struct {
 // durable stores into the session. The runtime may be Lua today or another
 // adapter later; session determinism depends only on these language-neutral
 // participants.
-func (session *Session) RegisterAuthoritativeRuntime(identity simulation.RuntimeIdentity, stores *simulation.StateStore) error {
+func (session *Session) RegisterAuthoritativeRuntime(identity simulation.RuntimeIdentity, stores *simulation.StateStore, additional ...simulation.StateParticipant) error {
 	if stores == nil {
 		return fmt.Errorf("game session: authoritative state store is required")
 	}
@@ -75,7 +75,9 @@ func (session *Session) RegisterAuthoritativeRuntime(identity simulation.Runtime
 	if err != nil {
 		return err
 	}
-	return session.registerStateParticipants(identityParticipant, stores)
+	participants := []simulation.StateParticipant{identityParticipant, stores}
+	participants = append(participants, additional...)
+	return session.registerStateParticipants(participants...)
 }
 
 // RegisterStateParticipant adds deterministic authoritative state to session
