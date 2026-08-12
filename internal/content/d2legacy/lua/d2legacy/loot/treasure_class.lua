@@ -31,6 +31,15 @@ local function copied_quality(value)
     }
 end
 
+local function stronger_quality(parent, child)
+    local result = copied_quality(parent)
+    for _, name in ipairs({ "unique", "set", "rare", "magic" }) do
+        local candidate = child[name] or 0
+        if candidate > (result[name] or 0) then result[name] = candidate end
+    end
+    return result
+end
+
 local function read_entries(row)
     local result = {}
     for index = 1, 10 do
@@ -136,7 +145,7 @@ local function append_drop(drops, entry, path, quality)
     }
 end
 
-local function expand(name, path, active, drops)
+local function expand(name, path, inherited_quality, active, drops)
     local all = classes()
     local class = assert(all[name], "unknown treasure class " .. tostring(name))
     assert(#path < MAX_DEPTH, "maximum treasure-class depth exceeded")
@@ -145,12 +154,13 @@ local function expand(name, path, active, drops)
     active[name] = true
     path = copied_list(path)
     path[#path + 1] = name
+    local effective_quality = stronger_quality(inherited_quality, class.quality)
 
     for _, entry in ipairs(chosen_entries(class)) do
         if all[entry.code] then
-            expand(entry.code, path, active, drops)
+            expand(entry.code, path, effective_quality, active, drops)
         else
-            append_drop(drops, entry, path, class.quality)
+            append_drop(drops, entry, path, effective_quality)
         end
     end
     active[name] = nil
@@ -159,7 +169,8 @@ end
 function M.roll(name)
     if not name or name == "" then return {} end
     local drops = {}
-    expand(name, {}, {}, drops)
+    local no_quality = { unique = 0, set = 0, rare = 0, magic = 0 }
+    expand(name, {}, no_quality, {}, drops)
     return drops
 end
 

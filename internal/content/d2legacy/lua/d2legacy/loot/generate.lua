@@ -28,13 +28,13 @@ end
 -- Lua's standard library has no JSON encoder. This deliberately small encoder
 -- accepts only the scalar/table trees produced by this module. Sorted object
 -- keys keep the serialized death event stable across replay and checkpoints.
-local function encode(value)
+local function encode(value, force_array)
     local kind = type(value)
     if kind == "string" then return quoted(value) end
     if kind == "number" or kind == "boolean" then return tostring(value) end
     if kind ~= "table" then return "null" end
 
-    if #value > 0 then
+    if force_array or #value > 0 then
         local entries = {}
         for _, entry in ipairs(value) do
             entries[#entries + 1] = encode(entry)
@@ -99,6 +99,10 @@ function M.roll(treasure_class, context)
     return result
 end
 
-M.encode = encode
+-- Loot is always a list, including when NoDrop produces no entries. Passing an
+-- explicit array hint avoids serializing an empty result as the JSON object {}.
+function M.encode(drops)
+    return encode(drops, true)
+end
 
 return M
