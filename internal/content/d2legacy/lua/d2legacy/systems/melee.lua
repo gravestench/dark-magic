@@ -17,6 +17,7 @@ end
 local function target_for(attacker, wanted, candidates)
     local ap = ecs.get(attacker, "d2legacy.world.position")
     local al = ecs.get(attacker, "d2legacy.world.location")
+    local ac = ecs.get(attacker, "d2legacy.world.collider")
     local profile = ecs.get(attacker, "d2legacy.combat.melee_profile")
     local best, best_distance, best_id = nil, math.huge, ""
     -- A named target wins when it remains valid. Shift-attacking supplies no
@@ -24,13 +25,15 @@ local function target_for(attacker, wanted, candidates)
     for _, candidate in ipairs(candidates) do
         if candidate:id() ~= attacker:id() then
             local selectable = ecs.get(candidate, "d2legacy.world.selectable")
+            local collider = ecs.get(candidate, "d2legacy.world.collider")
             local id, kind = selectable:get("id"), selectable:get("kind")
             if (wanted ~= "" and id == wanted) or (wanted == "" and kind == "hostile") then
                 local cp, cl = ecs.get(candidate, "d2legacy.world.position"), ecs.get(candidate, "d2legacy.world.location")
                 local dx, dy = cp:get("x")-ap:get("x"), cp:get("y")-ap:get("y")
                 local distance = math.sqrt(dx*dx+dy*dy)
                 if cl:get("act") == al:get("act") and cl:get("level_id") == al:get("level_id")
-                    and distance <= profile:get("range") + selectable:get("radius")
+                    and distance <= policy.reach(
+                        profile:get("range"), ac:get("radius"), collider:get("radius"))
                     and (distance < best_distance or distance == best_distance and id < best_id) then
                     best, best_distance, best_id = candidate, distance, id
                 end
@@ -73,7 +76,7 @@ function M.register()
         -- tick is running.
         query={any={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable"}},
         read={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable","d2legacy.world.position",
-            "d2legacy.world.location","d2legacy.combat.melee_profile","d2legacy.monster.stats","d2legacy.player.vitals",
+            "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile","d2legacy.monster.stats","d2legacy.player.vitals",
             "d2legacy.player.progress","d2legacy.player.combat_stats"},
         write={"d2legacy.combat.basic_attack_request","d2legacy.monster.stats","d2legacy.player.vitals",
             "d2legacy.combat.melee_event"},

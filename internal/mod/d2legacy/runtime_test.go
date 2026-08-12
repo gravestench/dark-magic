@@ -3,6 +3,7 @@ package d2legacy
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"reflect"
 	"testing"
 
@@ -108,6 +109,81 @@ func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
 	}
 	if len(replay.InitialParticipants) != 3 {
 		t.Fatalf("participant states = %d, want identity, Lua state, and RNG", len(replay.InitialParticipants))
+	}
+}
+
+func TestMonsterMeleeReachIncludesBothActorFootprints(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 17)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+
+	player, _ := json.Marshal(map[string]any{
+		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
+		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
+		"health": 500, "max_health": 500, "mana": 20, "max_mana": 20,
+		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
+		"direction": 0, "mode": "NU", "x": 0, "y": 0,
+		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
+	})
+	monster, _ := json.Marshal(map[string]any{
+		"spawn_id": "spacing-fallen", "seed": 9, "x": 2.5, "y": 0, "act": 1, "level_id": 1,
+		"definition": map[string]any{
+			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
+			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
+			"life_min": 256, "life_max": 256, "level": 1, "defense": 0, "attack_rating": 0,
+			"physical_min": 256, "physical_max": 256, "experience": 5, "treasure_class": "",
+			"collider_radius": 1, "select_radius": 1, "velocity": 5, "think_interval": 1,
+			"aggro_radius": 20, "attack_range": 1,
+		},
+	})
+	for _, command := range []simulation.Command{
+		{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.player.enter", Payload: player},
+		{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.monster.spawn", Payload: monster},
+	} {
+		if err := session.Submit(command); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for range 3 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
+	var playerX, playerY, monsterX, monsterY float64
+	for _, entity := range selectables.Entities() {
+		selectable, _ := selectables.Get(entity)
+		id, _ := selectable.Get("id")
+		position, _ := positions.Get(entity)
+		x, _ := position.Get("x")
+		y, _ := position.Get("y")
+		if id == "player:alice" {
+			playerX, playerY = x.(float64), y.(float64)
+		} else if id == "monster:spacing-fallen" {
+			monsterX, monsterY = x.(float64), y.(float64)
+		}
+	}
+	distance := math.Hypot(monsterX-playerX, monsterY-playerY)
+	if distance < 2 {
+		t.Fatalf("actor centers separated by %v, want at least combined collider radii 2", distance)
+	}
+	brains, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.ai")
+	brain, _ := brains.Get(brains.Entities()[0])
+	state, _ := brain.Get("state")
+	if state != "attack" {
+		t.Fatalf("monster state = %v at distance %v, want attack within footprint-aware reach 3", state, distance)
 	}
 }
 
