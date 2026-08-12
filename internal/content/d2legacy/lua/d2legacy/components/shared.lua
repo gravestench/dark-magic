@@ -84,6 +84,15 @@ function M.register()
     component("d2legacy.player.combat_stats", {
         {name="attack_rating",type="i64"},{name="defense",type="i64"},
     })
+    component("d2legacy.combat.defense", {
+        {name="base_physical_resist",type="i64"},{name="base_fire_resist",type="i64"},
+        {name="physical_resist",type="i64"},{name="fire_resist",type="i64"},
+        {name="max_fire_resist",type="i64"},{name="physical_reduction_raw",type="i64"},
+    })
+    component("d2legacy.stat.source", {
+        {name="target",type="entity"},{name="source_id",type="string"},
+        {name="stat",type="string"},{name="value",type="i64"},
+    })
     component("d2legacy.monster.death", {
         {name="tick",type="i64"},{name="killer_id",type="string"},
         {name="credited_id",type="string"},{name="xp",type="i64"},

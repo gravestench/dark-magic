@@ -90,8 +90,9 @@ local function resolve_contacts(context, entities, structural)
                 local amount = damage.roll_fire(
                     projectile:get("minimum_damage_raw"),
                     projectile:get("maximum_damage_raw"))
-                local remaining = damage.apply(target.entity, amount, ecs)
-                emit_hit(context, projectile, target, amount, remaining, structural)
+                local remaining, _, applied = damage.apply(target.entity, amount, ecs,
+                    projectile:get("damage_channel"))
+                emit_hit(context, projectile, target, applied, remaining, structural)
                 structural:destroy(entity)
             elseif projectile:get("remaining_ticks") <= 0 then
                 structural:destroy(entity)
@@ -117,7 +118,7 @@ function M.register()
         read = {
             "d2legacy.missile.projectile", "d2legacy.world.position", "d2legacy.world.location",
             "d2legacy.world.selectable", "d2legacy.world.collider", "d2legacy.monster.stats",
-            "d2legacy.player.vitals",
+            "d2legacy.player.vitals", "d2legacy.combat.defense",
         },
         write = {
             "d2legacy.monster.stats", "d2legacy.player.vitals", "d2legacy.combat.event",

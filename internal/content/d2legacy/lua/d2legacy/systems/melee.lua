@@ -7,6 +7,7 @@
 
 local ecs = require("engine.ecs/v1")
 local policy = require("d2legacy.policy.melee")
+local mitigation = require("d2legacy.policy.mitigation")
 local M = {}
 
 local function identity(entity)
@@ -44,17 +45,18 @@ local function target_for(attacker, wanted, candidates)
 end
 
 local function hurt(target, damage)
+    damage = mitigation.apply(damage, "physical", ecs.get(target, "d2legacy.combat.defense"))
     local monster = ecs.get(target, "d2legacy.monster.stats")
     if monster then
         local remaining = math.max(monster:get("health") - damage, 0)
         monster:set("health", remaining)
-        return remaining
+        return remaining, damage
     end
     local player = assert(ecs.get(target, "d2legacy.player.vitals"), "melee target has no health")
     local whole = math.floor(damage / 256)
     local remaining = math.max(player:get("health") - whole, 0)
     player:set("health", remaining)
-    return remaining * 256
+    return remaining * 256, damage
 end
 
 local function combat_values(entity)
@@ -77,7 +79,7 @@ function M.register()
         query={any={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable"}},
         read={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable","d2legacy.world.position",
             "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile","d2legacy.monster.stats","d2legacy.player.vitals",
-            "d2legacy.player.progress","d2legacy.player.combat_stats"},
+            "d2legacy.player.progress","d2legacy.player.combat_stats","d2legacy.combat.defense"},
         write={"d2legacy.combat.basic_attack_request","d2legacy.monster.stats","d2legacy.player.vitals",
             "d2legacy.combat.melee_event"},
         update=function(context, entities, structural)
@@ -98,8 +100,8 @@ function M.register()
                                 profile:get("physical_min"),
                                 profile:get("physical_max")
                             )
-                            base.hit, base.damage_raw = true, damage
-                            base.remaining_health_raw = hurt(target, damage)
+                            base.hit = true
+                            base.remaining_health_raw, base.damage_raw = hurt(target, damage)
                         end
                     end
                     event(structural, base)
