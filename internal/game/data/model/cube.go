@@ -3,112 +3,14 @@ package models
 // OpID represents the operation ID for additional input requirement
 type OpID int
 
-const (
-	OpNone OpID = iota
-	OpDayOfMonthLessThan
-	OpDayOfMonthGreaterThan
-	OpDayOfWeekNotEqual
-	OpPlayerStatGreaterThan
-	OpPlayerStatLessThan
-	OpPlayerStatNotEqual
-	OpPlayerStatEqual
-	OpPlayerBaseStatGreaterThan
-	OpPlayerBaseStatLessThan
-	OpPlayerBaseStatNotEqual
-	OpPlayerBaseStatEqual
-	OpPlayerNonBaseStatGreaterThan
-	OpPlayerNonBaseStatLessThan
-	OpPlayerNonBaseStatNotEqual
-	OpPlayerNonBaseStatEqual
-	OpInputItemStatGreaterThan
-	OpInputItemStatLessThan
-	OpInputItemStatNotEqual
-	OpInputItemStatEqual
-	OpInputItemBaseStatGreaterThan
-	OpInputItemBaseStatLessThan
-	OpInputItemBaseStatNotEqual
-	OpInputItemBaseStatEqual
-	OpInputItemNonBaseStatGreaterThan
-	OpInputItemNonBaseStatLessThan
-	OpInputItemNonBaseStatNotEqual
-	OpInputItemNonBaseStatEqual
-	OpItemModClassNotEqual
-	OpQuestDiffCheck
-)
-
 // OpCode represents the operation code for class restriction
 type OpCode string
-
-const (
-	OpAnyClass        OpCode = ""
-	OpAmazonOnly      OpCode = "ama"
-	OpBarbarianOnly   OpCode = "bar"
-	OpPaladinOnly     OpCode = "pal"
-	OpNecromancerOnly OpCode = "nec"
-	OpSorceressOnly   OpCode = "sor"
-	OpDruidOnly       OpCode = "dru"
-	OpAssassinOnly    OpCode = "ass"
-)
 
 // CubeItemType represents the input and output item types
 type CubeItemType string
 
-const (
-	ItemTypeQuantity    CubeItemType = "qty=#"
-	ItemTypeLow         CubeItemType = "low"
-	ItemTypeNormal      CubeItemType = "nor"
-	ItemTypeHigh        CubeItemType = "hiq"
-	ItemTypeMagic       CubeItemType = "mag"
-	ItemTypeSet         CubeItemType = "set"
-	ItemTypeRare        CubeItemType = "rar"
-	ItemTypeUnique      CubeItemType = "uni"
-	ItemTypeCrafted     CubeItemType = "crf"
-	ItemTypeTempered    CubeItemType = "tmp"
-	ItemTypeNoSockets   CubeItemType = "nos"
-	ItemTypeSockets     CubeItemType = "sock=#"
-	ItemTypeNotEthereal CubeItemType = "noe"
-	ItemTypeEthereal    CubeItemType = "eth"
-	ItemTypeUpgradable  CubeItemType = "upg"
-	ItemTypeBasic       CubeItemType = "bas"
-	ItemTypeExceptional CubeItemType = "exc"
-	ItemTypeElite       CubeItemType = "eli"
-	ItemTypeNotRuneWord CubeItemType = "nru"
-)
-
 // OutputCode represents the output code for creating output items
 type OutputCode string
-
-const (
-	OutputCowPortal               OutputCode = "Cow Portal"
-	OutputPandemoniumPortal       OutputCode = "Pandemonium Portal"
-	OutputPandemoniumFinalePortal OutputCode = "Pandemonium Finale Portal"
-	OutputRedPortal               OutputCode = "Red Portal"
-	OutputUseType                 OutputCode = "usetype"
-	OutputUseItem                 OutputCode = "useitem"
-	OutputQuantity                OutputCode = "qty=#"
-	OutputPrefix                  OutputCode = "pre=#"
-	OutputSuffix                  OutputCode = "suf=#"
-	OutputLow                     OutputCode = "low"
-	OutputNormal                  OutputCode = "nor"
-	OutputHigh                    OutputCode = "hiq"
-	OutputMagic                   OutputCode = "mag"
-	OutputSet                     OutputCode = "set"
-	OutputRare                    OutputCode = "rar"
-	OutputUnique                  OutputCode = "uni"
-	OutputCrafted                 OutputCode = "crf"
-	OutputTempered                OutputCode = "tmp"
-	OutputEthereal                OutputCode = "eth"
-	OutputSockets                 OutputCode = "sock"
-	OutputModifiers               OutputCode = "mod"
-	OutputDestroyGemsRunesJewels  OutputCode = "uns"
-	OutputRemoveGemsRunesJewels   OutputCode = "rem"
-	OutputRegenerateUnique        OutputCode = "reg"
-	OutputExceptional             OutputCode = "exc"
-	OutputElite                   OutputCode = "eli"
-	OutputRepair                  OutputCode = "rep"
-	OutputRecharge                OutputCode = "rch"
-	OutputLevel                   OutputCode = "lvl=#"
-)
 
 // CubeRecipe holds the recipes for the Horadric Cube
 type CubeRecipe struct {

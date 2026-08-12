@@ -1,5 +1,5 @@
 # prefix	class	destination	reason
-internal/game/data/model/	data	go:data	Pure D2 file schemas may remain in Go; helpers and enums require policy audit
+internal/game/data/model/	data	go:data	Passive D2 file schemas only; CI rejects behavior and interpreted constant vocabularies
 internal/game/data/store/	mechanism	go:engine	Generic immutable lossless row storage provenance and invalidation
 internal/game/data/typed/	mechanism	go:engine	Caller-selected schema binding and deterministic indexes without table composition
 internal/mod/d2legacy/data/	data	go:d2legacy	Parsers and immutable stores for first-party recovered d2legacy content

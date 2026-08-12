@@ -44,28 +44,3 @@ type AutoMagicData struct {
 }
 
 type AutomagicColor string // represents the color change of the item after spawning with this item affix.
-
-const (
-	AutomagicColorNone         AutomagicColor = ""     // represents no color change.
-	AutomagicColorWhite        AutomagicColor = "whit" // represents white color.
-	AutomagicColorLightGrey    AutomagicColor = "lgry" // represents light grey color.
-	AutomagicColorDarkGrey     AutomagicColor = "dgry" // represents dark grey color.
-	AutomagicColorBlack        AutomagicColor = "blac" // represents black color.
-	AutomagicColorLightBlue    AutomagicColor = "lblu" // represents light blue color.
-	AutomagicColorDarkBlue     AutomagicColor = "dblu" // represents dark blue color.
-	AutomagicColorCrystalBlue  AutomagicColor = "cblu" // represents crystal blue color.
-	AutomagicColorLightRed     AutomagicColor = "lred" // represents light red color.
-	AutomagicColorDarkRed      AutomagicColor = "dred" // represents dark red color.
-	AutomagicColorCrystalRed   AutomagicColor = "cred" // represents crystal red color.
-	AutomagicColorLightGreen   AutomagicColor = "lgrn" // represents light green color.
-	AutomagicColorDarkGreen    AutomagicColor = "dgrn" // represents dark green color.
-	AutomagicColorCrystalGreen AutomagicColor = "cgrn" // represents crystal green color.
-	AutomagicColorLightYellow  AutomagicColor = "lyel" // represents light yellow color.
-	AutomagicColorDarkYellow   AutomagicColor = "dyel" // represents dark yellow color.
-	AutomagicColorLightGold    AutomagicColor = "lgld" // represents light gold color.
-	AutomagicColorDarkGold     AutomagicColor = "dgld" // represents dark gold color.
-	AutomagicColorLightPurple  AutomagicColor = "lpur" // represents light purple color.
-	AutomagicColorDarkPurple   AutomagicColor = "dpur" // represents dark purple color.
-	AutomagicColorOrange       AutomagicColor = "oran" // represents orange color.
-	AutomagicColorBrightWhite  AutomagicColor = "bwht" // represents bright white color.
-)

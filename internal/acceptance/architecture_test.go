@@ -182,6 +182,9 @@ func TestD2ModelsRemainPassiveSchemas(t *testing.T) {
 			if function, ok := declaration.(*ast.FuncDecl); ok {
 				t.Errorf("%s contains behavior %s; move D2 interpretation to d2legacy", path, function.Name.Name)
 			}
+			if values, ok := declaration.(*ast.GenDecl); ok && (values.Tok == token.CONST || values.Tok == token.VAR) {
+				t.Errorf("%s contains interpreted values; keep raw schemas here and move D2 vocabulary to d2legacy", path)
+			}
 		}
 		return nil
 	})
