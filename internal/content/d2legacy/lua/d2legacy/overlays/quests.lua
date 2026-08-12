@@ -1,7 +1,7 @@
 -- Expansion quest-log presentation.
 --
 -- This file demonstrates reading GAME CATALOG data without owning game state.
--- `engine.quest_catalog/v1` tells presentation what quests exist and which localized
+-- `d2legacy.quest_catalog/v1` tells presentation what quests exist and which localized
 -- title keys they use. The panel arranges those facts into recovered sockets.
 -- Quest completion/progression is a separate authority problem.
 
@@ -56,7 +56,7 @@ return {
 
         -- Require recovered catalog data only after the asset-backed path is
         -- entered; lightweight/headless presentation harnesses may omit it.
-        local catalog = require("engine.quest_catalog/v1")
+        local catalog = require("d2legacy.quest_catalog/v1")
         local quests = catalog.quests(0)
 
         for index, socket in ipairs(screen.sockets.positions) do

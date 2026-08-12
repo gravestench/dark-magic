@@ -11,6 +11,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
+	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
 	d2targeting "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
@@ -45,8 +46,8 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		}),
 		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
-		modruntime.QuestCatalogModule(app.questCatalog, app.locale),
-		modruntime.MapCatalogModule(app.questCatalog),
+		d2catalog.QuestModule(app.questCatalog, app.locale),
+		d2catalog.MapModule(app.questCatalog),
 		modruntime.LocaleModule(app.locale),
 		modruntime.SaveModule(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
