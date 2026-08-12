@@ -1087,11 +1087,12 @@ complete until its actions are driven by authoritative game state and commands.
     optional DT1 graphic. A production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
     subtile coordinates without asking presentation to infer either endpoint.
-    A trusted fixed-tick `system.world.transition` command now requires the
-    player's authoritative source level and proximity to that seam, then
-    atomically updates destination level, inset arrival position, world bounds,
-    and velocity. The local source detects the crossed endpoint without trusting
-    Lua and arrival inset prevents immediate bounce-back. The client now swaps
+    The collision-derived endpoints are now immutable bootstrap facts consumed
+    by the authoritative `d2legacy.world.transition` Lua system. Lua owns source
+    and destination level identity, proximity, arrival position, world bounds,
+    and velocity reset; the former native command source and Go transition
+    authority have been deleted. Arrival inset prevents immediate bounce-back.
+    The client now observes the committed level fact and swaps
     authoritative navigation, collision, spatial interaction selection, Lua
     collision, camera projection facts, and sparse assembled-world rendering
     when that command commits. `make capture-act1-seam` places a deterministic
@@ -1621,8 +1622,11 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   Lua-owned, replay-safe, and driven by immutable decoded records plus recovered
   relationships.
 
-  Ownership cutover and cross-zone warp behavior are complete. A full decoded
-  quest/NPC reward path and difficulty progression vector remain.
+  Ownership cutover and cross-zone warp behavior are complete. The production
+  Act I town/Blood Moor seam now crosses through a fixed-tick Lua ECS system;
+  Go supplies collision-derived endpoint facts and presentation observes the
+  committed level only. A full decoded quest/NPC reward path and difficulty
+  progression vector remain.
 
 - [ ] **M21.14.12 — D2 map-generation and population-policy migration.** Move
   act/level graph choices, preset/maze/outdoor selection, legacy hard-coded
@@ -1913,10 +1917,12 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   per concept. Delete superseded code only after callers and preserved historical
   work have been audited. Generic table storage and the typed catalog have been
   audited as complementary layers and consolidated under `internal/game/data`:
-  `store` owns layered TSV bytes and immutable generic rows, while `catalog` owns
-  the one atomic typed snapshot and indexes. The client continues to construct a
-  single shared store for typed records, Lua, and audio rather than duplicating
-  caches or source resolution. Four small renderer-independent capabilities now
+  `store` owns layered TSV bytes and immutable generic rows, while `typed` binds
+  only caller-selected passive schemas and deterministic indexes. The retired
+  global typed catalog/snapshot no longer declares one native list of required
+  Diablo tables; d2legacy selects records and owns all joins and meanings. The
+  client continues to construct a single shared store for Lua, audio, and narrow
+  adapters rather than duplicating caches or source resolution. Four small renderer-independent capabilities now
   use feature ownership instead of historical `*core` names: `inputstate`,
   `loading`, `localization`, and `persistence`; all composition, Lua, acceptance,
   and Raylib callers migrated together and the retired paths are guarded. The

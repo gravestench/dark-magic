@@ -24,7 +24,6 @@ import (
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
-	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
@@ -135,8 +134,12 @@ func (app *application) buildOfflineSession() error {
 		return wrap("register d2legacy random streams", err)
 	}
 	initialData := map[string]any{
-		"d2legacy.development_items": map[string]any{"enabled": app.options.FixtureCharacters > 0},
+		"d2legacy.development_items": map[string]any{
+			"enabled":                 app.options.FixtureCharacters > 0,
+			"create_empty_containers": app.options.FixtureCharacters == 0,
+		},
 		"d2legacy.interactions":      app.interactionBootstrapData(),
+		"d2legacy.world_transitions": app.transitionBootstrapData(),
 	}
 	identity, err := d2legacymod.Identity(app.options.Content, initialData)
 	if err != nil {
@@ -196,16 +199,11 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("create offline player entry source", err)
 	}
-	app.transitionSource, err = gametransition.NewSource(app.entitySimulation, "local-player", app.transitionAuthority)
-	if err != nil {
-		return wrap("create zone transition source", err)
-	}
 	sequencer := simulation.NewLocalSequencer()
 	app.commandSource = func(tick uint64) []simulation.Command {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
 		commands = append(commands, app.commandIntentSource.Commands(tick)...)
-		commands = append(commands, app.transitionSource.Commands(tick)...)
 		return sequencer.Assign(commands)
 	}
 	app.playerControl = movement

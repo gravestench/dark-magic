@@ -114,8 +114,7 @@ type application struct {
 	authoritativeRandom *simulation.RandomStreams
 	playerControl       *d2movement.MovementController
 	movementSource      *d2movement.MovementSource
-	transitionAuthority *gametransition.Authority
-	transitionSource    *gametransition.Source
+	transitionSeam      gametransition.Seam
 	commandIntents      *gamesession.IntentController
 	commandIntentSource *gamesession.IntentSource
 	commandSource       func(uint64) []simulation.Command

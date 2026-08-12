@@ -192,6 +192,35 @@ func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
 	}
 }
 
+// Cross-zone policy used to be split between a native proximity command source
+// and Lua command application. The fixed-tick d2legacy system now owns the
+// complete decision, so no production Go file may recreate those authority
+// types or the retired command identity.
+func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, relativeRoot := range []string{"internal/app", "internal/mod/d2legacy"} {
+		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, forbidden := range []string{"system.world.transition", "transitionAuthority", "transitionSource"} {
+				if strings.Contains(string(data), forbidden) {
+					relative, _ := filepath.Rel(root, path)
+					t.Errorf("%s restores native D2 transition policy through %q", filepath.ToSlash(relative), forbidden)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 // TestGameplayMechanismsDoNotGainPolicyDependencies is a migration ratchet.
 // The small debt file names today's known violations; no new generic engine
 // mechanism may import a package classified as D2 policy or transitional.

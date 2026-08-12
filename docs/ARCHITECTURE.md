@@ -197,7 +197,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/game/worldgen` | Immutable generated-zone recipe contract, validation, and checksums | d2legacy map policy, world | Game session | Keep policy-neutral |
 | `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
 | `internal/game/session` | Command admission, fixed stepping, checkpointing, and replay recording for Go- or Lua-owned systems | client/server composition | Game session | Keep transport-neutral and policy-neutral |
-| `internal/game/data/model` | Lossless Diablo TSV row schemas | typed decoder, narrow d2legacy adapters | Application data | Keep isolated; no formulas, required-table policy, or behavioral enums |
+| `internal/game/data/model` | Lossless Diablo TSV row schemas | typed decoder, narrow d2legacy adapters | Application data | Keep isolated; CI rejects behavior and interpreted constants alongside formulas and required-table policy |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
 | `internal/presentation/scene` | Headless scene state | command, Lua, world | Scene | Keep internal; merge with navigation when lifecycles converge |

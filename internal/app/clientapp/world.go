@@ -33,10 +33,7 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("join Act I town to Blood Moor", err)
 	}
-	app.transitionAuthority, err = gametransition.NewAuthority(seam)
-	if err != nil {
-		return wrap("create zone transition authority", err)
-	}
+	app.transitionSeam = seam
 	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
 	townSpawnX, townSpawnY, found := d2mapgen.ActOneTownEntry(townMap)
@@ -60,7 +57,6 @@ func (app *application) buildEntryWorld() error {
 			app.gameWorlds[app.activeWorldLevel], spawn[0], spawn[1], app.profile.Width, app.profile.Height,
 		)
 	}
-	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
 }
 
@@ -106,6 +102,24 @@ func entryWorldSpawns(fixtureSpawn string, seam gametransition.Seam, townX, town
 	default:
 		return nil, fmt.Errorf("development fixture world spawn %q is unavailable", fixtureSpawn)
 	}
+}
+
+// transitionBootstrapData exports collision-derived seam geometry without
+// deciding what it means. The d2legacy mod owns level identities, trigger
+// distance, arrival behavior, and the authoritative transition system.
+func (app *application) transitionBootstrapData() map[string]any {
+	endpoint := func(source, destination gametransition.SeamEndpoint) map[string]any {
+		return map[string]any{
+			"source_level": float64(source.LevelID), "destination_level": float64(destination.LevelID),
+			"source_x": source.X, "source_y": source.Y,
+			"arrival_x": destination.ArrivalX, "arrival_y": destination.ArrivalY,
+			"world_width": destination.Width, "world_height": destination.Height,
+		}
+	}
+	return map[string]any{"seams": []any{
+		endpoint(app.transitionSeam.Town, app.transitionSeam.Wilderness),
+		endpoint(app.transitionSeam.Wilderness, app.transitionSeam.Town),
+	}}
 }
 
 func (app *application) materializeZone(zone *worldgen.Zone) (*gameworld.Map, error) {

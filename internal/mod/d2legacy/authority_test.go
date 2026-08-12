@@ -256,6 +256,39 @@ assert(mode:get("running") == true)
 `)
 }
 
+func TestD2LegacyWorldTransitionRunsThroughLuaSystem(t *testing.T) {
+	initial := map[string]any{
+		"d2legacy.world_transitions": map[string]any{"seams": []any{
+			map[string]any{
+				"source_level": 1.0, "destination_level": 2.0,
+				"source_x": 10.0, "source_y": 12.0,
+				"arrival_x": 6.0, "arrival_y": 40.0,
+				"world_width": 400.0, "world_height": 400.0,
+			},
+		}},
+	}
+	fixture := newAuthorityFixture(t, fixtureRecords{}, initial)
+	fixture.submitSystem(t, 1, 1, "system.player.enter", `{
+"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",
+"level":1,"experience":0,"dexterity":20,"defense":0,
+"health":50,"max_health":50,"mana":20,"max_mana":20,
+"expansion":true,"hardcore":false,"cof":"","palette":"units",
+"direction":0,"mode":"NU","x":10,"y":12,
+"world_width":100,"world_height":80,"act":1,"level_id":1,"skills":[]
+}`)
+	fixture.step(t)
+	fixture.run(t, `
+local ecs = require("engine.ecs/v1")
+local player = ecs.query({all={"d2legacy.world.player_control"}})[1]
+local location = ecs.get(player, "d2legacy.world.location")
+local position = ecs.get(player, "d2legacy.world.position")
+local bounds = ecs.get(player, "d2legacy.world.bounds")
+assert(location:get("level_id") == 2)
+assert(position:get("x") == 6 and position:get("y") == 40)
+assert(bounds:get("width") == 400 and bounds:get("height") == 400)
+`)
+}
+
 func TestD2LegacyOwnedUnitLimitsAndAttributionAreAuthoritative(t *testing.T) {
 	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
 	fixture.run(t, `

@@ -137,6 +137,23 @@ function M.load()
     if not data and fixture_config.enabled == true then
         data = development_fixtures.build(true)
     end
+	-- A newly created character owns empty containers before any durable item
+	-- import exists. Their dimensions and gold policy are Diablo rules, so the
+	-- first-party mod supplies them instead of asking the generic host to know
+	-- what an inventory, stash, cube, belt, or vendor page looks like.
+	if not data and fixture_config.create_empty_containers == true then
+		data = {
+			owner = "local-player",
+			inventory_width = 10, inventory_height = 4,
+			stash_width = 6, stash_height = 8,
+			cube_width = 3, cube_height = 4,
+			belt_capacity = 4,
+			vendor_width = 10, vendor_height = 10,
+			active_weapon_set = 0,
+			carried_gold = 0, stashed_gold = 0,
+			items = {},
+		}
+	end
     if not data or not data.owner then return end
 
     local layout = create_layout(data)
