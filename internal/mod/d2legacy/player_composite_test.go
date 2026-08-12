@@ -1,4 +1,4 @@
-package modruntime
+package d2legacy_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
+	. "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 

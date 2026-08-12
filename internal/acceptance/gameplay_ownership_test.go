@@ -273,6 +273,42 @@ func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
 	}
 }
 
+// TestGenericEngineDoesNotNameD2Policy catches the subtler form of coupling
+// where rules are copied into an engine package without importing d2legacy.
+// Typed record schemas and codec-facing world data are deliberately outside
+// this lexical gate: they may describe legacy data, but must not decide what
+// that data means during gameplay.
+func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
+	root := repositoryRoot(t)
+	forbidden := []string{
+		"d2legacy", "fire bolt", "fire_bolt", "treasure class", "horadric",
+		"rogue encampment", "blood moor", "monstats", "amazon", "sorceress",
+		"necromancer", "barbarian", "paladin", "druid", "assassin",
+	}
+	for _, relativeRoot := range []string{"internal/game/ecs", "internal/game/session", "internal/game/simulation", "internal/game/worldgen", "internal/runtime/lua"} {
+		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			lower := strings.ToLower(string(data))
+			for _, token := range forbidden {
+				if strings.Contains(lower, token) {
+					relative, _ := filepath.Rel(root, path)
+					t.Errorf("%s names Diablo policy %q; generic engine code must use mod-neutral vocabulary", filepath.ToSlash(relative), token)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 	t.Helper()
 	file, err := os.Open(path)
