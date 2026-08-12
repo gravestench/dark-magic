@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 
 	"github.com/gravestench/akara"
-	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
@@ -47,109 +45,14 @@ func NewAuthority(seam gameworld.Seam) (*Authority, error) {
 // gameplay fact and therefore cannot veto the transition.
 func (authority *Authority) SetObserver(observer func(int)) { authority.observer = observer }
 
-func Register(session *gamesession.Session, authority *Authority) error {
-	if session == nil || authority == nil {
-		return fmt.Errorf("transition: session and authority are required")
-	}
-	return session.Register(CommandKind, gamesession.CommandHandler{
-		Allowed:  []simulation.Authority{simulation.AuthoritySystem, simulation.AuthorityAdmin},
-		Validate: func(command simulation.Command) error { _, err := decode(command.Payload); return err },
-		Apply:    authority.apply,
-	})
-}
-
-func (authority *Authority) apply(engine *gameecs.Engine, command simulation.Command) error {
-	payload, err := decode(command.Payload)
-	if err != nil {
-		return err
-	}
-	controls, ok := akara.GetDynamicStore(engine.World(), "d2legacy.world.player_control")
-	if !ok {
-		return fmt.Errorf("transition: player control is unavailable")
-	}
-	locations, ok := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
-	if !ok {
-		return fmt.Errorf("transition: player location is unavailable")
-	}
-	positions, ok := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
-	if !ok {
-		return fmt.Errorf("transition: player position is unavailable")
-	}
-	bounds, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.bounds")
-	velocities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.velocity")
-	for _, entity := range controls.Entities() {
-		control, _ := controls.Get(entity)
-		owner, _ := control.Get("player")
-		if owner != command.Player {
-			continue
-		}
-		location, _ := locations.Get(entity)
-		current, _ := location.Get("level_id")
-		source, destination, err := authority.endpoints(current.(int64), payload.DestinationLevel)
-		if err != nil {
-			return err
-		}
-		position, _ := positions.Get(entity)
-		x, _ := position.Get("x")
-		y, _ := position.Get("y")
-		if math.Hypot(x.(float64)-source.X, y.(float64)-source.Y) > triggerRadius {
-			return fmt.Errorf("transition: player is outside the authored seam")
-		}
-		if err := location.Set("level_id", int64(destination.LevelID)); err != nil {
-			return err
-		}
-		if err := position.Set("x", destination.ArrivalX); err != nil {
-			return err
-		}
-		if err := position.Set("y", destination.ArrivalY); err != nil {
-			return err
-		}
-		if bounds != nil {
-			if value, found := bounds.Get(entity); found {
-				if err := value.Set("width", destination.Width); err != nil {
-					return err
-				}
-				if err := value.Set("height", destination.Height); err != nil {
-					return err
-				}
-			}
-		}
-		if velocities != nil {
-			if value, found := velocities.Get(entity); found {
-				if err := value.Set("x", float64(0)); err != nil {
-					return err
-				}
-				if err := value.Set("y", float64(0)); err != nil {
-					return err
-				}
-			}
-		}
-		if authority.observer != nil {
-			authority.observer(destination.LevelID)
-		}
-		return nil
-	}
-	return fmt.Errorf("transition: player %q is unavailable", command.Player)
-}
-
-func (authority *Authority) endpoints(current int64, destination int) (gameworld.SeamEndpoint, gameworld.SeamEndpoint, error) {
-	if current == 1 && destination == 2 {
-		return authority.seam.Town, authority.seam.Wilderness, nil
-	}
-	if current == 2 && destination == 1 {
-		return authority.seam.Wilderness, authority.seam.Town, nil
-	}
-	return gameworld.SeamEndpoint{}, gameworld.SeamEndpoint{}, fmt.Errorf("transition: invalid level change %d -> %d", current, destination)
-}
-
 type Source struct {
-	engine    *gameecs.Engine
+	engine    interface{ World() *akara.World }
 	player    string
 	authority *Authority
 	sequence  atomic.Uint64
 }
 
-func NewSource(engine *gameecs.Engine, player string, authority *Authority) (*Source, error) {
+func NewSource(engine interface{ World() *akara.World }, player string, authority *Authority) (*Source, error) {
 	player = strings.TrimSpace(player)
 	if engine == nil || player == "" || authority == nil {
 		return nil, fmt.Errorf("transition: source requires engine, player, and authority")
