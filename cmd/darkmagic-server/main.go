@@ -16,7 +16,6 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
-	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	"github.com/gravestench/dark-magic/internal/logging"
 	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -55,10 +54,6 @@ func main() {
 	defer mod.Stop(context.Background())
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		slog.Error("registering authoritative movement commands", "error", err)
-		return
-	}
-	if err := gamestate.Register(engine); err != nil {
-		slog.Error("registering authoritative timed state engine", "error", err)
 		return
 	}
 	sessionContext, stopSession := context.WithCancel(ctx)

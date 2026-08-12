@@ -11,6 +11,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
@@ -108,6 +109,52 @@ func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
 	}
 	if len(replay.InitialParticipants) != 3 {
 		t.Fatalf("participant states = %d, want identity, Lua state, and RNG", len(replay.InitialParticipants))
+	}
+}
+
+func TestAuthorityRunsTimedStateLifecycleThroughLua(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+	if err := authority.Runtime.Run(ctx, func(state *lua.LState) error {
+		return state.DoString(`
+local ecs=require("engine.ecs/v1")
+timed_target=ecs.create()
+ecs.create({["d2legacy.state.request"]={operation="apply",target=timed_target,
+    state_id="poison",source_id="monster:fallen",duration=2,policy="refresh_same_source"}})
+`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	instances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.state.instance")
+	if instances.Len() != 1 {
+		t.Fatalf("instances after apply = %d", instances.Len())
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if instances.Len() != 0 {
+		t.Fatalf("instances after expiration = %d", instances.Len())
+	}
+	events, _ := akara.GetDynamicStore(engine.World(), "d2legacy.state.event")
+	if events.Len() != 2 {
+		t.Fatalf("timed-state events = %d, want apply and expire", events.Len())
 	}
 }
 

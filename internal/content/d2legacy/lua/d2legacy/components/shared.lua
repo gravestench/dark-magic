@@ -92,6 +92,21 @@ function M.register()
         {name="loot_seed",type="string"},{name="treasure_class",type="string"},
         {name="drops",type="string"},
     })
+    component("d2legacy.state.request", {
+        {name="operation",type="string"},{name="target",type="entity"},
+        {name="state_id",type="string"},{name="source_id",type="string"},
+        {name="duration",type="i64"},{name="policy",type="string"},
+    })
+    component("d2legacy.state.instance", {
+        {name="target",type="entity"},{name="state_id",type="string"},
+        {name="source_id",type="string"},{name="applied_tick",type="i64"},
+        {name="expires_tick",type="i64"},{name="policy",type="string"},
+    })
+    component("d2legacy.state.event", {
+        {name="kind",type="string"},{name="tick",type="i64"},{name="target",type="entity"},
+        {name="state_id",type="string"},{name="source_id",type="string"},
+        {name="expires_tick",type="i64"},{name="reason",type="string"},
+    })
 end
 
 return M

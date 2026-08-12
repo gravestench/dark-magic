@@ -25,7 +25,6 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -167,9 +166,6 @@ func (app *application) buildOfflineSession() error {
 }
 
 func (app *application) registerOfflineCommands() error {
-	if err := gamestate.Register(app.entitySimulation); err != nil {
-		return wrap("register timed state engine", err)
-	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
