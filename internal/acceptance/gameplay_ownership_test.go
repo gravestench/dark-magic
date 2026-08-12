@@ -122,6 +122,28 @@ func TestD2LegacyContentRetiresShimIdentity(t *testing.T) {
 	}
 }
 
+// TestClientDoesNotReinstallMigratedD2Policy keeps completed Lua cutovers from
+// becoming optional decorations over a second Go authority path.
+func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, name := range []string{"core.go", "runtime.go", "components.go"} {
+		path := filepath.Join(root, "internal", "app", "clientapp", name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(data)
+		for _, forbidden := range []string{
+			"RegisterPlayerBasicAttack", "RegisterAI", "RegisterDeath",
+			"game/loot\"", "gamemonster.Register,",
+		} {
+			if strings.Contains(text, forbidden) {
+				t.Errorf("%s reinstalls migrated d2legacy policy through %q", name, forbidden)
+			}
+		}
+	}
+}
+
 // TestGameplayMechanismsDoNotGainPolicyDependencies is a migration ratchet.
 // The small debt file names today's known violations; no new generic engine
 // mechanism may import a package classified as D2 policy or transitional.
