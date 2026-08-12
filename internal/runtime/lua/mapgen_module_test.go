@@ -27,7 +27,7 @@ func TestMapgenModuleExposesPresetValueSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	script := fstest.MapFS{"test.lua": {Data: []byte(`local m=require("engine.mapgen/v1"); local z=m.preset(1,42); assert(z.kind..":"..z.stamps[1].ds1 == "preset:data/global/tiles/Act1/Town/town.ds1")`)}}
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local m=require("d2legacy.mapgen/v1"); local z=m.preset(1,42); assert(z.kind..":"..z.stamps[1].ds1 == "preset:data/global/tiles/Act1/Town/town.ds1")`)}}
 	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestMapgenModuleExposesMazeTopology(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("engine.mapgen/v1").maze(9,42); assert(z.kind=="maze" and #z.rooms==4 and #z.links>=3 and #z.stamps==4)`)}}
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("d2legacy.mapgen/v1").maze(9,42); assert(z.kind=="maze" and #z.rooms==4 and #z.links>=3 and #z.stamps==4)`)}}
 	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestMapgenModuleExposesBloodMoorTownEdge(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("engine.mapgen/v1").outdoor(2,42,"east"); assert(z.kind=="outdoor" and #z.rooms==100 and z.warps[1].direction=="west" and #z.structures>0); local bridges,open=0,0; for _,s in ipairs(z.structures) do if s.kind=="bridge" then bridges=bridges+1; if s.passable then open=open+1 end end end; assert(bridges==64 and open==48)`)}}
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local z=require("d2legacy.mapgen/v1").outdoor(2,42,"east"); assert(z.kind=="outdoor" and #z.rooms==100 and z.warps[1].direction=="west" and #z.structures>0); local bridges,open=0,0; for _,s in ipairs(z.structures) do if s.kind=="bridge" then bridges=bridges+1; if s.passable then open=open+1 end end end; assert(bridges==64 and open==48)`)}}
 	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

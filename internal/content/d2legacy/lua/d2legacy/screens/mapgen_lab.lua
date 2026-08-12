@@ -32,7 +32,7 @@ local function add_pointer_button(self, id, x, caption, action)
 end
 
 function lab:generate()
-    local mapgen = require("engine.mapgen/v1")
+    local mapgen = require("d2legacy.mapgen/v1")
 	local ok, zone
 	if self.mode == "moor" then
 		ok, zone = pcall(mapgen.outdoor, 2, self.seed, self.town_exit, self.difficulty)

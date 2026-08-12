@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 // SeamEndpoint is one authoritative side of a level transition. Coordinates

@@ -3,11 +3,11 @@ internal/game/data/	data	go:data	D2 schemas and immutable decoded records may re
 internal/game/ecs/	mechanism	go:engine	mod-neutral ECS schedule storage queries and barriers
 internal/game/simulation/	mechanism	go:engine	command RNG and replay primitives; embedded policy must split
 internal/game/session/	mechanism	go:engine	policy-neutral session host; D2 handlers must split
-internal/game/mapgen/	d2-policy	lua:d2legacy	D2 generation policy; generic algorithms may split
 internal/game/world/	transitional	split:engine+d2legacy	geometry navigation and D2 world policy are mixed
 internal/game/targeting/	transitional	split:engine+d2legacy	spatial mechanism and D2 target semantics are mixed
 internal/runtime/lua/	adapter	go:runtime	Lua sandbox capabilities and transitional D2 facades
 internal/mod/d2legacy/adapter/	adapter	go:d2legacy	trusted save world and transport adapters feeding plain facts to d2legacy
+internal/mod/d2legacy/mapgen/	d2-policy	lua:d2legacy	transitional Go implementation of D2 generation policy pending Lua replacement
 internal/content/d2legacy/lua/d2legacy/gameplay/	transitional	lua:d2legacy	presentation-era gameplay helpers migrate into canonical d2legacy authority modules
 internal/content/d2legacy/lua/d2legacy/dev/	adapter	lua:development	developer instruments consuming production boundaries
 internal/content/d2legacy/lua/d2legacy/screens/	adapter	lua:presentation	first-party screens and labs

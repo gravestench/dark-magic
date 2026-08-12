@@ -3,7 +3,7 @@ package modruntime
 import (
 	"fmt"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -11,10 +11,10 @@ import (
 // catalog ownership. Lua labs can inspect recipes while gameplay sessions can
 // use the same Go generator without a Lua VM.
 func MapgenModule(catalog gameDataSnapshotter) Module {
-	return Module{Name: "engine.mapgen/v1", Help: documentedModule("Generate deterministic renderer-independent zone recipes.", map[string]CommandHelp{
-		"preset":  commandHelp("engine.mapgen.preset(level_id, seed [, difficulty])", "Generate a typed preset zone and return its canonical value snapshot."),
-		"maze":    commandHelp("engine.mapgen.maze(level_id, seed [, difficulty])", "Generate a typed maze zone and return rooms, links, recipes, and trace."),
-		"outdoor": commandHelp("engine.mapgen.outdoor(level_id, seed, town_exit [, difficulty])", "Generate Blood Moor joined to a north/east/south/west town exit."),
+	return Module{Name: "d2legacy.mapgen/v1", Help: documentedModule("Generate Diablo II zone recipes for the first-party mod.", map[string]CommandHelp{
+		"preset":  commandHelp("d2legacy.mapgen.preset(level_id, seed [, difficulty])", "Generate a typed preset zone and return its canonical value snapshot."),
+		"maze":    commandHelp("d2legacy.mapgen.maze(level_id, seed [, difficulty])", "Generate a typed maze zone and return rooms, links, recipes, and trace."),
+		"outdoor": commandHelp("d2legacy.mapgen.outdoor(level_id, seed, town_exit [, difficulty])", "Generate Blood Moor joined to a north/east/south/west town exit."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"outdoor": func(state *lua.LState) int {

@@ -7,7 +7,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 func TestActOnePresetRecipeAgainstOwnedAssets(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 var (

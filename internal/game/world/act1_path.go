@@ -3,7 +3,7 @@ package world
 import (
 	"fmt"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 // actOneDirtPathSequence maps the eight neighboring path cells to the authored

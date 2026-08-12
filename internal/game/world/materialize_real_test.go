@@ -7,8 +7,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
