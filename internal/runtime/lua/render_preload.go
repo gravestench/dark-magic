@@ -315,7 +315,7 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 		if value, ok := definition.RawGetString("world").(*lua.LUserData); ok {
 			world, valid := value.Value.(*gameworld.Map)
 			if !valid {
-				return nil, fmt.Errorf("request %d world must be a d2legacy.world map", item)
+				return nil, fmt.Errorf("request %d world must be an engine.world map", item)
 			}
 			request.World = world
 		}

@@ -4,7 +4,7 @@ import lua "github.com/yuin/gopher-lua"
 
 // InitialDataModule exposes immutable composition-time values to trusted mod
 // startup code. It is policy-neutral: the host transports a copied value tree;
-// d2legacy decides which ECS state and rules those values create.
+// the loaded mod decides which ECS state and rules those values create.
 func InitialDataModule(values map[string]any) Module {
 	return Module{Name: "engine.initial_data/v1", Help: documentedModule("Read immutable host-provided session bootstrap values.", map[string]CommandHelp{
 		"get": commandHelp("engine.initial_data.get(name)", "Return a deep Lua copy of one bootstrap value."),

@@ -61,7 +61,8 @@ local function options(row, requested, seed)
     local bus = "sfx"
     if music then bus = "music"
     elseif number(row, "IsUI", "isui") ~= 0 then bus = "ui"
-    elseif number(row, "IsAmbientScene", "IsAmbientEvent") ~= 0 then bus = "ambience"
+    elseif number(row, "IsAmbientScene", "isambientscene") ~= 0
+        or number(row, "IsAmbientEvent", "isambientevent") ~= 0 then bus = "ambience"
     elseif channel:find("voice") or channel:find("speech") or channel:find("vocal") then bus = "speech" end
     return {bus=bus, volume=volume/255, loop=number(row,"Loop","loop")~=0,
         stream=music or number(row,"Stream","stream")~=0, group=requested}
