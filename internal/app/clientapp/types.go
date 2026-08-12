@@ -120,7 +120,6 @@ type application struct {
 	transitionSource    *gametransition.Source
 	commandIntents      *gamesession.IntentController
 	commandIntentSource *gamesession.IntentSource
-	itemInitialData     map[string]any
 	commandSource       func(uint64) []simulation.Command
 	worldMu             sync.RWMutex
 	gameWorlds          map[int]*gameworld.Map

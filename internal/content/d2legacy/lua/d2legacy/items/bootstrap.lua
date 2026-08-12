@@ -5,6 +5,7 @@
 -- and systems consult ECS only; initial_data is never a mutable side channel.
 
 local ecs = require("engine.ecs/v1")
+local development_fixtures = require("d2legacy.items.development_fixtures")
 local M = {}
 
 local function create_layout(data)
@@ -128,7 +129,14 @@ function M.load()
     local available, initial = pcall(require, "engine.initial_data/v1")
     if not available then return end
 
+    local fixture_config = initial.get("d2legacy.development_items") or {}
+    -- Tests, save importers, and servers may supply already-decoded durable
+    -- item facts. The development catalog is only a fallback explicitly
+    -- requested by the interactive client.
     local data = initial.get("d2legacy.items")
+    if not data and fixture_config.enabled == true then
+        data = development_fixtures.build(true)
+    end
     if not data or not data.owner then return end
 
     local layout = create_layout(data)

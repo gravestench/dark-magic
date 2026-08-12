@@ -8,8 +8,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/audio"
@@ -156,11 +154,11 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("create local command intent source", err)
 	}
-	if err := app.buildItemAuthority(); err != nil {
-		return err
-	}
 	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
-		app.authoritativeState, app.authoritativeRandom, map[string]any{"d2legacy.items": app.itemBootstrapData(), "d2legacy.interactions": app.interactionBootstrapData()}); err != nil {
+		app.authoritativeState, app.authoritativeRandom, map[string]any{
+			"d2legacy.development_items": map[string]any{"enabled": app.options.FixtureCharacters > 0},
+			"d2legacy.interactions":      app.interactionBootstrapData(),
+		}); err != nil {
 		return wrap("configure canonical d2legacy runtime", err)
 	}
 	if err := app.registerOfflineCommands(); err != nil {
@@ -267,134 +265,6 @@ func (app *application) populationBootstrapData() map[string]any {
 	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
 }
 
-func (app *application) buildItemAuthority() error {
-	items, placements := app.developmentItems()
-	catalogSnapshot, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load vendor trade terms", err)
-	}
-	trades := make(map[string]any, len(catalogSnapshot.NPCTradesByID))
-	for vendor, record := range catalogSnapshot.NPCTradesByID {
-		trades[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
-	}
-	app.itemInitialData = itemBootstrap(items, placements, trades)
-	return nil
-}
-
-type bootstrapItem struct {
-	id, code                 string
-	width, height            int
-	bodySlots                []string
-	beltEligible             bool
-	baseCost                 int64
-	inventoryDC6, worldDC6   string
-	worldAnimated            bool
-	composite                map[string]string
-	weaponClass              string
-	meleeRange               float64
-	physicalMin, physicalMax int64
-	meleeWeaponClass         string
-}
-
-type bootstrapPlacement struct {
-	container, slot                 string
-	x, y, beltSlot, weaponSet, page int
-}
-
-func (app *application) developmentItems() ([]bootstrapItem, map[string]bootstrapPlacement) {
-	if app.options.FixtureCharacters <= 0 {
-		return nil, nil
-	}
-	snapshot, err := app.gameData.Snapshot()
-	if err != nil {
-		return nil, nil
-	}
-	items := make([]bootstrapItem, 0, 8)
-	placements := make(map[string]bootstrapPlacement)
-	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
-		base := bootstrapItem{id: "fixture-short-sword", code: weapon.Code, width: weapon.InvWidth, height: weapon.InvHeight, baseCost: int64(weapon.Cost), bodySlots: []string{"rarm", "larm"}, inventoryDC6: itemAsset(weapon.InvFile), worldDC6: itemAsset(weapon.FlippyFile), worldAnimated: true, composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), weaponClass: strings.ToUpper(weapon.WeaponClass), meleeRange: float64(1 + weapon.RangeAdder), physicalMin: int64(weapon.MinDam) * 256, physicalMax: int64(weapon.MaxDam) * 256, meleeWeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		items = append(items, base)
-		placements[base.id] = bootstrapPlacement{container: "inventory"}
-		base.id = "fixture-vendor-short-sword"
-		items = append(items, base)
-		placements[base.id] = bootstrapPlacement{container: "vendor", slot: "weap"}
-	}
-	if armor, found := snapshot.ArmorByCode["cap"]; found {
-		base := bootstrapItem{id: "fixture-hireling-cap", code: armor.Code, width: armor.InvWidth, height: armor.InvHeight, baseCost: int64(armor.Cost), bodySlots: []string{"head"}, inventoryDC6: itemAsset(armor.InvFile), worldDC6: itemAsset(armor.FlippyFile), worldAnimated: true, composite: compositeRecipe(strconv.Itoa(armor.Component), armor.AlternateGfx)}
-		items = append(items, base)
-		placements[base.id] = bootstrapPlacement{container: "hireling", slot: "head"}
-		base.id = "fixture-vendor-cap"
-		items = append(items, base)
-		placements[base.id] = bootstrapPlacement{container: "vendor", slot: "armo"}
-	}
-	for index, code := range []string{"hp1", "mp1"} {
-		if misc, found := snapshot.MiscByCode[code]; found {
-			id := "fixture-" + code
-			base := bootstrapItem{id: id, code: code, width: misc.InvWidth, height: misc.InvHeight, baseCost: int64(misc.Cost), beltEligible: true, inventoryDC6: itemAsset(misc.InvFile), worldDC6: itemAsset(misc.FlippyFile), worldAnimated: true}
-			items = append(items, base)
-			if code == "mp1" {
-				placements[id] = bootstrapPlacement{container: "belt", beltSlot: 0}
-			} else {
-				placements[id] = bootstrapPlacement{container: "inventory", x: 2 + index}
-			}
-			if code == "hp1" {
-				vendorID := "fixture-vendor-" + code
-				base.id = vendorID
-				items = append(items, base)
-				placements[vendorID] = bootstrapPlacement{container: "vendor", slot: "misc"}
-			}
-		}
-	}
-	for _, fixture := range []struct {
-		code         string
-		container    string
-		beltEligible bool
-	}{
-		{code: "rvs", container: "stash", beltEligible: true},
-		{code: "tsc", container: "cube"},
-	} {
-		if misc, found := snapshot.MiscByCode[fixture.code]; found {
-			id := "fixture-" + fixture.code
-			items = append(items, bootstrapItem{id: id, code: fixture.code, width: misc.InvWidth, height: misc.InvHeight, baseCost: int64(misc.Cost), beltEligible: fixture.beltEligible, inventoryDC6: itemAsset(misc.InvFile), worldDC6: itemAsset(misc.FlippyFile), worldAnimated: true})
-			placements[id] = bootstrapPlacement{container: fixture.container}
-		}
-	}
-	return items, placements
-}
-
-// itemBootstrapData converts the host/import boundary to policy-neutral value
-// trees. Lua receives a deep copy and decides what these Diablo item facts mean.
-func (app *application) itemBootstrapData() map[string]any {
-	return app.itemInitialData
-}
-
-func itemBootstrap(items []bootstrapItem, placements map[string]bootstrapPlacement, tradeTerms map[string]any) map[string]any {
-	result := map[string]any{
-		"owner": "local-player", "belt_capacity": float64(4), "active_weapon_set": float64(0),
-		"vendor_width": float64(10), "vendor_height": float64(10), "carried_gold": float64(10000), "stashed_gold": float64(0),
-		"inventory_width": float64(10), "inventory_height": float64(4), "stash_width": float64(6), "stash_height": float64(8), "cube_width": float64(3), "cube_height": float64(4),
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].id < items[j].id })
-	entries := make([]any, 0, len(items))
-	for _, item := range items {
-		placement := placements[item.id]
-		components := make([]string, 0, len(item.composite))
-		for component, appearance := range item.composite {
-			components = append(components, component+"="+appearance)
-		}
-		sort.Strings(components)
-		entries = append(entries, map[string]any{
-			"id": item.id, "code": item.code, "width": float64(item.width), "height": float64(item.height), "body_slots": strings.Join(item.bodySlots, ","), "belt_eligible": item.beltEligible,
-			"base_cost": float64(item.baseCost), "applied_services": "", "inventory_dc6": item.inventoryDC6, "world_dc6": item.worldDC6, "world_animated": item.worldAnimated, "composite": strings.Join(components, ","),
-			"weapon_class": item.weaponClass, "melee_range": item.meleeRange, "physical_min": float64(item.physicalMin), "physical_max": float64(item.physicalMax), "melee_weapon_class": item.meleeWeaponClass,
-			"container": placement.container, "x": float64(placement.x), "y": float64(placement.y), "slot": placement.slot, "belt_slot": float64(placement.beltSlot), "weapon_set": float64(placement.weaponSet), "page": float64(placement.page),
-		})
-	}
-	result["items"] = entries
-	result["trade_terms"] = tradeTerms
-	return result
-}
-
 func (app *application) interactionBootstrapData() map[string]any {
 	initial := ""
 	if app.options.StartScene == "vendor" {
@@ -419,33 +289,6 @@ func (app *application) interactionBootstrapData() map[string]any {
 		}
 	}
 	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": targets}
-}
-
-func compositeRecipe(component, appearance string) map[string]string {
-	tokens := []string{"HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"}
-	component = strings.ToUpper(strings.TrimSpace(component))
-	appearance = strings.ToUpper(strings.TrimSpace(appearance))
-	if appearance == "" {
-		return nil
-	}
-	for _, token := range tokens {
-		if component == token {
-			return map[string]string{token: appearance}
-		}
-	}
-	index, err := strconv.Atoi(component)
-	if err != nil || index < 0 || index >= len(tokens) {
-		return nil
-	}
-	return map[string]string{tokens[index]: appearance}
-}
-
-func itemAsset(name string) string {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return ""
-	}
-	return "data/global/items/" + name + ".dc6"
 }
 
 func (app *application) buildLoadingCoordinator() error {
