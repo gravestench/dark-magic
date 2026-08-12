@@ -358,7 +358,9 @@ return {
             local player = require("d2legacy.player_intents")
             self.player = player
             self.interaction = require("d2legacy.interactions.api")
-			self.targeting = require("d2legacy.targeting/v1")
+			-- Live-entity selection is d2legacy policy over generic ECS queries.
+			-- Static authored objects still come from the engine.world map facts.
+			self.targeting = require("d2legacy.gameplay.targeting")
             local items = require("d2legacy.items.api")
             self.items = items
 
