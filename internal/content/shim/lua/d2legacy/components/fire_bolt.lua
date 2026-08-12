@@ -47,6 +47,8 @@ function M.register()
             { name = "target_y", type = "f64" },
             { name = "velocity_x", type = "f64" },
             { name = "velocity_y", type = "f64" },
+            { name = "previous_x", type = "f64" },
+            { name = "previous_y", type = "f64" },
             { name = "remaining_ticks", type = "i64" },
             { name = "collision_radius", type = "f64" },
             { name = "minimum_damage_raw", type = "i64" },

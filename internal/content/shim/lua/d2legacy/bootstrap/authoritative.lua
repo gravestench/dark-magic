@@ -7,6 +7,8 @@ local components = require("d2legacy.components.fire_bolt")
 local fire_bolt_data = require("d2legacy.data.fire_bolt")
 local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
+local fire_bolt_system = require("d2legacy.systems.fire_bolt")
+local projectile_system = require("d2legacy.systems.projectile")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -20,6 +22,8 @@ function M.start()
     M.fire_bolt = fire_bolt_data.load()
     cast_command.register()
     cast_system.register(M.fire_bolt)
+    fire_bolt_system.register(M.fire_bolt)
+    projectile_system.register()
 end
 
 function M.stop()

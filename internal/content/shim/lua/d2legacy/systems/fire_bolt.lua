@@ -49,6 +49,8 @@ function M.register(definition)
                             target_x = cast:get("target_x"), target_y = cast:get("target_y"),
                             velocity_x = dx * definition.speed_per_tick,
                             velocity_y = dy * definition.speed_per_tick,
+                            previous_x = position:get("x"),
+                            previous_y = position:get("y"),
                             remaining_ticks = definition.lifetime_ticks,
                             collision_radius = definition.collision_radius,
                             minimum_damage_raw = definition.minimum_damage_raw,
