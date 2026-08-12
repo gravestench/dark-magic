@@ -279,6 +279,59 @@ assert(animation:get("mode") == "WL" and facing:get("direction") == 15)
 `)
 }
 
+func TestD2LegacyPlayerMeleeEmitsAnimationLifecycleEvents(t *testing.T) {
+	fixture := newAuthorityFixture(t, fixtureRecords{
+		"data/global/excel/skills.txt": {
+			{"Id": "0", "skill": "Attack", "skilldesc": "attack", "leftskill": "1", "general": "1", "passive": "0"},
+			{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"},
+		},
+		"data/global/excel/skilldesc.txt": {
+			{"skilldesc": "attack", "ListRow": "0", "IconCel": "0"},
+			{"skilldesc": "firebolt", "ListRow": "1", "IconCel": "1"},
+		},
+	}, nil)
+	fixture.submitSystem(t, 1, 1, "system.player.enter", `{
+"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",
+"level":1,"experience":0,"dexterity":20,"defense":0,
+"health":50,"max_health":50,"mana":20,"max_mana":20,
+"expansion":true,"hardcore":false,"cof":"","palette":"units",
+"direction":0,"mode":"NU","x":10,"y":12,
+"world_width":100,"world_height":80,"act":1,"level_id":1,"skills":[]
+}`)
+	fixture.step(t)
+	fixture.run(t, `
+local ecs=require("engine.ecs/v1")
+ecs.create({
+    ["d2legacy.monster.identity"]={spawn_id="event-target",definition_id="target",base_id="",graphics_id="",seed="1",treasure_class=""},
+    ["d2legacy.monster.stats"]={level=1,health=4096,max_health=4096,defense=0,attack_rating=0,physical_min=0,physical_max=0,experience=0},
+    ["d2legacy.world.position"]={x=12,y=12},["d2legacy.world.location"]={act=1,level_id=1},
+    ["d2legacy.world.collider"]={radius=1},
+    ["d2legacy.world.selectable"]={id="monster:event-target",kind="hostile",label="Target",owner="",radius=1,priority=1},
+})`)
+	fixture.submit(t, 2, 1, "alice", "player.use_skill",
+		`{"side":"left","target_x":12,"target_y":12,"target_id":"monster:event-target"}`)
+	for range 11 {
+		fixture.step(t)
+	}
+	fixture.run(t, `
+local ecs=require("engine.ecs/v1")
+local events=ecs.query({all={"d2legacy.combat.attack_animation_event"}})
+assert(#events==3,"animation events="..#events)
+local kinds={}
+local ticks={}
+for _,entity in ipairs(events) do
+    local event=ecs.get(entity,"d2legacy.combat.attack_animation_event")
+    assert(event:get("attacker_id")=="player:alice")
+    assert(event:get("target_id")=="monster:event-target")
+    assert(event:get("skill_id")==0)
+    kinds[event:get("kind")]=true
+    ticks[event:get("kind")]=event:get("tick")
+end
+assert(kinds.attack_started and kinds.attack_impact and kinds.attack_completed)
+assert(ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed)
+`)
+}
+
 func TestD2LegacyDerivedMitigationAndLethalDamageVectors(t *testing.T) {
 	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
 	fixture.submitSystem(t, 1, 1, "system.player.enter", `{

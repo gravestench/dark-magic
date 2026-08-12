@@ -175,6 +175,7 @@ function M.semantic_cues(observed)
     local result = {}
     local entities, known = {}, {}
     for _, component in ipairs({"d2legacy.monster.death_event", "d2legacy.missile.event",
+        "d2legacy.combat.attack_animation_event",
         "d2legacy.combat.melee_event", "d2legacy.combat.event"}) do
         local ok, matches = pcall(ecs.query, {all = {component}})
         if ok then
@@ -193,6 +194,8 @@ function M.semantic_cues(observed)
         if death then kind, values = "monster_death", death:snapshot() end
         local missile = optional_component(entity, "d2legacy.missile.event")
         if missile then kind, values = "missile", missile:snapshot() end
+        local animation = optional_component(entity, "d2legacy.combat.attack_animation_event")
+        if animation then kind, values = "combat", animation:snapshot() end
         local melee = optional_component(entity, "d2legacy.combat.melee_event")
         if melee then kind, values = "combat", melee:snapshot() end
         local combat = optional_component(entity, "d2legacy.combat.event")

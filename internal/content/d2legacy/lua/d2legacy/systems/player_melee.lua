@@ -29,6 +29,24 @@ local function stop(entity, mode)
     if animation then animation:set("mode", mode or "NU") end
 end
 
+local function identity(entity)
+    local selectable=ecs.get(entity,"d2legacy.world.selectable")
+    return selectable and selectable:get("id") or tostring(entity:id())
+end
+
+local function animation_event(structural, attacker, attack, kind, tick)
+    local target_id,skill_id
+    if type(attack)=="table" then
+        target_id,skill_id=attack.target_id,attack.skill_id
+    else
+        target_id,skill_id=attack:get("target_id"),attack:get("skill_id")
+    end
+    structural:create({["d2legacy.combat.attack_animation_event"]={
+        kind=kind,tick=tick,attacker_id=identity(attacker),
+        target_id=target_id,skill_id=skill_id,
+    }})
+end
+
 local function start_swing(context, attacker, target_id, dx, dy, structural)
     stop(attacker, "A1")
     local facing = ecs.get(attacker, "d2legacy.world.facing")
@@ -37,10 +55,12 @@ local function start_swing(context, attacker, target_id, dx, dy, structural)
     end
     -- These reviewed fallback ticks keep simulation independent of renderer
     -- frames. Typed AnimData timing will replace the defaults through mod data.
-    structural:set(attacker, "d2legacy.combat.attack_animation", {
+    local attack = {
         skill_id=0,target_id=target_id,start_tick=context.tick,
         impact_tick=context.tick+3,complete_tick=context.tick+8,impact_fired=false,
-    })
+    }
+    structural:set(attacker, "d2legacy.combat.attack_animation", attack)
+    animation_event(structural, attacker, attack, "attack_started", context.tick)
 end
 
 function M.register()
@@ -78,7 +98,8 @@ function M.register()
         read={"d2legacy.combat.attack_approach","d2legacy.world.selectable","d2legacy.world.position",
             "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile"},
         write={"d2legacy.combat.attack_approach","d2legacy.combat.attack_animation",
-            "d2legacy.world.velocity","d2legacy.world.facing","d2legacy.player.animation"},
+            "d2legacy.world.velocity","d2legacy.world.facing","d2legacy.player.animation",
+            "d2legacy.combat.attack_animation_event"},
         update=function(context, entities, structural)
             for _, attacker in ipairs(entities) do
                 local approach, profile = ecs.get(attacker, "d2legacy.combat.attack_approach"), ecs.get(attacker, "d2legacy.combat.melee_profile")
@@ -116,17 +137,19 @@ function M.register()
     ecs.system({id="d2legacy.combat.player_melee_animation",phase="pre_simulation",
         query={all={"d2legacy.combat.attack_animation"}},
         read={"d2legacy.combat.attack_animation","d2legacy.world.velocity",
-            "d2legacy.player.animation"},
+            "d2legacy.player.animation","d2legacy.world.selectable"},
         write={"d2legacy.combat.attack_animation","d2legacy.combat.basic_attack_request",
-            "d2legacy.world.velocity","d2legacy.player.animation"},
+            "d2legacy.world.velocity","d2legacy.player.animation","d2legacy.combat.attack_animation_event"},
         update=function(context, entities, structural)
             for _, attacker in ipairs(entities) do
                 local attack = ecs.get(attacker, "d2legacy.combat.attack_animation")
                 if not attack:get("impact_fired") and context.tick >= attack:get("impact_tick") then
                     attack:set("impact_fired", true)
+                    animation_event(structural, attacker, attack, "attack_impact", context.tick)
                     structural:set(attacker, "d2legacy.combat.basic_attack_request", {target_id=attack:get("target_id"),request_tick=context.tick})
                 end
                 if context.tick >= attack:get("complete_tick") then
+                    animation_event(structural, attacker, attack, "attack_completed", context.tick)
                     stop(attacker); structural:remove(attacker, "d2legacy.combat.attack_animation")
                 end
             end
