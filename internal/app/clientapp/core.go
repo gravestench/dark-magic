@@ -12,7 +12,6 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -27,6 +26,7 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"

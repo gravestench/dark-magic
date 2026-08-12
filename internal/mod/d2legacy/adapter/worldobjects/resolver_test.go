@@ -4,8 +4,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 )
 
 func TestResolverUsesActLocalOrderingForBothObjectKinds(t *testing.T) {

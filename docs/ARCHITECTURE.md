@@ -325,7 +325,8 @@ rule prediction is optional later work, never an authority transfer.
 
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/d2legacy/data/recovered/riiablo`, accompanied by provenance. The
-`internal/game/data/recovered` catalog validates and normalizes those files;
+`internal/mod/d2legacy/data/recovered` validates and normalizes those files as
+first-party mod data rather than generic engine state;
 narrow adapters under `internal/mod/d2legacy/adapter/catalog` expose facts to
 the mod while localization and audio remain separate capabilities responsible
 for resolving strings and assets.

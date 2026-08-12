@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 )
 
 type Records interface {

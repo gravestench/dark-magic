@@ -2,7 +2,7 @@
 internal/game/data/model/	data	go:data	Pure D2 file schemas may remain in Go; helpers and enums require policy audit
 internal/game/data/store/	mechanism	go:engine	Generic immutable lossless row storage provenance and invalidation
 internal/game/data/typed/	mechanism	go:engine	Caller-selected schema binding and deterministic indexes without table composition
-internal/game/data/recovered/	data	go:data	Immutable imported research records pending narrower d2legacy adapters
+internal/mod/d2legacy/data/	data	go:d2legacy	Parsers and immutable stores for first-party recovered d2legacy content
 internal/game/ecs/	mechanism	go:engine	mod-neutral ECS schedule storage queries and barriers
 internal/game/simulation/	mechanism	go:engine	command RNG and replay primitives; embedded policy must split
 internal/game/session/	mechanism	go:engine	policy-neutral session host; D2 handlers must split

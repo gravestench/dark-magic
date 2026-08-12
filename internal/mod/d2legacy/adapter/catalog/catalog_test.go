@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )

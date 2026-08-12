@@ -80,5 +80,5 @@ func TestRepositoryD2LegacyDataParses(t *testing.T) {
 
 func repositoryD2Legacy(t *testing.T) fs.FS {
 	t.Helper()
-	return os.DirFS("../../../content/d2legacy")
+	return os.DirFS("../../../../content/d2legacy")
 }
