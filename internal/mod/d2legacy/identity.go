@@ -17,31 +17,17 @@ import (
 // Identity pins the exact authoritative Lua bytes used by one session. Sorted
 // file order makes the result independent of filesystem traversal order.
 func Identity(source fs.FS, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
-	var names []string
-	err := fs.WalkDir(source, "lua/d2legacy", func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !entry.IsDir() && strings.HasSuffix(name, ".lua") {
-			names = append(names, name)
-		}
-		return nil
+	packageDigest, err := hashSource(source, ".", func(string) bool { return true })
+	if err != nil {
+		return simulation.RuntimeIdentity{}, err
+	}
+	authoritativeDigest, err := hashSource(source, "lua/d2legacy", func(name string) bool {
+		return strings.HasSuffix(name, ".lua")
 	})
 	if err != nil {
 		return simulation.RuntimeIdentity{}, err
 	}
-	sort.Strings(names)
-	hash := sha256.New()
-	for _, name := range names {
-		data, err := fs.ReadFile(source, name)
-		if err != nil {
-			return simulation.RuntimeIdentity{}, err
-		}
-		_, _ = hash.Write([]byte(name))
-		_, _ = hash.Write([]byte{0})
-		_, _ = hash.Write(data)
-	}
-	digest := hex.EncodeToString(hash.Sum(nil))
+
 	configured := map[string]any{}
 	if len(configuration) > 0 && configuration[0] != nil {
 		configured = configuration[0]
@@ -51,15 +37,46 @@ func Identity(source fs.FS, configuration ...map[string]any) (simulation.Runtime
 		return simulation.RuntimeIdentity{}, err
 	}
 	configurationDigest := sha256.Sum256(encodedConfiguration)
+	dependency := func(value string) string { sum := sha256.Sum256([]byte(value)); return hex.EncodeToString(sum[:]) }
 	return simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1",
-		PackageHash: digest, AuthoritativeHash: digest,
+		ModID: "d2legacy", ContractVersion: "v1", PackageHash: packageDigest,
+		AuthoritativeHash: authoritativeDigest,
+		Dependencies: map[string]string{"engine/deterministic": "sha256:" + dependency("v1"),
+			"engine/worldgen": "sha256:" + dependency("v1")},
 		ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
 		CapabilityVersions: map[string]string{
 			"engine.authority_command": "v1", "engine.authority_random": "v1",
 			"engine.authority_state": "v1", "engine.ecs": "v1", "engine.records": "v1",
 		},
 	}, nil
+}
+
+func hashSource(source fs.FS, root string, include func(string) bool) (string, error) {
+	var names []string
+	err := fs.WalkDir(source, root, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && include(name) {
+			names = append(names, name)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	sort.Strings(names)
+	hash := sha256.New()
+	for _, name := range names {
+		data, err := fs.ReadFile(source, name)
+		if err != nil {
+			return "", err
+		}
+		_, _ = hash.Write([]byte(name))
+		_, _ = hash.Write([]byte{0})
+		_, _ = hash.Write(data)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 // NewRandomStreams declares every purpose currently consumed by authoritative

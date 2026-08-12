@@ -26,6 +26,35 @@ type RuntimeIdentity struct {
 	CapabilityVersions map[string]string `json:"capability_versions,omitempty"`
 }
 
+func (identity RuntimeIdentity) Digest() (string, error) {
+	if err := identity.Validate(); err != nil {
+		return "", err
+	}
+	encoded, err := json.Marshal(identity)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(encoded)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func RuntimeIdentityFromParticipants(states []ParticipantState) (RuntimeIdentity, error) {
+	for _, state := range states {
+		if state.ID != (&IdentityParticipant{}).StateID() {
+			continue
+		}
+		var identity RuntimeIdentity
+		if err := json.Unmarshal(state.Data, &identity); err != nil {
+			return RuntimeIdentity{}, err
+		}
+		if err := identity.Validate(); err != nil {
+			return RuntimeIdentity{}, err
+		}
+		return identity, nil
+	}
+	return RuntimeIdentity{}, fmt.Errorf("%w: runtime identity participant is missing", ErrAuthoritativeState)
+}
+
 func (identity RuntimeIdentity) Validate() error {
 	if strings.TrimSpace(identity.ModID) == "" || strings.TrimSpace(identity.ContractVersion) == "" || strings.TrimSpace(identity.PackageHash) == "" || strings.TrimSpace(identity.AuthoritativeHash) == "" || strings.TrimSpace(identity.ConfigurationHash) == "" {
 		return fmt.Errorf("%w: runtime identity requires mod, contract, package, authoritative source, and configuration identities", ErrAuthoritativeState)
