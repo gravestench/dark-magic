@@ -289,6 +289,76 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 		"engine.authoritative_rng/v1", "engine.authoritative_runtime/v1", "engine.authoritative_state/v1")
 }
 
+func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+
+	spawnPayload, _ := json.Marshal(map[string]any{"spawn_id": "continued-fallen", "seed": float64(9), "x": float64(8), "y": float64(9), "act": float64(1), "level_id": float64(2), "definition": map[string]any{
+		"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen", "ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
+		"life_min": float64(256), "life_max": float64(768), "level": float64(1), "defense": float64(0), "attack_rating": float64(0), "physical_min": float64(256), "physical_max": float64(256), "experience": float64(5), "treasure_class": "Act 1 H2H A", "collider_radius": float64(1), "select_radius": float64(1), "velocity": float64(5), "think_interval": float64(1), "aggro_radius": float64(20), "attack_range": float64(1)}})
+	command := simulation.Command{Tick: 2, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.monster.spawn", Payload: spawnPayload}
+	if err := session.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	originalReplay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalChecksum := originalReplay.Checkpoints[len(originalReplay.Checkpoints)-1].Checksum
+	if err := authority.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+	session.Close()
+
+	restoredEngine, err := gameecs.RestoreSnapshot(*checkpoint.Snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoredSession, err := gamesession.New(restoredEngine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restoredSession.Close()
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 77, Restore: checkpoint.Participants})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Stop(ctx)
+	if err := restoredSession.Submit(command); err != nil {
+		t.Fatal(err)
+	}
+	if err := restoredSession.Step(); err != nil {
+		t.Fatal(err)
+	}
+	restoredReplay, err := restoredSession.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoredChecksum := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1].Checksum
+	if restoredChecksum != originalChecksum {
+		t.Fatalf("continued checksum = %s, want %s", restoredChecksum, originalChecksum)
+	}
+}
+
 func assertParticipantIDs(t *testing.T, states []simulation.ParticipantState, expected ...string) {
 	t.Helper()
 	if len(states) != len(expected) {
