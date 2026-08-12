@@ -123,8 +123,10 @@ type Spawn struct {
 // Materialization may realize it with level-specific DT1 floor identities;
 // simulation and tests can reason about connectivity before assets are loaded.
 type PathTile struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X         int   `json:"x"`
+	Y         int   `json:"y"`
+	MainIndex int32 `json:"main_index,omitempty"`
+	SubIndex  int32 `json:"sub_index,omitempty"`
 }
 
 // StructureTile reserves one world-tile cell for an outdoor structural layer.

@@ -115,10 +115,44 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
-	if materializer.done && materializer.postprocess != nil {
-		if err := materializer.postprocess(materializer.assembled, materializer.zone, append([]*TileCatalog(nil), materializer.catalogOrder...)); err != nil {
+	if materializer.done {
+		if err := materializeRecipeFloors(materializer.assembled, materializer.zone, materializer.catalogOrder); err != nil {
 			return err
 		}
+		if materializer.postprocess != nil {
+			if err := materializer.postprocess(materializer.assembled, materializer.zone, append([]*TileCatalog(nil), materializer.catalogOrder...)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// materializeRecipeFloors applies opaque floor identities selected by a mod's
+// admitted world recipe. The engine performs only catalog lookup and placement;
+// it does not know why a route cell uses a particular DT1 identity.
+func materializeRecipeFloors(world *Map, zone *worldgen.Zone, catalogs []*TileCatalog) error {
+	changed := false
+	for _, tile := range zone.Paths() {
+		if tile.MainIndex == 0 && tile.SubIndex == 0 {
+			continue
+		}
+		identity := TileIdentity{MainIndex: tile.MainIndex, SubIndex: tile.SubIndex}
+		var reference TileReference
+		var found bool
+		for _, catalog := range catalogs {
+			if reference, found = catalog.Select(identity, tile.X, tile.Y, 0); found {
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("world: recipe floor (%d,%d) is unavailable at %d,%d", identity.MainIndex, identity.SubIndex, tile.X, tile.Y)
+		}
+		world.ReplaceFloor(tile.X, tile.Y, identity, reference)
+		changed = true
+	}
+	if changed {
+		world.RebuildFlags()
 	}
 	return nil
 }

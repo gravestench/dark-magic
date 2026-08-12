@@ -5,6 +5,7 @@ local data = require("d2legacy.mapgen.records")
 local draw = require("engine.deterministic/v1").integer
 local route_policy = require("d2legacy.mapgen.outdoor_route")
 local structure_policy = require("d2legacy.mapgen.outdoor_structures")
+local dirt_path = require("d2legacy.mapgen.act1_dirt_path")
 local worldgen = require("engine.worldgen/v1")
 local M = {}
 local CELL = 8
@@ -66,7 +67,7 @@ function M.generate(level_id, seed, town_exit, difficulty)
         request = {version = 1, seed = seed, act = 1, level_id = level_id, difficulty = difficulty},
         kind = "outdoor", bounds = {x = 0, y = 0, width = width, height = height},
         stamps = stamps, rooms = rooms, links = links,
-        warps = {route.entry, route.exit}, paths = structures.path, structures = structures.tiles,
+        warps = {route.entry, route.exit}, paths = dirt_path.apply(structures.path), structures = structures.tiles,
         trace = {
             string.format("Levels[%d] selected Act I outdoor strategy on a %dx%d coarse grid", level_id, columns, rows),
             "authored 8x8 Blood Moor fill presets selected by independent cell keys",

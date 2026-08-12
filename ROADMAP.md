@@ -1102,7 +1102,9 @@ complete until its actions are driven by authoritative game state and commands.
     route between explicit town-entry and next-level edge anchors. The route is
     rasterized into validated tile-resolution `PathTile` facts in the immutable
     zone checksum. Materialization applies D2MOO's verified 3x3-neighbor
-    floor-identity pass and rebuilds collision from the selected DT1 metadata.
+    floor-identity pass in `d2legacy.mapgen.act1_dirt_path`; the admitted recipe
+    carries opaque `(main_index, sub_index)` choices and generic materialization
+    applies them before rebuilding collision. No Act I lookup table remains in Go.
   - [x] M20.15e: Separate raw authored DS1 special cells from render placements.
     Exit discovery and town/wilderness seam construction now consume immutable
     special-tile facts instead of scanning the renderer-facing tile list. This

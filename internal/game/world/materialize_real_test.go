@@ -158,7 +158,6 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	materializer.SetPostprocessor(d2mapgen.RealizeActOneDirtPath)
 	for materializer.Progress().Completed < materializer.Progress().Total {
 		if err := materializer.Step(t.Context()); err != nil {
 			t.Fatal(err)

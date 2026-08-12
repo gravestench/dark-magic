@@ -127,7 +127,6 @@ func (app *application) materializeZone(zone *worldgen.Zone) (*gameworld.Map, er
 	if err != nil {
 		return nil, err
 	}
-	materializer.SetPostprocessor(d2mapgen.RealizeActOneDirtPath)
 	for {
 		err = materializer.Step(context.Background())
 		if errors.Is(err, gameworld.ErrMaterializationComplete) {
