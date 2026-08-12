@@ -27,7 +27,6 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
 	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -178,20 +177,6 @@ func (app *application) registerOfflineCommands() error {
 	if err := gamestate.Register(app.entitySimulation); err != nil {
 		return wrap("register timed state engine", err)
 	}
-	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
-		return wrap("register skill intent consumer", err)
-	}
-	basicAttackSkill := gameskill.Definition{
-		SkillID: 0, Behavior: gameskill.BehaviorBasicMelee, TargetPolicy: gameskill.TargetUnit,
-		EffectDelay: 1, CompleteDelay: 2, Interruptible: true,
-	}
-	skillRegistry, err := gameskill.NewRegistry(basicAttackSkill)
-	if err != nil {
-		return wrap("build production skill registry", err)
-	}
-	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
-		return wrap("register production skill lifecycle", err)
-	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
@@ -201,7 +186,7 @@ func (app *application) registerOfflineCommands() error {
 		return wrap("load authoritative player animation timing", err)
 	}
 	attackTimings := newCombatTimingAdapter(animationData)
-	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID, bloodMoor, attackTimings); err != nil {
+	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, 0, bloodMoor, attackTimings); err != nil {
 		return wrap("register player basic attack", err)
 	}
 	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {

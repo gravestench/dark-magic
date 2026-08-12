@@ -1540,8 +1540,12 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   routes skill assignment/use through the Lua command boundary. Fire Bolt no
   longer registers Go cast/missile policy: the superseded Go normalizer and its
   production registrations are deleted, while presentation passively observes
-  the Lua-owned projectile facts. Basic melee remains behind one explicit
-  temporary Lua-to-Go intent bridge until the combat/stats migration. Remaining
+  the Lua-owned projectile facts. Basic-melee admission, targeting, hit/damage
+  RNG, health mutation, and events now execute in `d2legacy`; the Go skill
+  mailbox and cast lifecycle are no longer part of production composition.
+  Collision-aware approach and authored attack-animation timing remain as a
+  narrow transitional mechanism consuming a Lua-emitted semantic effect until
+  the generic navigation/timing capability is exposed directly. Remaining
   work for this item is midpoint checkpoint/restore and initial-snapshot replay
   parity through a reconstructed authoritative Lua runtime.
 

@@ -15,6 +15,16 @@ function M.register()
         {name="range",type="f64"},{name="physical_min",type="i64"},
         {name="physical_max",type="i64"},
     }})
+    -- Transitional adapter event. Lua owns the decision to attack; the current
+    -- Go approach/animation mechanism observes this semantic effect until its
+    -- generic navigation seam is available directly to Lua.
+    ecs.component({name="dm.skill.cast_event", fields={
+        {name="kind",type="string"},{name="tick",type="i64"},
+        {name="player",type="string"},{name="skill_id",type="i64"},
+        {name="skill_level",type="i64"},{name="behavior",type="string"},
+        {name="target_x",type="f64"},{name="target_y",type="f64"},
+        {name="target_id",type="string"},{name="reason",type="string"},
+    }})
     ecs.component({name="d2legacy.combat.melee_event", fields={
         {name="kind",type="string"},{name="tick",type="i64"},
         {name="attacker_id",type="string"},{name="target_id",type="string"},

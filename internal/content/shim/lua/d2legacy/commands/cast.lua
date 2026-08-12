@@ -88,15 +88,17 @@ function M.apply(command)
         return
     end
 
-    -- Temporary migration bridge: basic melee still uses the old approach and
-    -- animation systems. This branch disappears when those systems move in the
-    -- next slice; no Fire Bolt policy crosses back into Go.
+    -- The approach/animation adapter consumes this semantic fact. Cast
+    -- admission and Diablo policy no longer cross into the old Go lifecycle.
     assert(skill_id == 0, "assigned skill has not migrated to d2legacy")
-    ecs.set(player, "dm.player.skill_intent", {
-        side = payload.side, skill_id = skill_id,
+    local learned = assert(learned_skill(player, skill_id), "skill is not learned")
+    ecs.create({["dm.skill.cast_event"] = {
+        kind = "skill_effect", tick = command.tick, player = command.player,
+        skill_id = skill_id, skill_level = learned:get("level"),
+        behavior = "basic.melee",
         target_x = payload.target_x, target_y = payload.target_y,
-        target_id = payload.target_id or "",
-    })
+        target_id = payload.target_id or "", reason = "",
+    }})
 end
 
 function M.register()
