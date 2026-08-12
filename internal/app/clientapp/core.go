@@ -19,7 +19,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -275,16 +274,7 @@ func (app *application) populationBootstrapData() map[string]any {
 }
 
 func (app *application) buildItemAuthority() error {
-	layout := gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{
-		gameitem.ContainerInventory: {Width: 10, Height: 4},
-		gameitem.ContainerStash:     {Width: 6, Height: 8},
-		gameitem.ContainerCube:      {Width: 3, Height: 4},
-	}, BeltCapacity: 4, VendorGrid: gameitem.Grid{Width: 10, Height: 10}, Gold: gameitem.GoldBalance{Carried: 10000}}
 	items, placements := app.developmentItems()
-	state, err := gameitem.NewState(layout, items, placements)
-	if err != nil {
-		return wrap("create local item state", err)
-	}
 	catalogSnapshot, err := app.gameData.Snapshot()
 	if err != nil {
 		return wrap("load vendor trade terms", err)
@@ -293,11 +283,31 @@ func (app *application) buildItemAuthority() error {
 	for vendor, record := range catalogSnapshot.NPCTradesByID {
 		trades[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
 	}
-	app.itemInitialData = itemBootstrapFromState(state, trades)
+	app.itemInitialData = itemBootstrap(items, placements, trades)
 	return nil
 }
 
-func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem.Placement) {
+type bootstrapItem struct {
+	id, code                 string
+	width, height            int
+	bodySlots                []string
+	beltEligible             bool
+	baseCost                 int64
+	inventoryDC6, worldDC6   string
+	worldAnimated            bool
+	composite                map[string]string
+	weaponClass              string
+	meleeRange               float64
+	physicalMin, physicalMax int64
+	meleeWeaponClass         string
+}
+
+type bootstrapPlacement struct {
+	container, slot                 string
+	x, y, beltSlot, weaponSet, page int
+}
+
+func (app *application) developmentItems() ([]bootstrapItem, map[string]bootstrapPlacement) {
 	if app.options.FixtureCharacters <= 0 {
 		return nil, nil
 	}
@@ -305,51 +315,54 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	if err != nil {
 		return nil, nil
 	}
-	items := make([]gameitem.Item, 0, 6)
-	placements := make(map[string]gameitem.Placement)
+	items := make([]bootstrapItem, 0, 8)
+	placements := make(map[string]bootstrapPlacement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
-		weaponPresentation := gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		weaponMelee := gameitem.Melee{Range: float64(1 + weapon.RangeAdder), PhysicalMinRaw: int64(weapon.MinDam) * 256, PhysicalMaxRaw: int64(weapon.MaxDam) * 256, WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
-		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
-		placements["fixture-vendor-short-sword"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "weap", Page: 0}
+		base := bootstrapItem{id: "fixture-short-sword", code: weapon.Code, width: weapon.InvWidth, height: weapon.InvHeight, baseCost: int64(weapon.Cost), bodySlots: []string{"rarm", "larm"}, inventoryDC6: itemAsset(weapon.InvFile), worldDC6: itemAsset(weapon.FlippyFile), worldAnimated: true, composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), weaponClass: strings.ToUpper(weapon.WeaponClass), meleeRange: float64(1 + weapon.RangeAdder), physicalMin: int64(weapon.MinDam) * 256, physicalMax: int64(weapon.MaxDam) * 256, meleeWeaponClass: strings.ToUpper(weapon.WeaponClass)}
+		items = append(items, base)
+		placements[base.id] = bootstrapPlacement{container: "inventory"}
+		base.id = "fixture-vendor-short-sword"
+		items = append(items, base)
+		placements[base.id] = bootstrapPlacement{container: "vendor", slot: "weap"}
 	}
 	if armor, found := snapshot.ArmorByCode["cap"]; found {
-		armorPresentation := gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(strconv.Itoa(armor.Component), armor.AlternateGfx)}
-		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
-		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
-		placements["fixture-vendor-cap"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "armo", Page: 0}
+		base := bootstrapItem{id: "fixture-hireling-cap", code: armor.Code, width: armor.InvWidth, height: armor.InvHeight, baseCost: int64(armor.Cost), bodySlots: []string{"head"}, inventoryDC6: itemAsset(armor.InvFile), worldDC6: itemAsset(armor.FlippyFile), worldAnimated: true, composite: compositeRecipe(strconv.Itoa(armor.Component), armor.AlternateGfx)}
+		items = append(items, base)
+		placements[base.id] = bootstrapPlacement{container: "hireling", slot: "head"}
+		base.id = "fixture-vendor-cap"
+		items = append(items, base)
+		placements[base.id] = bootstrapPlacement{container: "vendor", slot: "armo"}
 	}
 	for index, code := range []string{"hp1", "mp1"} {
 		if misc, found := snapshot.MiscByCode[code]; found {
 			id := "fixture-" + code
-			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
+			base := bootstrapItem{id: id, code: code, width: misc.InvWidth, height: misc.InvHeight, baseCost: int64(misc.Cost), beltEligible: true, inventoryDC6: itemAsset(misc.InvFile), worldDC6: itemAsset(misc.FlippyFile), worldAnimated: true}
+			items = append(items, base)
 			if code == "mp1" {
-				placements[id] = gameitem.Placement{Container: gameitem.ContainerBelt, BeltSlot: 0}
+				placements[id] = bootstrapPlacement{container: "belt", beltSlot: 0}
 			} else {
-				placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+				placements[id] = bootstrapPlacement{container: "inventory", x: 2 + index}
 			}
 			if code == "hp1" {
 				vendorID := "fixture-vendor-" + code
-				items = append(items, gameitem.Item{ID: vendorID, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-				placements[vendorID] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "misc", Page: 0}
+				base.id = vendorID
+				items = append(items, base)
+				placements[vendorID] = bootstrapPlacement{container: "vendor", slot: "misc"}
 			}
 		}
 	}
 	for _, fixture := range []struct {
 		code         string
-		container    gameitem.Container
+		container    string
 		beltEligible bool
 	}{
-		{code: "rvs", container: gameitem.ContainerStash, beltEligible: true},
-		{code: "tsc", container: gameitem.ContainerCube},
+		{code: "rvs", container: "stash", beltEligible: true},
+		{code: "tsc", container: "cube"},
 	} {
 		if misc, found := snapshot.MiscByCode[fixture.code]; found {
 			id := "fixture-" + fixture.code
-			items = append(items, gameitem.Item{ID: id, Code: fixture.code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: fixture.beltEligible, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-			placements[id] = gameitem.Placement{Container: fixture.container, X: 0, Y: 0}
+			items = append(items, bootstrapItem{id: id, code: fixture.code, width: misc.InvWidth, height: misc.InvHeight, baseCost: int64(misc.Cost), beltEligible: fixture.beltEligible, inventoryDC6: itemAsset(misc.InvFile), worldDC6: itemAsset(misc.FlippyFile), worldAnimated: true})
+			placements[id] = bootstrapPlacement{container: fixture.container}
 		}
 	}
 	return items, placements
@@ -361,42 +374,26 @@ func (app *application) itemBootstrapData() map[string]any {
 	return app.itemInitialData
 }
 
-func itemBootstrapFromState(state *gameitem.State, tradeTerms map[string]any) map[string]any {
-	layout, items, placements := state.Snapshot()
+func itemBootstrap(items []bootstrapItem, placements map[string]bootstrapPlacement, tradeTerms map[string]any) map[string]any {
 	result := map[string]any{
-		"owner": "local-player", "belt_capacity": float64(layout.BeltCapacity),
-		"active_weapon_set": float64(layout.ActiveWeaponSet), "vendor_width": float64(layout.VendorGrid.Width),
-		"vendor_height": float64(layout.VendorGrid.Height), "carried_gold": float64(layout.Gold.Carried),
-		"stashed_gold": float64(layout.Gold.Stashed),
+		"owner": "local-player", "belt_capacity": float64(4), "active_weapon_set": float64(0),
+		"vendor_width": float64(10), "vendor_height": float64(10), "carried_gold": float64(10000), "stashed_gold": float64(0),
+		"inventory_width": float64(10), "inventory_height": float64(4), "stash_width": float64(6), "stash_height": float64(8), "cube_width": float64(3), "cube_height": float64(4),
 	}
-	for _, container := range []gameitem.Container{gameitem.ContainerInventory, gameitem.ContainerStash, gameitem.ContainerCube} {
-		grid := layout.Grids[container]
-		result[string(container)+"_width"], result[string(container)+"_height"] = float64(grid.Width), float64(grid.Height)
-	}
-	ids := make([]string, 0, len(items))
-	for id := range items {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	entries := make([]any, 0, len(ids))
-	for _, id := range ids {
-		item, placement := items[id], placements[id]
-		components := make([]string, 0, len(item.Presentation.Composite))
-		for component, appearance := range item.Presentation.Composite {
+	sort.Slice(items, func(i, j int) bool { return items[i].id < items[j].id })
+	entries := make([]any, 0, len(items))
+	for _, item := range items {
+		placement := placements[item.id]
+		components := make([]string, 0, len(item.composite))
+		for component, appearance := range item.composite {
 			components = append(components, component+"="+appearance)
 		}
 		sort.Strings(components)
 		entries = append(entries, map[string]any{
-			"id": item.ID, "code": item.Code, "width": float64(item.Width), "height": float64(item.Height),
-			"body_slots": strings.Join(item.BodySlots, ","), "belt_eligible": item.BeltEligible,
-			"base_cost": float64(item.BaseCost), "applied_services": strings.Join(item.AppliedServices, ","),
-			"inventory_dc6": item.Presentation.InventoryDC6, "world_dc6": item.Presentation.WorldDC6,
-			"world_animated": item.Presentation.WorldAnimated, "composite": strings.Join(components, ","),
-			"weapon_class": item.Presentation.WeaponClass, "melee_range": item.Melee.Range,
-			"physical_min": float64(item.Melee.PhysicalMinRaw), "physical_max": float64(item.Melee.PhysicalMaxRaw),
-			"melee_weapon_class": item.Melee.WeaponClass, "container": string(placement.Container),
-			"x": float64(placement.X), "y": float64(placement.Y), "slot": placement.Slot,
-			"belt_slot": float64(placement.BeltSlot), "weapon_set": float64(placement.WeaponSet), "page": float64(placement.Page),
+			"id": item.id, "code": item.code, "width": float64(item.width), "height": float64(item.height), "body_slots": strings.Join(item.bodySlots, ","), "belt_eligible": item.beltEligible,
+			"base_cost": float64(item.baseCost), "applied_services": "", "inventory_dc6": item.inventoryDC6, "world_dc6": item.worldDC6, "world_animated": item.worldAnimated, "composite": strings.Join(components, ","),
+			"weapon_class": item.weaponClass, "melee_range": item.meleeRange, "physical_min": float64(item.physicalMin), "physical_max": float64(item.physicalMax), "melee_weapon_class": item.meleeWeaponClass,
+			"container": placement.container, "x": float64(placement.x), "y": float64(placement.y), "slot": placement.slot, "belt_slot": float64(placement.beltSlot), "weapon_set": float64(placement.weaponSet), "page": float64(placement.page),
 		})
 	}
 	result["items"] = entries
