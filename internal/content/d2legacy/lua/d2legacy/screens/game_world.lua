@@ -6,7 +6,7 @@
 --   engine.world/v1          -> immutable map/collision/projection facts
 --   d2legacy.gameplay.world -> ECS binding + camera helper
 --   engine.player/v1         -> authoritative player intents
---   engine.items/v1          -> item snapshots/intents
+--   d2legacy.items.api       -> item snapshots and command intents
 --   d2legacy.data.skill      -> skill presentation interpreted by this mod
 --   game_hud.lua         -> disposable HUD presentation
 --   engine.scene/v1          -> overlay navigation

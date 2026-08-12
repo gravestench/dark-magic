@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 
 	"github.com/gravestench/akara"
-	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -134,135 +133,6 @@ func (controller *MovementController) drainSkills() map[string]int64 {
 	result := controller.skills
 	controller.skills = nil
 	return result
-}
-
-// RegisterMovement installs the authoritative adapter from normalized movement
-// intent to Lua-defined world velocity components.
-func RegisterMovement(session *Session) error {
-	return session.Register(MoveCommand, CommandHandler{
-		Validate: func(command simulation.Command) error {
-			_, err := decodeMove(command.Payload)
-			return err
-		},
-		Apply: func(engine *gameecs.Engine, command simulation.Command) error {
-			payload, err := decodeMove(command.Payload)
-			if err != nil {
-				return err
-			}
-			controls, present := akara.GetDynamicStore(engine.World(), "d2legacy.world.player_control")
-			if !present {
-				return nil
-			}
-			velocities, present := akara.GetDynamicStore(engine.World(), "d2legacy.world.velocity")
-			if !present {
-				return nil
-			}
-			modes, modesPresent := akara.GetDynamicStore(engine.World(), "d2legacy.player.movement_mode")
-			animations, animationsPresent := akara.GetDynamicStore(engine.World(), "d2legacy.player.animation")
-			for _, entity := range controls.Entities() {
-				control, found := controls.Get(entity)
-				if !found {
-					continue
-				}
-				player, err := control.Get("player")
-				if err != nil {
-					return err
-				}
-				if player != command.Player {
-					continue
-				}
-				// Idle snapshots keep the current action alive. Only a real
-				// directional input or a newly clicked ground target says the
-				// player intends to stop approaching an attack target.
-				explicit := payload.Target != nil || payload.X != 0 || payload.Y != 0
-				if explicit {
-					gameaction.CancelExclusive(engine.World(), entity)
-				} else if gameaction.ActiveExclusive(engine.World(), entity) {
-					// Combat currently owns velocity and animation. An idle host
-					// sample means "no newer intent," not "stop the action."
-					continue
-				}
-				velocity, found := velocities.Get(entity)
-				if !found {
-					continue
-				}
-				speed := 10.0
-				if payload.Running {
-					speed = 15
-				}
-				// Two full-speed axes would make diagonal movement sqrt(2) times
-				// faster. Normalize the vector before simulation sees it.
-				x, y := float64(payload.X), float64(payload.Y)
-				if payload.Target != nil {
-					positions, positionsPresent := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
-					if positionsPresent {
-						if position, found := positions.Get(entity); found {
-							currentX, _ := position.Get("x")
-							currentY, _ := position.Get("y")
-							x, y = payload.Target.X-currentX.(float64), payload.Target.Y-currentY.(float64)
-							distance := math.Hypot(x, y)
-							if distance <= 0.2 {
-								x, y = 0, 0
-							} else {
-								x, y = x/distance, y/distance
-							}
-						}
-					}
-				} else if payload.X != 0 && payload.Y != 0 {
-					const inverseSquareRootTwo = 0.7071067811865476
-					x *= inverseSquareRootTwo
-					y *= inverseSquareRootTwo
-				}
-				if err := velocity.Set("x", x*speed); err != nil {
-					return err
-				}
-				if err := velocity.Set("y", y*speed); err != nil {
-					return err
-				}
-				if modesPresent {
-					if mode, found := modes.Get(entity); found {
-						if err := mode.Set("running", payload.Running); err != nil {
-							return err
-						}
-					}
-				}
-				if animationsPresent {
-					if animation, found := animations.Get(entity); found {
-						moving := x != 0 || y != 0
-						mode := "NU"
-						if moving && payload.Running {
-							mode = "RN"
-						} else if moving {
-							mode = "WL"
-						}
-						if err := animation.Set("mode", mode); err != nil {
-							return err
-						}
-						if moving {
-							directionX, directionY := sign(x), sign(y)
-							if err := animation.Set("direction", movementDirection(directionX, directionY)); err != nil {
-								return err
-							}
-						}
-					}
-				}
-			}
-			return nil
-		},
-	})
-}
-
-// movementDirection converts the eight normalized world-space input vectors to
-// a readable logical direction order. The presentation adapter converts this
-// authoritative value to each legacy asset's encoded 8/16-direction order.
-// Stopping does not call this function, so an idle player keeps looking the way
-// they last moved.
-func movementDirection(x, y int) int64 {
-	directions := map[[2]int]int64{
-		{0, 1}: 0, {-1, 0}: 1, {0, -1}: 2, {1, 0}: 3,
-		{1, 1}: 4, {-1, 1}: 5, {-1, -1}: 6, {1, -1}: 7,
-	}
-	return directions[[2]int{x, y}]
 }
 
 // MovementSource turns the latest native input snapshot into one replayable
@@ -435,14 +305,4 @@ func decodeMove(encoded []byte) (MovePayload, error) {
 		return MovePayload{}, fmt.Errorf("movement target must be finite")
 	}
 	return payload, nil
-}
-
-func sign(value float64) int {
-	if value < 0 {
-		return -1
-	}
-	if value > 0 {
-		return 1
-	}
-	return 0
 }

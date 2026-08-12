@@ -49,9 +49,6 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer authority.Close()
-	if err := gamesession.RegisterMovement(authority); err != nil {
-		t.Fatal(err)
-	}
 	mod, err := d2legacy.Start(ctx, content.D2Legacy(), shellD2Records{}, entitySimulation, authority, 7)
 	if err != nil {
 		t.Fatal(err)

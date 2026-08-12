@@ -7,8 +7,8 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
+	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -31,14 +31,6 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	var input inputstate.Store
 	var mixer audio.Mixer
 	var composer render.Composer
-	itemState, err := gameitem.NewState(gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{gameitem.ContainerInventory: {Width: 10, Height: 4}}}, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	itemAuthority := gameitem.NewAuthority()
-	if err := itemAuthority.Register("local-player", itemState); err != nil {
-		t.Fatal(err)
-	}
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
 		AppModule("test", func() {}),
@@ -46,7 +38,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
-		SaveModule(persistence.New()), PlayerControlModule(&gamesession.MovementController{}), ItemModule(&gameitem.Controller{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		SaveModule(persistence.New()), PlayerControlModule(&gamesession.MovementController{}), CommandIntentModule(&gamesession.IntentController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
@@ -55,13 +47,13 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.data/v1":  {"load", "load_manifest"},
 		"engine.world/v1": {"load"},
 		"engine.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "engine.records/v1": {"load", "reload", "loaded"},
-		"engine.settings/v1":  {"get", "save", "set", "status"},
-		"engine.video/v1":     {"available", "play"},
-		"engine.locale/v1": {"text"},
-		"engine.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
-		"engine.player/v1":     {"assign_skill", "request_running"},
-		"engine.items/v1":      {"move"},
-		"engine.simulation/v1": {"move_hero", "state"}, "engine.render/v1": {"create", "diagnostics"},
+		"engine.settings/v1":       {"get", "save", "set", "status"},
+		"engine.video/v1":          {"available", "play"},
+		"engine.locale/v1":         {"text"},
+		"engine.save/v1":           {"characters", "create", "create_named", "delete", "select", "selected"},
+		"engine.player/v1":         {"assign_skill", "request_running"},
+		"engine.command_intent/v1": {"submit"},
+		"engine.simulation/v1":     {"move_hero", "state"}, "engine.render/v1": {"create", "diagnostics"},
 		"engine.scene/v1": {"register", "replace", "push", "pop", "toggle_overlay"},
 	}
 	for _, module := range modules {

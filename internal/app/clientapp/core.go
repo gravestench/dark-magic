@@ -19,7 +19,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -152,8 +151,10 @@ func (app *application) buildOfflineSession() error {
 	if err := session.RegisterAuthoritativeRuntime(identity, app.authoritativeState, app.authoritativeRandom); err != nil {
 		return wrap("register d2legacy authoritative runtime", err)
 	}
-	if err := app.buildInteractionAuthority(); err != nil {
-		return err
+	app.commandIntents = &gamesession.IntentController{}
+	app.commandIntentSource, err = gamesession.NewIntentSource(app.commandIntents, "local-player")
+	if err != nil {
+		return wrap("create local command intent source", err)
 	}
 	if err := app.buildItemAuthority(); err != nil {
 		return err
@@ -222,8 +223,7 @@ func (app *application) registerOfflineCommands() error {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
 		commands = append(commands, skills.Commands(tick)...)
-		commands = append(commands, app.interactionSource.Commands(tick)...)
-		commands = append(commands, app.itemSource.Commands(tick)...)
+		commands = append(commands, app.commandIntentSource.Commands(tick)...)
 		commands = append(commands, app.transitionSource.Commands(tick)...)
 		return sequencer.Assign(commands)
 	}
@@ -274,13 +274,6 @@ func (app *application) populationBootstrapData() map[string]any {
 	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
 }
 
-func (app *application) buildInteractionAuthority() error {
-	app.interactionControl = &gameinteraction.Controller{}
-	var err error
-	app.interactionSource, err = gameinteraction.NewSource(app.interactionControl, "local-player")
-	return wrap("create local interaction command source", err)
-}
-
 func (app *application) buildItemAuthority() error {
 	layout := gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{
 		gameitem.ContainerInventory: {Width: 10, Height: 4},
@@ -301,9 +294,7 @@ func (app *application) buildItemAuthority() error {
 		trades[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
 	}
 	app.itemInitialData = itemBootstrapFromState(state, trades)
-	app.itemControl = &gameitem.Controller{}
-	app.itemSource, err = gameitem.NewSource(app.itemControl, "local-player")
-	return wrap("create local item command source", err)
+	return nil
 }
 
 func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem.Placement) {

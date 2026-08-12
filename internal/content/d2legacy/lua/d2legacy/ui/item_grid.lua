@@ -7,7 +7,7 @@
 --     It does not directly mutate authoritative gameplay state.
 --
 -- This module knows where cells are drawn and clicked. It never decides whether
--- an item fits, overlaps legally, can be swapped, etc. `engine.items/v1` queues a
+-- an item fits, overlaps legally, can be swapped, etc. `d2legacy.items.api` queues a
 -- move request; fixed-tick Go authority validates and applies that request.
 
 local render = require("engine.render/v1")

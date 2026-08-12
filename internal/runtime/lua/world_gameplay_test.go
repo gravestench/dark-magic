@@ -25,9 +25,6 @@ func materializeGameplayPlayer(t *testing.T, engine *gameecs.Engine, step time.D
 	if err := gameplayer.Register(session); err != nil {
 		t.Fatal(err)
 	}
-	if err := gamesession.RegisterMovement(session); err != nil {
-		t.Fatal(err)
-	}
 	entry := gameplayer.EntryFromCharacter(persistence.Character{
 		ID: "test-hero", Name: "Hero", Class: "Amazon", Level: 2,
 		Stats: &persistence.Stats{Experience: 125, Health: 70, MaxHealth: 80, Mana: 30, MaxMana: 40},

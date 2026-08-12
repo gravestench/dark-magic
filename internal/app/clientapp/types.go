@@ -18,8 +18,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
-	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -119,11 +117,9 @@ type application struct {
 	movementSource      *gamesession.MovementSource
 	transitionAuthority *gametransition.Authority
 	transitionSource    *gametransition.Source
-	interactionControl  *gameinteraction.Controller
-	interactionSource   *gameinteraction.Source
+	commandIntents      *gamesession.IntentController
+	commandIntentSource *gamesession.IntentSource
 	itemInitialData     map[string]any
-	itemControl         *gameitem.Controller
-	itemSource          *gameitem.Source
 	commandSource       func(uint64) []simulation.Command
 	worldMu             sync.RWMutex
 	gameWorlds          map[int]*gameworld.Map

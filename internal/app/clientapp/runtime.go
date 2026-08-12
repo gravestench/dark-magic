@@ -50,8 +50,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.SaveModule(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
 		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
-		modruntime.InteractionModule(app.interactionControl),
-		modruntime.ItemModule(app.itemControl),
+		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
 	}
 }

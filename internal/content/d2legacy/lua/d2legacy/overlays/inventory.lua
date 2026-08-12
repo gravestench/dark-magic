@@ -6,8 +6,8 @@
 --
 --   Inventory.txt        -> authoritative/recovered geometry facts
 --   presentation manifest -> panel frame order + profile corrections
---   engine.items/v1 snapshot  -> which item is actually where right now
---   engine.items/v1 move      -> player MOVE INTENT sent back to authority
+--   d2legacy.items.api snapshot -> which item is actually where right now
+--   d2legacy.items.api move     -> player MOVE INTENT sent to authority
 --   controls.lua          -> clickable cells/equipment wells
 --   render nodes          -> disposable pictures of that state
 --

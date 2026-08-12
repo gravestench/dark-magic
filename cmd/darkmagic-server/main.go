@@ -52,10 +52,6 @@ func main() {
 		return
 	}
 	defer mod.Stop(context.Background())
-	if err := gamesession.RegisterMovement(authority); err != nil {
-		slog.Error("registering authoritative movement commands", "error", err)
-		return
-	}
 	sessionContext, stopSession := context.WithCancel(ctx)
 	sessionErrors := make(chan error, 1)
 	go func() { sessionErrors <- authority.Run(sessionContext) }()
