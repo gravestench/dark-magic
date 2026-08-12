@@ -275,6 +275,28 @@ func goToLua(state *lua.LState, value any, depth int) (lua.LValue, error) {
 		return lua.LString(value), nil
 	case float64:
 		return lua.LNumber(value), nil
+	case float32:
+		return lua.LNumber(value), nil
+	case int:
+		return lua.LNumber(value), nil
+	case int8:
+		return lua.LNumber(value), nil
+	case int16:
+		return lua.LNumber(value), nil
+	case int32:
+		return lua.LNumber(value), nil
+	case int64:
+		return lua.LNumber(value), nil
+	case uint:
+		return lua.LNumber(value), nil
+	case uint8:
+		return lua.LNumber(value), nil
+	case uint16:
+		return lua.LNumber(value), nil
+	case uint32:
+		return lua.LNumber(value), nil
+	case uint64:
+		return lua.LNumber(value), nil
 	case []any:
 		table := state.NewTable()
 		for _, entry := range value {
