@@ -1459,6 +1459,9 @@ data owners; they do not introduce parallel gameplay authorities.
   defense source without disturbing active-hand attack rating. Affix, socket,
   passive-skill, and armor-roll sources plus their verified percentage ordering
   remain before this milestone can replace its broader synthetic inputs.
+  Player melee animation now emits distinct authoritative start, impact, and
+  completion lifecycle events at fixed simulation ticks; these are separate
+  from damage-resolution events so presentation cues cannot affect death credit.
 
 ### M21.14: Authoritative Lua Gameplay and d2legacy Isolation
 
