@@ -36,9 +36,8 @@ type Entry struct {
 	Expansion   bool    `json:"expansion"`
 	Hardcore    bool    `json:"hardcore"`
 	COF         string  `json:"cof"`
-	Palette     string  `json:"palette"`
-	Direction   int64   `json:"direction"`
-	Mode        string  `json:"mode"`
+	Palette     string  `json:"palette,omitempty"`
+	Direction   *int64  `json:"direction,omitempty"`
 	X           float64 `json:"x"`
 	Y           float64 `json:"y"`
 	WorldWidth  float64 `json:"world_width"`
@@ -153,7 +152,7 @@ func (source *EntrySource) entered(characterID string) bool {
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character d2save.Character, player string, x, y, width, height float64) Entry {
-	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
+	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, X: x, Y: y, WorldWidth: width, WorldHeight: height}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
 		entry.Dexterity, entry.Defense = int64(character.Stats.Dexterity), int64(character.Stats.Defense)
@@ -161,7 +160,8 @@ func EntryFromCharacter(character d2save.Character, player string, x, y, width, 
 		entry.Mana, entry.MaxMana = int64(character.Stats.Mana), int64(character.Stats.MaxMana)
 	}
 	if character.Appearance != nil {
-		entry.COF, entry.Direction = character.Appearance.COF, int64(character.Appearance.Direction)
+		direction := int64(character.Appearance.Direction)
+		entry.COF, entry.Direction = character.Appearance.COF, &direction
 		if character.Appearance.Palette != "" {
 			entry.Palette = character.Appearance.Palette
 		}

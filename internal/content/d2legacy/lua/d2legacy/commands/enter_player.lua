@@ -30,7 +30,7 @@ end
 function M.validate(command)
     local p = command.payload
     assert(type(p) == "table", "player entry payload must be a table")
-    for _, field in ipairs({"character_id","player","name","class","palette","mode"}) do
+    for _, field in ipairs({"character_id","player","name","class"}) do
         assert(present(p[field]), "player entry " .. field .. " is required")
     end
     assert(p.level >= 1 and p.health >= 0 and p.max_health >= p.health,
@@ -73,9 +73,10 @@ function M.apply(command)
             mana_raw=p.mana*256,max_mana_raw=p.max_mana*256},
         -- D2 synthesizes an unarmed profile when no weapon contributes one.
         ["d2legacy.combat.melee_profile"]={range=2,physical_min=256,physical_max=512},
-        ["d2legacy.player.appearance"]={cof=p.cof or "",token=assert(class_tokens[string.lower(p.class)],"unknown player class"),palette=p.palette,
+        ["d2legacy.player.appearance"]={cof=p.cof or "",token=assert(class_tokens[string.lower(p.class)],"unknown player class"),
+            palette=present(p.palette) and p.palette or "data/global/Palette/units/pal.dat",
             weapon_class="HTH"},
-        ["d2legacy.player.animation"]={direction=p.direction,mode=p.mode},
+        ["d2legacy.player.animation"]={direction=p.direction or 0,mode="NU"},
         ["d2legacy.world.position"]={x=p.x,y=p.y},
         ["d2legacy.world.velocity"]={x=0,y=0},
         ["d2legacy.player.movement_mode"]={running=false},
