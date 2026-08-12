@@ -1,4 +1,9 @@
 -- Diablo II item footprint, named-slot, belt, held-item, and swap policy.
+--
+-- A placement is the item's current home. Grid homes use x/y plus the item's
+-- width and height. Named homes use a body slot, belt slot, or service slot.
+-- The invisible "held" home represents the item attached to the cursor. This
+-- module only validates and writes homes; commands decide who may move them.
 
 local ecs = require("engine.ecs/v1")
 local M = {}
@@ -115,6 +120,8 @@ local function validate_grid(layout, item_entity, item, destination, entities,
         and destination.x + item:get("width") <= width
         and destination.y + item:get("height") <= height
     assert(fits, "item does not fit grid")
+    -- One overlap is intentional during inventory reordering: the incoming
+    -- held item takes the footprint and the displaced item becomes held.
     local overlaps = M.overlaps(item_entity, item, destination, entities)
     assert(#overlaps == 0 or allow_one_overlap and #overlaps == 1,
         "item footprint is occupied")
@@ -160,6 +167,8 @@ function M.validate(layout, item_entity, item, destination, entities,
         "item destination container is required")
     normalize(destination)
 
+    -- Grid and named-slot containers have different occupancy rules, but both
+    -- return the single item that should be swapped into the held home.
     local overlap, is_grid = validate_grid(
         layout,
         item_entity,

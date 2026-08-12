@@ -1,4 +1,9 @@
 -- Authoritative vendor pricing, buying, selling, and page arrangement.
+--
+-- Vendors are not player-controlled grids. Selling removes the held item from
+-- the cursor and lets the vendor arranger choose its page and slot. Buying
+-- performs the reverse transaction and refuses to overwrite an already-held
+-- item. Every price is integer arithmetic using the legacy 1024 scale.
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
@@ -77,6 +82,8 @@ function M.apply_sell(command)
         price = math.min(price, rule:get("max_buy"))
     end
 
+    -- The arranger owns vendor pagination. A seller chooses a category, never
+    -- an exact vendor cell.
     arrangement.apply(layout, layout_entity, payload.category, {
         entity = entity,
         item = item,
@@ -100,6 +107,8 @@ function M.apply_buy(command)
     local placed = assert(ecs.get(entity, "d2legacy.item.placement"))
     assert(placed:get("container") == "vendor", "item is not vendor stock")
 
+    -- A purchased item first enters the durable held location. The player can
+    -- then place it in inventory, belt, stash, cube, or equipment normally.
     local held_destination = { container = "held" }
     local occupied = placement.slot_occupant(
         entity,

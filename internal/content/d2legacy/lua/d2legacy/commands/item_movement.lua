@@ -1,4 +1,8 @@
 -- Authoritative item movement, held-item swapping, and weapon-set selection.
+--
+-- Validation is intentionally separate from mutation. The generic host admits
+-- the command, this file checks Diablo container rules, and placement.lua
+-- performs the small deterministic move or one-item swap.
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
@@ -50,6 +54,8 @@ function M.apply_move(command)
         assert(current:get("container") == "held", "item is not held")
     end
 
+    -- A held item may replace exactly one occupied item. That displaced item
+    -- becomes the new held item, matching legacy inventory reordering.
     local displaced = placement.validate(
         layout,
         item_entity,

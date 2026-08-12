@@ -1,4 +1,9 @@
 -- Resolve impact requests emitted by reusable approach/animation mechanisms.
+--
+-- Movement and animation merely say that an impact moment happened. This
+-- authoritative system chooses an in-range target, rolls Diablo's hit and
+-- damage formulas, mutates health, and emits a factual result event. Keeping
+-- that distinction lets presentation animate without becoming game authority.
 
 local ecs = require("engine.ecs/v1")
 local policy = require("d2legacy.policy.melee")
@@ -14,6 +19,8 @@ local function target_for(attacker, wanted, candidates)
     local al = ecs.get(attacker, "d2legacy.world.location")
     local profile = ecs.get(attacker, "d2legacy.combat.melee_profile")
     local best, best_distance, best_id = nil, math.huge, ""
+    -- A named target wins when it remains valid. Shift-attacking supplies no
+    -- target, so the nearest hostile inside melee reach is selected instead.
     for _, candidate in ipairs(candidates) do
         if candidate:id() ~= attacker:id() then
             local selectable = ecs.get(candidate, "d2legacy.world.selectable")
@@ -84,9 +91,12 @@ function M.register()
                         local attacker_level, attack_rating = combat_values(attacker)
                         local defender_level, _, defense = combat_values(target)
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
-                        local damage = policy.damage(profile:get("physical_min"), profile:get("physical_max"))
-                        base.hit, base.damage_raw = true, damage
-                        base.remaining_health_raw = hurt(target, damage)
+                            local damage = policy.damage(
+                                profile:get("physical_min"),
+                                profile:get("physical_max")
+                            )
+                            base.hit, base.damage_raw = true, damage
+                            base.remaining_health_raw = hurt(target, damage)
                         end
                     end
                     event(structural, base)
