@@ -185,10 +185,6 @@ func (app *application) registerOfflineCommands() error {
 		return wrap("create offline movement source", err)
 	}
 	app.movementSource = movementSource
-	skills, err := gamesession.NewSkillSource(movement, "local-player")
-	if err != nil {
-		return wrap("create offline skill source", err)
-	}
 	skillProvider, err := app.skillProvider()
 	if err != nil {
 		return wrap("build starting skill provider", err)
@@ -221,7 +217,6 @@ func (app *application) registerOfflineCommands() error {
 	app.commandSource = func(tick uint64) []simulation.Command {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
-		commands = append(commands, skills.Commands(tick)...)
 		commands = append(commands, app.commandIntentSource.Commands(tick)...)
 		commands = append(commands, app.transitionSource.Commands(tick)...)
 		return sequencer.Assign(commands)

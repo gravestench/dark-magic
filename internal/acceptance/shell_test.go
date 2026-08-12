@@ -59,7 +59,8 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	skillSource, err := gamesession.NewSkillSource(movementController, "local-player")
+	intentController := &gamesession.IntentController{}
+	intentSource, err := gamesession.NewIntentSource(intentController, "local-player")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,9 +70,11 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sequencer := simulation.NewLocalSequencer()
 	commandSource := func(tick uint64) []simulation.Command {
 		commands := append(entrySource.Commands(tick), movementSource.Commands(tick)...)
-		return append(commands, skillSource.Commands(tick)...)
+		commands = append(commands, intentSource.Commands(tick)...)
+		return sequencer.Assign(commands)
 	}
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
@@ -83,6 +86,8 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.AppModule("test", func() {}),
 		modruntime.VFSModule(contentFS),
 		modruntime.DataModule(contentFS),
+		modruntime.RecordsModule(shellD2Records{}),
+		modruntime.CommandIntentModule(intentController),
 		modruntime.InputModule(&input),
 		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
@@ -460,7 +465,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if running, err := mode.Get("running"); err != nil || running != true {
 		t.Fatalf("authoritative movement mode = %v, %v", running, err)
 	}
-	if err := movementController.AssignSkill("right", 42); err != nil {
+	if err := intentController.Submit("player.assign_skills", map[string]any{"right": 42}); err != nil {
 		t.Fatal(err)
 	}
 	input.Publish(inputstate.Frame{Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})

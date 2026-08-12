@@ -31,12 +31,10 @@ type MoveTarget struct{ X, Y, StopRadius float64 }
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
 type MovementController struct {
-	running   atomic.Bool
-	sequence  atomic.Uint64
-	mu        sync.Mutex
-	skills    map[string]int64
-	skillUses []UseSkillPayload
-	target    *MoveTarget
+	running  atomic.Bool
+	sequence atomic.Uint64
+	mu       sync.Mutex
+	target   *MoveTarget
 }
 
 func (controller *MovementController) SetRunning(running bool) { controller.running.Store(running) }
@@ -47,41 +45,6 @@ func (controller *MovementController) HasMoveTarget() bool {
 	return controller.target != nil
 }
 func (controller *MovementController) nextSequence() uint64 { return controller.sequence.Add(1) }
-
-func (controller *MovementController) AssignSkill(slot string, skillID int64) error {
-	if slot != "left" && slot != "right" || skillID < 0 {
-		return fmt.Errorf("game session: skill assignment requires left/right slot and non-negative skill ID")
-	}
-	controller.mu.Lock()
-	defer controller.mu.Unlock()
-	if controller.skills == nil {
-		controller.skills = make(map[string]int64)
-	}
-	controller.skills[slot] = skillID
-	return nil
-}
-
-func (controller *MovementController) UseSkill(side string, x, y float64, targetID string) error {
-	side = strings.ToLower(strings.TrimSpace(side))
-	if side != "left" && side != "right" || math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
-		return fmt.Errorf("game session: skill use requires left/right side and finite target")
-	}
-	controller.mu.Lock()
-	// Skill intent owns the player now. This is especially important for
-	// Shift-melee: a stand-still swing must not inherit an older ground route.
-	controller.target = nil
-	controller.skillUses = append(controller.skillUses, UseSkillPayload{Side: side, TargetX: x, TargetY: y, TargetID: strings.TrimSpace(targetID)})
-	controller.mu.Unlock()
-	return nil
-}
-
-func (controller *MovementController) drainSkillUses() []UseSkillPayload {
-	controller.mu.Lock()
-	defer controller.mu.Unlock()
-	result := controller.skillUses
-	controller.skillUses = nil
-	return result
-}
 
 func (controller *MovementController) SetMoveTarget(x, y float64) error {
 	return controller.SetMoveTargetWithRadius(x, y, 0)
@@ -125,14 +88,6 @@ func (controller *MovementController) restoreMoveTarget(target *MoveTarget) {
 	}
 	copyTarget := *target
 	controller.target = &copyTarget
-}
-
-func (controller *MovementController) drainSkills() map[string]int64 {
-	controller.mu.Lock()
-	defer controller.mu.Unlock()
-	result := controller.skills
-	controller.skills = nil
-	return result
 }
 
 // MovementSource turns the latest native input snapshot into one replayable

@@ -18,19 +18,14 @@ func TestPlayerControlModuleQueuesMovementIntent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local player=require("engine.player/v1"); player.request_running(true); player.request_move(12.5, 44.25); player.assign_skill("right", 17); player.request_skill("right", 20.5, 30.25, "fallen:7")`
+	script := `local player=require("engine.player/v1"); player.request_running(true); player.request_move(12.5, 44.25)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	if !controller.Running() {
 		t.Fatal("Lua run intent did not reach the fixed-tick command mailbox")
 	}
-	source, err := gamesession.NewSkillSource(controller, "local-player")
-	if err != nil {
-		t.Fatal(err)
-	}
-	commands := source.Commands(1)
-	if len(commands) != 2 || commands[0].Kind != gamesession.AssignSkillsCommand || commands[1].Kind != gamesession.UseSkillCommand {
-		t.Fatalf("Lua skill intent commands = %#v", commands)
+	if !controller.HasMoveTarget() {
+		t.Fatal("Lua move target did not reach the movement mailbox")
 	}
 }

@@ -248,7 +248,9 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	}
 	before, _ := stats.Get(nearbyMonster)
 	beforeHealth, _ := before.Get("health")
-	if err := app.playerControl.UseSkill("left", targetX.(float64), targetY.(float64), targetID.(string)); err != nil {
+	if err := app.commandIntents.Submit("player.use_skill", map[string]any{
+		"side": "left", "target_x": targetX, "target_y": targetY, "target_id": targetID,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	// Advance in host-sized slices: the session intentionally caps catch-up per

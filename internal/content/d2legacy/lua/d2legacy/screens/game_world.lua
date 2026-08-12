@@ -354,7 +354,7 @@ return {
         if render.assets_available() then
             -- Require gameplay-facing capabilities only in the asset-backed HUD
             -- path that actually needs them.
-            local player = require("engine.player/v1")
+            local player = require("d2legacy.player_intents")
             self.player = player
             self.interaction = require("d2legacy.interactions.api")
 			self.targeting = require("d2legacy.targeting/v1")

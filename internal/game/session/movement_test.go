@@ -122,19 +122,6 @@ func TestMovementSourceEmitsPointerWorldTarget(t *testing.T) {
 	}
 }
 
-func TestSkillIntentStopsAnOlderPointerRoute(t *testing.T) {
-	controller := &MovementController{}
-	if err := controller.SetMoveTarget(20, 10); err != nil {
-		t.Fatal(err)
-	}
-	if err := controller.UseSkill("left", 12, 10, ""); err != nil {
-		t.Fatal(err)
-	}
-	if controller.HasMoveTarget() {
-		t.Fatal("stand-still skill retained older movement route")
-	}
-}
-
 func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) {
 	engine := gameecs.New()
 	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
