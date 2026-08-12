@@ -30,6 +30,9 @@ local owned_units = require("d2legacy.commands.owned_units")
 local owned_unit_component = require("d2legacy.components.owned_unit")
 local facing = require("d2legacy.systems.facing")
 local derived_stats = require("d2legacy.systems.derived_stats")
+local progression_data = require("d2legacy.data.progression")
+local progression = require("d2legacy.systems.progression")
+local owned_unit_lifecycle = require("d2legacy.systems.owned_unit_lifecycle")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -46,6 +49,7 @@ function M.start()
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.
     M.fire_bolt = fire_bolt_data.load()
+    M.progression = progression_data.load()
     cast_command.register()
     cast_system.register(M.fire_bolt)
     fire_bolt_system.register(M.fire_bolt)
@@ -55,6 +59,7 @@ function M.start()
     player_melee.register()
     spawn_monster.register()
     monster_death.register()
+    progression.register(M.progression)
     enter_player.register()
     world_transition.register()
     timed_state.register()
@@ -65,11 +70,13 @@ function M.start()
     population.register()
     move_player.register()
     owned_units.register()
+    owned_unit_lifecycle.register()
     facing.register()
 end
 
 function M.stop()
     M.fire_bolt = nil
+    M.progression = nil
 end
 
 return M
