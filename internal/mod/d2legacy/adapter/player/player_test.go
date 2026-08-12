@@ -16,7 +16,7 @@ func TestAdmissionCommandCarriesDurableFactsWithoutInterpretingD2Policy(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	command, err := AdmissionCommand(character, "player-1", destination, []Skill{{ID: 0, Level: 1, LeftAllowed: true, RightAllowed: true}}, "server", 1, 1, simulation.AuthoritySystem)
+	command, err := AdmissionCommand(character, "player-1", destination, "server", 1, 1, simulation.AuthoritySystem)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestEntrySourceEmitsTrustedCommandForSelectedCharacter(t *testing.T) {
 	if err := saves.Select("hero"); err != nil {
 		t.Fatal(err)
 	}
-	source, err := NewEntrySourceAtLocation(engine, saves, "player", 12, 13, 100, 80, 5, 109, nil)
+	source, err := NewEntrySourceAtLocation(engine, saves, "player", 12, 13, 100, 80, 5, 109)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestEntrySourceEmitsTrustedCommandForSelectedCharacter(t *testing.T) {
 func TestRemoteAdmissionRejectsPlayerAuthority(t *testing.T) {
 	destination, _ := NewDestination(23, 17, 100, 80, 1, 1)
 	character := persistence.Character{ID: "realm-amazon", Name: "RemoteHero", Class: "Amazon", Level: 1}
-	if _, err := AdmissionCommand(character, "account:42", destination, nil, "client", 1, 1, simulation.AuthorityPlayer); err == nil {
+	if _, err := AdmissionCommand(character, "account:42", destination, "client", 1, 1, simulation.AuthorityPlayer); err == nil {
 		t.Fatal("client minted trusted admission")
 	}
 }

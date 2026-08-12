@@ -6,6 +6,7 @@
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
+local skills = require("d2legacy.data.skill")
 local M = {}
 
 local function finite(value)
@@ -40,7 +41,6 @@ function M.validate(command)
     assert(p.world_width > 0 and p.world_height > 0 and p.x >= 0 and p.y >= 0
         and p.x < p.world_width and p.y < p.world_height, "player entry is outside the world")
     assert(p.act >= 1 and p.act <= 5 and p.level_id > 0, "player entry location is invalid")
-    assert(type(p.skills) == "table" or p.skills == nil, "player entry skills must be a table")
 end
 
 local class_tokens={amazon="AM",sorceress="SO",necromancer="NE",paladin="PA",barbarian="BA",assassin="AI",druid="DZ"}
@@ -60,7 +60,8 @@ end
 function M.apply(command)
     local p = command.payload
     assert(not already_entered(p.character_id), "character already entered")
-    local left, right = initial_skills(p.skills)
+    local learned = skills.starting_for_class(p.class)
+    local left, right = initial_skills(learned)
     local player = ecs.create({
         ["d2legacy.player.identity"]={character_id=p.character_id,player=p.player,name=p.name,class=p.class},
         ["d2legacy.player.progress"]={level=p.level,experience=p.experience},
@@ -89,7 +90,7 @@ function M.apply(command)
         ["d2legacy.world.selectable"]={id="player:"..p.player,kind="player",label=p.name,
             owner=p.player,radius=0.75,priority=10},
     })
-    for _, skill in ipairs(p.skills or {}) do
+    for _, skill in ipairs(learned) do
         ecs.create({["d2legacy.player.learned_skill"]={owner=player,skill_id=skill.id,
             level=skill.level,list_row=skill.list_row,left_allowed=skill.left_allowed,
             right_allowed=skill.right_allowed}})

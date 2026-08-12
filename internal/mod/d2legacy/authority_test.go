@@ -130,13 +130,18 @@ func (records fixtureRecords) Load(path string) ([]map[string]string, error) {
 		return rows, nil
 	}
 	switch path {
+	case "data/global/excel/charstats.txt":
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}}, nil
 	case "data/global/excel/skills.txt":
 		return []map[string]string{{
 			"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt",
+			"skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0",
 			"etype": "fire", "interrupt": "1", "srvstfunc": "",
 			"srvdofunc": "", "mana": "5", "manashift": "7",
 			"emin": "3", "emax": "6", "HitShift": "8",
 		}}, nil
+	case "data/global/excel/skilldesc.txt":
+		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil
 	case "data/global/excel/Missiles.txt":
 		return []map[string]string{{
 			"Missile": "firebolt", "Skill": "Fire Bolt",

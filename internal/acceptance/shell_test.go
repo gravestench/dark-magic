@@ -65,9 +65,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096, func(persistence.Character) []gameplayer.Skill {
-		return []gameplayer.Skill{{ID: 42, Level: 1, ListRow: 0, LeftAllowed: true, RightAllowed: true}}
-	})
+	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -505,10 +503,23 @@ type shellD2Records struct{}
 func (shellD2Records) Invalidate(string)  {}
 func (shellD2Records) Loaded(string) bool { return true }
 func (shellD2Records) Load(path string) ([]map[string]string, error) {
-	if path == "data/global/excel/skills.txt" {
-		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
+	switch path {
+	case "data/global/excel/charstats.txt":
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Test Skill"}}, nil
+	case "data/global/excel/skilldesc.txt":
+		return []map[string]string{
+			{"skilldesc": "firebolt", "ListRow": "1", "IconCel": "0"},
+			{"skilldesc": "test", "ListRow": "0", "IconCel": "0"},
+		}, nil
+	case "data/global/excel/skills.txt":
+		return []map[string]string{
+			{"Id": "36", "skill": "Fire Bolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"},
+			{"Id": "42", "skill": "Test Skill", "skilldesc": "test", "leftskill": "1", "general": "1", "passive": "0"},
+		}, nil
+	case "data/global/excel/Missiles.txt":
+		return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
 	}
-	return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
+	return nil, nil
 }
 
 func publishAction(input *inputstate.Store, name string) {

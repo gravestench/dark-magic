@@ -52,8 +52,8 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	assignments, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.skill_assignment")
 	assignment, _ := assignments.Get(player)
 	left, _ := assignment.Get("left")
-	if left != int64(0) {
-		t.Fatalf("initial left skill = %v, want basic Attack 0", left)
+	if left != int64(36) {
+		t.Fatalf("initial left skill = %v, want Lua-selected Fire Bolt 36", left)
 	}
 	learned, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.learned_skill")
 	if len(learned.Entities()) != 1 {
@@ -231,10 +231,17 @@ type runtimeFixtureRecords struct{}
 func (runtimeFixtureRecords) Invalidate(string)  {}
 func (runtimeFixtureRecords) Loaded(string) bool { return true }
 func (runtimeFixtureRecords) Load(path string) ([]map[string]string, error) {
-	if path == "data/global/excel/skills.txt" {
-		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
+	switch path {
+	case "data/global/excel/charstats.txt":
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}}, nil
+	case "data/global/excel/skilldesc.txt":
+		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil
+	case "data/global/excel/skills.txt":
+		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
+	case "data/global/excel/Missiles.txt":
+		return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
 	}
-	return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
+	return nil, nil
 }
 
 func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing.T) {
