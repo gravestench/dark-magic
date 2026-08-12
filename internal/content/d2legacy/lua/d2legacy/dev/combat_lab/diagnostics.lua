@@ -102,16 +102,16 @@ local function update_panel(state, snapshot)
     local phase = player.attack and "ATTACK"
         or (player.approach and "APPROACH" or "READY")
     set_text(state.panel, "player", state.panel.player, string.format(
-        "[blue]%s[/]  POS [white]%.1f,%.1f[/]  MODE [green]%s[/]  PHASE [gold]%s[/]  RANGE %.1f  DAMAGE %g-%g",
-        player.id, player.position.x, player.position.y, animation.mode or "?", phase,
+        "[blue]%s[/]  MODE [green]%s[/]  PHASE [gold]%s[/]  RANGE %.1f  DAMAGE %g-%g",
+        player.id, animation.mode or "?", phase,
         profile.range or 0, (profile.physical_min or 0)/fixed_one,
         (profile.physical_max or 0)/fixed_one))
     local nearest, distance = nearest_monster(player, snapshot.monsters)
     if nearest then
         local stats, ai = nearest.stats or {}, nearest.ai or {}
         set_text(state.panel, "target", state.panel.target, string.format(
-            "[red]%d HOSTILES[/]  NEAREST [gold]%s[/] @ %.1f,%.1f  DIST [white]%.1f[/]  HP [green]%g/%g[/]  AI [blue]%s[/]",
-            #snapshot.monsters, nearest.label, nearest.position.x, nearest.position.y, distance,
+            "[red]%d HOSTILES[/]  NEAREST [gold]%s[/]  HP [green]%g/%g[/]  AI [blue]%s[/]",
+            #snapshot.monsters, nearest.label,
             (stats.health or 0)/fixed_one, (stats.max_health or 0)/fixed_one,
             ai.state or "?"))
     else

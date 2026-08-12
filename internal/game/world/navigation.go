@@ -76,6 +76,26 @@ func (m *Map) walkableCell(cell navCell, radius float64) bool {
 	return true
 }
 
+// WalkableStep validates one adjacent collision-cell transition without
+// allocating an A* frontier. Fixed-tick velocity movement only needs this
+// local collision fact; route planning remains the caller of FindPath.
+func (m *Map) WalkableStep(start, goal Point, radius float64) bool {
+	if m == nil || radius < 0 || !finitePoint(start.X, start.Y) || !finitePoint(goal.X, goal.Y) {
+		return false
+	}
+	from := navCell{CollisionCell(start.X), CollisionCell(start.Y)}
+	to := navCell{CollisionCell(goal.X), CollisionCell(goal.Y)}
+	dx, dy := to.x-from.x, to.y-from.y
+	if absInt(dx) > 1 || absInt(dy) > 1 || !m.walkableCell(to, radius) {
+		return false
+	}
+	if dx != 0 && dy != 0 {
+		return m.walkableCell(navCell{from.x + dx, from.y}, radius) &&
+			m.walkableCell(navCell{from.x, from.y + dy}, radius)
+	}
+	return true
+}
+
 type navCell struct{ x, y int }
 type navStep struct{ x, y, cost int }
 
