@@ -2,6 +2,7 @@ package hotreload
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -63,5 +64,22 @@ func TestHelperChangeInvalidatesRequireAndReplacesActiveDefinition(t *testing.T)
 	}
 	if observed != 2 {
 		t.Fatalf("observed = %d", observed)
+	}
+}
+
+func TestAuthoritativeD2LegacyChangeRequiresNewSession(t *testing.T) {
+	root := t.TempDir()
+	contentFS, err := content.New(content.Layer{Name: "mods", FS: content.Directory(root)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coordinator := New(contentFS, modruntime.New(), host.NewManager(), nil, nil)
+	for _, changed := range []string{
+		"lua/d2legacy/policy/damage.lua",
+		"components/d2legacy.lua",
+	} {
+		if err := coordinator.Reload(context.Background(), changed); !errors.Is(err, ErrAuthoritativeReload) {
+			t.Fatalf("Reload(%q) error = %v", changed, err)
+		}
 	}
 }
