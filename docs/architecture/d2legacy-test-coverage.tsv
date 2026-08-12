@@ -6,7 +6,7 @@ internal/game/action	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered
 internal/game/stats	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	attack-rating versus defense hit chance clamps and integer order
 internal/game/item	internal/mod/d2legacy/authority_test.go	partial	held swap footprints and Lua materialization covered; focused vendor service equipment and corpse-recovery vectors remain fidelity work
 internal/game/interaction	internal/mod/d2legacy/authority_test.go	partial	Lua owns spatial open close policy; a focused checkpointed NPC reward vector remains fidelity work
-internal/game/loot	internal/mod/d2legacy/authority_test.go	partial	Lua owns treasure quality affix property policy and nested inheritance; broader fixed legacy vectors remain fidelity work
+internal/game/loot	internal/mod/d2legacy/authority_test.go	covered	fixed nested treasure quality affix value and property vectors plus checkpointed monster-drop restore parity in hostile_lifecycle_restore_test.go
 internal/game/monster	internal/mod/d2legacy/hostile_lifecycle_restore_test.go	covered	generated population spawn AI acquisition skill damage atomic death corpse credit XP loot events and reconstructed-runtime restore parity
 internal/game/player	internal/mod/d2legacy/runtime_test.go	partial	Lua owns entry movement progression and restore state; a complete creation-to-level-up vector remains fidelity work
 internal/game/transition	internal/mod/d2legacy/warp_lab_test.go	covered	approach collision warp relocation and presentation transition

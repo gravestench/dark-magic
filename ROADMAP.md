@@ -1585,16 +1585,18 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   completes skill damage and atomic death, and reproduces corpse, XP credit,
   loot/quest/presentation events, untargetability, and the final checksum.
 
-- [ ] **M21.14.8 — loot and item generation migration.** Move treasure classes,
+- [x] **M21.14.8 — loot and item generation migration.** Move treasure classes,
   quality, affixes, properties, item rolls, drop policy, and D2 item identity
   interpretation to `d2legacy`; retain typed record decoding and any justified
   generic RNG/transaction primitives in Go. Acceptance: fixed-seed generation
   vectors and monster-drop replay match through Lua, and superseded Go policy is
   deleted.
 
-  Ownership cutover is complete and all former Go generation modules now have
-  Lua policy owners. Broader fixed legacy quality/affix/property vectors and a
-  checkpointed monster-drop vector remain.
+  Complete: all former Go generation modules have Lua policy owners. Fixed
+  legacy vectors cover nested treasure-class modifiers, forced quality,
+  affix eligibility/value materialization, and property interpretation. The
+  restored generated-hostile lifecycle also checkpoints a deterministic
+  monster drop and reproduces the same unique item facts and checksum.
 
 - [ ] **M21.14.9 — inventory, equipment, vendors, and services migration.** Move
   D2 container footprints, held/belt/corpse behavior, equipment eligibility,
