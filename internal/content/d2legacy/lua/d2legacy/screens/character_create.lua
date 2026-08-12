@@ -596,16 +596,17 @@ return {
             end
         end
 
-        -- Keep transition resources stable while a hero is walking forward/back.
-        -- Pointer/keyboard controls resume as soon as selection_transition clears.
-        if self.selection_transition then return end
-
+        -- Class activation guards its own one-shot transition above. Keep the
+        -- rest of the form live while the selected hero walks forward so the
+        -- name field can accept input immediately.
+        local confirm_from_name = self.form_visible
+            and self.controls.focus == self.name_field
+            and input.pressed("confirm")
         self.controls:update()
 
         -- Enter/Confirm from name field acts like OK when form is valid, without
         -- requiring keyboard focus to travel to the mostly pointer-authored OK art.
-        if self.form_visible and input.pressed("confirm") and self.ok_button.enabled
-            and self.controls.focus ~= self.ok_button then
+        if confirm_from_name and self.ok_button.enabled then
             self.controls:activate(self.ok_button)
         end
 
