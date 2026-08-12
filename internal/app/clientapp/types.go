@@ -21,11 +21,11 @@ import (
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
@@ -123,7 +123,7 @@ type application struct {
 	commandSource       func(uint64) []simulation.Command
 	worldMu             sync.RWMutex
 	gameWorlds          map[int]*gameworld.Map
-	gameWorldZones      map[int]*mapgen.Zone
+	gameWorldZones      map[int]*worldgen.Zone
 	gameWorldSpawns     map[int][2]float64
 	activeWorldLevel    int
 	loading             *loadcore.Coordinator

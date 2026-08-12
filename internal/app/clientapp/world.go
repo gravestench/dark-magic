@@ -8,27 +8,18 @@ import (
 	"github.com/gravestench/akara"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 // buildEntryWorld generates and materializes both sides of the first playable
 // zone seam. Maps publish together; a half-built wilderness is never active.
 func (app *application) buildEntryWorld() error {
-	snapshot, err := app.gameData.Snapshot()
+	townZone, moorZone, err := d2mapgen.GenerateEntryZones(app.ctx, app.options.Content, app.records, 1)
 	if err != nil {
-		return wrap("load entry-world records", err)
-	}
-	townZone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{
-		Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1, Difficulty: mapgen.Normal,
-	})
-	if err != nil {
-		return wrap("generate Act I town", err)
-	}
-	moorZone, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2, Difficulty: mapgen.Normal}, townZone.Stamps()[0])
-	if err != nil {
-		return wrap("generate Blood Moor", err)
+		return wrap("generate d2legacy entry world", err)
 	}
 	townMap, err := app.materializeZone(townZone)
 	if err != nil {
@@ -46,7 +37,7 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("create zone transition authority", err)
 	}
-	app.gameWorldZones = map[int]*mapgen.Zone{1: townZone, 2: moorZone}
+	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
 	townSpawnX, townSpawnY, found := townMap.ActOneTownEntry()
 	if !found {
@@ -117,7 +108,7 @@ func entryWorldSpawns(fixtureSpawn string, seam gameworld.Seam, townX, townY flo
 	}
 }
 
-func (app *application) materializeZone(zone *mapgen.Zone) (*gameworld.Map, error) {
+func (app *application) materializeZone(zone *worldgen.Zone) (*gameworld.Map, error) {
 	materializer, err := gameworld.NewMaterializer(app.options.Content, zone, app.worldObjectResolver)
 	if err != nil {
 		return nil, err

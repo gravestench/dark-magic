@@ -51,7 +51,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.video/v1":          {"available", "play"},
 		"engine.locale/v1":         {"text"},
 		"engine.save/v1":           {"characters", "create", "create_named", "delete", "select", "selected"},
-		"engine.player/v1":         {"assign_skill", "request_running"},
+		"engine.player/v1":         {"request_move", "request_running"},
 		"engine.command_intent/v1": {"submit"},
 		"engine.simulation/v1":     {"move_hero", "state"}, "engine.render/v1": {"create", "diagnostics"},
 		"engine.scene/v1": {"register", "replace", "push", "pop", "toggle_overlay"},

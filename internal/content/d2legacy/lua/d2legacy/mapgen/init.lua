@@ -4,9 +4,7 @@
 local M = {
     preset = require("d2legacy.mapgen.preset").generate,
     maze = require("d2legacy.mapgen.maze").generate,
+	outdoor = require("d2legacy.mapgen.outdoor").generate,
 }
-
--- These two temporary delegates are deleted as their Lua strategy ports land.
-function M.outdoor(...) return require("d2legacy.mapgen.native/v1").outdoor(...) end
 
 return M

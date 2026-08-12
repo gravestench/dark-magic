@@ -11,6 +11,10 @@ import (
 // cannot accidentally change authoritative generation results.
 type Zone struct{ definition Definition }
 
+// Definition returns a defensive copy for generic adapters which serialize or
+// transport an already-admitted recipe.
+func (zone *Zone) Definition() Definition { return cloneDefinition(zone.definition) }
+
 func NewZone(definition Definition) (*Zone, error) {
 	definition = cloneDefinition(definition)
 	canonicalize(&definition)
