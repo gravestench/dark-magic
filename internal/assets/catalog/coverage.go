@@ -29,7 +29,7 @@ type Coverage struct {
 	Fingerprint            string   `json:"fingerprint"`
 }
 
-// BuildCoverage joins static paths in the presentation manifest and Lua shim
+// BuildCoverage joins static paths in the presentation manifest and Lua mod
 // with the curated catalog and redistributable structural fixture.
 func BuildCoverage(source fs.FS, manifest Manifest, fixture Fixture) (Coverage, error) {
 	presentation, err := fs.ReadFile(source, "manifests/presentation.v1.json")

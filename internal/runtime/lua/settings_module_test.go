@@ -30,7 +30,7 @@ func TestSettingsModuleAppliesAudioPreferences(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	scripts := fstest.MapFS{"script.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.settings/v1"); s.set("sound_volume",.25); s.set("music_volume",.75)`)}}
+	scripts := fstest.MapFS{"script.lua": &fstest.MapFile{Data: []byte(`local s=require("engine.settings/v1"); s.set("sound_volume",.25); s.set("music_volume",.75)`)}}
 	if err := runtime.Execute(context.Background(), scripts, "script.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestSettingsModuleAppliesPersistentRenderDiagnosticsPreferences(t *testing.
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local s=require("dm.settings/v1"); s.set("debug_texture_residency",true); s.set("texture_upload_budget_mb",8); s.set("texture_cache_budget_mb",768); s.save(); assert(s.get("debug_texture_residency") and s.get("texture_upload_budget_mb")==8 and s.get("texture_cache_budget_mb")==768)`
+	script := `local s=require("engine.settings/v1"); s.set("debug_texture_residency",true); s.set("texture_upload_budget_mb",8); s.set("texture_cache_budget_mb",768); s.save(); assert(s.get("debug_texture_residency") and s.get("texture_upload_budget_mb")==8 and s.get("texture_cache_budget_mb")==768)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"script.lua": {Data: []byte(script)}}, "script.lua"); err != nil {
 		t.Fatal(err)
 	}

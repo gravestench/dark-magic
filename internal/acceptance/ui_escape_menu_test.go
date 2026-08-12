@@ -6,9 +6,8 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -18,7 +17,7 @@ import (
 
 func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +33,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 		modruntime.InputModule(&input),
 		modruntime.DataModule(contentFS),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -47,9 +46,9 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	defer runtime.Stop(ctx)
 
 	script := `
-local render = require("dm.render/v1")
-local settings = require("dm.settings/v1")
-local escape_menu = require("darkmagic.ui.escape_menu")
+local render = require("engine.render/v1")
+local settings = require("engine.settings/v1")
+local escape_menu = require("d2legacy.ui.escape_menu")
 
 local function value(value)
   if value == nil then return "<nil>" end
@@ -135,7 +134,7 @@ func TestLuaOptionsOverlayCentersInClassicViewport(t *testing.T) {
 func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY float64) {
 	t.Helper()
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,9 +149,9 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 	scenes := modruntime.NewScenes(runtime, navigation.New())
 	for _, module := range []modruntime.Module{
 		modruntime.InputModule(&input),
-		modruntime.DataModule(contentFS, profile),
+		modruntime.DataModule(contentFS, d2presentation.ManifestTransforms(profile)),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		scenes.Module(),
 	} {
@@ -168,7 +167,7 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 	scope := &modruntime.Scope{}
 	defer scope.Close()
 	if err := runtime.RunScoped(ctx, scope, func(state *glua.LState) error {
-		return state.DoString(`local overlay = require("darkmagic.overlays.options"); overlay:create()`)
+		return state.DoString(`local overlay = require("d2legacy.overlays.options"); overlay:create()`)
 	}); err != nil {
 		t.Fatal(err)
 	}

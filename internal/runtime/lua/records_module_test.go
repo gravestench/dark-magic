@@ -24,7 +24,7 @@ func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 
 	source := fstest.MapFS{
 		"items.txt": &fstest.MapFile{Data: []byte("code\tname\na\tAlpha\n")},
-		"test.lua":  &fstest.MapFile{Data: []byte(`local r=require("dm.records/v1"); rows=assert(r.load("items.txt")); was_loaded=r.loaded("items.txt"); r.reload("items.txt"); is_loaded=r.loaded("items.txt")`)},
+		"test.lua":  &fstest.MapFile{Data: []byte(`local r=require("engine.records/v1"); rows=assert(r.load("items.txt")); was_loaded=r.loaded("items.txt"); r.reload("items.txt"); is_loaded=r.loaded("items.txt")`)},
 	}
 	runtime := New()
 	records := &trackingRecordsGateway{Store: recordstore.New(source)}

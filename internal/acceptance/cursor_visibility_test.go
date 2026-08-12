@@ -17,7 +17,7 @@ func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 	var input inputstate.Store
 	var composer render.Composer
 	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {
@@ -33,7 +33,7 @@ func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 
 	scripts := fstest.MapFS{
 		"cursor.lua": &fstest.MapFile{Data: []byte(`
-local cursor = require("darkmagic.ui.cursor")
+local cursor = require("d2legacy.ui.cursor")
 local definition = {
     palette = "units",
     direction = 0,

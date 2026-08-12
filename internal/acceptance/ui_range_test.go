@@ -14,7 +14,7 @@ func TestLuaControlsSliderKeyboardAndDragSemantics(t *testing.T) {
 	ctx := context.Background()
 	var input inputstate.Store
 	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {
@@ -27,7 +27,7 @@ func TestLuaControlsSliderKeyboardAndDragSemantics(t *testing.T) {
 
 	scripts := fstest.MapFS{
 		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui=require("darkmagic.ui.controls")
+local ui=require("d2legacy.ui.controls")
 manager=ui.new()
 slider=manager:add_slider({id="volume",x=10,y=10,width=100,height=20,min=0,max=100,step=10,value=40})
 `)},

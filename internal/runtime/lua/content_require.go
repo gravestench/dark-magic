@@ -11,8 +11,8 @@ import (
 )
 
 // ContentRequire installs a Lua require searcher backed by source. A module
-// such as darkmagic.screens.loading resolves to
-// <root>/darkmagic/screens/loading.lua.
+// such as example.screens.loading resolves beneath the configured content root
+// using ordinary dotted Lua module names.
 func ContentRequire(source fs.FS, root string) Installer {
 	return Installer{Name: "content.require", Install: func(state *lua.LState) error {
 		packageValue := state.GetGlobal("package")

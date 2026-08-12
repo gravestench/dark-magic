@@ -139,7 +139,7 @@ sprite/quantization nodes rather than directly from Blender scene state.
   clocks are time-based; collision and selection are authored separately.
 - **Packages / modules / tools:** introduce semantic packages above and
   `dm-asset inspect|validate --json`; no Blender code yet.
-- **Schemas / assets:** draft explicitly versioned `darkmagic.creature/v1`,
+- **Schemas / assets:** draft explicitly versioned `d2legacy.creature/v1`,
   `skeleton/v1`, `animation/v1`, `material/v1`, `composite/v1`, and
   `render-profile/v1`. Create minimal humanoid, equipment, non-humanoid,
   palette-region, and socket fixtures with stable licenses/provenance.

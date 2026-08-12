@@ -159,7 +159,7 @@ func TestRenderNodesBelongToLuaComponentScope(t *testing.T) {
 	defer runtime.Stop(context.Background())
 
 	source := fstest.MapFS{"screen.lua": &fstest.MapFile{Data: []byte(`
-local render = require("dm.render/v1")
+local render = require("engine.render/v1")
 return {
     id = "screen.loading",
     start = function(self)
@@ -212,7 +212,7 @@ func TestRenderNodePaletteQuantizationAcceptsTinyPalettes(t *testing.T) {
 	runtime := New()
 	assets := fstest.MapFS{
 		"screen.lua": {Data: []byte(`
-local render = require("dm.render/v1")
+local render = require("engine.render/v1")
 return {
     id = "screen.palette",
     start = function(self)
@@ -282,7 +282,7 @@ func TestRenderCapabilityExposesCOFCompositionMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local r=require("dm.render/v1"); local c=assert(r.cof_info("unit.cof")); assert(c.directions==1 and c.frames==1 and c.layers[1].type=="HD" and c.priority[1][1][1]=="HD" and c.events[1]==1)`
+	script := `local r=require("engine.render/v1"); local c=assert(r.cof_info("unit.cof")); assert(c.directions==1 and c.frames==1 and c.layers[1].type=="HD" and c.priority[1][1][1]=="HD" and c.events[1]==1)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -500,7 +500,7 @@ func TestRenderNodeDecodesPaletteAwareDC6(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	source := fstest.MapFS{"screen.lua": &fstest.MapFile{Data: []byte(`
-local render = require("dm.render/v1")
+local render = require("engine.render/v1")
 return { id = "screen.dc6", start = function(self)
   self.root = render.create("hud")
 	  local w, h, ox, oy = self.root:set_dc6("one.dc6", "pal.dat", 0, 0)
@@ -680,7 +680,7 @@ func TestRenderCapabilityRequiresComponentScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	err := runtime.Execute(context.Background(), fstest.MapFS{"bad.lua": &fstest.MapFile{Data: []byte(`local render = require("dm.render/v1"); render.create("world")`)}}, "bad.lua")
+	err := runtime.Execute(context.Background(), fstest.MapFS{"bad.lua": &fstest.MapFile{Data: []byte(`local render = require("engine.render/v1"); render.create("world")`)}}, "bad.lua")
 	if err == nil {
 		t.Fatal("expected unscoped allocation to fail")
 	}

@@ -78,7 +78,7 @@ func TestRuntimeExecutesVersionedModuleOnOneOwner(t *testing.T) {
 	t.Parallel()
 
 	runtime := New()
-	if err := runtime.RegisterModule(Module{Name: "dm.test/v1", Loader: func(state *lua.LState) int {
+	if err := runtime.RegisterModule(Module{Name: "example.test/v1", Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"answer": func(state *lua.LState) int { state.Push(lua.LNumber(42)); return 1 },
 		})
@@ -91,7 +91,7 @@ func TestRuntimeExecutesVersionedModuleOnOneOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`local test = require("dm.test/v1"); result = test.answer()`)}}
+	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`local test = require("example.test/v1"); result = test.answer()`)}}
 	if err := runtime.Execute(context.Background(), source, "boot.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +135,26 @@ func TestRuntimeSerializesConcurrentCalls(t *testing.T) {
 			t.Fatalf("count = %s", got)
 		}
 		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRuntimeDoesNotExposeAmbientNondeterminism(t *testing.T) {
+	runtime := New()
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		return state.DoString(`
+assert(os == nil and io == nil and debug == nil and channel == nil and coroutine == nil)
+assert(dofile == nil and loadfile == nil and loadstring == nil and load == nil)
+assert(print == nil and math.random == nil and math.randomseed == nil)
+assert(package.loadlib == nil and package.path == "" and package.cpath == "")
+local ok = pcall(require, "not.an.engine.module")
+assert(not ok)
+`)
 	}); err != nil {
 		t.Fatal(err)
 	}

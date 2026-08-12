@@ -498,5 +498,5 @@ cell-for-cell checks against retail-engine captures across all five acts and
 keeps blind holdout seeds. Dark Magic should use its verification structure and
 observable outputs to design independent tests, not copy embedded fixtures or
 assume that every 1.14d behavior is identical to D2MOO's 1.10f reconstruction.
-See [`research/libd2.md`](research/libd2.md) for the source boundary and audit
+See [`research/libd2legacy.md`](research/libd2legacy.md) for the source boundary and audit
 queue.

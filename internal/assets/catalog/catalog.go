@@ -64,7 +64,7 @@ type Result struct {
 	Error      string   `json:"error,omitempty"`
 }
 
-// Report is deterministic output suitable for review or shim generation.
+// Report is deterministic output suitable for review or mod generation.
 type Report struct {
 	ManifestVersion int      `json:"manifest_version"`
 	Results         []Result `json:"results"`

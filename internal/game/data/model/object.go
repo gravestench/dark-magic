@@ -283,16 +283,16 @@ type Object struct {
 	Height int `csv:"Height"`
 
 	// Defines a function that the game will use when the player clicks on the object.
-	OperateFn ObjectOperateFunction `csv:"OperateFn"`
+	OperateFn int `csv:"OperateFn"`
 
 	// Defines a function that the game will use to spawn this object.
-	PopulateFn ObjectPopulateFunction `csv:"PopulateFn"`
+	PopulateFn int `csv:"PopulateFn"`
 
 	// Defines a function to control how the object works while active and when initially activated by a player.
-	InitFn ObjectInitFunction `csv:"InitFn"`
+	InitFn int `csv:"InitFn"`
 
 	// Defines a function that runs on the object from the game's client side.
-	ClientFn ObjectClientFunction `csv:"ClientFn"`
+	ClientFn int `csv:"ClientFn"`
 
 	// Boolean Field. If equals 1, then when the object has been used, the game will not restore the object in an inactive state when the area level repopulates after a player loads back into it.
 	// If equals 0, then ignore this.

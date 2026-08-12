@@ -251,7 +251,7 @@ graph. Each generated game must make all required actions reachable.
 - [D2MOO Act IV quest implementations](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/QUESTS/ACT4)
 - [D2MOO Act V quest implementations](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/QUESTS/ACT5)
 - [1.13 `Levels.txt` field and row reference](https://github.com/fabd/diablo2/blob/master/code/d2_113_data/Levels.txt)
-- Local recovered quest hierarchy: `internal/content/shim/data/recovered/riiablo/quests.txt`.
+- Local recovered quest hierarchy: `internal/content/d2legacy/data/recovered/riiablo/quests.txt`.
 
 ### Contemporary/player-facing corroboration
 

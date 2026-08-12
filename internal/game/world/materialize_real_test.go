@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
@@ -21,11 +22,13 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	records := recordstore.New(source)
+	runtime, err := d2mapgen.NewRuntime(t.Context(), source, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9})
+	defer runtime.Close(t.Context())
+	zone, err := runtime.Generate(t.Context(), "maze", float64(9), float64(42), float64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,31 +48,6 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if worldMap.WidthTiles != zone.Bounds().Width || worldMap.HeightTiles != zone.Bounds().Height || len(worldMap.Tiles) == 0 {
 		t.Fatalf("materialized map dimensions/tiles = %dx%d/%d", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
 	}
-	transitions, err := worldMap.ResolveLevelTransitions(snapshot.LevelsByID[9], snapshot.LevelWarpsByID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(transitions) == 0 {
-		t.Fatalf("materialized cave transitions = %#v", transitions)
-	}
-	first := transitions[0]
-	if first.DestinationLevel != 3 || first.WarpID != 4 || first.Tile.X != 4 || first.Tile.Y != 29 || first.Tile.MainIndex != 0 || first.Tile.SubIndex != 21 {
-		t.Fatalf("unexpected production cave transition = %#v", first)
-	}
-	wantGeometry := gameworld.WarpGeometry{
-		CellOrigin: gameworld.SubtilePoint{X: 20, Y: 145}, EntityPosition: gameworld.SubtilePoint{X: 22, Y: 150},
-		SelectionLocal: gameworld.LocalSelectionBounds{MinX: -30, MinY: -120, MaxX: 90, MaxY: 30},
-		Arrival:        gameworld.SubtilePoint{X: 22, Y: 150}, ExitWalkTarget: gameworld.SubtilePoint{X: 25, Y: 155},
-	}
-	if got := first.Geometry(); got != wantGeometry {
-		t.Fatalf("production cave geometry = %#v, want %#v", got, wantGeometry)
-	}
-	for _, transition := range transitions {
-		geometry := transition.Geometry()
-		if geometry.EntityPosition != geometry.Arrival || geometry.SelectionLocal.MaxX <= geometry.SelectionLocal.MinX || geometry.SelectionLocal.MaxY <= geometry.SelectionLocal.MinY {
-			t.Fatalf("invalid authored warp geometry = %#v", geometry)
-		}
-	}
 }
 
 func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
@@ -82,11 +60,13 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	records := recordstore.New(source)
+	runtime, err := d2mapgen.NewRuntime(t.Context(), source, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1})
+	defer runtime.Close(t.Context())
+	zone, err := runtime.Generate(t.Context(), "preset", float64(1), float64(1), float64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +83,7 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	x, y, found := worldMap.ActOneTownEntry()
+	x, y, found := runtime.TownEntry(t.Context(), worldMap)
 	if !found {
 		t.Fatal("materialized town has no campfire-relative entry")
 	}
@@ -126,18 +106,12 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	records := recordstore.New(source)
+	entryWorld, err := d2mapgen.GenerateEntryWorld(t.Context(), source, records, 17)
 	if err != nil {
 		t.Fatal(err)
 	}
-	town, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	moor, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 2}, town.Stamps()[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	town, moor := entryWorld.Town, entryWorld.Wilderness
 	materializer, err := gameworld.NewMaterializer(source, moor)
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +167,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seam, err := gameworld.NewActOneTownMoorSeam(town, townMap, moor, worldMap)
+	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, worldMap)
 	if err != nil {
 		t.Fatal(err)
 	}

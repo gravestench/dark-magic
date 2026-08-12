@@ -3,26 +3,6 @@ package models
 // NPC represents the NPCs in each Act that have specific item data.
 type NPC string
 
-const (
-	NpcCharsi   NPC = "Charsi"
-	NpcGheed    NPC = "Gheed"
-	NpcAkara    NPC = "Akara"
-	NpcFara     NPC = "Fara"
-	NpcLysander NPC = "Lysander"
-	NpcDrognan  NPC = "Drognan"
-	NpcHratli   NPC = "Hratli"
-	NpcAlkor    NPC = "Alkor"
-	NpcOrmus    NPC = "Ormus"
-	NpcElzix    NPC = "Elzix"
-	NpcAsheara  NPC = "Asheara"
-	NpcCain     NPC = "Cain"
-	NpcHalbu    NPC = "Halbu"
-	NpcJamella  NPC = "Jamella"
-	NpcLarzuk   NPC = "Larzuk"
-	NpcMalah    NPC = "Malah"
-	NpcAnya     NPC = "Anya"
-)
-
 // NPCTrade represents the data for how each town NPC manipulates their store prices.
 type NPCTrade struct {
 	NPC            string `csv:"npc"`             // Points to the matching "Id" value in the monstats.txt file. Should not be changed.

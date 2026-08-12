@@ -16,7 +16,7 @@ import (
 )
 
 // FromEnvironment constructs the production content stack. User content wins,
-// followed by the Dark Magic shim, Diablo II patches/expansion data, and base
+// followed by the bundled d2legacy mod, Diablo II patches/expansion data, and base
 // archives. Missing optional directories and archives are skipped.
 func FromEnvironment() (*FS, error) {
 	layers := make([]Layer, 0, 16)
@@ -35,7 +35,7 @@ func FromEnvironment() (*FS, error) {
 		}
 		layers = append(layers, Layer{Name: "user-mods", FS: Directory(mods)})
 	}
-	layers = append(layers, Layer{Name: "darkmagic", FS: Shim()})
+	layers = append(layers, Layer{Name: "d2legacy", FS: D2Legacy()})
 	if configured := os.Getenv("MPQ_DIRECTORY"); configured != "" {
 		for index, entry := range strings.Split(configured, ",") {
 			directory := strings.TrimSpace(entry)
@@ -56,12 +56,7 @@ func FromEnvironment() (*FS, error) {
 			}
 			prefix := fmt.Sprintf("mpq-%d", index)
 			layers = append(layers, Layer{Name: prefix + "-directory", FS: Directory(directory)})
-			priority := []string{
-				"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
-				"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
-				"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
-			}
-			for _, name := range priority {
+			for _, name := range standardMPQNames {
 				fileName := filepath.Join(directory, name)
 				if _, err := os.Stat(fileName); err != nil {
 					if os.IsNotExist(err) {
@@ -78,6 +73,15 @@ func FromEnvironment() (*FS, error) {
 		}
 	}
 	return New(layers...)
+}
+
+// standardMPQNames is ordered from the newest game data to the oldest. Diablo
+// II stores post-release table updates such as sets.txt in patch_d2.mpq, so the
+// patch archive must be mounted before expansion and base archives.
+var standardMPQNames = []string{
+	"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
+	"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
+	"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
 }
 
 // Layer is one named content source. Earlier layers have higher priority.

@@ -16,7 +16,7 @@ func TestAppModuleReportsVersionAndRequestsExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local app=require("dm.app/v1"); assert(app.version()=="test-version"); app.request_exit()`)}}, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local app=require("engine.app/v1"); assert(app.version()=="test-version"); app.request_exit()`)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	if !exited {

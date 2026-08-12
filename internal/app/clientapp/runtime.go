@@ -11,15 +11,15 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
-	gametargeting "github.com/gravestench/dark-magic/internal/game/targeting"
+	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
+	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+	d2targeting "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
 func (app *application) registerLuaRuntime() error {
-	if err := app.scripts.RegisterInstaller(modruntime.ContentRequire(app.options.Content, "lua")); err != nil {
-		return err
-	}
 	for _, module := range app.baseLuaModules() {
 		if err := app.scripts.RegisterModule(module); err != nil {
 			return fmt.Errorf("register Lua module %s: %w", module.Name, err)
@@ -38,26 +38,21 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.AppModule(BuildVersion(), app.stop),
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
-		modruntime.DataModule(app.options.Content, app.profile.ID),
+		modruntime.DataModule(app.options.Content, d2presentation.ManifestTransforms(app.profile.ID)),
 		modruntime.SessionWorldModule(app.options.Content, app.currentWorld, app.worldObjectResolver),
-		modruntime.MapgenModule(app.gameData),
 		modruntime.InputModule(app.inputState),
 		modruntime.DevModule(map[string]any{
 			"random_seed": int(time.Now().UnixNano()%2147483646) + 1,
 		}),
-		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
+		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
-		modruntime.RecordsModule(app.gameData),
-		modruntime.GameDataModule(app.gameData),
-		modruntime.QuestCatalogModule(app.questCatalog, app.locale),
-		modruntime.MapCatalogModule(app.questCatalog),
+		d2catalog.QuestModule(app.questCatalog, app.locale),
+		d2catalog.MapModule(app.questCatalog),
 		modruntime.LocaleModule(app.locale),
-		modruntime.SaveModule(app.saves),
+		d2save.Module(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
-		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
-		modruntime.InteractionModule(app.interactionAuthority, app.interactionControl, "local-player"),
-		modruntime.ItemModule(app.itemAuthority, app.itemControl, "local-player"),
-		modruntime.NewECSCapability(app.scripts, app.entitySimulation).Module(),
+		d2targeting.Module(d2targeting.New(app.entitySimulation)),
+		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
 	}
 }

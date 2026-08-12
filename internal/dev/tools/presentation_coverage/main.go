@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	source := content.Shim()
+	source := content.D2Legacy()
 	manifest := readManifest[assetcatalog.Manifest](source, "manifests/asset-catalog.v1.json")
 	fixture := readManifest[assetcatalog.Fixture](source, "manifests/asset-fixture.v1.json")
 	coverage, err := assetcatalog.BuildCoverage(source, manifest, fixture)

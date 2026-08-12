@@ -17,8 +17,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/dev/capture"
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
 	"github.com/gravestench/dark-magic/internal/logging"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
@@ -132,7 +132,7 @@ func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, ca
 
 // Keep this tiny forwarding function for the command's historical tests. The
 // fixture recipe itself belongs beside the client application that consumes it.
-func developmentCharacters(count int) []persistence.Character {
+func developmentCharacters(count int) []d2save.Character {
 	return clientapp.DevelopmentCharacters(count)
 }
 

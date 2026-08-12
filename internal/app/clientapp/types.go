@@ -13,22 +13,20 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
-	gameitem "github.com/gravestench/dark-magic/internal/game/item"
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
-	"github.com/gravestench/dark-magic/internal/persistence"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -106,31 +104,27 @@ type application struct {
 	scenes           *modruntime.Scenes
 	renderCapability *modruntime.RenderCapability
 
-	records              *recordstore.Store
-	gameData             *gamedata.Catalog
-	questCatalog         *recovered.Catalog
-	worldObjectResolver  *worldobjects.Resolver
-	saves                *persistence.Store
-	entitySimulation     *gameecs.Engine
-	offlineSession       *gamesession.Session
-	playerControl        *gamesession.MovementController
-	movementSource       *gamesession.MovementSource
-	transitionAuthority  *gametransition.Authority
-	transitionSource     *gametransition.Source
-	interactionAuthority *gameinteraction.Authority
-	interactionControl   *gameinteraction.Controller
-	interactionSource    *gameinteraction.Source
-	itemAuthority        *gameitem.Authority
-	itemControl          *gameitem.Controller
-	itemSource           *gameitem.Source
-	commandSource        func(uint64) []simulation.Command
-	worldMu              sync.RWMutex
-	gameWorlds           map[int]*gameworld.Map
-	gameWorldZones       map[int]*mapgen.Zone
-	gameWorldSpawns      map[int][2]float64
-	activeWorldLevel     int
-	loading              *loadcore.Coordinator
-	pointerAcceptance    *pointerMovementAcceptance
+	records             *recordstore.Store
+	questCatalog        *recovered.Catalog
+	worldObjectResolver *worldobjects.Resolver
+	saves               *d2save.Store
+	entitySimulation    *gameecs.Engine
+	offlineSession      *gamesession.Session
+	authoritativeState  *simulation.StateStore
+	authoritativeRandom *simulation.RandomStreams
+	playerControl       *d2movement.MovementController
+	movementSource      *d2movement.MovementSource
+	transitionSeam      gametransition.Seam
+	commandIntents      *gamesession.IntentController
+	commandIntentSource *gamesession.IntentSource
+	commandSource       func(uint64) []simulation.Command
+	worldMu             sync.RWMutex
+	gameWorlds          map[int]*gameworld.Map
+	gameWorldZones      map[int]*worldgen.Zone
+	gameWorldSpawns     map[int][2]float64
+	activeWorldLevel    int
+	loading             *loadcore.Coordinator
+	pointerAcceptance   *pointerMovementAcceptance
 
 	components   *host.Manager
 	engineHost   *host.Host

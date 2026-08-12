@@ -1,6 +1,9 @@
 package simulation
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestNamedStreamsAreIndependentAndRestorable(t *testing.T) {
 	loot := NewStream(42, "loot")
@@ -29,5 +32,62 @@ func TestUint64nIsBoundedAndZeroSafe(t *testing.T) {
 		if value := stream.Uint64n(7); value >= 7 {
 			t.Fatalf("value %d outside limit", value)
 		}
+	}
+}
+
+func TestRandomStreamsRestoreExactNamedSequences(t *testing.T) {
+	streams := NewRandomStreams(42)
+	if err := streams.Register("d2legacy.combat.hit"); err != nil {
+		t.Fatal(err)
+	}
+	if err := streams.Register("d2legacy.loot.quality"); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = streams.Uint64n("d2legacy.combat.hit", 100)
+	snapshot, err := streams.SnapshotState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := streams.Uint64n("d2legacy.combat.hit", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := streams.RestoreState(snapshot); err != nil {
+		t.Fatal(err)
+	}
+	got, err := streams.Uint64n("d2legacy.combat.hit", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("restored roll = %d, want %d", got, want)
+	}
+	restored, err := streams.SnapshotState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(snapshot, restored) {
+		t.Fatal("drawing after restore did not advance the checkpointed stream")
+	}
+}
+
+func TestRandomStreamsRejectUnknownAndChangedRegistrations(t *testing.T) {
+	streams := NewRandomStreams(7)
+	if err := streams.Register("combat"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := streams.Uint64n("loot", 10); err == nil {
+		t.Fatal("unknown stream was accepted")
+	}
+	snapshot, err := streams.SnapshotState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	different := NewRandomStreams(7)
+	if err := different.Register("loot"); err != nil {
+		t.Fatal(err)
+	}
+	if err := different.RestoreState(snapshot); err == nil {
+		t.Fatal("changed registration restored successfully")
 	}
 }

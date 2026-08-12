@@ -12,11 +12,11 @@ import (
 
 // VFSModule exposes read-only layered content access to Lua.
 func VFSModule(source *content.FS) Module {
-	return Module{Name: "dm.vfs/v1", Help: documentedModule("Read assets from the layered virtual filesystem.", map[string]CommandHelp{
-		"read_text": commandHelp("dm.vfs.read_text(path)", "Read an asset as text."),
-		"read":      commandHelp("dm.vfs.read(path)", "Read an asset as binary data."),
-		"source":    commandHelp("dm.vfs.source(path)", "Describe the layer and resolved path supplying an asset."),
-		"list":      commandHelp("dm.vfs.list(prefix[, suffix])", "List mounted asset paths below a prefix, optionally filtered by case-insensitive suffix."),
+	return Module{Name: "engine.vfs/v1", Help: documentedModule("Read assets from the layered virtual filesystem.", map[string]CommandHelp{
+		"read_text": commandHelp("engine.vfs.read_text(path)", "Read an asset as text."),
+		"read":      commandHelp("engine.vfs.read(path)", "Read an asset as binary data."),
+		"source":    commandHelp("engine.vfs.source(path)", "Describe the layer and resolved path supplying an asset."),
+		"list":      commandHelp("engine.vfs.list(prefix[, suffix])", "List mounted asset paths below a prefix, optionally filtered by case-insensitive suffix."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"read_text": func(state *lua.LState) int {
@@ -77,7 +77,7 @@ func VFSModule(source *content.FS) Module {
 			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
-		module.RawSetString("name", lua.LString(fmt.Sprintf("%s", "dm.vfs/v1")))
+		module.RawSetString("name", lua.LString(fmt.Sprintf("%s", "engine.vfs/v1")))
 		state.Push(module)
 		return 1
 	}}

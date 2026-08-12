@@ -214,7 +214,7 @@ RNG algorithm and event-order policy are replay-format concerns. Legacy streams 
 3. Trace whether refresh preserves or restarts phase.
 4. Map original RNG owners: game, level, room, unit, item, quest, skill.
 5. Verify which seed fields are serialized in `.d2s` item data and when they change.
-6. Compare a known original item roll sequence against D2MOO/libd2.
+6. Compare a known original item roll sequence against D2MOO/libd2legacy.
 7. Capture deterministic skill/missile traces including RNG call order.
 8. Verify timer behavior across level transition, death, save/exit, reconnect.
 9. Verify same-frame command/event ordering for simultaneous rewards/kills/objects.

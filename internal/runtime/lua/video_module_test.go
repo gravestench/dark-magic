@@ -43,7 +43,7 @@ func TestVideoModulePlaybackIsScoped(t *testing.T) {
 	defer runtime.Stop(context.Background())
 	scope := &Scope{}
 	if err := runtime.runScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`local video=require("dm.video/v1"); assert(video.available()); local p=video.play("intro.bik"); assert(p:status().state=="playing")`)
+		return state.DoString(`local video=require("engine.video/v1"); assert(video.available()); local p=video.play("intro.bik"); assert(p:status().state=="playing")`)
 	}); err != nil {
 		t.Fatal(err)
 	}

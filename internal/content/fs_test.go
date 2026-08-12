@@ -125,10 +125,10 @@ func TestZIPAndDirectoryNormalizePaths(t *testing.T) {
 	}
 }
 
-func TestShimContainsBoot(t *testing.T) {
+func TestD2LegacyContainsBoot(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "boot.lua")
+	data, err := fs.ReadFile(D2Legacy(), "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"user-mods", "darkmagic"}) {
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"user-mods", "d2legacy"}) {
 		t.Fatalf("layers = %v", got)
 	}
 	data, err := fs.ReadFile(contentFS, "boot.lua")
@@ -266,7 +266,7 @@ func TestFromEnvironmentMountsMultipleMPQDirectoriesInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"darkmagic", "mpq-0-directory", "mpq-1-directory"}) {
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"d2legacy", "mpq-0-directory", "mpq-1-directory"}) {
 		t.Fatalf("layers = %v", got)
 	}
 	shared, err := fs.ReadFile(contentFS, "shared.gpl")
@@ -287,6 +287,12 @@ func TestFromEnvironmentRejectsEmptyMPQDirectoryEntry(t *testing.T) {
 	}
 }
 
+func TestStandardMPQOrderStartsWithLegacyPatchArchive(t *testing.T) {
+	if len(standardMPQNames) == 0 || standardMPQNames[0] != "patch_d2.mpq" {
+		t.Fatalf("archive priority = %v", standardMPQNames)
+	}
+}
+
 func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
@@ -303,6 +309,9 @@ func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 			_ = Close(layer.FS)
 		}
 	}()
+	if _, err := fs.ReadFile(contentFS, "data/global/excel/sets.txt"); err != nil {
+		t.Fatalf("open patch table sets.txt: %v", err)
+	}
 
 	for _, suffix := range []string{".dt1", ".ds1"} {
 		paths, listErr := contentFS.List("data/global/tiles", suffix)

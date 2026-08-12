@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"context"
 	"math"
 	"os"
 	"testing"
@@ -11,8 +12,36 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
+
+func startTestD2LegacyAuthority(t *testing.T, app *application) {
+	t.Helper()
+	if err := app.scripts.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := modruntime.LoadDefinition(t.Context(), app.scripts, app.options.Content, "components/d2legacy.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	component, err := definition.Managed().New(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := component.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.queueEntryPopulation(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = component.Stop(context.Background())
+		_ = app.scripts.Stop(context.Background())
+	})
+}
 
 // This is the complete offline admission seam exercised with production data:
 // the frontend creates/selects a durable character, while the fixed-tick
@@ -29,6 +58,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		options:    Options{Content: assets},
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
+		scripts:    modruntime.New(),
 	}
 	if err := app.loadGameCatalogs(); err != nil {
 		t.Fatal(err)
@@ -36,6 +66,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
+	startTestD2LegacyAuthority(t, app)
 	chunks, err := maprender.Index(assets, app.gameWorlds[2], "data/global/palette/ACT1/pal.pl2", maprender.DefaultChunkSize)
 	if err != nil {
 		t.Fatal(err)
@@ -83,8 +114,8 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		_ = content.Close(assets)
 	})
 
-	character, err := app.saves.CreateNamedWithOptions("CampfireHero", "Amazon", true, false)
-	if err != nil {
+	character := d2save.Character{ID: "amazon-campfirehero", Name: "CampfireHero", Class: "Amazon", Level: 1, Expansion: true}
+	if err := app.saves.Create(character); err != nil {
 		t.Fatal(err)
 	}
 	if err := app.saves.Select(character.ID); err != nil {
@@ -93,11 +124,11 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
 		t.Fatal(err)
 	}
-	monsters, found := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.identity")
+	monsters, found := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.identity")
 	if !found || monsters.Len() == 0 {
 		t.Fatal("real Blood Moor population produced no authoritative monsters")
 	}
-	locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.location")
+	locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
 	for _, entity := range monsters.Entities() {
 		location, _ := locations.Get(entity)
 		level, _ := location.Get("level_id")
@@ -106,15 +137,15 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		}
 	}
 
-	wantX, wantY, found := app.gameWorlds[1].ActOneTownEntry()
+	wantX, wantY, found := d2mapgen.ResolveTownEntry(t.Context(), app.options.Content, app.records, app.gameWorlds[1])
 	if !found {
 		t.Fatal("generated town has no campfire entry anchor")
 	}
-	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.player.identity")
+	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.identity")
 	if !ok {
 		t.Fatal("player identity store was not admitted")
 	}
-	positions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.position")
+	positions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
 	for _, entity := range identities.Entities() {
 		identity, _ := identities.Get(entity)
 		id, _ := identity.Get("character_id")
@@ -155,6 +186,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 		},
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
+		scripts:    modruntime.New(),
 	}
 	if err := app.loadGameCatalogs(); err != nil {
 		t.Fatal(err)
@@ -162,6 +194,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
+	startTestD2LegacyAuthority(t, app)
 	t.Cleanup(func() {
 		app.loading.Close()
 		_ = app.offlineSession.Close()
@@ -172,14 +205,14 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
 		t.Fatal(err)
 	}
-	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.player.identity")
+	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.identity")
 	if !ok {
 		t.Fatal("Combat Lab admitted no player identity store")
 	}
 	if identities.Len() != 1 {
 		t.Fatalf("Combat Lab admitted players = %d, want 1", identities.Len())
 	}
-	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.location")
+	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
 	if !ok {
 		t.Fatal("Combat Lab has no authoritative world locations")
 	}
@@ -193,11 +226,11 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 			t.Fatalf("Combat Lab player level = %v, want Blood Moor level 2", level)
 		}
 	}
-	monsters, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.identity")
+	monsters, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.identity")
 	if !ok || monsters.Len() == 0 {
 		t.Fatal("Combat Lab admitted no production Blood Moor hostiles")
 	}
-	positions, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.position")
+	positions, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
 	if !ok {
 		t.Fatal("Combat Lab has no authoritative positions")
 	}
@@ -223,7 +256,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if !nearby {
 		t.Fatal("Combat Lab placed no hostile within its visible encounter radius")
 	}
-	selectables, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.selectable")
+	selectables, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.selectable")
 	if !ok {
 		t.Fatal("Combat Lab has no authoritative selectable targets")
 	}
@@ -242,13 +275,15 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	}
 	targetX, _ := targetPosition.Get("x")
 	targetY, _ := targetPosition.Get("y")
-	stats, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.stats")
+	stats, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.stats")
 	if !ok {
 		t.Fatal("Combat Lab has no authoritative monster stats")
 	}
 	before, _ := stats.Get(nearbyMonster)
 	beforeHealth, _ := before.Get("health")
-	if err := app.playerControl.UseSkill("left", targetX.(float64), targetY.(float64), targetID.(string)); err != nil {
+	if err := app.commandIntents.Submit("player.use_skill", map[string]any{
+		"side": "left", "target_x": targetX, "target_y": targetY, "target_id": targetID,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	// Advance in host-sized slices: the session intentionally caps catch-up per
@@ -268,9 +303,9 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 			targetPosition, _ = positions.Get(nearbyMonster)
 			targetX, _ = targetPosition.Get("x")
 			targetY, _ = targetPosition.Get("y")
-			approaches, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.attack_approach")
-			animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.attack_animation")
-			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.event")
+			approaches, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.attack_approach")
+			animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.attack_animation")
+			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.event")
 			t.Fatalf("Combat Lab basic attack left monster health unchanged at %v; player=(%.1f,%.1f) target=(%.1f,%.1f) approaches=%d animations=%d events=%d", afterHealth, playerX, playerY, targetX, targetY, approaches.Len(), animations.Len(), events.Len())
 		}
 	}

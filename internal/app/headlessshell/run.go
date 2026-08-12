@@ -65,7 +65,7 @@ func buildRuntime(ctx context.Context, policy shell.Policy, modules []modruntime
 	if err := runtime.RegisterModule(modruntime.ShellModule(settings)); err != nil {
 		return nil, nil, policy, err
 	}
-	policy.Capabilities = append(policy.Capabilities, "dm.shell/v1")
+	policy.Capabilities = append(policy.Capabilities, "engine.shell/v1")
 	if err := runtime.Start(ctx); err != nil {
 		return nil, nil, policy, err
 	}

@@ -1,0 +1,15 @@
+# retired Go policy family	new authoritative evidence	status	behavioral contract
+internal/game/combat	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	ordered hit resolution damage and Fire Bolt end-to-end
+internal/game/skill	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	assignment cast timing mana cost and effect emission
+internal/game/missile	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	projectile movement contact damage and removal
+internal/game/action	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	exclusive melee approach animation and impact lifecycle
+internal/game/stats	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	attack-rating versus defense hit chance clamps and integer order
+internal/game/item	internal/mod/d2legacy/authority_test.go	partial	held swap footprints and Lua materialization covered; focused vendor service equipment and corpse-recovery vectors remain fidelity work
+internal/game/interaction	internal/mod/d2legacy/authority_test.go	partial	Lua owns spatial open close policy; a focused checkpointed NPC reward vector remains fidelity work
+internal/game/loot	internal/mod/d2legacy/authority_test.go	partial	Lua owns treasure quality affix property policy and nested inheritance; broader fixed legacy vectors remain fidelity work
+internal/game/monster	internal/mod/d2legacy/runtime_test.go	partial	Lua owns population spawn AI attack death corpse credit XP and loot; a complete restored hostile-lifecycle vector remains fidelity work
+internal/game/player	internal/mod/d2legacy/runtime_test.go	partial	Lua owns entry movement progression and restore state; a complete creation-to-level-up vector remains fidelity work
+internal/game/transition	internal/mod/d2legacy/warp_lab_test.go	covered	approach collision warp relocation and presentation transition
+internal/game/ownedunit	internal/mod/d2legacy/authority_test.go	covered	category and group limits stable replacement attribution and checkpointed ownership state
+internal/game/state	internal/mod/d2legacy/runtime_test.go	covered	timed lifecycle plus reconstructed-runtime checkpoint restore and replay parity
+internal/mod/d2legacy/mapgen	internal/mod/d2legacy/mapgen_outdoor_test.go	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua

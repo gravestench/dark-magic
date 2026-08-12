@@ -9,7 +9,7 @@ import (
 const presentationManifest = "manifests/presentation.v1.json"
 
 // PresentationBootstrap contains the small set of authored presentation assets
-// needed before Lua scenes take ownership. Asset identity remains shim data;
+// needed before Lua scenes take ownership. Asset identity remains d2legacy data;
 // the native composition root only schedules the returned dependencies.
 type PresentationBootstrap struct {
 	TitleBackground string
@@ -24,7 +24,7 @@ type PresentationMapRecipe struct {
 	DT1 []string
 }
 
-// LoadPresentationBootstrap reads startup facts from the versioned shim
+// LoadPresentationBootstrap reads startup facts from the versioned d2legacy
 // manifest without duplicating Blizzard paths or palette choices in Go.
 func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 	data, err := fs.ReadFile(source, presentationManifest)
@@ -53,8 +53,8 @@ func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 	if err := json.Unmarshal(data, &document); err != nil {
 		return PresentationBootstrap{}, fmt.Errorf("content: decode presentation manifest: %w", err)
 	}
-	if document.Schema != "darkmagic.presentation/v1" {
-		return PresentationBootstrap{}, fmt.Errorf("content: presentation schema is %q, want %q", document.Schema, "darkmagic.presentation/v1")
+	if document.Schema != "d2legacy.presentation/v1" {
+		return PresentationBootstrap{}, fmt.Errorf("content: presentation schema is %q, want %q", document.Schema, "d2legacy.presentation/v1")
 	}
 	loadingPalette := document.Palettes[document.Screens.GameLoading.Palette]
 	if document.Screens.Title.Background == "" || document.Screens.GameLoading.Sheet == "" || loadingPalette == "" {

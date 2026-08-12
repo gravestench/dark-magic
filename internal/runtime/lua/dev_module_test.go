@@ -15,7 +15,7 @@ func TestDevModuleCopiesLaunchOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local d=require("dm.dev/v1"); assert(d.option("name")=="AM"); assert(d.option("direction")==3); assert(d.option("random")==true); assert(d.option("missing")==nil); local first=d.seed(); local second=d.seed(); assert(first>0 and second>0 and first~=second)`
+	script := `local d=require("engine.dev/v1"); assert(d.option("name")=="AM"); assert(d.option("direction")==3); assert(d.option("random")==true); assert(d.option("missing")==nil); local first=d.seed(); local second=d.seed(); assert(first>0 and second>0 and first~=second)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

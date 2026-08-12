@@ -17,6 +17,12 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
+// ErrAuthoritativeReload explains why gameplay scripts are deliberately not
+// swapped in the middle of a running deterministic session. A future explicit
+// safe-boundary migration may replace this guard; ordinary presentation and
+// lab scripts remain reloadable today.
+var ErrAuthoritativeReload = errors.New("hotreload: authoritative d2legacy changes require a new session")
+
 // Invalidator is the narrow generic-record cache seam used after VFS changes.
 type Invalidator interface {
 	Invalidate(string)
@@ -51,6 +57,9 @@ func (c *Coordinator) Reload(ctx context.Context, changed string) error {
 	if err != nil {
 		return err
 	}
+	if authoritativePath(clean) {
+		return fmt.Errorf("%w: %s", ErrAuthoritativeReload, clean)
+	}
 	if _, err := c.content.Invalidate(clean); err != nil {
 		return err
 	}
@@ -69,6 +78,10 @@ func (c *Coordinator) Reload(ctx context.Context, changed string) error {
 		return c.reloadAll(ctx)
 	}
 	return nil
+}
+
+func authoritativePath(clean string) bool {
+	return clean == "components/d2legacy.lua" || strings.HasPrefix(clean, "lua/d2legacy/")
 }
 
 func (c *Coordinator) reloadDefinition(ctx context.Context, source string) error {

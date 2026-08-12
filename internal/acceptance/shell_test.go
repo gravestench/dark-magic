@@ -10,15 +10,15 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
-	"github.com/gravestench/dark-magic/internal/persistence"
+	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
+	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -26,11 +26,11 @@ import (
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
-func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
+func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,40 +41,37 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	var input inputstate.Store
 	scenes.SetInputStore(&input)
 	var mixer audio.Mixer
-	saves := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	saves := d2save.New(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	entitySimulation := gameecs.New()
 	authority, err := gamesession.New(entitySimulation, gamesession.Config{Step: time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer authority.Close()
-	if err := gamesession.RegisterMovement(authority); err != nil {
-		t.Fatal(err)
-	}
-	if err := gamesession.RegisterSkillAssignments(authority); err != nil {
-		t.Fatal(err)
-	}
-	if err := gameplayer.Register(authority); err != nil {
-		t.Fatal(err)
-	}
-	movementController := &gamesession.MovementController{}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
+	mod, err := d2legacy.Start(ctx, content.D2Legacy(), shellD2Records{}, entitySimulation, authority, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
-	skillSource, err := gamesession.NewSkillSource(movementController, "local-player")
+	defer mod.Stop(ctx)
+	movementController := &d2movement.MovementController{}
+	movementSource, err := d2movement.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
 	if err != nil {
 		t.Fatal(err)
 	}
-	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096, func(persistence.Character) []gameplayer.Skill {
-		return []gameplayer.Skill{{ID: 42, Level: 1, ListRow: 0, LeftAllowed: true, RightAllowed: true}}
-	})
+	intentController := &gamesession.IntentController{}
+	intentSource, err := gamesession.NewIntentSource(intentController, "local-player")
 	if err != nil {
 		t.Fatal(err)
 	}
+	entrySource, err := gameplayer.NewEntrySource(entitySimulation, saves, "local-player", 4096, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sequencer := simulation.NewLocalSequencer()
 	commandSource := func(tick uint64) []simulation.Command {
 		commands := append(entrySource.Commands(tick), movementSource.Commands(tick)...)
-		return append(commands, skillSource.Commands(tick)...)
+		commands = append(commands, intentSource.Commands(tick)...)
+		return sequencer.Assign(commands)
 	}
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
@@ -86,13 +83,15 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.AppModule("test", func() {}),
 		modruntime.VFSModule(contentFS),
 		modruntime.DataModule(contentFS),
+		modruntime.RecordsModule(shellD2Records{}),
+		modruntime.CommandIntentModule(intentController),
 		modruntime.InputModule(&input),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		modruntime.VideoModule(runtime, video.Unavailable{}, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(saves),
+		d2save.Module(saves),
 		modruntime.PlayerControlModule(movementController),
 		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),
@@ -415,11 +414,11 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
-	positions, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(entitySimulation.World(), "d2legacy.world.position")
 	if !found {
 		t.Fatal("game world did not register position component")
 	}
-	players, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.player_control")
+	players, found := akara.GetDynamicStore(entitySimulation.World(), "d2legacy.world.player_control")
 	if !found {
 		t.Fatal("game world did not register player-control component")
 	}
@@ -452,7 +451,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if after := afterValue.(float64); after <= before {
 		t.Fatalf("hero did not move: %v -> %v", before, after)
 	}
-	modes, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.movement_mode")
+	modes, found := akara.GetDynamicStore(entitySimulation.World(), "d2legacy.player.movement_mode")
 	if !found {
 		t.Fatal("game world did not register movement-mode component")
 	}
@@ -463,14 +462,14 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if running, err := mode.Get("running"); err != nil || running != true {
 		t.Fatalf("authoritative movement mode = %v, %v", running, err)
 	}
-	if err := movementController.AssignSkill("right", 42); err != nil {
+	if err := intentController.Submit("player.assign_skills", map[string]any{"right": 42}); err != nil {
 		t.Fatal(err)
 	}
 	input.Publish(inputstate.Frame{Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
-	assignments, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.skill_assignment")
+	assignments, found := akara.GetDynamicStore(entitySimulation.World(), "d2legacy.player.skill_assignment")
 	if !found {
 		t.Fatal("game world did not register skill-assignment component")
 	}
@@ -495,6 +494,30 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if diagnostics := mixer.Diagnostics(); diagnostics.Active != 0 {
 		t.Fatalf("mixer leaked sounds: %#v", diagnostics)
 	}
+}
+
+type shellD2Records struct{}
+
+func (shellD2Records) Invalidate(string)  {}
+func (shellD2Records) Loaded(string) bool { return true }
+func (shellD2Records) Load(path string) ([]map[string]string, error) {
+	switch path {
+	case "data/global/excel/charstats.txt":
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Test Skill"}}, nil
+	case "data/global/excel/skilldesc.txt":
+		return []map[string]string{
+			{"skilldesc": "firebolt", "ListRow": "1", "IconCel": "0"},
+			{"skilldesc": "test", "ListRow": "0", "IconCel": "0"},
+		}, nil
+	case "data/global/excel/skills.txt":
+		return []map[string]string{
+			{"Id": "36", "skill": "Fire Bolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"},
+			{"Id": "42", "skill": "Test Skill", "skilldesc": "test", "leftskill": "1", "general": "1", "passive": "0"},
+		}, nil
+	case "data/global/excel/Missiles.txt":
+		return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
+	}
+	return nil, nil
 }
 
 func publishAction(input *inputstate.Store, name string) {

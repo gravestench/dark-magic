@@ -10,13 +10,13 @@ import (
 	"github.com/gravestench/dark-magic/internal/assets/catalog"
 )
 
-// TestShimPresentationManifestContract protects the architectural boundary
+// TestD2LegacyPresentationManifestContract protects the architectural boundary
 // between native engine code and mod-owned presentation knowledge. Go should
-// provide capabilities; the shim manifest should name and describe assets.
-func TestShimPresentationManifestContract(t *testing.T) {
+// provide capabilities; the d2legacy manifest should name and describe assets.
+func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatalf("decode presentation manifest: %v", err)
 	}
-	if manifest.Schema != "darkmagic.presentation/v1" || manifest.Version != 1 {
+	if manifest.Schema != "d2legacy.presentation/v1" || manifest.Version != 1 {
 		t.Fatalf("unexpected presentation contract %q version %d", manifest.Schema, manifest.Version)
 	}
 	if manifest.Resolution.Width <= 0 || manifest.Resolution.Height <= 0 {
@@ -130,7 +130,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 			}
 			validatePresentationGeometry(t, validatedScreens, width, height, "screens")
 			language := profile["language"].(string)
-			localeData, err := fs.ReadFile(Shim(), "locales/"+language+".json")
+			localeData, err := fs.ReadFile(D2Legacy(), "locales/"+language+".json")
 			if err != nil {
 				t.Fatalf("read %s locale: %v", language, err)
 			}
@@ -248,10 +248,10 @@ func sumJSONNumbers(values []any) float64 {
 	return result
 }
 
-func TestShimAssetFixtureContract(t *testing.T) {
+func TestD2LegacyAssetFixtureContract(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,14 +267,14 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	}
 }
 
-func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
+func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	t.Parallel()
 
-	manifestData, err := fs.ReadFile(Shim(), "manifests/asset-catalog.v1.json")
+	manifestData, err := fs.ReadFile(D2Legacy(), "manifests/asset-catalog.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fixtureData, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	fixtureData, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if err := json.Unmarshal(fixtureData, &fixture); err != nil {
 		t.Fatal(err)
 	}
-	coverage, err := assetcatalog.BuildCoverage(Shim(), manifest, fixture)
+	coverage, err := assetcatalog.BuildCoverage(D2Legacy(), manifest, fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,11 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	// and HD/TR components recovered from OpenDiablo2 and visually checked against
 	// mounted production assets. Random map/tile paths remain dynamic VFS
 	// discoveries and therefore do not pretend every mounted asset is manifest-owned.
-	const auditedFingerprint = "e0236c0359e6dc548a93ebc9d6c32b3a8933a0d6e5dfcbde1182b25033de8e23"
+	// The d2legacy Fire Bolt slice now declares its immutable Skills.txt and
+	// Missiles.txt inputs directly. They are code-owned data rather than
+	// presentation assets; missile art remains covered by the audited dynamic
+	// data/global/missiles prefix.
+	const auditedFingerprint = "350b41d968c4ad5430dfb5b9a7b6a207892b84b21bef3f3732d14f36577019fb"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
@@ -307,7 +311,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 func TestCharacterCreationTransitionFacts(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +381,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 func TestGameHUDCompositionFacts(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -489,7 +493,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,7 +539,7 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}

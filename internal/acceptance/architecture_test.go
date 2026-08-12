@@ -129,6 +129,70 @@ func TestDependencyDirection(t *testing.T) {
 	}
 }
 
+// TestGameDataHasNoGlobalD2Catalog prevents the host from hardcoding one eager
+// list of every Diablo table again. The engine may decode a caller-selected
+// schema; d2legacy owns which records form its game and which are required.
+func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
+	root := repositoryRoot(t)
+	retired := filepath.Join(root, "internal", "game", "data", "catalog")
+	if entries, err := os.ReadDir(retired); err == nil && len(entries) != 0 {
+		t.Fatalf("retired global game-data catalog returned: %s", retired)
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	for _, relative := range []string{"internal/game/data/typed", "internal/game/data/store"} {
+		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relative)), func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
+				return err
+			}
+			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			if err != nil {
+				return err
+			}
+			for _, declaration := range file.Decls {
+				typeDecl, ok := declaration.(*ast.GenDecl)
+				if !ok || typeDecl.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range typeDecl.Specs {
+					if named, ok := spec.(*ast.TypeSpec); ok && (named.Name.Name == "Catalog" || named.Name.Name == "Snapshot") {
+						t.Errorf("%s restores global %s composition", path, named.Name.Name)
+					}
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestD2ModelsRemainPassiveSchemas(t *testing.T) {
+	root := filepath.Join(repositoryRoot(t), "internal", "game", "data", "model")
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			return err
+		}
+		for _, declaration := range file.Decls {
+			if function, ok := declaration.(*ast.FuncDecl); ok {
+				t.Errorf("%s contains behavior %s; move D2 interpretation to d2legacy", path, function.Name.Name)
+			}
+			if values, ok := declaration.(*ast.GenDecl); ok && (values.Tok == token.CONST || values.Tok == token.VAR) {
+				t.Errorf("%s contains interpreted values; keep raw schemas here and move D2 vocabulary to d2legacy", path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func forbiddenLayerImport(packagePath, dependency string) bool {
 	for _, root := range []string{"internal/cache", "internal/paths", "internal/logging", "internal/game/data/model"} {
 		if packagePath == root || strings.HasPrefix(packagePath, root+"/") {

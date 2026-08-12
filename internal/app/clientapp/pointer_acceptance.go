@@ -92,11 +92,11 @@ func (app *application) controlledPlayerPosition() (float64, float64, bool) {
 	if app.entitySimulation == nil {
 		return 0, 0, false
 	}
-	controls, found := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.player_control")
+	controls, found := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.player_control")
 	if !found {
 		return 0, 0, false
 	}
-	positions, found := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
 	if !found {
 		return 0, 0, false
 	}

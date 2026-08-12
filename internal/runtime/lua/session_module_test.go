@@ -29,7 +29,7 @@ func TestSessionModuleReportsStatusAndReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`local s=require("dm.session/v1"); local v=s.status(); tick=v.tick; privileged=v.privileged_commands; replay=s.replay(); audit=s.audit()`)
+		return state.DoString(`local s=require("engine.session/v1"); local v=s.status(); tick=v.tick; privileged=v.privileged_commands; replay=s.replay(); audit=s.audit()`)
 	}); err != nil {
 		t.Fatal(err)
 	}

@@ -108,7 +108,7 @@ func defaultMOTD(target string, policy Policy) string {
 	if len(policy.Capabilities) > 0 {
 		capabilities = strings.Join(policy.Capabilities, ", ")
 	}
-	return fmt.Sprintf("Welcome to the Dark Magic Lua shell.\nTarget: %s | Policy: %s\nRoot objects: dm (alias: darkmagic)\nCapabilities: %s\nTry dm.help(), dm.capabilities(), print(...), or printregs(). Press F2 for application logs.", target, policy.Name, capabilities)
+	return fmt.Sprintf("Welcome to the Dark Magic Lua shell.\nTarget: %s | Policy: %s\nRoot objects: dm (alias: darkmagic)\nCapabilities: %s\nTry d2legacy.help(), d2legacy.capabilities(), print(...), or printregs(). Press F2 for application logs.", target, policy.Name, capabilities)
 }
 
 func (s *Session) Submit(ctx context.Context, source string) Entry {

@@ -52,14 +52,14 @@ func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
 	return &Scenes{runtime: runtime, manager: manager}
 }
 
-// Module returns the dm.scene/v1 capability.
+// Module returns the engine.scene/v1 capability.
 func (s *Scenes) Module() Module {
-	return Module{Name: "dm.scene/v1", Help: documentedModule("Register Lua scenes and navigate the active scene stack.", map[string]CommandHelp{
-		"register":       commandHelp("dm.scene.register(definition)", "Register a Lua-authored scene definition."),
-		"replace":        commandHelp("dm.scene.replace(id [, payload])", "Replace the active scene."),
-		"push":           commandHelp("dm.scene.push(id [, payload])", "Push a scene above the active scene."),
-		"pop":            commandHelp("dm.scene.pop([payload])", "Pop the active scene."),
-		"toggle_overlay": commandHelp("dm.scene.toggle_overlay(id, slot)", "Toggle an overlay in the left, right, or full spatial slot."),
+	return Module{Name: "engine.scene/v1", Help: documentedModule("Register Lua scenes and navigate the active scene stack.", map[string]CommandHelp{
+		"register":       commandHelp("engine.scene.register(definition)", "Register a Lua-authored scene definition."),
+		"replace":        commandHelp("engine.scene.replace(id [, payload])", "Replace the active scene."),
+		"push":           commandHelp("engine.scene.push(id [, payload])", "Push a scene above the active scene."),
+		"pop":            commandHelp("engine.scene.pop([payload])", "Pop the active scene."),
+		"toggle_overlay": commandHelp("engine.scene.toggle_overlay(id, slot)", "Toggle an overlay in the left, right, or full spatial slot."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"register":       s.luaRegister,

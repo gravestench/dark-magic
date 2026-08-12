@@ -2,41 +2,31 @@ package clientapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 
-	assetdecode "github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
-	gameitem "github.com/gravestench/dark-magic/internal/game/item"
-	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
-	gamemissile "github.com/gravestench/dark-magic/internal/game/missile"
-	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
-	gamestate "github.com/gravestench/dark-magic/internal/game/state"
-	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
+	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -103,32 +93,25 @@ func (app *application) buildPresentationCore() error {
 func (app *application) loadGameCatalogs() error {
 	app.records = recordstore.New(app.options.Content)
 	app.records.SetLogger(slog.Default().With("component", "records"))
-	app.gameData = gamedata.New(app.records)
 	app.questCatalog = recovered.New(app.options.Content)
 
-	typed, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load typed game data", err)
-	}
 	recoveredData, err := app.questCatalog.Snapshot()
 	if err != nil {
 		return wrap("load recovered game data", err)
 	}
-	soundNames := make(map[string]struct{}, len(typed.Sounds))
-	for _, sound := range typed.Sounds {
-		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
+	app.worldObjectResolver, err = worldobjects.New(recoveredData, app.records)
+	if err != nil {
+		return err
 	}
-	issues := recovered.ValidateReferences(recoveredData, soundNames, app.locale.Text)
-	app.worldObjectResolver = worldobjects.New(recoveredData, typed)
-	slog.Info("loaded game-data catalogs", "typed_issues", len(typed.Issues),
+	slog.Info("loaded recovered d2legacy records",
 		"quests", len(recoveredData.Quests), "speech", len(recoveredData.Speech),
-		"map_objects", len(recoveredData.MapObjects), "reference_issues", len(issues))
+		"map_objects", len(recoveredData.MapObjects))
 	return nil
 }
 
 func (app *application) buildOfflineSession() error {
 	fixtures := DevelopmentCharacters(app.options.FixtureCharacters)
-	app.saves = persistence.New(fixtures...)
+	app.saves = d2save.New(fixtures...)
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)
@@ -145,11 +128,34 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create offline game session", err)
 	}
 	app.offlineSession = session
-	if err := app.buildInteractionAuthority(); err != nil {
-		return err
+	app.authoritativeState = simulation.NewStateStore()
+	app.authoritativeRandom, err = d2legacymod.NewRandomStreams(0)
+	if err != nil {
+		return wrap("register d2legacy random streams", err)
 	}
-	if err := app.buildItemAuthority(); err != nil {
-		return err
+	initialData := map[string]any{
+		"d2legacy.development_items": map[string]any{
+			"enabled":                 app.options.FixtureCharacters > 0,
+			"create_empty_containers": app.options.FixtureCharacters == 0,
+		},
+		"d2legacy.interactions":      app.interactionBootstrapData(),
+		"d2legacy.world_transitions": app.transitionBootstrapData(),
+	}
+	identity, err := d2legacymod.Identity(app.options.Content, initialData)
+	if err != nil {
+		return wrap("identify d2legacy mod", err)
+	}
+	if err := session.RegisterAuthoritativeRuntime(identity, app.authoritativeState, app.authoritativeRandom); err != nil {
+		return wrap("register d2legacy authoritative runtime", err)
+	}
+	app.commandIntents = &gamesession.IntentController{}
+	app.commandIntentSource, err = gamesession.NewIntentSource(app.commandIntents, "local-player")
+	if err != nil {
+		return wrap("create local command intent source", err)
+	}
+	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
+		app.authoritativeState, app.authoritativeRandom, initialData); err != nil {
+		return wrap("configure canonical d2legacy runtime", err)
 	}
 	if err := app.registerOfflineCommands(); err != nil {
 		return err
@@ -158,141 +164,27 @@ func (app *application) buildOfflineSession() error {
 }
 
 func (app *application) registerOfflineCommands() error {
-	if err := gamestate.Register(app.entitySimulation); err != nil {
-		return wrap("register timed state engine", err)
-	}
-	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
-		return wrap("register skill intent consumer", err)
-	}
-	combatData, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load player combat data", err)
-	}
-	fireBoltSkill, fireBoltMissile, err := gamemissile.FireBoltFromCatalog(combatData)
-	if err != nil {
-		return wrap("normalize Fire Bolt", err)
-	}
-	basicAttackSkill := gameskill.Definition{
-		SkillID: 0, Behavior: gameskill.BehaviorBasicMelee, TargetPolicy: gameskill.TargetUnit,
-		EffectDelay: 1, CompleteDelay: 2, Interruptible: true,
-	}
-	skillRegistry, err := gameskill.NewRegistry(basicAttackSkill, fireBoltSkill)
-	if err != nil {
-		return wrap("build production skill registry", err)
-	}
-	missileRegistry, err := gamemissile.NewRegistry(fireBoltMissile)
-	if err != nil {
-		return wrap("build production missile registry", err)
-	}
-	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
-		return wrap("register production skill lifecycle", err)
-	}
-	if err := gamemissile.Register(app.entitySimulation, missileRegistry); err != nil {
-		return wrap("register production missiles", err)
-	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
 	}
-	animationData, err := assetdecode.AnimationData(app.options.Content, "data/global/AnimData.d2")
-	if err != nil {
-		return wrap("load authoritative player animation timing", err)
+	if err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor, gameworld.VelocityComponents{
+		Position: "d2legacy.world.position", Velocity: "d2legacy.world.velocity", Collider: "d2legacy.world.collider",
+	}); err != nil {
+		return wrap("register generic velocity movement", err)
 	}
-	attackTimings := newCombatTimingAdapter(animationData)
-	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, basicAttackSkill.SkillID, bloodMoor, attackTimings); err != nil {
-		return wrap("register player basic attack", err)
-	}
-	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {
-		return wrap("register monster AI", err)
-	}
-	if err := gamemonster.RegisterMovement(app.entitySimulation, bloodMoor); err != nil {
-		return wrap("register monster movement", err)
-	}
-	// This fixed hit chance remains explicitly synthetic until the verified
-	// attacker/defender chance-to-hit formula replaces the M21 scaffold.
-	if err := gamecombat.RegisterBasicMelee(app.entitySimulation, gamecombat.BasicMeleePolicy{HitChance: 75}); err != nil {
-		return wrap("register basic melee combat", err)
-	}
-	lootCatalog, err := gameloot.CatalogFromRecords(app.gameData)
-	if err != nil {
-		return wrap("build monster death loot catalog", err)
-	}
-	worldSeed := uint64(0)
-	if zone := app.gameWorldZones[2]; zone != nil {
-		worldSeed = zone.Request().Seed
-	}
-	if err := gamemonster.RegisterDeath(app.entitySimulation, gamemonster.DeathPolicy{WorldSeed: worldSeed, Loot: lootCatalog}); err != nil {
-		return wrap("register monster death transaction", err)
-	}
-	for name, register := range map[string]func(*gamesession.Session) error{
-		"movement commands": gamesession.RegisterMovement,
-		"skill commands":    gamesession.RegisterSkillAssignments,
-		"player commands":   gameplayer.Register,
-		"monster commands":  gamemonster.Register,
-	} {
-		if err := register(app.offlineSession); err != nil {
-			return wrap("register "+name, err)
-		}
-	}
-	if err := gameinteraction.RegisterCommands(app.offlineSession, app.interactionAuthority); err != nil {
-		return wrap("register interaction commands", err)
-	}
-	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
-		return wrap("register item commands", err)
-	}
-	if err := gameplayer.RegisterEquipmentProfile(app.entitySimulation, app.itemAuthority); err != nil {
-		return wrap("register equipped player melee profile", err)
-	}
-	if err := gametransition.Register(app.offlineSession, app.transitionAuthority); err != nil {
-		return wrap("register zone transition commands", err)
-	}
-	if err := app.queueEntryPopulation(); err != nil {
-		return err
-	}
-	movement := &gamesession.MovementController{}
-	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
+	movement := &d2movement.MovementController{}
+	movementSource, err := d2movement.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
 	if err != nil {
 		return wrap("create offline movement source", err)
 	}
 	app.movementSource = movementSource
-	skills, err := gamesession.NewSkillSource(movement, "local-player")
-	if err != nil {
-		return wrap("create offline skill source", err)
-	}
-	skillProvider, err := app.skillProvider()
-	if err != nil {
-		return wrap("build starting skill provider", err)
-	}
 	entryLevel := app.activeWorldLevel
 	worldMap := app.gameWorlds[entryLevel]
 	if worldMap == nil {
 		return errors.New("load offline entry map: session world is unavailable")
 	}
 	movementSource.SetNavigation(worldMap)
-	app.interactionAuthority.ConfigureWorld(worldMap)
-	selectables := worldMap.Selectables()
-	interactionTargets := make([]gameinteraction.Target, 0, len(selectables))
-	objectsBySelectionID := make(map[string]gameworld.Object, len(worldMap.Objects))
-	for index, object := range worldMap.Objects {
-		objectsBySelectionID[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
-	}
-	for _, selected := range selectables {
-		object := objectsBySelectionID[selected.ID]
-		name := strings.TrimSpace(object.Description)
-		if name == "" {
-			name = strings.TrimSpace(object.Class)
-		}
-		if name == "" {
-			continue
-		}
-		interactionTargets = append(interactionTargets, gameinteraction.Target{
-			ID: selected.ID, NPC: name, X: selected.X, Y: selected.Y,
-			Radius: 4, SelectRadius: selected.Radius,
-		})
-	}
-	if err := app.interactionAuthority.AddTargets(interactionTargets...); err != nil {
-		return wrap("materialize authored interaction targets", err)
-	}
 	spawn, found := app.gameWorldSpawns[entryLevel]
 	if !found {
 		return errors.New("create offline player entry source: world has no trusted spawn subtile")
@@ -303,22 +195,15 @@ func (app *application) registerOfflineCommands() error {
 	if err != nil {
 		return wrap("create Act I town admission destination", err)
 	}
-	entry, err := gameplayer.NewEntrySourceForDestination(app.entitySimulation, app.saves, "local-player", destination, skillProvider)
+	entry, err := gameplayer.NewEntrySourceForDestination(app.entitySimulation, app.saves, "local-player", destination)
 	if err != nil {
 		return wrap("create offline player entry source", err)
-	}
-	app.transitionSource, err = gametransition.NewSource(app.entitySimulation, "local-player", app.transitionAuthority)
-	if err != nil {
-		return wrap("create zone transition source", err)
 	}
 	sequencer := simulation.NewLocalSequencer()
 	app.commandSource = func(tick uint64) []simulation.Command {
 		commands := entry.Commands(tick)
 		commands = append(commands, movementSource.Commands(tick)...)
-		commands = append(commands, skills.Commands(tick)...)
-		commands = append(commands, app.interactionSource.Commands(tick)...)
-		commands = append(commands, app.itemSource.Commands(tick)...)
-		commands = append(commands, app.transitionSource.Commands(tick)...)
+		commands = append(commands, app.commandIntentSource.Commands(tick)...)
 		return sequencer.Assign(commands)
 	}
 	app.playerControl = movement
@@ -326,204 +211,72 @@ func (app *application) registerOfflineCommands() error {
 }
 
 func (app *application) queueEntryPopulation() error {
-	snapshot, err := app.gameData.Snapshot()
+	payload, err := json.Marshal(app.populationBootstrapData())
 	if err != nil {
-		return wrap("load Blood Moor population records", err)
+		return wrap("encode entry population geometry", err)
 	}
-	plan, err := gamemonster.BuildBloodMoorPopulation(app.gameWorldZones[2], app.gameWorlds[2], snapshot)
-	if err != nil {
-		return wrap("plan Blood Moor population", err)
-	}
-	if defaults := developmentScenes[app.options.StartScene]; defaults.nearbyHostiles > 0 {
-		spawn := app.gameWorldSpawns[2]
-		plan, err = placeDevelopmentEncounter(plan, app.gameWorlds[2], spawn, defaults.nearbyHostiles)
-		if err != nil {
-			return wrap("place development combat encounter", err)
-		}
-	}
-	if err := gamemonster.SubmitPopulation(app.offlineSession, plan, "population", 1); err != nil {
-		return wrap("queue Blood Moor population", err)
-	}
-	checksum, err := plan.Checksum()
-	if err != nil {
-		return wrap("checksum Blood Moor population", err)
-	}
-	slog.Info("planned Blood Moor population", "spawns", len(plan.Spawns), "trace_entries", len(plan.Trace), "checksum", checksum)
-	return nil
+	return wrap("queue d2legacy entry population", app.offlineSession.Submit(simulation.Command{
+		Tick: 1, Player: "d2legacy.population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: payload,
+	}))
 }
 
-func (app *application) buildInteractionAuthority() error {
-	var err error
-	app.interactionAuthority, err = gameinteraction.NewAuthority(gameinteraction.Target{
-		ID: "act1-akara", NPC: "Akara", Vendor: "Akara",
-		Categories: []string{"armo", "weap", "misc"},
-		X:          4096, Y: 4096, Radius: 160,
-	})
-	if err != nil {
-		return wrap("create interaction authority", err)
+func (app *application) populationBootstrapData() map[string]any {
+	zone, worldMap := app.gameWorldZones[2], app.gameWorlds[2]
+	if zone == nil || worldMap == nil {
+		return nil
 	}
-	initialTarget := ""
+	request := zone.Request()
+	populated := map[uint32]bool{}
+	for _, stamp := range zone.Stamps() {
+		populated[stamp.ID] = stamp.Populate
+	}
+	nearby := developmentScenes[app.options.StartScene].nearbyHostiles
+	player := app.gameWorldSpawns[2]
+	rooms := make([]any, 0, len(zone.Rooms()))
+	for _, room := range zone.Rooms() {
+		points := make([]any, 0, 8)
+		anchors := [][2]float64{}
+		if nearby > 0 {
+			anchors = [][2]float64{{player[0] + 10, player[1]}, {player[0] + 7, player[1] + 7}, {player[0], player[1] + 10}, {player[0] - 7, player[1] + 7}}
+		} else {
+			centerX, centerY := float64((room.X+room.Width/2)*5)+2, float64((room.Y+room.Height/2)*5)+2
+			anchors = [][2]float64{{centerX, centerY}, {centerX + 1, centerY}, {centerX, centerY + 1}, {centerX - 1, centerY}}
+		}
+		for _, anchor := range anchors {
+			if x, y, ok := worldMap.OpenPointNearSubtile(anchor[0], anchor[1]); ok {
+				points = append(points, map[string]any{"x": x, "y": y})
+			}
+		}
+		rooms = append(rooms, map[string]any{"id": float64(room.ID), "populate": populated[room.StampID], "points": points})
+	}
+	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
+}
+
+func (app *application) interactionBootstrapData() map[string]any {
+	initial := ""
 	if app.options.StartScene == "vendor" {
-		initialTarget = "act1-akara"
+		initial = "act1-akara"
 	}
-	if err := app.interactionAuthority.RegisterOwner("local-player", initialTarget); err != nil {
-		return wrap("register local interaction owner", err)
-	}
-	app.interactionControl = &gameinteraction.Controller{}
-	app.interactionSource, err = gameinteraction.NewSource(app.interactionControl, "local-player")
-	return wrap("create local interaction command source", err)
-}
-
-func (app *application) buildItemAuthority() error {
-	layout := gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{
-		gameitem.ContainerInventory: {Width: 10, Height: 4},
-		gameitem.ContainerStash:     {Width: 6, Height: 8},
-		gameitem.ContainerCube:      {Width: 3, Height: 4},
-	}, BeltCapacity: 4, VendorGrid: gameitem.Grid{Width: 10, Height: 10}, Gold: gameitem.GoldBalance{Carried: 10000}}
-	items, placements := app.developmentItems()
-	state, err := gameitem.NewState(layout, items, placements)
-	if err != nil {
-		return wrap("create local item state", err)
-	}
-	app.itemAuthority = gameitem.NewAuthority()
-	catalogSnapshot, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load vendor trade terms", err)
-	}
-	trades := make(gameitem.TradeCatalog, len(catalogSnapshot.NPCTradesByID))
-	for vendor, record := range catalogSnapshot.NPCTradesByID {
-		trades[vendor] = gameitem.TradeTerms{BuyMultiplier: int64(record.BuyMult), SellMultiplier: int64(record.SellMult), MaxBuy: int64(record.MaxBuy)}
-	}
-	app.itemAuthority.SetTradeCatalog(trades)
-	app.itemAuthority.SetInteractionPolicy(app.interactionAuthority)
-	if err := app.itemAuthority.Register("local-player", state); err != nil {
-		return wrap("register local item state", err)
-	}
-	app.itemControl = &gameitem.Controller{}
-	app.itemSource, err = gameitem.NewSource(app.itemControl, "local-player")
-	return wrap("create local item command source", err)
-}
-
-func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem.Placement) {
-	if app.options.FixtureCharacters <= 0 {
-		return nil, nil
-	}
-	snapshot, err := app.gameData.Snapshot()
-	if err != nil {
-		return nil, nil
-	}
-	items := make([]gameitem.Item, 0, 6)
-	placements := make(map[string]gameitem.Placement)
-	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
-		weaponPresentation := gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		weaponMelee := gameitem.Melee{Range: float64(1 + weapon.RangeAdder), PhysicalMinRaw: gamecombat.MustWhole(int64(weapon.MinDam)).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(int64(weapon.MaxDam)).Raw(), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
-		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
-		placements["fixture-vendor-short-sword"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "weap", Page: 0}
-	}
-	if armor, found := snapshot.ArmorByCode["cap"]; found {
-		armorPresentation := gameitem.Presentation{InventoryDC6: itemAsset(armor.InvFile), WorldDC6: itemAsset(armor.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(strconv.Itoa(armor.Component), armor.AlternateGfx)}
-		items = append(items, gameitem.Item{ID: "fixture-hireling-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
-		placements["fixture-hireling-cap"] = gameitem.Placement{Container: gameitem.ContainerHireling, Slot: "head"}
-		items = append(items, gameitem.Item{ID: "fixture-vendor-cap", Code: armor.Code, Width: armor.InvWidth, Height: armor.InvHeight, BaseCost: int64(armor.Cost), BodySlots: []string{"head"}, Presentation: armorPresentation})
-		placements["fixture-vendor-cap"] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "armo", Page: 0}
-	}
-	for index, code := range []string{"hp1", "mp1"} {
-		if misc, found := snapshot.MiscByCode[code]; found {
-			id := "fixture-" + code
-			items = append(items, gameitem.Item{ID: id, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-			if code == "mp1" {
-				placements[id] = gameitem.Placement{Container: gameitem.ContainerBelt, BeltSlot: 0}
-			} else {
-				placements[id] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 2 + index, Y: 0}
+	targets := []any{map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)}}
+	for _, worldMap := range app.gameWorlds {
+		objects := make(map[string]gameworld.Object, len(worldMap.Objects))
+		for index, object := range worldMap.Objects {
+			objects[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
+		}
+		for _, selected := range worldMap.Selectables() {
+			object := objects[selected.ID]
+			name := strings.TrimSpace(object.Description)
+			if name == "" {
+				name = strings.TrimSpace(object.Class)
 			}
-			if code == "hp1" {
-				vendorID := "fixture-vendor-" + code
-				items = append(items, gameitem.Item{ID: vendorID, Code: code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: true, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-				placements[vendorID] = gameitem.Placement{Container: gameitem.ContainerVendor, Slot: "misc", Page: 0}
+			if name == "" {
+				continue
 			}
+			targets = append(targets, map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)})
 		}
 	}
-	for _, fixture := range []struct {
-		code         string
-		container    gameitem.Container
-		beltEligible bool
-	}{
-		{code: "rvs", container: gameitem.ContainerStash, beltEligible: true},
-		{code: "tsc", container: gameitem.ContainerCube},
-	} {
-		if misc, found := snapshot.MiscByCode[fixture.code]; found {
-			id := "fixture-" + fixture.code
-			items = append(items, gameitem.Item{ID: id, Code: fixture.code, Width: misc.InvWidth, Height: misc.InvHeight, BaseCost: int64(misc.Cost), BeltEligible: fixture.beltEligible, Presentation: gameitem.Presentation{InventoryDC6: itemAsset(misc.InvFile), WorldDC6: itemAsset(misc.FlippyFile), WorldAnimated: true}})
-			placements[id] = gameitem.Placement{Container: fixture.container, X: 0, Y: 0}
-		}
-	}
-	return items, placements
-}
-
-func compositeRecipe(component, appearance string) map[string]string {
-	tokens := []string{"HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"}
-	component = strings.ToUpper(strings.TrimSpace(component))
-	appearance = strings.ToUpper(strings.TrimSpace(appearance))
-	if appearance == "" {
-		return nil
-	}
-	for _, token := range tokens {
-		if component == token {
-			return map[string]string{token: appearance}
-		}
-	}
-	index, err := strconv.Atoi(component)
-	if err != nil || index < 0 || index >= len(tokens) {
-		return nil
-	}
-	return map[string]string{tokens[index]: appearance}
-}
-
-func itemAsset(name string) string {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return ""
-	}
-	return "data/global/items/" + name + ".dc6"
-}
-
-// learnedSkills translates character records into the small authoritative
-// loadout admitted with a player. Generic actions and the class starting skill
-// are available; the later save importer will add actually purchased skills.
-func (app *application) skillProvider() (gameplayer.SkillProvider, error) {
-	snapshot, err := app.gameData.Snapshot()
-	if err != nil {
-		return nil, err
-	}
-	return func(character persistence.Character) []gameplayer.Skill {
-		return learnedSkills(snapshot, character)
-	}, nil
-}
-
-func learnedSkills(snapshot gamedata.Snapshot, character persistence.Character) []gameplayer.Skill {
-	start := ""
-	for class, record := range snapshot.CharStatsByClass {
-		if strings.EqualFold(class, character.Class) {
-			start = record.StartSkill
-			break
-		}
-	}
-	result := make([]gameplayer.Skill, 0, 8)
-	for _, skill := range snapshot.Skills {
-		if strings.TrimSpace(skill.General) != "1" && !strings.EqualFold(skill.SkillName, start) {
-			continue
-		}
-		description, found := snapshot.SkillDescByName[skill.SkillDesc]
-		id, parseErr := strconv.ParseInt(strings.TrimSpace(skill.ID), 10, 64)
-		if !found || parseErr != nil || description.ListRow < 0 || strings.TrimSpace(skill.Passive) == "1" {
-			continue
-		}
-		result = append(result, gameplayer.Skill{ID: id, Level: 1, ListRow: int64(description.ListRow), LeftAllowed: strings.TrimSpace(skill.LeftSkill) == "1", RightAllowed: true})
-	}
-	sort.Slice(result, func(left, right int) bool { return result[left].ID < result[right].ID })
-	return result
+	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": targets}
 }
 
 func (app *application) buildLoadingCoordinator() error {

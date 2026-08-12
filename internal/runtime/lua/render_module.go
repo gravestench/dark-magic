@@ -30,7 +30,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-const renderNodeType = "dm.render.node/v1"
+const renderNodeType = "engine.render.node/v1"
 
 type ownedRenderNode struct {
 	composer *render.Composer
@@ -93,7 +93,7 @@ type DecodeStageDiagnostics struct {
 	Time  time.Duration
 }
 
-// RenderCapability owns the shared asset cache behind dm.render/v1.
+// RenderCapability owns the shared asset cache behind engine.render/v1.
 type RenderCapability struct {
 	runtime  *Runtime
 	composer *render.Composer
@@ -1591,21 +1591,21 @@ func RenderModuleWithAssets(runtime *Runtime, composer *render.Composer, assets 
 // Module returns the versioned Lua render capability.
 func (r *RenderCapability) Module() Module {
 	runtime, composer, assets, cache, preloads, pool := r.runtime, r.composer, r.assets, r.cache, r.preloads, r.pool
-	return Module{Name: "dm.render/v1", Help: documentedModule("Create and inspect retained presentation nodes.", map[string]CommandHelp{
-		"diagnostics":          commandHelp("dm.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
-		"preload":              commandHelp("dm.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
-		"preload_status":       commandHelp("dm.render.preload_status(job)", "Return progress and errors for a preload job."),
-		"preload_release":      commandHelp("dm.render.preload_release(job)", "Release bookkeeping for a completed preload job."),
-		"ds1_dependencies":     commandHelp("dm.render.ds1_dependencies(map)", "Resolve the mounted DT1 libraries declared by a DS1 stamp."),
-		"ds1_chunks":           commandHelp("dm.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
-		"world_chunks":         commandHelp("dm.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
-		"world_tiles":          commandHelp("dm.render.world_tiles(world, palette)", "Return shared DT1 graphic placement geometry for an authoritative world map."),
-		"assets_available":     commandHelp("dm.render.assets_available()", "Report whether asset-backed rendering is available."),
-		"asset_exists":         commandHelp("dm.render.asset_exists(path)", "Report whether a render asset exists."),
-		"dc6_animation_bounds": commandHelp("dm.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
-		"cof_info":             commandHelp("dm.render.cof_info(path)", "Inspect COF layer and animation metadata."),
-		"animdata_info":        commandHelp("dm.render.animdata_info(key)", "Read typed rate and frame-event metadata from AnimData.d2."),
-		"create":               commandHelp("dm.render.create()", "Create a scoped retained presentation node."),
+	return Module{Name: "engine.render/v1", Help: documentedModule("Create and inspect retained presentation nodes.", map[string]CommandHelp{
+		"diagnostics":          commandHelp("engine.render.diagnostics()", "Return decoded-asset cache and retained-renderer diagnostics."),
+		"preload":              commandHelp("engine.render.preload(requests)", "Decode assets asynchronously and return a preload job identifier."),
+		"preload_status":       commandHelp("engine.render.preload_status(job)", "Return progress and errors for a preload job."),
+		"preload_release":      commandHelp("engine.render.preload_release(job)", "Release bookkeeping for a completed preload job."),
+		"ds1_dependencies":     commandHelp("engine.render.ds1_dependencies(map)", "Resolve the mounted DT1 libraries declared by a DS1 stamp."),
+		"ds1_chunks":           commandHelp("engine.render.ds1_chunks(map, tiles, palette [, chunk_size])", "Return sparse DS1 chunk geometry after CPU composition."),
+		"world_chunks":         commandHelp("engine.render.world_chunks(world, palette [, chunk_size])", "Return sparse chunk geometry for an assembled authoritative world map."),
+		"world_tiles":          commandHelp("engine.render.world_tiles(world, palette)", "Return shared DT1 graphic placement geometry for an authoritative world map."),
+		"assets_available":     commandHelp("engine.render.assets_available()", "Report whether asset-backed rendering is available."),
+		"asset_exists":         commandHelp("engine.render.asset_exists(path)", "Report whether a render asset exists."),
+		"dc6_animation_bounds": commandHelp("engine.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
+		"cof_info":             commandHelp("engine.render.cof_info(path)", "Inspect COF layer and animation metadata."),
+		"animdata_info":        commandHelp("engine.render.animdata_info(key)", "Read typed rate and frame-event metadata from an AnimData record source."),
+		"create":               commandHelp("engine.render.create()", "Create a scoped retained presentation node."),
 	}, map[string]TypeHelp{renderNodeType: {Summary: "A scoped retained presentation node.", Methods: map[string]CommandHelp{
 		"set_position":               commandHelp("node:set_position(x, y)", "Set the node position."),
 		"set_scale":                  commandHelp("node:set_scale(x, y)", "Set the node scale."),
@@ -2351,7 +2351,7 @@ func registerRenderNodeType(state *lua.LState) {
 			metadata.RawSetString("sequence", lua.LNumber(prepared.tile.Sequence))
 			// These are the names used by the map-selection algorithm and by
 			// modern reference implementations. Keep the historical aliases
-			// above because existing shim scripts may still use them.
+			// above because existing mod scripts may still use them.
 			metadata.RawSetString("orientation", lua.LNumber(prepared.tile.Type))
 			metadata.RawSetString("main_index", lua.LNumber(prepared.tile.Style))
 			metadata.RawSetString("sub_index", lua.LNumber(prepared.tile.Sequence))
@@ -2782,7 +2782,7 @@ func checkRenderNode(state *lua.LState, index int) *ownedRenderNode {
 	userData := state.CheckUserData(index)
 	node, ok := userData.Value.(*ownedRenderNode)
 	if !ok {
-		state.ArgError(index, "dm.render/v1 node expected")
+		state.ArgError(index, "engine.render/v1 node expected")
 		return nil
 	}
 	return node

@@ -11,7 +11,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-const audioSoundType = "dm.audio.sound/v1"
+const audioSoundType = "engine.audio.sound/v1"
 
 type ownedSound struct {
 	mixer *audio.Mixer
@@ -45,16 +45,14 @@ func (s *ownedSound) release() error {
 }
 
 // AudioModule exposes scoped archive-backed sound playback.
-func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS, records audio.SoundRecords) Module {
-	catalog := audio.NewCatalog(source, records)
-	return Module{Name: "dm.audio/v1", Help: documentedModule("Play and control music, speech, ambience, and effects.", map[string]CommandHelp{
-		"diagnostics":     commandHelp("dm.audio.diagnostics()", "Return mixer and playback diagnostics."),
-		"exists":          commandHelp("dm.audio.exists(path)", "Report whether an audio asset exists."),
-		"play":            commandHelp("dm.audio.play(path [, options])", "Play an audio asset in the active scope."),
-		"play_persistent": commandHelp("dm.audio.play_persistent(path [, options])", "Play audio whose handle survives the active scene scope."),
-		"set_bus_volume":  commandHelp("dm.audio.set_bus_volume(bus, volume)", "Set the volume of a named mixer bus."),
-		"play_record":     commandHelp("dm.audio.play_record(record [, options])", "Resolve and play an audio game-data record."),
-		"stop_group":      commandHelp("dm.audio.stop_group(group)", "Stop every active sound in a playback group."),
+func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
+	return Module{Name: "engine.audio/v1", Help: documentedModule("Play and control music, speech, ambience, and effects.", map[string]CommandHelp{
+		"diagnostics":     commandHelp("engine.audio.diagnostics()", "Return mixer and playback diagnostics."),
+		"exists":          commandHelp("engine.audio.exists(path)", "Report whether an audio asset exists."),
+		"play":            commandHelp("engine.audio.play(path [, options])", "Play an audio asset in the active scope."),
+		"play_persistent": commandHelp("engine.audio.play_persistent(path [, options])", "Play audio whose handle survives the active scene scope."),
+		"set_bus_volume":  commandHelp("engine.audio.set_bus_volume(bus, volume)", "Set the volume of a named mixer bus."),
+		"stop_group":      commandHelp("engine.audio.stop_group(group)", "Stop every active sound in a playback group."),
 	}, map[string]TypeHelp{audioSoundType: {Summary: "A scoped active sound handle.", Methods: map[string]CommandHelp{
 		"set_volume": commandHelp("sound:set_volume(volume)", "Set this sound's volume."),
 		"set_pan":    commandHelp("sound:set_pan(pan)", "Set this sound's stereo pan."),
@@ -140,34 +138,6 @@ func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS, records aud
 				}
 				return 0
 			},
-			"play_record": func(state *lua.LState) int {
-				scope, err := runtime.requireActiveScope()
-				if err != nil {
-					state.RaiseError("%v", err)
-					return 0
-				}
-				definition, err := catalog.Resolve(state.CheckString(1), uint64(state.OptInt64(2, 0)))
-				if err != nil {
-					state.RaiseError("resolving sound record: %v", err)
-					return 0
-				}
-				id, err := mixer.PlayWithOptions(definition.Format, definition.Data, definition.Options)
-				if err != nil {
-					state.RaiseError("playing sound record %q: %v", definition.Name, err)
-					return 0
-				}
-				sound := &ownedSound{mixer: mixer, id: id}
-				if err := scope.Add(sound.release); err != nil {
-					_ = sound.release()
-					state.RaiseError("owning sound record %q: %v", definition.Name, err)
-					return 0
-				}
-				userData := state.NewUserData()
-				userData.Value = sound
-				state.SetMetatable(userData, state.GetTypeMetatable(audioSoundType))
-				state.Push(userData)
-				return 1
-			},
 			"stop_group": func(state *lua.LState) int {
 				if err := mixer.StopGroup(state.CheckString(1)); err != nil {
 					state.RaiseError("stopping audio group: %v", err)
@@ -218,7 +188,7 @@ func checkSound(state *lua.LState, index int) *ownedSound {
 	userData := state.CheckUserData(index)
 	sound, ok := userData.Value.(*ownedSound)
 	if !ok {
-		state.ArgError(index, "dm.audio/v1 sound expected")
+		state.ArgError(index, "engine.audio/v1 sound expected")
 		return nil
 	}
 	return sound

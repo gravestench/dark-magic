@@ -10,10 +10,10 @@ type recordsGateway interface {
 
 // RecordsModule exposes generic cached TSV records from layered content.
 func RecordsModule(records recordsGateway) Module {
-	return Module{Name: "dm.records/v1", Help: documentedModule("Load and inspect raw Diablo II data-table records.", map[string]CommandHelp{
-		"load":   commandHelp("dm.records.load(table)", "Load records from a named game-data table."),
-		"reload": commandHelp("dm.records.reload()", "Invalidate and reload the record catalog."),
-		"loaded": commandHelp("dm.records.loaded()", "List the record tables currently loaded."),
+	return Module{Name: "engine.records/v1", Help: documentedModule("Load and inspect raw tabular content records.", map[string]CommandHelp{
+		"load":   commandHelp("engine.records.load(table)", "Load records from a named game-data table."),
+		"reload": commandHelp("engine.records.reload()", "Invalidate and reload the record catalog."),
+		"loaded": commandHelp("engine.records.loaded()", "List the record tables currently loaded."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"load": func(state *lua.LState) int {

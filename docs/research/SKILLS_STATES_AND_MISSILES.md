@@ -62,7 +62,7 @@ Do not make each skill a bespoke UI callback. Do not require the renderer's curr
 - semantic left/right assignment validation;
 - learned-skill/side validation;
 - point target `(x,y)` plus optional semantic target ID;
-- an authoritative `dm.player.skill_intent` ECS record.
+- an authoritative `d2legacy.player.skill_intent` ECS record.
 
 This is a good admission boundary, but the intent currently stops before:
 
@@ -414,7 +414,7 @@ These are candidate package names, not mandatory layout. Repository review shoul
 
 ## Suggested implementation slices
 
-### S1 — consume `dm.player.skill_intent`
+### S1 — consume `d2legacy.player.skill_intent`
 
 Build a deterministic cast-request stage that resolves the current authoritative assignment/learned level and clears or acknowledges intent exactly once.
 

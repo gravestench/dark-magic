@@ -33,7 +33,7 @@ func TestLuaDefinesComponentsEntitiesAndMovementSystem(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local ecs = require("dm.ecs/v1")
+local ecs = require("engine.ecs/v1")
 ecs.component{name="position", version=1, fields={{name="x",type="f64"},{name="y",type="f64"}}}
 ecs.component{name="velocity", version=1, fields={{name="x",type="f64"},{name="y",type="f64"}}}
 player = ecs.create{position={x=10,y=5}, velocity={x=4,y=-2}}
@@ -58,7 +58,7 @@ ecs.system{
 		t.Fatal(err)
 	}
 	err = runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`local ecs=require("dm.ecs/v1"); local p=ecs.get(player,"position"); assert(p:get("x")==12 and p:get("y")==4)`)
+		return state.DoString(`local ecs=require("engine.ecs/v1"); local p=ecs.get(player,"position"); assert(p:get("x")==12 and p:get("y")==4)`)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestLuaCanQueryAnOrderedEntitySnapshotOutsideSystems(t *testing.T) {
 	runtime, _ := newECSRuntime(t)
 	err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
+local ecs=require("engine.ecs/v1")
 ecs.component{name="position",fields={}}
 ecs.component{name="hidden",fields={}}
 local first=ecs.create{position={}}
@@ -95,7 +95,7 @@ func TestLuaStructuralCommandsApplyBetweenSystems(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
+local ecs=require("engine.ecs/v1")
 ecs.component{name="spawn",fields={}}
 entity=ecs.create()
 ecs.system{id="add",phase="intent",write={"spawn"},update=function(ctx,entities,commands) commands:set(entity,"spawn",{}) end}
@@ -120,7 +120,7 @@ func TestLuaSystemCanSpawnThroughCommandBuffer(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
+local ecs=require("engine.ecs/v1")
 ecs.component{name="monster",fields={{name="kind",type="string"}}}
 ecs.system{id="spawn",phase="intent",write={"monster"},update=function(ctx,entities,commands) commands:create{monster={kind="fallen"}} end}
 ecs.system{id="count",phase="movement",query={all={"monster"}},read={"monster"},update=function(ctx,entities,commands) monster_count=#entities end}
@@ -144,7 +144,7 @@ func TestLuaSystemAccessDeclarationsAreEnforced(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
+local ecs=require("engine.ecs/v1")
 ecs.component{name="secret",fields={{name="value",type="string"}}}
 entity=ecs.create{secret={value="hidden"}}
 ecs.system{id="bad",phase="effects",update=function(ctx,entities,commands) ecs.get(entity,"secret") end}
@@ -165,7 +165,7 @@ func TestLuaComponentSchemaMigrationPreservesEntities(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
+local ecs=require("engine.ecs/v1")
 ecs.component{name="counter",version=1,fields={{name="value",type="i64"}}}
 entity=ecs.create{counter={value=7}}
 ecs.component{name="counter",version=2,fields={{name="value",type="i64"},{name="step",type="i64",default=1}},migrate=function(old,entity) return {value=old.value,step=2} end}
@@ -188,7 +188,7 @@ func TestLuaRejectsEntityFromAnotherWorld(t *testing.T) {
 	entity := first.engine.World().MustCreateEntity()
 	function := state.NewFunction(second.destroyEntity)
 	err := state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, first.entityValue(state, entity))
-	if err == nil || !strings.Contains(err.Error(), "different dm.ecs/v1 world") {
+	if err == nil || !strings.Contains(err.Error(), "different engine.ecs/v1 world") {
 		t.Fatalf("cross-world entity error = %v", err)
 	}
 }

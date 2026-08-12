@@ -4,15 +4,6 @@ package models
 type ItemRatioFunction string
 
 // Constants for Item Ratio Functions.
-const (
-	ItemRatioUnique    ItemRatioFunction = "Unique"
-	ItemRatioSet       ItemRatioFunction = "Set"
-	ItemRatioRare      ItemRatioFunction = "Rare"
-	ItemRatioMagic     ItemRatioFunction = "Magic"
-	ItemRatioHiQuality ItemRatioFunction = "HiQuality"
-	ItemRatioNormal    ItemRatioFunction = "Normal"
-	ItemRatioLow       ItemRatioFunction = "Low"
-)
 
 // ItemRatio represents the quality of items when being spawned and the probability calculations.
 type ItemRatio struct {

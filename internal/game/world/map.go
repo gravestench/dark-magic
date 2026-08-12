@@ -32,10 +32,48 @@ type Flags struct {
 	BlockWalk, BlockLOS, BlockJump, BlockPlayerWalk, BlockLight bool
 }
 
+// NewOpenMap creates an empty traversable collision map. It is useful to
+// generic tools, generated-world assembly, and tests that need geometry
+// without first decoding a DS1 stamp.
+func NewOpenMap(widthSubtiles, heightSubtiles int) (*Map, error) {
+	if widthSubtiles <= 0 || heightSubtiles <= 0 {
+		return nil, fmt.Errorf("world: open map dimensions must be positive")
+	}
+	return &Map{
+		WidthSubtiles: widthSubtiles, HeightSubtiles: heightSubtiles,
+		WidthTiles: widthSubtiles / SubtilesPerTile, HeightTiles: heightSubtiles / SubtilesPerTile,
+		flags: make([]Flags, widthSubtiles*heightSubtiles),
+	}, nil
+}
+
 // Blocked reports whether a player-sized point cannot walk through this
 // subtile. BlockWalk is shared terrain collision; BlockPlayerWalk is the
 // additional player-specific restriction encoded by DT1.
 func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
+
+// ReplaceFloor swaps one floor placement while preserving every other layer.
+// Which identity to choose is policy supplied by the caller.
+func (m *Map) ReplaceFloor(x, y int, identity TileIdentity, reference TileReference) {
+	for index := range m.Tiles {
+		if m.Tiles[index].X == x && m.Tiles[index].Y == y && m.Tiles[index].Layer == LayerFloor {
+			m.Tiles[index].Identity = identity
+			m.Tiles[index].Reference = reference
+			return
+		}
+	}
+	m.Tiles = append(m.Tiles, TilePlacement{X: x, Y: y, Layer: LayerFloor, Identity: identity, Reference: reference})
+}
+
+// RebuildFlags recomputes collision after a trusted assembly postprocessor
+// changes tile references.
+func (m *Map) RebuildFlags() {
+	m.flags = make([]Flags, m.WidthSubtiles*m.HeightSubtiles)
+	for _, tile := range m.Tiles {
+		if tile.Layer != LayerShadow && tile.Layer != LayerRoof && tile.Reference.Path != "" {
+			m.apply(tile.X, tile.Y, tile.Reference)
+		}
+	}
+}
 
 // Object preserves authored DS1 placement plus optional catalog resolution.
 // Loading identifies objects; authoritative systems decide whether to spawn them.
@@ -274,17 +312,13 @@ func (m *Map) OpenPointNearSubtile(x, y float64) (float64, float64, bool) {
 	return m.openPointNear(CollisionCell(x), CollisionCell(y), 0)
 }
 
-// ActOneTownEntry returns a deterministic open point near the authored Rogue
-// Encampment bonfire. The bonfire is the stable town landmark shared by all
-// four cardinal layouts; using it avoids tying session entry to screen pixels
-// or to whichever shape happens to surround the map's numeric center.
-func (m *Map) ActOneTownEntry() (float64, float64, bool) {
-	for _, object := range m.Objects {
-		if object.Type == ObjectTypeStatic && object.ID == 2 { // act-local RogueBonfire
-			return m.openPointNear(int(object.X), int(object.Y), 4)
-		}
+// OpenPointNear resolves a traversable point at or outside a caller-selected
+// radius. The caller owns why that inset is appropriate.
+func (m *Map) OpenPointNear(x, y float64, firstRadius int) (float64, float64, bool) {
+	if firstRadius < 0 {
+		return 0, 0, false
 	}
-	return 0, 0, false
+	return m.openPointNear(CollisionCell(x), CollisionCell(y), firstRadius)
 }
 
 func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64, bool) {

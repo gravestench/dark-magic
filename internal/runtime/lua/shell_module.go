@@ -33,21 +33,21 @@ func ShellModule(settings *shell.Settings) Module {
 			state.RaiseError("unknown shell setting %q", name)
 		}
 	}
-	return Module{Name: "dm.shell/v1", Help: ModuleHelp{
+	return Module{Name: "engine.shell/v1", Help: ModuleHelp{
 		Summary: "Inspect and edit interactive shell presentation settings.",
 		Commands: map[string]CommandHelp{
-			"values":   {Summary: "Return the active runtime settings.", Usage: "dm.shell.values()"},
-			"defaults": {Summary: "Return the built-in default settings.", Usage: "dm.shell.defaults()"},
-			"get":      {Summary: "Read one active setting by name.", Usage: "dm.shell.get(name)"},
-			"set": {Summary: "Change a setting immediately without saving it.", Usage: "dm.shell.set(name, value)", Parameters: []ParameterHelp{
-				{Name: "name", Type: "string", Description: "A key returned by dm.shell.values()."},
+			"values":   {Summary: "Return the active runtime settings.", Usage: "engine.shell.values()"},
+			"defaults": {Summary: "Return the built-in default settings.", Usage: "engine.shell.defaults()"},
+			"get":      {Summary: "Read one active setting by name.", Usage: "engine.shell.get(name)"},
+			"set": {Summary: "Change a setting immediately without saving it.", Usage: "engine.shell.set(name, value)", Parameters: []ParameterHelp{
+				{Name: "name", Type: "string", Description: "A key returned by engine.shell.values()."},
 				{Name: "value", Type: "number", Description: "New setting value."},
 			}},
-			"set_many": {Summary: "Validate and apply several settings atomically.", Usage: "dm.shell.set_many(values)"},
-			"reset":    {Summary: "Reset all runtime settings to defaults without saving.", Usage: "dm.shell.reset()"},
-			"reload":   {Summary: "Discard unsaved changes and reload persistent settings.", Usage: "dm.shell.reload()"},
-			"save":     {Summary: "Persist the active settings for future launches.", Usage: "dm.shell.save()"},
-			"status":   {Summary: "Return persistence path and unsaved-change state.", Usage: "dm.shell.status()"},
+			"set_many": {Summary: "Validate and apply several settings atomically.", Usage: "engine.shell.set_many(values)"},
+			"reset":    {Summary: "Reset all runtime settings to defaults without saving.", Usage: "engine.shell.reset()"},
+			"reload":   {Summary: "Discard unsaved changes and reload persistent settings.", Usage: "engine.shell.reload()"},
+			"save":     {Summary: "Persist the active settings for future launches.", Usage: "engine.shell.save()"},
+			"status":   {Summary: "Return persistence path and unsaved-change state.", Usage: "engine.shell.status()"},
 		},
 	}, Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -119,7 +119,7 @@ func ShellModule(settings *shell.Settings) Module {
 			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
-		module.RawSetString("name", lua.LString("dm.shell/v1"))
+		module.RawSetString("name", lua.LString("engine.shell/v1"))
 		state.Push(module)
 		return 1
 	}}

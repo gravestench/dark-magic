@@ -1,4 +1,4 @@
-.PHONY: test architecture test-race fmt vet shim bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
 
 test:
 	go test ./...
@@ -15,8 +15,8 @@ fmt:
 vet:
 	go vet ./...
 
-shim:
-	go run ./internal/dev/tools/shim_pack -output ./dist/darkmagic.zip
+d2legacy:
+	go run ./internal/dev/tools/d2legacy_pack -output ./dist/d2legacy.zip
 
 bik-view:
 	go run ./internal/dev/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"

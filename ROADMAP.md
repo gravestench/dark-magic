@@ -201,12 +201,12 @@ experiments behind the same canonical import boundary.
 - [x] Define one normalized VFS contract for directories, MPQs, zip archives, and
   embedded content.
 - [x] Mount sources in deterministic override order: user mods, the Dark Magic
-  shim archive, Diablo II patches/expansion data, then base game data.
+  `d2legacy` mod archive, Diablo II patches/expansion data, then base game data.
 - [x] Preserve source provenance so diagnostics can report which layer supplied an
   asset or script.
 - [x] Add enumeration, existence, and invalidation behavior suitable for script
   loading and development-time reload.
-- [x] Package a redistributable `darkmagic` shim archive containing engine-owned
+- [x] Package a redistributable first-party `d2legacy` mod archive containing
   scripts and assets, while continuing to require users to supply Diablo II data.
 - [x] Load a minimal `boot.lua` from the layered VFS and verify the complete boot
   path headlessly.
@@ -214,7 +214,7 @@ experiments behind the same canonical import boundary.
 ## M10: Capability-based Lua runtime
 
 - [x] Replace the mutable global export table with versioned modules such as
-  `dm.vfs/v1`, `dm.render/v1`, `dm.input/v1`, and `dm.audio/v1`.
+  `engine.vfs/v1`, `engine.render/v1`, `engine.input/v1`, and `engine.audio/v1`.
 - [x] Expose narrow engine capabilities rather than the application host or
   component registry itself.
 - [x] Make one goroutine own each Lua state and route every invocation, callback,
@@ -276,8 +276,8 @@ experiments behind the same canonical import boundary.
 - [x] Add a scene/navigation manager distinct from long-lived engine components.
 - [x] Define scene lifecycle callbacks for `create`, `enter`, `update`, `render`,
   `exit`, and `destroy`.
-- [x] Implement the loading screen from the shim archive.
-- [x] Implement the title and main game menus from the shim archive.
+- [x] Implement the loading screen from the `d2legacy` mod archive.
+- [x] Implement the title and main game menus from the `d2legacy` mod archive.
 - [x] Implement character selection/creation as Lua scenes backed by native save
   and record capabilities.
 - [x] Implement the interactive game-world scene as Lua orchestration over native
@@ -307,7 +307,7 @@ experiments behind the same canonical import boundary.
 ## Architectural acceptance milestone
 
 - [x] Boot the executable through the internal host.
-- [x] Mount legally supplied Diablo II archives plus the Dark Magic shim archive.
+- [x] Mount legally supplied Diablo II archives plus the first-party `d2legacy` mod archive.
 - [x] Execute `boot.lua`, enter the Lua-authored main menu, select a character, and
   enter an interactive world.
 - [x] Open and close inventory as an overlay without disrupting the world scene.
@@ -329,7 +329,7 @@ implementations. The remaining work is tracked explicitly below.
   and palette-applied DC6 contact sheets.
 - [x] Verify the initial 90 hypotheses against a complete English Diablo II/LOD
   MPQ stack without committing derived game imagery.
-- [x] Move verified screen facts from Go literals into versioned shim manifests
+- [x] Move verified screen facts from Go literals into versioned `d2legacy` manifests
   with confidence, game-version, language, and resolution fields.
 - [ ] Catalog every front-end screen, HUD/panel sheet, cursor, font, cinematic,
   sound cue, and relevant TXT/TBL dependency (M15.5).
@@ -343,9 +343,9 @@ implementations. The remaining work is tracked explicitly below.
 - [x] M15.2: Load manifests through a read-only versioned Lua capability and
   reject malformed or incompatible documents with actionable errors.
 - [x] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
-  cinematic facts from compiled Go declarations into shim-owned manifests. The
+  cinematic facts from compiled Go declarations into mod-owned manifests. The
   verified asset catalog and every presentation fact consumed by the runtime
-  now live in the embedded shim. The unused legacy MPQ path constant dump was
+  now live in the embedded `d2legacy` mod. The unused legacy MPQ path constant dump was
   removed so Go no longer presents a competing asset-knowledge source.
 - [x] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
   without storing proprietary decoded pixels. The 90 verified entries now have
@@ -450,7 +450,7 @@ implementations. The remaining work is tracked explicitly below.
   backed Multiplayer, Credits, and Cinematics controls now navigate to their
   verified sibling backgrounds and return safely. The verified hand cursor is
   shared across front-end scenes, and Exit requests orderly client shutdown
-  through `dm.app/v1`. Localized legal copy and the real Go build version render
+  through `engine.app/v1`. Localized legal copy and the real Go build version render
   through the bitmap-font path. A reusable focus-isolated text-entry modal now
   drives manifest-backed TCP/IP Host/Join intent controls. The supplied
   `Sounds.txt` resolves menu music through `ESOUND_MUSIC_DIABLO`, preserving its
@@ -460,7 +460,7 @@ implementations. The remaining work is tracked explicitly below.
   English 640x292 BIK entries as VFS-aware localized controls; playback and
   startup sequencing proceed under M17.2.
 - [x] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
-  behavior. A scoped backend-neutral `dm.video/v1` capability now keeps large
+  behavior. A scoped backend-neutral `engine.video/v1` capability now keeps large
   MPQ payloads outside Lua and exposes deterministic playing/complete/failed/
   stopped lifecycle state. The verified Blizzard and Blizzard North startup
   BIKs sequence with explicit skip/failure policy, and the Cinematics selector
@@ -520,14 +520,14 @@ implementations. The remaining work is tracked explicitly below.
   positions. A development-only deterministic fixture source exercises filled
   pages without touching player saves. Save records can now carry an optional,
   defensively copied appearance snapshot containing the authoritative COF,
-  palette, direction, and component DCC paths. The shim feeds that snapshot to
+  palette, direction, and component DCC paths. The mod feeds that snapshot to
   the generic compositor while legacy records retain their class-only fallback;
   this keeps save decoding and asset resolution out of presentation code.
 - [x] M17.5: Implement dependency-driven loading and front-end composition tests
   across supported resolution, language, and game-version variants. An
   engine-owned coordinator now executes named character, loading-asset, and
   world readiness tasks and exposes immutable progress through
-  `dm.loading/v1`. The Lua loading screen animates toward that real progress,
+  `engine.loading/v1`. The Lua loading screen animates toward that real progress,
   treats its configured sweep duration as presentation smoothing only, reports
   failures, and cannot enter the world while a dependency remains blocked.
   Coordinator, capability, and end-to-end blocked-transition tests cover the
@@ -558,7 +558,7 @@ implementations. The remaining work is tracked explicitly below.
   from startup monotonic time to that device clock and retains bounded late-frame
   dropping.
 - [x] Implement stop, skip, completion, decode failure, device loss, resize, and
-  shutdown cleanup through the existing `dm.video/v1` lifecycle contract. The
+  shutdown cleanup through the existing `engine.video/v1` lifecycle contract. The
   embedded scheduler now uses bounded decode queues, one monotonic media clock,
   late-video dropping, lossless audio ordering, cancellation, and checked
   presenter/audio teardown. Resizable windows now publish owner-thread viewport
@@ -617,11 +617,11 @@ complete until its actions are driven by authoritative game state and commands.
   instances and transfers remain part of M19.
   The recovered Escape/options hierarchy now uses verified `OptBarC.dc6` and
   `OptSkull.dc6` controls for live, persistent sound and music preferences via
-  `dm.settings/v1`. Unsupported 3D bias, gamma, contrast, and key-binding rows
+  `engine.settings/v1`. Unsupported 3D bias, gamma, contrast, and key-binding rows
   remain explicitly unavailable until their engine effects and recovered ranges
   are implemented rather than displaying fabricated values.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
-  related records; keep only presentation corrections in shim manifests. The
+  related records; keep only presentation corrections in mod manifests. The
   selected class's expansion Inventory.txt row now owns inventory grid and
   equipment hit geometry. Only the verified DC6 frame order and expansion panel
   origin correction remain in the presentation manifest.
@@ -644,16 +644,16 @@ complete until its actions are driven by authoritative game state and commands.
   target-aware MOTD, and exposes the policy-filtered `dm`/`darkmagic` root with
   friendly lazy capability aliases, help, discovery, and exact versioned module
   access. Versioned module registrations now own structured module and command
-  help (usage, parameters, returns, and examples); `dm.help` accepts module or
+  help (usage, parameters, returns, and examples); `d2legacy.help` accepts module or
   command values and string paths, while legacy commands receive generated
   fallback documentation. Multiline values now preserve newlines and indentation
-  through both adapters. The shared `dm.shell/v1` capability exposes validated
+  through both adapters. The shared `engine.shell/v1` capability exposes validated
   live presentation settings; font-size edits apply immediately and explicit
   defaults, reset, dirty status, and atomic platform-native persistence are
   available from client, server, and realm shells. All built-in capability
   functions now carry authored summaries and usage signatures checked against
-  their actual exported Lua tables. Policy-filtered `dm.apropos` searches the
-  registry and `dm.docs()` renders Markdown from that same source of truth.
+  their actual exported Lua tables. Policy-filtered `d2legacy.apropos` searches the
+  registry and `d2legacy.docs()` renders Markdown from that same source of truth.
   Structured table output now uses deterministic multiline formatting with
   cycle/depth protection. Lua output has retained Page Up/Page Down scrollback
   and semantic heading/code/value coloring in both adapters. Persistent settings
@@ -722,7 +722,7 @@ complete until its actions are driven by authoritative game state and commands.
   tooltips. Assignments pass through a replayable command into the player ECS.
   The desktop selector opens upward in the five recovered logical rows, applies
   left/right eligibility and passive filtering, and closes its opposite side.
-  Choices come from session-owned `dm.player.learned_skill` entities seeded by
+  Choices come from session-owned `d2legacy.player.learned_skill` entities seeded by
   typed general/start-skill records; Lua only arranges and describes them.
   Save-imported purchased skills and charged item skills remain M19 work.
   Riiablo's mobile controls were explicitly
@@ -874,7 +874,7 @@ complete until its actions are driven by authoritative game state and commands.
 - [ ] Import DS1/DT1 collision, orientation, material, warp, object, shadow, roof,
   and subtile flags into deterministic chunks and zones. DS1 dimensions,
   authored objects, and combined DT1 subtile collision flags now decode into a
-  renderer-independent immutable map exposed through `dm.world/v1`; remaining
+  renderer-independent immutable map exposed through `engine.world/v1`; remaining
   orientation/material/warp/roof facts and chunk ownership are pending.
 - [ ] Implement entity-size-aware A* navigation, path smoothing, collision,
   interaction range, line of sight, and movement modes.
@@ -1057,7 +1057,7 @@ complete until its actions are driven by authoritative game state and commands.
     the town campfire anchor; preserve character/session identity independently
     of the selected town layout.
     The entry command now records the server-selected act and level in an
-    authoritative `dm.world.location` component; creation and offline join use
+    authoritative `d2legacy.world.location` component; creation and offline join use
     the generated Act I town and campfire anchor. The production-asset client
     seam now proves a frontend-created/selected character is admitted by the
     fixed-tick session at that exact anchor with Act 1 / level 1 authority.
@@ -1087,11 +1087,12 @@ complete until its actions are driven by authoritative game state and commands.
     optional DT1 graphic. A production-asset seam contract verifies the selected
     town anchor meets the generated opposite Blood Moor edge in walkable
     subtile coordinates without asking presentation to infer either endpoint.
-    A trusted fixed-tick `system.world.transition` command now requires the
-    player's authoritative source level and proximity to that seam, then
-    atomically updates destination level, inset arrival position, world bounds,
-    and velocity. The local source detects the crossed endpoint without trusting
-    Lua and arrival inset prevents immediate bounce-back. The client now swaps
+    The collision-derived endpoints are now immutable bootstrap facts consumed
+    by the authoritative `d2legacy.world.transition` Lua system. Lua owns source
+    and destination level identity, proximity, arrival position, world bounds,
+    and velocity reset; the former native command source and Go transition
+    authority have been deleted. Arrival inset prevents immediate bounce-back.
+    The client now observes the committed level fact and swaps
     authoritative navigation, collision, spatial interaction selection, Lua
     collision, camera projection facts, and sparse assembled-world rendering
     when that command commits. `make capture-act1-seam` places a deterministic
@@ -1101,7 +1102,9 @@ complete until its actions are driven by authoritative game state and commands.
     route between explicit town-entry and next-level edge anchors. The route is
     rasterized into validated tile-resolution `PathTile` facts in the immutable
     zone checksum. Materialization applies D2MOO's verified 3x3-neighbor
-    floor-identity pass and rebuilds collision from the selected DT1 metadata.
+    floor-identity pass in `d2legacy.mapgen.act1_dirt_path`; the admitted recipe
+    carries opaque `(main_index, sub_index)` choices and generic materialization
+    applies them before rebuilding collision. No Act I lookup table remains in Go.
   - [x] M20.15e: Separate raw authored DS1 special cells from render placements.
     Exit discovery and town/wilderness seam construction now consume immutable
     special-tile facts instead of scanning the renderer-facing tile list. This
@@ -1168,7 +1171,7 @@ focus must not replace pointer coordinates as the authoritative client request.
   snapshot carries only validated presentation recipes, never renderer paths.
   Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
-  `dm.world.collider` radius now probes the player's full footprint while
+  `d2legacy.world.collider` radius now probes the player's full footprint while
   retaining axis-separated wall sliding. Riiablo's player factory identifies
   players as `Size.MEDIUM = 2` and its physics adapter uses `size / 2`, confirming
   a one-subtile radius (two-subtile diameter), not one five-subtile map tile.
@@ -1254,7 +1257,7 @@ data owners; they do not introduce parallel gameplay authorities.
   keys and ordered source entries, applies validated replace/remove batches
   atomically, treats identical replacement as an idempotent no-op, increments a
   per-entity invalidation revision, rejects arithmetic overflow, and exports a
-  canonical `dm.stats/v1` replay participant. Tests prove parameter separation,
+  canonical `engine.stats/v1` replay participant. Tests prove parameter separation,
   equip-style attach/detach, failed-batch rollback, deterministic serialization,
   strict atomic restore, race-safe snapshots, and composite-checksum coverage.
 - [x] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
@@ -1309,13 +1312,13 @@ data owners; they do not introduce parallel gameplay authorities.
   leech, secondary states, and the full death transaction stay
   in their documented verification/dependency queues.
 - [x] **M21.6: Consume assigned skill intent.** Resolve the existing
-  `dm.player.skill_intent` into one deterministic cast request with assigned
+  `d2legacy.player.skill_intent` into one deterministic cast request with assigned
   skill and learned level read exactly once. The intent-phase consumer treats
   the existing component as a mutable admission mailbox, preserves the skill
   already resolved from the authoritative assignment by command admission,
   resolves its learned-skill level once,
   and snapshots player, side, skill ID, learned level, semantic/point target,
-  and request tick into `dm.skill.cast_request`. It clears the mailbox in the
+  and request tick into `d2legacy.skill.cast_request`. It clears the mailbox in the
   same update and refuses to overwrite an unconsumed request, so later skill
   reassignment or level changes cannot rewrite an in-flight action. Both the
   offline client authority and standalone session server install the consumer;
@@ -1469,25 +1472,30 @@ boundary. The annotated tag
 `baseline/pre-d2legacy-lua-migration-2026-08-11` preserves the pre-refactor
 baseline.
 
+Authoritative Lua must remain deliberately approachable: small purpose-named
+files, short single-purpose functions, separate schemas/state/handlers/systems,
+thin registration roots, and plain-language comments explaining ownership and
+legacy behavior to an uninitiated reader. Each migrated domain documents its
+capabilities, durable state, execution order, data-policy boundary, and tests.
+
 - [x] **M21.14.1 — inventory and classification.** The machine-checked
   `docs/architecture/gameplay-ownership.tsv` now gives every production file
-  under `internal/game`, `internal/runtime/lua`, and the bundled Lua shim exactly
+  under `internal/game`, `internal/runtime/lua`, and bundled `d2legacy` Lua exactly
   one mechanism, D2-policy, data, adapter, or transitional destination. The
   companion guide records domain dispositions, migration sequencing, the
   pre-refactor tag, and the rule that coherent moves may cross intentionally
   non-buildable intermediate commits. Architecture CI rejects unclassified
-  files and new mechanism-to-policy/transitional imports; the two existing
-  session-to-action edges are explicit debt that must disappear with movement
-  and Fire Bolt migration. Publish a file-level catalog
-  of production `internal/game/**`, related `internal/runtime/lua/**`, and shim
-  gameplay code. Classify every unit as engine mechanism, D2 policy,
+  files and new mechanism-to-policy/transitional imports; the former dependency
+  debt is empty after the policy cutover. Publish a file-level catalog
+  of production `internal/game/**`, related `internal/runtime/lua/**`, and
+  `d2legacy` gameplay code. Classify every unit as engine mechanism, D2 policy,
   data/codec, adapter, or obsolete/transitional; record its destination and the
   reason. Add a CI architecture test that fails when a generic engine package
   imports `d2legacy`, a D2 rule package, or a forbidden D2 policy identifier.
   Acceptance: every production gameplay file has exactly one classification,
   and a fixture that introduces a forbidden engine-to-mod dependency fails.
 
-- [ ] **M21.14.2 — authoritative Lua foundation.** Add versioned APIs for trusted
+- [x] **M21.14.2 — authoritative Lua foundation.** Add versioned APIs for trusted
   Lua command-handler registration and deterministic ECS-system registration,
   including declared read/write access and structural barriers. Expose named,
   deterministic RNG streams without wall-clock, process, filesystem, network,
@@ -1513,7 +1521,7 @@ baseline.
   mismatched client/reconnect/checkpoint/replay, and prove changed scripts affect
   new sessions only unless an explicit state migration is supplied.
 
-- [ ] **M21.14.4 — Fire Bolt vertical migration.** Move one complete production
+- [x] **M21.14.4 — Fire Bolt vertical migration.** Move one complete production
   path into `d2legacy`: input intent -> command admission -> skill validation ->
   cast timing and cost -> Lua missile policy -> engine movement and collision ->
   Lua damage and death consequences -> authoritative snapshots. Keep command
@@ -1524,6 +1532,24 @@ baseline.
   midpoint checkpoint/restore and initial-snapshot replay produce identical
   checksums, and no production Go handler contains Fire Bolt rules.
 
+  Completed: the canonical bundled `d2legacy` mod owns a complete headless
+  Fire Bolt path, split into documented data normalization, command, cast,
+  projectile, geometry, and damage modules. Its command consumes the generic
+  mouse-side intent, derives skill identity/level from authoritative ECS state,
+  uses checkpointed named RNG, and passes swept-contact/damage acceptance tests.
+  Production client composition now loads `d2legacy.authoritative` by default,
+  pins the exact Lua package identity and named RNG in session checkpoints, and
+  routes skill assignment/use through the Lua command boundary. Fire Bolt no
+  longer registers Go cast/missile policy: the superseded Go normalizer and its
+  production registrations are deleted, while presentation passively observes
+  the Lua-owned projectile facts. Basic-melee admission, targeting, hit/damage
+  RNG, health mutation, and events now execute in `d2legacy`; the Go skill
+  mailbox and cast lifecycle are no longer part of production composition.
+  Collision-aware approach and authored attack-animation timing use generic
+  navigation/timing mechanisms driven by Lua-owned semantic requests. Midpoint
+  checkpoint/restore and initial-snapshot replay parity both pass through a
+  reconstructed authoritative Lua runtime.
+
 - [ ] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
   mitigation, state, death, stat-definition, and derived-stat policy to
   `d2legacy`; retain only documented generic numeric, source-aggregation,
@@ -1531,11 +1557,20 @@ baseline.
   melee, missile, death, and checkpoint scenarios execute through Lua and keep
   their deterministic vectors.
 
+  Ownership cutover is complete: the former Go package is deleted and current
+  melee, missile, damage, timed-state, and death policy runs in Lua. This item
+  remains open for the broader mitigation/derived-stat and deterministic death
+  vectors named by its acceptance contract.
+
 - [ ] **M21.14.6 — skills and missiles migration.** Move D2 skill eligibility,
   costs, timing, targeting, effects, and missile behavior to `d2legacy`; retain
   only generic scheduling, movement/collision, and spatial primitives that are
   demonstrably mod-neutral. Acceptance: representative targeted, ground,
   targetless, state, and missile skills have Lua-owned policy and replay parity.
+
+  Ownership cutover and Fire Bolt parity are complete. Representative ground,
+  targetless, and non-damage state-skill vectors remain before this broader
+  fidelity item can be checked.
 
 - [ ] **M21.14.7 — monsters, AI, spawning, and death migration.** Move D2
   monster definition interpretation, encounter population, AI decisions,
@@ -1544,12 +1579,20 @@ baseline.
   headless, Lua-owned, checkpointable, and independent of presentation
   residency.
 
+  Ownership cutover is complete and Lua owns current population, spawn, AI,
+  attack, death, corpse, credit, XP, and loot behavior. A single restored
+  generated-zone hostile-lifecycle acceptance vector remains.
+
 - [ ] **M21.14.8 — loot and item generation migration.** Move treasure classes,
   quality, affixes, properties, item rolls, drop policy, and D2 item identity
   interpretation to `d2legacy`; retain typed record decoding and any justified
   generic RNG/transaction primitives in Go. Acceptance: fixed-seed generation
   vectors and monster-drop replay match through Lua, and superseded Go policy is
   deleted.
+
+  Ownership cutover is complete and all former Go generation modules now have
+  Lua policy owners. Broader fixed legacy quality/affix/property vectors and a
+  checkpointed monster-drop vector remain.
 
 - [ ] **M21.14.9 — inventory, equipment, vendors, and services migration.** Move
   D2 container footprints, held/belt/corpse behavior, equipment eligibility,
@@ -1558,11 +1601,21 @@ baseline.
   equip/stat activation, vendor sale, and one service transaction execute via
   Lua while generic atomic storage primitives remain reusable.
 
+  Ownership cutover is complete; current containers, held swaps, equipment,
+  vendor arrangement/commerce, services, and corpse state are Lua-owned. The
+  focused reconnect, recovery, vendor-sale, and service acceptance matrix is
+  still tracked here rather than being inferred from source presence.
+
 - [ ] **M21.14.10 — character progression and owned units migration.** Move D2
   class definitions, base/derived stats, XP/leveling, hirelings, pets, summons,
   limits, attribution, and lifecycle policy to `d2legacy`. Acceptance: character
   creation through level-up and one owned-unit lifecycle restore identically
   from a checkpoint without Go-owned D2 policy.
+
+  Ownership cutover is complete. Lua now owns category/group limits, stable
+  replacement, immediate/ultimate attribution, lifetime flags, and checkpointed
+  owned-unit state. Creation-to-level-up and active lifetime/despawn acceptance
+  remain before the full item is complete.
 
 - [ ] **M21.14.11 — interactions, quests, transitions, and difficulty
   migration.** Move D2 NPC/object interactions, quests, rewards, services,
@@ -1570,6 +1623,13 @@ baseline.
   Acceptance: one quest/NPC reward path and one cross-zone transition are
   Lua-owned, replay-safe, and driven by immutable decoded records plus recovered
   relationships.
+
+  Ownership cutover and cross-zone warp behavior are complete. The production
+  Act I town/Blood Moor seam now crosses through a fixed-tick Lua ECS system;
+  Lua identifies the connected levels, authored roles, and facing edges while
+  Go resolves only collision-safe endpoint geometry. Presentation observes the
+  committed level only. A full decoded quest/NPC reward path and difficulty
+  progression vector remain.
 
 - [ ] **M21.14.12 — D2 map-generation and population-policy migration.** Move
   act/level graph choices, preset/maze/outdoor selection, legacy hard-coded
@@ -1579,7 +1639,15 @@ baseline.
   wilderness are selected by Lua policy from typed immutable inputs and restore
   to the same topology checksum.
 
-- [ ] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
+  Ownership cutover is complete: preset, maze, outdoor, route, structure, asset,
+  entry-world level selection, and Rogue Encampment campfire-marker selection
+  execute in documented d2legacy Lua modules. Go transports admitted recipes
+  and runs generic collision-space nearest-open-point and cardinal seam geometry
+  from the mod-authored specification only.
+  Population choices are likewise Lua-owned while generic recipe/geometry
+  contracts remain in Go. The joined Act I town-to-wilderness restore vector remains.
+
+- [x] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
   alternate mod without loading `d2legacy`; prove generic engine packages have
   no dependency on D2 rule packages or D2 identifiers; require migrated-system
   replay/checkpoint parity in CI; remove transitional capabilities that expose
@@ -1591,13 +1659,15 @@ baseline.
 
 M21.14 is complete only when all of the following are true:
 
-- [ ] The application can run its generic host without `d2legacy`.
-- [ ] Loading `d2legacy` supplies all Diablo II gameplay systems and policies.
-- [ ] No production Go package implements Diablo-specific combat, skill,
+- [x] The application can run its generic host without `d2legacy`.
+- [ ] Loading `d2legacy` supplies all Diablo II gameplay systems and policies;
+  current implemented policy is isolated there, while the open domain vectors
+  above identify fidelity that has not been implemented yet.
+- [x] No production Go package implements Diablo-specific combat, skill,
   monster, loot, item, quest, progression, economy, or map-generation rules.
-- [ ] Remaining Go gameplay-adjacent code is documented as a reusable mechanism
+- [x] Remaining Go gameplay-adjacent code is documented as a reusable mechanism
   or data/codec boundary.
-- [ ] Authoritative Lua state participates in deterministic checksums, replay,
+- [x] Authoritative Lua state participates in deterministic checksums, replay,
   checkpoint, and restore.
 - [ ] A headless game server runs authoritative `d2legacy` with the exact mod,
   dependency, configuration, and capability identity pinned for the session.
@@ -1605,9 +1675,9 @@ M21.14 is complete only when all of the following are true:
   sessions, and replays are rejected instead of silently changing rules.
 - [ ] Client prediction is optional and untrusted; reconciliation preserves the
   game server's canonical outcome.
-- [ ] Existing gameplay acceptance scenarios pass through the Lua
+- [x] Existing gameplay acceptance scenarios pass through the Lua
   implementation.
-- [ ] CI prevents reintroducing D2-specific policy into the engine.
+- [x] CI prevents reintroducing D2-specific policy into the engine.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits
@@ -1663,7 +1733,7 @@ authority, persistence separation, and resilience acceptance remain open.
   now exist. `internal/game/session` now owns transport-independent admission,
   fixed stepping, canonical command ordering, checkpointing, and replay export;
   the client uses it for offline stepping and the standalone server owns its
-  timed lifecycle plus read-only `dm.session/v1` diagnostics. Listen-server,
+  timed lifecycle plus read-only `engine.session/v1` diagnostics. Listen-server,
   realm orchestration, gameplay-system composition, and transports remain.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
@@ -1694,7 +1764,7 @@ authority, persistence separation, and resilience acceptance remain open.
 
 ## M24: Packaging and release acceptance
 
-- [ ] Package the engine and shim without Blizzard assets and verify first-run
+- [ ] Package the engine and `d2legacy` mod without Blizzard assets and verify first-run
   installation discovery, configuration, diagnostics, mod isolation, and update
   behavior.
 
@@ -1793,7 +1863,7 @@ separate profiling PRs unless a measured gameplay budget requires it sooner.
 - [ ] Implement reusable frames, boxes, scrollbars, text boxes, list controls,
   toggles, and modal focus rules from verified Blizzard assets and records.
 - [ ] Add native screenshot fixtures for every shared component state and migrate
-  every shim screen and overlay away from one-off styling code. The interactive
+  every `d2legacy` screen and overlay away from one-off styling code. The interactive
   five-page `font_lab` now isolates semantic screen styles, bitmap families, PL2
   color slots and contexts, and text layout behavior; automated native screenshot
   fixtures and the remaining component migrations are still outstanding.
@@ -1805,7 +1875,7 @@ for the remaining typed-record admissions/consumers and final migration
 acceptance/documentation cleanup; it is no longer a general refactor mandate.
 
 - [x] Inventory every package, its responsibility, importers, lifecycle owner,
-  stability, and whether it is engine infrastructure, game/shim implementation,
+  stability, and whether it is engine infrastructure, mod implementation,
   tooling, or an intentionally supported external API. Record obsolete,
   duplicate, transitional, and misleadingly named code before moving anything.
 - [x] Define and document a strict boundary policy: implementation details live
@@ -1854,10 +1924,12 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   per concept. Delete superseded code only after callers and preserved historical
   work have been audited. Generic table storage and the typed catalog have been
   audited as complementary layers and consolidated under `internal/game/data`:
-  `store` owns layered TSV bytes and immutable generic rows, while `catalog` owns
-  the one atomic typed snapshot and indexes. The client continues to construct a
-  single shared store for typed records, Lua, and audio rather than duplicating
-  caches or source resolution. Four small renderer-independent capabilities now
+  `store` owns layered TSV bytes and immutable generic rows, while `typed` binds
+  only caller-selected passive schemas and deterministic indexes. The retired
+  global typed catalog/snapshot no longer declares one native list of required
+  Diablo tables; d2legacy selects records and owns all joins and meanings. The
+  client continues to construct a single shared store for Lua, audio, and narrow
+  adapters rather than duplicating caches or source resolution. Four small renderer-independent capabilities now
   use feature ownership instead of historical `*core` names: `inputstate`,
   `loading`, `localization`, and `persistence`; all composition, Lua, acceptance,
   and Raylib callers migrated together and the retired paths are guarded. The
@@ -1979,13 +2051,21 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   The Lua records capability now uses the typed catalog as its generic-row
   gateway, so script-requested reloads also drop the typed snapshot rather than
   bypassing catalog invalidation through the raw store. The versioned
-  `dm.game_data/v1` capability now supplies copied, typed character starting
+  `engine.game_data/v1` capability now supplies copied, typed character starting
   attributes and ordered unique-title fragments without exposing Go records or
   coupling authored scripts to arbitrary TSV columns.
   The Lua loot capability likewise consumes typed `TreasureClassEx` records and
   exposes `roll(class, seed)`; arbitrary TSV paths and duplicate parsing no
   longer cross the runtime boundary, while deterministic event seeds and roll
   results retain their existing simulation-owned representation.
+  **Superseded by M21.14's committed d2legacy isolation:** the completed schema
+  recovery remains useful evidence, but the global `catalog.Snapshot`, eager
+  host validation, typed gameplay capabilities, and engine-owned D2 joins were
+  the wrong permanent boundary and have been removed. `store` now owns generic
+  immutable rows, `typed` offers optional caller-selected schema binding, and
+  `d2legacy` chooses required tables, joins records, and interprets gameplay.
+  Future work must not complete this historical item by recreating an all-table
+  Go catalog.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
@@ -2015,7 +2095,7 @@ replay verification, and narrow audited administrator handlers.
   any entity conversion fails.
 - [x] Add deterministic Dark Magic phases, dependency ordering, stable query
   snapshots, declared read/write access, and structural command barriers.
-- [x] Expose checked entities and components through `dm.ecs/v1`, including
+- [x] Expose checked entities and components through `engine.ecs/v1`, including
   Lua-defined schemas, systems, queries, field mutation, and deferred spawning,
   addition, removal, and destruction.
 - [x] Tie Lua system registrations to disposable component scopes and prove that
@@ -2024,15 +2104,15 @@ replay verification, and narrow audited administrator handlers.
   frame duration, with stable tick and delta values exposed to Lua systems.
 - [x] Replace the production compatibility hero/world state with Lua-defined ECS
   components and systems for input intent, transform, bounded movement, camera
-  follow, and presentation snapshots. The shim now keeps related component
+  follow, and presentation snapshots. The mod now keeps related component
   schemas and individual systems in documented modules; `world.lua` only
   registers them and owns the narrow scene-facing binding/snapshot facade.
 - [x] Admit a renderer-matched, round-tripped isometric pixel/subtile transform,
   then use axis-separated DT1 collision in ECS movement without mixing in
   presentation pixels.
 - [x] Preserve and validate Riiablo's recovered quest and speech tables in the
-  shim, including quest prerequisites, stage localization keys, and logical
-  sound-to-localization joins exposed through `dm.quest_catalog/v1`.
+  `d2legacy` mod, including quest prerequisites, stage localization keys, and logical
+  sound-to-localization joins exposed through `engine.quest_catalog/v1`.
 - [x] Resolve DS1 static objects through recovered act-local `obj.txt` mappings
   and dynamic objects through act-local `MonPreset.txt` ordering before exposing
   immutable world records to Lua.
@@ -2052,7 +2132,7 @@ replay verification, and narrow audited administrator handlers.
   listen-server mode and verify exported client/server replays.
 - [x] Distinguish player, administrator, and system command authority at handler
   registration; reject privilege escalation and retain executed privileged
-  commands as a defensive, replay-correlated audit exposed by `dm.session/v1`.
+  commands as a defensive, replay-correlated audit exposed by `engine.session/v1`.
 - [ ] Add explicit audited administrator handlers for item/loot, monster, world,
   character, and session operations as their authoritative ECS archetypes and
   validation rules become available; never add arbitrary component mutation.
@@ -2191,7 +2271,7 @@ gaps; M18–M24, M26–M27, the typed-data tail of M28, and M29's gameplay-comma
 integration remain open as described above. M31–M43 now define the independent
 creature-authoring and generated-representation program; none of that program is
 claimed implemented. The repository builds against
-tagged codec releases, boots through the internal host and layered shim, runs
+tagged codec releases, boots through the internal host and layered d2legacy mod, runs
 the Lua-authored shell and world orchestration, and passes the complete package
 suite under race detection. Historical stashes remain preserved and documented
 in `STASHES.md`; do not apply or drop them without a separate comparison task.

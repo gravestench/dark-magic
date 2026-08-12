@@ -10,11 +10,10 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
-	"github.com/gravestench/dark-magic/internal/persistence"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -126,7 +125,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 	})
 
 	t.Run("character deletion is confirmed before leaving the list", func(t *testing.T) {
-		harness := newStartupHarnessWithSaves(t, persistence.Character{
+		harness := newStartupHarnessWithSaves(t, d2save.Character{
 			ID: "hero", Name: "Hero", Class: "Amazon", Level: 1,
 		})
 		harness.skip(t)
@@ -152,14 +151,14 @@ type startupHarness struct {
 	navigator *navigation.Manager
 	input     *inputstate.Store
 	backend   *startupVideoBackend
-	saves     *persistence.Store
+	saves     *d2save.Store
 }
 
 func newStartupHarness(t *testing.T) *startupHarness {
 	return newStartupHarnessWithSaves(t)
 }
 
-func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) *startupHarness {
+func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *startupHarness {
 	t.Helper()
 	ctx := context.Background()
 	videos := fstest.MapFS{
@@ -168,7 +167,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	}
 	contentFS, err := content.New(
 		content.Layer{Name: "videos", FS: videos},
-		content.Layer{Name: "darkmagic", FS: content.Shim()},
+		content.Layer{Name: "darkmagic", FS: content.D2Legacy()},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +181,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	var mixer audio.Mixer
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
 	loading := acceptanceLoadingCoordinator()
-	saves := persistence.New(entries...)
+	saves := d2save.New(entries...)
 	t.Cleanup(loading.Close)
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
@@ -191,13 +190,14 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 		modruntime.AppModule("test", func() {}),
 		modruntime.VFSModule(contentFS),
 		modruntime.DataModule(contentFS),
+		modruntime.RecordsModule(recordstore.New(contentFS)),
 		modruntime.InputModule(&input),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		modruntime.VideoModule(runtime, backend, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(saves),
+		d2save.Module(saves),
 		modruntime.SimulationModule(simulation),
 		modruntime.LoadingModule(loading),
 		scenes.Module(),

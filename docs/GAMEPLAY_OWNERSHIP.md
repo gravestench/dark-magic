@@ -1,7 +1,8 @@
 # Gameplay ownership migration inventory
 
-Status: M21.14.1 migration contract. This inventory classifies production code
-by architectural destination; it does not claim that the move is complete.
+Status: enforced M21.14 ownership contract. This inventory classifies the
+post-migration production code and prevents the deleted Go policy boundary from
+returning.
 
 The machine-checked source is
 [`docs/architecture/gameplay-ownership.tsv`](architecture/gameplay-ownership.tsv).
@@ -27,14 +28,12 @@ must use ECS or registered, versioned engine stores.
 
 | Current area | Current contents | Intended result |
 | --- | --- | --- |
-| `internal/game/ecs`, `simulation`, `session` | ECS schedule, command envelopes, RNG/replay, plus some D2 handlers | Keep mechanisms; move embedded D2 handlers to `d2legacy` |
-| `internal/game/data/**` | Typed D2 schemas, immutable catalogs, recovered records | Keep decoding/data in Go; Lua interprets gameplay meaning |
-| `combat`, `skill`, `missile` | D2 hit/cast/missile policy mixed with reusable fixed-point/spatial work | Migrate policy together; extract only proven generic primitives |
-| `monster`, `loot`, `item`, `player`, `stats`, `state`, `action` | Most current authoritative D2 simulation | Migration source, not permanent engine API |
-| `mapgen`, `world`, `targeting` | Reusable geometry/navigation mixed with D2 act/level/population policy | Split mechanisms from D2 selection and relationships |
-| `interaction`, `transition`, `ownedunit` | Generic relations/transactions mixed with D2 services and lifecycle policy | Split, then migrate D2 policy |
-| `internal/runtime/lua` | Runtime mechanisms plus subsystem-shaped Go-owned D2 facades | Keep runtime/adapters; retire facades as policy moves into Lua |
-| bundled `darkmagic` Lua | Presentation, labs, and early gameplay helpers | Separate generic examples from first-party `d2legacy` mod |
+| `internal/game/ecs`, `simulation`, `session` | ECS schedule, command envelopes, RNG, transactional ticks, checkpoints, and replay | Generic mechanisms only |
+| `internal/game/data/store`, `typed`, `model` | Generic rows, optional schema binding, and lossless D2 row schemas | Keep mechanisms/schemas in Go; no global catalog; Lua selects and interprets tables |
+| former Go gameplay packages | Deleted migration sources for combat, skills, missiles, monsters, loot, items, players, progression, interactions, transitions, owned units, and D2 map generation | Production policy now lives under `d2legacy` Lua |
+| `internal/game/world`, `worldgen` | Decoded map facts, geometry, collision, navigation, materialization, and immutable recipe contracts | Keep reusable mechanisms/data; Lua chooses D2 topology and population policy |
+| `internal/runtime/lua` | Sandboxed runtime, versioned capabilities, authoritative registration, and resource scopes | Keep generic and mod-neutral |
+| bundled Lua content | Canonical first-party `d2legacy` authority, presentation, and labs | One mod and one `d2legacy.*` namespace |
 
 ## Migration execution policy
 
@@ -51,6 +50,28 @@ Do not preserve compatibility wrappers merely to keep old internal APIs alive.
 There are no external consumers. Prefer deleting superseded Go policy and
 changing call sites together.
 
+## Authoritative Lua readability contract
+
+`d2legacy` is intended to teach as well as run. Do not replace large Go files
+with large Lua files. Keep component schemas, registered state, command
+handlers, deterministic systems, and domain policy in separate purpose-named
+modules. Composition roots only import and register those modules.
+
+Functions should do one small job, use descriptive names, and stay short enough
+to understand without scrolling through unrelated behavior. Comments explain
+ownership, ordering, state lifetime, legacy evidence, numeric units, and why a
+rule exists in plain language suitable for a reader new to the engine. Avoid
+comments that merely repeat syntax. Shared helpers are extracted only when they
+make the rule easier—not to hide control flow behind abstraction.
+
+Each migrated domain must include a short README or module-level guide showing:
+
+1. which engine capabilities it receives;
+2. which state it reads and writes;
+3. command-to-system execution order;
+4. where decoded D2 records become gameplay decisions; and
+5. which tests prove replay/checkpoint behavior.
+
 ## First migration sequence
 
 1. Make the inventory exhaustive and enforce its dependency direction.
@@ -59,4 +80,3 @@ changing call sites together.
 4. Move the complete Fire Bolt path as the first proof.
 5. Move tightly coupled domains in coherent groups rather than maintaining two
    authorities during a prolonged file-by-file port.
-

@@ -9,9 +9,9 @@ func DevModule(values map[string]any) Module {
 	if seed <= 0 {
 		seed = 1
 	}
-	return Module{Name: "dm.dev/v1", Help: documentedModule("Read development-only launch options.", map[string]CommandHelp{
-		"option": commandHelp("dm.dev.option(name)", "Return a copied development launch option."),
-		"seed":   commandHelp("dm.dev.seed()", "Return a different positive pseudo-random seed on each call."),
+	return Module{Name: "engine.dev/v1", Help: documentedModule("Read development-only launch options.", map[string]CommandHelp{
+		"option": commandHelp("engine.dev.option(name)", "Return a copied development launch option."),
+		"seed":   commandHelp("engine.dev.seed()", "Return a different positive pseudo-random seed on each call."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"seed": func(state *lua.LState) int {

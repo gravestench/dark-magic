@@ -16,7 +16,7 @@ func TestLuaReusableWidgetModulesLoad(t *testing.T) {
 	var input inputstate.Store
 	runtime := modruntime.New()
 	composer := &render.Composer{}
-	shim := content.Shim()
+	shim := content.D2Legacy()
 
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(shim, "lua")); err != nil {
 		t.Fatal(err)
@@ -38,12 +38,12 @@ func TestLuaReusableWidgetModulesLoad(t *testing.T) {
 	scripts := fstest.MapFS{
 		"load.lua": &fstest.MapFile{Data: []byte(`
 local modules = {
-  "darkmagic.ui.slider",
-  "darkmagic.ui.scrollbar",
-  "darkmagic.ui.list",
-  "darkmagic.ui.tabs",
-  "darkmagic.ui.panel",
-  "darkmagic.ui.progress_bar",
+  "d2legacy.ui.slider",
+  "d2legacy.ui.scrollbar",
+  "d2legacy.ui.list",
+  "d2legacy.ui.tabs",
+  "d2legacy.ui.panel",
+  "d2legacy.ui.progress_bar",
 }
 for _, name in ipairs(modules) do
   local loaded = require(name)

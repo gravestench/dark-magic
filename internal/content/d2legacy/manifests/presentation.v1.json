@@ -1,0 +1,584 @@
+{
+  "schema": "d2legacy.presentation/v1",
+  "version": 1,
+  "game_version": "diablo-ii-lod",
+  "language": "neutral",
+  "resolution": { "width": 800, "height": 600 },
+  "supported_profiles": [
+    {
+      "id": "lod-english-800x600",
+      "game_version": "diablo-ii-lod",
+      "language": "English",
+      "resolution": { "width": 800, "height": 600 }
+    },
+    {
+      "id": "lod-english-640x480-gameplay",
+      "game_version": "diablo-ii-lod",
+      "language": "English",
+      "resolution": { "width": 640, "height": 480 },
+      "screens": ["game_world","inventory","character","skills","quests","party","help","stash","cube","hireling","vendor","waypoint","pause","options","automap","death","loading","game_loading"],
+      "overrides": {
+        "screens": {
+          "game_world": {
+            "world_input_bottom": 360,
+            "map": {"screen_x":320,"screen_y":240},
+            "hero": {"screen_x":320,"screen_y":270},
+            "hud": {
+              "panel_sheet": "data/global/ui/PANEL/ctrlpnl7.dc6",
+              "panel_parts": [
+                {"frame":0,"x":0,"bottom":480},
+                {"frame":1,"x":165,"bottom":480},
+                {"frame":2,"x":293,"bottom":480},
+                {"frame":3,"x":421,"bottom":480},
+                {"frame":4,"x":523,"bottom":480}
+              ],
+              "globes": {
+                "health": {"x":30,"y":387,"overlap_x":28,"overlap_y":387},
+                "mana": {"x":530,"y":388,"overlap_x":531,"overlap_y":384}
+              },
+              "stamina": {"x":193,"y":452},
+              "experience": {"x":176,"y":441},
+              "skills": {"left":{"x":117,"y":430},"right":{"x":475,"y":430},"selector_left":90,"selector_right":560},
+              "belt": {"x":262,"y":441},
+              "run": {"x":175,"y":450},
+              "menu": {"x":312,"y":442},
+              "minipanel": {"x":245,"y":405,"button_x":248,"button_y":408}
+            }
+          },
+          "inventory": {"record_suffix":"","offset_x":-80,"offset_y":-60,"panel":{"origin_y_correction":4}},
+          "character": {"offset_x":-80,"offset_y":-60},
+          "skills": {"x":320,"y":4},
+          "quests": {"offset_x":-80,"offset_y":-60},
+          "party": {"offset_x":-80,"offset_y":-60},
+          "help": {
+            "border": {
+              "sheet":"data/global/ui/MENU/helpborder.DC6",
+              "placements":[
+                {"frame":0,"x":0,"y":0},{"frame":1,"x":256,"y":0},
+                {"frame":2,"x":0,"y":256},{"frame":3,"x":256,"y":256},
+                {"frame":4,"x":320,"y":0},{"frame":5,"x":576,"y":0},
+                {"frame":6,"x":320,"y":256},{"frame":7,"x":576,"y":256}
+              ]
+            },
+            "heading":{"x":283,"y":2,"width":260},
+            "content":{"scale_x":0.8,"hud_offset_y":-120,"text_width":500},
+            "close":{"x":525,"y":25}
+          },
+          "stash":{"x":0,"y":4},
+          "cube":{"x":0,"y":4},
+          "hireling":{"x":0,"y":4},
+          "vendor":{"x":0,"y":4},
+          "waypoint":{"x":0,"y":4},
+          "automap":{"x":320,"y":240,"width":540,"height":380},
+          "death":{"x":320,"width":600},
+          "loading":{"x":320,"y":240,"width":640,"height":480},
+          "game_loading":{"x":320,"y":240,"width":640,"height":480}
+        }
+      }
+    }
+  ],
+  "provenance": "community research verified against user-supplied archives",
+  "confidence": "verified",
+  "palettes": {
+    "sky": "data/global/Palette/sky/pal.dat",
+    "units": "data/global/Palette/units/pal.dat",
+    "loading": "data/global/Palette/loading/pal.dat",
+    "fechar": "data/global/Palette/fechar/pal.dat",
+    "static": "data/global/Palette/static/pal.dat"
+  },
+  "palette_transforms": {
+    "act1": "data/global/Palette/Act1/Pal.pl2",
+    "fechar": "data/global/Palette/fechar/Pal.pl2",
+    "loading": "data/global/Palette/loading/Pal.pl2",
+    "sky": "data/global/Palette/Sky/Pal.pl2"
+  },
+  "layouts": {
+    "frontend_tiles": {
+      "columns": [256, 256, 256, 32],
+      "rows": [256, 256, 88],
+      "direction": 0,
+      "first_frame": 0
+    }
+  },
+  "fonts": {
+    "exocet10": {
+      "table": "data/local/FONT/latin/fontexocet10.tbl",
+      "sheet": "data/local/FONT/latin/fontexocet10.dc6",
+      "palette": "units"
+    },
+    "font16": {
+      "table": "data/local/FONT/latin/font16.tbl",
+      "sheet": "data/local/FONT/latin/font16.dc6",
+      "palette": "units"
+    },
+    "font6": {
+      "table": "data/local/FONT/latin/font6.tbl",
+      "sheet": "data/local/FONT/latin/font6.dc6",
+      "palette": "units"
+    },
+    "font30": {
+      "table": "data/local/FONT/latin/font30.tbl",
+      "sheet": "data/local/FONT/latin/font30.dc6",
+      "palette": "units"
+    },
+    "font42": {
+      "table": "data/local/FONT/latin/font42.tbl",
+      "sheet": "data/local/FONT/latin/font42.dc6",
+      "palette": "units"
+    },
+    "formal10_static": {
+      "table": "data/local/FONT/latin/fontformal10.tbl",
+      "sheet": "data/local/FONT/latin/fontformal10.dc6",
+      "palette": "static"
+    },
+    "formal10_sky": {
+      "table": "data/local/FONT/latin/fontformal10.tbl",
+      "sheet": "data/local/FONT/latin/fontformal10.dc6",
+      "palette": "sky"
+    },
+    "formal11_units": {
+      "table": "data/local/FONT/latin/fontformal11.tbl",
+      "sheet": "data/local/FONT/latin/fontformal11.dc6",
+      "palette": "units"
+    },
+    "formal12_static": {
+      "table": "data/local/FONT/latin/fontformal12.tbl",
+      "sheet": "data/local/FONT/latin/fontformal12.dc6",
+      "palette": "static"
+    },
+    "formal12_sky": {
+      "table": "data/local/FONT/latin/fontformal12.tbl",
+      "sheet": "data/local/FONT/latin/fontformal12.dc6",
+      "palette": "sky"
+    }
+  },
+  "text_styles": {
+    "panel_heading": {"font":"font16","transform":"act1","text_color":"white"},
+    "panel_label": {"font":"font6","transform":"act1","text_color":"white"},
+    "panel_value": {"font":"font16","transform":"act1","text_color":"white"},
+    "formal_small": {"font":"formal10_static","text_color":"white"},
+    "formal_body": {"font":"formal11_units","text_color":"white"},
+    "formal_large": {"font":"formal12_static","text_color":"white"},
+    "frontend_version": {"font":"formal12_static","transform":"sky","text_color":"white"},
+    "frontend_legal": {"font":"formal12_static","transform":"sky","text_color":"gold"},
+    "character_select_title": {"font":"font42","transform":"sky","text_color":"gold"},
+    "character_select_metadata": {"font":"font16","transform":"sky","text_color":"white"},
+    "character_create_heading": {"font":"font30","transform":"fechar","text_color":"white"},
+    "character_create_class": {"font":"font30","transform":"fechar","text_color":"white"},
+    "character_create_description": {"font":"font16","transform":"fechar","text_color":"white"},
+    "character_create_option": {"font":"font16","transform":"fechar","text_color":"gold"},
+    "credits": {"font":"formal10_sky","transform":"sky","text_color":"gold"},
+    "button_normal": {"font":"exocet10","color":{"red":100,"green":100,"blue":100,"alpha":255}},
+    "button_hover": {"font":"exocet10","text_color":"white"},
+    "label_button_normal": {"font":"exocet10","color":{"red":100,"green":100,"blue":100,"alpha":255}},
+    "label_button_hover": {"font":"exocet10","text_color":"white"},
+    "dialog_text": {"font":"exocet10","color":{"red":100,"green":100,"blue":100,"alpha":255}},
+    "tooltip": {"font":"font16","transform":"act1","text_color":"white"},
+    "disabled": {"font":"font16","transform":"fechar","text_color":"grey"},
+    "font_lab_heading": {"font":"font30","transform":"sky","text_color":"white"},
+    "font_lab_caption": {"font":"formal10_sky","transform":"sky","text_color":"white"},
+    "font_lab_font6": {"font":"font6","transform":"sky","text_color":"white"},
+    "font_lab_font16": {"font":"font16","transform":"sky","text_color":"white"},
+    "font_lab_font30": {"font":"font30","transform":"sky","text_color":"white"},
+    "font_lab_font42": {"font":"font42","transform":"sky","text_color":"white"},
+    "font_lab_formal10": {"font":"formal10_sky","transform":"sky","text_color":"white"},
+    "font_lab_formal11": {"font":"formal11_units","transform":"sky","text_color":"white"},
+    "font_lab_formal12": {"font":"formal12_sky","transform":"sky","text_color":"white"},
+    "font_lab_color": {"font":"font16","transform":"sky","text_color":"white"},
+    "dt1_lab_tooltip": {"font":"font16","text_color":"white"},
+    "font_lab_gold_sky": {"font":"font16","transform":"sky","text_color":"gold"},
+    "font_lab_gold_fechar": {"font":"font16","transform":"fechar","text_color":"gold"},
+    "font_lab_gold_act1": {"font":"font16","transform":"act1","text_color":"gold"},
+    "ui_lab_control_idle": {"font":"font16","transform":"sky","text_color":"white"},
+    "ui_lab_control_hover": {"font":"font16","transform":"sky","text_color":"blue"},
+    "ui_lab_control_active": {"font":"font16","transform":"sky","text_color":"green"},
+    "death_primary": {"font":"font30","transform":"sky","text_color":"red"},
+    "death_secondary": {"font":"font16","transform":"sky","text_color":"red"}
+  },
+  "sounds": {
+    "button": "data/global/sfx/cursor/button.wav",
+    "select": "data/global/sfx/cursor/select.wav",
+    "title_music": "data/global/music/introedit.wav"
+  },
+  "cursor": {
+    "palette": "units",
+    "direction": 0,
+    "default_mode": "default",
+    "modes": {
+      "default": {"sheet":"data/global/ui/CURSOR/protate.DC6","fps":5,"loop":"loop","hotspot":{"x":0,"y":0}},
+      "normal": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":0,"hotspot":{"x":0,"y":0}},
+      "pressed": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":5,"hotspot":{"x":0,"y":-2}},
+      "hand": {"sheet":"data/global/ui/CURSOR/ohand.DC6","frame":6,"hotspot":{"x":0,"y":-2}}
+    }
+  },
+  "startup": {
+    "sequence": [
+      "data/local/video/New_Bliz640x480.bik",
+      "data/local/video/BlizNorth640x480.bik"
+    ],
+    "failure": "skip",
+    "skippable": true
+  },
+  "screens": {
+    "loading": {
+      "x":400,"y":300,"width":800,"height":600,
+      "fill":{"red":8,"green":8,"blue":12,"alpha":255}
+    },
+    "font_lab": {
+      "development_only": true,
+      "pages": 5
+    },
+    "title": {
+      "background": "data/global/ui/FrontEnd/trademarkscreenEXP.dc6",
+      "palette": "sky",
+      "logo": {
+        "anchor": { "x": 400, "y": 120 },
+        "frames": 30,
+        "frames_per_second": 15,
+        "palette": "units",
+        "black_left": "data/global/ui/FrontEnd/D2logoBlackLeft.DC6",
+        "black_right": "data/global/ui/FrontEnd/D2logoBlackRight.DC6",
+        "fire_left": "data/global/ui/FrontEnd/D2logoFireLeft.DC6",
+        "fire_right": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
+        "fire_blend": "additive"
+      }
+    },
+    "main_menu": {
+      "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
+      "palette": "sky",
+      "labels": {
+        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "style": "frontend_version", "key": "d2legacy.frontend.version" },
+        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "style": "frontend_legal", "key": "d2legacy.frontend.legal" }
+      },
+      "controls": {
+        "single_player": {
+          "x": 264,
+          "y": 290,
+          "width": 272,
+          "height": 35,
+          "label": "d2legacy.menu.single_player",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6",
+          "palette": "units",
+          "up_frames": [0, 1], "text_offset": 1,
+          "down_frames": [2, 3]
+        },
+        "multiplayer": {
+          "x": 264, "y": 330, "width": 272, "height": 35,
+          "label": "d2legacy.menu.multiplayer", "target": "tcpip",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
+          "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
+        },
+        "credits": {
+          "x": 264, "y": 505, "width": 135, "height": 35,
+          "label": "d2legacy.menu.credits", "target": "credits",
+          "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
+          "up_frames": [0], "down_frames": [1]
+        },
+        "cinematics": {
+          "x": 401, "y": 505, "width": 135, "height": 35,
+          "label": "d2legacy.menu.cinematics", "target": "cinematics",
+          "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
+          "up_frames": [0], "down_frames": [1]
+        },
+        "exit": {
+          "x": 264, "y": 535, "width": 272, "height": 35,
+          "label": "d2legacy.menu.exit", "action": "exit",
+          "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
+          "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
+        }
+      },
+      "logo": {
+        "anchor": { "x": 400, "y": 120 },
+        "frames": 30,
+        "frames_per_second": 15,
+        "palette": "units",
+        "black_left": "data/global/ui/FrontEnd/D2logoBlackLeft.DC6",
+        "black_right": "data/global/ui/FrontEnd/D2logoBlackRight.DC6",
+        "fire_left": "data/global/ui/FrontEnd/D2logoFireLeft.DC6",
+        "fire_right": "data/global/ui/FrontEnd/D2logoFireRight.DC6",
+        "fire_blend": "additive"
+      }
+    },
+    "tcpip": {
+      "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky",
+      "controls": {
+        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "d2legacy.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 },
+        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "d2legacy.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 }
+      },
+      "dialog": {
+        "x": 270, "y": 175, "width": 260, "height": 180,
+        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
+      }
+    },
+    "character_create": {
+      "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
+      "palette": "fechar",
+      "class_palette": "fechar",
+      "idle_frames_per_second": 15,
+      "transition_frames_per_second": 25,
+      "campfire": {
+        "sheet": "data/global/ui/FrontEnd/fire.DC6",
+        "palette": "fechar",
+        "anchor": {"x":380,"y":335},
+        "z": 90,
+        "frames_per_second": 15
+      },
+      "labels": {
+        "heading": {"x":400,"y":35,"width":760,"style":"character_create_heading","key":"d2legacy.character_create.heading"},
+        "class": {"x":400,"y":78,"width":760,"style":"character_create_class"},
+        "description": {"x":400,"y":118,"width":600,"style":"character_create_description"}
+      },
+      "option_style": "character_create_option",
+      "stage": {
+        "Amazon": {"anchor":{"x":100,"y":339},"z":50,"hit":{"x":70,"y":220,"width":55,"height":200}},
+        "Assassin": {"anchor":{"x":231,"y":365},"z":70,"hit":{"x":175,"y":235,"width":50,"height":180}},
+        "Necromancer": {"anchor":{"x":300,"y":335},"z":30,"hit":{"x":265,"y":220,"width":55,"height":175}},
+        "Barbarian": {"anchor":{"x":400,"y":330},"z":20,"hit":{"x":364,"y":201,"width":90,"height":170}},
+        "Paladin": {"anchor":{"x":521,"y":338},"z":40,"hit":{"x":490,"y":210,"width":65,"height":180}},
+        "Sorceress": {"anchor":{"x":626,"y":352},"z":60,"hit":{"x":580,"y":240,"width":65,"height":160}},
+        "Druid": {"anchor":{"x":720,"y":370},"z":80,"hit":{"x":680,"y":220,"width":70,"height":195}}
+      },
+      "dialog": {
+        "x": 270, "y": 185, "width": 260, "height": 180, "max_length": 15,
+        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
+      },
+      "options": {
+        "expansion": {"x":285,"y":530,"width":230,"height":22,"label":"d2legacy.character.expansion","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"},
+        "hardcore": {"x":285,"y":555,"width":230,"height":22,"label":"d2legacy.character.hardcore","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"}
+      },
+      "controls": {
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2legacy.character_create.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frames":[0],"down_frames":[1]}
+      },
+      "classes": [
+        {"class":"Amazon", "palette":"units", "anchor":{"x":96,"y":520}, "hit":{"x":35,"y":190,"width":125,"height":330}, "select_sound":"data/global/SFX/cursor/intro/amazon select.wav", "deselect_sound":"data/global/SFX/cursor/intro/amazon deselect.wav", "unselected":"data/global/ui/FrontEnd/amazon/AMNU1.DC6", "hover":"data/global/ui/FrontEnd/amazon/AMNU2.DC6", "selected":"data/global/ui/FrontEnd/amazon/AMNU3.DC6", "forward":"data/global/ui/FrontEnd/amazon/AMFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/amazon/AMFWs.DC6", "forward_frames":54, "back":"data/global/ui/FrontEnd/amazon/AMBW.DC6", "back_frames":30},
+        {"class":"Sorceress", "palette":"units", "anchor":{"x":704,"y":520}, "hit":{"x":640,"y":190,"width":125,"height":330}, "select_sound":"data/global/SFX/cursor/intro/sorceress select.wav", "deselect_sound":"data/global/SFX/cursor/intro/sorceress deselect.wav", "unselected":"data/global/ui/FrontEnd/sorceress/SONU1.DC6", "hover":"data/global/ui/FrontEnd/sorceress/SONU2.DC6", "selected":"data/global/ui/FrontEnd/sorceress/SONU3.DC6", "selected_overlay":"data/global/ui/FrontEnd/sorceress/SONU3s.DC6", "forward":"data/global/ui/FrontEnd/sorceress/SOFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/sorceress/SOFWs.DC6", "forward_frames":52, "back":"data/global/ui/FrontEnd/sorceress/SOBW.DC6", "back_overlay":"data/global/ui/FrontEnd/sorceress/SOBWs.DC6", "back_frames":30},
+        {"class":"Necromancer", "palette":"units", "anchor":{"x":250,"y":500}, "hit":{"x":180,"y":175,"width":125,"height":325}, "select_sound":"data/global/SFX/cursor/intro/necromancer select.wav", "deselect_sound":"data/global/SFX/cursor/intro/necromancer deselect.wav", "unselected":"data/global/ui/FrontEnd/necromancer/NENU1.DC6", "hover":"data/global/ui/FrontEnd/necromancer/NENU2.DC6", "selected":"data/global/ui/FrontEnd/necromancer/NENU3.DC6", "selected_overlay":"data/global/ui/FrontEnd/necromancer/NENU3s.DC6", "forward":"data/global/ui/FrontEnd/necromancer/NEFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/necromancer/NEFWs.DC6", "forward_frames":38, "back":"data/global/ui/FrontEnd/necromancer/NEBW.DC6", "back_overlay":"data/global/ui/FrontEnd/necromancer/NEBWs.DC6", "back_frames":28},
+        {"class":"Paladin", "palette":"units", "anchor":{"x":550,"y":500}, "hit":{"x":495,"y":175,"width":125,"height":325}, "select_sound":"data/global/SFX/cursor/intro/paladin select.wav", "deselect_sound":"data/global/SFX/cursor/intro/paladin deselect.wav", "unselected":"data/global/ui/FrontEnd/paladin/PANU1.DC6", "hover":"data/global/ui/FrontEnd/paladin/PANU2.DC6", "selected":"data/global/ui/FrontEnd/paladin/PANU3.DC6", "forward":"data/global/ui/FrontEnd/paladin/PAFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/paladin/PAFWs.DC6", "forward_frames":80, "back":"data/global/ui/FrontEnd/paladin/PABW.DC6", "back_frames":40},
+        {"class":"Barbarian", "palette":"units", "anchor":{"x":400,"y":470}, "hit":{"x":335,"y":145,"width":130,"height":325}, "select_sound":"data/global/SFX/cursor/intro/barbarian select.wav", "deselect_sound":"data/global/SFX/cursor/intro/barbarian deselect.wav", "unselected":"data/global/ui/FrontEnd/barbarian/banu1.DC6", "hover":"data/global/ui/FrontEnd/barbarian/banu2.DC6", "selected":"data/global/ui/FrontEnd/barbarian/banu3.DC6", "forward":"data/global/ui/FrontEnd/barbarian/bafw.DC6", "forward_overlay":"data/global/ui/FrontEnd/barbarian/BAFWs.DC6", "forward_frames":64, "back":"data/global/ui/FrontEnd/barbarian/babw.DC6", "back_frames":19},
+        {"class":"Assassin", "palette":"units", "anchor":{"x":175,"y":550}, "hit":{"x":115,"y":245,"width":125,"height":305}, "select_sound":"data/global/SFX/Cursor/intro/assassin select.wav", "deselect_sound":"data/global/SFX/Cursor/intro/assassin deselect.wav", "unselected":"data/global/ui/FrontEnd/assassin/ASNU1.DC6", "hover":"data/global/ui/FrontEnd/assassin/ASNU2.DC6", "selected":"data/global/ui/FrontEnd/assassin/ASNU3.DC6", "forward":"data/global/ui/FrontEnd/assassin/ASFW.DC6", "forward_frames":91, "back":"data/global/ui/FrontEnd/assassin/ASBW.DC6", "back_frames":51},
+        {"class":"Druid", "palette":"units", "anchor":{"x":625,"y":550}, "hit":{"x":565,"y":245,"width":125,"height":305}, "select_sound":"data/global/SFX/Cursor/intro/druid select.wav", "deselect_sound":"data/global/SFX/Cursor/intro/druid deselect.wav", "unselected":"data/global/ui/FrontEnd/druid/DZNU1.DC6", "hover":"data/global/ui/FrontEnd/druid/DZNU2.DC6", "selected":"data/global/ui/FrontEnd/druid/DZNU3.DC6", "forward":"data/global/ui/FrontEnd/druid/DZFW.DC6", "forward_frames":121, "back":"data/global/ui/FrontEnd/druid/DZBW.DC6", "back_frames":40}
+      ]
+    },
+    "character_select": {
+      "background": "data/global/ui/CharSelect/characterselectscreenEXP.dc6",
+      "palette": "sky",
+      "selection": "data/global/ui/CharSelect/charselectbox.dc6",
+      "selection_palette": "sky",
+      "preview_palette": "fechar",
+      "metadata_style": "character_select_metadata",
+      "title": {"x":400,"y":45,"width":760,"style":"character_select_title"},
+      "grid": {
+        "x": 37, "y": 86, "columns": 2, "rows": 4,
+        "cell_width": 272, "cell_height": 92,
+        "column_step": 270, "row_step": 95,
+        "text_offset": {"x": 78, "y": 14},
+        "preview_offset": {"x": 42, "y": 48},
+        "preview_scale": 0.32
+      },
+      "scrollbar": {"x":586,"y":87,"width":20,"height":369,"sheet":"data/global/ui/PANEL/scrollbar.dc6","palette":"sky","up_frame":0,"down_frame":1,"thumb_frame":4},
+      "double_activation_seconds": 1.25,
+      "controls": {
+        "new": {"x":33,"y":468,"width":160,"height":65,"label":"d2legacy.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
+        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"d2legacy.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2legacy.character_select.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "ok": {"x":625,"y":537,"width":135,"height":35,"label":"d2legacy.character_select.ok","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1}
+      },
+      "delete_dialog": {
+        "x":270,"y":175,"width":260,"height":180,
+        "sheet":"data/global/ui/FrontEnd/PopUpOKCancel.dc6","palette":"fechar",
+        "yes":{"x":422,"y":308,"width":80,"height":30},
+        "no":{"x":282,"y":308,"width":80,"height":30}
+      }
+    },
+    "cinematics": {
+      "background": "data/global/ui/FrontEnd/CinematicsSelectionEXP.dc6",
+      "palette": "sky",
+      "x": 240,
+      "y": 90,
+      "entries": [
+        { "id": "act1", "label": "d2legacy.cinematics.act1", "path": "data/local/Video/ENG/d2intro640x292.bik" },
+        { "id": "act2", "label": "d2legacy.cinematics.act2", "path": "data/local/Video/ENG/Act02start640x292.bik" },
+        { "id": "act3", "label": "d2legacy.cinematics.act3", "path": "data/local/Video/ENG/Act03start640x292.bik" },
+        { "id": "act4", "label": "d2legacy.cinematics.act4", "path": "data/local/Video/ENG/Act04start640x292.bik" },
+        { "id": "terror_end", "label": "d2legacy.cinematics.terror_end", "path": "data/local/Video/ENG/Act04end640x292.bik" },
+        { "id": "act5", "label": "d2legacy.cinematics.act5", "path": "data/local/Video/ENG/D2x_Intro_640x292.bik" },
+        { "id": "destruction_end", "label": "d2legacy.cinematics.destruction_end", "path": "data/local/Video/ENG/D2x_Out_640x292.bik" }
+      ],
+      "list": { "x": 235, "y": 145, "width": 330, "row_height": 42 }
+    },
+    "game_loading": {
+      "sheet": "data/global/ui/Loading/loadingscreen.dc6",
+      "palette": "loading",
+      "x":400,"y":300,"width":800,"height":600,
+      "fill":{"red":0,"green":0,"blue":0,"alpha":255},
+      "sweep_seconds": 1.5,
+      "dependencies": ["selected_character", "loading_assets", "world"]
+    },
+    "game_world": {
+      "world_input_bottom": 480,
+      "map": {
+        "ds1": "data/global/tiles/Act1/BARRACKS/barE.ds1",
+        "dt1": [
+          "data/global/tiles/Act1/BARRACKS/floor.dt1",
+          "data/global/tiles/Act1/BARRACKS/basewall.dt1",
+          "data/global/tiles/Act1/BARRACKS/barset.dt1"
+        ],
+        "palette": "data/global/palette/ACT1/pal.pl2",
+        "screen_x": 400,
+        "screen_y": 300,
+        "z": -100
+      },
+      "hero": {"scale":1.0,"screen_x":400,"screen_y":330},
+      "hud": {
+        "palette": "sky",
+        "panel_sheet": "data/global/ui/PANEL/800ctrlpnl7.dc6",
+        "panel_parts": [
+          {"frame":0,"x":0,"bottom":600},
+          {"frame":1,"x":165,"bottom":600},
+          {"frame":2,"x":293,"bottom":600},
+          {"frame":3,"x":421,"bottom":600},
+          {"frame":4,"x":549,"bottom":600},
+          {"frame":5,"x":683,"bottom":600}
+        ],
+        "globes": {
+          "sheet": "data/global/ui/PANEL/hlthmana.DC6",
+          "overlap_sheet": "data/global/ui/PANEL/overlap.DC6",
+          "health": {"frame":0,"overlap_frame":0,"x":30,"y":507,"width":80,"height":80,"overlap_x":28,"overlap_y":507},
+          "mana": {"frame":1,"overlap_frame":1,"x":690,"y":508,"width":80,"height":80,"overlap_x":691,"overlap_y":504}
+        },
+        "stamina": {"x":273,"y":572,"width":102,"height":19,"color":{"red":175,"green":136,"blue":72,"alpha":200}},
+        "experience": {"x":256,"y":561,"width":120,"height":4,"color":{"red":92,"green":72,"blue":180,"alpha":220}},
+        "skills": {"sheet":"data/global/ui/SPELLS/Skillicon.DC6","frame":2,"width":48,"height":48,"left":{"x":117,"y":550},"right":{"x":635,"y":550},"selector_left":90,"selector_right":720},
+        "belt": {"sheet":"data/global/ui/PANEL/ctrlpnl_popbelt.DC6","x":342,"y":561,"columns":4,"rows":4,"cell_width":31,"cell_height":31},
+        "run": {"sheet":"data/global/ui/PANEL/runbutton.dc6","x":255,"y":570,"width":16,"height":20,"walk_frame":0,"run_frame":2},
+        "menu": {"sheet":"data/global/ui/PANEL/menubutton.dc6","x":392,"y":562,"width":15,"height":24,"closed_frame":0,"open_frame":2},
+        "minipanel": {
+          "sheet":"data/global/ui/PANEL/minipanel_s.dc6","x":325,"y":525,
+          "button_sheet":"data/global/ui/PANEL/minipanelbtn.dc6","button_x":328,"button_y":528,"button_step":21,"button_width":20,"button_height":20,
+          "buttons":[
+            {"id":"character","label":"d2legacy.minipanel.character","frame":0,"scene":"character","slot":"left","enabled":true},
+            {"id":"inventory","label":"d2legacy.minipanel.inventory","frame":2,"scene":"inventory","slot":"right","enabled":true},
+            {"id":"skills","label":"d2legacy.minipanel.skills","frame":4,"scene":"skills","slot":"right","enabled":true},
+            {"id":"automap","label":"d2legacy.minipanel.automap","frame":8,"scene":"automap","slot":"full","enabled":true},
+            {"id":"messages","label":"d2legacy.minipanel.messages","frame":10,"scene":"messages","slot":"full","enabled":true},
+            {"id":"quests","label":"d2legacy.minipanel.quests","frame":12,"scene":"quests","slot":"left","enabled":true},
+            {"id":"options","label":"d2legacy.minipanel.options","frame":14,"scene":"options","slot":"full","enabled":true}
+          ]
+        }
+      }
+    },
+    "inventory": {
+      "records": "data/global/excel/Inventory.txt",
+      "record_suffix": "2",
+      "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","origin_x_correction":1,"origin_y_correction":64,"frames":[4,5,7,6]},
+      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":419,"y":449,"width":32,"height":32,"label":"d2legacy.inventory.close"},
+      "slots": [
+        {"id":"head","prefix":"head","body_loc":"head","label":"d2legacy.inventory.slot.head"},
+        {"id":"neck","prefix":"neck","body_loc":"neck","label":"d2legacy.inventory.slot.neck"},
+        {"id":"torso","prefix":"torso","body_loc":"tors","label":"d2legacy.inventory.slot.torso"},
+        {"id":"right_arm","prefix":"rArm","body_loc":"rarm","label":"d2legacy.inventory.slot.right_arm"},
+        {"id":"left_arm","prefix":"lArm","body_loc":"larm","label":"d2legacy.inventory.slot.left_arm"},
+        {"id":"right_hand","prefix":"rHand","body_loc":"rrin","label":"d2legacy.inventory.slot.right_hand"},
+        {"id":"left_hand","prefix":"lHand","body_loc":"lrin","label":"d2legacy.inventory.slot.left_hand"},
+        {"id":"belt","prefix":"belt","body_loc":"belt","label":"d2legacy.inventory.slot.belt"},
+        {"id":"feet","prefix":"feet","body_loc":"feet","label":"d2legacy.inventory.slot.feet"},
+        {"id":"gloves","prefix":"gloves","body_loc":"glov","label":"d2legacy.inventory.slot.gloves"}
+      ]
+    },
+    "character": {
+      "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","x":80,"y":64,"frames":[0,1,3,2]},
+      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":208,"y":453,"width":32,"height":32,"label":"d2legacy.character_panel.close"},
+      "heading_style":"panel_heading",
+      "label_style":"panel_label",
+      "value_style":"panel_value",
+      "headings":[
+        {"field":"name","x":165,"y":72},
+        {"field":"class","x":330,"y":74}
+      ],
+      "values":[
+        {"field":"level","label":"d2legacy.character_panel.level","label_x":110,"label_y":100,"x":112,"y":110},
+        {"field":"experience","label":"d2legacy.character_panel.experience","label_x":200,"label_y":100,"x":200,"y":110},
+        {"field":"next_level_experience","label":"d2legacy.character_panel.next_level","label_x":330,"label_y":100,"x":330,"y":110},
+        {"field":"strength","label":"d2legacy.character_panel.strength","label_x":100,"label_y":150,"x":175,"y":147},
+        {"field":"dexterity","label":"d2legacy.character_panel.dexterity","label_x":100,"label_y":213,"x":175,"y":207},
+        {"field":"vitality","label":"d2legacy.character_panel.vitality","label_x":95,"label_y":300,"x":175,"y":295},
+        {"field":"energy","label":"d2legacy.character_panel.energy","label_x":100,"label_y":360,"x":175,"y":355},
+        {"field":"defense","label":"d2legacy.character_panel.defense","label_x":280,"label_y":260,"x":350,"y":260},
+        {"field":"stamina_pair","label":"d2legacy.character_panel.stamina","label_x":280,"label_y":300,"x":350,"y":295},
+        {"field":"health_pair","label":"d2legacy.character_panel.life","label_x":280,"label_y":322,"x":350,"y":320},
+        {"field":"mana_pair","label":"d2legacy.character_panel.mana","label_x":280,"label_y":360,"x":350,"y":355}
+      ]
+    },
+    "skills": {"x":400,"y":64,"unavailable_bottom":70,"close_inset":48},
+    "help": {
+      "border":{"sheet":"data/global/ui/MENU/800helpborder.DC6","palette":"sky","frame_order":[0,1,2,3,4,5,6],"middle_overlap":40},
+      "yellow_bullet":"data/global/ui/MENU/helpyellowbullet.DC6",
+      "white_bullet":"data/global/ui/MENU/helpwhitebullet.DC6",
+      "heading":{"x":363,"y":2,"width":260},
+      "content":{"scale_x":1,"hud_offset_y":0,"text_width":600},
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":685,"y":25,"width":32,"height":32,"label":"d2legacy.help.close"}
+    },
+    "quests": {
+      "panel":{"sheet":"data/global/ui/MENU/questbackground.dc6","palette":"sky","x":80,"y":64,"frames":[0,1,2,3]},
+      "tabs":{"sheet":"data/global/ui/MENU/expquesttabs.dc6","palette":"sky","x":86,"y":66,"step":61},
+      "sockets":{"sheet":"data/global/ui/MENU/questsockets.dc6","palette":"sky","positions":[{"x":100,"y":95},{"x":200,"y":95},{"x":300,"y":95},{"x":100,"y":190},{"x":200,"y":190},{"x":300,"y":190}]},
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":455,"width":32,"height":32,"label":"d2legacy.quests.close"},
+      "unavailable":{"x":240,"y":317,"width":280}
+    },
+    "party": {
+      "panel":{"sheet":"data/global/ui/MENU/party.dc6","palette":"sky","x":80,"y":64,"frames":[0,1,2,3]},
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":453,"width":32,"height":32,"label":"d2legacy.party.close"},
+      "heading":{"x":180,"y":80,"width":180},
+      "unavailable":{"x":240,"y":145,"width":280}
+    },
+    "stash": {
+      "sheet":"data/global/ui/PANEL/TradeStash.DC6","palette":"sky","x":80,"y":64,
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.stash.close"},
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Big Bank Page 1","container":"stash"}
+    },
+    "cube": {
+      "sheet":"data/global/ui/PANEL/supertransmogrifier.dc6","palette":"sky","x":80,"y":64,
+      "close":{"x":275,"bottom_inset":15,"label":"d2legacy.cube.close"},
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Transmogrify Box Page 1","container":"cube"}
+    },
+    "hireling": {
+      "sheet":"data/global/ui/PANEL/NpcInv.dc6","palette":"sky","x":80,"y":64,
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.hireling.close"},
+      "item_slots":{
+        "records":"data/global/excel/Inventory.txt","record_class":"Hireling","container":"hireling",
+        "slots":[
+          {"prefix":"head","body_loc":"head","placeholder":{"sheet":"data/global/ui/PANEL/inv_helm_glove.DC6","frame":1,"offset_x":-2,"offset_y":-1}},
+          {"prefix":"torso","body_loc":"tors","placeholder":{"sheet":"data/global/ui/PANEL/inv_armor.DC6","frame":0,"offset_y":-2}},
+          {"prefix":"rArm","body_loc":"rarm","placeholder":{"sheet":"data/global/ui/PANEL/inv_weapons.DC6","frame":0,"offset_x":-2,"offset_y":-2}},
+          {"prefix":"lArm","body_loc":"larm","placeholder":{"sheet":"data/global/ui/PANEL/inv_weapons.DC6","frame":0,"offset_x":-2,"offset_y":-2}}
+        ]
+      }
+    },
+    "vendor": {
+      "sheet":"data/global/ui/PANEL/buysell.dc6","palette":"sky","x":80,"y":64,
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.vendor.close"},
+      "tabs":{"sheet":"data/global/ui/PANEL/buyselltabs.DC6","labels":["d2legacy.vendor.armor","d2legacy.vendor.weapons","d2legacy.vendor.weapons","d2legacy.vendor.misc"],"categories":["armo","weap","weap","misc"]},
+      "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Monster","container":"vendor"}
+    },
+    "waypoint": {
+      "sheet":"data/global/ui/MENU/waygatebackground.dc6","palette":"sky","x":80,"y":64,
+      "close":{"x":272,"bottom_inset":14,"label":"d2legacy.waypoint.close"},
+      "labels":[{"key":"d2legacy.waypoint.unavailable","x":160,"y":385,"width":250}]
+    },
+    "automap": {
+      "x":400,"y":300,"width":700,"height":500,
+      "fill":{"red":40,"green":36,"blue":28,"alpha":120}
+    },
+    "death": {
+      "x":400,"width":760,
+      "died_y":145,"continue_y":195,"hardcore_y":255
+    },
+    "credits": {
+      "background": "data/global/ui/CharSelect/creditsbckgexpand.dc6",
+      "palette": "sky",
+      "text": "data/local/ui/eng/ExpansionCredits.txt",
+      "text_style": "credits",
+      "lines_per_page": 28
+    }
+  }
+}

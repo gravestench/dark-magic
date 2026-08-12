@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 var (
@@ -24,16 +24,18 @@ type MaterializationProgress struct {
 }
 
 type stampLoader func(fs.FS, string, []string, ...ObjectResolver) (*Map, error)
+type ZonePostprocessor func(*Map, *worldgen.Zone, []*TileCatalog) error
 
 // Materializer incrementally joins generated stamp recipes into one immutable
 // world map. Callers may run Step on a worker goroutine because it performs no
 // native renderer work. Result becomes visible only after all steps succeed.
 type Materializer struct {
 	source       fs.FS
-	zone         *mapgen.Zone
+	zone         *worldgen.Zone
 	resolver     ObjectResolver
-	stamps       []mapgen.Stamp
+	stamps       []worldgen.Stamp
 	load         stampLoader
+	postprocess  ZonePostprocessor
 	catalogs     map[string]*TileCatalog
 	catalogOrder []*TileCatalog
 	assembled    *Map
@@ -41,7 +43,14 @@ type Materializer struct {
 	done         bool
 }
 
-func NewMaterializer(source fs.FS, zone *mapgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
+// SetPostprocessor installs a mod-selected final recipe interpretation step.
+// The engine owns decoded map assembly; a mod may translate its own recipe
+// vocabulary into tile choices after every authored stamp is present.
+func (materializer *Materializer) SetPostprocessor(postprocess ZonePostprocessor) {
+	materializer.postprocess = postprocess
+}
+
+func NewMaterializer(source fs.FS, zone *worldgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
 	if source == nil || zone == nil {
 		return nil, errors.New("world: materializer requires an asset source and zone")
 	}
@@ -106,15 +115,49 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
-	if materializer.done && materializer.zone.Kind() == mapgen.Outdoor && materializer.zone.Request().Act == 1 {
-		if err := materializer.assembled.realizeActOneDirtPath(materializer.zone.Paths(), materializer.catalogOrder); err != nil {
+	if materializer.done {
+		if err := materializeRecipeFloors(materializer.assembled, materializer.zone, materializer.catalogOrder); err != nil {
 			return err
+		}
+		if materializer.postprocess != nil {
+			if err := materializer.postprocess(materializer.assembled, materializer.zone, append([]*TileCatalog(nil), materializer.catalogOrder...)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (materializer *Materializer) loadCached(stamp mapgen.Stamp) (*Map, error) {
+// materializeRecipeFloors applies opaque floor identities selected by a mod's
+// admitted world recipe. The engine performs only catalog lookup and placement;
+// it does not know why a route cell uses a particular DT1 identity.
+func materializeRecipeFloors(world *Map, zone *worldgen.Zone, catalogs []*TileCatalog) error {
+	changed := false
+	for _, tile := range zone.Paths() {
+		if tile.MainIndex == 0 && tile.SubIndex == 0 {
+			continue
+		}
+		identity := TileIdentity{MainIndex: tile.MainIndex, SubIndex: tile.SubIndex}
+		var reference TileReference
+		var found bool
+		for _, catalog := range catalogs {
+			if reference, found = catalog.Select(identity, tile.X, tile.Y, 0); found {
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("world: recipe floor (%d,%d) is unavailable at %d,%d", identity.MainIndex, identity.SubIndex, tile.X, tile.Y)
+		}
+		world.ReplaceFloor(tile.X, tile.Y, identity, reference)
+		changed = true
+	}
+	if changed {
+		world.RebuildFlags()
+	}
+	return nil
+}
+
+func (materializer *Materializer) loadCached(stamp worldgen.Stamp) (*Map, error) {
 	key := strings.Join(stamp.TilePaths, "\x00")
 	catalog := materializer.catalogs[key]
 	if catalog == nil {

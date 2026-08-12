@@ -1,29 +1,33 @@
 # prefix	class	destination	reason
-internal/game/data/	data	go:data	D2 schemas and immutable decoded records may remain in Go
+internal/game/data/model/	data	go:data	Passive D2 file schemas only; CI rejects behavior and interpreted constant vocabularies
+internal/game/data/store/	mechanism	go:engine	Generic immutable lossless row storage provenance and invalidation
+internal/game/data/typed/	mechanism	go:engine	Caller-selected schema binding and deterministic indexes without table composition
+internal/mod/d2legacy/data/	data	go:d2legacy	Parsers and immutable stores for first-party recovered d2legacy content
 internal/game/ecs/	mechanism	go:engine	mod-neutral ECS schedule storage queries and barriers
 internal/game/simulation/	mechanism	go:engine	command RNG and replay primitives; embedded policy must split
 internal/game/session/	mechanism	go:engine	policy-neutral session host; D2 handlers must split
-internal/game/combat/	d2-policy	lua:d2legacy	current D2 combat migration source
-internal/game/skill/	d2-policy	lua:d2legacy	current D2 cast and skill migration source
-internal/game/missile/	d2-policy	lua:d2legacy	current D2 missile migration source; generic motion may split
-internal/game/monster/	d2-policy	lua:d2legacy	current D2 population AI and death migration source
-internal/game/loot/	d2-policy	lua:d2legacy	current D2 treasure item and affix policy migration source
-internal/game/item/	d2-policy	lua:d2legacy	current D2 container equipment vendor and service policy
-internal/game/player/	d2-policy	lua:d2legacy	current D2 character admission and equipment policy
-internal/game/stats/	d2-policy	lua:d2legacy	current D2 stat authority migration source
-internal/game/state/	d2-policy	lua:d2legacy	current D2 state policy; generic timed stores may split
-internal/game/action/	d2-policy	lua:d2legacy	current D2 action policy; generic scheduling may split
-internal/game/interaction/	d2-policy	lua:d2legacy	current D2 interaction and commerce policy
-internal/game/transition/	d2-policy	lua:d2legacy	current D2 warp and progression transition policy
-internal/game/ownedunit/	d2-policy	lua:d2legacy	current D2 summon hireling and lifecycle policy
-internal/game/mapgen/	d2-policy	lua:d2legacy	D2 generation policy; generic algorithms may split
-internal/game/world/	transitional	split:engine+d2legacy	geometry navigation and D2 world policy are mixed
-internal/game/targeting/	transitional	split:engine+d2legacy	spatial mechanism and D2 target semantics are mixed
-internal/runtime/lua/	adapter	go:runtime	Lua sandbox capabilities and transitional D2 facades
-internal/content/shim/lua/darkmagic/gameplay/	transitional	lua:d2legacy	early gameplay helpers must join the explicit mod
-internal/content/shim/lua/darkmagic/dev/	adapter	lua:development	developer instruments consuming production boundaries
-internal/content/shim/lua/darkmagic/screens/	adapter	lua:presentation	first-party screens and labs
-internal/content/shim/lua/darkmagic/overlays/	adapter	lua:presentation	first-party overlay presentation
-internal/content/shim/lua/darkmagic/presentation/	adapter	lua:presentation	world presentation adapters
-internal/content/shim/lua/darkmagic/ui/	adapter	lua:presentation	reusable UI and input composition
-internal/content/shim/lua/darkmagic/bootstrap/	adapter	lua:composition	mod and presentation composition
+internal/game/world/	mechanism	go:engine	decoded map facts geometry navigation selection depth and materialization contain no D2 gameplay policy
+internal/game/worldgen/	mechanism	go:engine	mod-neutral immutable recipe validation canonicalization and checksums
+internal/runtime/lua/	adapter	go:runtime	mod-neutral Lua sandbox authoritative capabilities and scoped resources
+internal/mod/d2legacy/adapter/	adapter	go:d2legacy	trusted save world and transport adapters feeding plain facts to d2legacy
+internal/content/d2legacy/lua/d2legacy/gameplay/	adapter	lua:d2legacy	mod-owned presentation snapshots and composite recipe adapters over authoritative facts
+internal/content/d2legacy/lua/d2legacy/dev/	adapter	lua:development	developer instruments consuming production boundaries
+internal/content/d2legacy/lua/d2legacy/screens/	adapter	lua:presentation	first-party screens and labs
+internal/content/d2legacy/lua/d2legacy/overlays/	adapter	lua:presentation	first-party overlay presentation
+internal/content/d2legacy/lua/d2legacy/presentation/	adapter	lua:presentation	world presentation adapters
+internal/content/d2legacy/lua/d2legacy/ui/	adapter	lua:presentation	reusable UI and input composition
+internal/content/d2legacy/lua/d2legacy/authoritative.lua	d2-policy	lua:d2legacy	canonical authoritative gameplay composition root
+internal/content/d2legacy/lua/d2legacy/audio.lua	d2-policy	lua:d2legacy	Diablo Sounds.txt selection path and playback policy
+internal/content/d2legacy/lua/d2legacy/bootstrap/	adapter	lua:composition	presentation composition and scene registration
+internal/content/d2legacy/lua/d2legacy/commands/	d2-policy	lua:d2legacy	authoritative Diablo command validation and admission
+internal/content/d2legacy/lua/d2legacy/components/	d2-policy	lua:d2legacy	authoritative Diablo component schemas
+internal/content/d2legacy/lua/d2legacy/data/	d2-policy	lua:d2legacy	interpretation of decoded records as Diablo rules
+internal/content/d2legacy/lua/d2legacy/items/	d2-policy	lua:d2legacy	Diablo item container snapshots and policy helpers
+internal/content/d2legacy/lua/d2legacy/interactions/	d2-policy	lua:d2legacy	Diablo NPC interaction context and presentation adapter
+internal/content/d2legacy/lua/d2legacy/loot/	d2-policy	lua:d2legacy	Diablo treasure class quality affix and property policy
+internal/content/d2legacy/lua/d2legacy/mapgen/	d2-policy	lua:d2legacy	authoritative Diablo preset maze and outdoor generation policy
+internal/content/d2legacy/lua/d2legacy/owned_units/	d2-policy	lua:d2legacy	Diablo summon pet trap minion and hireling ownership limits lifetime and attribution policy
+internal/content/d2legacy/lua/d2legacy/player_intents.lua	adapter	lua:d2legacy	Diablo input vocabulary translated into generic command intents
+internal/content/d2legacy/lua/d2legacy/policy/	d2-policy	lua:d2legacy	Diablo formulas and decisions
+internal/content/d2legacy/lua/d2legacy/save/	d2-policy	lua:d2legacy	Diablo character identity creation and roster policy
+internal/content/d2legacy/lua/d2legacy/systems/	d2-policy	lua:d2legacy	authoritative Diablo fixed-tick systems

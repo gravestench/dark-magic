@@ -18,7 +18,7 @@ func TestSimulationModuleMovesPersistentWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.simulation/v1"); s.move_hero(10,-5); x=s.state().hero_x`)}}, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("engine.simulation/v1"); s.move_hero(10,-5); x=s.state().hero_x`)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	if world.Hero.X != 60 || world.Hero.Y != 35 {

@@ -5,29 +5,23 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gravestench/dark-magic/internal/game/mapgen"
-	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
+	"github.com/gravestench/akara"
+
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 // buildEntryWorld generates and materializes both sides of the first playable
 // zone seam. Maps publish together; a half-built wilderness is never active.
 func (app *application) buildEntryWorld() error {
-	snapshot, err := app.gameData.Snapshot()
+	entryWorld, err := d2mapgen.GenerateEntryWorld(app.ctx, app.options.Content, app.records, 1)
 	if err != nil {
-		return wrap("load entry-world records", err)
+		return wrap("generate d2legacy entry world", err)
 	}
-	townZone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{
-		Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1, Difficulty: mapgen.Normal,
-	})
-	if err != nil {
-		return wrap("generate Act I town", err)
-	}
-	moorZone, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2, Difficulty: mapgen.Normal}, townZone.Stamps()[0])
-	if err != nil {
-		return wrap("generate Blood Moor", err)
-	}
+	townZone, moorZone := entryWorld.Town, entryWorld.Wilderness
 	townMap, err := app.materializeZone(townZone)
 	if err != nil {
 		return wrap("materialize Act I town", err)
@@ -36,17 +30,14 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("materialize Blood Moor", err)
 	}
-	seam, err := gameworld.NewActOneTownMoorSeam(townZone, townMap, moorZone, moorMap)
+	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, moorMap)
 	if err != nil {
 		return wrap("join Act I town to Blood Moor", err)
 	}
-	app.transitionAuthority, err = gametransition.NewAuthority(seam)
-	if err != nil {
-		return wrap("create zone transition authority", err)
-	}
-	app.gameWorldZones = map[int]*mapgen.Zone{1: townZone, 2: moorZone}
+	app.transitionSeam = seam
+	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	townSpawnX, townSpawnY, found := townMap.ActOneTownEntry()
+	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, app.options.Content, app.records, townMap)
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}
@@ -67,14 +58,43 @@ func (app *application) buildEntryWorld() error {
 			app.gameWorlds[app.activeWorldLevel], spawn[0], spawn[1], app.profile.Width, app.profile.Height,
 		)
 	}
-	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
+}
+
+// syncActiveWorldFromPlayer is a presentation adapter. Lua has already
+// committed the authoritative level change; this only swaps client-side map
+// caches and navigation inputs to match that fact.
+func (app *application) syncActiveWorldFromPlayer() {
+	controls, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.player_control")
+	if !ok {
+		return
+	}
+	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
+	if !ok {
+		return
+	}
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		owner, _ := control.Get("player")
+		if owner != "local-player" {
+			continue
+		}
+		location, found := locations.Get(entity)
+		if !found {
+			return
+		}
+		level, _ := location.Get("level_id")
+		if levelID := int(level.(int64)); levelID != app.activeWorldLevel {
+			app.activateWorld(levelID)
+		}
+		return
+	}
 }
 
 // entryWorldSpawns keeps the real admission rule and the screenshot fixture
 // choice visibly separate. Players normally enter town at the campfire. A
 // development capture may instead stand just inside either side of the seam.
-func entryWorldSpawns(fixtureSpawn string, seam gameworld.Seam, townX, townY float64) (map[int][2]float64, error) {
+func entryWorldSpawns(fixtureSpawn string, seam gametransition.Seam, townX, townY float64) (map[int][2]float64, error) {
 	switch fixtureSpawn {
 	case "", "entry":
 		return map[int][2]float64{1: {townX, townY}, 2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY}}, nil
@@ -85,7 +105,25 @@ func entryWorldSpawns(fixtureSpawn string, seam gameworld.Seam, townX, townY flo
 	}
 }
 
-func (app *application) materializeZone(zone *mapgen.Zone) (*gameworld.Map, error) {
+// transitionBootstrapData exports collision-derived seam geometry without
+// deciding what it means. The d2legacy mod owns level identities, trigger
+// distance, arrival behavior, and the authoritative transition system.
+func (app *application) transitionBootstrapData() map[string]any {
+	endpoint := func(source, destination gametransition.SeamEndpoint) map[string]any {
+		return map[string]any{
+			"source_level": float64(source.LevelID), "destination_level": float64(destination.LevelID),
+			"source_x": source.X, "source_y": source.Y,
+			"arrival_x": destination.ArrivalX, "arrival_y": destination.ArrivalY,
+			"world_width": destination.Width, "world_height": destination.Height,
+		}
+	}
+	return map[string]any{"seams": []any{
+		endpoint(app.transitionSeam.Town, app.transitionSeam.Wilderness),
+		endpoint(app.transitionSeam.Wilderness, app.transitionSeam.Town),
+	}}
+}
+
+func (app *application) materializeZone(zone *worldgen.Zone) (*gameworld.Map, error) {
 	materializer, err := gameworld.NewMaterializer(app.options.Content, zone, app.worldObjectResolver)
 	if err != nil {
 		return nil, err
@@ -128,8 +166,5 @@ func (app *application) activateWorld(levelID int) {
 	}
 	if app.movementSource != nil {
 		app.movementSource.SetNavigation(worldMap)
-	}
-	if app.interactionAuthority != nil {
-		app.interactionAuthority.ConfigureWorld(worldMap)
 	}
 }

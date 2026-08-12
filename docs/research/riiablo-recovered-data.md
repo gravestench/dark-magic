@@ -2,16 +2,16 @@
 
 This audit separates portable Diablo II knowledge from Riiablo implementation
 details. The source project is Apache-2.0 licensed; imported tables retain their
-original bytes and provenance under `internal/content/shim/data/recovered`.
+original bytes and provenance under `internal/content/d2legacy/data/recovered`.
 
 ## Imported declarative sources
 
 | Riiablo source | Normalized meaning | Dark Magic owner |
 | --- | --- | --- |
-| `assets/data/quests.txt` | Quest IDs, act/order, prerequisites, icons, title and stage string keys | `dm.quest_catalog/v1` |
-| `assets/data/speech.txt` | Logical `Sounds.txt` ID to localization key | `dm.quest_catalog/v1` |
-| `assets/data/ds1types.txt` | DS1 definition ID to descriptive name and level type | `dm.map_catalog/v1` |
-| `assets/data/obj.txt` | Act-local DS1 object ID to global `Objects.txt` ID | `dm.map_catalog/v1` |
+| `assets/data/quests.txt` | Quest IDs, act/order, prerequisites, icons, title and stage string keys | `engine.quest_catalog/v1` |
+| `assets/data/speech.txt` | Logical `Sounds.txt` ID to localization key | `engine.quest_catalog/v1` |
+| `assets/data/ds1types.txt` | DS1 definition ID to descriptive name and level type | `engine.map_catalog/v1` |
+| `assets/data/obj.txt` | Act-local DS1 object ID to global `Objects.txt` ID | `engine.map_catalog/v1` |
 
 DS1 object type `2` is static and uses `obj.txt`; type `1` is dynamic and uses
 the mounted `MonPreset.txt` act-local ordering. Dark Magic applies the recovered
@@ -30,7 +30,7 @@ and are created once rather than cloning catalogs for each decoded object.
 4. Display the remaining lines while playing the logical sound ID.
 5. Stop the sound when dialogue completes or is dismissed.
 
-Dark Magic normalizes steps 1–3 through `dm.quest_catalog.dialog`. Lua owns the
+Dark Magic normalizes steps 1–3 through `engine.quest_catalog.dialog`. Lua owns the
 presentation lifecycle and calls the existing locale/audio capabilities; this
 avoids embedding font metrics or a particular widget toolkit in game data.
 

@@ -1,3 +1,1 @@
 # importer	dependency	reason
-internal/game/session/movement.go	internal/game/action	transitional player movement action state moves with the first authoritative Lua domain slice
-internal/game/session/skills.go	internal/game/action	transitional player skill action state moves with the Fire Bolt slice

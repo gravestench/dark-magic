@@ -86,7 +86,7 @@ D2MOO AI control stores owner type/GUID, maintains minion lists, and can retriev
 Dark Magic should use stable ECS/entity relationships, for example:
 
 ```text
-dm.owned_unit
+d2legacy.owned_unit
   owner_entity
   category
   durable_id

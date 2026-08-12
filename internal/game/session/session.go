@@ -63,33 +63,67 @@ type Session struct {
 	closed              bool
 }
 
+// RegisterAuthoritativeRuntime pins one rule implementation and its engine-owned
+// durable stores into the session. The runtime may be Lua today or another
+// adapter later; session determinism depends only on these language-neutral
+// participants.
+func (session *Session) RegisterAuthoritativeRuntime(identity simulation.RuntimeIdentity, stores *simulation.StateStore, additional ...simulation.StateParticipant) error {
+	if stores == nil {
+		return fmt.Errorf("game session: authoritative state store is required")
+	}
+	identityParticipant, err := simulation.NewIdentityParticipant(identity)
+	if err != nil {
+		return err
+	}
+	participants := []simulation.StateParticipant{identityParticipant, stores}
+	participants = append(participants, additional...)
+	return session.registerStateParticipants(participants...)
+}
+
 // RegisterStateParticipant adds deterministic authoritative state to session
 // initial state, checkpoints, replay restoration, and desync verification.
 // Register participants before the first command is submitted or tick advances.
 func (session *Session) RegisterStateParticipant(participant simulation.StateParticipant) error {
+	return session.registerStateParticipants(participant)
+}
+
+func (session *Session) registerStateParticipants(participants ...simulation.StateParticipant) error {
 	session.mu.Lock()
 	defer session.mu.Unlock()
 	if session.closed {
 		return ErrClosed
 	}
-	if participant == nil || strings.TrimSpace(participant.StateID()) == "" {
-		return fmt.Errorf("game session: state participant and ID are required")
-	}
 	if session.engine.Tick() != session.initial.Tick || len(session.commands) != 0 || len(session.pending) != 0 {
 		return fmt.Errorf("game session: state participants must be registered before commands or ticks")
 	}
+	known := make(map[string]struct{}, len(session.participants)+len(participants))
 	for _, existing := range session.participants {
-		if existing.StateID() == participant.StateID() {
+		known[existing.StateID()] = struct{}{}
+	}
+	type pendingParticipant struct {
+		participant simulation.StateParticipant
+		state       simulation.ParticipantState
+	}
+	pending := make([]pendingParticipant, 0, len(participants))
+	for _, participant := range participants {
+		if participant == nil || strings.TrimSpace(participant.StateID()) == "" {
+			return fmt.Errorf("game session: state participant and ID are required")
+		}
+		if _, exists := known[participant.StateID()]; exists {
 			return fmt.Errorf("game session: duplicate state participant %q", participant.StateID())
 		}
+		data, err := participant.SnapshotState()
+		if err != nil {
+			return fmt.Errorf("game session: snapshot initial participant %q: %w", participant.StateID(), err)
+		}
+		known[participant.StateID()] = struct{}{}
+		pending = append(pending, pendingParticipant{participant: participant, state: simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)}})
 	}
-	data, err := participant.SnapshotState()
-	if err != nil {
-		return fmt.Errorf("game session: snapshot initial participant %q: %w", participant.StateID(), err)
+	for _, item := range pending {
+		session.participants = append(session.participants, item.participant)
+		session.initialParticipants = append(session.initialParticipants, item.state)
 	}
-	session.participants = append(session.participants, participant)
 	sort.Slice(session.participants, func(i, j int) bool { return session.participants[i].StateID() < session.participants[j].StateID() })
-	session.initialParticipants = append(session.initialParticipants, simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)})
 	sort.Slice(session.initialParticipants, func(i, j int) bool { return session.initialParticipants[i].ID < session.initialParticipants[j].ID })
 	return nil
 }
@@ -192,6 +226,29 @@ func (session *Session) stepLocked() error {
 	if session.closed {
 		return ErrClosed
 	}
+	// A tick is one transaction. Command handlers and systems may touch several
+	// ECS components and script-owned state values before returning an error.
+	// Capture both stores before doing any work so failure cannot expose half of
+	// a command or half of a system schedule to the next tick.
+	beforeECS, err := session.engine.Snapshot()
+	if err != nil {
+		return err
+	}
+	beforeParticipants, err := session.snapshotParticipantsLocked()
+	if err != nil {
+		return err
+	}
+	beforeCommands := len(session.commands)
+	rollback := func(cause error) error {
+		if restoreErr := session.engine.Restore(beforeECS); restoreErr != nil {
+			return errors.Join(cause, fmt.Errorf("game session: roll back ECS: %w", restoreErr))
+		}
+		if restoreErr := session.restoreParticipantsLocked(beforeParticipants); restoreErr != nil {
+			return errors.Join(cause, fmt.Errorf("game session: roll back participants: %w", restoreErr))
+		}
+		session.commands = session.commands[:beforeCommands]
+		return cause
+	}
 	tick := session.engine.Tick() + 1
 	commands := session.pending[tick]
 	sort.Slice(commands, func(i, j int) bool {
@@ -206,16 +263,19 @@ func (session *Session) stepLocked() error {
 	for _, command := range commands {
 		handler, found := session.handlers[command.Kind]
 		if !found {
-			return fmt.Errorf("%w: missing handler %q", ErrCommandApply, command.Kind)
+			return rollback(fmt.Errorf("%w: missing handler %q", ErrCommandApply, command.Kind))
 		}
 		if err := handler.Apply(session.engine, command); err != nil {
-			return fmt.Errorf("%w: %s player=%q sequence=%d: %v", ErrCommandApply, command.Kind, command.Player, command.Sequence, err)
+			return rollback(fmt.Errorf("%w: %s player=%q sequence=%d: %v", ErrCommandApply, command.Kind, command.Player, command.Sequence, err))
 		}
 		session.commands = append(session.commands, command)
 	}
 	delete(session.pending, tick)
 	if err := session.engine.Update(session.config.Step); err != nil {
-		return err
+		// Keep the queued commands available for an administrator to inspect or
+		// retry after the faulty runtime is replaced.
+		session.pending[tick] = commands
+		return rollback(err)
 	}
 	if tick%session.config.CheckpointInterval == 0 {
 		return session.checkpointLocked()
@@ -340,6 +400,26 @@ func (session *Session) snapshotParticipantsLocked() ([]simulation.ParticipantSt
 		result = append(result, simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)})
 	}
 	return result, nil
+}
+
+func (session *Session) restoreParticipantsLocked(states []simulation.ParticipantState) error {
+	if len(states) != len(session.participants) {
+		return fmt.Errorf("game session: participant count changed during tick")
+	}
+	byID := make(map[string]simulation.StateParticipant, len(session.participants))
+	for _, participant := range session.participants {
+		byID[participant.StateID()] = participant
+	}
+	for _, state := range states {
+		participant, found := byID[state.ID]
+		if !found {
+			return fmt.Errorf("game session: missing participant %q", state.ID)
+		}
+		if err := participant.RestoreState(append([]byte(nil), state.Data...)); err != nil {
+			return fmt.Errorf("game session: restore participant %q: %w", state.ID, err)
+		}
+	}
+	return nil
 }
 
 func cloneParticipantStates(states []simulation.ParticipantState) []simulation.ParticipantState {

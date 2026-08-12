@@ -12,8 +12,8 @@ func TestContentRequireLoadsModuleFromVFS(t *testing.T) {
 	t.Parallel()
 
 	source := fstest.MapFS{
-		"lua/darkmagic/screens/loading.lua": &fstest.MapFile{Data: []byte(`return { id = "loading" }`)},
-		"boot.lua":                          &fstest.MapFile{Data: []byte(`screen_id = require("darkmagic.screens.loading").id`)},
+		"lua/example/screens/loading.lua": &fstest.MapFile{Data: []byte(`return { id = "loading" }`)},
+		"boot.lua":                        &fstest.MapFile{Data: []byte(`screen_id = require("example.screens.loading").id`)},
 	}
 	runtime := New()
 	if err := runtime.RegisterInstaller(ContentRequire(source, "lua")); err != nil {

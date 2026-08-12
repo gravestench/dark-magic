@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestDefaultManifestComesFromEmbeddedShim(t *testing.T) {
+func TestDefaultManifestComesFromEmbeddedD2Legacy(t *testing.T) {
 	manifest, err := loadManifest("")
 	if err != nil {
 		t.Fatal(err)

@@ -1,0 +1,149 @@
+package save
+
+import (
+	"errors"
+	"fmt"
+	"sync"
+)
+
+// Character is d2legacy's current durable character-selection record. Future
+// importers translate legacy save bytes into this adapter value and preserve
+// unsupported bytes separately.
+type Character struct {
+	ID         string
+	Name       string
+	Class      string
+	Level      int
+	Expansion  bool
+	Hardcore   bool
+	Appearance *Appearance
+	Stats      *Stats
+}
+
+// Stats is an immutable character-sheet snapshot. Authoritative simulation and
+// save importers replace it as values change; Lua receives copies for display.
+type Stats struct {
+	Experience, NextLevelExperience       int
+	Strength, Dexterity, Vitality, Energy int
+	Defense                               int
+	Health, MaxHealth, Mana, MaxMana      int
+	Stamina, MaxStamina                   int
+	FireResistance, ColdResistance        int
+	LightningResistance, PoisonResistance int
+}
+
+// Appearance is an immutable rendering snapshot decoded from a character save.
+// Asset resolution belongs to the save importer; the store carries only the
+// authoritative COF and DCC paths needed by presentation code.
+type Appearance struct {
+	COF        string
+	Palette    string
+	Direction  int
+	Components map[string]string
+}
+
+func (s *Store) Create(character Character) error {
+	// This store is deliberately policy-free. The owning mod validates and
+	// normalizes its record before crossing this persistence boundary.
+	if character.ID == "" {
+		return errors.New("persistence: record ID is required")
+	}
+	character = cloneCharacter(character)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, existing := range s.entries {
+		if existing.ID == character.ID {
+			return fmt.Errorf("persistence: character %q already exists", character.ID)
+		}
+	}
+	s.entries = append(s.entries, character)
+	return nil
+}
+
+// Store owns the selectable character roster and returns defensive copies.
+// Selection is application state; authoritative in-session player state is
+// materialized by the game session rather than mutated through this store.
+type Store struct {
+	mu       sync.RWMutex
+	entries  []Character
+	selected string
+}
+
+// New creates a roster from the supplied fixtures or imported characters.
+func New(entries ...Character) *Store {
+	copyEntries := make([]Character, len(entries))
+	for index, entry := range entries {
+		copyEntries[index] = cloneCharacter(entry)
+	}
+	return &Store{entries: copyEntries}
+}
+
+func (s *Store) Characters() []Character {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Character, len(s.entries))
+	for index, entry := range s.entries {
+		result[index] = cloneCharacter(entry)
+	}
+	return result
+}
+
+func (s *Store) Select(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, character := range s.entries {
+		if character.ID == id {
+			s.selected = id
+			return nil
+		}
+	}
+	return errors.New("persistence: unknown character")
+}
+
+// Delete removes one character identity and clears the active selection when
+// it refers to that character. Save-file persistence remains a Store concern;
+// presentation code only requests deletion by opaque ID.
+func (s *Store) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index, character := range s.entries {
+		if character.ID != id {
+			continue
+		}
+		copy(s.entries[index:], s.entries[index+1:])
+		s.entries = s.entries[:len(s.entries)-1]
+		if s.selected == id {
+			s.selected = ""
+		}
+		return nil
+	}
+	return errors.New("persistence: unknown character")
+}
+
+func (s *Store) Selected() (Character, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, character := range s.entries {
+		if character.ID == s.selected {
+			return cloneCharacter(character), true
+		}
+	}
+	return Character{}, false
+}
+
+func cloneCharacter(character Character) Character {
+	if character.Stats != nil {
+		stats := *character.Stats
+		character.Stats = &stats
+	}
+	if character.Appearance == nil {
+		return character
+	}
+	appearance := *character.Appearance
+	appearance.Components = make(map[string]string, len(character.Appearance.Components))
+	for component, path := range character.Appearance.Components {
+		appearance.Components[component] = path
+	}
+	character.Appearance = &appearance
+	return character
+}
