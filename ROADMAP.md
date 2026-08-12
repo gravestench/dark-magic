@@ -34,10 +34,12 @@ The milestone-number order is historical, not a strict dependency graph. The
 M21.1-M21.12 authority spine and its first production Fire Bolt are complete.
 The active dependency queue, reassessed after that gate, is:
 
-1. **M21.13 — player combat:** finish attack animation events and
-   equipment-derived damage on the shared pointer-selected Attack transaction.
-   Its checkpointed pending action now follows a still-valid target through the
-   collision-aware world pathfinder and admits melee only after reaching range.
+1. **M21.13 — player combat:** finish attack animation events and the remaining
+   derived-stat sources on the shared pointer-selected Attack transaction.
+   Its checkpointed pending action follows a still-valid target through the
+   collision-aware world pathfinder, admits melee only after reaching range,
+   and now proves an inventory equip command changes the active hand's range,
+   damage, weapon class, and resulting combat impact in one session flow.
 2. **Developer labs:** the lab-specific arguments have left the client
    composition root, and the labs now share one modal fuzzy finder. Combat Lab
    now delegates directly to the production game-world lifecycle in generated
@@ -1416,10 +1418,12 @@ data owners; they do not introduce parallel gameplay authorities.
   the last accepted route rather than acting as an accidental stop. Holding
   Shift submits a targetless stand-still swing toward the pointer: it never
   creates an approach route, but its authoritative impact may acquire an
-  eligible hostile already inside melee range. Complete this
-  checkpoint now projects the active equipment hand set's typed base-weapon
-  range, physical damage, and weapon class into the player ECS profile before
-  combat. The no-argument Combat Lab now runs this transaction inside the
+  eligible hostile already inside melee range. The active equipment hand set's
+  typed base-weapon range, physical damage, and weapon class are projected into
+  the player ECS profile before combat; a vertical session test now equips an
+  inventory sword through the authoritative item command and proves its exact
+  reach, weapon class, and physical impact replace the unarmed fallback in the
+  same tick. The no-argument Combat Lab runs this transaction inside the
   production generated Blood Moor scene and overlays authoritative player,
   hostile, AI, health, attack-phase, and semantic-event facts without owning a
   second simulation or renderer. Finish affix/socket/attribute stat sources,
