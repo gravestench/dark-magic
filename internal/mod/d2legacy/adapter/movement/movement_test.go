@@ -1,6 +1,7 @@
 package movement
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 
@@ -119,6 +120,10 @@ func TestMovementSourceEmitsPointerWorldTarget(t *testing.T) {
 	}
 	if payload.Target == nil || payload.Target.X != 12.5 || payload.Target.Y != 44.25 {
 		t.Fatalf("pointer target payload = %#v", payload)
+	}
+	encoded := source.Commands(2)[0].Payload
+	if !bytes.Contains(encoded, []byte(`"target":{"x":12.5,"y":44.25,"stop_radius":0}`)) {
+		t.Fatalf("pointer target wire schema = %s", encoded)
 	}
 }
 

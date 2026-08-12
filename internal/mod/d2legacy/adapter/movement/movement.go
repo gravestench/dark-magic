@@ -29,7 +29,13 @@ type MovePayload struct {
 	Target  *MoveTarget `json:"target,omitempty"`
 }
 
-type MoveTarget struct{ X, Y, StopRadius float64 }
+// MoveTarget is a wire value consumed by d2legacy Lua. Keep explicit JSON names:
+// Go's default capitalized field names are different keys in Lua tables.
+type MoveTarget struct {
+	X          float64 `json:"x"`
+	Y          float64 `json:"y"`
+	StopRadius float64 `json:"stop_radius"`
+}
 
 // MovementController is the thread-safe local intent mailbox shared by Lua UI
 // and the fixed-tick movement command source. It never mutates ECS state.
