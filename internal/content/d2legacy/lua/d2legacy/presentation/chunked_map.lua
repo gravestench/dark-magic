@@ -71,6 +71,29 @@ local function admit_chunk(state, chunk, key)
     )
     node:set_z(chunk.depth)
     state.nodes[key] = node
+    state.last_visible[key] = state.revision
+end
+
+local function trim_residency(state, visible_keys)
+    local resident, hidden = 0, {}
+    for key, node in pairs(state.nodes) do
+        resident = resident + 1
+        if not visible_keys[key] then
+            hidden[#hidden + 1] = {key=key,seen=state.last_visible[key] or 0,node=node}
+        end
+    end
+    if resident <= state.resident_limit then return end
+    table.sort(hidden, function(left, right)
+        if left.seen == right.seen then return left.key < right.key end
+        return left.seen < right.seen
+    end)
+    for _, entry in ipairs(hidden) do
+        if resident <= state.resident_limit then break end
+        entry.node:destroy()
+        state.nodes[entry.key] = nil
+        state.last_visible[entry.key] = nil
+        resident = resident - 1
+    end
 end
 
 local function finish_preload(state)
@@ -128,6 +151,7 @@ end
 
 local function refresh_nodes(state)
     if not state.set then return end
+    state.revision = state.revision + 1
     local left, top, right, bottom = render_viewport(state.viewport_width, state.viewport_height)
     local admitted, visible_keys = 0, {}
     local entries = nearby_entries(state, left, top, right, bottom)
@@ -144,6 +168,10 @@ local function refresh_nodes(state)
             and screen_top <= bottom + state.margin
         local key = chunk.index + 1
         if visible then visible_keys[key] = true end
+        if visible and state.nodes[key] then
+            state.nodes[key]:set_visible(true)
+            state.last_visible[key] = state.revision
+        end
         if visible and not state.nodes[key] and state.pending[key] then
             local status = render.preload_status(state.pending[key])
             if status and status.done then
@@ -173,14 +201,16 @@ local function refresh_nodes(state)
             admitted = admitted + 1
         end
     end
-    -- Anything that was resident last frame but did not occur in a nearby
-    -- bucket this frame is outside the culling margin.
+    -- Keep recently visited placements as hidden retained nodes. Panning back
+    -- then toggles visibility instead of rebuilding render resources in a
+    -- burst. The bounded LRU below still prevents an explored large world from
+    -- retaining every placement forever.
     for key, node in pairs(state.nodes) do
         if not visible_keys[key] then
-            state.nodes[key]:destroy()
-            state.nodes[key] = nil
+            node:set_visible(false)
         end
     end
+    trim_residency(state, visible_keys)
     for key, job in pairs(state.pending) do
         if not visible_keys[key] then
             local status = render.preload_status(job)
@@ -200,6 +230,7 @@ function chunked_map.create(parent, recipe, options)
         recipe = assert(recipe, "chunked map recipe is required"),
         root = render.create("world", parent),
         nodes = {},
+        last_visible = {},
         pending = {},
         failed = {},
         chunk_size = options.chunk_size or 512,
@@ -208,6 +239,8 @@ function chunked_map.create(parent, recipe, options)
         -- useful screenful quickly; the renderer's byte budget still governs
         -- actual native uploads and prevents one frame from monopolizing them.
         admit_per_frame = options.admit_per_frame or (recipe.world and 32 or 2),
+        resident_limit = options.resident_limit or (recipe.world and 512 or 32),
+        revision = 0,
         viewport_width = options.viewport_width or 800,
         viewport_height = options.viewport_height or 600,
         canvas_width = options.canvas_width,
