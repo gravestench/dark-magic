@@ -12,9 +12,8 @@ import (
 
 func TestEquippedItemModifierSourcesPreserveAffixAndSocketProvenance(t *testing.T) {
 	initial := itemAcceptanceBootstrap()
-	items := initial["d2legacy.items"].(map[string]any)["items"].([]any)
-	for _, raw := range items {
-		item := raw.(map[string]any)
+	items := initial["d2legacy.items"].(map[string]any)["items"].([]map[string]any)
+	for _, item := range items {
 		switch item["id"] {
 		case "weapon":
 			item["stat_modifiers"] = []any{
