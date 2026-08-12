@@ -7,15 +7,18 @@ most other simulation and presentation facts.
 
 ## Current recovery state
 
-The repository still contains 91 model files representing the historical typed
-table schemas. The Service Mesh retirement in commit `68e3c9e` removed the old
-record-manager implementation, including typed loading and lookup behavior. The
-current `internal/recordstore` provides layered, cached generic TSV rows to
-native code and Lua. Typed schema binding is owned by the independent
-`github.com/gravestench/tsv` codec, while `internal/gamedata` owns catalog
-snapshots, indexes, diagnostics, and compatibility handling for the surviving
-historical structs. Generic `map[string]string` access does not replace the typed
-game-data catalog.
+The repository preserves historical row schemas under
+`internal/game/data/model`. The generic `internal/game/data/store` provides
+layered, cached TSV rows to native code and Lua. The small
+`internal/game/data/typed` mechanism binds one explicitly requested table to a
+Go schema using `github.com/gravestench/tsv` and can build a caller-selected
+deterministic index.
+
+There is deliberately no global typed game-data snapshot. The retired snapshot
+hardcoded every known Diablo table into the host, eagerly made unrelated tables
+mandatory, and encoded d2legacy composition policy in generic Go. The first-party
+mod now chooses the records it needs through `engine.records/v1`; Lua owns joins,
+required/optional decisions, and gameplay meaning.
 
 The schemas must be preserved during repository cleanup. The old service
 lifecycle and integration wrappers should not be restored wholesale; useful
@@ -26,20 +29,20 @@ behavior should be recovered behind explicit internal ownership.
 The game-data subsystem should provide:
 
 - a layered-content TSV decoder shared by typed and generic access;
-- typed collections for every supported Blizzard table, retaining unknown
-  columns when practical for forward compatibility and mods;
-- deterministic indexes by each table's canonical identifiers and codes;
-- cross-table validation with actionable source, row, and column errors;
-- immutable snapshots for simulation and read-only Lua views for shim/mod logic;
-- generation-aware invalidation and atomic rebuilds during content hot reload;
+- generic immutable rows that retain unknown columns for forward compatibility
+  and mods;
+- optional caller-selected typed binding for native codec/adapter boundaries;
+- deterministic indexes only where a narrow caller explicitly requests one;
+- d2legacy-owned cross-table validation with actionable table/row/column errors;
+- authoritative Lua state/checkpoint identity that pins interpreted rule state;
+- generation-aware per-table invalidation during development hot reload;
 - explicit host ownership, without global registries or one service per table;
-- synthetic coverage for every schema and optional real-archive tests proving
-  that all available tables decode and their primary indexes are valid.
+- synthetic coverage for retained schemas and focused real-archive tests proving
+  only the tables required by the tested path.
 
-Gameplay systems should depend on focused catalog interfaces or immutable typed
-snapshots, not parse TSV independently. Generic record access remains valuable
-for data exploration, mod-defined tables, and columns the engine does not yet
-model.
+Authoritative gameplay systems load immutable generic rows through the versioned
+records capability and interpret them inside d2legacy. Native code may depend on
+a focused adapter value, never an application-wide catalog or snapshot.
 
 ## Authentic-data policy
 
@@ -72,7 +75,7 @@ semantics.
 
 The shipped tables are known to contain unused rows and columns, sentinel
 values, dangling references, contradictory fields, patch-era leftovers, and
-values that do not match their apparent documentation. The catalog must preserve
+values that do not match their apparent documentation. The record layer must preserve
 those facts. It must not silently "fix" source data or treat every inconsistency
 as a fatal engine error.
 

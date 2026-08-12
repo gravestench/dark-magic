@@ -12,10 +12,8 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -28,6 +26,7 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
@@ -95,26 +94,19 @@ func (app *application) buildPresentationCore() error {
 func (app *application) loadGameCatalogs() error {
 	app.records = recordstore.New(app.options.Content)
 	app.records.SetLogger(slog.Default().With("component", "records"))
-	app.gameData = gamedata.New(app.records)
 	app.questCatalog = recovered.New(app.options.Content)
 
-	typed, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load typed game data", err)
-	}
 	recoveredData, err := app.questCatalog.Snapshot()
 	if err != nil {
 		return wrap("load recovered game data", err)
 	}
-	soundNames := make(map[string]struct{}, len(typed.Sounds))
-	for _, sound := range typed.Sounds {
-		soundNames[strings.ToLower(sound.Sound)] = struct{}{}
+	app.worldObjectResolver, err = worldobjects.New(recoveredData, app.records)
+	if err != nil {
+		return err
 	}
-	issues := recovered.ValidateReferences(recoveredData, soundNames, app.locale.Text)
-	app.worldObjectResolver = worldobjects.New(recoveredData, typed)
-	slog.Info("loaded game-data catalogs", "typed_issues", len(typed.Issues),
+	slog.Info("loaded recovered d2legacy records",
 		"quests", len(recoveredData.Quests), "speech", len(recoveredData.Speech),
-		"map_objects", len(recoveredData.MapObjects), "reference_issues", len(issues))
+		"map_objects", len(recoveredData.MapObjects))
 	return nil
 }
 
@@ -177,9 +169,6 @@ func (app *application) registerOfflineCommands() error {
 		Position: "d2legacy.world.position", Velocity: "d2legacy.world.velocity", Collider: "d2legacy.world.collider",
 	}); err != nil {
 		return wrap("register generic velocity movement", err)
-	}
-	if err := app.queueEntryPopulation(); err != nil {
-		return err
 	}
 	movement := &d2movement.MovementController{}
 	movementSource, err := d2movement.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)

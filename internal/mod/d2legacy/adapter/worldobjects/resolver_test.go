@@ -2,16 +2,18 @@ package worldobjects
 
 import (
 	"testing"
+	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/model"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
 func TestResolverUsesActLocalOrderingForBothObjectKinds(t *testing.T) {
-	resolver := New(recovered.Snapshot{MapObjects: []recovered.MapObject{{Act: 1, ID: 3, ObjectID: 108, Description: "Malus"}}}, gamedata.Snapshot{
-		MonsterPresets: []models.MonsterPreset{{Act: 1, Place: "fallen"}, {Act: 2, Place: "skeleton"}, {Act: 1, Place: "zombie"}},
-	})
+	rows := fstest.MapFS{"data/global/excel/monpreset.txt": &fstest.MapFile{Data: []byte("Act\tPlace\n1\tfallen\n2\tskeleton\n1\tzombie\n")}}
+	resolver, err := New(recovered.Snapshot{MapObjects: []recovered.MapObject{{Act: 1, ID: 3, ObjectID: 108, Description: "Malus"}}}, recordstore.New(rows))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if id, description, found := resolver.ResolveStaticObject(1, 3); !found || id != 108 || description != "Malus" {
 		t.Fatalf("static = %d, %q, %v", id, description, found)
 	}

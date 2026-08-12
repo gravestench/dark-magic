@@ -29,7 +29,7 @@ must use ECS or registered, versioned engine stores.
 | Current area | Current contents | Intended result |
 | --- | --- | --- |
 | `internal/game/ecs`, `simulation`, `session` | ECS schedule, command envelopes, RNG, transactional ticks, checkpoints, and replay | Generic mechanisms only |
-| `internal/game/data/**` | Typed D2 schemas, immutable catalogs, recovered records | Keep decoding/data in Go; Lua interprets gameplay meaning |
+| `internal/game/data/store`, `typed`, `model` | Generic rows, optional schema binding, and lossless D2 row schemas | Keep mechanisms/schemas in Go; no global catalog; Lua selects and interprets tables |
 | former Go gameplay packages | Deleted migration sources for combat, skills, missiles, monsters, loot, items, players, progression, interactions, transitions, owned units, and D2 map generation | Production policy now lives under `d2legacy` Lua |
 | `internal/game/world`, `worldgen` | Decoded map facts, geometry, collision, navigation, materialization, and immutable recipe contracts | Keep reusable mechanisms/data; Lua chooses D2 topology and population policy |
 | `internal/runtime/lua` | Sandboxed runtime, versioned capabilities, authoritative registration, and resource scopes | Keep generic and mod-neutral |

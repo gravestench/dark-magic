@@ -164,8 +164,8 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `cmd/darkmagic` | Client composition root | executable | Process | Keep thin |
 | `internal/app/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
 | `internal/content` | Layered directory/MPQ/ZIP/mod VFS | command, reload, Lua, tools | Application | Keep |
-| `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
-| `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
+| `internal/game/data/store` | Generic immutable TSV rows, provenance, caching, and invalidation | Lua, typed decoding, tools | Application | Keep internal and mod-neutral |
+| `internal/game/data/typed` | Caller-selected Go-schema binding and deterministic index helpers | tests, narrow d2legacy adapters | Stateless | Keep; never compose a global game catalog |
 | `internal/presentation/render` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep internal |
 | `internal/audio` | Audio buses, records, playback state | command, Lua, video | Application/scopes | Keep |
 | `internal/video` | Cinematic decode/playback orchestration | command, Lua | Scene | Keep |
@@ -197,7 +197,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/game/worldgen` | Immutable generated-zone recipe contract, validation, and checksums | d2legacy map policy, world | Game session | Keep policy-neutral |
 | `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
 | `internal/game/session` | Command admission, fixed stepping, checkpointing, and replay recording for Go- or Lua-owned systems | client/server composition | Game session | Keep transport-neutral and policy-neutral |
-| `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
+| `internal/game/data/model` | Lossless Diablo TSV row schemas | typed decoder, narrow d2legacy adapters | Application data | Keep isolated; no formulas, required-table policy, or behavioral enums |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
 | `internal/presentation/scene` | Headless scene state | command, Lua, world | Scene | Keep internal; merge with navigation when lifecycles converge |
@@ -387,11 +387,15 @@ missile, or scenery. The targeting capability returns copied hit facts and
 filters the locally owned player in presentation; it does not expose ECS stores
 or infer classifications from asset labels.
 
-Diablo TSV bytes and generic rows are owned by `internal/game/data/store`. The
-typed, atomic generation and indexes live in `internal/game/data/catalog`, using
-schemas from `internal/game/data/model`. Consult `docs/GAME_DATA_RECORDS.md` and
-the bundled Data File Guide before admitting or interpreting another table, then
-verify assumptions against real layered MPQs.
+Diablo TSV bytes and generic rows are owned by `internal/game/data/store`.
+`internal/game/data/typed` can bind one caller-selected table to a lossless
+schema from `internal/game/data/model`; it does not declare which tables exist,
+which are mandatory, or how records join into gameplay. The authoritative
+`d2legacy` mod requests immutable rows through `engine.records/v1` and owns
+those choices and interpretations. A narrow Go adapter may decode a schema when
+the boundary genuinely requires a native value, but it must not rebuild a
+global Diablo catalog. Consult `docs/GAME_DATA_RECORDS.md` and the bundled Data
+File Guide, then verify assumptions against real layered MPQs.
 
 New developer-only executables belong under `internal/dev/tools` or
 `internal/dev/testapps`; production entry points belong under `cmd`. A new engine

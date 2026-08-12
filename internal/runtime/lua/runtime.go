@@ -160,6 +160,9 @@ func (r *Runtime) RegisterModule(module Module) error {
 
 // Start creates the Lua state on its owner goroutine.
 func (r *Runtime) Start(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.started {
@@ -191,6 +194,9 @@ func (r *Runtime) Start(ctx context.Context) error {
 
 // Stop closes the Lua state after all active Run calls finish.
 func (r *Runtime) Stop(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.started {

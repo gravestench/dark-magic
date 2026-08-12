@@ -45,6 +45,7 @@ type Runtime struct {
 }
 
 func NewRuntime(ctx context.Context, source fs.FS, records recordsGateway) (*Runtime, error) {
+	ctx = nonNilContext(ctx)
 	luaRuntime := modruntime.New()
 	if err := luaRuntime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
 		return nil, err
@@ -68,7 +69,7 @@ func (runtime *Runtime) Close(ctx context.Context) error {
 	if runtime == nil || runtime.lua == nil {
 		return nil
 	}
-	return runtime.lua.Stop(ctx)
+	return runtime.lua.Stop(nonNilContext(ctx))
 }
 
 // Generate invokes one named d2legacy map strategy. Arguments are deliberately
@@ -77,13 +78,14 @@ func (runtime *Runtime) Generate(ctx context.Context, strategy string, arguments
 	if runtime == nil || runtime.lua == nil {
 		return nil, fmt.Errorf("d2legacy mapgen runtime is not started")
 	}
-	return modruntime.GenerateWorldRecipe(ctx, runtime.lua, "d2legacy.mapgen."+strategy, "generate", arguments...)
+	return modruntime.GenerateWorldRecipe(nonNilContext(ctx), runtime.lua, "d2legacy.mapgen."+strategy, "generate", arguments...)
 }
 
 // GenerateEntryZones asks d2legacy for the first town and wilderness recipes.
 // The short-lived runtime is intentionally headless: world policy must not
 // depend on a renderer, window, audio device, or native client startup.
 func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (*worldgen.Zone, *worldgen.Zone, error) {
+	ctx = nonNilContext(ctx)
 	runtime, err := NewRuntime(ctx, source, records)
 	if err != nil {
 		return nil, nil, err
@@ -104,4 +106,11 @@ func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGatewa
 		return nil, nil, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
 	}
 	return town, moor, nil
+}
+
+func nonNilContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }

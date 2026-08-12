@@ -1,14 +1,15 @@
-package world
+package transition
 
 import (
 	"strings"
 	"testing"
 
 	models "github.com/gravestench/dark-magic/internal/game/data/model"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
 func TestResolveLevelTransitionsJoinsMatchingVisibilitySlot(t *testing.T) {
-	m := &Map{SpecialTiles: []SpecialTile{
+	m := &gameworld.Map{SpecialTiles: []gameworld.SpecialTile{
 		{X: 8, Y: 4, Orientation: 10, MainIndex: 3, SubIndex: 22, Hidden: true},
 		{X: 1, Y: 1, Orientation: 10, MainIndex: 30}, // town entry, not Vis#
 		{X: 2, Y: 2, Orientation: 10, MainIndex: 1},  // unused Vis# slot
@@ -16,7 +17,7 @@ func TestResolveLevelTransitionsJoinsMatchingVisibilitySlot(t *testing.T) {
 	}}
 	level := models.LevelData{Id: 4, Vis3: 9, Warp3: 13, Vis7: 10, Warp7: -1}
 	warp := models.LevelWarp{Id: 13, SelectX: -2, SelectY: 3, SelectDX: 10, SelectDY: 12, ExitWalkX: 4, ExitWalkY: 5, OffsetX: 6, OffsetY: 7, LitVersion: 1, Tiles: 2, NoInteract: 1, Direction: "b", UniqueId: 99}
-	resolved, err := m.ResolveLevelTransitions(level, map[int]models.LevelWarp{13: warp})
+	resolved, err := ResolveLevelTransitions(m, level, map[int]models.LevelWarp{13: warp})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,8 +40,8 @@ func TestResolveLevelTransitionsJoinsMatchingVisibilitySlot(t *testing.T) {
 }
 
 func TestResolveLevelTransitionsRejectsMissingTypedWarp(t *testing.T) {
-	m := &Map{SpecialTiles: []SpecialTile{{Orientation: 11, MainIndex: 0}}}
-	_, err := m.ResolveLevelTransitions(models.LevelData{Id: 4, Vis0: 5, Warp0: 12}, nil)
+	m := &gameworld.Map{SpecialTiles: []gameworld.SpecialTile{{Orientation: 11, MainIndex: 0}}}
+	_, err := ResolveLevelTransitions(m, models.LevelData{Id: 4, Vis0: 5, Warp0: 12}, nil)
 	if err == nil || !strings.Contains(err.Error(), "missing LvlWarp 12") {
 		t.Fatalf("error = %v", err)
 	}

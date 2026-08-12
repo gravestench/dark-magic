@@ -8,6 +8,12 @@ local records = require("engine.records/v1")
 
 local M = {}
 
+local function field(row, canonical, legacy)
+    local value = row[canonical]
+    if value == nil and legacy then value = row[legacy] end
+    return value
+end
+
 local function find(rows, column, wanted)
     for _, row in ipairs(rows) do
         if row[column] == wanted then return row end
@@ -15,15 +21,16 @@ local function find(rows, column, wanted)
     return nil
 end
 
-local function required_integer(row, column)
-    local value = tonumber(row[column])
+local function required_integer(row, column, legacy)
+    local value = tonumber(field(row, column, legacy))
     assert(value and value >= 0 and value == math.floor(value),
         "Fire Bolt has invalid " .. column)
     return value
 end
 
-local function shifted(row, value_column, shift_column)
-    return required_integer(row, value_column) * (2 ^ required_integer(row, shift_column))
+local function shifted(row, value_column, shift_column, legacy_value)
+    return required_integer(row, value_column, legacy_value)
+        * (2 ^ required_integer(row, shift_column))
 end
 
 local function integer_or(row, column, fallback)
@@ -36,7 +43,10 @@ function M.load()
     local skills = assert(records.load("data/global/excel/skills.txt"))
     local skill = assert(find(skills, "Id", "36"), "Fire Bolt skill 36 is missing")
     assert(skill.skill == "Fire Bolt" and skill.srvmissile == "firebolt")
-    assert(skill.etype == "fire" and skill.interrupt == "1")
+    -- Blizzard's shipped header is `EType` (capital E/T). Preserve and read
+    -- that authored spelling instead of relying on a normalized schema name.
+    assert(field(skill, "EType", "etype") == "fire" and skill.interrupt == "1",
+        "Fire Bolt has unexpected element or interrupt policy")
     assert(skill.srvstfunc == "" and skill.srvdofunc == "")
 
     local missiles = assert(records.load("data/global/excel/Missiles.txt"))
@@ -53,8 +63,8 @@ function M.load()
     return {
         skill_id = 36,
         mana_cost_raw = shifted(skill, "mana", "manashift"),
-        minimum_damage_raw = shifted(skill, "emin", "HitShift"),
-        maximum_damage_raw = shifted(skill, "emax", "HitShift"),
+        minimum_damage_raw = shifted(skill, "EMin", "HitShift", "emin"),
+        maximum_damage_raw = shifted(skill, "EMax", "HitShift", "emax"),
         effect_delay = 1,
         complete_delay = 2,
         speed_per_tick = velocity / 25,

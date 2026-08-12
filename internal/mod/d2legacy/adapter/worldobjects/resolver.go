@@ -1,12 +1,17 @@
-// Package worldobjects joins DS1 act-local identities to admitted game data.
+// Package worldobjects joins Diablo DS1 act-local identities to recovered and
+// decoded d2legacy records.
 package worldobjects
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 )
+
+type Records interface {
+	Load(string) ([]map[string]string, error)
+}
 
 type staticDefinition struct {
 	objectID    int
@@ -21,21 +26,29 @@ type Resolver struct {
 
 // New freezes both data generations into act-local lookup indexes. Dynamic
 // monster preset IDs are positional, so their authored per-act order is kept.
-func New(recoveredData recovered.Snapshot, gameData gamedata.Snapshot) *Resolver {
+func New(recoveredData recovered.Snapshot, records Records) (*Resolver, error) {
+	presets, err := records.Load("data/global/excel/monpreset.txt")
+	if err != nil {
+		return nil, fmt.Errorf("d2legacy world objects: load MonPreset.txt: %w", err)
+	}
 	resolver := &Resolver{
 		static:  make(map[string]staticDefinition, len(recoveredData.MapObjects)),
-		dynamic: make(map[string]string, len(gameData.MonsterPresets)),
+		dynamic: make(map[string]string, len(presets)),
 	}
 	for _, entry := range recoveredData.MapObjects {
 		resolver.static[key(entry.Act, entry.ID)] = staticDefinition{objectID: entry.ObjectID, description: entry.Description}
 	}
 	actOffsets := make(map[int]int, 5)
-	for _, entry := range gameData.MonsterPresets {
-		index := actOffsets[entry.Act]
-		resolver.dynamic[key(entry.Act, index)] = entry.Place
-		actOffsets[entry.Act] = index + 1
+	for row, entry := range presets {
+		act, err := strconv.Atoi(entry["Act"])
+		if err != nil {
+			return nil, fmt.Errorf("d2legacy world objects: MonPreset.txt row %d has invalid Act %q", row+2, entry["Act"])
+		}
+		index := actOffsets[act]
+		resolver.dynamic[key(act, index)] = entry["Place"]
+		actOffsets[act] = index + 1
 	}
-	return resolver
+	return resolver, nil
 }
 
 // ResolveStaticObject maps a DS1 static ID to Objects.txt and its recovered

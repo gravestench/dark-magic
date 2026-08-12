@@ -1,4 +1,4 @@
-package gamedata
+package typed
 
 import (
 	"strings"
@@ -12,8 +12,9 @@ import (
 func TestLoadDecodesSurvivingTypedSchema(t *testing.T) {
 	t.Parallel()
 
-	source := fstest.MapFS{CharStatsTable: &fstest.MapFile{Data: []byte("class\tstr\tdex\tint\tvit\tStartSkill\textra\nama\t20\t25\t15\t20\tAttack\tmod-owned\n")}}
-	records, err := Load[models.CharStats](recordstore.New(source), CharStatsTable)
+	const path = "data/global/excel/charstats.txt"
+	source := fstest.MapFS{path: &fstest.MapFile{Data: []byte("class\tstr\tdex\tint\tvit\tStartSkill\textra\nama\t20\t25\t15\t20\tAttack\tmod-owned\n")}}
+	records, err := Load[models.CharStats](recordstore.New(source), path)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -116,8 +116,10 @@ function M.register()
 
     ecs.system({id="d2legacy.combat.player_melee_animation",phase="pre_simulation",
         query={all={"d2legacy.combat.attack_animation"}},
-        read={"d2legacy.combat.attack_animation"},
-        write={"d2legacy.combat.attack_animation","d2legacy.combat.basic_attack_request","d2legacy.player.animation"},
+        read={"d2legacy.combat.attack_animation","d2legacy.world.velocity",
+            "d2legacy.player.animation"},
+        write={"d2legacy.combat.attack_animation","d2legacy.combat.basic_attack_request",
+            "d2legacy.world.velocity","d2legacy.player.animation"},
         update=function(context, entities, structural)
             for _, attacker in ipairs(entities) do
                 local attack = ecs.get(attacker, "d2legacy.combat.attack_animation")

@@ -13,10 +13,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
-	"github.com/gravestench/dark-magic/internal/game/data/worldobjects"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -28,6 +26,7 @@ import (
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -106,7 +105,6 @@ type application struct {
 	renderCapability *modruntime.RenderCapability
 
 	records             *recordstore.Store
-	gameData            *gamedata.Catalog
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
 	saves               *d2save.Store

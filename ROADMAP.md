@@ -2045,6 +2045,14 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   exposes `roll(class, seed)`; arbitrary TSV paths and duplicate parsing no
   longer cross the runtime boundary, while deterministic event seeds and roll
   results retain their existing simulation-owned representation.
+  **Superseded by M21.14's committed d2legacy isolation:** the completed schema
+  recovery remains useful evidence, but the global `catalog.Snapshot`, eager
+  host validation, typed gameplay capabilities, and engine-owned D2 joins were
+  the wrong permanent boundary and have been removed. `store` now owns generic
+  immutable rows, `typed` offers optional caller-selected schema binding, and
+  `d2legacy` chooses required tables, joins records, and interprets gameplay.
+  Future work must not complete this historical item by recreating an all-table
+  Go catalog.
 - [x] Add package documentation and a concise newcomer architecture guide showing
   the boot path, frame path, scene/mod boundary, asset path, and where new code of
   each kind belongs. Keep examples aligned with the resulting structure.
@@ -2250,7 +2258,7 @@ gaps; M18–M24, M26–M27, the typed-data tail of M28, and M29's gameplay-comma
 integration remain open as described above. M31–M43 now define the independent
 creature-authoring and generated-representation program; none of that program is
 claimed implemented. The repository builds against
-tagged codec releases, boots through the internal host and layered shim, runs
+tagged codec releases, boots through the internal host and layered d2legacy mod, runs
 the Lua-authored shell and world orchestration, and passes the complete package
 suite under race detection. Historical stashes remain preserved and documented
 in `STASHES.md`; do not apply or drop them without a separate comparison task.

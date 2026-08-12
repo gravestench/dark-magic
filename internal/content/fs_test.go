@@ -287,6 +287,12 @@ func TestFromEnvironmentRejectsEmptyMPQDirectoryEntry(t *testing.T) {
 	}
 }
 
+func TestStandardMPQOrderStartsWithLegacyPatchArchive(t *testing.T) {
+	if len(standardMPQNames) == 0 || standardMPQNames[0] != "patch_d2.mpq" {
+		t.Fatalf("archive priority = %v", standardMPQNames)
+	}
+}
+
 func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
@@ -303,6 +309,9 @@ func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 			_ = Close(layer.FS)
 		}
 	}()
+	if _, err := fs.ReadFile(contentFS, "data/global/excel/sets.txt"); err != nil {
+		t.Fatalf("open patch table sets.txt: %v", err)
+	}
 
 	for _, suffix := range []string{".dt1", ".ds1"} {
 		paths, listErr := contentFS.List("data/global/tiles", suffix)

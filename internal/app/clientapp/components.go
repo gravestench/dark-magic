@@ -56,7 +56,7 @@ func (app *application) modDirectory() (string, error) {
 }
 
 func (app *application) registerHotReload(directory string, definitions []modruntime.Definition) error {
-	coordinator := hotreload.New(app.options.Content, app.scripts, app.components, app.gameData, definitions)
+	coordinator := hotreload.New(app.options.Content, app.scripts, app.components, app.records, definitions)
 	definition := host.ManagedDefinition{
 		ID: "engine.hot-reload",
 		New: func(context.Context) (host.Component, error) {
@@ -76,6 +76,14 @@ func (app *application) activateComponents(modDirectory string) error {
 	}
 	if err := app.components.ApplyDesired(context.Background(), desired); err != nil {
 		return wrap("start enabled components", err)
+	}
+	// d2legacy registers its authoritative command handlers while its managed
+	// component starts. Queue bootstrap work only after that registration has
+	// completed; session admission correctly rejects unknown command kinds.
+	if desired == nil || desired["d2legacy.authoritative"] {
+		if err := app.queueEntryPopulation(); err != nil {
+			return err
+		}
 	}
 	if err := app.scenes.Flush(context.Background()); err != nil {
 		return wrap("flush initial scene requests", err)

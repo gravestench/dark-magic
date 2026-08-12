@@ -209,7 +209,7 @@ func loadManifest(name string) (assetcatalog.Manifest, error) {
 
 func openMPQStack(directory string) (*content.FS, error) {
 	priority := []string{
-		"patch_d2legacy.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
+		"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
 		"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
 		"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
 	}

@@ -122,7 +122,10 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			retiredShort := "d" + "m."
 			retiredModShort := "d" + "2."
 			retiredLong := "dark" + "magic"
-			if strings.Contains(text, retiredShort) || strings.Contains(text, retiredModShort) || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
+			// Only quoted d2.* identifiers are namespaces. Real legacy archive
+			// names such as patch_d2.mpq are content filenames, not Lua APIs.
+			usesRetiredModShort := strings.Contains(text, `"`+retiredModShort) || strings.Contains(text, `'`+retiredModShort)
+			if strings.Contains(text, retiredShort) || usesRetiredModShort || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
 				relative, _ := filepath.Rel(root, path)
 				t.Errorf("%s uses a retired Lua namespace; use engine.*, d2legacy.*, or d2legacy.*", filepath.ToSlash(relative))
 			}

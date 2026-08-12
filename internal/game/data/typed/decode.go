@@ -1,7 +1,6 @@
-// Package gamedata loads the typed records that form Diablo II's authored game
-// database. It deliberately owns data decoding rather than application service
-// lifecycle; the host can build and publish immutable catalog snapshots.
-package gamedata
+// Package typed binds one immutable generic record table to a caller-selected
+// Go schema. It does not choose tables, join domains, or define a game catalog.
+package typed
 
 import (
 	"fmt"

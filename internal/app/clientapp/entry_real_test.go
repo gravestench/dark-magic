@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"context"
 	"math"
 	"os"
 	"testing"
@@ -14,7 +15,33 @@ import (
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
+
+func startTestD2LegacyAuthority(t *testing.T, app *application) {
+	t.Helper()
+	if err := app.scripts.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := modruntime.LoadDefinition(t.Context(), app.scripts, app.options.Content, "components/d2legacy.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	component, err := definition.Managed().New(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := component.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.queueEntryPopulation(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = component.Stop(context.Background())
+		_ = app.scripts.Stop(context.Background())
+	})
+}
 
 // This is the complete offline admission seam exercised with production data:
 // the frontend creates/selects a durable character, while the fixed-tick
@@ -31,6 +58,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		options:    Options{Content: assets},
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
+		scripts:    modruntime.New(),
 	}
 	if err := app.loadGameCatalogs(); err != nil {
 		t.Fatal(err)
@@ -38,6 +66,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
+	startTestD2LegacyAuthority(t, app)
 	chunks, err := maprender.Index(assets, app.gameWorlds[2], "data/global/palette/ACT1/pal.pl2", maprender.DefaultChunkSize)
 	if err != nil {
 		t.Fatal(err)
@@ -157,6 +186,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 		},
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
+		scripts:    modruntime.New(),
 	}
 	if err := app.loadGameCatalogs(); err != nil {
 		t.Fatal(err)
@@ -164,6 +194,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
+	startTestD2LegacyAuthority(t, app)
 	t.Cleanup(func() {
 		app.loading.Close()
 		_ = app.offlineSession.Close()

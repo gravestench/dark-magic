@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
+	models "github.com/gravestench/dark-magic/internal/game/data/model"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
+	typedrecords "github.com/gravestench/dark-magic/internal/game/data/typed"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
@@ -49,11 +50,23 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if worldMap.WidthTiles != zone.Bounds().Width || worldMap.HeightTiles != zone.Bounds().Height || len(worldMap.Tiles) == 0 {
 		t.Fatalf("materialized map dimensions/tiles = %dx%d/%d", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
 	}
-	snapshot, err := gamedata.New(records).Snapshot()
+	levels, err := typedrecords.Load[models.LevelData](records, "data/global/excel/levels.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
-	transitions, err := worldMap.ResolveLevelTransitions(snapshot.LevelsByID[9], snapshot.LevelWarpsByID)
+	levelsByID, err := typedrecords.Index(levels, func(level models.LevelData) int { return level.Id })
+	if err != nil {
+		t.Fatal(err)
+	}
+	warps, err := typedrecords.Load[models.LevelWarp](records, "data/global/excel/lvlwarp.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	warpsByID, err := typedrecords.Index(warps, func(warp models.LevelWarp) int { return warp.Id })
+	if err != nil {
+		t.Fatal(err)
+	}
+	transitions, err := gametransition.ResolveLevelTransitions(worldMap, levelsByID[9], warpsByID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,10 +77,10 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if first.DestinationLevel != 3 || first.WarpID != 4 || first.Tile.X != 4 || first.Tile.Y != 29 || first.Tile.MainIndex != 0 || first.Tile.SubIndex != 21 {
 		t.Fatalf("unexpected production cave transition = %#v", first)
 	}
-	wantGeometry := gameworld.WarpGeometry{
-		CellOrigin: gameworld.SubtilePoint{X: 20, Y: 145}, EntityPosition: gameworld.SubtilePoint{X: 22, Y: 150},
-		SelectionLocal: gameworld.LocalSelectionBounds{MinX: -30, MinY: -120, MaxX: 90, MaxY: 30},
-		Arrival:        gameworld.SubtilePoint{X: 22, Y: 150}, ExitWalkTarget: gameworld.SubtilePoint{X: 25, Y: 155},
+	wantGeometry := gametransition.WarpGeometry{
+		CellOrigin: gametransition.SubtilePoint{X: 20, Y: 145}, EntityPosition: gametransition.SubtilePoint{X: 22, Y: 150},
+		SelectionLocal: gametransition.LocalSelectionBounds{MinX: -30, MinY: -120, MaxX: 90, MaxY: 30},
+		Arrival:        gametransition.SubtilePoint{X: 22, Y: 150}, ExitWalkTarget: gametransition.SubtilePoint{X: 25, Y: 155},
 	}
 	if got := first.Geometry(); got != wantGeometry {
 		t.Fatalf("production cave geometry = %#v, want %#v", got, wantGeometry)

@@ -1,17 +1,39 @@
-package world
+package transition
 
 import (
 	"fmt"
 	"sort"
 
 	models "github.com/gravestench/dark-magic/internal/game/data/model"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
+
+type levelLink struct {
+	slot             int
+	destinationLevel int
+	warpID           int
+}
+
+// levelLinks interprets Levels.txt's eight Vis#/Warp# column pairs. Keeping
+// this join here is important: the schema layer preserves columns, while the
+// d2legacy adapter decides that they describe Diablo level transitions.
+func levelLinks(level models.LevelData) []levelLink {
+	destinations := [...]int{level.Vis0, level.Vis1, level.Vis2, level.Vis3, level.Vis4, level.Vis5, level.Vis6, level.Vis7}
+	warps := [...]int{level.Warp0, level.Warp1, level.Warp2, level.Warp3, level.Warp4, level.Warp5, level.Warp6, level.Warp7}
+	result := make([]levelLink, 0, len(destinations))
+	for slot, destination := range destinations {
+		if destination > 0 {
+			result = append(result, levelLink{slot: slot, destinationLevel: destination, warpID: warps[slot]})
+		}
+	}
+	return result
+}
 
 // LevelTransition joins one raw DS1 special tile to the paired Levels.txt and
 // LvlWarp.txt records. Geometry remains in its authored units until each field's
 // coordinate semantics has been verified against production maps.
 type LevelTransition struct {
-	Tile             SpecialTile
+	Tile             gameworld.SpecialTile
 	DestinationLevel int
 	WarpID           int
 	SelectX          int
@@ -56,7 +78,7 @@ type WarpGeometry struct {
 //   - arrival starts at the destination entity and ExitWalk is the follow-up
 //     automatic movement target.
 func (transition LevelTransition) Geometry() WarpGeometry {
-	origin := SubtilePoint{X: transition.Tile.X * SubtilesPerTile, Y: transition.Tile.Y * SubtilesPerTile}
+	origin := SubtilePoint{X: transition.Tile.X * gameworld.SubtilesPerTile, Y: transition.Tile.Y * gameworld.SubtilesPerTile}
 	entity := SubtilePoint{X: origin.X + transition.OffsetX, Y: origin.Y + transition.OffsetY}
 	selection := LocalSelectionBounds{
 		MinX: transition.SelectX,
@@ -74,13 +96,13 @@ func (transition LevelTransition) Geometry() WarpGeometry {
 // indexes 0 through 7 select the matching Levels.txt Vis#/Warp# pair. Higher
 // indexes are other authored markers (entry, corpse, portal, and level-specific
 // facts), so they are intentionally left unresolved here.
-func (m *Map) ResolveLevelTransitions(level models.LevelData, warps map[int]models.LevelWarp) ([]LevelTransition, error) {
+func ResolveLevelTransitions(m *gameworld.Map, level models.LevelData, warps map[int]models.LevelWarp) ([]LevelTransition, error) {
 	if m == nil {
 		return nil, nil
 	}
-	links := make(map[int]models.LevelLink, 8)
-	for _, link := range level.Links() {
-		links[link.Slot] = link
+	links := make(map[int]levelLink, 8)
+	for _, link := range levelLinks(level) {
+		links[link.slot] = link
 	}
 	result := make([]LevelTransition, 0)
 	for _, tile := range m.SpecialTiles {
@@ -88,15 +110,15 @@ func (m *Map) ResolveLevelTransitions(level models.LevelData, warps map[int]mode
 			continue
 		}
 		link, found := links[int(tile.MainIndex)]
-		if !found || link.WarpID < 0 {
+		if !found || link.warpID < 0 {
 			continue
 		}
-		warp, found := warps[link.WarpID]
+		warp, found := warps[link.warpID]
 		if !found {
-			return nil, fmt.Errorf("world: level %d visibility slot %d references missing LvlWarp %d", level.Id, link.Slot, link.WarpID)
+			return nil, fmt.Errorf("world: level %d visibility slot %d references missing LvlWarp %d", level.Id, link.slot, link.warpID)
 		}
 		result = append(result, LevelTransition{
-			Tile: tile, DestinationLevel: link.DestinationLevel, WarpID: link.WarpID,
+			Tile: tile, DestinationLevel: link.destinationLevel, WarpID: link.warpID,
 			SelectX: warp.SelectX, SelectY: warp.SelectY, SelectDX: warp.SelectDX, SelectDY: warp.SelectDY,
 			ExitWalkX: warp.ExitWalkX, ExitWalkY: warp.ExitWalkY, OffsetX: warp.OffsetX, OffsetY: warp.OffsetY,
 			LitVersion: warp.LitVersion != 0, Tiles: warp.Tiles, NoInteract: warp.NoInteract != 0,
