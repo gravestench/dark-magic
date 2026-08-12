@@ -13,7 +13,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -39,7 +38,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
-		SaveModule(persistence.New()), PlayerControlModule(&d2movement.MovementController{}), CommandIntentModule(&gamesession.IntentController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		PlayerControlModule(&d2movement.MovementController{}), CommandIntentModule(&gamesession.IntentController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
@@ -51,7 +50,6 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.settings/v1":       {"get", "save", "set", "status"},
 		"engine.video/v1":          {"available", "play"},
 		"engine.locale/v1":         {"text"},
-		"engine.save/v1":           {"characters", "create", "create_named", "delete", "select", "selected"},
 		"engine.player/v1":         {"request_move", "request_running"},
 		"engine.command_intent/v1": {"submit"},
 		"engine.simulation/v1":     {"move_hero", "state"}, "engine.render/v1": {"create", "diagnostics"},

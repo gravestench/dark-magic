@@ -2,7 +2,7 @@
 --
 -- This screen demonstrates a common game-UI pattern: presentation works with
 -- OPAQUE ENGINE-OWNED IDs instead of owning save files or mutable character
--- objects. `engine.save/v1` enumerates/selects/deletes; Lua owns paging, focus,
+-- objects. `d2legacy.save/v1` enumerates/selects/deletes; Lua owns paging, focus,
 -- presentation, confirmation dialogs, and the "double click launches" gesture.
 --
 -- Another useful lesson here is RETAINED REUSE: character slot controls and
@@ -11,7 +11,7 @@
 
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")
-local saves = require("engine.save/v1")
+local saves = require("d2legacy.save/v1")
 local scenes = require("engine.scene/v1")
 local data = require("engine.data/v1")
 local locale = require("engine.locale/v1")

@@ -19,7 +19,7 @@
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")
 local scenes = require("engine.scene/v1")
-local saves = require("engine.save/v1")
+local saves = require("d2legacy.save/v1")
 local data = require("engine.data/v1")
 local audio = require("engine.audio/v1")
 local locale = require("engine.locale/v1")
@@ -530,7 +530,7 @@ return {
                     local name = self.name_field.value or ""
                     if #name < recovered.form.minimum_name_length then return end
 
-                    -- ACTUAL save creation is performed by engine.save/v1. Lua passes
+                    -- ACTUAL save creation is performed by d2legacy.save/v1. Lua passes
                     -- plain requested values and gets back opaque ID or error.
                     local id, err = saves.create_named(
                         name,

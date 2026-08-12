@@ -20,6 +20,7 @@ import (
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
@@ -93,7 +94,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.VideoModule(runtime, video.Unavailable{}, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.SaveModule(saves),
+		d2save.Module(saves),
 		modruntime.PlayerControlModule(movementController),
 		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),

@@ -1,21 +1,22 @@
-package modruntime
+package save
 
 import (
 	"github.com/gravestench/dark-magic/internal/persistence"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 
-// SaveModule exposes character metadata and selection without exposing save
-// file ownership or mutable Go objects to Lua.
-func SaveModule(store *persistence.Store) Module {
-	return Module{Name: "engine.save/v1", Help: documentedModule("Create, select, inspect, and delete local characters.", map[string]CommandHelp{
-		"create_named": commandHelp("engine.save.create_named(name, class)", "Create and persist a character with an explicit name."),
-		"create":       commandHelp("engine.save.create(class)", "Create and persist a character with a generated name."),
-		"characters":   commandHelp("engine.save.characters()", "Return all available character summaries."),
-		"select":       commandHelp("engine.save.select(id)", "Select the active character by identifier."),
-		"delete":       commandHelp("engine.save.delete(id)", "Delete a character by identifier."),
-		"selected":     commandHelp("engine.save.selected()", "Return the currently selected character, if any."),
-	}), Loader: func(state *lua.LState) int {
+// Module exposes d2legacy character metadata and selection without exposing
+// persistence internals or mutable Go objects to Lua.
+func Module(store *persistence.Store) modruntime.Module {
+	return modruntime.Module{Name: "d2legacy.save/v1", Help: modruntime.ModuleHelp{Summary: "Create, select, inspect, and delete d2legacy characters.", Commands: map[string]modruntime.CommandHelp{
+		"create_named": {Usage: "d2legacy.save.create_named(name, class)", Summary: "Create and persist a character with an explicit name."},
+		"create":       {Usage: "d2legacy.save.create(id, name, class)", Summary: "Persist an imported character identity."},
+		"characters":   {Usage: "d2legacy.save.characters()", Summary: "Return all available character summaries."},
+		"select":       {Usage: "d2legacy.save.select(id)", Summary: "Select the active character by identifier."},
+		"delete":       {Usage: "d2legacy.save.delete(id)", Summary: "Delete a character by identifier."},
+		"selected":     {Usage: "d2legacy.save.selected()", Summary: "Return the currently selected character, if any."},
+	}}, Loader: func(state *lua.LState) int {
 		characterTable := func(character persistence.Character) *lua.LTable {
 			entry := state.NewTable()
 			entry.RawSetString("id", lua.LString(character.ID))
