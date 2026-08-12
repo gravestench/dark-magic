@@ -334,6 +334,13 @@ func (app *application) queueEntryPopulation() error {
 	if err != nil {
 		return wrap("plan Blood Moor population", err)
 	}
+	if defaults := developmentScenes[app.options.StartScene]; defaults.nearbyHostiles > 0 {
+		spawn := app.gameWorldSpawns[2]
+		plan, err = placeDevelopmentEncounter(plan, app.gameWorlds[2], spawn, defaults.nearbyHostiles)
+		if err != nil {
+			return wrap("place development combat encounter", err)
+		}
+	}
 	if err := gamemonster.SubmitPopulation(app.offlineSession, plan, "population", 1); err != nil {
 		return wrap("queue Blood Moor population", err)
 	}

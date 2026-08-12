@@ -1400,7 +1400,23 @@ data owners; they do not introduce parallel gameplay authorities.
   damage/range. An out-of-range effect now becomes checkpointed approach state:
   it retains the target identity, caches one collision-aware waypoint rather
   than pathfinding every tick, follows a moving same-zone target, and cancels
-  cleanly when that target disappears or becomes unreachable. Complete this
+  cleanly when that target disappears or becomes unreachable. Player admission
+  no longer confuses real skill ID 0 with an unset sentinel, and both approach
+  and impact range now measure to the target's occupied footprint. Combat Lab
+  places its first production hostiles on nearby reachable open subtiles and
+  an MPQ-backed acceptance follows default left Attack through authoritative
+  health loss. Idle fixed-tick input snapshots also preserve combat-owned
+  velocity and animation instead of resetting an active approach/swing to
+  neutral every frame. Repeated `(skill, target)` intents are idempotent, so
+  click repetition cannot reset a waypoint or swing clock, while changing
+  either the skill or target still replaces the action. Pointer holds now
+  reaffirm the initially selected hostile even after it moves away from the
+  cursor; ground holds continue updating traversal instead. Proposed movement
+  routes are transactional, so clicking an unreachable wall or void preserves
+  the last accepted route rather than acting as an accidental stop. Holding
+  Shift submits a targetless stand-still swing toward the pointer: it never
+  creates an approach route, but its authoritative impact may acquire an
+  eligible hostile already inside melee range. Complete this
   checkpoint now projects the active equipment hand set's typed base-weapon
   range, physical damage, and weapon class into the player ECS profile before
   combat. The no-argument Combat Lab now runs this transaction inside the

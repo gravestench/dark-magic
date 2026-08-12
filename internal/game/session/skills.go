@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gravestench/akara"
+	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
@@ -120,6 +121,9 @@ func RegisterSkillAssignments(session *Session) error {
 						return nil
 					}
 					return fmt.Errorf("assigned %s skill %d is not learned or allowed", payload.Side, skillID)
+				}
+				if !gameaction.MatchesExclusive(engine.World(), entity, skillID, payload.TargetID) {
+					gameaction.CancelExclusive(engine.World(), entity)
 				}
 				intent, present := intents.Get(entity)
 				if !present {

@@ -156,7 +156,7 @@ func beginCast(context gameecs.Context, owner akara.Entity, request *akara.Dynam
 	targetX, _ := request.Get("target_x")
 	targetY, _ := request.Get("target_y")
 	targetID, _ := request.Get("target_id")
-	if err := validateTarget(definition.TargetPolicy, targetX.(float64), targetY.(float64), targetID.(string), selectables); err != nil {
+	if err := validateTarget(definition, targetX.(float64), targetY.(float64), targetID.(string), selectables); err != nil {
 		rejectCast(context, owner, request, err.Error(), commands, world, requests, events)
 		return nil
 	}
@@ -226,11 +226,17 @@ func advanceCast(context gameecs.Context, owner akara.Entity, state *akara.Dynam
 	return nil
 }
 
-func validateTarget(policy string, x, y float64, targetID string, selectables *akara.DynamicStore) error {
+func validateTarget(definition Definition, x, y float64, targetID string, selectables *akara.DynamicStore) error {
 	if math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
 		return fmt.Errorf("skill: target point must be finite")
 	}
-	if policy == TargetPoint {
+	if definition.TargetPolicy == TargetPoint {
+		return nil
+	}
+	// Diablo II's Shift modifier permits a basic melee swing at a point even
+	// without a unit underneath it. This still produces the authored animation
+	// and timing, but the later melee transaction has no victim to damage.
+	if definition.Behavior == BehaviorBasicMelee && targetID == "" {
 		return nil
 	}
 	if targetID == "" {

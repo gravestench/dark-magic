@@ -45,6 +45,39 @@ func TestBasicMeleeAppliesDamageAndEmitsDeath(t *testing.T) {
 	}
 }
 
+func TestManualMeleeAcquiresHostileAlreadyInRange(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	if err := RegisterBasicMelee(engine, BasicMeleePolicy{HitChance: 100}); err != nil {
+		t.Fatal(err)
+	}
+	stores := meleeTestStores(t, engine)
+	player := engine.World().MustCreateEntity()
+	hostile := engine.World().MustCreateEntity()
+	mustSetEntity(t, stores.requests, player, map[string]any{"target_id": "", "request_tick": int64(1)})
+	mustSetEntity(t, stores.profiles, player, map[string]any{"range": 2.0, "physical_min": MustWhole(2).Raw(), "physical_max": MustWhole(2).Raw()})
+	mustSetEntity(t, stores.selectables, player, map[string]any{"id": "player:hero", "kind": targeting.KindPlayer, "label": "Hero", "owner": "hero", "radius": 1.0, "priority": int64(10)})
+	mustSetEntity(t, stores.positions, player, map[string]any{"x": 2.0, "y": 2.0})
+	mustSetEntity(t, stores.locations, player, map[string]any{"act": int64(1), "level_id": int64(2)})
+	mustSetEntity(t, stores.selectables, hostile, map[string]any{"id": "monster:fallen", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 0.5, "priority": int64(20)})
+	mustSetEntity(t, stores.positions, hostile, map[string]any{"x": 4.0, "y": 2.0})
+	mustSetEntity(t, stores.locations, hostile, map[string]any{"act": int64(1), "level_id": int64(2)})
+	mustSetEntity(t, stores.monsterStats, hostile, map[string]any{"level": int64(1), "health": MustWhole(5).Raw(), "max_health": MustWhole(5).Raw(), "defense": int64(0), "attack_rating": int64(0), "physical_min": int64(0), "physical_max": int64(0), "experience": int64(0)})
+	if err := engine.Update(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+	stats, _ := stores.monsterStats.Get(hostile)
+	health, _ := stats.Get("health")
+	if health != MustWhole(3).Raw() {
+		t.Fatalf("manual melee health = %v, want %d", health, MustWhole(3).Raw())
+	}
+	event, _ := stores.events.Get(stores.events.Entities()[0])
+	targetID, _ := event.Get("target_id")
+	if targetID != "monster:fallen" {
+		t.Fatalf("manual melee resolved target = %v", targetID)
+	}
+}
+
 func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	engine := gameecs.New()
 	defer engine.Close()
@@ -112,7 +145,9 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 		t.Fatalf("out-of-range target health = %v, want unchanged", before)
 	}
 	playerPosition, _ := stores.positions.Get(player)
-	if err := playerPosition.Set("x", 7.0); err != nil {
+	// The player is within weapon range of the Fallen's occupied footprint,
+	// although still farther than weapon range from its center.
+	if err := playerPosition.Set("x", 5.6); err != nil {
 		t.Fatal(err)
 	}
 	if err := engine.Update(time.Second / 25); err != nil {

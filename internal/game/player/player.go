@@ -275,12 +275,18 @@ func materialize(engine *gameecs.Engine, command simulation.Command) error {
 		return err
 	}
 	leftSkill, rightSkill := int64(0), int64(0)
+	leftChosen, rightChosen := false, false
 	for _, skill := range entry.Skills {
-		if leftSkill == 0 && skill.LeftAllowed {
+		// Skill zero is the real basic Attack action, so zero cannot double as
+		// an "unset" sentinel. Track selection separately or a later general
+		// action silently replaces Attack on the left mouse button.
+		if !leftChosen && skill.LeftAllowed {
 			leftSkill = skill.ID
+			leftChosen = true
 		}
-		if rightSkill == 0 && skill.RightAllowed {
+		if !rightChosen && skill.RightAllowed {
 			rightSkill = skill.ID
+			rightChosen = true
 		}
 	}
 	components := []struct {

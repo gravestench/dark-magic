@@ -30,16 +30,16 @@ func (timing AttackTiming) valid() bool {
 
 func attackAnimationSchema() akara.Schema {
 	return akara.Schema{Name: AttackAnimation, Version: 1, Fields: []akara.Field{
-		{Name: "target_id", Kind: akara.FieldString}, {Name: "start_tick", Kind: akara.FieldInt64},
+		{Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_id", Kind: akara.FieldString}, {Name: "start_tick", Kind: akara.FieldInt64},
 		{Name: "frames", Kind: akara.FieldInt64}, {Name: "speed", Kind: akara.FieldInt64},
 		{Name: "impact_frame", Kind: akara.FieldInt64}, {Name: "progress", Kind: akara.FieldInt64},
 		{Name: "impact_fired", Kind: akara.FieldBool},
 	}}
 }
 
-func newAttackAnimation(targetID string, tick uint64, timing AttackTiming) map[string]any {
+func newAttackAnimation(skillID int64, targetID string, tick uint64, timing AttackTiming) map[string]any {
 	return map[string]any{
-		"target_id": targetID, "start_tick": int64(tick), "frames": timing.Frames,
+		"skill_id": skillID, "target_id": targetID, "start_tick": int64(tick), "frames": timing.Frames,
 		"speed": timing.Speed, "impact_frame": timing.ImpactFrame,
 		"progress": int64(0), "impact_fired": false,
 	}

@@ -616,16 +616,40 @@ return {
 			self.world_hover_tip:set_visible(hover ~= nil)
 			if hover then self.world_hover_tip:set_text(hover.label ~= "" and hover.label or hover.kind);self.world_hover_tip:set_position(pointer_x+16,pointer_y+18) end
 		end
+        local primary_pressed = input.pressed("pointer_primary")
+        local primary_down = input.down("pointer_primary")
+        local stand_still = input.down("shift") or input.pressed("shift")
+        if input.released("pointer_primary") or not primary_down then
+            self.held_hostile = nil
+        end
         if self.player and self.world and in_world and not self.__darkmagic_item_held
-            and (input.pressed("pointer_primary") or (input.down("pointer_primary") and not self.pending_interaction)) then
+            and (primary_pressed or (primary_down and not self.pending_interaction)) then
             local target_world_x, target_world_y = self.world:screen_to_subtile(
                 pointer_x, pointer_y, camera_x, camera_y, target_x, target_y
             )
-			local selected = selectable_at(self, target_world_x, target_world_y)
-			if selected and input.pressed("pointer_primary") then
+			-- A held attack belongs to the unit selected on the first frame. The
+			-- monster may walk away from the stationary cursor, but that must not
+			-- silently turn the next held frame into a ground-movement command.
+			local selected = primary_pressed and selectable_at(self, target_world_x, target_world_y) or nil
+			if primary_pressed then self.held_hostile = nil end
+			if self.held_hostile then
+				self.pending_interaction = nil
+				if stand_still then
+					self.player.request_skill("left", target_world_x, target_world_y, "")
+				else
+					self.player.request_skill("left", target_world_x, target_world_y, self.held_hostile.id)
+				end
+			elseif selected and primary_pressed then
 				if selected.kind == "hostile" then
 					self.pending_interaction = nil
-					self.player.request_skill("left", selected.x, selected.y, selected.id)
+					if stand_still then
+						-- Shift attacks the point, even when a unit happens to be there.
+						-- It therefore cannot create a chase when that unit moves away.
+						self.player.request_skill("left", selected.x, selected.y, "")
+					else
+						self.held_hostile = {id = selected.id}
+						self.player.request_skill("left", selected.x, selected.y, selected.id)
+					end
 				elseif selected.kind == "static-object" or selected.kind == "dynamic-object" then
 					self.pending_interaction = selected
 					self.player.request_move(selected.x, selected.y, 3.5)
@@ -633,6 +657,11 @@ return {
 					self.pending_interaction = nil
 					self.player.request_move(selected.x, selected.y, selected.radius or 0)
 				end
+			elseif stand_still then
+				-- Shift-click deliberately casts at empty ground. It is the legacy
+				-- way to swing or cast toward the pointer without chasing a unit.
+				self.pending_interaction = nil
+				self.player.request_skill("left", target_world_x, target_world_y, "", true)
 			else
 				self.pending_interaction = nil
 				self.player.request_move(target_world_x, target_world_y)

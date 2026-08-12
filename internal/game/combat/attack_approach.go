@@ -12,15 +12,15 @@ const playerWalkSpeed = 10.0
 
 func attackApproachSchema() akara.Schema {
 	return akara.Schema{Name: AttackApproach, Version: 1, Fields: []akara.Field{
-		{Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64},
+		{Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_id", Kind: akara.FieldString}, {Name: "request_tick", Kind: akara.FieldInt64},
 		{Name: "goal_x", Kind: akara.FieldFloat64}, {Name: "goal_y", Kind: akara.FieldFloat64},
 		{Name: "waypoint_x", Kind: akara.FieldFloat64}, {Name: "waypoint_y", Kind: akara.FieldFloat64},
 		{Name: "has_waypoint", Kind: akara.FieldBool},
 	}}
 }
 
-func newAttackApproach(targetID string, tick int64) map[string]any {
-	return map[string]any{"target_id": targetID, "request_tick": tick, "goal_x": 0.0, "goal_y": 0.0, "waypoint_x": 0.0, "waypoint_y": 0.0, "has_waypoint": false}
+func newAttackApproach(skillID int64, targetID string, tick int64) map[string]any {
+	return map[string]any{"skill_id": skillID, "target_id": targetID, "request_tick": tick, "goal_x": 0.0, "goal_y": 0.0, "waypoint_x": 0.0, "waypoint_y": 0.0, "has_waypoint": false}
 }
 
 // updateAttackApproaches owns the pending click-to-attack action. The target is
@@ -42,7 +42,11 @@ func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, co
 		ax, _ := position.Get("x")
 		ay, _ := position.Get("y")
 		rangeValue, _ := profile.Get("range")
-		attackRange := rangeValue.(float64)
+		// Weapon range reaches the edge of a unit, not only its mathematical
+		// center. Large monsters therefore become hittable when the attacker
+		// reaches their occupied footprint. Pathfinding must use the same number
+		// or it can stop successfully and then have combat reject the swing.
+		attackRange := rangeValue.(float64) + target.radius
 		if math.Hypot(target.x-ax.(float64), target.y-ay.(float64)) <= attackRange {
 			if err := stopAttackApproach(attacker, commands, approaches, velocities, animations); err != nil {
 				return err
@@ -51,7 +55,8 @@ func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, co
 			if err != nil {
 				return err
 			}
-			commands.AddDynamic(attackAnimations, attacker, newAttackAnimation(target.id, context.Tick, timing))
+			skillID, _ := approach.Get("skill_id")
+			commands.AddDynamic(attackAnimations, attacker, newAttackAnimation(skillID.(int64), target.id, context.Tick, timing))
 			if animation, present := animations.Get(attacker); present {
 				if err := animation.Set("mode", "A1"); err != nil {
 					return err
@@ -101,8 +106,9 @@ func updateAttackApproaches(context gameecs.Context, entities []akara.Entity, co
 }
 
 type approachTarget struct {
-	id   string
-	x, y float64
+	id     string
+	x, y   float64
+	radius float64
 }
 
 func sameZoneTarget(attacker akara.Entity, targetID string, selectables, positions, locations *akara.DynamicStore) (approachTarget, bool) {
@@ -127,7 +133,8 @@ func sameZoneTarget(attacker akara.Entity, targetID string, selectables, positio
 		}
 		x, _ := position.Get("x")
 		y, _ := position.Get("y")
-		return approachTarget{id: targetID, x: x.(float64), y: y.(float64)}, true
+		radius, _ := selectable.Get("radius")
+		return approachTarget{id: targetID, x: x.(float64), y: y.(float64), radius: radius.(float64)}, true
 	}
 	return approachTarget{}, false
 }

@@ -83,6 +83,7 @@ func registerAIStores(engine *gameecs.Engine) (ai, attacks, positions, velocitie
 type aiTarget struct {
 	id         string
 	x, y       float64
+	radius     float64
 	act, level int64
 }
 
@@ -123,7 +124,12 @@ func updateAI(context gameecs.Context, entities []akara.Entity, commands *akara.
 		}
 		dx, dy := target.x-x.(float64), target.y-y.(float64)
 		attackRange, _ := brain.Get("attack_range")
-		if math.Hypot(dx, dy) <= attackRange.(float64) {
+		// The combat transaction measures reach to the edge of the target's
+		// occupied footprint. AI and pathfinding must use that exact same reach;
+		// otherwise a monster can successfully finish its route beside a player
+		// while still believing the player's center is too far away to attack.
+		effectiveRange := attackRange.(float64) + target.radius
+		if math.Hypot(dx, dy) <= effectiveRange {
 			if err := setBrain(brain, AIAttack, target.id); err != nil {
 				return err
 			}
@@ -137,7 +143,7 @@ func updateAI(context gameecs.Context, entities []akara.Entity, commands *akara.
 			return err
 		}
 		if paths != nil {
-			path, err := paths.FindPath(gameworld.PathRequest{Start: gameworld.Point{X: x.(float64), Y: y.(float64)}, Goal: gameworld.Point{X: target.x, Y: target.y}, StopRadius: attackRange.(float64)})
+			path, err := paths.FindPath(gameworld.PathRequest{Start: gameworld.Point{X: x.(float64), Y: y.(float64)}, Goal: gameworld.Point{X: target.x, Y: target.y}, StopRadius: effectiveRange})
 			if err != nil || len(path) < 2 {
 				if err := setVelocity(velocity, 0, 0); err != nil {
 					return err
@@ -187,9 +193,10 @@ func playerTargets(selectables, positions, locations *akara.DynamicStore) []aiTa
 		id, _ := selectable.Get("id")
 		x, _ := position.Get("x")
 		y, _ := position.Get("y")
+		radius, _ := selectable.Get("radius")
 		act, _ := location.Get("act")
 		level, _ := location.Get("level_id")
-		result = append(result, aiTarget{id: id.(string), x: x.(float64), y: y.(float64), act: act.(int64), level: level.(int64)})
+		result = append(result, aiTarget{id: id.(string), x: x.(float64), y: y.(float64), radius: radius.(float64), act: act.(int64), level: level.(int64)})
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].id < result[j].id })
 	return result
