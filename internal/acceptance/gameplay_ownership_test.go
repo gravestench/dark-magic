@@ -135,7 +135,7 @@ func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
 		text := string(data)
 		for _, forbidden := range []string{
 			"RegisterPlayerBasicAttack", "RegisterAI", "RegisterDeath",
-			"game/loot\"", "gamemonster.Register,",
+			"game/loot\"", "gamemonster.Register,", "gameplayer.Register,",
 		} {
 			if strings.Contains(text, forbidden) {
 				t.Errorf("%s reinstalls migrated d2legacy policy through %q", name, forbidden)

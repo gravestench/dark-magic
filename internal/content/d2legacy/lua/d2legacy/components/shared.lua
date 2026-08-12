@@ -25,10 +25,26 @@ function M.register()
     component("d2legacy.player.skill_assignment", {
         {name="left",type="i64"},{name="right",type="i64"},
     })
+    component("d2legacy.player.skill_intent", {
+        {name="side",type="string"},{name="skill_id",type="i64"},
+        {name="target_x",type="f64"},{name="target_y",type="f64"},
+        {name="target_id",type="string"},
+    })
+    component("d2legacy.player.movement_mode", {{name="running",type="bool"}})
+    component("d2legacy.player.appearance", {
+        {name="cof",type="string"},{name="token",type="string"},
+        {name="palette",type="string"},{name="weapon_class",type="string"},
+    })
+    local belt = {{name="capacity",type="i64"}}
+    for slot = 1, 16 do
+        belt[#belt + 1] = {name="slot_" .. slot,type="string"}
+    end
+    component("d2legacy.player.belt", belt)
     component("d2legacy.world.position", {{name="x",type="f64"},{name="y",type="f64"}})
     component("d2legacy.world.velocity", {{name="x",type="f64"},{name="y",type="f64"}})
     component("d2legacy.world.player_control", {{name="player",type="string"}})
     component("d2legacy.player.animation", {{name="direction",type="i64"},{name="mode",type="string"}})
+    component("d2legacy.world.bounds", {{name="width",type="f64"},{name="height",type="f64"}})
     component("d2legacy.world.location", {{name="act",type="i64"},{name="level_id",type="i64"}})
     component("d2legacy.world.collider", {{name="radius",type="f64"}})
     component("d2legacy.world.selectable", {

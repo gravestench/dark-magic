@@ -15,7 +15,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	"github.com/gravestench/dark-magic/internal/logging"
@@ -54,10 +53,6 @@ func main() {
 		return
 	}
 	defer mod.Stop(context.Background())
-	if err := gameplayer.Register(authority); err != nil {
-		slog.Error("registering authoritative player commands", "error", err)
-		return
-	}
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		slog.Error("registering authoritative movement commands", "error", err)
 		return

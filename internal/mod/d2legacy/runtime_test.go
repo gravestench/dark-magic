@@ -2,14 +2,63 @@ package d2legacy
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"testing"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
+
+func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+	payload, _ := json.Marshal(map[string]any{
+		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
+		"level": 1, "experience": 0, "health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"expansion": true, "hardcore": false, "cof": "", "token": "AM",
+		"palette": "data/global/Palette/units/pal.dat", "direction": 0, "mode": "NU", "weapon_class": "HTH",
+		"melee_range": 2, "physical_min_raw": 256, "physical_max_raw": 512,
+		"x": 10, "y": 20, "world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
+		"skills": []map[string]any{{"id": 0, "level": 1, "list_row": 0, "left_allowed": true, "right_allowed": true}},
+	})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	identities, found := akara.GetDynamicStore(engine.World(), "d2legacy.player.identity")
+	if !found || len(identities.Entities()) != 1 {
+		t.Fatalf("Lua entry created %d players", len(identities.Entities()))
+	}
+	player := identities.Entities()[0]
+	assignments, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.skill_assignment")
+	assignment, _ := assignments.Get(player)
+	left, _ := assignment.Get("left")
+	if left != int64(0) {
+		t.Fatalf("initial left skill = %v, want basic Attack 0", left)
+	}
+	learned, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.learned_skill")
+	if len(learned.Entities()) != 1 {
+		t.Fatalf("Lua entry created %d learned skills", len(learned.Entities()))
+	}
+}
 
 type fixtureRecords struct{}
 
