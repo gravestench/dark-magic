@@ -20,6 +20,13 @@ func (scriptedPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point,
 	return []gameworld.Point{request.Start, {X: 11, Y: 10}, request.Goal}, nil
 }
 
+type countingPaths struct{ calls int }
+
+func (paths *countingPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point, error) {
+	paths.calls++
+	return []gameworld.Point{request.Start, request.Goal}, nil
+}
+
 func TestMovementSourceHonorsGameplayInputRouting(t *testing.T) {
 	engine := gameecs.New()
 	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
@@ -169,5 +176,49 @@ func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) 
 	retained := controller.moveTarget()
 	if retained == nil || retained.X != 20 || retained.Y != 10 {
 		t.Fatalf("controller retained target = %#v, want original target", retained)
+	}
+}
+
+func TestMovementSourceDoesNotReplanHeldPointerInsideCollisionCell(t *testing.T) {
+	engine := gameecs.New()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := positions.Set(entity, map[string]any{"x": 10.0, "y": 10.0}); err != nil {
+		t.Fatal(err)
+	}
+	var input inputstate.Store
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(20.1, 10.1); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewMovementSource(engine, &input, "alpha", "game_world", controller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := &countingPaths{}
+	source.navigation = paths
+	first, err := decodeMove(source.Commands(1)[0].Payload)
+	if err != nil || first.Target == nil {
+		t.Fatalf("first waypoint = %#v, %v", first.Target, err)
+	}
+	if err := controller.SetMoveTarget(20.2, 10.2); err != nil {
+		t.Fatal(err)
+	}
+	second, err := decodeMove(source.Commands(2)[0].Payload)
+	if err != nil || second.Target == nil || second.Target.X != 20.2 || second.Target.Y != 10.2 {
+		t.Fatalf("updated sub-cell waypoint = %#v, %v", second.Target, err)
+	}
+	if paths.calls != 1 {
+		t.Fatalf("path searches = %d, want one for held-pointer movement within a collision cell", paths.calls)
 	}
 }
