@@ -25,16 +25,10 @@ func TestResolverUsesSpawnedEntityKindsAndPriority(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	spawn("npc:1", KindNPC, 0)
-	spawn("item:1", KindItem, 5)
+	spawn("npc:1", "npc", 0)
+	spawn("item:1", "item", 5)
 	hit, found := New(engine).HitAt(10, 10)
-	if !found || hit.ID != "item:1" || hit.Kind != KindItem {
+	if !found || hit.ID != "item:1" || hit.Kind != "item" {
 		t.Fatalf("hit=%#v,%v", hit, found)
-	}
-}
-
-func TestKindsAreExplicit(t *testing.T) {
-	if ValidKind("dynamic-object") || !ValidKind(KindHostile) {
-		t.Fatal("kind validation accepted an inferred DS1 class")
 	}
 }

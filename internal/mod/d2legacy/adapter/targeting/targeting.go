@@ -4,26 +4,12 @@
 package targeting
 
 import (
-	"fmt"
-	"sort"
-	"strings"
-
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
 const Component = "d2legacy.world.selectable"
-
-const (
-	KindPlayer  = "player"
-	KindNPC     = "npc"
-	KindHostile = "hostile"
-	KindItem    = "item"
-	KindPortal  = "portal"
-	KindMissile = "missile"
-	KindScenery = "scenery"
-)
 
 type Hit struct {
 	ID, Kind, Label, Owner string
@@ -34,14 +20,6 @@ type Hit struct {
 type Resolver struct{ engine *gameecs.Engine }
 
 func New(engine *gameecs.Engine) *Resolver { return &Resolver{engine: engine} }
-
-func ValidKind(kind string) bool {
-	switch kind {
-	case KindPlayer, KindNPC, KindHostile, KindItem, KindPortal, KindMissile, KindScenery:
-		return true
-	}
-	return false
-}
 
 func (resolver *Resolver) HitAt(x, y float64) (Hit, bool) {
 	if resolver == nil || resolver.engine == nil {
@@ -73,9 +51,6 @@ func (resolver *Resolver) HitAt(x, y float64) (Hit, bool) {
 		priority, _ := component.Get("priority")
 		px, _ := position.Get("x")
 		py, _ := position.Get("y")
-		if !ValidKind(kind.(string)) {
-			continue
-		}
 		hit := Hit{ID: id.(string), Kind: kind.(string), Label: label.(string), Owner: owner.(string), X: px.(float64), Y: py.(float64), Radius: radius.(float64), Priority: priority.(int64)}
 		hits[hit.ID] = hit
 	}
@@ -96,19 +71,4 @@ func (resolver *Resolver) HitAt(x, y float64) (Hit, bool) {
 
 func Schema() akara.Schema {
 	return akara.Schema{Name: Component, Version: 1, Fields: []akara.Field{{Name: "id", Kind: akara.FieldString}, {Name: "kind", Kind: akara.FieldString}, {Name: "label", Kind: akara.FieldString}, {Name: "owner", Kind: akara.FieldString}, {Name: "radius", Kind: akara.FieldFloat64}, {Name: "priority", Kind: akara.FieldInt64}}}
-}
-
-func Validate(id, kind string, radius float64) error {
-	id = strings.TrimSpace(id)
-	kind = strings.ToLower(strings.TrimSpace(kind))
-	if id == "" || !ValidKind(kind) || radius <= 0 {
-		return fmt.Errorf("targeting: ID, valid kind, and positive radius are required")
-	}
-	return nil
-}
-
-func Kinds() []string {
-	result := []string{KindPlayer, KindNPC, KindHostile, KindItem, KindPortal, KindMissile, KindScenery}
-	sort.Strings(result)
-	return result
 }

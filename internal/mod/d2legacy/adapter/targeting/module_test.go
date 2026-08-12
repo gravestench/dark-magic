@@ -15,7 +15,7 @@ func TestTargetingModuleReturnsCopiedSpawnedFacts(t *testing.T) {
 	selectables, _ := akara.RegisterSchema(engine.World(), Schema())
 	entity := engine.World().MustCreateEntity()
 	_, _ = positions.Set(entity, map[string]any{"x": 4.0, "y": 5.0})
-	_, _ = selectables.Set(entity, map[string]any{"id": "fallen:1", "kind": KindHostile, "label": "Fallen", "owner": "", "radius": 1.0, "priority": int64(2)})
+	_, _ = selectables.Set(entity, map[string]any{"id": "fallen:1", "kind": "hostile", "label": "Fallen", "owner": "", "radius": 1.0, "priority": int64(2)})
 	runtime := modruntime.New()
 	if err := runtime.RegisterModule(Module(New(engine))); err != nil {
 		t.Fatal(err)
