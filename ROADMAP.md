@@ -1613,16 +1613,18 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   Item bootstrap is idempotent over restored ECS state, so immutable creation
   facts cannot duplicate durable layouts or items during reconnect.
 
-- [ ] **M21.14.10 — character progression and owned units migration.** Move D2
+- [x] **M21.14.10 — character progression and owned units migration.** Move D2
   class definitions, base/derived stats, XP/leveling, hirelings, pets, summons,
   limits, attribution, and lifecycle policy to `d2legacy`. Acceptance: character
   creation through level-up and one owned-unit lifecycle restore identically
   from a checkpoint without Go-owned D2 policy.
 
-  Ownership cutover is complete. Lua now owns category/group limits, stable
-  replacement, immediate/ultimate attribution, lifetime flags, and checkpointed
-  owned-unit state. Creation-to-level-up and active lifetime/despawn acceptance
-  remain before the full item is complete.
+  Complete: Lua owns category/group limits, stable replacement,
+  immediate/ultimate attribution, lifetime flags, checkpointed owned-unit state,
+  class-specific cumulative experience thresholds, level promotion, and active
+  lifetime expiration. A production-composition acceptance vector creates a
+  character at its authored threshold, crosses an owned-unit expiration boundary
+  from a checkpoint, and proves identical level, despawn, and final checksum.
 
 - [ ] **M21.14.11 — interactions, quests, transitions, and difficulty
   migration.** Move D2 NPC/object interactions, quests, rewards, services,
