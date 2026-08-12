@@ -29,7 +29,7 @@ end
 function M.validate(command)
     local p = command.payload
     assert(type(p) == "table", "player entry payload must be a table")
-    for _, field in ipairs({"character_id","player","name","class","token","palette","mode","weapon_class"}) do
+    for _, field in ipairs({"character_id","player","name","class","palette","mode"}) do
         assert(present(p[field]), "player entry " .. field .. " is required")
     end
     assert(p.level >= 1 and p.health >= 0 and p.max_health >= p.health,
@@ -40,11 +40,10 @@ function M.validate(command)
     assert(p.world_width > 0 and p.world_height > 0 and p.x >= 0 and p.y >= 0
         and p.x < p.world_width and p.y < p.world_height, "player entry is outside the world")
     assert(p.act >= 1 and p.act <= 5 and p.level_id > 0, "player entry location is invalid")
-    assert(finite(p.melee_range) and p.melee_range > 0
-        and p.physical_min_raw >= 0 and p.physical_max_raw >= p.physical_min_raw,
-        "player entry melee profile is invalid")
     assert(type(p.skills) == "table" or p.skills == nil, "player entry skills must be a table")
 end
+
+local class_tokens={amazon="AM",sorceress="SO",necromancer="NE",paladin="PA",barbarian="BA",assassin="AI",druid="DZ"}
 
 local function initial_skills(skills)
     local left, right, left_chosen, right_chosen = 0, 0, false, false
@@ -65,13 +64,16 @@ function M.apply(command)
     local player = ecs.create({
         ["d2legacy.player.identity"]={character_id=p.character_id,player=p.player,name=p.name,class=p.class},
         ["d2legacy.player.progress"]={level=p.level,experience=p.experience},
-        ["d2legacy.player.combat_stats"]={attack_rating=p.attack_rating or 0,defense=p.defense or 0},
+        -- Legacy base attack rating is five points per Dexterity. Equipment and
+        -- skills add their own removable sources later; the host supplies only
+        -- the durable Dexterity fact and does not interpret the D2 formula.
+        ["d2legacy.player.combat_stats"]={attack_rating=(p.dexterity or 0)*5,defense=p.defense or 0},
         ["d2legacy.player.vitals"]={health=p.health,max_health=p.max_health,mana=p.mana,max_mana=p.max_mana,
             mana_raw=p.mana*256,max_mana_raw=p.max_mana*256},
-        ["d2legacy.combat.melee_profile"]={range=p.melee_range,physical_min=p.physical_min_raw,
-            physical_max=p.physical_max_raw},
-        ["d2legacy.player.appearance"]={cof=p.cof or "",token=p.token,palette=p.palette,
-            weapon_class=p.weapon_class},
+        -- D2 synthesizes an unarmed profile when no weapon contributes one.
+        ["d2legacy.combat.melee_profile"]={range=2,physical_min=256,physical_max=512},
+        ["d2legacy.player.appearance"]={cof=p.cof or "",token=assert(class_tokens[string.lower(p.class)],"unknown player class"),palette=p.palette,
+            weapon_class="HTH"},
         ["d2legacy.player.animation"]={direction=p.direction,mode=p.mode},
         ["d2legacy.world.position"]={x=p.x,y=p.y},
         ["d2legacy.world.velocity"]={x=0,y=0},

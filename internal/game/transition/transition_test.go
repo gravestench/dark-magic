@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
-	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
-	"github.com/gravestench/dark-magic/internal/persistence"
 )
 
 func TestSourceTransitionsPlayerAcrossVerifiedSeamWithoutBounce(t *testing.T) {
@@ -23,11 +21,13 @@ func TestSourceTransitionsPlayerAcrossVerifiedSeamWithoutBounce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry := gameplayer.EntryFromCharacter(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1}, "player", 10, 10, 100, 80)
-	command, _ := gameplayer.Command(entry, "system", 1, 1, simulation.AuthoritySystem)
-	if err := gameplayer.ApplyEntryCommand(engine, command); err != nil {
-		t.Fatal(err)
-	}
+	identity, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	position, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	location, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}})
+	entity, _ := engine.World().CreateEntity()
+	identity.Set(entity, map[string]any{"player": "player"})
+	position.Set(entity, map[string]any{"x": float64(10), "y": float64(10)})
+	location.Set(entity, map[string]any{"act": int64(1), "level_id": int64(1)})
 	source, err := transition.NewSource(engine, "player", authority)
 	if err != nil {
 		t.Fatal(err)

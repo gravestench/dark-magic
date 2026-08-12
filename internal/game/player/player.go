@@ -2,19 +2,13 @@
 package player
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"math"
 	"strings"
 
 	"github.com/gravestench/akara"
-	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	"github.com/gravestench/dark-magic/internal/game/targeting"
 	"github.com/gravestench/dark-magic/internal/persistence"
 )
 
@@ -27,36 +21,31 @@ const localEntryActor = "system:local-player-entry"
 // Entry is the complete validated intent needed to create the initial player
 // archetype. After application, ECS components—not this payload—are live state.
 type Entry struct {
-	CharacterID    string  `json:"character_id"`
-	Player         string  `json:"player"`
-	Name           string  `json:"name"`
-	Class          string  `json:"class"`
-	Level          int64   `json:"level"`
-	Experience     int64   `json:"experience"`
-	AttackRating   int64   `json:"attack_rating"`
-	Defense        int64   `json:"defense"`
-	Health         int64   `json:"health"`
-	MaxHealth      int64   `json:"max_health"`
-	Mana           int64   `json:"mana"`
-	MaxMana        int64   `json:"max_mana"`
-	Expansion      bool    `json:"expansion"`
-	Hardcore       bool    `json:"hardcore"`
-	COF            string  `json:"cof"`
-	Token          string  `json:"token"`
-	Palette        string  `json:"palette"`
-	Direction      int64   `json:"direction"`
-	Mode           string  `json:"mode"`
-	WeaponClass    string  `json:"weapon_class"`
-	MeleeRange     float64 `json:"melee_range"`
-	PhysicalMinRaw int64   `json:"physical_min_raw"`
-	PhysicalMaxRaw int64   `json:"physical_max_raw"`
-	X              float64 `json:"x"`
-	Y              float64 `json:"y"`
-	WorldWidth     float64 `json:"world_width"`
-	WorldHeight    float64 `json:"world_height"`
-	Act            int64   `json:"act"`
-	LevelID        int64   `json:"level_id"`
-	Skills         []Skill `json:"skills,omitempty"`
+	CharacterID string  `json:"character_id"`
+	Player      string  `json:"player"`
+	Name        string  `json:"name"`
+	Class       string  `json:"class"`
+	Level       int64   `json:"level"`
+	Experience  int64   `json:"experience"`
+	Dexterity   int64   `json:"dexterity"`
+	Defense     int64   `json:"defense"`
+	Health      int64   `json:"health"`
+	MaxHealth   int64   `json:"max_health"`
+	Mana        int64   `json:"mana"`
+	MaxMana     int64   `json:"max_mana"`
+	Expansion   bool    `json:"expansion"`
+	Hardcore    bool    `json:"hardcore"`
+	COF         string  `json:"cof"`
+	Palette     string  `json:"palette"`
+	Direction   int64   `json:"direction"`
+	Mode        string  `json:"mode"`
+	X           float64 `json:"x"`
+	Y           float64 `json:"y"`
+	WorldWidth  float64 `json:"world_width"`
+	WorldHeight float64 `json:"world_height"`
+	Act         int64   `json:"act"`
+	LevelID     int64   `json:"level_id"`
+	Skills      []Skill `json:"skills,omitempty"`
 }
 
 // Skill is one learned action admitted with the character. Presentation may
@@ -189,15 +178,10 @@ func (source *EntrySource) entered(characterID string) bool {
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
 func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
-	// D2MOO confirms that the damage pipeline synthesizes an unarmed/default
-	// range when no weapon contributes one. The narrow 1-2 profile is explicit
-	// admission scaffolding until equipped item/stat sources replace it.
-	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", MeleeRange: 2, PhysicalMinRaw: gamecombat.MustWhole(1).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(2).Raw(), X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
+	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
-		// Legacy character attack rating starts with five points per point of
-		// dexterity before item/skill sources. Lua owns the live hit formula.
-		entry.AttackRating, entry.Defense = int64(character.Stats.Dexterity*5), int64(character.Stats.Defense)
+		entry.Dexterity, entry.Defense = int64(character.Stats.Dexterity), int64(character.Stats.Defense)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
 		entry.Mana, entry.MaxMana = int64(character.Stats.Mana), int64(character.Stats.MaxMana)
 	}
@@ -210,30 +194,6 @@ func EntryFromCharacter(character persistence.Character, player string, x, y, wi
 	return entry
 }
 
-// classToken translates the durable player-facing class name into Diablo II's
-// two-letter composite namespace. This is simulation seed data, not a filename
-// guessed by the renderer.
-func classToken(class string) string {
-	switch strings.ToLower(strings.TrimSpace(class)) {
-	case "amazon":
-		return "AM"
-	case "sorceress":
-		return "SO"
-	case "necromancer":
-		return "NE"
-	case "paladin":
-		return "PA"
-	case "barbarian":
-		return "BA"
-	case "assassin":
-		return "AI"
-	case "druid":
-		return "DZ"
-	default:
-		return ""
-	}
-}
-
 // Command encodes player-entry intent for deterministic admission and replay.
 func Command(entry Entry, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
 	payload, err := json.Marshal(entry)
@@ -241,215 +201,4 @@ func Command(entry Entry, actor string, sequence, tick uint64, authority simulat
 		return simulation.Command{}, err
 	}
 	return simulation.Command{Tick: tick, Player: actor, Authority: authority, Sequence: sequence, Kind: EnterCommand, Payload: payload}, nil
-}
-
-// Register installs the trusted player-materialization handler.
-func Register(session *gamesession.Session) error {
-	return session.Register(EnterCommand, gamesession.CommandHandler{
-		Validate: func(command simulation.Command) error {
-			_, err := decodeEntry(command.Payload)
-			return err
-		},
-		Apply:   materialize,
-		Allowed: []simulation.Authority{simulation.AuthoritySystem, simulation.AuthorityAdmin},
-	})
-}
-
-func materialize(engine *gameecs.Engine, command simulation.Command) error {
-	entry, err := decodeEntry(command.Payload)
-	if err != nil {
-		return err
-	}
-	stores, err := registerStores(engine.World())
-	if err != nil {
-		return err
-	}
-	for _, entity := range stores.identity.Entities() {
-		component, _ := stores.identity.Get(entity)
-		id, _ := component.Get("character_id")
-		if id == entry.CharacterID {
-			return fmt.Errorf("player: character %q already entered", entry.CharacterID)
-		}
-	}
-	entity, err := engine.World().CreateEntity()
-	if err != nil {
-		return err
-	}
-	fail := func(err error) error {
-		engine.World().DestroyEntity(entity)
-		return err
-	}
-	leftSkill, rightSkill := int64(0), int64(0)
-	leftChosen, rightChosen := false, false
-	for _, skill := range entry.Skills {
-		// Skill zero is the real basic Attack action, so zero cannot double as
-		// an "unset" sentinel. Track selection separately or a later general
-		// action silently replaces Attack on the left mouse button.
-		if !leftChosen && skill.LeftAllowed {
-			leftSkill = skill.ID
-			leftChosen = true
-		}
-		if !rightChosen && skill.RightAllowed {
-			rightSkill = skill.ID
-			rightChosen = true
-		}
-	}
-	components := []struct {
-		store  *akara.DynamicStore
-		values map[string]any
-	}{
-		{stores.identity, map[string]any{"character_id": entry.CharacterID, "player": entry.Player, "name": entry.Name, "class": entry.Class}},
-		{stores.progress, map[string]any{"level": entry.Level, "experience": entry.Experience}},
-		{stores.vitals, map[string]any{"health": entry.Health, "max_health": entry.MaxHealth, "mana": entry.Mana, "max_mana": entry.MaxMana, "mana_raw": entry.Mana * 256, "max_mana_raw": entry.MaxMana * 256}},
-		{stores.melee, map[string]any{"range": entry.MeleeRange, "physical_min": entry.PhysicalMinRaw, "physical_max": entry.PhysicalMaxRaw}},
-		{stores.appearance, map[string]any{"cof": entry.COF, "token": entry.Token, "palette": entry.Palette, "weapon_class": entry.WeaponClass}},
-		{stores.animation, map[string]any{"direction": entry.Direction, "mode": entry.Mode}},
-		{stores.position, map[string]any{"x": entry.X, "y": entry.Y}},
-		{stores.velocity, nil},
-		{stores.movementMode, map[string]any{"running": false}},
-		{stores.skillAssignment, map[string]any{"left": leftSkill, "right": rightSkill}},
-		{stores.skillIntent, map[string]any{"side": "", "skill_id": int64(0), "target_x": entry.X, "target_y": entry.Y, "target_id": ""}},
-		{stores.belt, map[string]any{"capacity": int64(4)}},
-		{stores.control, map[string]any{"player": entry.Player}},
-		{stores.bounds, map[string]any{"width": entry.WorldWidth, "height": entry.WorldHeight}},
-		{stores.location, map[string]any{"act": entry.Act, "level_id": entry.LevelID}},
-		{stores.collider, map[string]any{"radius": PlayerColliderRadius}},
-		{stores.selectable, map[string]any{"id": "player:" + entry.Player, "kind": targeting.KindPlayer, "label": entry.Name, "owner": entry.Player, "radius": 0.75, "priority": int64(10)}},
-	}
-	for _, component := range components {
-		if _, err := component.store.Set(entity, component.values); err != nil {
-			return fail(err)
-		}
-	}
-	if err := materializeSkills(engine.World(), entity, entry.Skills); err != nil {
-		return fail(err)
-	}
-	return nil
-}
-
-// ApplyEntryCommand reuses trusted player materialization during replay.
-// It does not admit untrusted input; only already-recorded commands belong here.
-func ApplyEntryCommand(engine *gameecs.Engine, command simulation.Command) error {
-	return materialize(engine, command)
-}
-
-func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) error {
-	store, err := akara.RegisterSchema(world, akara.Schema{Name: "d2legacy.player.learned_skill", Version: 1, Fields: []akara.Field{
-		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},
-		{Name: "level", Kind: akara.FieldInt64}, {Name: "list_row", Kind: akara.FieldInt64},
-		{Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool},
-	}})
-	if err != nil {
-		return err
-	}
-	created := make([]akara.Entity, 0, len(skills))
-	rollback := func() {
-		for _, entity := range created {
-			world.DestroyEntity(entity)
-		}
-	}
-	for _, skill := range skills {
-		entity, err := world.CreateEntity()
-		if err != nil {
-			rollback()
-			return err
-		}
-		created = append(created, entity)
-		if _, err := store.Set(entity, map[string]any{"owner": owner, "skill_id": skill.ID, "level": skill.Level, "list_row": skill.ListRow, "left_allowed": skill.LeftAllowed, "right_allowed": skill.RightAllowed}); err != nil {
-			rollback()
-			return err
-		}
-	}
-	return nil
-}
-
-type stores struct {
-	identity, progress, vitals, melee, appearance, animation                                                              *akara.DynamicStore
-	position, velocity, movementMode, skillAssignment, skillIntent, belt, control, bounds, location, collider, selectable *akara.DynamicStore
-}
-
-func registerStores(world *akara.World) (stores, error) {
-	schemas := []akara.Schema{
-		{Name: "d2legacy.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
-		{Name: "d2legacy.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
-		{Name: "d2legacy.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
-		{Name: gamecombat.MeleeProfile, Version: 1, Fields: []akara.Field{{Name: "range", Kind: akara.FieldFloat64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}}},
-		{Name: "d2legacy.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
-		{Name: "d2legacy.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
-		{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "d2legacy.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "d2legacy.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}},
-		{Name: "d2legacy.player.skill_assignment", Version: 1, Fields: []akara.Field{{Name: "left", Kind: akara.FieldInt64}, {Name: "right", Kind: akara.FieldInt64}}},
-		{Name: "d2legacy.player.skill_intent", Version: 1, Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}},
-		{Name: "d2legacy.player.belt", Version: 1, Fields: beltFields()},
-		{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
-		{Name: "d2legacy.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
-		{Name: "d2legacy.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
-		{Name: "d2legacy.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
-		targeting.Schema(),
-	}
-	registered := make([]*akara.DynamicStore, len(schemas))
-	for index, schema := range schemas {
-		store, err := akara.RegisterSchema(world, schema)
-		if err != nil {
-			return stores{}, err
-		}
-		registered[index] = store
-	}
-	return stores{identity: registered[0], progress: registered[1], vitals: registered[2], melee: registered[3], appearance: registered[4], animation: registered[5], position: registered[6], velocity: registered[7], movementMode: registered[8], skillAssignment: registered[9], skillIntent: registered[10], belt: registered[11], control: registered[12], bounds: registered[13], location: registered[14], collider: registered[15], selectable: registered[16]}, nil
-}
-
-func beltFields() []akara.Field {
-	fields := []akara.Field{{Name: "capacity", Kind: akara.FieldInt64}}
-	for slot := 1; slot <= 16; slot++ {
-		fields = append(fields, akara.Field{Name: fmt.Sprintf("slot_%d", slot), Kind: akara.FieldString})
-	}
-	return fields
-}
-
-func decodeEntry(encoded []byte) (Entry, error) {
-	var entry Entry
-	decoder := json.NewDecoder(bytes.NewReader(encoded))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&entry); err != nil {
-		return Entry{}, err
-	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		return Entry{}, fmt.Errorf("player: entry payload has trailing data")
-	}
-	entry.CharacterID, entry.Player, entry.Name, entry.Class = strings.TrimSpace(entry.CharacterID), strings.TrimSpace(entry.Player), strings.TrimSpace(entry.Name), strings.TrimSpace(entry.Class)
-	entry.Token, entry.Palette, entry.Mode, entry.WeaponClass = strings.ToUpper(strings.TrimSpace(entry.Token)), strings.TrimSpace(entry.Palette), strings.ToUpper(strings.TrimSpace(entry.Mode)), strings.ToUpper(strings.TrimSpace(entry.WeaponClass))
-	if entry.CharacterID == "" || entry.Player == "" || entry.Name == "" || entry.Class == "" {
-		return Entry{}, fmt.Errorf("player: character ID, player, name, and class are required")
-	}
-	if entry.Level < 1 || entry.Health < 0 || entry.MaxHealth < entry.Health || entry.Mana < 0 || entry.MaxMana < entry.Mana {
-		return Entry{}, fmt.Errorf("player: invalid progression or vitals")
-	}
-	if !validInitialMelee(entry) {
-		return Entry{}, fmt.Errorf("player: invalid initial melee profile")
-	}
-	if len(entry.Token) != 2 || entry.Palette == "" || entry.Mode != "NU" || entry.WeaponClass != "HTH" || entry.Direction < 0 || entry.Direction > 7 {
-		return Entry{}, fmt.Errorf("player: invalid initial composite appearance")
-	}
-	for _, skill := range entry.Skills {
-		if skill.ID < 0 || skill.Level < 1 || skill.ListRow < 0 || !skill.LeftAllowed && !skill.RightAllowed {
-			return Entry{}, fmt.Errorf("player: invalid learned skill")
-		}
-	}
-	if entry.WorldWidth <= 0 || entry.WorldHeight <= 0 || entry.X < 0 || entry.X >= entry.WorldWidth || entry.Y < 0 || entry.Y >= entry.WorldHeight {
-		return Entry{}, fmt.Errorf("player: invalid world position or bounds")
-	}
-	if entry.Act < 1 || entry.Act > 5 || entry.LevelID <= 0 {
-		return Entry{}, fmt.Errorf("player: entry act and level are invalid")
-	}
-	return entry, nil
-}
-
-func validInitialMelee(entry Entry) bool {
-	if entry.MeleeRange <= 0 || math.IsNaN(entry.MeleeRange) || math.IsInf(entry.MeleeRange, 0) || entry.PhysicalMinRaw < 0 || entry.PhysicalMaxRaw < entry.PhysicalMinRaw {
-		return false
-	}
-	// The first melee roller deliberately supports whole authored endpoints.
-	// Reject fractional admission here instead of crashing on the first swing.
-	return entry.PhysicalMinRaw%int64(gamecombat.One) == 0 && entry.PhysicalMaxRaw%int64(gamecombat.One) == 0
 }

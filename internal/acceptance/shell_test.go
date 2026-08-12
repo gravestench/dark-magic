@@ -18,6 +18,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
@@ -51,12 +52,11 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		t.Fatal(err)
 	}
-	if err := gamesession.RegisterSkillAssignments(authority); err != nil {
+	mod, err := d2legacy.Start(ctx, content.D2Legacy(), shellD2Records{}, entitySimulation, authority, 7)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := gameplayer.Register(authority); err != nil {
-		t.Fatal(err)
-	}
+	defer mod.Stop(ctx)
 	movementController := &gamesession.MovementController{}
 	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
 	if err != nil {
@@ -495,6 +495,17 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if diagnostics := mixer.Diagnostics(); diagnostics.Active != 0 {
 		t.Fatalf("mixer leaked sounds: %#v", diagnostics)
 	}
+}
+
+type shellD2Records struct{}
+
+func (shellD2Records) Invalidate(string)  {}
+func (shellD2Records) Loaded(string) bool { return true }
+func (shellD2Records) Load(path string) ([]map[string]string, error) {
+	if path == "data/global/excel/skills.txt" {
+		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
+	}
+	return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
 }
 
 func publishAction(input *inputstate.Store, name string) {
