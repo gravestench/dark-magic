@@ -29,6 +29,7 @@ local move_player = require("d2legacy.commands.move_player")
 local owned_units = require("d2legacy.commands.owned_units")
 local owned_unit_component = require("d2legacy.components.owned_unit")
 local facing = require("d2legacy.systems.facing")
+local derived_stats = require("d2legacy.systems.derived_stats")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -58,6 +59,7 @@ function M.start()
     world_transition.register()
     timed_state.register()
     equipment.register()
+    derived_stats.register()
     item_commands.register()
     interaction_commands.register()
     population.register()
