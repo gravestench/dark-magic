@@ -44,29 +44,31 @@ Ordinary modules such as `require("d2legacy.ui.button")` are Lua code from the b
 Do **not** begin with the largest file. This order builds one idea at a time:
 
 1. `../../boot.lua` — how a mod starts and how scene ownership begins.
-2. `d2/bootstrap/scene_registry.lua` — how names such as `main_menu` become registered scenes.
-3. `d2/bootstrap/overlay_routing.lua` — how a helper can wrap another scene without rewriting it.
-4. `d2/screens/loading.lua` — a small real scene using engine capabilities.
-5. `d2/screens/title.lua` — retained rendering, animation, audio, and navigation.
-6. `d2/ui/controls.lua` — the shared input/focus brain behind widgets.
-7. `d2/ui/button.lua` — how one visual widget plugs into that input brain.
-8. `d2/screens/main_menu.lua` — several small systems composed into a complete screen.
-9. `d2/ui/item_grid.lua` — presentation reads authoritative state and submits intent instead of mutating gameplay directly.
-10. `d2/gameplay/world.lua` — ECS components, snapshots, and presentation binding.
-11. `d2/screens/game_world.lua` — the world scene joins simulation, presentation, HUD, and overlays.
-12. `d2/ui/game_hud.lua` — a larger capstone example.
-13. `d2/screens/ui_lab.lua` — a playground showing the reusable widgets together.
-14. `d2/screens/composite_lab.lua`, `monster_lab.lua`, `missile_lab.lua`, `combat_lab.lua`, `dt1_lab.lua`, `ds1_lab.lua`, `mapgen_lab.lua`, and `warp_lab.lua` — asset-backed animation, tile, map, generated-zone, and spatial portal instruments. Combat Lab deliberately wraps `game_world.lua` so its collision, culling, depth ordering, composites, HUD, and authoritative combat cannot drift into a lab-only implementation.
+2. `d2legacy/bootstrap/scene_registry.lua` — how names such as `main_menu` become registered scenes.
+3. `d2legacy/bootstrap/overlay_routing.lua` — how a helper can wrap another scene without rewriting it.
+4. `d2legacy/screens/loading.lua` — a small real scene using engine capabilities.
+5. `d2legacy/screens/title.lua` — retained rendering, animation, audio, and navigation.
+6. `d2legacy/ui/controls.lua` — the shared input/focus brain behind widgets.
+7. `d2legacy/ui/button.lua` — how one visual widget plugs into that input brain.
+8. `d2legacy/screens/main_menu.lua` — several small systems composed into a complete screen.
+9. `d2legacy/ui/item_grid.lua` — presentation reads authoritative state and submits intent instead of mutating gameplay directly.
+10. `d2legacy/gameplay/world.lua` — ECS components, snapshots, and presentation binding.
+11. `d2legacy/screens/game_world.lua` — the world scene joins simulation, presentation, HUD, and overlays.
+12. `d2legacy/ui/game_hud.lua` — a larger capstone example.
+13. `d2legacy/screens/ui_lab.lua` — a playground showing the reusable widgets together.
+14. `d2legacy/screens/composite_lab.lua`, `monster_lab.lua`, `missile_lab.lua`, `combat_lab.lua`, `dt1_lab.lua`, `ds1_lab.lua`, `mapgen_lab.lua`, and `warp_lab.lua` — asset-backed animation, tile, map, generated-zone, and spatial portal instruments. Combat Lab deliberately wraps `game_world.lua` so its collision, culling, depth ordering, composites, HUD, and authoritative combat cannot drift into a lab-only implementation.
 
 After that, browse whichever overlay or widget resembles the thing you want to make.
 
 ## Structure
 
-- `d2/bootstrap` wires scene names and shared routing policy together.
-- `d2/screens` contains root navigation scenes: title screens, menus, character screens, and the game world.
-- `d2/overlays` contains panels that appear above another scene.
-- `d2/ui` contains reusable Lua presentation and interaction helpers.
-- `d2/gameplay` contains transitional Lua gameplay/ECS helpers being folded into the canonical `d2legacy` authority.
+- `d2legacy/bootstrap` wires scene names and shared routing policy together.
+- `d2legacy/screens` contains root navigation scenes: title screens, menus, character screens, and the game world.
+- `d2legacy/overlays` contains panels that appear above another scene.
+- `d2legacy/ui` contains reusable Lua presentation and interaction helpers.
+- `d2legacy/gameplay` contains presentation snapshots and composite adapters;
+  authoritative rules live in the purpose-named `commands`, `components`,
+  `data`, `items`, `loot`, `mapgen`, `policy`, and `systems` directories.
 
 ## Tiny Lua glossary
 

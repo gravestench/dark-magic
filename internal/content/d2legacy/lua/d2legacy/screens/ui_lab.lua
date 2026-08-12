@@ -9,7 +9,7 @@
 --
 -- Reading tip: do not try to memorize the whole create() function. Each labeled
 -- block is intentionally independent. Pick the widget you care about, read that
--- block, then open its implementation under `d2/ui/` for the next layer.
+-- block, then open its implementation under `d2legacy/ui/` for the next layer.
 
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")
