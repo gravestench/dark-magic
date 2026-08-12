@@ -103,7 +103,7 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter
 // abbreviation from blurring generic engine APIs with the d2legacy mod again. Engine doors
-// use engine.*; Diablo runtime state and bundled modules use d2legacy.* or d2legacy.*.
+// use engine.*; Diablo runtime state and bundled modules use d2legacy.*.
 func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 	root := repositoryRoot(t)
 	for _, relativeRoot := range []string{"internal", "cmd"} {
@@ -127,7 +127,7 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			usesRetiredModShort := strings.Contains(text, `"`+retiredModShort) || strings.Contains(text, `'`+retiredModShort)
 			if strings.Contains(text, retiredShort) || usesRetiredModShort || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
 				relative, _ := filepath.Rel(root, path)
-				t.Errorf("%s uses a retired Lua namespace; use engine.*, d2legacy.*, or d2legacy.*", filepath.ToSlash(relative))
+				t.Errorf("%s uses a retired Lua namespace; use engine.* or d2legacy.*", filepath.ToSlash(relative))
 			}
 			return nil
 		})

@@ -201,12 +201,12 @@ experiments behind the same canonical import boundary.
 - [x] Define one normalized VFS contract for directories, MPQs, zip archives, and
   embedded content.
 - [x] Mount sources in deterministic override order: user mods, the Dark Magic
-  shim archive, Diablo II patches/expansion data, then base game data.
+  `d2legacy` mod archive, Diablo II patches/expansion data, then base game data.
 - [x] Preserve source provenance so diagnostics can report which layer supplied an
   asset or script.
 - [x] Add enumeration, existence, and invalidation behavior suitable for script
   loading and development-time reload.
-- [x] Package a redistributable `darkmagic` shim archive containing engine-owned
+- [x] Package a redistributable first-party `d2legacy` mod archive containing
   scripts and assets, while continuing to require users to supply Diablo II data.
 - [x] Load a minimal `boot.lua` from the layered VFS and verify the complete boot
   path headlessly.
@@ -276,8 +276,8 @@ experiments behind the same canonical import boundary.
 - [x] Add a scene/navigation manager distinct from long-lived engine components.
 - [x] Define scene lifecycle callbacks for `create`, `enter`, `update`, `render`,
   `exit`, and `destroy`.
-- [x] Implement the loading screen from the shim archive.
-- [x] Implement the title and main game menus from the shim archive.
+- [x] Implement the loading screen from the `d2legacy` mod archive.
+- [x] Implement the title and main game menus from the `d2legacy` mod archive.
 - [x] Implement character selection/creation as Lua scenes backed by native save
   and record capabilities.
 - [x] Implement the interactive game-world scene as Lua orchestration over native
@@ -307,7 +307,7 @@ experiments behind the same canonical import boundary.
 ## Architectural acceptance milestone
 
 - [x] Boot the executable through the internal host.
-- [x] Mount legally supplied Diablo II archives plus the Dark Magic shim archive.
+- [x] Mount legally supplied Diablo II archives plus the first-party `d2legacy` mod archive.
 - [x] Execute `boot.lua`, enter the Lua-authored main menu, select a character, and
   enter an interactive world.
 - [x] Open and close inventory as an overlay without disrupting the world scene.
@@ -329,7 +329,7 @@ implementations. The remaining work is tracked explicitly below.
   and palette-applied DC6 contact sheets.
 - [x] Verify the initial 90 hypotheses against a complete English Diablo II/LOD
   MPQ stack without committing derived game imagery.
-- [x] Move verified screen facts from Go literals into versioned shim manifests
+- [x] Move verified screen facts from Go literals into versioned `d2legacy` manifests
   with confidence, game-version, language, and resolution fields.
 - [ ] Catalog every front-end screen, HUD/panel sheet, cursor, font, cinematic,
   sound cue, and relevant TXT/TBL dependency (M15.5).
@@ -343,9 +343,9 @@ implementations. The remaining work is tracked explicitly below.
 - [x] M15.2: Load manifests through a read-only versioned Lua capability and
   reject malformed or incompatible documents with actionable errors.
 - [x] M15.3: Migrate front-end, character, HUD, panel, cursor, font, audio, and
-  cinematic facts from compiled Go declarations into shim-owned manifests. The
+  cinematic facts from compiled Go declarations into mod-owned manifests. The
   verified asset catalog and every presentation fact consumed by the runtime
-  now live in the embedded shim. The unused legacy MPQ path constant dump was
+  now live in the embedded `d2legacy` mod. The unused legacy MPQ path constant dump was
   removed so Go no longer presents a competing asset-knowledge source.
 - [x] M15.4: Generate and validate hash/dimension/frame fixtures from manifests
   without storing proprietary decoded pixels. The 90 verified entries now have
@@ -520,7 +520,7 @@ implementations. The remaining work is tracked explicitly below.
   positions. A development-only deterministic fixture source exercises filled
   pages without touching player saves. Save records can now carry an optional,
   defensively copied appearance snapshot containing the authoritative COF,
-  palette, direction, and component DCC paths. The shim feeds that snapshot to
+  palette, direction, and component DCC paths. The mod feeds that snapshot to
   the generic compositor while legacy records retain their class-only fallback;
   this keeps save decoding and asset resolution out of presentation code.
 - [x] M17.5: Implement dependency-driven loading and front-end composition tests
@@ -621,7 +621,7 @@ complete until its actions are driven by authoritative game state and commands.
   remain explicitly unavailable until their engine effects and recovered ranges
   are implemented rather than displaying fabricated values.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
-  related records; keep only presentation corrections in shim manifests. The
+  related records; keep only presentation corrections in mod manifests. The
   selected class's expansion Inventory.txt row now owns inventory grid and
   equipment hit geometry. Only the verified DC6 frame order and expansion panel
   origin correction remain in the presentation manifest.
@@ -1764,7 +1764,7 @@ authority, persistence separation, and resilience acceptance remain open.
 
 ## M24: Packaging and release acceptance
 
-- [ ] Package the engine and shim without Blizzard assets and verify first-run
+- [ ] Package the engine and `d2legacy` mod without Blizzard assets and verify first-run
   installation discovery, configuration, diagnostics, mod isolation, and update
   behavior.
 
@@ -1863,7 +1863,7 @@ separate profiling PRs unless a measured gameplay budget requires it sooner.
 - [ ] Implement reusable frames, boxes, scrollbars, text boxes, list controls,
   toggles, and modal focus rules from verified Blizzard assets and records.
 - [ ] Add native screenshot fixtures for every shared component state and migrate
-  every shim screen and overlay away from one-off styling code. The interactive
+  every `d2legacy` screen and overlay away from one-off styling code. The interactive
   five-page `font_lab` now isolates semantic screen styles, bitmap families, PL2
   color slots and contexts, and text layout behavior; automated native screenshot
   fixtures and the remaining component migrations are still outstanding.
@@ -1875,7 +1875,7 @@ for the remaining typed-record admissions/consumers and final migration
 acceptance/documentation cleanup; it is no longer a general refactor mandate.
 
 - [x] Inventory every package, its responsibility, importers, lifecycle owner,
-  stability, and whether it is engine infrastructure, game/shim implementation,
+  stability, and whether it is engine infrastructure, mod implementation,
   tooling, or an intentionally supported external API. Record obsolete,
   duplicate, transitional, and misleadingly named code before moving anything.
 - [x] Define and document a strict boundary policy: implementation details live
@@ -2104,14 +2104,14 @@ replay verification, and narrow audited administrator handlers.
   frame duration, with stable tick and delta values exposed to Lua systems.
 - [x] Replace the production compatibility hero/world state with Lua-defined ECS
   components and systems for input intent, transform, bounded movement, camera
-  follow, and presentation snapshots. The shim now keeps related component
+  follow, and presentation snapshots. The mod now keeps related component
   schemas and individual systems in documented modules; `world.lua` only
   registers them and owns the narrow scene-facing binding/snapshot facade.
 - [x] Admit a renderer-matched, round-tripped isometric pixel/subtile transform,
   then use axis-separated DT1 collision in ECS movement without mixing in
   presentation pixels.
 - [x] Preserve and validate Riiablo's recovered quest and speech tables in the
-  shim, including quest prerequisites, stage localization keys, and logical
+  `d2legacy` mod, including quest prerequisites, stage localization keys, and logical
   sound-to-localization joins exposed through `engine.quest_catalog/v1`.
 - [x] Resolve DS1 static objects through recovered act-local `obj.txt` mappings
   and dynamic objects through act-local `MonPreset.txt` ordering before exposing
