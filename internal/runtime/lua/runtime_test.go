@@ -140,6 +140,26 @@ func TestRuntimeSerializesConcurrentCalls(t *testing.T) {
 	}
 }
 
+func TestRuntimeDoesNotExposeAmbientNondeterminism(t *testing.T) {
+	runtime := New()
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		return state.DoString(`
+assert(os == nil and io == nil and debug == nil and channel == nil and coroutine == nil)
+assert(dofile == nil and loadfile == nil and loadstring == nil and load == nil)
+assert(print == nil and math.random == nil and math.randomseed == nil)
+assert(package.loadlib == nil and package.path == "" and package.cpath == "")
+local ok = pcall(require, "not.an.engine.module")
+assert(not ok)
+`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestScopeClosesInReverseAndJoinsErrors(t *testing.T) {
 	t.Parallel()
 

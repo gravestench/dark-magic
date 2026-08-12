@@ -1,9 +1,9 @@
 # retired Go policy family	new authoritative evidence	status	behavioral contract
-internal/game/combat	internal/runtime/lua/d2legacy_fire_bolt_test.go	covered	ordered hit resolution damage and Fire Bolt end-to-end
-internal/game/skill	internal/runtime/lua/d2legacy_fire_bolt_test.go	covered	assignment cast timing mana cost and effect emission
-internal/game/missile	internal/runtime/lua/d2legacy_fire_bolt_test.go	covered	projectile movement contact damage and removal
-internal/game/action	internal/runtime/lua/d2legacy_fire_bolt_test.go	covered	exclusive melee approach animation and impact lifecycle
-internal/game/stats	internal/runtime/lua/d2legacy_fire_bolt_test.go	covered	attack-rating versus defense hit chance clamps and integer order
+internal/game/combat	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	ordered hit resolution damage and Fire Bolt end-to-end
+internal/game/skill	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	assignment cast timing mana cost and effect emission
+internal/game/missile	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	projectile movement contact damage and removal
+internal/game/action	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	exclusive melee approach animation and impact lifecycle
+internal/game/stats	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	attack-rating versus defense hit chance clamps and integer order
 internal/game/item	internal/mod/d2legacy/authority_test.go	partial	held swap and footprints covered; vendor services equipment corpse persistence pending
 internal/game/interaction	internal/mod/d2legacy/authority_test.go	pending	open close spatial selection and checkpoint restore
 internal/game/loot	internal/mod/d2legacy/authority_test.go	partial	nested modifier inheritance and empty result covered; quality affix property vectors pending
@@ -11,5 +11,5 @@ internal/game/monster	internal/mod/d2legacy/authority_test.go	pending	population
 internal/game/player	internal/mod/d2legacy/authority_test.go	partial	entry and movement covered; authoritative restore and progression pending
 internal/game/transition	internal/runtime/lua/warp_lab_test.go	covered	approach collision warp relocation and presentation transition
 internal/game/ownedunit	internal/mod/d2legacy/authority_test.go	pending	hireling summon ownership persistence and death consequences
-internal/game/state	internal/runtime/lua/d2legacy_fire_bolt_test.go	partial	timed lifecycle covered; replay and restore parity pending
-internal/mod/d2legacy/mapgen	internal/runtime/lua/d2legacy_mapgen_outdoor_test.go	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua
+internal/game/state	internal/mod/d2legacy/runtime_test.go	covered	timed lifecycle plus reconstructed-runtime checkpoint restore and replay parity
+internal/mod/d2legacy/mapgen	internal/mod/d2legacy/mapgen_outdoor_test.go	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua

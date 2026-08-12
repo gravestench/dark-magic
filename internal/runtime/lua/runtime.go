@@ -286,7 +286,7 @@ func (r *Runtime) InvalidateModule(ctx context.Context, name string) error {
 }
 
 func runLoop(requests <-chan request, done chan<- struct{}, ready chan<- error, installers []Installer, modules []Module) {
-	state := lua.NewState()
+	state := newSandboxedState()
 	for _, installer := range installers {
 		if err := installer.Install(state); err != nil {
 			state.Close()
@@ -311,4 +311,48 @@ func runLoop(requests <-chan request, done chan<- struct{}, ready chan<- error, 
 		state.RemoveContext()
 		current.done <- err
 	}
+}
+
+// newSandboxedState opens only deterministic, in-memory language facilities.
+// The default GopherLua state also exposes the host filesystem, environment,
+// process clock, ambient random generator, debug hooks, and dynamic source
+// loading. Mods reach the outside world exclusively through reviewed engine
+// capabilities, so those ambient APIs never enter the global environment.
+func newSandboxedState() *lua.LState {
+	state := lua.NewState(lua.Options{SkipOpenLibs: true})
+	lua.OpenBase(state)
+	lua.OpenPackage(state)
+	lua.OpenTable(state)
+	lua.OpenString(state)
+	lua.OpenMath(state)
+
+	for _, name := range []string{"dofile", "load", "loadfile", "loadstring", "print", "_printregs"} {
+		state.SetGlobal(name, lua.LNil)
+	}
+	if mathTable, ok := state.GetGlobal("math").(*lua.LTable); ok {
+		mathTable.RawSetString("random", lua.LNil)
+		mathTable.RawSetString("randomseed", lua.LNil)
+	}
+	if packageTable, ok := state.GetGlobal("package").(*lua.LTable); ok {
+		packageTable.RawSetString("loadlib", lua.LNil)
+		packageTable.RawSetString("path", lua.LString(""))
+		packageTable.RawSetString("cpath", lua.LString(""))
+		// Preloaded engine capabilities are the only default loader. A reviewed
+		// content installer may append its VFS-backed loader afterward.
+		loaders := state.NewTable()
+		loaders.Append(state.NewFunction(func(state *lua.LState) int {
+			name := state.CheckString(1)
+			preload := state.GetField(state.GetGlobal("package"), "preload")
+			loader := state.GetField(preload, name)
+			if loader == lua.LNil {
+				state.Push(lua.LString(fmt.Sprintf("\n\tno preloaded module %q", name)))
+				return 1
+			}
+			state.Push(loader)
+			return 1
+		}))
+		packageTable.RawSetString("loaders", loaders)
+		state.SetField(state.Get(lua.RegistryIndex), "_LOADERS", loaders)
+	}
+	return state
 }
