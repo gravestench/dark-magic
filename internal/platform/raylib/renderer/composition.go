@@ -26,6 +26,8 @@ func (s *Service) AttachComposer(composer *render.Composer) error {
 	s.composition = composer
 	s.compositionBackend = backend
 	s.OnFrame(func() {
+		started := time.Now()
+		defer func() { s.lastFrameCompositionNS.Store(uint64(time.Since(started))) }()
 		if err := s.applyTextureCacheBudget(); err != nil && s.logger != nil {
 			s.logger.Error("applying texture cache budget", "error", err)
 		}

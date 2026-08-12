@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -17,9 +18,11 @@ func (s *Service) render() {
 	// frame starts so the debug overlay can also answer the much more useful
 	// question: "how much work did the frame I can see require?"
 	start := s.BackendDiagnostics()
+	started := time.Now()
 	s.frames.Add(1)
 	s.renderRecursively(s.rootNode, nil)
 	s.recordFrameWork(start)
+	s.lastFrameRenderNS.Store(uint64(time.Since(started)))
 }
 
 func (s *Service) recordFrameWork(start BackendDiagnostics) {
@@ -27,6 +30,7 @@ func (s *Service) recordFrameWork(start BackendDiagnostics) {
 	s.lastFrameNodesVisited.Store(s.nodesVisited.Load() - start.NodesVisited)
 	s.lastFrameSubtreesCulled.Store(s.subtreesCulled.Load() - start.SubtreesCulled)
 	s.lastFrameTextureUpdates.Store(s.textureUpdates.Load() - start.TextureUpdates)
+	s.lastFrameUploadNS.Store(s.textureUploadNS.Load() - start.TextureUploadNS)
 }
 
 func (s *Service) renderRecursively(renderable *node, inheritedClip *rl.Rectangle) {
@@ -94,6 +98,7 @@ func (s *Service) renderNode(node *node) {
 
 	if node.dirty() {
 		s.textureUpdates.Add(1)
+		started := time.Now()
 		img := node.Image()
 		if px, ok := contiguousRGBA(img); ok {
 			if len(px) < 4 {
@@ -108,6 +113,7 @@ func (s *Service) renderNode(node *node) {
 
 			rl.UpdateTexture(tx, px)
 		}
+		s.textureUploadNS.Add(uint64(time.Since(started)))
 	}
 
 	//rl.DrawTextureEx(

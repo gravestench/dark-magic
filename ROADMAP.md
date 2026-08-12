@@ -1883,6 +1883,11 @@ separate profiling PRs unless a measured gameplay budget requires it sooner.
 - [x] Repeat the interactive acceptance profile through `game_loading` and
   `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
   against the latest frontend-only baseline.
+  The completed follow-up also records bounded frame/update percentiles,
+  simulation and Lua p95 work, composition/native-render/upload durations, and
+  a real 640x480 BIK upload-bandwidth capture. A measured spatial-parent tile
+  grouping increased traversal/update work and was rejected; Raylib's existing
+  compatible draw batching remains the faster path for the current workload.
 
 ## M27: Diablo UI styling fidelity
 

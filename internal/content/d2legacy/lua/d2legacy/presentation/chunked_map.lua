@@ -132,7 +132,9 @@ local function nearby_entries(state, left, top, right, bottom)
     local map_bottom = bottom + state.margin - state.root_y + state.set.height / 2
     local first_column, last_column = math.floor(map_left / size), math.floor(map_right / size)
     local first_row, last_row = math.floor(map_top / size), math.floor(map_bottom / size)
-    local result, seen = {}, {}
+    local result, seen = state.nearby_scratch, state.nearby_seen
+    for index = #result, 1, -1 do result[index] = nil end
+    for index in pairs(seen) do seen[index] = nil end
     for row = first_row, last_row do
         for column = first_column, last_column do
             local indexes = state.set.buckets[string.format("%d:%d", column, row)]
@@ -153,7 +155,8 @@ local function refresh_nodes(state)
     if not state.set then return end
     state.revision = state.revision + 1
     local left, top, right, bottom = render_viewport(state.viewport_width, state.viewport_height)
-    local admitted, visible_keys = 0, {}
+    local admitted, visible_keys = 0, state.visible_scratch
+    for key in pairs(visible_keys) do visible_keys[key] = nil end
     local entries = nearby_entries(state, left, top, right, bottom)
     for _, chunk in ipairs(entries) do
         -- Chunk coordinates begin at the map's top-left. Render children are
@@ -233,6 +236,9 @@ function chunked_map.create(parent, recipe, options)
         last_visible = {},
         pending = {},
         failed = {},
+        nearby_scratch = {},
+        nearby_seen = {},
+        visible_scratch = {},
         chunk_size = options.chunk_size or 512,
         margin = residency_margin(recipe, options),
         -- Tile placements are much smaller than 512px composed chunks. Admit a

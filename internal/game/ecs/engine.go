@@ -70,7 +70,44 @@ type Context struct {
 
 // UpdateFunc executes against a stable entity snapshot. Structural mutations
 // must be submitted to commands and are applied after the callback returns.
-type UpdateFunc func(Context, []akara.Entity, *akara.CommandBuffer) error
+type UpdateFunc func(Context, []akara.Entity, *StructuralCommands) error
+
+// StructuralCommands allocates Akara's synchronized command buffer only when a
+// system actually submits a structural mutation. Most steady-state systems only
+// read or update component values and therefore remain allocation-free here.
+type StructuralCommands struct{ buffer *akara.CommandBuffer }
+
+func (commands *StructuralCommands) native() *akara.CommandBuffer {
+	if commands.buffer == nil {
+		commands.buffer = akara.NewCommandBuffer()
+	}
+	return commands.buffer
+}
+
+func (commands *StructuralCommands) CreateDynamic(world *akara.World, components map[*akara.DynamicStore]map[string]any) {
+	commands.native().CreateDynamic(world, components)
+}
+
+func (commands *StructuralCommands) AddDynamic(store *akara.DynamicStore, entity akara.Entity, values map[string]any) {
+	commands.native().AddDynamic(store, entity, values)
+}
+
+func (commands *StructuralCommands) Remove(component akara.ComponentType, entity akara.Entity) {
+	commands.native().Remove(component, entity)
+}
+
+func (commands *StructuralCommands) Destroy(world *akara.World, entity akara.Entity) {
+	commands.native().Destroy(world, entity)
+}
+
+func (commands *StructuralCommands) apply() error {
+	if commands.buffer == nil {
+		return nil
+	}
+	err := commands.buffer.Apply()
+	commands.buffer = nil
+	return err
+}
 
 // Definition declares one ordered ECS system and its component access contract.
 type Definition struct {
@@ -89,6 +126,7 @@ type Definition struct {
 type registeredSystem struct {
 	definition   Definition
 	subscription *akara.Subscription
+	commands     StructuralCommands
 }
 
 type compiledSchedule struct{ systems []*registeredSystem }
@@ -255,11 +293,16 @@ func (engine *Engine) update(delta time.Duration) error {
 	context := Context{Tick: engine.tick, Delta: delta}
 	engine.mu.Unlock()
 	for _, system := range engine.schedule.Load().systems {
-		commands := akara.NewCommandBuffer()
-		if err := system.definition.Update(context, system.subscription.Entities(), commands); err != nil {
+		commands := &system.commands
+		var entities []akara.Entity
+		if system.subscription.Len() > 0 {
+			entities = system.subscription.Entities()
+		}
+		if err := system.definition.Update(context, entities, commands); err != nil {
+			commands.buffer = nil
 			return fmt.Errorf("game ecs: update %q: %w", system.definition.ID, err)
 		}
-		if err := commands.Apply(); err != nil {
+		if err := commands.apply(); err != nil {
 			return fmt.Errorf("game ecs: apply %q structural changes: %w", system.definition.ID, err)
 		}
 	}

@@ -26,15 +26,15 @@ func TestEngineOrdersPhasesDependenciesAndStableEntities(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	register(Definition{ID: "input", Phase: PhaseInput, Update: func(Context, []akara.Entity, *akara.CommandBuffer) error {
+	register(Definition{ID: "input", Phase: PhaseInput, Update: func(Context, []akara.Entity, *StructuralCommands) error {
 		calls = append(calls, "input")
 		return nil
 	}})
-	register(Definition{ID: "move.a", Phase: PhaseMovement, Update: func(Context, []akara.Entity, *akara.CommandBuffer) error {
+	register(Definition{ID: "move.a", Phase: PhaseMovement, Update: func(Context, []akara.Entity, *StructuralCommands) error {
 		calls = append(calls, "move.a")
 		return nil
 	}})
-	register(Definition{ID: "move.b", Phase: PhaseMovement, After: []string{"move.a"}, All: []akara.ComponentType{position}, Update: func(_ Context, got []akara.Entity, _ *akara.CommandBuffer) error {
+	register(Definition{ID: "move.b", Phase: PhaseMovement, After: []string{"move.a"}, All: []akara.ComponentType{position}, Update: func(_ Context, got []akara.Entity, _ *StructuralCommands) error {
 		calls = append(calls, "move.b")
 		entities = append([]akara.Entity(nil), got...)
 		return nil
@@ -53,7 +53,7 @@ func TestEngineOrdersPhasesDependenciesAndStableEntities(t *testing.T) {
 func TestEngineRejectsMissingDependenciesAndCyclesTransactionally(t *testing.T) {
 	engine := New()
 	defer engine.Close()
-	update := func(Context, []akara.Entity, *akara.CommandBuffer) error { return nil }
+	update := func(Context, []akara.Entity, *StructuralCommands) error { return nil }
 	if err := engine.Register(Definition{ID: "missing", Phase: PhaseMovement, After: []string{"absent"}, Update: update}); !errors.Is(err, ErrSystemNotFound) {
 		t.Fatalf("missing dependency error = %v", err)
 	}
@@ -80,7 +80,7 @@ func TestEngineAppliesStructuralCommandsAtSystemBarrier(t *testing.T) {
 	}
 	entity := engine.World().MustCreateEntity()
 	var observed bool
-	if err := engine.Register(Definition{ID: "add", Phase: PhaseIntent, Update: func(_ Context, _ []akara.Entity, commands *akara.CommandBuffer) error {
+	if err := engine.Register(Definition{ID: "add", Phase: PhaseIntent, Update: func(_ Context, _ []akara.Entity, commands *StructuralCommands) error {
 		commands.AddDynamic(tag, entity, nil)
 		if tag.Has(entity) {
 			t.Fatal("structural mutation was visible inside producer system")
@@ -89,7 +89,7 @@ func TestEngineAppliesStructuralCommandsAtSystemBarrier(t *testing.T) {
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := engine.Register(Definition{ID: "observe", Phase: PhaseMovement, All: []akara.ComponentType{tag}, Update: func(_ Context, entities []akara.Entity, _ *akara.CommandBuffer) error {
+	if err := engine.Register(Definition{ID: "observe", Phase: PhaseMovement, All: []akara.ComponentType{tag}, Update: func(_ Context, entities []akara.Entity, _ *StructuralCommands) error {
 		observed = len(entities) == 1 && entities[0] == entity
 		return nil
 	}}); err != nil {
@@ -107,7 +107,7 @@ func TestEngineStopsOnSystemError(t *testing.T) {
 	engine := New()
 	defer engine.Close()
 	failure := errors.New("boom")
-	if err := engine.Register(Definition{ID: "fail", Phase: PhaseInput, Update: func(Context, []akara.Entity, *akara.CommandBuffer) error { return failure }}); err != nil {
+	if err := engine.Register(Definition{ID: "fail", Phase: PhaseInput, Update: func(Context, []akara.Entity, *StructuralCommands) error { return failure }}); err != nil {
 		t.Fatal(err)
 	}
 	if err := engine.Update(time.Millisecond); !errors.Is(err, failure) {
@@ -120,7 +120,7 @@ func TestEngineAdvanceUsesFixedStepsAndLimitsCatchUp(t *testing.T) {
 	defer engine.Close()
 	var deltas []time.Duration
 	var ticks []uint64
-	if err := engine.Register(Definition{ID: "clock", Phase: PhaseInput, Update: func(context Context, _ []akara.Entity, _ *akara.CommandBuffer) error {
+	if err := engine.Register(Definition{ID: "clock", Phase: PhaseInput, Update: func(context Context, _ []akara.Entity, _ *StructuralCommands) error {
 		deltas = append(deltas, context.Delta)
 		ticks = append(ticks, context.Tick)
 		return nil
@@ -147,7 +147,7 @@ func TestEngineAdvanceUsesFixedStepsAndLimitsCatchUp(t *testing.T) {
 func BenchmarkEngineSteadyStateTick(b *testing.B) {
 	engine := New()
 	b.Cleanup(func() { _ = engine.Close() })
-	update := func(Context, []akara.Entity, *akara.CommandBuffer) error { return nil }
+	update := func(Context, []akara.Entity, *StructuralCommands) error { return nil }
 	for index := range 24 {
 		if err := engine.Register(Definition{ID: fmt.Sprintf("system-%02d", index), Phase: PhaseMovement, Update: update}); err != nil {
 			b.Fatal(err)

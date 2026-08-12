@@ -54,7 +54,7 @@ func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 	}
 	return engine.Register(gameecs.Definition{ID: VelocityMovementSystemID, Phase: gameecs.PhaseMovement,
 		All: []akara.ComponentType{marker, position, velocity, collider}, Read: []akara.ComponentType{velocity, collider}, Write: []akara.ComponentType{position, velocity},
-		Update: func(context gameecs.Context, entities []akara.Entity, _ *akara.CommandBuffer) error {
+		Update: func(context gameecs.Context, entities []akara.Entity, _ *gameecs.StructuralCommands) error {
 			seconds := context.Delta.Seconds()
 			if seconds <= 0 {
 				return nil

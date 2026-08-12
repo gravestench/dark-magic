@@ -3,6 +3,7 @@ package raylibRenderer
 import (
 	"image"
 	"runtime"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -14,7 +15,9 @@ func (s *Service) getTexture(key string, img image.Image) (texture rl.Texture2D,
 
 	cached, exists := s.cache.Retrieve(key)
 	if !exists {
+		started := time.Now()
 		cached = loadTexture(img)
+		s.textureUploadNS.Add(uint64(time.Since(started)))
 		s.textureUploads.Add(1)
 		s.textureUploadBytes.Add(uint64(numBytes))
 		if err := s.cache.Insert(key, cached, numBytes); err != nil {

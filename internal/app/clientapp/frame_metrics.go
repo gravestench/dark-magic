@@ -9,11 +9,13 @@ import (
 const frameMetricWindow = 512
 
 type sceneFrameSamples struct {
-	interval [frameMetricWindow]time.Duration
-	work     [frameMetricWindow]time.Duration
-	count    int
-	next     int
-	maxWork  time.Duration
+	interval   [frameMetricWindow]time.Duration
+	work       [frameMetricWindow]time.Duration
+	simulation [frameMetricWindow]time.Duration
+	lua        [frameMetricWindow]time.Duration
+	count      int
+	next       int
+	maxWork    time.Duration
 }
 
 type frameMetrics struct {
@@ -22,17 +24,19 @@ type frameMetrics struct {
 }
 
 type frameTimingSnapshot struct {
-	Samples   int           `json:"samples"`
-	FrameP50  time.Duration `json:"frame_p50"`
-	FrameP95  time.Duration `json:"frame_p95"`
-	FrameP99  time.Duration `json:"frame_p99"`
-	UpdateP50 time.Duration `json:"update_p50"`
-	UpdateP95 time.Duration `json:"update_p95"`
-	UpdateP99 time.Duration `json:"update_p99"`
-	MaxUpdate time.Duration `json:"max_update"`
+	Samples       int           `json:"samples"`
+	FrameP50      time.Duration `json:"frame_p50"`
+	FrameP95      time.Duration `json:"frame_p95"`
+	FrameP99      time.Duration `json:"frame_p99"`
+	UpdateP50     time.Duration `json:"update_p50"`
+	UpdateP95     time.Duration `json:"update_p95"`
+	UpdateP99     time.Duration `json:"update_p99"`
+	MaxUpdate     time.Duration `json:"max_update"`
+	SimulationP95 time.Duration `json:"simulation_p95"`
+	LuaP95        time.Duration `json:"lua_p95"`
 }
 
-func (m *frameMetrics) Record(scene string, interval, work time.Duration) {
+func (m *frameMetrics) Record(scene string, interval, work, simulation, luaWork time.Duration) {
 	if scene == "" {
 		scene = "none"
 	}
@@ -48,6 +52,8 @@ func (m *frameMetrics) Record(scene string, interval, work time.Duration) {
 	}
 	samples.interval[samples.next] = interval
 	samples.work[samples.next] = work
+	samples.simulation[samples.next] = simulation
+	samples.lua[samples.next] = luaWork
 	samples.next = (samples.next + 1) % frameMetricWindow
 	if samples.count < frameMetricWindow {
 		samples.count++
@@ -64,11 +70,16 @@ func (m *frameMetrics) Snapshot() map[string]frameTimingSnapshot {
 	for scene, samples := range m.scenes {
 		interval := append([]time.Duration(nil), samples.interval[:samples.count]...)
 		work := append([]time.Duration(nil), samples.work[:samples.count]...)
+		simulation := append([]time.Duration(nil), samples.simulation[:samples.count]...)
+		luaWork := append([]time.Duration(nil), samples.lua[:samples.count]...)
 		sort.Slice(interval, func(i, j int) bool { return interval[i] < interval[j] })
 		sort.Slice(work, func(i, j int) bool { return work[i] < work[j] })
+		sort.Slice(simulation, func(i, j int) bool { return simulation[i] < simulation[j] })
+		sort.Slice(luaWork, func(i, j int) bool { return luaWork[i] < luaWork[j] })
 		result[scene] = frameTimingSnapshot{
 			Samples: samples.count, FrameP50: percentile(interval, 50), FrameP95: percentile(interval, 95), FrameP99: percentile(interval, 99),
 			UpdateP50: percentile(work, 50), UpdateP95: percentile(work, 95), UpdateP99: percentile(work, 99), MaxUpdate: samples.maxWork,
+			SimulationP95: percentile(simulation, 95), LuaP95: percentile(luaWork, 95),
 		}
 	}
 	return result

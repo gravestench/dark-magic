@@ -42,7 +42,7 @@ type ownedECSComponent struct {
 }
 type ownedECSCommands struct {
 	capability *ECSCapability
-	commands   *akara.CommandBuffer
+	commands   *gameecs.StructuralCommands
 }
 
 // NewECSCapability creates the adapter; the runtime and engine retain ownership.
@@ -357,7 +357,7 @@ func (capability *ECSCapability) registerSystem(state *lua.LState) int {
 	}
 	access := &ecsAccess{read: nameSet(readNames), write: nameSet(writeNames)}
 	definition := gameecs.Definition{ID: id, Phase: phase, After: tableStringList(state, table.RawGetString("after")), Before: tableStringList(state, table.RawGetString("before")), All: componentTypes(all), Any: componentTypes(any), None: componentTypes(none), Read: componentTypes(read), Write: componentTypes(write)}
-	definition.Update = func(ctx gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer) error {
+	definition.Update = func(ctx gameecs.Context, entities []akara.Entity, commands *gameecs.StructuralCommands) error {
 		return capability.runtime.runScoped(context.Background(), scope, func(state *lua.LState) error {
 			previous := capability.active
 			capability.active = access

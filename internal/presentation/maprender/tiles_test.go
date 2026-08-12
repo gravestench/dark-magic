@@ -73,9 +73,10 @@ func BenchmarkTileSetVisibleSpatialIndex(b *testing.B) {
 	}
 	set.buildBuckets()
 	view := image.Rect(7000, 3500, 8000, 4300)
+	visible := make([]int, 0, 256)
 	b.ReportAllocs()
 	for b.Loop() {
-		visible := set.Visible(view, nil)
+		visible = set.Visible(view, visible[:0])
 		if len(visible) == 0 {
 			b.Fatal("spatial query unexpectedly found no draws")
 		}
