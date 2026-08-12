@@ -141,6 +141,41 @@ func TestRuntimeModuleDefaultsPreserveHostOverrides(t *testing.T) {
 	}
 }
 
+func TestRuntimeHostOverrideReplacesEarlierDefault(t *testing.T) {
+	t.Parallel()
+
+	runtime := New()
+	if err := runtime.RegisterModuleDefault(Module{
+		Name: "example.catalog/v1",
+		Help: ModuleHelp{Summary: "fallback catalog"},
+		Loader: func(state *lua.LState) int {
+			state.Push(lua.LString("fallback"))
+			return 1
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.RegisterModuleOverride(Module{
+		Name: "example.catalog/v1",
+		Help: ModuleHelp{Summary: "localized host catalog"},
+		Loader: func(state *lua.LState) int {
+			state.Push(lua.LString("host"))
+			return 1
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if names := runtime.ModuleNames(); !reflect.DeepEqual(names, []string{"example.catalog/v1"}) {
+		t.Fatalf("module names = %v", names)
+	}
+	if got := runtime.ModuleHelp()["example.catalog/v1"].Summary; got != "localized host catalog" {
+		t.Fatalf("module summary = %q, want host override", got)
+	}
+	if err := runtime.RegisterModule(Module{Name: "example.catalog/v1", Loader: func(*lua.LState) int { return 0 }}); err == nil {
+		t.Fatal("strict registration accepted duplicate after override")
+	}
+}
+
 func TestRuntimeSerializesConcurrentCalls(t *testing.T) {
 	t.Parallel()
 

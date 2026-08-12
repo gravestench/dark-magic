@@ -57,6 +57,36 @@ func TestConfigureRuntimePreservesClientCatalogOverrides(t *testing.T) {
 	}
 }
 
+func TestClientCatalogsReplaceDefaultsAfterConfigureRuntime(t *testing.T) {
+	runtime := modruntime.New()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := ConfigureRuntime(runtime, content.D2Legacy(), runtimeFixtureRecords{}, engine, session,
+		simulation.NewStateStore(), simulation.NewRandomStreams(1), nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+		if err := runtime.RegisterModuleOverride(modruntime.Module{
+			Name: name,
+			Help: modruntime.ModuleHelp{Summary: "late client override"},
+			Loader: func(state *lua.LState) int {
+				state.Push(state.NewTable())
+				return 1
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if got := runtime.ModuleHelp()[name].Summary; got != "late client override" {
+			t.Fatalf("%s summary = %q, want late client override", name, got)
+		}
+	}
+}
+
 func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	ctx := context.Background()
 	engine := gameecs.New()

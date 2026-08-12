@@ -180,6 +180,29 @@ func (r *Runtime) RegisterModuleDefault(module Module) error {
 	return nil
 }
 
+// RegisterModuleOverride installs a host-specific capability, replacing an
+// earlier policy-neutral default with the same name. It is deliberately
+// separate from strict registration so ordinary duplicate wiring still fails.
+func (r *Runtime) RegisterModuleOverride(module Module) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.started {
+		return errors.New("modruntime: cannot register a module while running")
+	}
+	if module.Name == "" || module.Loader == nil {
+		return errors.New("modruntime: module name and loader are required")
+	}
+	module.Help = cloneModuleHelp(module.Help)
+	for index, existing := range r.modules {
+		if existing.Name == module.Name {
+			r.modules[index] = module
+			return nil
+		}
+	}
+	r.modules = append(r.modules, module)
+	return nil
+}
+
 // Start creates the Lua state on its owner goroutine.
 func (r *Runtime) Start(ctx context.Context) error {
 	if ctx == nil {
