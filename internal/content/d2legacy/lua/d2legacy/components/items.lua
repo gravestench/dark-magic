@@ -33,5 +33,8 @@ function M.register()
         {name="range",type="f64"},{name="physical_min",type="i64"},
         {name="physical_max",type="i64"},{name="weapon_class",type="string"},
     })
+    component("d2legacy.items.bootstrap",{
+        {name="owner",type="string"},{name="payload",type="string"},
+    })
 end
 return M

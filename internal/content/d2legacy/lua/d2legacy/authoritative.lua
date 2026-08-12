@@ -20,6 +20,7 @@ local enter_player = require("d2legacy.commands.enter_player")
 local transition = require("d2legacy.commands.transition")
 local timed_state = require("d2legacy.systems.timed_state")
 local item_components = require("d2legacy.components.items")
+local equipment = require("d2legacy.systems.equipment")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -46,6 +47,7 @@ function M.start()
     enter_player.register()
     transition.register()
     timed_state.register()
+    equipment.register()
 end
 
 function M.stop()

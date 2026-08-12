@@ -186,9 +186,6 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
 		return wrap("register item commands", err)
 	}
-	if err := gameplayer.RegisterEquipmentProfile(app.entitySimulation, app.itemAuthority); err != nil {
-		return wrap("register equipped player melee profile", err)
-	}
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}
