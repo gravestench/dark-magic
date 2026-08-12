@@ -51,6 +51,28 @@ Do not preserve compatibility wrappers merely to keep old internal APIs alive.
 There are no external consumers. Prefer deleting superseded Go policy and
 changing call sites together.
 
+## Authoritative Lua readability contract
+
+`d2legacy` is intended to teach as well as run. Do not replace large Go files
+with large Lua files. Keep component schemas, registered state, command
+handlers, deterministic systems, and domain policy in separate purpose-named
+modules. Composition roots only import and register those modules.
+
+Functions should do one small job, use descriptive names, and stay short enough
+to understand without scrolling through unrelated behavior. Comments explain
+ownership, ordering, state lifetime, legacy evidence, numeric units, and why a
+rule exists in plain language suitable for a reader new to the engine. Avoid
+comments that merely repeat syntax. Shared helpers are extracted only when they
+make the rule easier—not to hide control flow behind abstraction.
+
+Each migrated domain must include a short README or module-level guide showing:
+
+1. which engine capabilities it receives;
+2. which state it reads and writes;
+3. command-to-system execution order;
+4. where decoded D2 records become gameplay decisions; and
+5. which tests prove replay/checkpoint behavior.
+
 ## First migration sequence
 
 1. Make the inventory exhaustive and enforce its dependency direction.
@@ -59,4 +81,3 @@ changing call sites together.
 4. Move the complete Fire Bolt path as the first proof.
 5. Move tightly coupled domains in coherent groups rather than maintaining two
    authorities during a prolonged file-by-file port.
-

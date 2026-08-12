@@ -63,33 +63,65 @@ type Session struct {
 	closed              bool
 }
 
+// RegisterAuthoritativeRuntime pins one rule implementation and its engine-owned
+// durable stores into the session. The runtime may be Lua today or another
+// adapter later; session determinism depends only on these language-neutral
+// participants.
+func (session *Session) RegisterAuthoritativeRuntime(identity simulation.RuntimeIdentity, stores *simulation.StateStore) error {
+	if stores == nil {
+		return fmt.Errorf("game session: authoritative state store is required")
+	}
+	identityParticipant, err := simulation.NewIdentityParticipant(identity)
+	if err != nil {
+		return err
+	}
+	return session.registerStateParticipants(identityParticipant, stores)
+}
+
 // RegisterStateParticipant adds deterministic authoritative state to session
 // initial state, checkpoints, replay restoration, and desync verification.
 // Register participants before the first command is submitted or tick advances.
 func (session *Session) RegisterStateParticipant(participant simulation.StateParticipant) error {
+	return session.registerStateParticipants(participant)
+}
+
+func (session *Session) registerStateParticipants(participants ...simulation.StateParticipant) error {
 	session.mu.Lock()
 	defer session.mu.Unlock()
 	if session.closed {
 		return ErrClosed
 	}
-	if participant == nil || strings.TrimSpace(participant.StateID()) == "" {
-		return fmt.Errorf("game session: state participant and ID are required")
-	}
 	if session.engine.Tick() != session.initial.Tick || len(session.commands) != 0 || len(session.pending) != 0 {
 		return fmt.Errorf("game session: state participants must be registered before commands or ticks")
 	}
+	known := make(map[string]struct{}, len(session.participants)+len(participants))
 	for _, existing := range session.participants {
-		if existing.StateID() == participant.StateID() {
+		known[existing.StateID()] = struct{}{}
+	}
+	type pendingParticipant struct {
+		participant simulation.StateParticipant
+		state       simulation.ParticipantState
+	}
+	pending := make([]pendingParticipant, 0, len(participants))
+	for _, participant := range participants {
+		if participant == nil || strings.TrimSpace(participant.StateID()) == "" {
+			return fmt.Errorf("game session: state participant and ID are required")
+		}
+		if _, exists := known[participant.StateID()]; exists {
 			return fmt.Errorf("game session: duplicate state participant %q", participant.StateID())
 		}
+		data, err := participant.SnapshotState()
+		if err != nil {
+			return fmt.Errorf("game session: snapshot initial participant %q: %w", participant.StateID(), err)
+		}
+		known[participant.StateID()] = struct{}{}
+		pending = append(pending, pendingParticipant{participant: participant, state: simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)}})
 	}
-	data, err := participant.SnapshotState()
-	if err != nil {
-		return fmt.Errorf("game session: snapshot initial participant %q: %w", participant.StateID(), err)
+	for _, item := range pending {
+		session.participants = append(session.participants, item.participant)
+		session.initialParticipants = append(session.initialParticipants, item.state)
 	}
-	session.participants = append(session.participants, participant)
 	sort.Slice(session.participants, func(i, j int) bool { return session.participants[i].StateID() < session.participants[j].StateID() })
-	session.initialParticipants = append(session.initialParticipants, simulation.ParticipantState{ID: participant.StateID(), Data: append([]byte(nil), data...)})
 	sort.Slice(session.initialParticipants, func(i, j int) bool { return session.initialParticipants[i].ID < session.initialParticipants[j].ID })
 	return nil
 }

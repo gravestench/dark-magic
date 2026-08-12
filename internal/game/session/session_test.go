@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -9,6 +10,50 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
+
+func TestSessionPinsAuthoritativeRuntimeStateInReplay(t *testing.T) {
+	engine := gameecs.New()
+	session, err := New(engine, Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+
+	stores := simulation.NewStateStore()
+	if err := stores.Register("d2legacy.test", "test/v1", []byte(`{"value":1}`)); err != nil {
+		t.Fatal(err)
+	}
+	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config", CapabilityVersions: map[string]string{"dm.ecs": "v1"}}
+	if err := session.RegisterAuthoritativeRuntime(identity, stores); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(replay.InitialParticipants) != 2 || len(replay.Checkpoints) != 1 || len(replay.Checkpoints[0].Participants) != 2 {
+		t.Fatalf("runtime participants missing from replay: %#v", replay)
+	}
+
+	replayStores := simulation.NewStateStore()
+	if err := replayStores.Register("d2legacy.test", "test/v1", nil); err != nil {
+		t.Fatal(err)
+	}
+	replayIdentity, err := simulation.NewIdentityParticipant(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := simulation.VerifyReplay(replay, nil, func(*gameecs.Engine, simulation.Command) error { return nil }, replayIdentity, replayStores); err != nil {
+		t.Fatal(err)
+	}
+	got, found := replayStores.Read("d2legacy.test")
+	if !found || !bytes.Equal(got.Data, []byte(`{"value":1}`)) {
+		t.Fatalf("restored runtime state = %#v, %v", got, found)
+	}
+}
 
 func TestSessionCanonicalizesArrivalOrderAndExportsVerifiableReplay(t *testing.T) {
 	build := func() (*Session, func(*gameecs.Engine, simulation.Command) error) {

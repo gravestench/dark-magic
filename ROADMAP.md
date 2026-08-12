@@ -1469,6 +1469,12 @@ boundary. The annotated tag
 `baseline/pre-d2legacy-lua-migration-2026-08-11` preserves the pre-refactor
 baseline.
 
+Authoritative Lua must remain deliberately approachable: small purpose-named
+files, short single-purpose functions, separate schemas/state/handlers/systems,
+thin registration roots, and plain-language comments explaining ownership and
+legacy behavior to an uninitiated reader. Each migrated domain documents its
+capabilities, durable state, execution order, data-policy boundary, and tests.
+
 - [x] **M21.14.1 — inventory and classification.** The machine-checked
   `docs/architecture/gameplay-ownership.tsv` now gives every production file
   under `internal/game`, `internal/runtime/lua`, and the bundled Lua shim exactly
