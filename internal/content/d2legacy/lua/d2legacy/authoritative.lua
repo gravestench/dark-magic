@@ -22,6 +22,7 @@ local timed_state = require("d2legacy.systems.timed_state")
 local item_components = require("d2legacy.components.items")
 local equipment = require("d2legacy.systems.equipment")
 local item_bootstrap = require("d2legacy.items.bootstrap")
+local item_commands = require("d2legacy.commands.items")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -50,6 +51,7 @@ function M.start()
     transition.register()
     timed_state.register()
     equipment.register()
+    item_commands.register()
 end
 
 function M.stop()

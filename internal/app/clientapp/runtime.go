@@ -60,7 +60,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.PlayerControlModule(app.playerControl),
 		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
 		modruntime.InteractionModule(app.interactionAuthority, app.interactionControl, "local-player"),
-		modruntime.ItemModule(app.itemAuthority, app.itemControl, "local-player"),
+		modruntime.ItemModule(app.itemControl),
 		modruntime.NewECSCapability(app.scripts, app.entitySimulation).Module(),
 		modruntime.LoadingModule(app.loading),
 	}

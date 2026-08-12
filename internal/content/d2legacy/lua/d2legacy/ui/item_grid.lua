@@ -64,7 +64,7 @@ function M.create(root, controls, definition)
         controls = controls,
         -- Capability is required lazily here so presentation-only test harnesses
         -- that never create an item grid do not need gameplay item authority.
-        items = require("engine.items/v1"),
+        items = require("d2legacy.items.api"),
         container = assert(definition.container),
         columns = assert(definition.columns),
         rows = assert(definition.rows),

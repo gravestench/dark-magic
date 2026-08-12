@@ -30,5 +30,10 @@ function M.load()
                 physical_max=item.physical_max or 0,weapon_class=item.melee_weapon_class or ""},
         })
     end
+    for vendor,terms in pairs(data.trade_terms or {}) do
+        ecs.create({["d2legacy.vendor.terms"]={vendor=string.lower(vendor),
+            buy_multiplier=terms.buy_multiplier or 0,sell_multiplier=terms.sell_multiplier or 0,
+            max_buy=terms.max_buy or 0}})
+    end
 end
 return M

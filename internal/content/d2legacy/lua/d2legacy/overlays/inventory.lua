@@ -205,7 +205,7 @@ return {
 
         -- Item authority is gameplay capability. Require it only in the real
         -- asset-backed path where this panel will actually interact with items.
-        self.items = require("engine.items/v1")
+        self.items = require("d2legacy.items.api")
 
         -- Selected character chooses the correct Inventory.txt class geometry.
         local selected = assert(saves.selected(), "inventory requires a selected character")

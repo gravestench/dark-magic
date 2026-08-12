@@ -8,18 +8,10 @@ import (
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 )
 
-func TestItemModuleReturnsCopiesAndQueuesIntent(t *testing.T) {
-	state, err := gameitem.NewState(gameitem.Layout{Grids: map[gameitem.Container]gameitem.Grid{gameitem.ContainerInventory: {Width: 10, Height: 4}}, BeltCapacity: 4}, []gameitem.Item{{ID: "potion", Code: "hp1", Width: 1, Height: 1, Presentation: gameitem.Presentation{Composite: map[string]string{"RH": "ssd"}, WeaponClass: "1HS"}}}, map[string]gameitem.Placement{"potion": {Container: gameitem.ContainerInventory}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	authority := gameitem.NewAuthority()
-	if err := authority.Register("alice", state); err != nil {
-		t.Fatal(err)
-	}
+func TestItemModuleQueuesIntent(t *testing.T) {
 	controller := &gameitem.Controller{}
 	runtime := New()
-	if err := runtime.RegisterModule(ItemModule(authority, controller, "alice")); err != nil {
+	if err := runtime.RegisterModule(ItemModule(controller)); err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
@@ -29,10 +21,6 @@ func TestItemModuleReturnsCopiesAndQueuesIntent(t *testing.T) {
 	defer runtime.Stop(ctx)
 	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
 local items=require("engine.items/v1")
-local snapshot=assert(items.snapshot())
-assert(snapshot.belt_capacity==4 and snapshot.active_weapon_set==0)
-assert(#snapshot.items==1 and snapshot.items[1].container=="inventory" and snapshot.items[1].weapon_set==0)
-assert(snapshot.items[1].weapon_class=="1HS" and snapshot.items[1].composite.RH=="ssd")
 items.move("potion", {container="held"})
 items.select_weapon_set(1)
 items.sell_held("potion", "Akara", "misc")

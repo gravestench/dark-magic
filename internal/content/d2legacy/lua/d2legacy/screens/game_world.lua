@@ -357,7 +357,7 @@ return {
             self.player = player
             self.interaction = require("engine.interaction/v1")
 			self.targeting = require("engine.targeting/v1")
-            local items = require("engine.items/v1")
+            local items = require("d2legacy.items.api")
             self.items = items
             self.game_data = require("engine.game_data/v1")
 

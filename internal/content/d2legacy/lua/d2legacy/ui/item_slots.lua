@@ -42,7 +42,7 @@ end
 function M.create(root, controls, definition)
     local slots = {
         root = root,
-        items = require("engine.items/v1"),
+        items = require("d2legacy.items.api"),
         container = assert(definition.container),
         palette = assert(definition.palette),
         -- Geometry is keyed by semantic/body-location name rather than array index.

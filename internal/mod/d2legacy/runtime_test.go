@@ -191,6 +191,42 @@ func TestAuthorityMaterializesInitialItemsIntoLuaOwnedECS(t *testing.T) {
 	}
 }
 
+func TestAuthorityMovesItemsThroughLuaOwnedPolicy(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	bootstrap := map[string]any{"d2legacy.items": map[string]any{
+		"owner": "alice", "inventory_width": float64(10), "inventory_height": float64(4),
+		"stash_width": float64(6), "stash_height": float64(8), "cube_width": float64(3), "cube_height": float64(4),
+		"belt_capacity": float64(4), "vendor_width": float64(10), "vendor_height": float64(10),
+		"items": []any{map[string]any{"id": "sword", "code": "ssd", "width": float64(1), "height": float64(3),
+			"body_slots": "rarm,larm", "container": "inventory"}},
+	}}
+	authority, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+	payload, _ := json.Marshal(map[string]any{"item_id": "sword", "destination": map[string]any{"container": "held"}})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "item.move", Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	placements, _ := akara.GetDynamicStore(engine.World(), "d2legacy.item.placement")
+	value, _ := placements.Get(placements.Entities()[0])
+	container, _ := value.Get("container")
+	if container != "held" {
+		t.Fatalf("container = %v, want held", container)
+	}
+}
+
 type fixtureRecords struct{}
 
 func (fixtureRecords) Invalidate(string)  {}

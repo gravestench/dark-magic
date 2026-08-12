@@ -183,9 +183,6 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameinteraction.RegisterCommands(app.offlineSession, app.interactionAuthority); err != nil {
 		return wrap("register interaction commands", err)
 	}
-	if err := gameitem.RegisterCommands(app.offlineSession, app.itemAuthority); err != nil {
-		return wrap("register item commands", err)
-	}
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}
@@ -449,6 +446,13 @@ func (app *application) itemBootstrapData() map[string]any {
 		})
 	}
 	result["items"] = entries
+	if catalog, catalogErr := app.gameData.Snapshot(); catalogErr == nil {
+		terms := make(map[string]any, len(catalog.NPCTradesByID))
+		for vendor, record := range catalog.NPCTradesByID {
+			terms[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
+		}
+		result["trade_terms"] = terms
+	}
 	return result
 }
 

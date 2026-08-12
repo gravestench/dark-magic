@@ -1,17 +1,14 @@
 package modruntime
 
 import (
-	"sort"
-
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // ItemModule exposes copied item facts and queues move intents. Scripts never
 // receive the mutable authority or its internal maps.
-func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, owner string) Module {
-	return Module{Name: "engine.items/v1", Help: documentedModule("Inspect authoritative item containers and request fixed-tick moves.", map[string]CommandHelp{
-		"snapshot":          commandHelp("engine.items.snapshot()", "Return copied item identities, placements, container layout, and active weapon set."),
+func ItemModule(controller *gameitem.Controller) Module {
+	return Module{Name: "engine.items/v1", Help: documentedModule("Queue item command intents for fixed-tick admission.", map[string]CommandHelp{
 		"move":              commandHelp("engine.items.move(item_id, destination[, place_held])", "Queue a move or held-item grid placement for the next simulation tick."),
 		"select_weapon_set": commandHelp("engine.items.select_weapon_set(set)", "Queue selection of alternate hand-equipment set 0 or 1."),
 		"sell_held":         commandHelp("engine.items.sell_held(item_id, vendor, category)", "Queue priced sale and authority-owned vendor catalog arrangement."),
@@ -19,14 +16,6 @@ func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, 
 		"complete_service":  commandHelp("engine.items.complete_service(service)", "Queue a server-defined quest or vendor service transaction."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"snapshot": func(state *lua.LState) int {
-				layout, items, placements, err := authority.Snapshot(owner)
-				if err != nil {
-					return pushLuaError(state, err)
-				}
-				state.Push(itemSnapshotTable(state, layout, items, placements))
-				return 1
-			},
 			"move": func(state *lua.LState) int {
 				payload := gameitem.MovePayload{ItemID: state.CheckString(1), Destination: checkPlacement(state, 2), PlaceHeld: state.OptBool(3, false)}
 				if err := controller.Move(payload); err != nil {
@@ -89,62 +78,4 @@ func luaInt(table *lua.LTable, name string) int {
 		return int(value)
 	}
 	return 0
-}
-
-func itemSnapshotTable(state *lua.LState, layout gameitem.Layout, items map[string]gameitem.Item, placements map[string]gameitem.Placement) *lua.LTable {
-	result := state.NewTable()
-	result.RawSetString("belt_capacity", lua.LNumber(layout.BeltCapacity))
-	result.RawSetString("active_weapon_set", lua.LNumber(layout.ActiveWeaponSet))
-	result.RawSetString("carried_gold", lua.LNumber(layout.Gold.Carried))
-	result.RawSetString("stashed_gold", lua.LNumber(layout.Gold.Stashed))
-	vendorGrid := state.NewTable()
-	vendorGrid.RawSetString("width", lua.LNumber(layout.VendorGrid.Width))
-	vendorGrid.RawSetString("height", lua.LNumber(layout.VendorGrid.Height))
-	result.RawSetString("vendor_grid", vendorGrid)
-	grids := state.NewTable()
-	for container, grid := range layout.Grids {
-		entry := state.NewTable()
-		entry.RawSetString("width", lua.LNumber(grid.Width))
-		entry.RawSetString("height", lua.LNumber(grid.Height))
-		grids.RawSetString(string(container), entry)
-	}
-	result.RawSetString("grids", grids)
-	entries := state.NewTable()
-	ids := make([]string, 0, len(items))
-	for id := range items {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	for _, id := range ids {
-		candidate, placement := items[id], placements[id]
-		entry := state.NewTable()
-		entry.RawSetString("id", lua.LString(id))
-		entry.RawSetString("code", lua.LString(candidate.Code))
-		entry.RawSetString("width", lua.LNumber(candidate.Width))
-		entry.RawSetString("height", lua.LNumber(candidate.Height))
-		entry.RawSetString("inventory_dc6", lua.LString(candidate.Presentation.InventoryDC6))
-		entry.RawSetString("world_dc6", lua.LString(candidate.Presentation.WorldDC6))
-		entry.RawSetString("weapon_class", lua.LString(candidate.Presentation.WeaponClass))
-		composite := state.NewTable()
-		for component, appearance := range candidate.Presentation.Composite {
-			composite.RawSetString(component, lua.LString(appearance))
-		}
-		entry.RawSetString("composite", composite)
-		entry.RawSetString("container", lua.LString(placement.Container))
-		entry.RawSetString("x", lua.LNumber(placement.X))
-		entry.RawSetString("y", lua.LNumber(placement.Y))
-		entry.RawSetString("slot", lua.LString(placement.Slot))
-		entry.RawSetString("belt_slot", lua.LNumber(placement.BeltSlot))
-		entry.RawSetString("weapon_set", lua.LNumber(placement.WeaponSet))
-		entry.RawSetString("page", lua.LNumber(placement.Page))
-		entry.RawSetString("category", lua.LString(placement.Slot))
-		services := state.NewTable()
-		for _, service := range candidate.AppliedServices {
-			services.Append(lua.LString(service))
-		}
-		entry.RawSetString("applied_services", services)
-		entries.Append(entry)
-	}
-	result.RawSetString("items", entries)
-	return result
 }

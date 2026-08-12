@@ -37,4 +37,7 @@ function M.for_owner(owner)
     table.sort(result.items,function(a,b) return a.id<b.id end)
     return result
 end
+function M.local_player()
+    return M.for_owner("local-player")
+end
 return M
