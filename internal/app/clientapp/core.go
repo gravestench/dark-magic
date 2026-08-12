@@ -402,6 +402,56 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	return items, placements
 }
 
+// itemBootstrapData converts the host/import boundary to policy-neutral value
+// trees. Lua receives a deep copy and decides what these Diablo item facts mean.
+func (app *application) itemBootstrapData() map[string]any {
+	if app.itemAuthority == nil {
+		return nil
+	}
+	layout, items, placements, err := app.itemAuthority.Snapshot("local-player")
+	if err != nil {
+		return nil
+	}
+	result := map[string]any{
+		"owner": "local-player", "belt_capacity": float64(layout.BeltCapacity),
+		"active_weapon_set": float64(layout.ActiveWeaponSet), "vendor_width": float64(layout.VendorGrid.Width),
+		"vendor_height": float64(layout.VendorGrid.Height), "carried_gold": float64(layout.Gold.Carried),
+		"stashed_gold": float64(layout.Gold.Stashed),
+	}
+	for _, container := range []gameitem.Container{gameitem.ContainerInventory, gameitem.ContainerStash, gameitem.ContainerCube} {
+		grid := layout.Grids[container]
+		result[string(container)+"_width"], result[string(container)+"_height"] = float64(grid.Width), float64(grid.Height)
+	}
+	ids := make([]string, 0, len(items))
+	for id := range items {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	entries := make([]any, 0, len(ids))
+	for _, id := range ids {
+		item, placement := items[id], placements[id]
+		components := make([]string, 0, len(item.Presentation.Composite))
+		for component, appearance := range item.Presentation.Composite {
+			components = append(components, component+"="+appearance)
+		}
+		sort.Strings(components)
+		entries = append(entries, map[string]any{
+			"id": item.ID, "code": item.Code, "width": float64(item.Width), "height": float64(item.Height),
+			"body_slots": strings.Join(item.BodySlots, ","), "belt_eligible": item.BeltEligible,
+			"base_cost": float64(item.BaseCost), "applied_services": strings.Join(item.AppliedServices, ","),
+			"inventory_dc6": item.Presentation.InventoryDC6, "world_dc6": item.Presentation.WorldDC6,
+			"world_animated": item.Presentation.WorldAnimated, "composite": strings.Join(components, ","),
+			"weapon_class": item.Presentation.WeaponClass, "melee_range": item.Melee.Range,
+			"physical_min": float64(item.Melee.PhysicalMinRaw), "physical_max": float64(item.Melee.PhysicalMaxRaw),
+			"melee_weapon_class": item.Melee.WeaponClass, "container": string(placement.Container),
+			"x": float64(placement.X), "y": float64(placement.Y), "slot": placement.Slot,
+			"belt_slot": float64(placement.BeltSlot), "weapon_set": float64(placement.WeaponSet), "page": float64(placement.Page),
+		})
+	}
+	result["items"] = entries
+	return result
+}
+
 func compositeRecipe(component, appearance string) map[string]string {
 	tokens := []string{"HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"}
 	component = strings.ToUpper(strings.TrimSpace(component))

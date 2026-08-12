@@ -21,6 +21,7 @@ local transition = require("d2legacy.commands.transition")
 local timed_state = require("d2legacy.systems.timed_state")
 local item_components = require("d2legacy.components.items")
 local equipment = require("d2legacy.systems.equipment")
+local item_bootstrap = require("d2legacy.items.bootstrap")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -31,6 +32,7 @@ function M.start()
     components.register()
     melee_components.register()
     item_components.register()
+    item_bootstrap.load()
 
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.

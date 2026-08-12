@@ -158,6 +158,39 @@ ecs.create({["d2legacy.state.request"]={operation="apply",target=timed_target,
 	}
 }
 
+func TestAuthorityMaterializesInitialItemsIntoLuaOwnedECS(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	bootstrap := map[string]any{"d2legacy.items": map[string]any{
+		"owner": "alice", "inventory_width": float64(10), "inventory_height": float64(4),
+		"stash_width": float64(6), "stash_height": float64(8), "cube_width": float64(3), "cube_height": float64(4),
+		"belt_capacity": float64(4), "active_weapon_set": float64(0), "vendor_width": float64(10), "vendor_height": float64(10),
+		"carried_gold": float64(100), "stashed_gold": float64(200),
+		"items": []any{map[string]any{"id": "sword", "code": "ssd", "width": float64(1), "height": float64(3),
+			"body_slots": "rarm,larm", "belt_eligible": false, "base_cost": float64(100),
+			"inventory_dc6": "sword.dc6", "world_dc6": "flpsword.dc6", "world_animated": true,
+			"container": "inventory", "x": float64(0), "y": float64(0), "slot": "", "belt_slot": float64(0),
+			"weapon_set": float64(0), "page": float64(0), "melee_range": float64(2),
+			"physical_min": float64(512), "physical_max": float64(1024), "melee_weapon_class": "1HS"}},
+	}}
+	authority, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+	layouts, _ := akara.GetDynamicStore(engine.World(), "d2legacy.items.layout")
+	items, _ := akara.GetDynamicStore(engine.World(), "d2legacy.item.identity")
+	if layouts.Len() != 1 || items.Len() != 1 {
+		t.Fatalf("bootstrapped layouts/items = %d/%d", layouts.Len(), items.Len())
+	}
+}
+
 type fixtureRecords struct{}
 
 func (fixtureRecords) Invalidate(string)  {}

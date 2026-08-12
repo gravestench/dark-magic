@@ -38,6 +38,9 @@ type Authority struct {
 type Config struct {
 	Seed    uint64
 	Restore []simulation.ParticipantState
+	// InitialData contains immutable import/bootstrap values. It is deliberately
+	// absent from mutable runtime APIs after d2legacy materializes its own state.
+	InitialData map[string]any
 }
 
 func Start(ctx context.Context, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, seed uint64) (*Authority, error) {
@@ -91,6 +94,7 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	for _, module := range []modruntime.Module{
 		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(result.State),
 		modruntime.AuthorityRandomModule(streams), modruntime.AuthorityCommandModule(result.Runtime, session),
+		modruntime.InitialDataModule(config.InitialData),
 		modruntime.NewECSCapability(result.Runtime, engine).Module(),
 	} {
 		if err := result.Runtime.RegisterModule(module); err != nil {

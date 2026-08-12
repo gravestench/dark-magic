@@ -51,6 +51,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.AuthorityStateModule(app.authoritativeState),
 		modruntime.AuthorityRandomModule(app.authoritativeRandom),
 		modruntime.AuthorityCommandModule(app.scripts, app.offlineSession),
+		modruntime.InitialDataModule(map[string]any{"d2legacy.items": app.itemBootstrapData()}),
 		modruntime.GameDataModule(app.gameData),
 		modruntime.QuestCatalogModule(app.questCatalog, app.locale),
 		modruntime.MapCatalogModule(app.questCatalog),
