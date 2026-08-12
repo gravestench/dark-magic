@@ -3,23 +3,11 @@ internal/game/data/	data	go:data	D2 schemas and immutable decoded records may re
 internal/game/ecs/	mechanism	go:engine	mod-neutral ECS schedule storage queries and barriers
 internal/game/simulation/	mechanism	go:engine	command RNG and replay primitives; embedded policy must split
 internal/game/session/	mechanism	go:engine	policy-neutral session host; D2 handlers must split
-internal/game/combat/	d2-policy	lua:d2legacy	current D2 combat migration source
-internal/game/skill/	d2-policy	lua:d2legacy	current D2 cast and skill migration source
-internal/game/missile/	d2-policy	lua:d2legacy	current D2 missile migration source; generic motion may split
-internal/game/monster/	d2-policy	lua:d2legacy	current D2 population AI and death migration source
-internal/game/loot/	d2-policy	lua:d2legacy	current D2 treasure item and affix policy migration source
-internal/game/item/	d2-policy	lua:d2legacy	current D2 container equipment vendor and service policy
-internal/game/player/	d2-policy	lua:d2legacy	current D2 character admission and equipment policy
-internal/game/stats/	d2-policy	lua:d2legacy	current D2 stat authority migration source
-internal/game/state/	d2-policy	lua:d2legacy	current D2 state policy; generic timed stores may split
-internal/game/action/	d2-policy	lua:d2legacy	current D2 action policy; generic scheduling may split
-internal/game/interaction/	d2-policy	lua:d2legacy	current D2 interaction and commerce policy
-internal/game/transition/	d2-policy	lua:d2legacy	current D2 warp and progression transition policy
-internal/game/ownedunit/	d2-policy	lua:d2legacy	current D2 summon hireling and lifecycle policy
 internal/game/mapgen/	d2-policy	lua:d2legacy	D2 generation policy; generic algorithms may split
 internal/game/world/	transitional	split:engine+d2legacy	geometry navigation and D2 world policy are mixed
 internal/game/targeting/	transitional	split:engine+d2legacy	spatial mechanism and D2 target semantics are mixed
 internal/runtime/lua/	adapter	go:runtime	Lua sandbox capabilities and transitional D2 facades
+internal/mod/d2legacy/adapter/	adapter	go:d2legacy	trusted save world and transport adapters feeding plain facts to d2legacy
 internal/content/d2legacy/lua/d2legacy/gameplay/	transitional	lua:d2legacy	presentation-era gameplay helpers migrate into canonical d2legacy authority modules
 internal/content/d2legacy/lua/d2legacy/dev/	adapter	lua:development	developer instruments consuming production boundaries
 internal/content/d2legacy/lua/d2legacy/screens/	adapter	lua:presentation	first-party screens and labs

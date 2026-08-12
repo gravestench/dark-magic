@@ -7,10 +7,10 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	lua "github.com/yuin/gopher-lua"
 )

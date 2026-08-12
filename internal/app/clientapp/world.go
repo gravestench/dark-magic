@@ -8,8 +8,8 @@ import (
 	"github.com/gravestench/akara"
 
 	"github.com/gravestench/dark-magic/internal/game/mapgen"
-	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
