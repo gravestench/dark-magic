@@ -26,6 +26,7 @@ function M.register()
         fields = {
             { name = "level", type = "i64" },
             { name = "experience", type = "i64" },
+            { name = "unspent_skill_points", type = "i64" },
         },
     })
 
