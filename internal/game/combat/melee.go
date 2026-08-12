@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"strings"
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -101,24 +102,24 @@ func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *a
 		}
 		profile, _ := profiles.Get(attacker)
 		attackRange, _ := profile.Get("range")
-		attackerID, legalTarget, err := legalMeleeTarget(attacker, targetID.(string), attackRange.(float64), selectables, positions, locations)
+		attackerID, resolvedTargetID, legalTarget, err := legalMeleeTarget(attacker, targetID.(string), attackRange.(float64), selectables, positions, locations)
 		commands.Remove(requests, attacker)
 		if err != nil {
 			return err
 		}
-		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventAttackAttempted, context.Tick, attackerID, targetID.(string), false, 0, 0)})
+		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventAttackAttempted, context.Tick, attackerID, resolvedTargetID, false, 0, 0)})
 		if !legalTarget.found {
-			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, context.Tick, attackerID, targetID.(string), false, 0, 0)})
+			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, context.Tick, attackerID, resolvedTargetID, false, 0, 0)})
 			continue
 		}
-		hit := int(stableRoll("hit", context.Tick, attackerID, targetID.(string))%100) < policy.HitChance
-		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, context.Tick, attackerID, targetID.(string), hit, 0, 0)})
+		hit := int(stableRoll("hit", context.Tick, attackerID, resolvedTargetID)%100) < policy.HitChance
+		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventHitResolved, context.Tick, attackerID, resolvedTargetID, hit, 0, 0)})
 		if !hit {
 			continue
 		}
 		minimum, _ := profile.Get("physical_min")
 		maximum, _ := profile.Get("physical_max")
-		damage, err := rollDamage(FromRaw(minimum.(int64)), FromRaw(maximum.(int64)), stableRoll("damage", context.Tick, attackerID, targetID.(string)))
+		damage, err := rollDamage(FromRaw(minimum.(int64)), FromRaw(maximum.(int64)), stableRoll("damage", context.Tick, attackerID, resolvedTargetID))
 		if err != nil {
 			return err
 		}
@@ -126,9 +127,9 @@ func resolveMelee(context gameecs.Context, attackers []akara.Entity, commands *a
 		if err != nil {
 			return err
 		}
-		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventDamageApplied, context.Tick, attackerID, targetID.(string), true, damage.Raw(), remaining.Raw())})
+		commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventDamageApplied, context.Tick, attackerID, resolvedTargetID, true, damage.Raw(), remaining.Raw())})
 		if died {
-			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventUnitDied, context.Tick, attackerID, targetID.(string), true, damage.Raw(), 0)})
+			commands.CreateDynamic(world, map[*akara.DynamicStore]map[string]any{events: eventValues(EventUnitDied, context.Tick, attackerID, resolvedTargetID, true, damage.Raw(), 0)})
 		}
 	}
 	return nil
@@ -139,13 +140,13 @@ type targetResult struct {
 	found  bool
 }
 
-func legalMeleeTarget(attacker akara.Entity, targetID string, attackRange float64, selectables, positions, locations *akara.DynamicStore) (string, targetResult, error) {
+func legalMeleeTarget(attacker akara.Entity, targetID string, attackRange float64, selectables, positions, locations *akara.DynamicStore) (string, string, targetResult, error) {
 	if attackRange <= 0 || math.IsNaN(attackRange) || math.IsInf(attackRange, 0) {
-		return "", targetResult{}, fmt.Errorf("combat: attack range must be finite and positive")
+		return "", "", targetResult{}, fmt.Errorf("combat: attack range must be finite and positive")
 	}
 	attackerSelectable, ok := selectables.Get(attacker)
 	if !ok {
-		return "", targetResult{}, fmt.Errorf("combat: attacker lacks selectable identity")
+		return "", "", targetResult{}, fmt.Errorf("combat: attacker lacks selectable identity")
 	}
 	attackerIDValue, _ := attackerSelectable.Get("id")
 	attackerPosition, _ := positions.Get(attacker)
@@ -154,10 +155,15 @@ func legalMeleeTarget(attacker akara.Entity, targetID string, attackRange float6
 	ay, _ := attackerPosition.Get("y")
 	aAct, _ := attackerLocation.Get("act")
 	aLevel, _ := attackerLocation.Get("level_id")
+	bestID := ""
+	bestDistance := math.Inf(1)
+	best := targetResult{}
 	for _, entity := range selectables.Entities() {
 		selectable, _ := selectables.Get(entity)
 		id, _ := selectable.Get("id")
-		if id != targetID || entity == attacker {
+		kind, _ := selectable.Get("kind")
+		manual := strings.TrimSpace(targetID) == ""
+		if entity == attacker || (!manual && id != targetID) || (manual && kind != targeting.KindHostile) {
 			continue
 		}
 		position, pok := positions.Get(entity)
@@ -167,13 +173,24 @@ func legalMeleeTarget(attacker akara.Entity, targetID string, attackRange float6
 		}
 		x, _ := position.Get("x")
 		y, _ := position.Get("y")
+		radius, _ := selectable.Get("radius")
 		act, _ := location.Get("act")
 		level, _ := location.Get("level_id")
-		if act == aAct && level == aLevel && math.Hypot(x.(float64)-ax.(float64), y.(float64)-ay.(float64)) <= attackRange {
-			return attackerIDValue.(string), targetResult{entity: entity, found: true}, nil
+		// Range reaches a target's occupied footprint. This must agree with the
+		// attack-approach path stop rule or a visually adjacent large unit can be
+		// approached and animated but have its impact rejected.
+		distance := math.Hypot(x.(float64)-ax.(float64), y.(float64)-ay.(float64))
+		if act == aAct && level == aLevel && distance <= attackRange+radius.(float64) {
+			if !manual {
+				return attackerIDValue.(string), targetID, targetResult{entity: entity, found: true}, nil
+			}
+			candidateID := id.(string)
+			if distance < bestDistance || distance == bestDistance && candidateID < bestID {
+				bestDistance, bestID, best = distance, candidateID, targetResult{entity: entity, found: true}
+			}
 		}
 	}
-	return attackerIDValue.(string), targetResult{}, nil
+	return attackerIDValue.(string), bestID, best, nil
 }
 
 func rollDamage(minimum, maximum Amount, roll uint64) (Amount, error) {

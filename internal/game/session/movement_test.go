@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"testing"
 
@@ -9,8 +10,18 @@ import (
 	gameaction "github.com/gravestench/dark-magic/internal/game/action"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 )
+
+type scriptedPaths struct{}
+
+func (scriptedPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point, error) {
+	if request.Goal.X == 99 {
+		return nil, errors.New("blocked target")
+	}
+	return []gameworld.Point{request.Start, {X: 11, Y: 10}, request.Goal}, nil
+}
 
 func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	engine := gameecs.New()
@@ -136,6 +147,12 @@ func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	if !pendingActions.Has(entity) {
 		t.Fatal("idle movement snapshot canceled pending attack approach")
 	}
+	if x, _ := velocity.Get("x"); x != float64(10) {
+		t.Fatalf("idle movement snapshot overwrote attack-owned velocity: x=%v", x)
+	}
+	if animation, _ := animationState.Get("mode"); animation != "WL" {
+		t.Fatalf("idle movement snapshot overwrote attack-owned animation: mode=%v", animation)
+	}
 }
 
 func TestMovementDirectionMatchesLegacyEightWayEncoding(t *testing.T) {
@@ -253,5 +270,63 @@ func TestMovementSourceEmitsPointerWorldTarget(t *testing.T) {
 	}
 	if payload.Target == nil || payload.Target.X != 12.5 || payload.Target.Y != 44.25 {
 		t.Fatalf("pointer target payload = %#v", payload)
+	}
+}
+
+func TestSkillIntentStopsAnOlderPointerRoute(t *testing.T) {
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(20, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.UseSkill("left", 12, 10, ""); err != nil {
+		t.Fatal(err)
+	}
+	if controller.HasMoveTarget() {
+		t.Fatal("stand-still skill retained older movement route")
+	}
+}
+
+func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) {
+	engine := gameecs.New()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := positions.Set(entity, map[string]any{"x": 10.0, "y": 10.0}); err != nil {
+		t.Fatal(err)
+	}
+	var input inputstate.Store
+	input.Publish(inputstate.Frame{Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "game_world"}})
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(20, 10); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewMovementSource(engine, &input, "alpha", "game_world", controller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.navigation = scriptedPaths{}
+	first, err := decodeMove(source.Commands(1)[0].Payload)
+	if err != nil || first.Target == nil || first.Target.X != 11 || first.Target.Y != 10 {
+		t.Fatalf("accepted route waypoint = %#v, %v", first.Target, err)
+	}
+	if err := controller.SetMoveTarget(99, 10); err != nil {
+		t.Fatal(err)
+	}
+	second, err := decodeMove(source.Commands(2)[0].Payload)
+	if err != nil || second.Target == nil || second.Target.X != 11 || second.Target.Y != 10 {
+		t.Fatalf("blocked replacement discarded accepted route: %#v, %v", second.Target, err)
+	}
+	retained := controller.moveTarget()
+	if retained == nil || retained.X != 20 || retained.Y != 10 {
+		t.Fatalf("controller retained target = %#v, want original target", retained)
 	}
 }

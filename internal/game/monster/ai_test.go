@@ -52,7 +52,9 @@ func TestScheduledAIAcquiresChasesAndRequestsAttack(t *testing.T) {
 	if vx != float64(6) {
 		t.Fatalf("chase velocity = %v", vx)
 	}
-	movePlayerTarget(t, engine, "player:hero", 3, 2)
+	// Centers remain two subtiles apart, but the player's one-subtile footprint
+	// is already inside the monster's one-subtile melee reach.
+	movePlayerTarget(t, engine, "player:hero", 4, 2)
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}

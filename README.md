@@ -434,7 +434,10 @@ and missile labs expose the same picker for their typed record IDs.
 second miniature combat implementation. `make play-combat-lab` selects a
 development character, enters the generated Act I Blood Moor, admits its typed
 hostile population, and then delegates the complete scene lifecycle to
-`game_world`. Pointer traversal and hostile selection therefore exercise the
+`game_world`. The lab relocates up to three members of that real population to
+reachable open subtiles within the initial viewport, and admission keeps the
+data-backed general Attack (skill ID 0) on the left mouse button. Pointer
+traversal and hostile selection therefore exercise the
 same fixed-tick intents, collision-aware A*, sparse tile residency and culling,
 camera, entity depth ordering, player/monster composites, missiles, HUD,
 damage, death, and loot cues used by ordinary play. F3 toggles decoded

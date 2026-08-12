@@ -68,6 +68,9 @@ func (controller *MovementController) UseSkill(side string, x, y float64, target
 		return fmt.Errorf("game session: skill use requires left/right side and finite target")
 	}
 	controller.mu.Lock()
+	// Skill intent owns the player now. This is especially important for
+	// Shift-melee: a stand-still swing must not inherit an older ground route.
+	controller.target = nil
 	controller.skillUses = append(controller.skillUses, UseSkillPayload{Side: side, TargetX: x, TargetY: y, TargetID: strings.TrimSpace(targetID)})
 	controller.mu.Unlock()
 	return nil
@@ -112,6 +115,17 @@ func (controller *MovementController) clearMoveTarget() {
 	controller.mu.Lock()
 	controller.target = nil
 	controller.mu.Unlock()
+}
+
+func (controller *MovementController) restoreMoveTarget(target *MoveTarget) {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if target == nil {
+		controller.target = nil
+		return
+	}
+	copyTarget := *target
+	controller.target = &copyTarget
 }
 
 func (controller *MovementController) drainSkills() map[string]int64 {
@@ -160,8 +174,13 @@ func RegisterMovement(session *Session) error {
 				// Idle snapshots keep the current action alive. Only a real
 				// directional input or a newly clicked ground target says the
 				// player intends to stop approaching an attack target.
-				if payload.Target != nil || payload.X != 0 || payload.Y != 0 {
+				explicit := payload.Target != nil || payload.X != 0 || payload.Y != 0
+				if explicit {
 					gameaction.CancelExclusive(engine.World(), entity)
+				} else if gameaction.ActiveExclusive(engine.World(), entity) {
+					// Combat currently owns velocity and animation. An idle host
+					// sample means "no newer intent," not "stop the action."
+					continue
 				}
 				velocity, found := velocities.Get(entity)
 				if !found {
@@ -255,9 +274,13 @@ type MovementSource struct {
 	player     string
 	focusID    string
 	control    *MovementController
-	navigation *gameworld.Map
+	navigation movementPathFinder
 	path       []gameworld.Point
 	pathTarget *MoveTarget
+}
+
+type movementPathFinder interface {
+	FindPath(gameworld.PathRequest) ([]gameworld.Point, error)
 }
 
 func (source *MovementSource) SetNavigation(world *gameworld.Map) {
@@ -364,14 +387,24 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 	if changed {
 		path, err := source.navigation.FindPath(gameworld.PathRequest{Start: current, Goal: gameworld.Point{X: target.X, Y: target.Y}, Radius: radius, StopRadius: target.StopRadius})
 		if err != nil {
-			source.control.clearMoveTarget()
-			source.path = nil
-			source.pathTarget = nil
-			return &MoveTarget{X: current.X, Y: current.Y}
+			// A new click is only a proposed route replacement. If the player
+			// already has an accepted route, keep it moving rather than letting
+			// an unreachable wall/void click act like an implicit stop command.
+			if source.pathTarget != nil && len(source.path) > 1 {
+				oldTarget := *source.pathTarget
+				source.control.restoreMoveTarget(&oldTarget)
+				target = &oldTarget
+			} else {
+				source.control.clearMoveTarget()
+				source.path = nil
+				source.pathTarget = nil
+				return &MoveTarget{X: current.X, Y: current.Y}
+			}
+		} else {
+			source.path = path
+			copyTarget := *target
+			source.pathTarget = &copyTarget
 		}
-		source.path = path
-		copyTarget := *target
-		source.pathTarget = &copyTarget
 	}
 	for len(source.path) > 1 && math.Hypot(current.X-source.path[1].X, current.Y-source.path[1].Y) <= 0.3 {
 		source.path = source.path[1:]

@@ -23,7 +23,10 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	}
 	character := persistence.Character{ID: "amazon-hero", Name: "Hero", Class: "Amazon", Level: 3, Expansion: true, Stats: &persistence.Stats{Experience: 100, Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15}}
 	entry := EntryFromCharacter(character, "player-1", 5, 7, 100, 80)
-	entry.Skills = []Skill{{ID: 6, Level: 1, ListRow: 1, LeftAllowed: true, RightAllowed: true}}
+	entry.Skills = []Skill{
+		{ID: 0, Level: 1, ListRow: 0, LeftAllowed: true, RightAllowed: true},
+		{ID: 6, Level: 1, ListRow: 1, LeftAllowed: true, RightAllowed: true},
+	}
 	command, err := Command(entry, "server", 1, 1, simulation.AuthoritySystem)
 	if err != nil {
 		t.Fatal(err)
@@ -129,8 +132,16 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if level, _ := location.Get("level_id"); level != int64(1) {
 		t.Fatalf("entry level = %v", level)
 	}
+	assignments, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_assignment")
+	if !found {
+		t.Fatal("skill assignments were not materialized")
+	}
+	assignment, _ := assignments.Get(entity)
+	if left, _ := assignment.Get("left"); left != int64(0) {
+		t.Fatalf("default left skill = %v, want basic Attack ID 0", left)
+	}
 	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
-	if !found || learned.Len() != 1 {
+	if !found || learned.Len() != 2 {
 		t.Fatalf("learned skills = %v, %v", learned, found)
 	}
 	if audit := session.Audit(); len(audit) != 1 || audit[0].Kind != EnterCommand {

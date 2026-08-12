@@ -35,9 +35,9 @@ func RegisterPlayerBasicAttack(engine *gameecs.Engine, skillID int64, paths Path
 	}
 	if err := engine.Register(gameecs.Definition{
 		ID: "combat.player_basic_attack", Phase: gameecs.PhasePreSimulate, After: []string{gameskill.CastLifecycleSystemID},
-		All: []akara.ComponentType{casts}, None: []akara.ComponentType{receipts}, Read: []akara.ComponentType{casts, controls}, Write: []akara.ComponentType{receipts, approaches},
+		All: []akara.ComponentType{casts}, None: []akara.ComponentType{receipts}, Read: []akara.ComponentType{casts, controls, approaches, attackAnimations, positions, appearances}, Write: []akara.ComponentType{receipts, approaches, attackAnimations, velocities, animations},
 		Update: func(_ gameecs.Context, entities []akara.Entity, commands *akara.CommandBuffer) error {
-			return translatePlayerAttacks(entities, commands, skillID, casts, receipts, controls, approaches)
+			return translatePlayerAttacks(entities, commands, skillID, timings, casts, receipts, controls, approaches, attackAnimations, positions, velocities, animations, appearances)
 		},
 	}); err != nil {
 		return err
@@ -101,7 +101,7 @@ func registerPlayerAttackStores(engine *gameecs.Engine) (casts, receipts, contro
 	return casts, receipts, controls, approaches, attackAnimations, velocities, colliders, animations, movementModes, appearances, err
 }
 
-func translatePlayerAttacks(entities []akara.Entity, commands *akara.CommandBuffer, skillID int64, casts, receipts, controls, approaches *akara.DynamicStore) error {
+func translatePlayerAttacks(entities []akara.Entity, commands *akara.CommandBuffer, skillID int64, timings AttackTimingResolver, casts, receipts, controls, approaches, attackAnimations, positions, velocities, animations, appearances *akara.DynamicStore) error {
 	for _, eventEntity := range entities {
 		event, _ := casts.Get(eventEntity)
 		kind, _ := event.Get("kind")
@@ -118,11 +118,60 @@ func translatePlayerAttacks(entities []akara.Entity, commands *akara.CommandBuff
 		}
 		tick, _ := event.Get("tick")
 		commands.AddDynamic(receipts, eventEntity, map[string]any{"processed": true})
-		values := newAttackApproach(targetID.(string), tick.(int64))
+		requestedTarget := targetID.(string)
+		if pending, exists := approaches.Get(caster); exists {
+			currentTarget, _ := pending.Get("target_id")
+			currentSkill, _ := pending.Get("skill_id")
+			if currentSkill == skillID && currentTarget == requestedTarget {
+				// Repeated clicks on the same unit reaffirm the action. They must
+				// not clear its cached waypoint or postpone reaching attack range.
+				continue
+			}
+		}
+		if active, exists := attackAnimations.Get(caster); exists {
+			currentTarget, _ := active.Get("target_id")
+			currentSkill, _ := active.Get("skill_id")
+			if currentSkill == skillID && currentTarget == requestedTarget {
+				// The authored swing and impact clock already own this target.
+				// Spam clicking cannot restart the animation before its hit frame.
+				continue
+			}
+			commands.Remove(attackAnimations, caster)
+		}
+		if requestedTarget == "" {
+			// A targetless basic attack is the authoritative form of Shift-melee:
+			// swing in place toward the pointer and never create a chase route.
+			timing, err := resolveAttackTiming(caster, timings, appearances)
+			if err != nil {
+				return err
+			}
+			commands.AddDynamic(attackAnimations, caster, newAttackAnimation(skillID, "", uint64(tick.(int64)), timing))
+			if velocity, present := velocities.Get(caster); present {
+				if err := setApproachVelocity(velocity, 0, 0); err != nil {
+					return err
+				}
+			}
+			if animation, present := animations.Get(caster); present {
+				if err := animation.Set("mode", "A1"); err != nil {
+					return err
+				}
+				if position, found := positions.Get(caster); found {
+					x, _ := position.Get("x")
+					y, _ := position.Get("y")
+					targetX, _ := event.Get("target_x")
+					targetY, _ := event.Get("target_y")
+					if err := animation.Set("direction", logicalDirection(targetX.(float64)-x.(float64), targetY.(float64)-y.(float64))); err != nil {
+						return err
+					}
+				}
+			}
+			continue
+		}
+		values := newAttackApproach(skillID, requestedTarget, tick.(int64))
 		if pending, exists := approaches.Get(caster); exists {
 			// A fresh click replaces the old pending target immediately. There is
 			// only one left-button basic action per controlled player.
-			for _, field := range []string{"target_id", "request_tick", "goal_x", "goal_y", "waypoint_x", "waypoint_y", "has_waypoint"} {
+			for _, field := range []string{"skill_id", "target_id", "request_tick", "goal_x", "goal_y", "waypoint_x", "waypoint_y", "has_waypoint"} {
 				if err := pending.Set(field, values[field]); err != nil {
 					return err
 				}

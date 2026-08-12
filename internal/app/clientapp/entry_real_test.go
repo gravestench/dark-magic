@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"math"
 	"os"
 	"testing"
 	"time"
@@ -195,5 +196,82 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	monsters, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.identity")
 	if !ok || monsters.Len() == 0 {
 		t.Fatal("Combat Lab admitted no production Blood Moor hostiles")
+	}
+	positions, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.position")
+	if !ok {
+		t.Fatal("Combat Lab has no authoritative positions")
+	}
+	playerEntity := identities.Entities()[0]
+	playerPosition, _ := positions.Get(playerEntity)
+	playerX, _ := playerPosition.Get("x")
+	playerY, _ := playerPosition.Get("y")
+	nearby := false
+	var nearbyMonster akara.Entity
+	for _, monster := range monsters.Entities() {
+		position, found := positions.Get(monster)
+		if !found {
+			continue
+		}
+		x, _ := position.Get("x")
+		y, _ := position.Get("y")
+		if math.Hypot(x.(float64)-playerX.(float64), y.(float64)-playerY.(float64)) <= 14 {
+			nearby = true
+			nearbyMonster = monster
+			break
+		}
+	}
+	if !nearby {
+		t.Fatal("Combat Lab placed no hostile within its visible encounter radius")
+	}
+	selectables, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.selectable")
+	if !ok {
+		t.Fatal("Combat Lab has no authoritative selectable targets")
+	}
+	selected, _ := selectables.Get(nearbyMonster)
+	targetID, _ := selected.Get("id")
+	targetPosition, _ := positions.Get(nearbyMonster)
+	// This package-level acceptance test does not load the Lua movement
+	// integrator used by the running client. Move the already-validated nearby
+	// target into footprint range so this section isolates the native
+	// admission -> left assignment -> skill -> attack -> damage pipeline.
+	if err := targetPosition.Set("x", playerX.(float64)+2.4); err != nil {
+		t.Fatal(err)
+	}
+	if err := targetPosition.Set("y", playerY.(float64)); err != nil {
+		t.Fatal(err)
+	}
+	targetX, _ := targetPosition.Get("x")
+	targetY, _ := targetPosition.Get("y")
+	stats, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.stats")
+	if !ok {
+		t.Fatal("Combat Lab has no authoritative monster stats")
+	}
+	before, _ := stats.Get(nearbyMonster)
+	beforeHealth, _ := before.Get("health")
+	if err := app.playerControl.UseSkill("left", targetX.(float64), targetY.(float64), targetID.(string)); err != nil {
+		t.Fatal(err)
+	}
+	// Advance in host-sized slices: the session intentionally caps catch-up per
+	// frame, so one giant duration is not equivalent to three seconds of play.
+	for range 20 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
+	}
+	after, alive := stats.Get(nearbyMonster)
+	if alive {
+		afterHealth, _ := after.Get("health")
+		if afterHealth.(int64) >= beforeHealth.(int64) {
+			playerPosition, _ = positions.Get(playerEntity)
+			playerX, _ = playerPosition.Get("x")
+			playerY, _ = playerPosition.Get("y")
+			targetPosition, _ = positions.Get(nearbyMonster)
+			targetX, _ = targetPosition.Get("x")
+			targetY, _ = targetPosition.Get("y")
+			approaches, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.attack_approach")
+			animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.attack_animation")
+			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "dm.combat.event")
+			t.Fatalf("Combat Lab basic attack left monster health unchanged at %v; player=(%.1f,%.1f) target=(%.1f,%.1f) approaches=%d animations=%d events=%d", afterHealth, playerX, playerY, targetX, targetY, approaches.Len(), animations.Len(), events.Len())
+		}
 	}
 }
