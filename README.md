@@ -169,17 +169,15 @@ Renderer residency diagnostics use the same persistent preference path and can
 be controlled directly from the Lua shell:
 
 ```lua
-local settings = require("engine.settings/v1")
-settings.set("debug_texture_residency", true) -- native-resolution cache overlay
-settings.set("texture_upload_budget_mb", 16)  -- optional warm uploads per frame
-settings.set("texture_cache_budget_mb", 512) -- retained native texture capacity
-settings.set("camera_follow_strategy", "instant") -- default: no smoothing
-settings.set("camera_follow_duration", 0.0)        -- tween seconds per target update
-settings.set("camera_follow_param_1", 0.0)         -- strategy-specific value
-settings.save()                               -- retain these across launches
+engine.settings.set("debug_texture_residency", true) -- native-resolution cache overlay
+engine.settings.set("texture_upload_budget_mb", 16)  -- optional warm uploads per frame
+engine.settings.set("texture_cache_budget_mb", 512)   -- retained native texture capacity
+engine.settings.set("camera_follow_strategy", "instant") -- default: no smoothing
+engine.settings.set("camera_follow_duration", 0.0)        -- tween seconds per target update
+engine.settings.set("camera_follow_param_1", 0.0)         -- strategy-specific value
+engine.settings.save()                               -- retain these across launches
 
-local render = require("engine.render/v1")
-render.diagnostics() -- decoded cache plus pending CPU/GPU warm work
+engine.render.diagnostics() -- decoded cache plus pending CPU/GPU warm work
 ```
 
 Camera follow strategies are `instant`, `linear`, `quad_in`, `quad_out`,

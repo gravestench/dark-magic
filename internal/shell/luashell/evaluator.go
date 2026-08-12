@@ -447,6 +447,7 @@ func (e *Evaluator) formatCommandHelp(module, name string) string {
 
 func moduleAlias(module string) string {
 	module = strings.TrimPrefix(module, "d2legacy.")
+	module = strings.TrimPrefix(module, "engine.")
 	if separator := strings.IndexByte(module, '/'); separator >= 0 {
 		module = module[:separator]
 	}
