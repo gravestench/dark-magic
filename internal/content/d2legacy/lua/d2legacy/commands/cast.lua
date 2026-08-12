@@ -8,6 +8,7 @@ local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
 
 local M = {}
+local state_skills = {}
 
 local function finite(value)
     return type(value) == "number" and value == value
@@ -60,8 +61,8 @@ function M.validate(command)
     assert(type(payload) == "table", "cast payload must be a table")
     assert(payload.side == "left" or payload.side == "right",
         "cast side must be left or right")
-    assert(finite(payload.target_x) and finite(payload.target_y),
-        "cast target must be finite")
+    assert(payload.target_x == nil or finite(payload.target_x), "cast target X must be finite")
+    assert(payload.target_y == nil or finite(payload.target_y), "cast target Y must be finite")
     assert(payload.target_id == nil or type(payload.target_id) == "string",
         "target ID must be a string")
 end
@@ -72,6 +73,17 @@ function M.apply(command)
     local assignments = assert(ecs.get(player, "d2legacy.player.skill_assignment"),
         "cast player has no skill assignments")
     local skill_id = assignments:get(payload.side)
+    local state_definition = state_skills[skill_id]
+    if state_definition then
+        local learned = assert(learned_skill(player, skill_id), "skill is not learned")
+        ecs.create({["d2legacy.state.request"]={operation="apply",target=player,
+            state_id=state_definition.state_id,source_id="skill:"..command.player..":"..skill_id,
+            duration=state_definition.duration,policy="refresh_same_source"}})
+        ecs.create({["d2legacy.skill.cast_event"]={kind="skill_effect",tick=command.tick,
+            player=command.player,skill_id=skill_id,skill_level=learned:get("level"),
+            behavior="state.self",target_x=0,target_y=0,target_id="",reason=""}})
+        return
+    end
     local values = {
         player = command.player,
         skill_id = skill_id,
@@ -84,6 +96,8 @@ function M.apply(command)
         request_tick = command.tick,
     }
     if skill_id == 36 then
+        assert(finite(payload.target_x) and finite(payload.target_y),
+            "missile cast target must be finite")
         ecs.set(player, "d2legacy.skill.cast_request", values)
         return
     end
@@ -101,7 +115,8 @@ function M.apply(command)
     }})
 end
 
-function M.register()
+function M.register(definitions)
+    state_skills = definitions or {}
     commands.register({
         kind = "player.assign_skills",
         authorities = { "player" },

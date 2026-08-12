@@ -1562,15 +1562,18 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   remains open for the broader mitigation/derived-stat and deterministic death
   vectors named by its acceptance contract.
 
-- [ ] **M21.14.6 — skills and missiles migration.** Move D2 skill eligibility,
+- [x] **M21.14.6 — skills and missiles migration.** Move D2 skill eligibility,
   costs, timing, targeting, effects, and missile behavior to `d2legacy`; retain
   only generic scheduling, movement/collision, and spatial primitives that are
   demonstrably mod-neutral. Acceptance: representative targeted, ground,
   targetless, state, and missile skills have Lua-owned policy and replay parity.
 
-  Ownership cutover and Fire Bolt parity are complete. Representative ground,
-  targetless, and non-damage state-skill vectors remain before this broader
-  fidelity item can be checked.
+  Complete: targeted basic melee, ground-targeted Fire Bolt, targetless Frozen
+  Armor, timed source-tagged state, and straight-missile behavior execute through
+  Lua-owned admission and systems. Frozen Armor is decoded from immutable skill
+  records and emits a self-state request without accepting cursor authority;
+  checkpoint vectors preserve its source/expiry facts, while the ground missile
+  vector reconstructs the Lua runtime and reaches an identical final checksum.
 
 - [x] **M21.14.7 — monsters, AI, spawning, and death migration.** Move D2
   monster definition interpretation, encounter population, AI decisions,

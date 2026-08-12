@@ -273,6 +273,63 @@ assert(animation:get("mode") == "WL" and facing:get("direction") == 15)
 `)
 }
 
+func TestTargetlessNonDamageStateSkillRunsThroughLua(t *testing.T) {
+	records := fixtureRecords{
+		"data/global/excel/charstats.txt": {{"class": "Amazon", "StartSkill": "Frozen Armor"}},
+		"data/global/excel/skills.txt": {
+			{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"},
+			{"Id": "40", "skill": "Frozen Armor", "skilldesc": "frozenarmor", "leftskill": "1", "general": "0", "passive": "0", "Param1": "3"},
+		},
+		"data/global/excel/skilldesc.txt": {
+			{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"},
+			{"skilldesc": "frozenarmor", "ListRow": "1", "IconCel": "1"},
+		},
+	}
+	fixture := newAuthorityFixture(t, records, nil)
+	fixture.submitSystem(t, 1, 1, "system.player.enter", `{
+"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",
+"level":1,"experience":0,"dexterity":20,"defense":0,
+"health":50,"max_health":50,"mana":20,"max_mana":20,
+"expansion":true,"hardcore":false,"cof":"","palette":"units",
+"direction":0,"mode":"NU","x":10,"y":12,
+"world_width":100,"world_height":80,"act":1,"level_id":1,"skills":[]
+}`)
+	fixture.step(t)
+	fixture.submit(t, 2, 1, "alice", "player.use_skill", `{"side":"left"}`)
+	fixture.step(t)
+	fixture.run(t, `
+local ecs=require("engine.ecs/v1")
+local player=ecs.query({all={"d2legacy.player.identity"}})[1]
+local instances=ecs.query({all={"d2legacy.state.instance"}})
+assert(#instances==1)
+local state=ecs.get(instances[1],"d2legacy.state.instance")
+assert(state:get("target"):id()==player:id())
+assert(state:get("state_id")=="frozen_armor")
+assert(state:get("source_id")=="skill:alice:40")
+local events=ecs.query({all={"d2legacy.skill.cast_event"}})
+assert(#events==1 and ecs.get(events[1],"d2legacy.skill.cast_event"):get("behavior")=="state.self")
+`)
+	replay, err := fixture.session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	restored, err := gameecs.RestoreSnapshot(*checkpoint.Snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	want, _ := checkpoint.Snapshot.Checksum()
+	restoredSnapshot, err := restored.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := restoredSnapshot.Checksum()
+	if got != want {
+		t.Fatalf("restored state-skill checksum = %s, want %s", got, want)
+	}
+}
+
 func TestD2LegacyWorldTransitionRunsThroughLuaSystem(t *testing.T) {
 	initial := map[string]any{
 		"d2legacy.world_transitions": map[string]any{"seams": []any{

@@ -29,6 +29,7 @@ local move_player = require("d2legacy.commands.move_player")
 local owned_units = require("d2legacy.commands.owned_units")
 local owned_unit_component = require("d2legacy.components.owned_unit")
 local facing = require("d2legacy.systems.facing")
+local state_skill_data = require("d2legacy.data.state_skills")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -45,7 +46,8 @@ function M.start()
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.
     M.fire_bolt = fire_bolt_data.load()
-    cast_command.register()
+    M.state_skills = state_skill_data.load()
+    cast_command.register(M.state_skills)
     cast_system.register(M.fire_bolt)
     fire_bolt_system.register(M.fire_bolt)
     projectile_system.register()
@@ -68,6 +70,7 @@ end
 
 function M.stop()
     M.fire_bolt = nil
+    M.state_skills = nil
 end
 
 return M
