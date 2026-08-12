@@ -1,5 +1,11 @@
 # Character persistence and legacy save-format research
 
+> Architecture note: `d2legacy` Lua owns Diablo character, item, quest, and
+> progression decisions, while engine/realm persistence owns revisioned durable
+> storage. Durable projections include sufficient mod/configuration identity to
+> validate future admission or require an explicit migration; persistence does
+> not execute or reinterpret gameplay rules itself.
+
 Status: implementation-oriented baseline. The current in-memory persistence store is intentionally not a `.d2s` schema. A loss-preserving legacy codec and a durable Dark Magic character model still need to be built.
 
 ## Executive result
@@ -109,6 +115,7 @@ DurableCharacter
   item archive covering all durable containers
   preserved legacy extension data
   content/schema compatibility metadata
+  authoritative mod/configuration compatibility identity
 ```
 
 Do not duplicate derived combat stats as durable truth unless the legacy format requires the value. Store canonical base/permanent state and reconstruct derived session stats from the pinned data generation.
@@ -174,6 +181,13 @@ transaction/audit metadata
 ```
 
 A server should serialize mutation of one durable character. Join loads revision R, validates content/schema, admits through system authority, and records a lease/session identity. A checkpoint builds a durable snapshot from authoritative owners and commits only if revision R is still current.
+
+Admission also validates the game session's pinned mod ID/contract, package and
+authoritative-script hashes, dependency hashes, gameplay configuration, and
+required engine capability versions against the character's compatibility
+metadata. A reconnect, recovered checkpoint, or realm handoff must not silently
+reinterpret a character under different rules. Compatible upgrades require an
+explicit, versioned migration with idempotent failure/retry semantics.
 
 Disconnect/crash recovery must be idempotent. Item/trade/service escrow has an explicit recovery owner. A retry cannot duplicate an item or reward.
 

@@ -1,5 +1,12 @@
 # Skills, states, missiles, and combat actions research
 
+> Architecture note: this document's recovered behavior, data joins, and test
+> vectors remain valid. Its proposed Go package layout describes the current
+> transitional implementation, not the permanent owner. Under
+> [the engine/`d2legacy` boundary](../ARCHITECTURE.md), D2 skill and missile
+> policy migrates to authoritative Lua while justified generic scheduling,
+> collision, movement, and data-decoding mechanisms may remain in Go.
+
 Status: implementation-oriented research baseline. Runtime findings are primarily from D2MOO's Diablo II 1.10f reconstruction and are version-labeled accordingly. This document describes boundaries and evidence; it is not yet a complete skill-by-skill compatibility specification.
 
 This workstream builds directly on:

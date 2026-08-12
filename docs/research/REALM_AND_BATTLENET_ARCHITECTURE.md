@@ -1,5 +1,11 @@
 # Realm, game-server, persistence, and Battle.net responsibility research
 
+> Architecture note: the authoritative game server hosts the pinned
+> `d2legacy` Lua rules inside its trusted session process. “Server-authoritative”
+> does not require native Go gameplay rules. Go owns authentication, admission,
+> clocks, ECS/state, networking, replay, persistence, and sandbox enforcement;
+> Lua owns D2 gameplay decisions. Client Lua remains untrusted.
+
 Status: implementation-oriented architecture baseline. This document uses legacy Diablo II/PvPGN service decomposition as behavioral evidence for responsibilities, while designing a modern Dark Magic control plane around the existing transport-independent authoritative session. It does **not** prescribe byte-compatible BNCS/MCP/D2GS implementation yet.
 
 ## Executive conclusion
@@ -36,6 +42,12 @@ Persistence service/store
 ```
 
 Legacy protocols become adapters into these semantic services.
+
+Realm services generally do not load the full gameplay mod. They negotiate and
+allocate by immutable mod identity; the selected game server loads and executes
+the package. Optional realm Lua is limited to deliberately moddable control
+policy such as a season or matchmaking mode, never character inventory or
+combat mutation.
 
 ## Current Dark Magic composition roots
 
@@ -129,6 +141,7 @@ It should not execute combat ticks.
 Responsibilities:
 
 - own authoritative GameRules/content generation for game lifetime;
+- pin and sandbox the exact authoritative mod package for each session;
 - admit authenticated session players/characters;
 - run fixed-tick game simulation;
 - validate semantic gameplay commands;
@@ -300,6 +313,14 @@ Network handshake/admission should compare:
 - simulation-affecting table/content fingerprint;
 - mod/plugin IDs/versions/hashes where required.
 
+The stable authoritative identity includes mod ID/contract version, package and
+Lua source/bytecode hashes, the full dependency graph and hashes, gameplay
+configuration identity, and required engine capability/API versions. Realm
+allocation, admission tokens, handshakes, replay headers, checkpoints,
+reconnect/late join, recovered sessions, and persistence compatibility checks
+all bind or validate that same identity. Changed scripts apply to new sessions;
+an active session changes only through an explicit versioned state migration.
+
 Presentation-only mods can be negotiated separately if safe.
 
 Never allow peers to silently simulate different Skills/MonStats/Items/map rules.
@@ -328,7 +349,11 @@ Client sends semantic inputs with sequence/timing hints under a bounded lead/pre
 
 Do not let packet arrival order decide same-tick results.
 
-For latency-friendly play, client presentation can predict movement/casting while canonical server snapshots correct it.
+Prediction has three explicit levels: no gameplay prediction; limited generic
+movement/presentation prediction; and optional shared-`d2legacy` prediction with
+rollback/reconciliation. Start with limited movement/presentation prediction.
+Even identical client scripts are untrusted; canonical server snapshots and
+events always win.
 
 ## Snapshot/event projection
 
@@ -450,6 +475,8 @@ Trust boundaries:
 - gateway authenticates principal;
 - realm authorizes character/game/worker;
 - game server is authoritative simulation;
+- authoritative `d2legacy` executes only inside that trusted server/session
+  boundary; client copies never gain command or outcome authority;
 - persistence trusts only authenticated realm/game service identities + revision/lease checks;
 - admin APIs use separate privileged credentials/policies.
 
