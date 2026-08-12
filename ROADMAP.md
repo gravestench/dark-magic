@@ -1461,7 +1461,24 @@ it is transitional. Migration must distinguish reusable mechanisms from D2
 policy and data decoding; it must not blindly translate whole Go packages into
 Lua.
 
-- [ ] **M21.14.1 — inventory and classification.** Publish a file-level catalog
+Migration checkpoints may move coherent domains in large swaths. Intermediate
+commits do not need to build or boot when maintaining that illusion would add
+compatibility wrappers, duplicate authorities, or distort the target design.
+Each PR must clearly mark its transition and finish at a tested, reviewable
+boundary. The annotated tag
+`baseline/pre-d2legacy-lua-migration-2026-08-11` preserves the pre-refactor
+baseline.
+
+- [x] **M21.14.1 — inventory and classification.** The machine-checked
+  `docs/architecture/gameplay-ownership.tsv` now gives every production file
+  under `internal/game`, `internal/runtime/lua`, and the bundled Lua shim exactly
+  one mechanism, D2-policy, data, adapter, or transitional destination. The
+  companion guide records domain dispositions, migration sequencing, the
+  pre-refactor tag, and the rule that coherent moves may cross intentionally
+  non-buildable intermediate commits. Architecture CI rejects unclassified
+  files and new mechanism-to-policy/transitional imports; the two existing
+  session-to-action edges are explicit debt that must disappear with movement
+  and Fire Bolt migration. Publish a file-level catalog
   of production `internal/game/**`, related `internal/runtime/lua/**`, and shim
   gameplay code. Classify every unit as engine mechanism, D2 policy,
   data/codec, adapter, or obsolete/transitional; record its destination and the
