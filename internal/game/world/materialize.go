@@ -24,6 +24,7 @@ type MaterializationProgress struct {
 }
 
 type stampLoader func(fs.FS, string, []string, ...ObjectResolver) (*Map, error)
+type ZonePostprocessor func(*Map, *worldgen.Zone, []*TileCatalog) error
 
 // Materializer incrementally joins generated stamp recipes into one immutable
 // world map. Callers may run Step on a worker goroutine because it performs no
@@ -34,11 +35,19 @@ type Materializer struct {
 	resolver     ObjectResolver
 	stamps       []worldgen.Stamp
 	load         stampLoader
+	postprocess  ZonePostprocessor
 	catalogs     map[string]*TileCatalog
 	catalogOrder []*TileCatalog
 	assembled    *Map
 	next         int
 	done         bool
+}
+
+// SetPostprocessor installs a mod-selected final recipe interpretation step.
+// The engine owns decoded map assembly; a mod may translate its own recipe
+// vocabulary into tile choices after every authored stamp is present.
+func (materializer *Materializer) SetPostprocessor(postprocess ZonePostprocessor) {
+	materializer.postprocess = postprocess
 }
 
 func NewMaterializer(source fs.FS, zone *worldgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
@@ -106,8 +115,8 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
-	if materializer.done && materializer.zone.Kind() == "outdoor" && materializer.zone.Request().Act == 1 {
-		if err := materializer.assembled.realizeActOneDirtPath(materializer.zone.Paths(), materializer.catalogOrder); err != nil {
+	if materializer.done && materializer.postprocess != nil {
+		if err := materializer.postprocess(materializer.assembled, materializer.zone, append([]*TileCatalog(nil), materializer.catalogOrder...)); err != nil {
 			return err
 		}
 	}

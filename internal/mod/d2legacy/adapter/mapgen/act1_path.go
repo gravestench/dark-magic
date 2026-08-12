@@ -1,8 +1,9 @@
-package world
+package mapgen
 
 import (
 	"fmt"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
@@ -50,7 +51,14 @@ func pathNeighborMask(path map[[2]int]bool, x, y int) uint8 {
 	return mask
 }
 
-func (m *Map) realizeActOneDirtPath(paths []worldgen.PathTile, catalogs []*TileCatalog) error {
+// RealizeActOneDirtPath interprets d2legacy's authored path cells using the
+// legacy Act I DT1 sequence table. Generic world assembly never sees this
+// Diablo-specific neighborhood vocabulary.
+func RealizeActOneDirtPath(m *gameworld.Map, zone *worldgen.Zone, catalogs []*gameworld.TileCatalog) error {
+	if zone.Kind() != "outdoor" || zone.Request().Act != 1 {
+		return nil
+	}
+	paths := zone.Paths()
 	path := make(map[[2]int]bool, len(paths))
 	for _, tile := range paths {
 		path[[2]int{tile.X, tile.Y}] = true
@@ -60,8 +68,8 @@ func (m *Map) realizeActOneDirtPath(paths []worldgen.PathTile, catalogs []*TileC
 		if sequence == 0 {
 			continue
 		}
-		identity := TileIdentity{MainIndex: 0, SubIndex: int32(sequence)}
-		var reference TileReference
+		identity := gameworld.TileIdentity{MainIndex: 0, SubIndex: int32(sequence)}
+		var reference gameworld.TileReference
 		var found bool
 		for _, catalog := range catalogs {
 			if reference, found = catalog.Select(identity, tile.X, tile.Y, 0); found {
@@ -71,28 +79,8 @@ func (m *Map) realizeActOneDirtPath(paths []worldgen.PathTile, catalogs []*TileC
 		if !found {
 			return fmt.Errorf("world: Act I dirt-path floor %d is unavailable", sequence)
 		}
-		m.replaceFloor(tile.X, tile.Y, identity, reference)
+		m.ReplaceFloor(tile.X, tile.Y, identity, reference)
 	}
-	m.rebuildFlags()
+	m.RebuildFlags()
 	return nil
-}
-
-func (m *Map) replaceFloor(x, y int, identity TileIdentity, reference TileReference) {
-	for index := range m.Tiles {
-		if m.Tiles[index].X == x && m.Tiles[index].Y == y && m.Tiles[index].Layer == LayerFloor {
-			m.Tiles[index].Identity = identity
-			m.Tiles[index].Reference = reference
-			return
-		}
-	}
-	m.Tiles = append(m.Tiles, TilePlacement{X: x, Y: y, Layer: LayerFloor, Identity: identity, Reference: reference})
-}
-
-func (m *Map) rebuildFlags() {
-	m.flags = make([]Flags, m.WidthSubtiles*m.HeightSubtiles)
-	for _, tile := range m.Tiles {
-		if tile.Layer != LayerShadow && tile.Layer != LayerRoof && tile.Reference.Path != "" {
-			m.apply(tile.X, tile.Y, tile.Reference)
-		}
-	}
 }

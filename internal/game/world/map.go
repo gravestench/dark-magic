@@ -51,6 +51,30 @@ func NewOpenMap(widthSubtiles, heightSubtiles int) (*Map, error) {
 // additional player-specific restriction encoded by DT1.
 func (f Flags) Blocked() bool { return f.BlockWalk || f.BlockPlayerWalk }
 
+// ReplaceFloor swaps one floor placement while preserving every other layer.
+// Which identity to choose is policy supplied by the caller.
+func (m *Map) ReplaceFloor(x, y int, identity TileIdentity, reference TileReference) {
+	for index := range m.Tiles {
+		if m.Tiles[index].X == x && m.Tiles[index].Y == y && m.Tiles[index].Layer == LayerFloor {
+			m.Tiles[index].Identity = identity
+			m.Tiles[index].Reference = reference
+			return
+		}
+	}
+	m.Tiles = append(m.Tiles, TilePlacement{X: x, Y: y, Layer: LayerFloor, Identity: identity, Reference: reference})
+}
+
+// RebuildFlags recomputes collision after a trusted assembly postprocessor
+// changes tile references.
+func (m *Map) RebuildFlags() {
+	m.flags = make([]Flags, m.WidthSubtiles*m.HeightSubtiles)
+	for _, tile := range m.Tiles {
+		if tile.Layer != LayerShadow && tile.Layer != LayerRoof && tile.Reference.Path != "" {
+			m.apply(tile.X, tile.Y, tile.Reference)
+		}
+	}
+}
+
 // Object preserves authored DS1 placement plus optional catalog resolution.
 // Loading identifies objects; authoritative systems decide whether to spawn them.
 type Object struct {
