@@ -180,7 +180,6 @@ func (app *application) registerOfflineCommands() error {
 	for name, register := range map[string]func(*gamesession.Session) error{
 		"movement commands": gamesession.RegisterMovement,
 		"player commands":   gameplayer.Register,
-		"monster commands":  gamemonster.Register,
 	} {
 		if err := register(app.offlineSession); err != nil {
 			return wrap("register "+name, err)

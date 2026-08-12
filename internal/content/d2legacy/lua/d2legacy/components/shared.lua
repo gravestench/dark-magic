@@ -47,8 +47,31 @@ function M.register()
         {name="think_interval",type="i64"},{name="aggro_radius",type="f64"},
         {name="attack_range",type="f64"},{name="speed",type="f64"},
     })
+    component("d2legacy.monster.identity", {
+        {name="spawn_id",type="string"},{name="definition_id",type="string"},
+        {name="base_id",type="string"},{name="graphics_id",type="string"},
+        {name="seed",type="string"},{name="treasure_class",type="string"},
+    })
+    component("d2legacy.monster.appearance", {
+        {name="token",type="string"},{name="mode",type="string"},
+        {name="weapon_class",type="string"},{name="name_key",type="string"},
+        {name="components",type="string"},{name="death_sound",type="string"},
+    })
     component("d2legacy.player.progress", {
         {name="level",type="i64"},{name="experience",type="i64"},
+    })
+    component("d2legacy.monster.death", {
+        {name="tick",type="i64"},{name="killer_id",type="string"},
+        {name="credited_id",type="string"},{name="xp",type="i64"},
+        {name="loot_seed",type="string"},{name="treasure_class",type="string"},
+        {name="drops",type="string"},{name="active",type="bool"},{name="corpse_usable",type="bool"},
+    })
+    component("d2legacy.monster.death_event", {
+        {name="kind",type="string"},{name="tick",type="i64"},
+        {name="monster_id",type="string"},{name="killer_id",type="string"},
+        {name="credited_id",type="string"},{name="xp",type="i64"},
+        {name="loot_seed",type="string"},{name="treasure_class",type="string"},
+        {name="drops",type="string"},
     })
 end
 

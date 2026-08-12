@@ -14,6 +14,8 @@ local melee_components = require("d2legacy.components.melee")
 local melee_system = require("d2legacy.systems.melee")
 local monster_ai = require("d2legacy.systems.monster_ai")
 local player_melee = require("d2legacy.systems.player_melee")
+local spawn_monster = require("d2legacy.commands.spawn_monster")
+local monster_death = require("d2legacy.systems.monster_death")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -34,6 +36,8 @@ function M.start()
     melee_system.register()
     monster_ai.register()
     player_melee.register()
+    spawn_monster.register()
+    monster_death.register()
 end
 
 function M.stop()
