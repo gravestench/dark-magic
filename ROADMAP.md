@@ -1530,6 +1530,17 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   midpoint checkpoint/restore and initial-snapshot replay produce identical
   checksums, and no production Go handler contains Fire Bolt rules.
 
+  Progress: the canonical bundled `d2legacy` mod now owns a complete headless
+  Fire Bolt path, split into documented data normalization, command, cast,
+  projectile, geometry, and damage modules. Its command consumes the generic
+  mouse-side intent, derives skill identity/level from authoritative ECS state,
+  uses checkpointed named RNG, and passes swept-contact/damage acceptance tests.
+  Production cutover remains coupled to the default melee attack because the
+  current Go `player.use_skill` router and cast lifecycle serve both behaviors.
+  The next slice migrates that shared router/basic attack together, switches
+  client composition to `d2legacy.authoritative`, adds replay parity, and then
+  deletes the superseded Go Fire Bolt normalizer and policy registrations.
+
 - [ ] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
   mitigation, state, death, stat-definition, and derived-stat policy to
   `d2legacy`; retain only documented generic numeric, source-aggregation,
