@@ -12,8 +12,50 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
+
+func TestConfigureRuntimePreservesClientCatalogOverrides(t *testing.T) {
+	runtime := modruntime.New()
+	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+		if err := runtime.RegisterModule(modruntime.Module{
+			Name: name,
+			Help: modruntime.ModuleHelp{Summary: "client override"},
+			Loader: func(state *lua.LState) int {
+				state.Push(state.NewTable())
+				return 1
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := ConfigureRuntime(runtime, content.D2Legacy(), runtimeFixtureRecords{}, engine, session,
+		simulation.NewStateStore(), simulation.NewRandomStreams(1), nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+		if got := runtime.ModuleHelp()[name].Summary; got != "client override" {
+			t.Fatalf("%s summary = %q, want client override", name, got)
+		}
+		count := 0
+		for _, registered := range runtime.ModuleNames() {
+			if registered == name {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Fatalf("%s registered %d times", name, count)
+		}
+	}
+}
 
 func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	ctx := context.Background()

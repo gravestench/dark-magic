@@ -158,6 +158,28 @@ func (r *Runtime) RegisterModule(module Module) error {
 	return nil
 }
 
+// RegisterModuleDefault installs a fallback capability only when a richer host
+// composition has not already supplied that exact module name. Required
+// capabilities should continue using strict RegisterModule.
+func (r *Runtime) RegisterModuleDefault(module Module) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.started {
+		return errors.New("modruntime: cannot register a module while running")
+	}
+	if module.Name == "" || module.Loader == nil {
+		return errors.New("modruntime: module name and loader are required")
+	}
+	for _, existing := range r.modules {
+		if existing.Name == module.Name {
+			return nil
+		}
+	}
+	module.Help = cloneModuleHelp(module.Help)
+	r.modules = append(r.modules, module)
+	return nil
+}
+
 // Start creates the Lua state on its owner goroutine.
 func (r *Runtime) Start(ctx context.Context) error {
 	if ctx == nil {

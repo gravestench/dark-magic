@@ -1509,7 +1509,7 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   restores and replays without renderer or native startup, and produces the
   same checksum and event sequence.
 
-- [ ] **M21.14.3 — network and realm compatibility.** Define one stable session
+- [x] **M21.14.3 — network and realm compatibility.** Define one stable session
   mod identity containing mod ID/contract version, package and authoritative
   Lua hashes, dependency graph/hashes, gameplay configuration, and engine
   capability/API versions. Bind it to matchmaking/allocation, admission tokens,
@@ -1520,6 +1520,15 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   headless realm/game-server fixtures allocate a pinned package, reject a
   mismatched client/reconnect/checkpoint/replay, and prove changed scripts affect
   new sessions only unless an explicit state migration is supplied.
+
+  Complete: the canonical runtime identity independently hashes the full package
+  and authoritative Lua, pins dependency and engine-capability versions, and
+  hashes canonical gameplay configuration. Generic realm allocation and game-
+  server admission bind that identity to tokens, reconnect, durable characters,
+  checkpoint/replay participants, and explicit migrations. Prediction tiers are
+  named as none, limited movement/presentation (the initial contract), and shared
+  d2legacy. Headless fixtures reject every mismatched surface and prove changed
+  packages affect new allocations only unless a from/to migration is supplied.
 
 - [x] **M21.14.4 — Fire Bolt vertical migration.** Move one complete production
   path into `d2legacy`: input intent -> command admission -> skill validation ->
