@@ -8,7 +8,7 @@
 --
 -- This module knows where cells are drawn and clicked. It never decides whether
 -- an item fits, overlaps legally, can be swapped, etc. `d2legacy.items.api` queues a
--- move request; fixed-tick Go authority validates and applies that request.
+-- move request; fixed-tick d2legacy Lua authority validates and applies it.
 
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")

@@ -176,9 +176,8 @@ end
 -- events. A renderer follows these values; it never predicts or advances them.
 function M.missile_snapshots()
     local result = {}
-    -- During the migration both schemas may exist: basic melee still uses a
-    -- small transitional Go path, while Fire Bolt is fully owned by d2legacy.
-    -- Presentation reads either shape without deciding how either one behaves.
+    -- Projectile schemas are d2legacy authority facts. Presentation copies
+    -- either supported shape without deciding how the projectile behaves.
     for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile" }) do
         local ok, entities = pcall(ecs.query, { all = {
             component, "d2legacy.world.position", "d2legacy.world.location",

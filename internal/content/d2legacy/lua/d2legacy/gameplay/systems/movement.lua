@@ -68,7 +68,7 @@ end
 function M.register(collision)
 	active_collision = collision
     ecs.system({
-        id = "engine.world.integrate",
+        id = "d2legacy.world.integrate",
         phase = "movement",
         query = { all = { "d2legacy.world.position", "d2legacy.world.velocity", "d2legacy.world.bounds", "d2legacy.world.collider" } },
         read = { "d2legacy.world.velocity", "d2legacy.world.bounds", "d2legacy.world.collider" },

@@ -1,8 +1,8 @@
--- Saved facts used by basic melee resolution.
+-- Authoritative facts used by d2legacy melee resolution.
 --
--- The request/profile schemas already exist in today's transitional Go
--- approach and animation mechanisms. Registering the same shapes here makes
--- their ownership visible and lets restored snapshots validate them.
+-- These schemas are owned here, alongside the Lua commands and systems which
+-- interpret them. Go's ECS stores the values but knows nothing about attacks,
+-- impact frames, melee range, hit results, or Diablo skill events.
 
 local ecs = require("engine.ecs/v1")
 local M = {}
