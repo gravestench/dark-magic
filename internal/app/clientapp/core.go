@@ -193,9 +193,6 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameplayer.RegisterEquipmentProfile(app.entitySimulation, app.itemAuthority); err != nil {
 		return wrap("register equipped player melee profile", err)
 	}
-	if err := gametransition.Register(app.offlineSession, app.transitionAuthority); err != nil {
-		return wrap("register zone transition commands", err)
-	}
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}

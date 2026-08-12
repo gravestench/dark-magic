@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gravestench/akara"
+
 	"github.com/gravestench/dark-magic/internal/game/mapgen"
 	gametransition "github.com/gravestench/dark-magic/internal/game/transition"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -69,6 +71,36 @@ func (app *application) buildEntryWorld() error {
 	}
 	app.transitionAuthority.SetObserver(app.activateWorld)
 	return nil
+}
+
+// syncActiveWorldFromPlayer is a presentation adapter. Lua has already
+// committed the authoritative level change; this only swaps client-side map
+// caches and navigation inputs to match that fact.
+func (app *application) syncActiveWorldFromPlayer() {
+	controls, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.player_control")
+	if !ok {
+		return
+	}
+	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
+	if !ok {
+		return
+	}
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		owner, _ := control.Get("player")
+		if owner != "local-player" {
+			continue
+		}
+		location, found := locations.Get(entity)
+		if !found {
+			return
+		}
+		level, _ := location.Get("level_id")
+		if levelID := int(level.(int64)); levelID != app.activeWorldLevel {
+			app.activateWorld(levelID)
+		}
+		return
+	}
 }
 
 // entryWorldSpawns keeps the real admission rule and the screenshot fixture

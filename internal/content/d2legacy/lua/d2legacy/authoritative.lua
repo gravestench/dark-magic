@@ -17,6 +17,7 @@ local player_melee = require("d2legacy.systems.player_melee")
 local spawn_monster = require("d2legacy.commands.spawn_monster")
 local monster_death = require("d2legacy.systems.monster_death")
 local enter_player = require("d2legacy.commands.enter_player")
+local transition = require("d2legacy.commands.transition")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -40,6 +41,7 @@ function M.start()
     spawn_monster.register()
     monster_death.register()
     enter_player.register()
+    transition.register()
 end
 
 function M.stop()

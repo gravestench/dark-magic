@@ -21,7 +21,14 @@ const CommandKind = "system.world.transition"
 const triggerRadius = 2.0
 
 type Payload struct {
-	DestinationLevel int `json:"destination_level"`
+	DestinationLevel int     `json:"destination_level"`
+	SourceLevel      int     `json:"source_level"`
+	SourceX          float64 `json:"source_x"`
+	SourceY          float64 `json:"source_y"`
+	ArrivalX         float64 `json:"arrival_x"`
+	ArrivalY         float64 `json:"arrival_y"`
+	WorldWidth       float64 `json:"world_width"`
+	WorldHeight      float64 `json:"world_height"`
 }
 type Authority struct {
 	seam     gameworld.Seam
@@ -181,7 +188,13 @@ func (source *Source) Commands(tick uint64) []simulation.Command {
 		if math.Hypot(x.(float64)-endpoint.X, y.(float64)-endpoint.Y) > triggerRadius {
 			return nil
 		}
-		payload, _ := json.Marshal(Payload{DestinationLevel: destination})
+		destinationEndpoint := source.authority.seam.Wilderness
+		if destination == 1 {
+			destinationEndpoint = source.authority.seam.Town
+		}
+		payload, _ := json.Marshal(Payload{DestinationLevel: destination, SourceLevel: int(level.(int64)),
+			SourceX: endpoint.X, SourceY: endpoint.Y, ArrivalX: destinationEndpoint.ArrivalX,
+			ArrivalY: destinationEndpoint.ArrivalY, WorldWidth: destinationEndpoint.Width, WorldHeight: destinationEndpoint.Height})
 		return []simulation.Command{{Tick: tick, Player: source.player, Authority: simulation.AuthoritySystem, Sequence: source.sequence.Add(1), Kind: CommandKind, Payload: payload}}
 	}
 	return nil
@@ -199,6 +212,17 @@ func decode(encoded []byte) (Payload, error) {
 	}
 	if payload.DestinationLevel != 1 && payload.DestinationLevel != 2 {
 		return Payload{}, fmt.Errorf("transition: destination must be town or Blood Moor")
+	}
+	if payload.SourceLevel != 1 && payload.SourceLevel != 2 || payload.SourceLevel == payload.DestinationLevel {
+		return Payload{}, fmt.Errorf("transition: source and destination are invalid")
+	}
+	for _, value := range []float64{payload.SourceX, payload.SourceY, payload.ArrivalX, payload.ArrivalY, payload.WorldWidth, payload.WorldHeight} {
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return Payload{}, fmt.Errorf("transition: geometry must be finite")
+		}
+	}
+	if payload.WorldWidth <= 0 || payload.WorldHeight <= 0 || payload.ArrivalX < 0 || payload.ArrivalY < 0 || payload.ArrivalX >= payload.WorldWidth || payload.ArrivalY >= payload.WorldHeight {
+		return Payload{}, fmt.Errorf("transition: destination geometry is invalid")
 	}
 	return payload, nil
 }

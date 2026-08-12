@@ -77,6 +77,7 @@ func (app *application) advanceGame(elapsed time.Duration) error {
 	if _, err := app.offlineSession.AdvanceWithSource(elapsed, app.commandSource); err != nil {
 		return fmt.Errorf("updating offline game session: %w", err)
 	}
+	app.syncActiveWorldFromPlayer()
 	return nil
 }
 
