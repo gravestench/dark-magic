@@ -4,17 +4,15 @@ import (
 	"testing"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
-	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 func TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge(t *testing.T) {
-	townZone, _ := mapgen.NewZone(mapgen.Definition{Request: mapgen.Request{Version: 1, Seed: 1, Act: 1, LevelID: 1}, Kind: "preset", Bounds: mapgen.Bounds{Width: 8, Height: 8}, Stamps: []mapgen.Stamp{{ID: 1, Role: "act1-town:exit-east", Width: 8, Height: 8, DS1Path: "town.ds1"}}, Rooms: []mapgen.Room{{ID: 1, Width: 8, Height: 8, StampID: 1}}})
-	moorZone, _ := mapgen.NewZone(mapgen.Definition{Request: mapgen.Request{Version: 1, Seed: 1, Act: 1, LevelID: 2}, Kind: "outdoor", Bounds: mapgen.Bounds{Width: 8, Height: 8}, Stamps: []mapgen.Stamp{{ID: 1, Width: 8, Height: 8, DS1Path: "moor.ds1"}}, Rooms: []mapgen.Room{{ID: 1, Width: 8, Height: 8, StampID: 1}}, Warps: []mapgen.Warp{{ID: 1, Role: "town-entry", Direction: "west", X: 0, Y: 4, DestinationLevel: 1}, {ID: 2, Role: "next-level-exit", Direction: "east", X: 7, Y: 4, DestinationLevel: 3}}})
 	town, _ := gameworld.NewOpenMap(40, 40)
 	town.SpecialTiles = []gameworld.SpecialTile{{X: 7, Y: 4, Orientation: 10}}
 	moor, _ := gameworld.NewOpenMap(40, 40)
-	seam, err := gametransition.NewActOneTownMoorSeam(townZone, town, moorZone, moor)
+	seam, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{FirstLevel: 1, FirstDirection: "east", SecondLevel: 2, SecondDirection: "west", SecondTileX: 0, SecondTileY: 4}, town, moor)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -56,7 +56,7 @@ type Destination struct {
 
 // NewDestination validates a finite authoritative world and its entry anchor.
 func NewDestination(x, y, width, height float64, act, levelID int64) (Destination, error) {
-	if width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act < 1 || act > 5 || levelID <= 0 {
+	if width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height || act <= 0 || levelID <= 0 {
 		return Destination{}, fmt.Errorf("player: destination requires an in-bounds spawn, act, and level")
 	}
 	return Destination{X: x, Y: y, Width: width, Height: height, Act: act, LevelID: levelID}, nil

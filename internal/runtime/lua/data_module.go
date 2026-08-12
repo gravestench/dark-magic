@@ -16,7 +16,7 @@ import (
 // adaptation without teaching the generic runtime any mod schema names.
 type ManifestTransform func(map[string]any) (map[string]any, error)
 
-// DataModule exposes immutable JSON shim data as native Lua values. It keeps
+// DataModule exposes immutable JSON mod data as native Lua values. It keeps
 // data ownership in the layered VFS while avoiding a second JSON parser in Lua.
 func DataModule(source fs.FS, transforms ...map[string]ManifestTransform) Module {
 	bySchema := map[string]ManifestTransform{}

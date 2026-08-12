@@ -207,7 +207,10 @@ func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			for _, forbidden := range []string{"system.world.transition", "transitionAuthority", "transitionSource"} {
+			for _, forbidden := range []string{
+				"system.world.transition", "transitionAuthority", "transitionSource",
+				"act1-town:exit-", "town-entry", "NewActOneTownMoorSeam",
+			} {
 				if strings.Contains(string(data), forbidden) {
 					relative, _ := filepath.Rel(root, path)
 					t.Errorf("%s restores native D2 transition policy through %q", filepath.ToSlash(relative), forbidden)

@@ -2,10 +2,9 @@ package transition
 
 import (
 	"fmt"
-	"strings"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
-	"github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 )
 
 // SeamEndpoint is one authoritative side of a level transition. Coordinates
@@ -22,61 +21,36 @@ type SeamEndpoint struct {
 // zones. Transition commands consume this value; presentation only observes it.
 type Seam struct{ Town, Wilderness SeamEndpoint }
 
-func NewActOneTownMoorSeam(townZone *worldgen.Zone, townMap *gameworld.Map, moorZone *worldgen.Zone, moorMap *gameworld.Map) (Seam, error) {
-	if townZone == nil || townMap == nil || moorZone == nil || moorMap == nil {
-		return Seam{}, fmt.Errorf("world: town/Blood Moor seam requires both zones and maps")
+// ResolveSeam applies a mod-authored seam specification to two materialized
+// collision maps. It knows cardinal geometry, but no level IDs or role names.
+func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Seam, error) {
+	if firstMap == nil || secondMap == nil {
+		return Seam{}, fmt.Errorf("world: seam requires both materialized maps")
 	}
-	if townZone.Request().LevelID != 1 || moorZone.Request().LevelID != 2 {
-		return Seam{}, fmt.Errorf("world: Act I seam requires Rogue Encampment and Blood Moor")
-	}
-	townStamps, warps := townZone.Stamps(), moorZone.Warps()
-	townEntry, found := warpByRole(warps, "town-entry")
-	if len(townStamps) != 1 || !found || townEntry.DestinationLevel != 1 {
-		return Seam{}, fmt.Errorf("world: Act I seam recipes are incomplete")
-	}
-	townDirection := strings.TrimPrefix(townStamps[0].Role, "act1-town:exit-")
-	if oppositeCardinal(townDirection) != townEntry.Direction {
-		return Seam{}, fmt.Errorf("world: town exit %q does not meet wilderness edge %q", townDirection, townEntry.Direction)
-	}
-	anchor, found := cardinalTownAnchor(townMap.AuthoredExitAnchors(), townDirection)
+	anchor, found := cardinalAnchor(firstMap.AuthoredExitAnchors(), spec.FirstDirection)
 	if !found {
-		return Seam{}, fmt.Errorf("world: town has no authored exit anchor")
+		return Seam{}, fmt.Errorf("world: first map has no authored seam anchor")
 	}
-	townX, townY, found := townMap.OpenPointNearExit(anchor)
+	firstX, firstY, found := firstMap.OpenPointNearExit(anchor)
 	if !found {
-		return Seam{}, fmt.Errorf("world: town exit is blocked")
+		return Seam{}, fmt.Errorf("world: first seam edge is blocked")
 	}
-	moorX, moorY, found := moorMap.OpenPointNearSubtile(float64(townEntry.X*gameworld.SubtilesPerTile)+2.5, float64(townEntry.Y*gameworld.SubtilesPerTile)+2.5)
+	secondX, secondY, found := secondMap.OpenPointNearSubtile(float64(spec.SecondTileX*gameworld.SubtilesPerTile)+2.5, float64(spec.SecondTileY*gameworld.SubtilesPerTile)+2.5)
 	if !found {
-		return Seam{}, fmt.Errorf("world: Blood Moor town edge is blocked")
+		return Seam{}, fmt.Errorf("world: second seam edge is blocked")
 	}
-	townArrivalX, townArrivalY, found := insetArrival(townMap, townX, townY, townDirection)
+	firstArrivalX, firstArrivalY, found := insetArrival(firstMap, firstX, firstY, spec.FirstDirection)
 	if !found {
-		return Seam{}, fmt.Errorf("world: town arrival is blocked")
+		return Seam{}, fmt.Errorf("world: first seam arrival is blocked")
 	}
-	moorArrivalX, moorArrivalY, found := insetArrival(moorMap, moorX, moorY, townEntry.Direction)
+	secondArrivalX, secondArrivalY, found := insetArrival(secondMap, secondX, secondY, spec.SecondDirection)
 	if !found {
-		return Seam{}, fmt.Errorf("world: Blood Moor arrival is blocked")
+		return Seam{}, fmt.Errorf("world: second seam arrival is blocked")
 	}
 	return Seam{
-		Town:       SeamEndpoint{LevelID: 1, X: townX, Y: townY, ArrivalX: townArrivalX, ArrivalY: townArrivalY, Width: float64(townMap.WidthSubtiles), Height: float64(townMap.HeightSubtiles), Direction: townDirection},
-		Wilderness: SeamEndpoint{LevelID: 2, X: moorX, Y: moorY, ArrivalX: moorArrivalX, ArrivalY: moorArrivalY, Width: float64(moorMap.WidthSubtiles), Height: float64(moorMap.HeightSubtiles), Direction: townEntry.Direction},
+		Town:       SeamEndpoint{LevelID: spec.FirstLevel, X: firstX, Y: firstY, ArrivalX: firstArrivalX, ArrivalY: firstArrivalY, Width: float64(firstMap.WidthSubtiles), Height: float64(firstMap.HeightSubtiles), Direction: spec.FirstDirection},
+		Wilderness: SeamEndpoint{LevelID: spec.SecondLevel, X: secondX, Y: secondY, ArrivalX: secondArrivalX, ArrivalY: secondArrivalY, Width: float64(secondMap.WidthSubtiles), Height: float64(secondMap.HeightSubtiles), Direction: spec.SecondDirection},
 	}, nil
-}
-
-func warpByRole(warps []worldgen.Warp, role string) (worldgen.Warp, bool) {
-	var result worldgen.Warp
-	found := false
-	for _, warp := range warps {
-		if warp.Role != role {
-			continue
-		}
-		if found {
-			return worldgen.Warp{}, false
-		}
-		result, found = warp, true
-	}
-	return result, found
 }
 
 func insetArrival(world *gameworld.Map, x, y float64, edge string) (float64, float64, bool) {
@@ -84,7 +58,7 @@ func insetArrival(world *gameworld.Map, x, y float64, edge string) (float64, flo
 	return world.OpenPointNearSubtile(x+delta[0], y+delta[1])
 }
 
-func cardinalTownAnchor(anchors []gameworld.ExitAnchor, direction string) (gameworld.ExitAnchor, bool) {
+func cardinalAnchor(anchors []gameworld.ExitAnchor, direction string) (gameworld.ExitAnchor, bool) {
 	if len(anchors) == 0 {
 		return gameworld.ExitAnchor{}, false
 	}
@@ -112,8 +86,4 @@ func cardinalTownAnchor(anchors []gameworld.ExitAnchor, direction string) (gamew
 		}
 	}
 	return best, true
-}
-
-func oppositeCardinal(direction string) string {
-	return map[string]string{"north": "south", "east": "west", "south": "north", "west": "east"}[direction]
 }

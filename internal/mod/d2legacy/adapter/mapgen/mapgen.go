@@ -112,34 +112,98 @@ func (runtime *Runtime) generateFrom(ctx context.Context, module, function strin
 	return modruntime.GenerateWorldRecipe(nonNilContext(ctx), runtime.lua, module, function, arguments...)
 }
 
-// GenerateEntryZones asks d2legacy for the first town and wilderness recipes.
+// EntryWorld contains the two generated recipes plus the mod-authored seam
+// specification that tells the generic collision adapter how they meet.
+type EntryWorld struct {
+	Town, Wilderness *worldgen.Zone
+	Seam             SeamSpec
+}
+
+// SeamSpec is serialized policy chosen by d2legacy. Coordinates are tile
+// coordinates until the generic transition adapter resolves materialized maps.
+type SeamSpec struct {
+	FirstLevel, SecondLevel         int
+	FirstDirection, SecondDirection string
+	SecondTileX, SecondTileY        int
+}
+
+// GenerateEntryWorld asks d2legacy for the first town and wilderness recipes
+// and for the policy-owned description of how their materialized edges meet.
 // The short-lived runtime is intentionally headless: world policy must not
 // depend on a renderer, window, audio device, or native client startup.
-func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (*worldgen.Zone, *worldgen.Zone, error) {
+func GenerateEntryWorld(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (EntryWorld, error) {
 	ctx = nonNilContext(ctx)
 	runtime, err := NewRuntime(ctx, source, records)
 	if err != nil {
-		return nil, nil, err
+		return EntryWorld{}, err
 	}
 	defer runtime.Close(context.Background())
 
 	town, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "town", float64(seed), float64(0))
 	if err != nil {
-		return nil, nil, fmt.Errorf("generate d2legacy entry town: %w", err)
+		return EntryWorld{}, fmt.Errorf("generate d2legacy entry town: %w", err)
 	}
 	encodedTown, err := town.MarshalJSON()
 	if err != nil {
-		return nil, nil, fmt.Errorf("encode d2legacy entry town: %w", err)
+		return EntryWorld{}, fmt.Errorf("encode d2legacy entry town: %w", err)
 	}
 	var townFacts map[string]any
 	if err := json.Unmarshal(encodedTown, &townFacts); err != nil {
-		return nil, nil, fmt.Errorf("decode d2legacy entry town facts: %w", err)
+		return EntryWorld{}, fmt.Errorf("decode d2legacy entry town facts: %w", err)
 	}
 	moor, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "wilderness", float64(seed), float64(0), townFacts)
 	if err != nil {
-		return nil, nil, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
+		return EntryWorld{}, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
 	}
-	return town, moor, nil
+	encodedMoor, err := moor.MarshalJSON()
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("encode d2legacy entry wilderness: %w", err)
+	}
+	var moorFacts map[string]any
+	if err := json.Unmarshal(encodedMoor, &moorFacts); err != nil {
+		return EntryWorld{}, fmt.Errorf("decode d2legacy entry wilderness facts: %w", err)
+	}
+	value, err := modruntime.Call(ctx, runtime.lua, "d2legacy.mapgen.entry_world", "seam", townFacts, moorFacts)
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("describe d2legacy entry seam: %w", err)
+	}
+	facts, ok := value.(map[string]any)
+	if !ok {
+		return EntryWorld{}, fmt.Errorf("describe d2legacy entry seam: result is not a table")
+	}
+	number := func(name string) (int, error) {
+		value, ok := facts[name].(float64)
+		if !ok {
+			return 0, fmt.Errorf("describe d2legacy entry seam: %s is not numeric", name)
+		}
+		return int(value), nil
+	}
+	firstLevel, err := number("first_level")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	secondLevel, err := number("second_level")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	secondX, err := number("second_tile_x")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	secondY, err := number("second_tile_y")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	firstDirection, firstOK := facts["first_direction"].(string)
+	secondDirection, secondOK := facts["second_direction"].(string)
+	if !firstOK || !secondOK {
+		return EntryWorld{}, fmt.Errorf("describe d2legacy entry seam: directions are not strings")
+	}
+	return EntryWorld{Town: town, Wilderness: moor, Seam: SeamSpec{
+		FirstLevel: firstLevel, FirstDirection: firstDirection,
+		SecondLevel: secondLevel, SecondDirection: secondDirection,
+		SecondTileX: secondX, SecondTileY: secondY,
+	}}, nil
 }
 
 func nonNilContext(ctx context.Context) context.Context {

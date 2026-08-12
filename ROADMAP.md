@@ -1626,7 +1626,8 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
 
   Ownership cutover and cross-zone warp behavior are complete. The production
   Act I town/Blood Moor seam now crosses through a fixed-tick Lua ECS system;
-  Go supplies collision-derived endpoint facts and presentation observes the
+  Lua identifies the connected levels, authored roles, and facing edges while
+  Go resolves only collision-safe endpoint geometry. Presentation observes the
   committed level only. A full decoded quest/NPC reward path and difficulty
   progression vector remain.
 
@@ -1641,7 +1642,8 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   Ownership cutover is complete: preset, maze, outdoor, route, structure, asset,
   entry-world level selection, and Rogue Encampment campfire-marker selection
   execute in documented d2legacy Lua modules. Go transports admitted recipes
-  and runs generic collision-space nearest-open-point and seam geometry only.
+  and runs generic collision-space nearest-open-point and cardinal seam geometry
+  from the mod-authored specification only.
   Population choices are likewise Lua-owned while generic recipe/geometry
   contracts remain in Go. The joined Act I town-to-wilderness restore vector remains.
 

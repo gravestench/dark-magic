@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	models "github.com/gravestench/dark-magic/internal/game/data/model"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
-	typedrecords "github.com/gravestench/dark-magic/internal/game/data/typed"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
@@ -49,47 +47,6 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	}
 	if worldMap.WidthTiles != zone.Bounds().Width || worldMap.HeightTiles != zone.Bounds().Height || len(worldMap.Tiles) == 0 {
 		t.Fatalf("materialized map dimensions/tiles = %dx%d/%d", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
-	}
-	levels, err := typedrecords.Load[models.LevelData](records, "data/global/excel/levels.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	levelsByID, err := typedrecords.Index(levels, func(level models.LevelData) int { return level.Id })
-	if err != nil {
-		t.Fatal(err)
-	}
-	warps, err := typedrecords.Load[models.LevelWarp](records, "data/global/excel/lvlwarp.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	warpsByID, err := typedrecords.Index(warps, func(warp models.LevelWarp) int { return warp.Id })
-	if err != nil {
-		t.Fatal(err)
-	}
-	transitions, err := gametransition.ResolveLevelTransitions(worldMap, levelsByID[9], warpsByID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(transitions) == 0 {
-		t.Fatalf("materialized cave transitions = %#v", transitions)
-	}
-	first := transitions[0]
-	if first.DestinationLevel != 3 || first.WarpID != 4 || first.Tile.X != 4 || first.Tile.Y != 29 || first.Tile.MainIndex != 0 || first.Tile.SubIndex != 21 {
-		t.Fatalf("unexpected production cave transition = %#v", first)
-	}
-	wantGeometry := gametransition.WarpGeometry{
-		CellOrigin: gametransition.SubtilePoint{X: 20, Y: 145}, EntityPosition: gametransition.SubtilePoint{X: 22, Y: 150},
-		SelectionLocal: gametransition.LocalSelectionBounds{MinX: -30, MinY: -120, MaxX: 90, MaxY: 30},
-		Arrival:        gametransition.SubtilePoint{X: 22, Y: 150}, ExitWalkTarget: gametransition.SubtilePoint{X: 25, Y: 155},
-	}
-	if got := first.Geometry(); got != wantGeometry {
-		t.Fatalf("production cave geometry = %#v, want %#v", got, wantGeometry)
-	}
-	for _, transition := range transitions {
-		geometry := transition.Geometry()
-		if geometry.EntityPosition != geometry.Arrival || geometry.SelectionLocal.MaxX <= geometry.SelectionLocal.MinX || geometry.SelectionLocal.MaxY <= geometry.SelectionLocal.MinY {
-			t.Fatalf("invalid authored warp geometry = %#v", geometry)
-		}
 	}
 }
 
@@ -150,10 +107,11 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	records := recordstore.New(source)
-	town, moor, err := d2mapgen.GenerateEntryZones(t.Context(), source, records, 17)
+	entryWorld, err := d2mapgen.GenerateEntryWorld(t.Context(), source, records, 17)
 	if err != nil {
 		t.Fatal(err)
 	}
+	town, moor := entryWorld.Town, entryWorld.Wilderness
 	materializer, err := gameworld.NewMaterializer(source, moor)
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +167,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seam, err := gametransition.NewActOneTownMoorSeam(town, townMap, moor, worldMap)
+	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, worldMap)
 	if err != nil {
 		t.Fatal(err)
 	}

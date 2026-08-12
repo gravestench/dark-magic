@@ -17,10 +17,11 @@ import (
 // buildEntryWorld generates and materializes both sides of the first playable
 // zone seam. Maps publish together; a half-built wilderness is never active.
 func (app *application) buildEntryWorld() error {
-	townZone, moorZone, err := d2mapgen.GenerateEntryZones(app.ctx, app.options.Content, app.records, 1)
+	entryWorld, err := d2mapgen.GenerateEntryWorld(app.ctx, app.options.Content, app.records, 1)
 	if err != nil {
 		return wrap("generate d2legacy entry world", err)
 	}
+	townZone, moorZone := entryWorld.Town, entryWorld.Wilderness
 	townMap, err := app.materializeZone(townZone)
 	if err != nil {
 		return wrap("materialize Act I town", err)
@@ -29,7 +30,7 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("materialize Blood Moor", err)
 	}
-	seam, err := gametransition.NewActOneTownMoorSeam(townZone, townMap, moorZone, moorMap)
+	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, moorMap)
 	if err != nil {
 		return wrap("join Act I town to Blood Moor", err)
 	}
