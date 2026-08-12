@@ -11,7 +11,7 @@ import (
 )
 
 // ContentRequire installs a Lua require searcher backed by source. A module
-// such as d2.screens.loading resolves to
+// such as d2legacy.screens.loading resolves to
 // <root>/d2/screens/loading.lua.
 func ContentRequire(source fs.FS, root string) Installer {
 	return Installer{Name: "content.require", Install: func(state *lua.LState) error {

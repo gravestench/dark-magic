@@ -30,12 +30,12 @@ control-manager roles:
 - focus-isolated modal confirmation dialog;
 - bitmap text and the regular Diablo II software cursor.
 
-The shared `d2.ui.controls` manager owns focus, accessibility roles,
+The shared `d2legacy.ui.controls` manager owns focus, accessibility roles,
 pointer capture, mouse-up activation, range dragging, text editing, and keyboard
 behavior. Widget modules own presentation and widget-specific composition, so
 shipping screens and mods use the same semantics shown by the lab.
 
-Recovered presentation values live in `d2.ui.compat`. In particular, the
+Recovered presentation values live in `d2legacy.ui.compat`. In particular, the
 text scrollbar uses the recovered `TextSlid.dc6` frame mapping: down/up hollow
 arrows `8/9`, down/up filled arrows `10/11`, gutter `13`, and thumb/fill `14`.
 The original executable also references `OptBar.dc6` and `OptBarC.dc6` for

@@ -2,7 +2,7 @@
 
 This tree is the first-party Diablo II rules mod. Its canonical name and Lua
 namespace are `d2legacy`. The repository embeds this canonical first-party mod;
-there is no separate gameplay package or “Dark Magic shim” identity.
+there is no separate gameplay package or competing first-party identity.
 
 The Go host supplies generic tools—fixed ticks, ECS storage, command admission,
 deterministic random streams, checkpoints, decoded records, rendering, and

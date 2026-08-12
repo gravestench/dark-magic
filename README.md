@@ -128,11 +128,11 @@ application-log tail appear in their respective modal views; normal process
 log output remains available outside the game window as well. Every Lua view
 opens with a target- and policy-specific message of the day. The `dm` root
 (`darkmagic` is an alias) provides discoverable, policy-filtered capability
-access: use `d2.help()` and `d2.capabilities()`, friendly names such as
-`d2.app`, or `d2.modules["engine.app/v1"]` for an exact versioned module ID.
+access: use `d2legacy.help()` and `d2legacy.capabilities()`, friendly names such as
+`d2legacy.app`, or `d2legacy.modules["engine.app/v1"]` for an exact versioned module ID.
 Pass a module, command, or path to help for progressively more detail—for
-example `d2.help(d2.audio)`, `d2.help(engine.audio.play)`, or
-`d2.help("engine.audio.play")`. Lua module registrations own the summaries, usage,
+example `d2legacy.help(d2legacy.audio)`, `d2legacy.help(engine.audio.play)`, or
+`d2legacy.help("engine.audio.play")`. Lua module registrations own the summaries, usage,
 parameters, returns, and examples used by both help and completion. Existing
 commands without authored metadata are still listed with fallback help.
 
@@ -183,8 +183,8 @@ Texture creation remains on the graphics-owner thread. Asset reads and bitmap
 preparation run in bounded workers; immutable textures are then uploaded within
 the configured frame budget and retained by content identity across scenes.
 
-Use `d2.apropos("music")` to search the permitted module and command
-descriptions. `d2.docs()` renders Markdown for the session's complete permitted
+Use `d2legacy.apropos("music")` to search the permitted module and command
+descriptions. `d2legacy.docs()` renders Markdown for the session's complete permitted
 Lua API from the same registration metadata used by help and completion.
 Built-in capability conformance tests reject public module functions that do
 not provide an authored summary and usage signature. Audio, video, and render

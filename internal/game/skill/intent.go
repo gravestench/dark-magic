@@ -10,7 +10,7 @@ import (
 
 const (
 	IntentConsumerSystemID = "skill.consume_player_intent"
-	CastRequestComponent   = "d2.skill.cast_request"
+	CastRequestComponent   = "d2legacy.skill.cast_request"
 )
 
 func castRequestSchema() akara.Schema {
@@ -81,9 +81,9 @@ func RegisterIntentConsumer(engine *gameecs.Engine) error {
 
 func registerIntentStores(engine *gameecs.Engine) (intents, controls, learned, requests *akara.DynamicStore, err error) {
 	schemas := []akara.Schema{
-		{Name: "d2.player.skill_intent", Version: 1, Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}},
-		{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
-		{Name: "d2.player.learned_skill", Version: 1, Fields: []akara.Field{{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "level", Kind: akara.FieldInt64}, {Name: "list_row", Kind: akara.FieldInt64}, {Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool}}},
+		{Name: "d2legacy.player.skill_intent", Version: 1, Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}},
+		{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
+		{Name: "d2legacy.player.learned_skill", Version: 1, Fields: []akara.Field{{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "level", Kind: akara.FieldInt64}, {Name: "list_row", Kind: akara.FieldInt64}, {Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool}}},
 		castRequestSchema(),
 	}
 	stores := make([]*akara.DynamicStore, len(schemas))

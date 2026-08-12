@@ -13,7 +13,7 @@ local M = {}
 local function move_projectiles(projectiles)
     for _, entity in ipairs(projectiles) do
         local projectile = ecs.get(entity, "d2legacy.missile.projectile")
-        local position = ecs.get(entity, "d2.world.position")
+        local position = ecs.get(entity, "d2legacy.world.position")
         local x, y = position:get("x"), position:get("y")
         projectile:set("previous_x", x)
         projectile:set("previous_y", y)
@@ -24,13 +24,13 @@ local function move_projectiles(projectiles)
 end
 
 local function target_snapshot(entity)
-    local selectable = ecs.get(entity, "d2.world.selectable")
-    local position = ecs.get(entity, "d2.world.position")
-    local location = ecs.get(entity, "d2.world.location")
+    local selectable = ecs.get(entity, "d2legacy.world.selectable")
+    local position = ecs.get(entity, "d2legacy.world.position")
+    local location = ecs.get(entity, "d2legacy.world.location")
     if not selectable or not position or not location then return nil end
-    if not ecs.get(entity, "d2.monster.stats")
-        and not ecs.get(entity, "d2.player.vitals") then return nil end
-    local collider = ecs.get(entity, "d2.world.collider")
+    if not ecs.get(entity, "d2legacy.monster.stats")
+        and not ecs.get(entity, "d2legacy.player.vitals") then return nil end
+    local collider = ecs.get(entity, "d2legacy.world.collider")
     return {
         entity = entity,
         id = selectable:get("id"),
@@ -83,8 +83,8 @@ local function resolve_contacts(context, entities, structural)
     for _, entity in ipairs(entities) do
         local projectile = ecs.get(entity, "d2legacy.missile.projectile")
         if projectile then
-            local position = ecs.get(entity, "d2.world.position")
-            local location = ecs.get(entity, "d2.world.location")
+            local position = ecs.get(entity, "d2legacy.world.position")
+            local location = ecs.get(entity, "d2legacy.world.location")
             local target = first_contact(entity, projectile, position, location, targets)
             if target then
                 local amount = damage.roll_fire(
@@ -104,23 +104,23 @@ function M.register()
     ecs.system({
         id = "d2legacy.missile.move",
         phase = "movement",
-        query = { all = { "d2legacy.missile.projectile", "d2.world.position" } },
-        read = { "d2legacy.missile.projectile", "d2.world.position" },
-        write = { "d2legacy.missile.projectile", "d2.world.position" },
+        query = { all = { "d2legacy.missile.projectile", "d2legacy.world.position" } },
+        read = { "d2legacy.missile.projectile", "d2legacy.world.position" },
+        write = { "d2legacy.missile.projectile", "d2legacy.world.position" },
         update = function(_, entities) move_projectiles(entities) end,
     })
 
     ecs.system({
         id = "d2legacy.missile.contact",
         phase = "combat",
-        query = { any = { "d2legacy.missile.projectile", "d2.world.selectable" } },
+        query = { any = { "d2legacy.missile.projectile", "d2legacy.world.selectable" } },
         read = {
-            "d2legacy.missile.projectile", "d2.world.position", "d2.world.location",
-            "d2.world.selectable", "d2.world.collider", "d2.monster.stats",
-            "d2.player.vitals",
+            "d2legacy.missile.projectile", "d2legacy.world.position", "d2legacy.world.location",
+            "d2legacy.world.selectable", "d2legacy.world.collider", "d2legacy.monster.stats",
+            "d2legacy.player.vitals",
         },
         write = {
-            "d2.monster.stats", "d2.player.vitals", "d2legacy.combat.event",
+            "d2legacy.monster.stats", "d2legacy.player.vitals", "d2legacy.combat.event",
         },
         update = resolve_contacts,
     })

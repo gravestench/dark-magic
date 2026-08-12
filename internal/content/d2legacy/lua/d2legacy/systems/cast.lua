@@ -11,7 +11,7 @@ local M = {}
 local function learned_levels(entities)
     local levels = {}
     for _, entity in ipairs(entities) do
-        local learned = ecs.get(entity, "d2.player.learned_skill")
+        local learned = ecs.get(entity, "d2legacy.player.learned_skill")
         if learned then
             local owner = learned:get("owner"):id()
             levels[owner] = levels[owner] or {}
@@ -22,7 +22,7 @@ local function learned_levels(entities)
 end
 
 local function begin_cast(context, player, request, definition, levels, commands)
-    local vitals = ecs.get(player, "d2.player.vitals")
+    local vitals = ecs.get(player, "d2legacy.player.vitals")
     local available = vitals:get("mana_raw")
     if available == 0 then available = vitals:get("mana") * 256 end
 
@@ -57,15 +57,15 @@ function M.register(definition)
         phase = "pre_simulation",
         query = { any = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "d2.player.learned_skill",
+            "d2legacy.player.learned_skill",
         } },
         read = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "d2.player.learned_skill", "d2.player.vitals",
+            "d2legacy.player.learned_skill", "d2legacy.player.vitals",
         },
         write = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "d2.player.vitals",
+            "d2legacy.player.vitals",
         },
         update = function(context, entities, structural)
             local levels = learned_levels(entities)

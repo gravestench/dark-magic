@@ -12,8 +12,8 @@ import (
 
 const (
 	CastLifecycleSystemID = "skill.cast_lifecycle"
-	CastStateComponent    = "d2.skill.cast_state"
-	CastEventComponent    = "d2.skill.cast_event"
+	CastStateComponent    = "d2legacy.skill.cast_state"
+	CastEventComponent    = "d2legacy.skill.cast_event"
 
 	TargetPoint = "point"
 	TargetUnit  = "unit"
@@ -128,7 +128,7 @@ func RegisterCastLifecycle(engine *gameecs.Engine, registry Registry) error {
 func registerCastStores(engine *gameecs.Engine) (requests, states, events, vitals, selectables *akara.DynamicStore, err error) {
 	schemas := []akara.Schema{
 		castRequestSchema(), castStateSchema(), castEventSchema(),
-		{Name: "d2.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
 		targeting.Schema(),
 	}
 	stores := make([]*akara.DynamicStore, len(schemas))

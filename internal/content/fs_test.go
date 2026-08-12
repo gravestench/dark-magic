@@ -125,7 +125,7 @@ func TestZIPAndDirectoryNormalizePaths(t *testing.T) {
 	}
 }
 
-func TestShimContainsBoot(t *testing.T) {
+func TestD2LegacyContainsBoot(t *testing.T) {
 	t.Parallel()
 
 	data, err := fs.ReadFile(D2Legacy(), "boot.lua")

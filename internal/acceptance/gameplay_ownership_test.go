@@ -61,7 +61,7 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter
 // abbreviation from blurring generic engine APIs with the d2legacy mod again. Engine doors
-// use engine.*; Diablo runtime state and bundled modules use d2.* or d2legacy.*.
+// use engine.*; Diablo runtime state and bundled modules use d2legacy.* or d2legacy.*.
 func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 	root := repositoryRoot(t)
 	for _, relativeRoot := range []string{"internal", "cmd"} {
@@ -81,7 +81,37 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			retiredLong := "dark" + "magic"
 			if strings.Contains(text, retiredShort) || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
 				relative, _ := filepath.Rel(root, path)
-				t.Errorf("%s uses a retired Lua namespace; use engine.*, d2.*, or d2legacy.*", filepath.ToSlash(relative))
+				t.Errorf("%s uses a retired Lua namespace; use engine.*, d2legacy.*, or d2legacy.*", filepath.ToSlash(relative))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TestD2LegacyContentRetiresShimIdentity protects the mod boundary in active
+// production code. Historical research may still discuss older architecture,
+// but executable paths and identifiers must call the first-party mod d2legacy.
+func TestD2LegacyContentRetiresShimIdentity(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, relativeRoot := range []string{"internal/content", "internal/dev/tools/d2legacy_pack"} {
+		err := filepath.WalkDir(filepath.Join(root, relativeRoot), func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			if extension := filepath.Ext(path); extension != ".go" && extension != ".lua" && extension != ".md" {
+				return nil
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			retired := "s" + "him"
+			if strings.Contains(strings.ToLower(string(data)), retired) {
+				relative, _ := filepath.Rel(root, path)
+				t.Errorf("%s uses retired first-party content terminology; use d2legacy", filepath.ToSlash(relative))
 			}
 			return nil
 		})

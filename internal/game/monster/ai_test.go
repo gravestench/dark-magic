@@ -46,7 +46,7 @@ func TestScheduledAIAcquiresChasesAndRequestsAttack(t *testing.T) {
 	if state != AIChase || target != "player:hero" || next != int64(4) {
 		t.Fatalf("first think = state %v target %v next %v", state, target, next)
 	}
-	velocities, _ := akara.GetDynamicStore(engine.World(), "d2.world.velocity")
+	velocities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.velocity")
 	velocity, _ := velocities.Get(brains.Entities()[0])
 	vx, _ := velocity.Get("x")
 	if vx != float64(6) {
@@ -88,8 +88,8 @@ func TestScheduledAIAcquiresChasesAndRequestsAttack(t *testing.T) {
 
 func addPlayerTarget(t *testing.T, engine *gameecs.Engine, id string, x, y float64) {
 	t.Helper()
-	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
-	locations, _ := akara.GetDynamicStore(engine.World(), "d2.world.location")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+	locations, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
 	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
 	entity := engine.World().MustCreateEntity()
 	if _, err := positions.Set(entity, map[string]any{"x": x, "y": y}); err != nil {
@@ -105,7 +105,7 @@ func addPlayerTarget(t *testing.T, engine *gameecs.Engine, id string, x, y float
 
 func movePlayerTarget(t *testing.T, engine *gameecs.Engine, id string, x, y float64) {
 	t.Helper()
-	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
 	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
 	for _, entity := range selectables.Entities() {
 		selectable, _ := selectables.Get(entity)

@@ -68,7 +68,7 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	session := materializeGameplayPlayer(t, engine, 500*time.Millisecond)
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`local world=require("d2.gameplay.world"); gameplay=world.create(100,80,nil,"test-player")`)
+		return state.DoString(`local world=require("d2legacy.gameplay.world"); gameplay=world.create(100,80,nil,"test-player")`)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local world=require("d2.gameplay.world")
+local world=require("d2legacy.gameplay.world")
 hero_x,hero_y=world.position(gameplay.hero)
 camera_x,camera_y=world.position(gameplay.camera)
 hud=world.hud_snapshot(gameplay.hero,{next_level_experience=250,stamina=44,max_stamina=60})
@@ -126,7 +126,7 @@ composite=world.composite_snapshot(gameplay.hero)
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`require("d2.gameplay.world").destroy(gameplay)`)
+		return state.DoString(`require("d2legacy.gameplay.world").destroy(gameplay)`)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local world=require("d2.gameplay.world")
+local world=require("d2legacy.gameplay.world")
 -- The center advances only to x=50.3, but its radius reaches collision cell
 -- 51. A point-only query would clip into the wall; the footprint must stop X.
 -- Only the axial cell is blocked. A four-corners-only footprint misses it.
@@ -183,7 +183,7 @@ gameplay=world.create(100,80,collision,"test-player")
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`local world=require("d2.gameplay.world"); hero_x,hero_y=world.position(gameplay.hero)`)
+		return state.DoString(`local world=require("d2legacy.gameplay.world"); hero_x,hero_y=world.position(gameplay.hero)`)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +198,7 @@ gameplay=world.create(100,80,collision,"test-player")
 		t.Fatal(err)
 	}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
-		return state.DoString(`require("d2.gameplay.world").destroy(gameplay)`)
+		return state.DoString(`require("d2legacy.gameplay.world").destroy(gameplay)`)
 	}); err != nil {
 		t.Fatal(err)
 	}

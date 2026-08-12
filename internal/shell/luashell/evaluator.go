@@ -199,7 +199,7 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 		aliases = append(aliases, alias)
 	}
 	sort.Strings(aliases)
-	help := "Engine/mod shell roots\n  engine.<capability>   lazy engine capability access\n  d2.<module>           lazy d2legacy module access\n  engine.modules[<id>]  exact versioned module access\n  engine.require(<id>)  policy-checked require\n  engine.capabilities() permitted module IDs\n  engine.help([value])  help for a module or command"
+	help := "Engine/mod shell roots\n  engine.<capability>   lazy engine capability access\n  d2legacy.<module>           lazy d2legacy module access\n  engine.modules[<id>]  exact versioned module access\n  engine.require(<id>)  policy-checked require\n  engine.capabilities() permitted module IDs\n  engine.help([value])  help for a module or command"
 	if len(aliases) > 0 {
 		help += "\nAvailable aliases: " + strings.Join(aliases, ", ")
 	}
@@ -245,20 +245,20 @@ func (e *Evaluator) installDarkMagicRoot(state *glua.LState, environment *glua.L
 	moduleMeta.RawSetString("__metatable", glua.LString("protected engine/mod modules"))
 	state.SetMetatable(modules, moduleMeta)
 	// Both roots share the policy-filtered resolver. Module IDs themselves retain
-	// the ownership distinction: engine.* capabilities versus d2.* mod APIs.
+	// the ownership distinction: engine.* capabilities versus d2legacy.* mod APIs.
 	environment.RawSetString("engine", root)
-	environment.RawSetString("d2", root)
+	environment.RawSetString("d2legacy", root)
 }
 
 func (e *Evaluator) apropos(query string) string {
 	query = strings.ToLower(strings.TrimSpace(query))
 	if query == "" {
-		return "Usage: d2.apropos(\"search terms\")"
+		return "Usage: d2legacy.apropos(\"search terms\")"
 	}
 	var matches []string
 	for _, module := range e.modules {
 		doc := e.help[module]
-		alias := "d2." + moduleAlias(module)
+		alias := "d2legacy." + moduleAlias(module)
 		if strings.Contains(strings.ToLower(module+" "+alias+" "+doc.Summary), query) {
 			matches = append(matches, alias+" — "+doc.Summary)
 		}
@@ -358,8 +358,8 @@ func (e *Evaluator) helpPath(path string) (string, string) {
 	if _, ok := e.allowed[path]; ok {
 		return path, ""
 	}
-	path = strings.TrimPrefix(path, "d2.")
-	path = strings.TrimPrefix(path, "d2.")
+	path = strings.TrimPrefix(path, "d2legacy.")
+	path = strings.TrimPrefix(path, "d2legacy.")
 	parts := strings.SplitN(path, ".", 2)
 	module, ok := e.aliases[parts[0]]
 	if !ok {
@@ -395,7 +395,7 @@ func (e *Evaluator) formatModuleHelp(module string, value glua.LValue) string {
 	}
 	sort.Strings(names)
 	var output strings.Builder
-	fmt.Fprintf(&output, "d2.%s (%s)\n%s", alias, module, summary)
+	fmt.Fprintf(&output, "d2legacy.%s (%s)\n%s", alias, module, summary)
 	if len(names) > 0 {
 		output.WriteString("\n\nCommands:")
 		for _, name := range names {
@@ -412,7 +412,7 @@ func (e *Evaluator) formatModuleHelp(module string, value glua.LValue) string {
 
 func (e *Evaluator) formatCommandHelp(module, name string) string {
 	doc := e.help[module].Commands[name]
-	path := "d2." + moduleAlias(module) + "." + name
+	path := "d2legacy." + moduleAlias(module) + "." + name
 	usage := doc.Usage
 	if usage == "" {
 		usage = path + "(...)"
@@ -446,7 +446,7 @@ func (e *Evaluator) formatCommandHelp(module, name string) string {
 }
 
 func moduleAlias(module string) string {
-	module = strings.TrimPrefix(module, "d2.")
+	module = strings.TrimPrefix(module, "d2legacy.")
 	if separator := strings.IndexByte(module, '/'); separator >= 0 {
 		module = module[:separator]
 	}
@@ -592,8 +592,8 @@ func (e *Evaluator) memberDetail(state *glua.LState, value glua.LValue, member, 
 }
 
 func (e *Evaluator) completionModule(base string) (string, bool) {
-	base = strings.TrimPrefix(base, "d2.")
-	base = strings.TrimPrefix(base, "d2.")
+	base = strings.TrimPrefix(base, "d2legacy.")
+	base = strings.TrimPrefix(base, "d2legacy.")
 	module, ok := e.aliases[base]
 	return module, ok
 }

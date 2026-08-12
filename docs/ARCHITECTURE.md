@@ -383,7 +383,7 @@ diagonals cannot cut blocked corners, occupied interaction targets use reachable
 stopping rings, and unreachable requests cancel explicitly. Selection kinds
 must come from spawned authoritative definitions—not DS1-name heuristics.
 
-Live selectable entities attach `d2.world.selectable` beside their authoritative
+Live selectable entities attach `d2legacy.world.selectable` beside their authoritative
 position. Its explicit kind is one of player, NPC, hostile, item, portal,
 missile, or scenery. The targeting capability returns copied hit facts and
 filters the locally owned player in presentation; it does not expose ECS stores

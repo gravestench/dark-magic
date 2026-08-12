@@ -284,7 +284,7 @@ The initial catalog was run against an English Diablo II/LOD MPQ set. All 90
 curated hypotheses resolved, all 80 DC6 assets decoded with
 their expected palettes, and no warnings were reported. Resolution by archive
 was: 58 from `d2data.mpq`, 22 from `d2exp.mpq`, four patched TXT records from
-`patch_d2.mpq`, three from `d2music.mpq`, two from `d2sfx.mpq`, and one from
+`patch_d2legacy.mpq`, three from `d2music.mpq`, two from `d2sfx.mpq`, and one from
 `d2xmusic.mpq`.
 
 Hash comparison clarified the notable path disagreements:

@@ -40,17 +40,17 @@ func TestSpawnMaterializesDeterministicHostile(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	identities, found := akara.GetDynamicStore(engine.World(), "d2.monster.identity")
+	identities, found := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
 	if !found || identities.Len() != 1 {
 		t.Fatalf("monster identities = %v, found=%v", identities, found)
 	}
-	statsStore, _ := akara.GetDynamicStore(engine.World(), "d2.monster.stats")
+	statsStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
 	component, _ := statsStore.Get(identities.Entities()[0])
 	health, _ := component.Get("health")
 	if health != rollLife(definition.LifeMin, definition.LifeMax, 42).Raw() {
 		t.Fatalf("health = %v", health)
 	}
-	appearance, _ := akara.GetDynamicStore(engine.World(), "d2.monster.appearance")
+	appearance, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
 	visual, _ := appearance.Get(identities.Entities()[0])
 	components, _ := visual.Get("components")
 	deathSound, _ := visual.Get("death_sound")

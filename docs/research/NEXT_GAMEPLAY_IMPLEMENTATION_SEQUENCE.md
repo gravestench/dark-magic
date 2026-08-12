@@ -14,7 +14,7 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
 - M21.3 one ordinary hostile materialized from joined MonStats/MonStats2/MonLvl facts;
 - M21.4 scheduled deterministic hostile target acquisition, chase, and semantic attack requests;
 - M21.5 one replayable melee transaction emitting semantic attempt/hit/damage/death events with explicitly synthetic hit policy;
-- M21.6 an intent-phase skill consumer that freezes `d2.player.skill_intent` into immutable `d2.skill.cast_request`, preserving admitted skill choice, learned level, target, side, player identity, and request tick exactly once;
+- M21.6 an intent-phase skill consumer that freezes `d2legacy.player.skill_intent` into immutable `d2legacy.skill.cast_request`, preserving admitted skill choice, learned level, target, side, player identity, and request tick exactly once;
 - M21.7 a normalized skill-definition registry plus checkpointed cast lifecycle with target/resource validation, start/effect/complete ticks, interruption state, semantic cast events, mana committed once, and a first headless `basic.point_event` behavior family.
 - M21.8 a checkpointed timed-state owner with source-tagged identity,
   same-source refresh, independent sources, deterministic expiration, and

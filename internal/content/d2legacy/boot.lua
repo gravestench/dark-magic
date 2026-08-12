@@ -6,7 +6,7 @@
 --
 -- A useful rule while reading this mod:
 --   require("engine.something/v1")  = engine/modding API capability
---   require("d2....")    = ordinary Lua from this example mod
+--   require("d2legacy....")    = ordinary Lua from this example mod
 --
 -- Keeping that boundary visible is important. Lua gets useful operations; it
 -- does not get raw renderer pointers, filesystem objects, or engine internals.
@@ -20,18 +20,18 @@ local scenes = require("engine.scene/v1")
 -- The data capability loads versioned, validated manifests from mod content.
 local data = require("engine.data/v1")
 -- This one is not an engine capability. It is another Lua file in this mod.
-local registry = require("d2.bootstrap.scene_registry")
+local registry = require("d2legacy.bootstrap.scene_registry")
 
 -- The manifest is data, not executable policy. `assert` makes a broken mod fail
 -- here with a useful error instead of producing mysterious nil errors later.
 -- The schema string is also versioned, so the loader knows what shape to expect.
-local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2.presentation/v1"))
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 
 -- A Lua module returns one value. Here we return a component definition table.
 -- Dark Magic reads this table and calls the lifecycle functions below.
 return {
     -- Stable component identity. This is a name, not a filename dependency.
-    id = "d2.boot",
+    id = "d2legacy.boot",
     -- Version of this tiny boot-component contract.
     api = 1,
 

@@ -13,7 +13,7 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
-const Component = "d2.world.selectable"
+const Component = "d2legacy.world.selectable"
 
 const (
 	KindPlayer  = "player"
@@ -51,7 +51,7 @@ func (resolver *Resolver) HitAt(x, y float64) (Hit, bool) {
 	if !ok {
 		return Hit{}, false
 	}
-	positions, ok := akara.GetDynamicStore(resolver.engine.World(), "d2.world.position")
+	positions, ok := akara.GetDynamicStore(resolver.engine.World(), "d2legacy.world.position")
 	if !ok {
 		return Hit{}, false
 	}

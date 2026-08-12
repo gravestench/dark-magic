@@ -57,7 +57,7 @@ func FromEnvironment() (*FS, error) {
 			prefix := fmt.Sprintf("mpq-%d", index)
 			layers = append(layers, Layer{Name: prefix + "-directory", FS: Directory(directory)})
 			priority := []string{
-				"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
+				"patch_d2legacy.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
 				"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
 				"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
 			}

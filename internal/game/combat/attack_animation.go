@@ -11,7 +11,7 @@ import (
 const AttackAnimation = gameaction.AttackAnimationComponent
 
 // AttackTiming is the small, simulation-safe subset normalized from
-// AnimData.d2. Speed is authored in 1/256 frame per 25 Hz simulation tick.
+// AnimData.d2legacy. Speed is authored in 1/256 frame per 25 Hz simulation tick.
 type AttackTiming struct {
 	Frames      int64
 	Speed       int64

@@ -10,10 +10,10 @@ import (
 	"github.com/gravestench/dark-magic/internal/assets/catalog"
 )
 
-// TestShimPresentationManifestContract protects the architectural boundary
+// TestD2LegacyPresentationManifestContract protects the architectural boundary
 // between native engine code and mod-owned presentation knowledge. Go should
-// provide capabilities; the shim manifest should name and describe assets.
-func TestShimPresentationManifestContract(t *testing.T) {
+// provide capabilities; the d2legacy manifest should name and describe assets.
+func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	t.Parallel()
 
 	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
@@ -58,7 +58,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatalf("decode presentation manifest: %v", err)
 	}
-	if manifest.Schema != "d2.presentation/v1" || manifest.Version != 1 {
+	if manifest.Schema != "d2legacy.presentation/v1" || manifest.Version != 1 {
 		t.Fatalf("unexpected presentation contract %q version %d", manifest.Schema, manifest.Version)
 	}
 	if manifest.Resolution.Width <= 0 || manifest.Resolution.Height <= 0 {
@@ -248,7 +248,7 @@ func sumJSONNumbers(values []any) float64 {
 	return result
 }
 
-func TestShimAssetFixtureContract(t *testing.T) {
+func TestD2LegacyAssetFixtureContract(t *testing.T) {
 	t.Parallel()
 
 	data, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
@@ -267,7 +267,7 @@ func TestShimAssetFixtureContract(t *testing.T) {
 	}
 }
 
-func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
+func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	t.Parallel()
 
 	manifestData, err := fs.ReadFile(D2Legacy(), "manifests/asset-catalog.v1.json")

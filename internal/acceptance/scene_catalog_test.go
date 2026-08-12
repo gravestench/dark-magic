@@ -70,14 +70,14 @@ func TestGameWorldUsesChunkedAuthoritativeCameraAdapter(t *testing.T) {
 	t.Parallel()
 
 	root := repositoryRoot(t)
-	path := filepath.Join(root, "internal/content/d2legacy/lua/d2/screens/game_world.lua")
+	path := filepath.Join(root, "internal/content/d2legacy/lua/d2legacy/screens/game_world.lua")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	source := string(contents)
 	for _, required := range []string{
-		`require("d2.presentation.chunked_map")`,
+		`require("d2legacy.presentation.chunked_map")`,
 		"chunked_map.create(",
 		"chunked_map.update(",
 	} {
@@ -96,7 +96,7 @@ func TestMapgenLabRegenerationUsesDocumentedRenderNodeLifetime(t *testing.T) {
 	t.Parallel()
 
 	root := repositoryRoot(t)
-	path := filepath.Join(root, "internal/content/d2legacy/lua/d2/screens/mapgen_lab.lua")
+	path := filepath.Join(root, "internal/content/d2legacy/lua/d2legacy/screens/mapgen_lab.lua")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +114,7 @@ func TestDS1LabUsesNativeChunkDepthForLayerOrdering(t *testing.T) {
 	t.Parallel()
 
 	root := repositoryRoot(t)
-	path := filepath.Join(root, "internal/content/d2legacy/lua/d2/screens/ds1_lab.lua")
+	path := filepath.Join(root, "internal/content/d2legacy/lua/d2legacy/screens/ds1_lab.lua")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestDS1LabUsesNativeChunkDepthForLayerOrdering(t *testing.T) {
 
 func readBootstrapLua(t *testing.T, root string) string {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(root, "internal/content/d2legacy/lua/d2/bootstrap/*.lua"))
+	paths, err := filepath.Glob(filepath.Join(root, "internal/content/d2legacy/lua/d2legacy/bootstrap/*.lua"))
 	if err != nil {
 		t.Fatal(err)
 	}

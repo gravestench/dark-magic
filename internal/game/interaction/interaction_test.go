@@ -115,7 +115,7 @@ func TestActiveCommercePermissionExpiresWhenPlayerWalksAway(t *testing.T) {
 	if !authority.CanTradeAt(engine, "alice", "Akara") || !authority.CanServiceAt(engine, "alice", "identify") {
 		t.Fatal("in-range active interaction did not admit declared actions")
 	}
-	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
 	position, _ := positions.Get(positions.Entities()[0])
 	if err := position.Set("x", float64(100)); err != nil {
 		t.Fatal(err)
@@ -127,11 +127,11 @@ func TestActiveCommercePermissionExpiresWhenPlayerWalksAway(t *testing.T) {
 
 func materializeControlledPosition(t *testing.T, engine *gameecs.Engine, player string, x, y float64) {
 	t.Helper()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		t.Fatal(err)
 	}

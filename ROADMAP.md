@@ -644,7 +644,7 @@ complete until its actions are driven by authoritative game state and commands.
   target-aware MOTD, and exposes the policy-filtered `dm`/`darkmagic` root with
   friendly lazy capability aliases, help, discovery, and exact versioned module
   access. Versioned module registrations now own structured module and command
-  help (usage, parameters, returns, and examples); `d2.help` accepts module or
+  help (usage, parameters, returns, and examples); `d2legacy.help` accepts module or
   command values and string paths, while legacy commands receive generated
   fallback documentation. Multiline values now preserve newlines and indentation
   through both adapters. The shared `engine.shell/v1` capability exposes validated
@@ -652,8 +652,8 @@ complete until its actions are driven by authoritative game state and commands.
   defaults, reset, dirty status, and atomic platform-native persistence are
   available from client, server, and realm shells. All built-in capability
   functions now carry authored summaries and usage signatures checked against
-  their actual exported Lua tables. Policy-filtered `d2.apropos` searches the
-  registry and `d2.docs()` renders Markdown from that same source of truth.
+  their actual exported Lua tables. Policy-filtered `d2legacy.apropos` searches the
+  registry and `d2legacy.docs()` renders Markdown from that same source of truth.
   Structured table output now uses deterministic multiline formatting with
   cycle/depth protection. Lua output has retained Page Up/Page Down scrollback
   and semantic heading/code/value coloring in both adapters. Persistent settings
@@ -722,7 +722,7 @@ complete until its actions are driven by authoritative game state and commands.
   tooltips. Assignments pass through a replayable command into the player ECS.
   The desktop selector opens upward in the five recovered logical rows, applies
   left/right eligibility and passive filtering, and closes its opposite side.
-  Choices come from session-owned `d2.player.learned_skill` entities seeded by
+  Choices come from session-owned `d2legacy.player.learned_skill` entities seeded by
   typed general/start-skill records; Lua only arranges and describes them.
   Save-imported purchased skills and charged item skills remain M19 work.
   Riiablo's mobile controls were explicitly
@@ -1057,7 +1057,7 @@ complete until its actions are driven by authoritative game state and commands.
     the town campfire anchor; preserve character/session identity independently
     of the selected town layout.
     The entry command now records the server-selected act and level in an
-    authoritative `d2.world.location` component; creation and offline join use
+    authoritative `d2legacy.world.location` component; creation and offline join use
     the generated Act I town and campfire anchor. The production-asset client
     seam now proves a frontend-created/selected character is admitted by the
     fixed-tick session at that exact anchor with Act 1 / level 1 authority.
@@ -1168,7 +1168,7 @@ focus must not replace pointer coordinates as the authoritative client request.
   snapshot carries only validated presentation recipes, never renderer paths.
   Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
-  `d2.world.collider` radius now probes the player's full footprint while
+  `d2legacy.world.collider` radius now probes the player's full footprint while
   retaining axis-separated wall sliding. Riiablo's player factory identifies
   players as `Size.MEDIUM = 2` and its physics adapter uses `size / 2`, confirming
   a one-subtile radius (two-subtile diameter), not one five-subtile map tile.
@@ -1309,13 +1309,13 @@ data owners; they do not introduce parallel gameplay authorities.
   leech, secondary states, and the full death transaction stay
   in their documented verification/dependency queues.
 - [x] **M21.6: Consume assigned skill intent.** Resolve the existing
-  `d2.player.skill_intent` into one deterministic cast request with assigned
+  `d2legacy.player.skill_intent` into one deterministic cast request with assigned
   skill and learned level read exactly once. The intent-phase consumer treats
   the existing component as a mutable admission mailbox, preserves the skill
   already resolved from the authoritative assignment by command admission,
   resolves its learned-skill level once,
   and snapshots player, side, skill ID, learned level, semantic/point target,
-  and request tick into `d2.skill.cast_request`. It clears the mailbox in the
+  and request tick into `d2legacy.skill.cast_request`. It clears the mailbox in the
   same update and refuses to overwrite an unconsumed request, so later skill
   reassignment or level changes cannot rewrite an in-flight action. Both the
   offline client authority and standalone session server install the consumer;

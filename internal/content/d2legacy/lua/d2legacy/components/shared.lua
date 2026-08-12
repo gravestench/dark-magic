@@ -8,31 +8,31 @@ local M = {}
 local function component(name, fields) ecs.component({name=name,fields=fields}) end
 
 function M.register()
-    component("d2.player.identity", {
+    component("d2legacy.player.identity", {
         {name="character_id",type="string"},{name="player",type="string"},
         {name="name",type="string"},{name="class",type="string"},
     })
-    component("d2.player.vitals", {
+    component("d2legacy.player.vitals", {
         {name="health",type="i64"},{name="max_health",type="i64"},
         {name="mana",type="i64"},{name="max_mana",type="i64"},
         {name="mana_raw",type="i64"},{name="max_mana_raw",type="i64"},
     })
-    component("d2.player.learned_skill", {
+    component("d2legacy.player.learned_skill", {
         {name="owner",type="entity"},{name="skill_id",type="i64"},
         {name="level",type="i64"},{name="list_row",type="i64"},
         {name="left_allowed",type="bool"},{name="right_allowed",type="bool"},
     })
-    component("d2.player.skill_assignment", {
+    component("d2legacy.player.skill_assignment", {
         {name="left",type="i64"},{name="right",type="i64"},
     })
-    component("d2.world.position", {{name="x",type="f64"},{name="y",type="f64"}})
-    component("d2.world.location", {{name="act",type="i64"},{name="level_id",type="i64"}})
-    component("d2.world.collider", {{name="radius",type="f64"}})
-    component("d2.world.selectable", {
+    component("d2legacy.world.position", {{name="x",type="f64"},{name="y",type="f64"}})
+    component("d2legacy.world.location", {{name="act",type="i64"},{name="level_id",type="i64"}})
+    component("d2legacy.world.collider", {{name="radius",type="f64"}})
+    component("d2legacy.world.selectable", {
         {name="id",type="string"},{name="kind",type="string"},{name="label",type="string"},
         {name="owner",type="string"},{name="radius",type="f64"},{name="priority",type="i64"},
     })
-    component("d2.monster.stats", {
+    component("d2legacy.monster.stats", {
         {name="level",type="i64"},{name="health",type="i64"},{name="max_health",type="i64"},
         {name="defense",type="i64"},{name="attack_rating",type="i64"},
         {name="physical_min",type="i64"},{name="physical_max",type="i64"},

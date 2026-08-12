@@ -50,14 +50,14 @@ func TestSourceTransitionsPlayerAcrossVerifiedSeamWithoutBounce(t *testing.T) {
 	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
 		t.Fatal(err)
 	}
-	locations, _ := akara.GetDynamicStore(engine.World(), "d2.world.location")
+	locations, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
 	entity := locations.Entities()[0]
 	location, _ := locations.Get(entity)
 	level, _ := location.Get("level_id")
 	if level != int64(2) {
 		t.Fatalf("level = %v", level)
 	}
-	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
 	position, _ := positions.Get(entity)
 	x, _ := position.Get("x")
 	y, _ := position.Get("y")

@@ -18,7 +18,7 @@ func TestMonsterMovementAppliesFixedStepVelocity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	colliders, _ := akara.GetDynamicStore(engine.World(), "d2.world.collider")
+	colliders, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.collider")
 	entity := engine.World().MustCreateEntity()
 	set := func(store *akara.DynamicStore, values map[string]any) {
 		if _, err := store.Set(entity, values); err != nil {

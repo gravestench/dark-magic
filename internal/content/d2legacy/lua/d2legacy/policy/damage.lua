@@ -16,7 +16,7 @@ function M.roll_fire(minimum_raw, maximum_raw)
 end
 
 function M.apply(target, damage_raw, ecs)
-    local monster = ecs.get(target, "d2.monster.stats")
+    local monster = ecs.get(target, "d2legacy.monster.stats")
     if monster then
         local before = monster:get("health")
         local remaining = math.max(0, before - damage_raw)
@@ -24,7 +24,7 @@ function M.apply(target, damage_raw, ecs)
         return remaining, before > 0 and remaining == 0
     end
 
-    local player = assert(ecs.get(target, "d2.player.vitals"),
+    local player = assert(ecs.get(target, "d2legacy.player.vitals"),
         "Fire Bolt target has no health component")
     local before_raw = player:get("health") * 256
     local remaining_raw = math.max(0, before_raw - damage_raw)

@@ -26,7 +26,7 @@ func TestLuaControlsPointerKeyboardFocusAndAccessibility(t *testing.T) {
 	defer runtime.Stop(ctx)
 	scripts := fstest.MapFS{
 		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui = require("d2.ui.controls")
+local ui = require("d2legacy.ui.controls")
 manager = ui.new()
 activated = ""
 visual_state = ""
@@ -102,7 +102,7 @@ func TestLuaControlsFormFieldsAndFocusScopes(t *testing.T) {
 	defer runtime.Stop(ctx)
 	scripts := fstest.MapFS{
 		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui=require("d2.ui.controls")
+local ui=require("d2legacy.ui.controls")
 manager=ui.new()
 manager:add({id="outside",x=0,y=0,width=10,height=10})
 manager:add_checkbox({id="check",scope="form",x=20,y=0,width=10,height=10})

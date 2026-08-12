@@ -93,7 +93,7 @@ func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 	if result, err := evaluator.Evaluate(context.Background(), `engine.apropos("secret")`); err != nil || !strings.Contains(result.Text, "No permitted") {
 		t.Fatalf("policy-filtered search = %#v, %v", result, err)
 	}
-	candidates, err := evaluator.Complete(context.Background(), "d2.se")
+	candidates, err := evaluator.Complete(context.Background(), "d2legacy.se")
 	if err != nil || len(candidates) != 0 {
 		t.Fatalf("denied completion = %#v, %v", candidates, err)
 	}
@@ -105,12 +105,12 @@ func TestEvaluatorEnforcesSessionPolicy(t *testing.T) {
 	}
 }
 
-func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
+func TestEvaluatorExposesDiscoverableD2LegacyRoot(t *testing.T) {
 	runtime := modruntime.New()
-	if err := runtime.RegisterModule(modruntime.Module{Name: "d2.demo/v1", Help: modruntime.ModuleHelp{
+	if err := runtime.RegisterModule(modruntime.Module{Name: "d2legacy.demo/v1", Help: modruntime.ModuleHelp{
 		Summary: "Demonstrates documented shell APIs.",
 		Commands: map[string]modruntime.CommandHelp{"greet": {
-			Summary: "Greet a named adventurer.", Usage: "d2.demo.greet(name)",
+			Summary: "Greet a named adventurer.", Usage: "d2legacy.demo.greet(name)",
 			Parameters: []modruntime.ParameterHelp{{Name: "name", Type: "string", Description: "Adventurer name."}},
 			Returns:    []modruntime.ReturnHelp{{Name: "greeting", Type: "string", Description: "Friendly greeting."}},
 			Examples:   []string{`engine.demo.greet("Deckard")`},
@@ -132,47 +132,47 @@ func TestEvaluatorExposesDiscoverableDarkMagicRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	evaluator, err := NewForPolicy(runtime, shell.Policy{Name: "developer", Mutable: true, Capabilities: []string{"d2.demo/v1"}})
+	evaluator, err := NewForPolicy(runtime, shell.Policy{Name: "developer", Mutable: true, Capabilities: []string{"d2legacy.demo/v1"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer evaluator.Close()
 
-	for _, source := range []string{`engine.demo.name`, `engine.demo.name`, `engine.modules["d2.demo/v1"].name`} {
+	for _, source := range []string{`d2legacy.demo.name`, `d2legacy.demo.name`, `engine.modules["d2legacy.demo/v1"].name`} {
 		if result, evaluateErr := evaluator.Evaluate(context.Background(), source); evaluateErr != nil || result.Text != `"demo"` {
 			t.Fatalf("%s = %#v, %v", source, result, evaluateErr)
 		}
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `table.concat(engine.capabilities(), ",")`); evaluateErr != nil || result.Text != `"d2.demo/v1"` {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `table.concat(engine.capabilities(), ",")`); evaluateErr != nil || result.Text != `"d2legacy.demo/v1"` {
 		t.Fatalf("capabilities = %#v, %v", result, evaluateErr)
 	}
 	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help()`); evaluateErr != nil || !strings.Contains(result.Text, "demo") {
 		t.Fatalf("help = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help(d2.demo)`); evaluateErr != nil || !strings.Contains(result.Text, "greet") || !strings.Contains(result.Text, "undocumented") || !strings.Contains(result.Text, "documented shell APIs") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help(d2legacy.demo)`); evaluateErr != nil || !strings.Contains(result.Text, "greet") || !strings.Contains(result.Text, "undocumented") || !strings.Contains(result.Text, "documented shell APIs") {
 		t.Fatalf("module help = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help(d2.demo.greet)`); evaluateErr != nil || !strings.Contains(result.Text, "d2.demo.greet(name)") || !strings.Contains(result.Text, "Adventurer name") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help(d2legacy.demo.greet)`); evaluateErr != nil || !strings.Contains(result.Text, "d2legacy.demo.greet(name)") || !strings.Contains(result.Text, "Adventurer name") {
 		t.Fatalf("command help = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help("d2.demo.greet")`); evaluateErr != nil || !strings.Contains(result.Text, "Friendly greeting") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help("d2legacy.demo.greet")`); evaluateErr != nil || !strings.Contains(result.Text, "Friendly greeting") {
 		t.Fatalf("string command help = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help("d2.demo.undocumented")`); evaluateErr != nil || !strings.Contains(result.Text, "Lua command provided by d2.demo/v1") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.help("d2legacy.demo.undocumented")`); evaluateErr != nil || !strings.Contains(result.Text, "Lua command provided by d2legacy.demo/v1") {
 		t.Fatalf("fallback command help = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.apropos("adventurer")`); evaluateErr != nil || !strings.Contains(result.Text, "d2.demo.greet") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.apropos("adventurer")`); evaluateErr != nil || !strings.Contains(result.Text, "d2legacy.demo.greet") {
 		t.Fatalf("apropos = %#v, %v", result, evaluateErr)
 	}
-	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.docs()`); evaluateErr != nil || !strings.Contains(result.Text, "# Dark Magic Lua API") || !strings.Contains(result.Text, "d2.demo.greet(name)") {
+	if result, evaluateErr := evaluator.Evaluate(context.Background(), `engine.docs()`); evaluateErr != nil || !strings.Contains(result.Text, "# Dark Magic Lua API") || !strings.Contains(result.Text, "d2legacy.demo.greet(name)") {
 		t.Fatalf("docs = %#v, %v", result, evaluateErr)
 	}
-	candidates, err := evaluator.Complete(context.Background(), "d2.de")
-	if err != nil || len(candidates) != 1 || candidates[0].Value != "d2.demo" || candidates[0].Detail != "member" {
+	candidates, err := evaluator.Complete(context.Background(), "d2legacy.de")
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "d2legacy.demo" || candidates[0].Detail != "member" {
 		t.Fatalf("completion = %#v, %v", candidates, err)
 	}
-	candidates, err = evaluator.Complete(context.Background(), "d2.demo.gr")
-	if err != nil || len(candidates) != 1 || candidates[0].Value != "d2.demo.greet" || candidates[0].Detail != "Greet a named adventurer." {
+	candidates, err = evaluator.Complete(context.Background(), "d2legacy.demo.gr")
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "d2legacy.demo.greet" || candidates[0].Detail != "Greet a named adventurer." {
 		t.Fatalf("command completion = %#v, %v", candidates, err)
 	}
 }

@@ -139,4 +139,4 @@ confidence upgrade
 which research document/section changed
 ```
 
-When feasible, retain synthetic/normalized vectors in the repository and keep proprietary captures outside Git. For broad algorithm work, reserve at least one blind holdout case before implementation, following the verification discipline documented by libd2.
+When feasible, retain synthetic/normalized vectors in the repository and keep proprietary captures outside Git. For broad algorithm work, reserve at least one blind holdout case before implementation, following the verification discipline documented by libd2legacy.

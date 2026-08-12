@@ -19,9 +19,9 @@ const (
 	MovementSystemID  = "missile.straight_movement"
 	CollisionSystemID = "missile.single_hit_collision"
 
-	Component      = "d2.missile.instance"
-	SpawnReceipt   = "d2.missile.spawn_receipt"
-	EventComponent = "d2.missile.event"
+	Component      = "d2legacy.missile.instance"
+	SpawnReceipt   = "d2legacy.missile.spawn_receipt"
+	EventComponent = "d2legacy.missile.event"
 	EventSpawned   = "missile_spawned"
 	EventHit       = "missile_hit"
 	EventExpired   = "missile_expired"
@@ -100,11 +100,11 @@ func registerStores(engine *gameecs.Engine) (stores, error) {
 		{Name: SpawnReceipt, Version: 1, Fields: []akara.Field{{Name: "processed", Kind: akara.FieldBool}}},
 		{Name: Component, Version: 3, Fields: []akara.Field{{Name: "owner_id", Kind: akara.FieldString}, {Name: "owner_entity", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "skill_level", Kind: akara.FieldInt64}, {Name: "created_tick", Kind: akara.FieldInt64}, {Name: "expires_tick", Kind: akara.FieldInt64}, {Name: "velocity_x", Kind: akara.FieldFloat64}, {Name: "velocity_y", Kind: akara.FieldFloat64}, {Name: "previous_x", Kind: akara.FieldFloat64}, {Name: "previous_y", Kind: akara.FieldFloat64}, {Name: "traveled", Kind: akara.FieldFloat64}, {Name: "max_range", Kind: akara.FieldFloat64}, {Name: "collision_policy", Kind: akara.FieldString}, {Name: "collision_radius", Kind: akara.FieldFloat64}, {Name: "damage_channel", Kind: akara.FieldString}, {Name: "damage", Kind: akara.FieldInt64}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "hit_target_id", Kind: akara.FieldString}, {Name: "announced", Kind: akara.FieldBool}, {Name: "missile_id", Kind: akara.FieldString}, {Name: "dcc", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "travel_sound", Kind: akara.FieldString}, {Name: "hit_sound", Kind: akara.FieldString}, {Name: "directions", Kind: akara.FieldInt64}, {Name: "frames_per_second", Kind: akara.FieldInt64}, {Name: "loop", Kind: akara.FieldBool}, {Name: "offset_x", Kind: akara.FieldFloat64}, {Name: "offset_y", Kind: akara.FieldFloat64}, {Name: "offset_z", Kind: akara.FieldFloat64}}},
 		{Name: EventComponent, Version: 3, Fields: []akara.Field{{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "missile", Kind: akara.FieldEntity}, {Name: "owner_id", Kind: akara.FieldString}, {Name: "target_id", Kind: akara.FieldString}, {Name: "damage_channel", Kind: akara.FieldString}, {Name: "damage", Kind: akara.FieldInt64}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "sound", Kind: akara.FieldString}}},
-		{Name: "d2.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "d2.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
-		{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
+		{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
 		targeting.Schema(),
-		{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))
 	for index, schema := range schemas {
@@ -319,10 +319,10 @@ func firstContact(engine *gameecs.Engine, missileEntity akara.Entity, missile *a
 }
 
 func hasHealth(engine *gameecs.Engine, entity akara.Entity) bool {
-	if monsters, found := akara.GetDynamicStore(engine.World(), "d2.monster.stats"); found && monsters.Has(entity) {
+	if monsters, found := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats"); found && monsters.Has(entity) {
 		return true
 	}
-	if players, found := akara.GetDynamicStore(engine.World(), "d2.player.vitals"); found && players.Has(entity) {
+	if players, found := akara.GetDynamicStore(engine.World(), "d2legacy.player.vitals"); found && players.Has(entity) {
 		return true
 	}
 	return false

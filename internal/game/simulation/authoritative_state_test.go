@@ -30,7 +30,7 @@ func TestAuthoritativeStateStoreSnapshotsRestoresAndRejectsSchemaDrift(t *testin
 }
 
 func TestRuntimeIdentityRejectsDifferentAuthoritativeCode(t *testing.T) {
-	identity := RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package-a", AuthoritativeHash: "rules-a", ConfigurationHash: "config-a", Dependencies: map[string]string{"base": "one"}, CapabilityVersions: map[string]string{"d2.ecs": "v1"}}
+	identity := RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package-a", AuthoritativeHash: "rules-a", ConfigurationHash: "config-a", Dependencies: map[string]string{"base": "one"}, CapabilityVersions: map[string]string{"d2legacy.ecs": "v1"}}
 	participant, err := NewIdentityParticipant(identity)
 	if err != nil {
 		t.Fatal(err)

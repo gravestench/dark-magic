@@ -1,6 +1,6 @@
 # Bundled d2legacy mod: start here
 
-The embedded `d2legacy` mod is Dark Magic's first-party Diablo II gameplay and presentation package **and living documentation for mod authors**. Its concise runtime namespace is `d2.*`; the canonical package identity is `d2legacy`. If you are new to programming, that is intentional: you should be able to read this mod from the top, follow the comments, change something small, and gradually understand how a game is put together.
+The embedded `d2legacy` mod is Dark Magic's first-party Diablo II gameplay and presentation package **and living documentation for mod authors**. Its concise runtime namespace is `d2legacy.*`; the canonical package identity is `d2legacy`. If you are new to programming, that is intentional: you should be able to read this mod from the top, follow the comments, change something small, and gradually understand how a game is put together.
 
 You do **not** need to understand all of Lua before starting. Read the comments first. Treat unfamiliar syntax like punctuation in a comic book: keep following the story, then come back to the punctuation later.
 
@@ -37,7 +37,7 @@ deterministic ECS and registered state/resources
 
 The `require("engine.something/v1")` calls are the modding API. The `/v1` matters: it is an explicit version boundary. A mod should not reach into Go packages or renderer internals.
 
-Ordinary modules such as `require("d2.ui.button")` are Lua code from the bundled mod. You can read them, copy their patterns, or replace them in another mod.
+Ordinary modules such as `require("d2legacy.ui.button")` are Lua code from the bundled mod. You can read them, copy their patterns, or replace them in another mod.
 
 ## Recommended reading order
 
@@ -142,11 +142,11 @@ self.picture:set_position(x, y)
 
 The node is a checked handle. The engine owns the native renderer object behind it.
 
-Many APIs use **center positions**, while old Diablo II data often describes top-left positions or common animation anchors. Helpers such as `d2.ui.dc6` exist so that conversion is explained and shared instead of repeated as mystery arithmetic.
+Many APIs use **center positions**, while old Diablo II data often describes top-left positions or common animation anchors. Helpers such as `d2legacy.ui.dc6` exist so that conversion is explained and shared instead of repeated as mystery arithmetic.
 
 ## Controls versus visuals
 
-`d2.ui.controls` owns interaction rules such as:
+`d2legacy.ui.controls` owns interaction rules such as:
 
 - focus;
 - hit testing;
@@ -211,7 +211,7 @@ Authoritative `d2legacy` Lua owns Diablo gameplay policy. Go capabilities own
 decoding, native rendering/audio resources, deterministic simulation
 mechanisms, persistence primitives, and capability/resource enforcement.
 
-`d2.ui.compat` is a special compatibility catalog: it stores recovered Diablo II presentation facts that have been researched/corroborated. Keeping those facts separate from the widget implementation makes it easier to tell "this is observed D2 behavior" from "this is how Dark Magic chose to implement it."
+`d2legacy.ui.compat` is a special compatibility catalog: it stores recovered Diablo II presentation facts that have been researched/corroborated. Keeping those facts separate from the widget implementation makes it easier to tell "this is observed D2 behavior" from "this is how Dark Magic chose to implement it."
 
 ## Headless-friendly code
 

@@ -25,23 +25,23 @@ func (scriptedPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point,
 
 func TestMovementCommandOnlyMutatesOwnedPlayerEntity(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	velocities, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.velocity", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	velocities, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.velocity", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	modes, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.movement_mode", Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}})
+	modes, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	animations, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.animation", Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
+	animations, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.animation", Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestMovementDirectionMatchesLegacyEightWayEncoding(t *testing.T) {
 
 func TestMovementSourceHonorsGameplayInputRouting(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestMovementSourceHonorsGameplayInputRouting(t *testing.T) {
 
 func TestMovementSourceAdmitsQueuedAndKeyboardRunIntent(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestMovementSourceAdmitsQueuedAndKeyboardRunIntent(t *testing.T) {
 
 func TestMovementSourceEmitsPointerWorldTarget(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,11 +288,11 @@ func TestSkillIntentStopsAnOlderPointerRoute(t *testing.T) {
 
 func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		t.Fatal(err)
 	}

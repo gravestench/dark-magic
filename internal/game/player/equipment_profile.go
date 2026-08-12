@@ -52,7 +52,7 @@ func RegisterEquipmentProfile(engine *gameecs.Engine, source EquipmentSource) er
 }
 
 func equipmentStores(engine *gameecs.Engine) (*akara.DynamicStore, *akara.DynamicStore, *akara.DynamicStore, error) {
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -60,7 +60,7 @@ func equipmentStores(engine *gameecs.Engine) (*akara.DynamicStore, *akara.Dynami
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	appearances, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}})
+	appearances, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}})
 	return controls, profiles, appearances, err
 }
 

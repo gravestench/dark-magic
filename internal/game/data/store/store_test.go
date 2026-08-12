@@ -65,7 +65,7 @@ func TestStorePreservesUnnamedShippedColumns(t *testing.T) {
 func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
 	t.Parallel()
 
-	source, err := content.New(content.Layer{Name: "patch_d2.mpq", FS: fstest.MapFS{
+	source, err := content.New(content.Layer{Name: "patch_d2legacy.mpq", FS: fstest.MapFS{
 		"data/global/excel/armor.txt": &fstest.MapFile{Data: []byte("code\ncap\n")},
 	}})
 	if err != nil {
@@ -80,7 +80,7 @@ func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
 		}
 	}
 	logged := output.String()
-	for _, expected := range []string{`"msg":"loaded records"`, `"table":"data/global/excel/armor.txt"`, `"records":1`, `"source":"patch_d2.mpq"`, `"source_path":"data/global/excel/armor.txt"`} {
+	for _, expected := range []string{`"msg":"loaded records"`, `"table":"data/global/excel/armor.txt"`, `"records":1`, `"source":"patch_d2legacy.mpq"`, `"source_path":"data/global/excel/armor.txt"`} {
 		if !strings.Contains(logged, expected) {
 			t.Errorf("load log %q does not contain %q", logged, expected)
 		}

@@ -33,7 +33,7 @@ func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 
 	scripts := fstest.MapFS{
 		"cursor.lua": &fstest.MapFile{Data: []byte(`
-local cursor = require("d2.ui.cursor")
+local cursor = require("d2legacy.ui.cursor")
 local definition = {
     palette = "units",
     direction = 0,

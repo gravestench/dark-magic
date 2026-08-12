@@ -1,5 +1,5 @@
 {
-  "schema": "d2.presentation/v1",
+  "schema": "d2legacy.presentation/v1",
   "version": 1,
   "game_version": "diablo-ii-lod",
   "language": "neutral",
@@ -247,8 +247,8 @@
       "background": "data/global/ui/FrontEnd/gameselectscreenEXP.dc6",
       "palette": "sky",
       "labels": {
-        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "style": "frontend_version", "key": "d2.frontend.version" },
-        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "style": "frontend_legal", "key": "d2.frontend.legal" }
+        "version": { "x": 8, "y": 582, "width": 240, "align": "left", "style": "frontend_version", "key": "d2legacy.frontend.version" },
+        "legal": { "x": 400, "y": 582, "width": 760, "align": "center", "style": "frontend_legal", "key": "d2legacy.frontend.legal" }
       },
       "controls": {
         "single_player": {
@@ -256,7 +256,7 @@
           "y": 290,
           "width": 272,
           "height": 35,
-          "label": "d2.menu.single_player",
+          "label": "d2legacy.menu.single_player",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6",
           "palette": "units",
           "up_frames": [0, 1], "text_offset": 1,
@@ -264,25 +264,25 @@
         },
         "multiplayer": {
           "x": 264, "y": 330, "width": 272, "height": 35,
-          "label": "d2.menu.multiplayer", "target": "tcpip",
+          "label": "d2legacy.menu.multiplayer", "target": "tcpip",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
           "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
         },
         "credits": {
           "x": 264, "y": 505, "width": 135, "height": 35,
-          "label": "d2.menu.credits", "target": "credits",
+          "label": "d2legacy.menu.credits", "target": "credits",
           "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
           "up_frames": [0], "down_frames": [1]
         },
         "cinematics": {
           "x": 401, "y": 505, "width": 135, "height": 35,
-          "label": "d2.menu.cinematics", "target": "cinematics",
+          "label": "d2legacy.menu.cinematics", "target": "cinematics",
           "sheet": "data/global/ui/FrontEnd/MediumButtonBlank.dc6", "palette": "units",
           "up_frames": [0], "down_frames": [1]
         },
         "exit": {
           "x": 264, "y": 535, "width": 272, "height": 35,
-          "label": "d2.menu.exit", "action": "exit",
+          "label": "d2legacy.menu.exit", "action": "exit",
           "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units",
           "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1
         }
@@ -302,8 +302,8 @@
     "tcpip": {
       "background": "data/global/ui/FrontEnd/TCPIPscreen.dc6", "palette": "sky",
       "controls": {
-        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "d2.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 },
-        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "d2.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 }
+        "host": { "x": 264, "y": 200, "width": 272, "height": 35, "label": "d2legacy.tcpip.host", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 },
+        "join": { "x": 264, "y": 240, "width": 272, "height": 35, "label": "d2legacy.tcpip.join", "sheet": "data/global/ui/FrontEnd/WideButtonBlank.dc6", "palette": "units", "up_frames": [0, 1], "down_frames": [2, 3], "text_offset": 1 }
       },
       "dialog": {
         "x": 270, "y": 175, "width": 260, "height": 180,
@@ -324,7 +324,7 @@
         "frames_per_second": 15
       },
       "labels": {
-        "heading": {"x":400,"y":35,"width":760,"style":"character_create_heading","key":"d2.character_create.heading"},
+        "heading": {"x":400,"y":35,"width":760,"style":"character_create_heading","key":"d2legacy.character_create.heading"},
         "class": {"x":400,"y":78,"width":760,"style":"character_create_class"},
         "description": {"x":400,"y":118,"width":600,"style":"character_create_description"}
       },
@@ -343,11 +343,11 @@
         "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
       },
       "options": {
-        "expansion": {"x":285,"y":530,"width":230,"height":22,"label":"d2.character.expansion","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"},
-        "hardcore": {"x":285,"y":555,"width":230,"height":22,"label":"d2.character.hardcore","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"}
+        "expansion": {"x":285,"y":530,"width":230,"height":22,"label":"d2legacy.character.expansion","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"},
+        "hardcore": {"x":285,"y":555,"width":230,"height":22,"label":"d2legacy.character.hardcore","sheet":"data/global/ui/FrontEnd/clickbox.dc6","palette":"fechar"}
       },
       "controls": {
-        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2.character_create.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frames":[0],"down_frames":[1]}
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2legacy.character_create.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frames":[0],"down_frames":[1]}
       },
       "classes": [
         {"class":"Amazon", "palette":"units", "anchor":{"x":96,"y":520}, "hit":{"x":35,"y":190,"width":125,"height":330}, "select_sound":"data/global/SFX/cursor/intro/amazon select.wav", "deselect_sound":"data/global/SFX/cursor/intro/amazon deselect.wav", "unselected":"data/global/ui/FrontEnd/amazon/AMNU1.DC6", "hover":"data/global/ui/FrontEnd/amazon/AMNU2.DC6", "selected":"data/global/ui/FrontEnd/amazon/AMNU3.DC6", "forward":"data/global/ui/FrontEnd/amazon/AMFW.DC6", "forward_overlay":"data/global/ui/FrontEnd/amazon/AMFWs.DC6", "forward_frames":54, "back":"data/global/ui/FrontEnd/amazon/AMBW.DC6", "back_frames":30},
@@ -378,10 +378,10 @@
       "scrollbar": {"x":586,"y":87,"width":20,"height":369,"sheet":"data/global/ui/PANEL/scrollbar.dc6","palette":"sky","up_frame":0,"down_frame":1,"thumb_frame":4},
       "double_activation_seconds": 1.25,
       "controls": {
-        "new": {"x":33,"y":468,"width":160,"height":65,"label":"d2.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
-        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"d2.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
-        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2.character_select.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
-        "ok": {"x":625,"y":537,"width":135,"height":35,"label":"d2.character_select.ok","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1}
+        "new": {"x":33,"y":468,"width":160,"height":65,"label":"d2legacy.character_select.new","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
+        "delete": {"x":433,"y":468,"width":160,"height":65,"label":"d2legacy.character_select.delete","sheet":"data/global/ui/CharSelect/TallButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1,"text_offset":5},
+        "exit": {"x":33,"y":537,"width":135,"height":35,"label":"d2legacy.character_select.exit","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1},
+        "ok": {"x":625,"y":537,"width":135,"height":35,"label":"d2legacy.character_select.ok","sheet":"data/global/ui/FrontEnd/MediumButtonBlank.dc6","palette":"units","up_frame":0,"down_frame":1}
       },
       "delete_dialog": {
         "x":270,"y":175,"width":260,"height":180,
@@ -396,13 +396,13 @@
       "x": 240,
       "y": 90,
       "entries": [
-        { "id": "act1", "label": "d2.cinematics.act1", "path": "data/local/Video/ENG/d2intro640x292.bik" },
-        { "id": "act2", "label": "d2.cinematics.act2", "path": "data/local/Video/ENG/Act02start640x292.bik" },
-        { "id": "act3", "label": "d2.cinematics.act3", "path": "data/local/Video/ENG/Act03start640x292.bik" },
-        { "id": "act4", "label": "d2.cinematics.act4", "path": "data/local/Video/ENG/Act04start640x292.bik" },
-        { "id": "terror_end", "label": "d2.cinematics.terror_end", "path": "data/local/Video/ENG/Act04end640x292.bik" },
-        { "id": "act5", "label": "d2.cinematics.act5", "path": "data/local/Video/ENG/D2x_Intro_640x292.bik" },
-        { "id": "destruction_end", "label": "d2.cinematics.destruction_end", "path": "data/local/Video/ENG/D2x_Out_640x292.bik" }
+        { "id": "act1", "label": "d2legacy.cinematics.act1", "path": "data/local/Video/ENG/d2intro640x292.bik" },
+        { "id": "act2", "label": "d2legacy.cinematics.act2", "path": "data/local/Video/ENG/Act02start640x292.bik" },
+        { "id": "act3", "label": "d2legacy.cinematics.act3", "path": "data/local/Video/ENG/Act03start640x292.bik" },
+        { "id": "act4", "label": "d2legacy.cinematics.act4", "path": "data/local/Video/ENG/Act04start640x292.bik" },
+        { "id": "terror_end", "label": "d2legacy.cinematics.terror_end", "path": "data/local/Video/ENG/Act04end640x292.bik" },
+        { "id": "act5", "label": "d2legacy.cinematics.act5", "path": "data/local/Video/ENG/D2x_Intro_640x292.bik" },
+        { "id": "destruction_end", "label": "d2legacy.cinematics.destruction_end", "path": "data/local/Video/ENG/D2x_Out_640x292.bik" }
       ],
       "list": { "x": 235, "y": 145, "width": 330, "row_height": 42 }
     },
@@ -456,13 +456,13 @@
           "sheet":"data/global/ui/PANEL/minipanel_s.dc6","x":325,"y":525,
           "button_sheet":"data/global/ui/PANEL/minipanelbtn.dc6","button_x":328,"button_y":528,"button_step":21,"button_width":20,"button_height":20,
           "buttons":[
-            {"id":"character","label":"d2.minipanel.character","frame":0,"scene":"character","slot":"left","enabled":true},
-            {"id":"inventory","label":"d2.minipanel.inventory","frame":2,"scene":"inventory","slot":"right","enabled":true},
-            {"id":"skills","label":"d2.minipanel.skills","frame":4,"scene":"skills","slot":"right","enabled":true},
-            {"id":"automap","label":"d2.minipanel.automap","frame":8,"scene":"automap","slot":"full","enabled":true},
-            {"id":"messages","label":"d2.minipanel.messages","frame":10,"scene":"messages","slot":"full","enabled":true},
-            {"id":"quests","label":"d2.minipanel.quests","frame":12,"scene":"quests","slot":"left","enabled":true},
-            {"id":"options","label":"d2.minipanel.options","frame":14,"scene":"options","slot":"full","enabled":true}
+            {"id":"character","label":"d2legacy.minipanel.character","frame":0,"scene":"character","slot":"left","enabled":true},
+            {"id":"inventory","label":"d2legacy.minipanel.inventory","frame":2,"scene":"inventory","slot":"right","enabled":true},
+            {"id":"skills","label":"d2legacy.minipanel.skills","frame":4,"scene":"skills","slot":"right","enabled":true},
+            {"id":"automap","label":"d2legacy.minipanel.automap","frame":8,"scene":"automap","slot":"full","enabled":true},
+            {"id":"messages","label":"d2legacy.minipanel.messages","frame":10,"scene":"messages","slot":"full","enabled":true},
+            {"id":"quests","label":"d2legacy.minipanel.quests","frame":12,"scene":"quests","slot":"left","enabled":true},
+            {"id":"options","label":"d2legacy.minipanel.options","frame":14,"scene":"options","slot":"full","enabled":true}
           ]
         }
       }
@@ -471,23 +471,23 @@
       "records": "data/global/excel/Inventory.txt",
       "record_suffix": "2",
       "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","origin_x_correction":1,"origin_y_correction":64,"frames":[4,5,7,6]},
-      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":419,"y":449,"width":32,"height":32,"label":"d2.inventory.close"},
+      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":419,"y":449,"width":32,"height":32,"label":"d2legacy.inventory.close"},
       "slots": [
-        {"id":"head","prefix":"head","body_loc":"head","label":"d2.inventory.slot.head"},
-        {"id":"neck","prefix":"neck","body_loc":"neck","label":"d2.inventory.slot.neck"},
-        {"id":"torso","prefix":"torso","body_loc":"tors","label":"d2.inventory.slot.torso"},
-        {"id":"right_arm","prefix":"rArm","body_loc":"rarm","label":"d2.inventory.slot.right_arm"},
-        {"id":"left_arm","prefix":"lArm","body_loc":"larm","label":"d2.inventory.slot.left_arm"},
-        {"id":"right_hand","prefix":"rHand","body_loc":"rrin","label":"d2.inventory.slot.right_hand"},
-        {"id":"left_hand","prefix":"lHand","body_loc":"lrin","label":"d2.inventory.slot.left_hand"},
-        {"id":"belt","prefix":"belt","body_loc":"belt","label":"d2.inventory.slot.belt"},
-        {"id":"feet","prefix":"feet","body_loc":"feet","label":"d2.inventory.slot.feet"},
-        {"id":"gloves","prefix":"gloves","body_loc":"glov","label":"d2.inventory.slot.gloves"}
+        {"id":"head","prefix":"head","body_loc":"head","label":"d2legacy.inventory.slot.head"},
+        {"id":"neck","prefix":"neck","body_loc":"neck","label":"d2legacy.inventory.slot.neck"},
+        {"id":"torso","prefix":"torso","body_loc":"tors","label":"d2legacy.inventory.slot.torso"},
+        {"id":"right_arm","prefix":"rArm","body_loc":"rarm","label":"d2legacy.inventory.slot.right_arm"},
+        {"id":"left_arm","prefix":"lArm","body_loc":"larm","label":"d2legacy.inventory.slot.left_arm"},
+        {"id":"right_hand","prefix":"rHand","body_loc":"rrin","label":"d2legacy.inventory.slot.right_hand"},
+        {"id":"left_hand","prefix":"lHand","body_loc":"lrin","label":"d2legacy.inventory.slot.left_hand"},
+        {"id":"belt","prefix":"belt","body_loc":"belt","label":"d2legacy.inventory.slot.belt"},
+        {"id":"feet","prefix":"feet","body_loc":"feet","label":"d2legacy.inventory.slot.feet"},
+        {"id":"gloves","prefix":"gloves","body_loc":"glov","label":"d2legacy.inventory.slot.gloves"}
       ]
     },
     "character": {
       "panel": {"sheet":"data/global/ui/PANEL/invchar6.DC6","palette":"sky","x":80,"y":64,"frames":[0,1,3,2]},
-      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":208,"y":453,"width":32,"height":32,"label":"d2.character_panel.close"},
+      "close": {"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":208,"y":453,"width":32,"height":32,"label":"d2legacy.character_panel.close"},
       "heading_style":"panel_heading",
       "label_style":"panel_label",
       "value_style":"panel_value",
@@ -496,17 +496,17 @@
         {"field":"class","x":330,"y":74}
       ],
       "values":[
-        {"field":"level","label":"d2.character_panel.level","label_x":110,"label_y":100,"x":112,"y":110},
-        {"field":"experience","label":"d2.character_panel.experience","label_x":200,"label_y":100,"x":200,"y":110},
-        {"field":"next_level_experience","label":"d2.character_panel.next_level","label_x":330,"label_y":100,"x":330,"y":110},
-        {"field":"strength","label":"d2.character_panel.strength","label_x":100,"label_y":150,"x":175,"y":147},
-        {"field":"dexterity","label":"d2.character_panel.dexterity","label_x":100,"label_y":213,"x":175,"y":207},
-        {"field":"vitality","label":"d2.character_panel.vitality","label_x":95,"label_y":300,"x":175,"y":295},
-        {"field":"energy","label":"d2.character_panel.energy","label_x":100,"label_y":360,"x":175,"y":355},
-        {"field":"defense","label":"d2.character_panel.defense","label_x":280,"label_y":260,"x":350,"y":260},
-        {"field":"stamina_pair","label":"d2.character_panel.stamina","label_x":280,"label_y":300,"x":350,"y":295},
-        {"field":"health_pair","label":"d2.character_panel.life","label_x":280,"label_y":322,"x":350,"y":320},
-        {"field":"mana_pair","label":"d2.character_panel.mana","label_x":280,"label_y":360,"x":350,"y":355}
+        {"field":"level","label":"d2legacy.character_panel.level","label_x":110,"label_y":100,"x":112,"y":110},
+        {"field":"experience","label":"d2legacy.character_panel.experience","label_x":200,"label_y":100,"x":200,"y":110},
+        {"field":"next_level_experience","label":"d2legacy.character_panel.next_level","label_x":330,"label_y":100,"x":330,"y":110},
+        {"field":"strength","label":"d2legacy.character_panel.strength","label_x":100,"label_y":150,"x":175,"y":147},
+        {"field":"dexterity","label":"d2legacy.character_panel.dexterity","label_x":100,"label_y":213,"x":175,"y":207},
+        {"field":"vitality","label":"d2legacy.character_panel.vitality","label_x":95,"label_y":300,"x":175,"y":295},
+        {"field":"energy","label":"d2legacy.character_panel.energy","label_x":100,"label_y":360,"x":175,"y":355},
+        {"field":"defense","label":"d2legacy.character_panel.defense","label_x":280,"label_y":260,"x":350,"y":260},
+        {"field":"stamina_pair","label":"d2legacy.character_panel.stamina","label_x":280,"label_y":300,"x":350,"y":295},
+        {"field":"health_pair","label":"d2legacy.character_panel.life","label_x":280,"label_y":322,"x":350,"y":320},
+        {"field":"mana_pair","label":"d2legacy.character_panel.mana","label_x":280,"label_y":360,"x":350,"y":355}
       ]
     },
     "skills": {"x":400,"y":64,"unavailable_bottom":70,"close_inset":48},
@@ -516,34 +516,34 @@
       "white_bullet":"data/global/ui/MENU/helpwhitebullet.DC6",
       "heading":{"x":363,"y":2,"width":260},
       "content":{"scale_x":1,"hud_offset_y":0,"text_width":600},
-      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":685,"y":25,"width":32,"height":32,"label":"d2.help.close"}
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":685,"y":25,"width":32,"height":32,"label":"d2legacy.help.close"}
     },
     "quests": {
       "panel":{"sheet":"data/global/ui/MENU/questbackground.dc6","palette":"sky","x":80,"y":64,"frames":[0,1,2,3]},
       "tabs":{"sheet":"data/global/ui/MENU/expquesttabs.dc6","palette":"sky","x":86,"y":66,"step":61},
       "sockets":{"sheet":"data/global/ui/MENU/questsockets.dc6","palette":"sky","positions":[{"x":100,"y":95},{"x":200,"y":95},{"x":300,"y":95},{"x":100,"y":190},{"x":200,"y":190},{"x":300,"y":190}]},
-      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":455,"width":32,"height":32,"label":"d2.quests.close"},
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":455,"width":32,"height":32,"label":"d2legacy.quests.close"},
       "unavailable":{"x":240,"y":317,"width":280}
     },
     "party": {
       "panel":{"sheet":"data/global/ui/MENU/party.dc6","palette":"sky","x":80,"y":64,"frames":[0,1,2,3]},
-      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":453,"width":32,"height":32,"label":"d2.party.close"},
+      "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":453,"width":32,"height":32,"label":"d2legacy.party.close"},
       "heading":{"x":180,"y":80,"width":180},
       "unavailable":{"x":240,"y":145,"width":280}
     },
     "stash": {
       "sheet":"data/global/ui/PANEL/TradeStash.DC6","palette":"sky","x":80,"y":64,
-      "close":{"x":272,"bottom_inset":15,"label":"d2.stash.close"},
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.stash.close"},
       "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Big Bank Page 1","container":"stash"}
     },
     "cube": {
       "sheet":"data/global/ui/PANEL/supertransmogrifier.dc6","palette":"sky","x":80,"y":64,
-      "close":{"x":275,"bottom_inset":15,"label":"d2.cube.close"},
+      "close":{"x":275,"bottom_inset":15,"label":"d2legacy.cube.close"},
       "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Transmogrify Box Page 1","container":"cube"}
     },
     "hireling": {
       "sheet":"data/global/ui/PANEL/NpcInv.dc6","palette":"sky","x":80,"y":64,
-      "close":{"x":272,"bottom_inset":15,"label":"d2.hireling.close"},
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.hireling.close"},
       "item_slots":{
         "records":"data/global/excel/Inventory.txt","record_class":"Hireling","container":"hireling",
         "slots":[
@@ -556,14 +556,14 @@
     },
     "vendor": {
       "sheet":"data/global/ui/PANEL/buysell.dc6","palette":"sky","x":80,"y":64,
-      "close":{"x":272,"bottom_inset":15,"label":"d2.vendor.close"},
-      "tabs":{"sheet":"data/global/ui/PANEL/buyselltabs.DC6","labels":["d2.vendor.armor","d2.vendor.weapons","d2.vendor.weapons","d2.vendor.misc"],"categories":["armo","weap","weap","misc"]},
+      "close":{"x":272,"bottom_inset":15,"label":"d2legacy.vendor.close"},
+      "tabs":{"sheet":"data/global/ui/PANEL/buyselltabs.DC6","labels":["d2legacy.vendor.armor","d2legacy.vendor.weapons","d2legacy.vendor.weapons","d2legacy.vendor.misc"],"categories":["armo","weap","weap","misc"]},
       "item_grid":{"records":"data/global/excel/Inventory.txt","record_class":"Monster","container":"vendor"}
     },
     "waypoint": {
       "sheet":"data/global/ui/MENU/waygatebackground.dc6","palette":"sky","x":80,"y":64,
-      "close":{"x":272,"bottom_inset":14,"label":"d2.waypoint.close"},
-      "labels":[{"key":"d2.waypoint.unavailable","x":160,"y":385,"width":250}]
+      "close":{"x":272,"bottom_inset":14,"label":"d2legacy.waypoint.close"},
+      "labels":[{"key":"d2legacy.waypoint.unavailable","x":160,"y":385,"width":250}]
     },
     "automap": {
       "x":400,"y":300,"width":700,"height":500,

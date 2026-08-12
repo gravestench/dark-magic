@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestShimArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
+func TestD2LegacyArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
 	var first, second bytes.Buffer
 	if err := WriteD2LegacyArchive(&first); err != nil {
 		t.Fatal(err)
@@ -16,7 +16,7 @@ func TestShimArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(first.Bytes(), second.Bytes()) {
-		t.Fatal("shim archive is not deterministic")
+		t.Fatal("d2legacy archive is not deterministic")
 	}
 	archive, err := zip.NewReader(bytes.NewReader(first.Bytes()), int64(first.Len()))
 	if err != nil {
@@ -45,6 +45,6 @@ func TestShimArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	if seen == 0 {
-		t.Fatal("shim archive is empty")
+		t.Fatal("d2legacy archive is empty")
 	}
 }

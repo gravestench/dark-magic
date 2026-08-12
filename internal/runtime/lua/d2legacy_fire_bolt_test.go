@@ -79,50 +79,50 @@ func TestD2LegacyFireBoltCastRunsHeadlesslyThroughLua(t *testing.T) {
 	defer scope.Close()
 	script := `
 local ecs = require("engine.ecs/v1")
-ecs.component({name="d2.player.identity",fields={
+ecs.component({name="d2legacy.player.identity",fields={
     {name="character_id",type="string"},{name="player",type="string"},
     {name="name",type="string"},{name="class",type="string"},
 }})
-ecs.component({name="d2.player.vitals",fields={
+ecs.component({name="d2legacy.player.vitals",fields={
     {name="health",type="i64"},{name="max_health",type="i64"},
     {name="mana",type="i64"},{name="max_mana",type="i64"},
     {name="mana_raw",type="i64"},{name="max_mana_raw",type="i64"},
 }})
-ecs.component({name="d2.player.learned_skill",fields={
+ecs.component({name="d2legacy.player.learned_skill",fields={
     {name="owner",type="entity"},{name="skill_id",type="i64"},
     {name="level",type="i64"},{name="list_row",type="i64"},
     {name="left_allowed",type="bool"},{name="right_allowed",type="bool"},
 }})
-ecs.component({name="d2.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
-ecs.component({name="d2.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
-ecs.component({name="d2.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})
-ecs.component({name="d2.world.collider",fields={{name="radius",type="f64"}}})
-ecs.component({name="d2.world.selectable",fields={
+ecs.component({name="d2legacy.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
+ecs.component({name="d2legacy.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
+ecs.component({name="d2legacy.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})
+ecs.component({name="d2legacy.world.collider",fields={{name="radius",type="f64"}}})
+ecs.component({name="d2legacy.world.selectable",fields={
     {name="id",type="string"},{name="kind",type="string"},{name="label",type="string"},
     {name="owner",type="string"},{name="radius",type="f64"},{name="priority",type="i64"},
 }})
-ecs.component({name="d2.monster.stats",fields={
+ecs.component({name="d2legacy.monster.stats",fields={
     {name="level",type="i64"},{name="health",type="i64"},{name="max_health",type="i64"},
     {name="defense",type="i64"},{name="attack_rating",type="i64"},
     {name="physical_min",type="i64"},{name="physical_max",type="i64"},{name="experience",type="i64"},
 }})
 player = ecs.create({
-    ["d2.player.identity"]={character_id="hero",player="alice",name="Hero",class="Sorceress"},
-    ["d2.player.vitals"]={health=50,max_health=50,mana=10,max_mana=10,mana_raw=2560,max_mana_raw=2560},
-    ["d2.player.skill_assignment"]={left=36,right=36},
-    ["d2.world.position"]={x=0,y=0}, ["d2.world.location"]={act=1,level_id=1},
-    ["d2.world.collider"]={radius=0.5},
-    ["d2.world.selectable"]={id="player:alice",kind="player",label="Hero",owner="alice",radius=0.5,priority=1},
+    ["d2legacy.player.identity"]={character_id="hero",player="alice",name="Hero",class="Sorceress"},
+    ["d2legacy.player.vitals"]={health=50,max_health=50,mana=10,max_mana=10,mana_raw=2560,max_mana_raw=2560},
+    ["d2legacy.player.skill_assignment"]={left=36,right=36},
+    ["d2legacy.world.position"]={x=0,y=0}, ["d2legacy.world.location"]={act=1,level_id=1},
+    ["d2legacy.world.collider"]={radius=0.5},
+    ["d2legacy.world.selectable"]={id="player:alice",kind="player",label="Hero",owner="alice",radius=0.5,priority=1},
 })
-ecs.create({["d2.player.learned_skill"]={owner=player,skill_id=36,level=1,list_row=0,left_allowed=true,right_allowed=true}})
+ecs.create({["d2legacy.player.learned_skill"]={owner=player,skill_id=36,level=1,list_row=0,left_allowed=true,right_allowed=true}})
 monster = ecs.create({
-    ["d2.monster.stats"]={level=1,health=4096,max_health=4096,defense=0,attack_rating=0,physical_min=0,physical_max=0,experience=0},
-    ["d2.world.position"]={x=4,y=0}, ["d2.world.location"]={act=1,level_id=1},
-    ["d2.world.collider"]={radius=0.5},
-    ["d2.world.selectable"]={id="monster:fallen",kind="hostile",label="Fallen",owner="",radius=0.5,priority=1},
+    ["d2legacy.monster.stats"]={level=1,health=4096,max_health=4096,defense=0,attack_rating=0,physical_min=0,physical_max=0,experience=0},
+    ["d2legacy.world.position"]={x=4,y=0}, ["d2legacy.world.location"]={act=1,level_id=1},
+    ["d2legacy.world.collider"]={radius=0.5},
+    ["d2legacy.world.selectable"]={id="monster:fallen",kind="hostile",label="Fallen",owner="",radius=0.5,priority=1},
 })
-require("d2legacy.bootstrap.authoritative").start()
-ecs.set(player,"d2.combat.melee_profile",{range=5,physical_min=256,physical_max=256})
+require("d2legacy.authoritative").start()
+ecs.set(player,"d2legacy.combat.melee_profile",{range=5,physical_min=256,physical_max=256})
 require("d2legacy.policy.melee").temporary_hit_chance=100
 `
 	if err := runtime.RunScoped(ctx, scope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
@@ -142,7 +142,7 @@ require("d2legacy.policy.melee").temporary_hit_chance=100
 		}
 	}
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
-		return state.DoString(`local ecs=require("engine.ecs/v1"); ecs.set(player,"d2.combat.basic_attack_request",{target_id="monster:fallen",request_tick=7})`)
+		return state.DoString(`local ecs=require("engine.ecs/v1"); ecs.set(player,"d2legacy.combat.basic_attack_request",{target_id="monster:fallen",request_tick=7})`)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -153,9 +153,9 @@ require("d2legacy.policy.melee").temporary_hit_chance=100
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
 		return state.DoString(`
 local ecs=require("engine.ecs/v1")
-local vitals=assert(ecs.get(player,"d2.player.vitals"))
+local vitals=assert(ecs.get(player,"d2legacy.player.vitals"))
 assert(vitals:get("mana_raw")==1920 and vitals:get("mana")==7)
-local monster_stats=assert(ecs.get(monster,"d2.monster.stats"))
+local monster_stats=assert(ecs.get(monster,"d2legacy.monster.stats"))
 assert(monster_stats:get("health") < 4096 and monster_stats:get("health") >= 2560)
 assert(#ecs.query({all={"d2legacy.missile.projectile"}})==0)
 local events=ecs.query({all={"d2legacy.combat.event"}})

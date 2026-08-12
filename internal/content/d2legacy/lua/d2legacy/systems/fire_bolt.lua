@@ -6,9 +6,9 @@ local geometry = require("d2legacy.policy.geometry")
 local M = {}
 
 local function selectable_id(entity)
-    local selectable = ecs.get(entity, "d2.world.selectable")
+    local selectable = ecs.get(entity, "d2legacy.world.selectable")
     if selectable then return selectable:get("id") end
-    local identity = ecs.get(entity, "d2.player.identity")
+    local identity = ecs.get(entity, "d2legacy.player.identity")
     if identity then return "player:" .. identity:get("player") end
     return "entity:" .. entity:id()
 end
@@ -19,31 +19,31 @@ function M.register(definition)
         phase = "pre_simulation",
         after = { "d2legacy.skill.cast_lifecycle" },
         query = { all = {
-            "d2legacy.skill.cast", "d2.world.position", "d2.world.location",
+            "d2legacy.skill.cast", "d2legacy.world.position", "d2legacy.world.location",
         } },
         read = {
-            "d2legacy.skill.cast", "d2.world.position", "d2.world.location",
-            "d2.world.selectable", "d2.player.identity",
+            "d2legacy.skill.cast", "d2legacy.world.position", "d2legacy.world.location",
+            "d2legacy.world.selectable", "d2legacy.player.identity",
         },
         write = {
             "d2legacy.skill.cast", "d2legacy.missile.projectile",
-            "d2.world.position", "d2.world.location",
+            "d2legacy.world.position", "d2legacy.world.location",
         },
         update = function(context, casters, structural)
             for _, caster in ipairs(casters) do
                 local cast = ecs.get(caster, "d2legacy.skill.cast")
                 if not cast:get("effect_emitted")
                     and context.tick >= cast:get("effect_tick") then
-                    local position = ecs.get(caster, "d2.world.position")
-                    local location = ecs.get(caster, "d2.world.location")
+                    local position = ecs.get(caster, "d2legacy.world.position")
+                    local location = ecs.get(caster, "d2legacy.world.location")
                     local dx, dy = geometry.normalized_direction(
                         position:get("x"), position:get("y"),
                         cast:get("target_x"), cast:get("target_y"))
                     structural:create({
-                        ["d2.world.position"] = {
+                        ["d2legacy.world.position"] = {
                             x = position:get("x"), y = position:get("y"),
                         },
-                        ["d2.world.location"] = location:snapshot(),
+                        ["d2legacy.world.location"] = location:snapshot(),
                         ["d2legacy.missile.projectile"] = {
                             owner_id = selectable_id(caster),
                             target_x = cast:get("target_x"), target_y = cast:get("target_y"),

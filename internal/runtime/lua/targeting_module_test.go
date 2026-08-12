@@ -11,7 +11,7 @@ import (
 
 func TestTargetingModuleReturnsCopiedSpawnedFacts(t *testing.T) {
 	engine := gameecs.New()
-	positions, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	selectables, _ := akara.RegisterSchema(engine.World(), targeting.Schema())
 	entity := engine.World().MustCreateEntity()
 	_, _ = positions.Set(entity, map[string]any{"x": 4.0, "y": 5.0})

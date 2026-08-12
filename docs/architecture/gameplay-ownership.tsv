@@ -20,11 +20,16 @@ internal/game/mapgen/	d2-policy	lua:d2legacy	D2 generation policy; generic algor
 internal/game/world/	transitional	split:engine+d2legacy	geometry navigation and D2 world policy are mixed
 internal/game/targeting/	transitional	split:engine+d2legacy	spatial mechanism and D2 target semantics are mixed
 internal/runtime/lua/	adapter	go:runtime	Lua sandbox capabilities and transitional D2 facades
-internal/content/d2legacy/lua/d2/gameplay/	transitional	lua:d2legacy	concise d2 namespace; gameplay helpers migrate into canonical d2legacy authority modules
-internal/content/d2legacy/lua/d2/dev/	adapter	lua:development	developer instruments consuming production boundaries
-internal/content/d2legacy/lua/d2/screens/	adapter	lua:presentation	first-party screens and labs
-internal/content/d2legacy/lua/d2/overlays/	adapter	lua:presentation	first-party overlay presentation
-internal/content/d2legacy/lua/d2/presentation/	adapter	lua:presentation	world presentation adapters
-internal/content/d2legacy/lua/d2/ui/	adapter	lua:presentation	reusable UI and input composition
-internal/content/d2legacy/lua/d2/bootstrap/	adapter	lua:composition	mod and presentation composition
-internal/content/d2legacy/lua/d2legacy/	d2-policy	lua:d2legacy	canonical first-party gameplay authority bundled with the application
+internal/content/d2legacy/lua/d2legacy/gameplay/	transitional	lua:d2legacy	presentation-era gameplay helpers migrate into canonical d2legacy authority modules
+internal/content/d2legacy/lua/d2legacy/dev/	adapter	lua:development	developer instruments consuming production boundaries
+internal/content/d2legacy/lua/d2legacy/screens/	adapter	lua:presentation	first-party screens and labs
+internal/content/d2legacy/lua/d2legacy/overlays/	adapter	lua:presentation	first-party overlay presentation
+internal/content/d2legacy/lua/d2legacy/presentation/	adapter	lua:presentation	world presentation adapters
+internal/content/d2legacy/lua/d2legacy/ui/	adapter	lua:presentation	reusable UI and input composition
+internal/content/d2legacy/lua/d2legacy/authoritative.lua	d2-policy	lua:d2legacy	canonical authoritative gameplay composition root
+internal/content/d2legacy/lua/d2legacy/bootstrap/	adapter	lua:composition	presentation composition and scene registration
+internal/content/d2legacy/lua/d2legacy/commands/	d2-policy	lua:d2legacy	authoritative Diablo command validation and admission
+internal/content/d2legacy/lua/d2legacy/components/	d2-policy	lua:d2legacy	authoritative Diablo component schemas
+internal/content/d2legacy/lua/d2legacy/data/	d2-policy	lua:d2legacy	interpretation of decoded records as Diablo rules
+internal/content/d2legacy/lua/d2legacy/policy/	d2-policy	lua:d2legacy	Diablo formulas and decisions
+internal/content/d2legacy/lua/d2legacy/systems/	d2-policy	lua:d2legacy	authoritative Diablo fixed-tick systems

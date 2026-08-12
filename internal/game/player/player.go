@@ -171,7 +171,7 @@ func (source *EntrySource) Commands(tick uint64) []simulation.Command {
 }
 
 func (source *EntrySource) entered(characterID string) bool {
-	identities, found := akara.GetDynamicStore(source.engine.World(), "d2.player.identity")
+	identities, found := akara.GetDynamicStore(source.engine.World(), "d2legacy.player.identity")
 	if !found {
 		return false
 	}
@@ -329,7 +329,7 @@ func ApplyEntryCommand(engine *gameecs.Engine, command simulation.Command) error
 }
 
 func materializeSkills(world *akara.World, owner akara.Entity, skills []Skill) error {
-	store, err := akara.RegisterSchema(world, akara.Schema{Name: "d2.player.learned_skill", Version: 1, Fields: []akara.Field{
+	store, err := akara.RegisterSchema(world, akara.Schema{Name: "d2legacy.player.learned_skill", Version: 1, Fields: []akara.Field{
 		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},
 		{Name: "level", Kind: akara.FieldInt64}, {Name: "list_row", Kind: akara.FieldInt64},
 		{Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool},
@@ -365,22 +365,22 @@ type stores struct {
 
 func registerStores(world *akara.World) (stores, error) {
 	schemas := []akara.Schema{
-		{Name: "d2.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
-		{Name: "d2.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
-		{Name: "d2.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.player.identity", Version: 1, Fields: []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}}},
+		{Name: "d2legacy.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.player.vitals", Version: 1, Fields: []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}, {Name: "mana_raw", Kind: akara.FieldInt64}, {Name: "max_mana_raw", Kind: akara.FieldInt64}}},
 		{Name: gamecombat.MeleeProfile, Version: 1, Fields: []akara.Field{{Name: "range", Kind: akara.FieldFloat64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}}},
-		{Name: "d2.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
-		{Name: "d2.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
-		{Name: "d2.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "d2.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "d2.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}},
-		{Name: "d2.player.skill_assignment", Version: 1, Fields: []akara.Field{{Name: "left", Kind: akara.FieldInt64}, {Name: "right", Kind: akara.FieldInt64}}},
-		{Name: "d2.player.skill_intent", Version: 1, Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}},
-		{Name: "d2.player.belt", Version: 1, Fields: beltFields()},
-		{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
-		{Name: "d2.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
-		{Name: "d2.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
-		{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}},
+		{Name: "d2legacy.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}},
+		{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}},
+		{Name: "d2legacy.player.skill_assignment", Version: 1, Fields: []akara.Field{{Name: "left", Kind: akara.FieldInt64}, {Name: "right", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.player.skill_intent", Version: 1, Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}},
+		{Name: "d2legacy.player.belt", Version: 1, Fields: beltFields()},
+		{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}},
+		{Name: "d2legacy.world.bounds", Version: 1, Fields: []akara.Field{{Name: "width", Kind: akara.FieldFloat64}, {Name: "height", Kind: akara.FieldFloat64}}},
+		{Name: "d2legacy.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
+		{Name: "d2legacy.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 		targeting.Schema(),
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))

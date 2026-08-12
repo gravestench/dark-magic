@@ -1604,7 +1604,7 @@ func (r *RenderCapability) Module() Module {
 		"asset_exists":         commandHelp("engine.render.asset_exists(path)", "Report whether a render asset exists."),
 		"dc6_animation_bounds": commandHelp("engine.render.dc6_animation_bounds(path)", "Inspect the normalized bounds of a DC6 animation."),
 		"cof_info":             commandHelp("engine.render.cof_info(path)", "Inspect COF layer and animation metadata."),
-		"animdata_info":        commandHelp("engine.render.animdata_info(key)", "Read typed rate and frame-event metadata from AnimData.d2."),
+		"animdata_info":        commandHelp("engine.render.animdata_info(key)", "Read typed rate and frame-event metadata from AnimData.d2legacy."),
 		"create":               commandHelp("engine.render.create()", "Create a scoped retained presentation node."),
 	}, map[string]TypeHelp{renderNodeType: {Summary: "A scoped retained presentation node.", Methods: map[string]CommandHelp{
 		"set_position":               commandHelp("node:set_position(x, y)", "Set the node position."),

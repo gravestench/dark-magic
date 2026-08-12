@@ -49,7 +49,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	script := `
 local render = require("engine.render/v1")
 local settings = require("engine.settings/v1")
-local escape_menu = require("d2.ui.escape_menu")
+local escape_menu = require("d2legacy.ui.escape_menu")
 
 local function value(value)
   if value == nil then return "<nil>" end
@@ -168,7 +168,7 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 	scope := &modruntime.Scope{}
 	defer scope.Close()
 	if err := runtime.RunScoped(ctx, scope, func(state *glua.LState) error {
-		return state.DoString(`local overlay = require("d2.overlays.options"); overlay:create()`)
+		return state.DoString(`local overlay = require("d2legacy.overlays.options"); overlay:create()`)
 	}); err != nil {
 		t.Fatal(err)
 	}

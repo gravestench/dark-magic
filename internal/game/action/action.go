@@ -8,8 +8,8 @@ package action
 import "github.com/gravestench/akara"
 
 const (
-	AttackApproachComponent  = "d2.combat.attack_approach"
-	AttackAnimationComponent = "d2.combat.attack_animation"
+	AttackApproachComponent  = "d2legacy.combat.attack_approach"
+	AttackAnimationComponent = "d2legacy.combat.attack_animation"
 )
 
 var exclusiveComponents = []string{AttackApproachComponent, AttackAnimationComponent}

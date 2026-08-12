@@ -78,8 +78,8 @@ func TestGeneratedBloodMoorSimulationLoopRestoresExactly(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	monster := firstEntity(t, engine, "d2.monster.identity")
-	player := firstEntity(t, engine, "d2.player.identity")
+	monster := firstEntity(t, engine, "d2legacy.monster.identity")
+	player := firstEntity(t, engine, "d2legacy.player.identity")
 	if err := session.Submit(simulation.Command{Tick: 2, Player: "acceptance", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: acceptanceActionCommand, Payload: json.RawMessage(`{}`)}); err != nil {
 		t.Fatal(err)
 	}
@@ -186,16 +186,16 @@ func acceptanceSystemRegistrations(engine *gameecs.Engine, policy DeathPolicy, s
 
 func applyAcceptanceAction(engine *gameecs.Engine) error {
 	world := engine.World()
-	monster, found := entityFromStore(world, "d2.monster.identity")
+	monster, found := entityFromStore(world, "d2legacy.monster.identity")
 	if !found {
 		return nil
 	}
-	player, found := entityFromStore(world, "d2.player.identity")
+	player, found := entityFromStore(world, "d2legacy.player.identity")
 	if !found {
 		return nil
 	}
-	positions, _ := akara.GetDynamicStore(world, "d2.world.position")
-	intents, _ := akara.GetDynamicStore(world, "d2.player.skill_intent")
+	positions, _ := akara.GetDynamicStore(world, "d2legacy.world.position")
+	intents, _ := akara.GetDynamicStore(world, "d2legacy.player.skill_intent")
 	monsterPosition, _ := positions.Get(monster)
 	mx, _ := monsterPosition.Get("x")
 	my, _ := monsterPosition.Get("y")
@@ -217,7 +217,7 @@ func assertAcceptanceConsequences(t *testing.T, engine *gameecs.Engine, monster,
 	if !deaths.Has(monster) {
 		t.Fatal("lethal missile produced no monster death transaction")
 	}
-	progress, _ := akara.GetDynamicStore(engine.World(), "d2.player.progress")
+	progress, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.progress")
 	component, _ := progress.Get(player)
 	experience, _ := component.Get("experience")
 	if experience.(int64) <= 0 {
@@ -251,7 +251,7 @@ func firstEntity(t *testing.T, engine *gameecs.Engine, name string) akara.Entity
 }
 
 func spawnIDValue(world *akara.World, entity akara.Entity) string {
-	store, _ := akara.GetDynamicStore(world, "d2.monster.identity")
+	store, _ := akara.GetDynamicStore(world, "d2legacy.monster.identity")
 	component, _ := store.Get(entity)
 	value, _ := component.Get("spawn_id")
 	return value.(string)

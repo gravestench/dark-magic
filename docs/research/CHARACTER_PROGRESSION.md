@@ -138,7 +138,7 @@ Validate positive bounded count, sufficient unspent points, valid base attribute
 
 Separate purchased/base learned level from item bonuses, oskills, charges, and temporary effects. Durable progression stores base class skill levels. Skill allocation validates unspent points, tree/class membership, character-level requirement, prerequisites, and max base level.
 
-Current `d2.player.learned_skill` entities are a useful live shape but should eventually distinguish base purchased level from effective/display level.
+Current `d2legacy.player.learned_skill` entities are a useful live shape but should eventually distinguish base purchased level from effective/display level.
 
 ## Starting skills and equipment
 

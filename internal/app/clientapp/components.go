@@ -67,7 +67,7 @@ func (app *application) registerHotReload(directory string, definitions []modrun
 }
 
 func (app *application) activateComponents(modDirectory string) error {
-	desired, err := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "d2legacy.authoritative", "d2.boot")
+	desired, err := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "d2legacy.authoritative", "d2legacy.boot")
 	if err != nil {
 		return wrap("parse enabled components", err)
 	}

@@ -69,7 +69,7 @@ func registerPlayerAttackStores(engine *gameecs.Engine) (casts, receipts, contro
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	controls, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
@@ -81,23 +81,23 @@ func registerPlayerAttackStores(engine *gameecs.Engine) (casts, receipts, contro
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	velocities, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	velocities, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	colliders, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
+	colliders, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	animations, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
+	animations, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.animation", Version: 1, Fields: []akara.Field{{Name: "direction", Kind: akara.FieldInt64}, {Name: "mode", Kind: akara.FieldString}}})
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	movementModes, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}})
+	movementModes, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.movement_mode", Version: 1, Fields: []akara.Field{{Name: "running", Kind: akara.FieldBool}}})
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	appearances, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}})
+	appearances, err = akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.player.appearance", Version: 1, Fields: []akara.Field{{Name: "cof", Kind: akara.FieldString}, {Name: "token", Kind: akara.FieldString}, {Name: "palette", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}}})
 	return casts, receipts, controls, approaches, attackAnimations, velocities, colliders, animations, movementModes, appearances, err
 }
 

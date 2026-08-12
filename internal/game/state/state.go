@@ -11,9 +11,9 @@ import (
 
 const (
 	SystemID          = "state.timed_instances"
-	RequestComponent  = "d2.state.request"
-	InstanceComponent = "d2.state.instance"
-	EventComponent    = "d2.state.event"
+	RequestComponent  = "d2legacy.state.request"
+	InstanceComponent = "d2legacy.state.instance"
+	EventComponent    = "d2legacy.state.event"
 
 	OperationApply    = "apply"
 	OperationRemove   = "remove"

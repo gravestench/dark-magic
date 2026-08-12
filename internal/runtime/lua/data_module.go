@@ -44,7 +44,7 @@ func DataModule(source fs.FS, presentationProfiles ...string) Module {
 				if err == nil {
 					err = validateManifest(decoded, expectedSchema)
 				}
-				if err == nil && expectedSchema == "d2.presentation/v1" {
+				if err == nil && expectedSchema == "d2legacy.presentation/v1" {
 					document := decoded.(map[string]any)
 					decoded, _, err = content.ApplyPresentationProfile(document, presentationProfile)
 				}
