@@ -404,6 +404,47 @@ assert(generate.encode({}) == "[]")
 `)
 }
 
+func TestLegacyLootQualityAffixAndPropertyVectors(t *testing.T) {
+	records := fixtureRecords{
+		"data/global/excel/itemratio.txt": {{
+			"Version": "100", "Uber": "0", "Class Specific": "0",
+			"Unique": "1000000000", "Set": "1000000000", "Rare": "1000000000",
+			"Magic": "1000000000", "HiQuality": "1000000000", "Normal": "1000000000",
+		}},
+		"data/global/excel/magicprefix.txt": {{
+			"Name": "Strong", "spawnable": "1", "frequency": "1", "level": "1",
+			"version": "100", "itype1": "swor", "mod1code": "dmg",
+			"mod1min": "7", "mod1max": "7",
+		}},
+		"data/global/excel/properties.txt": {{
+			"code": "dmg", "func1": "1", "stat1": "item_maxdamage",
+		}},
+	}
+	fixture := newAuthorityFixture(t, records, nil)
+	fixture.run(t, `
+local quality = require("d2legacy.loot.quality")
+local affixes = require("d2legacy.loot.affixes")
+local properties = require("d2legacy.loot.properties")
+local sword = {type="swor",type2="",level=1,uber=false,class_specific=false}
+local rolled = quality.roll(sword, {
+    version=100,monster_level=1,magic_find=0,
+}, {unique=0,set=0,rare=0,magic=1024})
+assert(rolled == "magic")
+
+local prefixes
+for _ = 1, 16 do
+    prefixes = affixes.roll(sword, rolled, 1, 100)
+    if #prefixes == 1 then break end
+end
+assert(#prefixes == 1 and prefixes[1].name == "Strong")
+assert(prefixes[1].modifiers[1].value == 7)
+local stats, effects, unsupported = properties.apply(prefixes, {})
+assert(#stats == 1 and stats[1].code == "item_maxdamage")
+assert(stats[1].value == 7 and stats[1].fn == 1)
+assert(#effects == 0 and #unsupported == 0)
+`)
+}
+
 func TestGenericHostCanBootWithoutD2Legacy(t *testing.T) {
 	engine := gameecs.New()
 	defer engine.Close()

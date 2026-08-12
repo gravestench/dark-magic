@@ -3,6 +3,7 @@ package d2legacy
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -146,8 +147,13 @@ func assertCompletedHostileLifecycle(t *testing.T, engine *gameecs.Engine) {
 	credited, _ := death.Get("credited_id")
 	active, _ := death.Get("active")
 	corpse, _ := death.Get("corpse_usable")
+	drops, _ := death.Get("drops")
 	if credited != "player:alice" || active != false || corpse != true {
 		t.Fatalf("death credit/active/corpse = %v/%v/%v", credited, active, corpse)
+	}
+	if !strings.Contains(drops.(string), `"code":"rin"`) ||
+		!strings.Contains(drops.(string), `"quality":"unique"`) {
+		t.Fatalf("checkpointed monster drops = %s, want unique ring", drops)
 	}
 	if events.Len() != 4 {
 		t.Fatalf("death events = %d, want kill, loot, quest, and presentation", events.Len())
@@ -182,11 +188,22 @@ func generatedHostileRecords() fixtureRecords {
 		"enabled": "1", "isSpawn": "1", "npc": "0", "noRatio": "1", "Level": "1",
 		"minHP": "3", "maxHP": "3", "AC": "0", "A1TH": "0", "A1MinD": "1", "A1MaxD": "1",
 		"Exp": "5", "Velocity": "0", "aidel": "1", "aidist": "20", "MinGrp": "1", "MaxGrp": "1",
-		"Rarity": "1", "TreasureClass1": "",
+		"Rarity": "1", "TreasureClass1": "fallen-drop",
 	}}
 	records["data/global/excel/monstats2.txt"] = []map[string]string{{
 		"Id": "fallen", "BaseW": "HTH", "SizeX": "1", "SizeY": "1", "MeleeRng": "1",
 	}}
 	records["data/global/excel/monlvl.txt"] = []map[string]string{{"Level": "1"}}
+	records["data/global/excel/treasureclassex.txt"] = []map[string]string{{
+		"Treasure Class": "fallen-drop", "Picks": "-1", "Item1": "rin", "Prob1": "1", "Unique": "1024",
+	}}
+	records["data/global/excel/misc.txt"] = []map[string]string{{
+		"code": "rin", "namestr": "Ring", "type": "ring", "level": "1", "invwidth": "1", "invheight": "1",
+	}}
+	records["data/global/excel/itemratio.txt"] = []map[string]string{{
+		"Version": "100", "Uber": "0", "Class Specific": "0",
+		"Unique": "4000", "Set": "4000", "Rare": "4000", "Magic": "4000",
+		"HiQuality": "4000", "Normal": "4000",
+	}}
 	return records
 }
