@@ -16,6 +16,8 @@ func TestSettingsValidatePersistAndReload(t *testing.T) {
 	values.SoundVolume, values.MusicVolume = .25, .75
 	values.DebugTextureResidency, values.TextureUploadBudgetMB = true, 8
 	values.TextureCacheBudgetMB = 768
+	values.CameraFollowStrategy, values.CameraFollowDuration = "back_out", .25
+	values.CameraFollowParam1 = 2.25
 	if err := settings.Update(values); err != nil {
 		t.Fatal(err)
 	}
@@ -35,6 +37,26 @@ func TestSettingsValidatePersistAndReload(t *testing.T) {
 	values.SoundVolume = 2
 	if err := settings.Update(values); err == nil {
 		t.Fatal("invalid sound volume accepted")
+	}
+}
+
+func TestCameraFollowPreferencesValidateStrategyAndParameters(t *testing.T) {
+	settings := NewTransient()
+	values := settings.Values()
+	if values.CameraFollowStrategy != "instant" || values.CameraFollowDuration != 0 {
+		t.Fatalf("camera defaults = %#v", values)
+	}
+	values.CameraFollowStrategy, values.CameraFollowDuration = "cubic_out", .2
+	if err := settings.Update(values); err != nil {
+		t.Fatal(err)
+	}
+	values.CameraFollowStrategy = "teleportish"
+	if err := settings.Update(values); err == nil {
+		t.Fatal("unknown camera strategy accepted")
+	}
+	values.CameraFollowStrategy, values.CameraFollowDuration = "linear", 6
+	if err := settings.Update(values); err == nil {
+		t.Fatal("out-of-range camera duration accepted")
 	}
 }
 

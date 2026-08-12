@@ -70,6 +70,7 @@ function M.bind(state)
         local control = ecs.get(entity, "d2legacy.world.player_control")
 
         if control:get("player") == state.player then
+            local settings = require("engine.settings/v1")
             state.hero = entity
 
             -- Camera IS a Lua-created ECS entity because camera-follow is
@@ -78,7 +79,19 @@ function M.bind(state)
                 -- Snapshot copies current position values instead of aliasing the
                 -- hero's live component storage.
                 ["d2legacy.world.position"] = ecs.get(entity, "d2legacy.world.position"):snapshot(),
-                ["d2legacy.world.camera_follow"] = { target = entity },
+                ["d2legacy.world.camera_follow"] = {
+                    target = entity,
+                    strategy = settings.get("camera_follow_strategy"),
+                    duration = settings.get("camera_follow_duration"),
+                    param_1 = settings.get("camera_follow_param_1"),
+                    param_2 = settings.get("camera_follow_param_2"),
+                    param_3 = settings.get("camera_follow_param_3"),
+                    origin_x = ecs.get(entity, "d2legacy.world.position"):get("x"),
+                    origin_y = ecs.get(entity, "d2legacy.world.position"):get("y"),
+                    destination_x = ecs.get(entity, "d2legacy.world.position"):get("x"),
+                    destination_y = ecs.get(entity, "d2legacy.world.position"):get("y"),
+                    elapsed = 0,
+                },
             })
             return true
         end
@@ -91,6 +104,16 @@ function M.position(entity)
     local position = assert(ecs.get(entity, "d2legacy.world.position"))
     -- Lua returns multiple values naturally, so callers can write `x, y = ...`.
     return position:get("x"), position:get("y")
+end
+
+function M.refresh_camera_settings(entity)
+    local follow = assert(ecs.get(entity, "d2legacy.world.camera_follow"))
+    local settings = require("engine.settings/v1")
+    follow:set("strategy", settings.get("camera_follow_strategy"))
+    follow:set("duration", settings.get("camera_follow_duration"))
+    follow:set("param_1", settings.get("camera_follow_param_1"))
+    follow:set("param_2", settings.get("camera_follow_param_2"))
+    follow:set("param_3", settings.get("camera_follow_param_3"))
 end
 
 function M.set_collision(state, collision)
