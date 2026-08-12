@@ -54,6 +54,34 @@ Lua runtime + engine APIs      first-party d2legacy mod
 The mod-to-engine arrow is one-way: `d2legacy` consumes engine capabilities.
 The engine does not import the mod or encode its rules.
 
+The deployment boundary is equally important:
+
+```text
+Client
+  Lua: UI, presentation, optional prediction
+  Go:  input, rendering, transport
+             |
+             | authenticated semantic commands / authoritative projections
+             v
+Game server
+  Go:  session host, networking, ECS, clock, replay, durable-state mechanisms
+  Lua: authoritative d2legacy gameplay decisions
+             |
+             | revisioned durable character/account results
+             v
+Realm services
+  Go:  authentication, lobby, matchmaking, allocation, storage,
+       coordination, leases, and version negotiation
+  Lua: optional realm/season policy only where deliberately moddable
+```
+
+Authoritative Lua runs inside the trusted, headless game-server/session process.
+Moving D2 policy from Go to Lua does not move authority to the client, weaken
+the server boundary, or require realm services to load the gameplay mod. A game
+server may host multiple isolated sessions, each pinned to its own compatible
+mod package. Realm services select a capable worker and coordinate durable
+results; they do not resolve combat ticks.
+
 ## Engine and mod ownership boundary
 
 “Authoritative” describes who is allowed to decide and commit gameplay state;
@@ -63,15 +91,31 @@ module and configuration identity, controlled APIs, fixed scheduling,
 deterministic RNG streams, restricted side effects, and serialized state—not
 from the implementation language.
 
+The state invariant is:
+
+```text
+Lua owns gameplay decisions; the engine owns durable state.
+```
+
+Authoritative Lua operates on generic ECS components and explicitly registered,
+versioned state stores. State that can affect a future tick may not hide in Lua
+globals, closures, unserializable userdata, native handles, or presentation
+resources. The engine snapshots, checksums, restores, replicates, and persists
+registered state; Lua decides how D2 rules transform it through controlled
+capabilities.
+
 The Go engine owns reusable mechanisms:
 
-- Lua runtime ownership, sandboxing, capabilities, and resource lifetimes;
+- Lua runtime ownership, isolation, sandboxing, capabilities, instruction/time
+  and memory budgets, and resource lifetimes;
 - deterministic fixed-tick scheduling, ECS storage, queries, declared access,
   structural barriers, and command buffers;
 - command admission and transport-neutral replay infrastructure;
 - deterministic RNG primitives and named stream management;
 - serialization, checkpoint, restore, checksum, and persistence primitives;
 - networking, replication, interest-management, and protocol primitives;
+- mod discovery, dependency resolution, package hashing, capability-version
+  negotiation, and session identity pinning;
 - VFS and file access, codecs, typed record decoding, validation, and immutable
   data generations;
 - rendering, audio, input, localization, and platform adapters;
@@ -222,6 +266,12 @@ handler. A trusted handler may be registered by Go or by an identified,
 sandboxed Lua mod. Administrative and gameplay Lua use explicit handlers rather
 than a generic ECS mutation backdoor.
 
+Go command admission remains the outer trust boundary. Transport authenticates
+the connection, actor, session, authority class, sequence number, and target
+tick before invoking Lua policy. Clients submit intents, never outcomes: damage,
+drops, item movement, quest completion, and other results are recomputed by the
+pinned server mod against canonical state.
+
 The authoritative session checksum covers the ECS snapshot, registered stable-ID
 state participants, and the identity/configuration digest of every authoritative
 Lua module. A Go or Lua subsystem whose handlers mutate state outside Akara must
@@ -229,6 +279,52 @@ provide deterministic snapshot and atomic restore operations and register before
 the first command or tick. Replay and restore reject module/configuration drift
 unless an explicit state migration is selected. Lua hot reload cannot silently
 replace authoritative code in a running replayable session.
+
+Authoritative execution has deterministic handler/system ordering, controlled
+numeric and iteration semantics, engine-supplied named RNG streams, explicit
+read/write declarations, and no ambient clock, unrestricted filesystem/network,
+OS entropy, or other nondeterministic host API. Script errors and budget
+exhaustion fail according to a documented atomic-tick policy: no partial
+authoritative mutation is published. Resource limits apply per runtime/session
+so one mod cannot starve sibling sessions.
+
+## Mod identity, networking, and prediction
+
+Every game session pins an authoritative mod identity containing at least:
+
+- mod ID and semantic contract/version;
+- package/content hash and authoritative Lua source or bytecode hash;
+- the complete dependency graph and dependency hashes;
+- gameplay configuration identity; and
+- required engine capability/API and network protocol versions.
+
+The realm selects a worker that supports this identity and binds it into session
+creation and matchmaking. The game server validates it during handshake,
+reconnect, late join, replay, checkpoint restore, and explicit session
+migration. Replay headers and checkpoints carry it. Durable characters carry
+the rule/schema compatibility metadata needed to decide whether admission or
+migration is legal. No path may silently restore, join, or replay a session with
+different authoritative code or configuration.
+
+Live sessions keep their pinned identity. Changed scripts apply to new sessions
+by default. Changing an active production session requires an explicit,
+versioned state migration whose input/output identities and failure behavior are
+recorded; incompatible versions fail clearly. Development hot reload may use a
+separate non-replayable policy, but it must never masquerade as a realm-safe
+session.
+
+Clients may use one of three prediction levels:
+
+1. no gameplay prediction: submit intent and render authoritative results;
+2. limited generic prediction: predict movement/presentation and reconcile to
+   canonical snapshots; or
+3. shared `d2legacy` prediction: run compatible Lua locally with rollback and
+   reconciliation.
+
+Limited movement and presentation prediction is the initial realm-capable
+design. Client Lua remains untrusted even when its hash matches the server mod;
+only the game server admits commands and publishes canonical outcomes. Shared
+rule prediction is optional later work, never an authority transfer.
 
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The

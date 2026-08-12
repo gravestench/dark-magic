@@ -1,5 +1,11 @@
 # Timing, RNG, simulation ticks, and determinism
 
+> Architecture note: authoritative D2 rules may execute in the pinned
+> `d2legacy` Lua runtime. The Go session remains the owner of clocks, ordering,
+> RNG primitives, registered durable state, checksums, replay, and atomic
+> restore. The determinism requirements below apply equally to Go and trusted
+> Lua handlers.
+
 Status: implementation-oriented research baseline. Dark Magic already owns a deterministic fixed-step session and replay boundary. This document defines how Diablo-style timers and random streams should fit it and records the original 1.10f seed arithmetic that is currently supported by strong reverse-engineered evidence.
 
 ## Executive result
@@ -15,6 +21,13 @@ wall-clock / entropy time
 Only the first belongs in gameplay state. Wall time may create a new seed or drive host scheduling, but it must not be read from inside replayable rules. Presentation can interpolate freely and must not alter authoritative timer order.
 
 Dark Magic's current `internal/game/session` already serializes commands, sorts them canonically, advances ECS by a fixed step, captures external state participants, and records replay checkpoints/checksums. That is the correct owner. Diablo timers and RNG should become explicit ECS fields or registered deterministic state participants, not hidden package globals.
+
+The same rule applies to Lua: future-affecting state must live in ECS or an
+explicitly registered, versioned engine-owned store. Arbitrary globals,
+closures, userdata, and native resources are not checkpoint state. An
+authoritative runtime also needs deterministic table/record traversal where
+order affects results, controlled numeric conversions, declared ECS access, and
+per-tick instruction/time and memory budgets with an atomic failure policy.
 
 ## Current Dark Magic baseline
 
@@ -184,6 +197,8 @@ RNG algorithm and event-order policy are replay-format concerns. Legacy streams 
 ## Acceptance criteria
 
 - Same initial state, content fingerprint, commands, and seed state produce identical checkpoints.
+- The same pinned mod/dependency/configuration identity is required for replay
+  and restore; identity drift is rejected unless an explicit migration applies.
 - `Advance(N*step)` equals N `Step` calls.
 - Renderer FPS does not change gameplay RNG traces.
 - RNG state is covered by checkpoint/replay state.
