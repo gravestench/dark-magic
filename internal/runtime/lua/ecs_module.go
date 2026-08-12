@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	ecsEntityType    = "dm.ecs.entity/v1"
-	ecsComponentType = "dm.ecs.component/v1"
-	ecsCommandsType  = "dm.ecs.commands/v1"
+	ecsEntityType    = "engine.ecs.entity/v1"
+	ecsComponentType = "engine.ecs.component/v1"
+	ecsCommandsType  = "engine.ecs.commands/v1"
 )
 
 type ecsAccess struct {
@@ -50,18 +50,18 @@ func NewECSCapability(runtime *Runtime, engine *gameecs.Engine) *ECSCapability {
 	return &ECSCapability{runtime: runtime, engine: engine}
 }
 
-// Module returns the versioned dm.ecs/v1 registration. Resource-producing
+// Module returns the versioned engine.ecs/v1 registration. Resource-producing
 // operations attach their cleanup to the active Lua scope.
 func (capability *ECSCapability) Module() Module {
-	return Module{Name: "dm.ecs/v1", Help: documentedModule("Define runtime ECS components and deterministic scoped systems.", map[string]CommandHelp{
-		"component": commandHelp("dm.ecs.component(definition)", "Register or migrate a named runtime component schema."),
-		"create":    commandHelp("dm.ecs.create([components])", "Create an entity and optionally attach named components."),
-		"get":       commandHelp("dm.ecs.get(entity, component)", "Return a checked component reference or nil."),
-		"query":     commandHelp("dm.ecs.query(filter)", "Return an ordered snapshot of entities matching all, any, and none component filters."),
-		"set":       commandHelp("dm.ecs.set(entity, component, values)", "Add or replace a component after schema validation."),
-		"remove":    commandHelp("dm.ecs.remove(entity, component)", "Remove a component immediately outside system iteration."),
-		"destroy":   commandHelp("dm.ecs.destroy(entity)", "Destroy an entity immediately outside system iteration."),
-		"system":    commandHelp("dm.ecs.system(definition)", "Register a scope-owned ordered simulation system."),
+	return Module{Name: "engine.ecs/v1", Help: documentedModule("Define runtime ECS components and deterministic scoped systems.", map[string]CommandHelp{
+		"component": commandHelp("engine.ecs.component(definition)", "Register or migrate a named runtime component schema."),
+		"create":    commandHelp("engine.ecs.create([components])", "Create an entity and optionally attach named components."),
+		"get":       commandHelp("engine.ecs.get(entity, component)", "Return a checked component reference or nil."),
+		"query":     commandHelp("engine.ecs.query(filter)", "Return an ordered snapshot of entities matching all, any, and none component filters."),
+		"set":       commandHelp("engine.ecs.set(entity, component, values)", "Add or replace a component after schema validation."),
+		"remove":    commandHelp("engine.ecs.remove(entity, component)", "Remove a component immediately outside system iteration."),
+		"destroy":   commandHelp("engine.ecs.destroy(entity)", "Destroy an entity immediately outside system iteration."),
+		"system":    commandHelp("engine.ecs.system(definition)", "Register a scope-owned ordered simulation system."),
 	}), Loader: func(state *lua.LState) int {
 		registerECSTypes(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -560,7 +560,7 @@ func checkECSEntity(state *lua.LState, index int) *ownedECSEntity {
 	value := state.CheckUserData(index)
 	entity, ok := value.Value.(*ownedECSEntity)
 	if !ok {
-		state.ArgError(index, "dm.ecs/v1 entity expected")
+		state.ArgError(index, "engine.ecs/v1 entity expected")
 	}
 	return entity
 }
@@ -568,7 +568,7 @@ func checkECSEntity(state *lua.LState, index int) *ownedECSEntity {
 func (capability *ECSCapability) checkEntity(state *lua.LState, index int) *ownedECSEntity {
 	entity := checkECSEntity(state, index)
 	if entity.engine != capability.engine {
-		state.ArgError(index, "entity belongs to a different dm.ecs/v1 world")
+		state.ArgError(index, "entity belongs to a different engine.ecs/v1 world")
 	}
 	return entity
 }
@@ -576,7 +576,7 @@ func checkECSComponent(state *lua.LState, index int) *ownedECSComponent {
 	value := state.CheckUserData(index)
 	component, ok := value.Value.(*ownedECSComponent)
 	if !ok {
-		state.ArgError(index, "dm.ecs/v1 component expected")
+		state.ArgError(index, "engine.ecs/v1 component expected")
 	}
 	return component
 }
@@ -584,7 +584,7 @@ func checkECSCommands(state *lua.LState, index int) *ownedECSCommands {
 	value := state.CheckUserData(index)
 	commands, ok := value.Value.(*ownedECSCommands)
 	if !ok {
-		state.ArgError(index, "dm.ecs/v1 commands expected")
+		state.ArgError(index, "engine.ecs/v1 commands expected")
 	}
 	return commands
 }

@@ -18,7 +18,7 @@ func TestAudioHandlesBelongToLuaComponentScope(t *testing.T) {
 	source := fstest.MapFS{
 		"sound.wav": &fstest.MapFile{Data: []byte("wave")},
 		"system.lua": &fstest.MapFile{Data: []byte(`
-local audio = require("dm.audio/v1")
+local audio = require("engine.audio/v1")
 return { id = "sound", start = function(self) audio.set_bus_volume("ui", .8); self.sound = audio.play("sound.wav", {bus="ui", volume=.5, pan=-.25, loop=true}); self.sound:set_pan(.25); self.sound:set_volume(.4) end }
 `)},
 	}
@@ -61,7 +61,7 @@ func TestPersistentAudioOutlivesCallingComponent(t *testing.T) {
 	source := fstest.MapFS{
 		"music.wav": &fstest.MapFile{Data: []byte("music")},
 		"system.lua": &fstest.MapFile{Data: []byte(`
-local audio = require("dm.audio/v1")
+local audio = require("engine.audio/v1")
 return { id = "music", start = function(self)
   audio.play_persistent("music.wav", {bus="music", loop=true, stream=true, group="frontend"})
 end }

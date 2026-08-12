@@ -237,7 +237,7 @@ real-asset, race, and relevant interactive acceptance checks green.
 
 ## Finding the main execution paths
 
-The client boots in `cmd/darkmagic/main.go`. It parses process configuration,
+The client boots in `cmd/d2/main.go`. It parses process configuration,
 opens the layered content filesystem, constructs shared application capabilities,
 registers Lua modules, and gives those components to `internal/app/host` for ordered
 startup and shutdown. Keep this file as wiring: capability behavior belongs in
@@ -253,7 +253,7 @@ must remain usable without this native frame loop.
 Akara owns entity identity, typed and runtime-defined component storage,
 archetypes, and subscriptions. Dark Magic owns named simulation phases, system
 ordering, read/write declarations, command-buffer barriers, and a bounded fixed
-25 Hz clock that is independent of renderer cadence. `dm.ecs/v1`
+25 Hz clock that is independent of renderer cadence. `engine.ecs/v1`
 adapts Lua schemas and scoped system callbacks to that engine contract; Akara
 does not import Lua or Dark Magic. Lua may mutate declared component fields
 immediately, while entity creation and component add/remove operations are
@@ -329,19 +329,19 @@ rule prediction is optional later work, never an authority transfer.
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The
 `internal/game/data/recovered` catalog validates and normalizes those files;
-`dm.quest_catalog/v1` exposes identifiers to Lua while localization and audio
+`engine.quest_catalog/v1` exposes identifiers to Lua while localization and audio
 remain separate capabilities responsible for resolving strings and assets.
 
 The production game-world scene defines hero position, velocity, bounds, player
-control, and camera-follow components in Lua through `dm.ecs/v1`. Its
-`darkmagic/gameplay/components` modules group small related schemas, while
-`darkmagic/gameplay/systems` gives each update rule its own documented file.
+control, and camera-follow components in Lua through `engine.ecs/v1`. Its
+`d2/gameplay/components` modules group small related schemas, while
+`d2/gameplay/systems` gives each update rule its own documented file.
 `world.lua` is their composition root and retains only player binding plus
 presentation-safe snapshot helpers. Native input is normalized into one admitted
 `player.move` command per active fixed tick; the session-owned handler applies
 velocity before Lua movement, collision, and camera systems run. The retained
 scene only reads component snapshots to update presentation nodes. The older
-`dm.simulation/v1` adapter remains available to compatibility tests and shell
+`engine.simulation/v1` adapter remains available to compatibility tests and shell
 examples but is no longer registered by the client.
 
 Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
@@ -383,7 +383,7 @@ diagonals cannot cut blocked corners, occupied interaction targets use reachable
 stopping rings, and unreachable requests cancel explicitly. Selection kinds
 must come from spawned authoritative definitions—not DS1-name heuristics.
 
-Live selectable entities attach `dm.world.selectable` beside their authoritative
+Live selectable entities attach `d2.world.selectable` beside their authoritative
 position. Its explicit kind is one of player, NPC, hostile, item, portal,
 missile, or scenery. The targeting capability returns copied hit facts and
 filters the locally owned player in presentation; it does not expose ECS stores

@@ -9,9 +9,9 @@ import (
 
 // LoadingModule exposes read-only progress for engine-owned transition work.
 func LoadingModule(coordinator *loading.Coordinator) Module {
-	return Module{Name: "dm.loading/v1", Help: documentedModule("Coordinate and inspect game loading work.", map[string]CommandHelp{
-		"begin":  commandHelp("dm.loading.begin()", "Begin the configured loading sequence."),
-		"status": commandHelp("dm.loading.status()", "Return the current loading progress snapshot."),
+	return Module{Name: "engine.loading/v1", Help: documentedModule("Coordinate and inspect game loading work.", map[string]CommandHelp{
+		"begin":  commandHelp("engine.loading.begin()", "Begin the configured loading sequence."),
+		"status": commandHelp("engine.loading.status()", "Return the current loading progress snapshot."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"begin": func(state *lua.LState) int {

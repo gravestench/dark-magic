@@ -149,16 +149,16 @@ func RegisterMovement(session *Session) error {
 			if err != nil {
 				return err
 			}
-			controls, present := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+			controls, present := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 			if !present {
 				return nil
 			}
-			velocities, present := akara.GetDynamicStore(engine.World(), "dm.world.velocity")
+			velocities, present := akara.GetDynamicStore(engine.World(), "d2.world.velocity")
 			if !present {
 				return nil
 			}
-			modes, modesPresent := akara.GetDynamicStore(engine.World(), "dm.player.movement_mode")
-			animations, animationsPresent := akara.GetDynamicStore(engine.World(), "dm.player.animation")
+			modes, modesPresent := akara.GetDynamicStore(engine.World(), "d2.player.movement_mode")
+			animations, animationsPresent := akara.GetDynamicStore(engine.World(), "d2.player.animation")
 			for _, entity := range controls.Entities() {
 				control, found := controls.Get(entity)
 				if !found {
@@ -194,7 +194,7 @@ func RegisterMovement(session *Session) error {
 				// faster. Normalize the vector before simulation sees it.
 				x, y := float64(payload.X), float64(payload.Y)
 				if payload.Target != nil {
-					positions, positionsPresent := akara.GetDynamicStore(engine.World(), "dm.world.position")
+					positions, positionsPresent := akara.GetDynamicStore(engine.World(), "d2.world.position")
 					if positionsPresent {
 						if position, found := positions.Get(entity); found {
 							currentX, _ := position.Get("x")
@@ -307,7 +307,7 @@ func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, 
 func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 	source.mu.Lock()
 	defer source.mu.Unlock()
-	controls, present := akara.GetDynamicStore(source.engine.World(), "dm.world.player_control")
+	controls, present := akara.GetDynamicStore(source.engine.World(), "d2.world.player_control")
 	if !present || controls.Len() == 0 {
 		return nil
 	}
@@ -347,11 +347,11 @@ func (source *MovementSource) Commands(tick uint64) []simulation.Command {
 }
 
 func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
-	positions, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.position")
+	positions, ok := akara.GetDynamicStore(source.engine.World(), "d2.world.position")
 	if !ok {
 		return target
 	}
-	controls, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.player_control")
+	controls, ok := akara.GetDynamicStore(source.engine.World(), "d2.world.player_control")
 	if !ok {
 		return target
 	}
@@ -372,7 +372,7 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 		y, _ := position.Get("y")
 		current = gameworld.Point{X: x.(float64), Y: y.(float64)}
 		found = true
-		if colliders, present := akara.GetDynamicStore(source.engine.World(), "dm.world.collider"); present {
+		if colliders, present := akara.GetDynamicStore(source.engine.World(), "d2.world.collider"); present {
 			if collider, exists := colliders.Get(entity); exists {
 				value, _ := collider.Get("radius")
 				radius = value.(float64)

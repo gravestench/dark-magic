@@ -4,7 +4,7 @@
 -- rule that skill 36 plus the reviewed function/flag combination means a
 -- straight fire projectile. Unknown combinations fail instead of being guessed.
 
-local records = require("dm.records/v1")
+local records = require("engine.records/v1")
 
 local M = {}
 

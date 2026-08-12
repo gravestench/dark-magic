@@ -8,7 +8,7 @@ import (
 	"github.com/gravestench/akara"
 )
 
-const Component = "dm.owned_unit"
+const Component = "d2.owned_unit"
 
 // Relation is checkpointed ECS state. Immediate owner and ultimate owner are
 // both retained because a trap or minion kill is not identical to a direct

@@ -20,7 +20,7 @@ func TestDataModuleLoadsJSONAsLuaValues(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
-local data = require("dm.data/v1")
+local data = require("engine.data/v1")
 local document = assert(data.load("data.json"))
 assert(document.version == 1 and document.enabled and document.names[2] == "two" and document.nothing == nil)
 local manifest = assert(data.load_manifest("manifest.json", "test/v1"))
@@ -54,7 +54,7 @@ func TestManifestRejectsInvalidSupportedProfile(t *testing.T) {
 func TestDataModuleAppliesSelectedPresentationProfile(t *testing.T) {
 	runtime := New()
 	source := fstest.MapFS{"manifest.json": &fstest.MapFile{Data: []byte(`{
-        "schema":"darkmagic.presentation/v1","version":1,"game_version":"test","language":"neutral","confidence":"verified",
+        "schema":"d2.presentation/v1","version":1,"game_version":"test","language":"neutral","confidence":"verified",
         "resolution":{"width":800,"height":600},"screens":{"world":{"hud":{"sheet":"800.dc6","x":400}}},
         "supported_profiles":[
           {"id":"wide","game_version":"test","language":"English","resolution":{"width":800,"height":600}},
@@ -69,7 +69,7 @@ func TestDataModuleAppliesSelectedPresentationProfile(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
-local manifest=assert(require("dm.data/v1").load_manifest("manifest.json","darkmagic.presentation/v1"))
+local manifest=assert(require("engine.data/v1").load_manifest("manifest.json","d2.presentation/v1"))
 assert(manifest.active_profile=="classic")
 assert(manifest.resolution.width==640 and manifest.resolution.height==480)
 assert(manifest.screens.world.hud.sheet=="640.dc6" and manifest.screens.world.hud.x==320)

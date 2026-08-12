@@ -56,20 +56,20 @@ func (authority *Authority) apply(engine *gameecs.Engine, command simulation.Com
 	if err != nil {
 		return err
 	}
-	controls, ok := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+	controls, ok := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 	if !ok {
 		return fmt.Errorf("transition: player control is unavailable")
 	}
-	locations, ok := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	locations, ok := akara.GetDynamicStore(engine.World(), "d2.world.location")
 	if !ok {
 		return fmt.Errorf("transition: player location is unavailable")
 	}
-	positions, ok := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	positions, ok := akara.GetDynamicStore(engine.World(), "d2.world.position")
 	if !ok {
 		return fmt.Errorf("transition: player position is unavailable")
 	}
-	bounds, _ := akara.GetDynamicStore(engine.World(), "dm.world.bounds")
-	velocities, _ := akara.GetDynamicStore(engine.World(), "dm.world.velocity")
+	bounds, _ := akara.GetDynamicStore(engine.World(), "d2.world.bounds")
+	velocities, _ := akara.GetDynamicStore(engine.World(), "d2.world.velocity")
 	for _, entity := range controls.Entities() {
 		control, _ := controls.Get(entity)
 		owner, _ := control.Get("player")
@@ -151,15 +151,15 @@ func NewSource(engine *gameecs.Engine, player string, authority *Authority) (*So
 }
 
 func (source *Source) Commands(tick uint64) []simulation.Command {
-	controls, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.player_control")
+	controls, ok := akara.GetDynamicStore(source.engine.World(), "d2.world.player_control")
 	if !ok {
 		return nil
 	}
-	locations, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.location")
+	locations, ok := akara.GetDynamicStore(source.engine.World(), "d2.world.location")
 	if !ok {
 		return nil
 	}
-	positions, ok := akara.GetDynamicStore(source.engine.World(), "dm.world.position")
+	positions, ok := akara.GetDynamicStore(source.engine.World(), "d2.world.position")
 	if !ok {
 		return nil
 	}

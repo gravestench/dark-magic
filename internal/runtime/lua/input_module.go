@@ -8,14 +8,14 @@ import (
 // InputModule exposes frame-stable logical actions rather than backend key
 // codes or direct Raylib calls.
 func InputModule(input *inputstate.Store) Module {
-	return Module{Name: "dm.input/v1", Help: documentedModule("Read the current normalized input frame.", map[string]CommandHelp{
-		"text":     commandHelp("dm.input.text()", "Return text entered during the current frame."),
-		"down":     commandHelp("dm.input.down(action)", "Report whether an action is currently held."),
-		"pressed":  commandHelp("dm.input.pressed(action)", "Report whether an action was pressed this frame."),
-		"released": commandHelp("dm.input.released(action)", "Report whether an action was released this frame."),
-		"cursor":   commandHelp("dm.input.cursor()", "Return the current cursor coordinates."),
-		"scroll":   commandHelp("dm.input.scroll()", "Return this frame's high-resolution horizontal and vertical pointer scroll deltas."),
-		"owner":    commandHelp("dm.input.owner()", "Return the current input focus domain and owner ID."),
+	return Module{Name: "engine.input/v1", Help: documentedModule("Read the current normalized input frame.", map[string]CommandHelp{
+		"text":     commandHelp("engine.input.text()", "Return text entered during the current frame."),
+		"down":     commandHelp("engine.input.down(action)", "Report whether an action is currently held."),
+		"pressed":  commandHelp("engine.input.pressed(action)", "Report whether an action was pressed this frame."),
+		"released": commandHelp("engine.input.released(action)", "Report whether an action was released this frame."),
+		"cursor":   commandHelp("engine.input.cursor()", "Return the current cursor coordinates."),
+		"scroll":   commandHelp("engine.input.scroll()", "Return this frame's high-resolution horizontal and vertical pointer scroll deltas."),
+		"owner":    commandHelp("engine.input.owner()", "Return the current input focus domain and owner ID."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {

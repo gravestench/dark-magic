@@ -11,7 +11,7 @@ import (
 func TestFiniteMapCameraCoversViewportAtBothEdges(t *testing.T) {
 	t.Parallel()
 
-	path := filepath.Join(repositoryRoot(t), "internal/content/shim/lua/darkmagic/presentation/camera_bounds.lua")
+	path := filepath.Join(repositoryRoot(t), "internal/content/shim/lua/d2/presentation/camera_bounds.lua")
 	source, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

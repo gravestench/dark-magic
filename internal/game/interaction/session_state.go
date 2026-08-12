@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	sessionStateID      = "dm.interaction/v1"
+	sessionStateID      = "engine.interaction/v1"
 	sessionStateVersion = 1
 )
 

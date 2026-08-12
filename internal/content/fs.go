@@ -16,7 +16,7 @@ import (
 )
 
 // FromEnvironment constructs the production content stack. User content wins,
-// followed by the Dark Magic shim, Diablo II patches/expansion data, and base
+// followed by the bundled d2legacy mod, Diablo II patches/expansion data, and base
 // archives. Missing optional directories and archives are skipped.
 func FromEnvironment() (*FS, error) {
 	layers := make([]Layer, 0, 16)

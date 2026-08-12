@@ -1,37 +1,37 @@
--- START HERE: this is the shim's front door.
+-- START HERE: this is the bundled d2legacy mod's presentation front door.
 --
 -- Dark Magic loads this file first. Its job is intentionally tiny: ask the
 -- engine for a few versioned capabilities, load the presentation manifest,
 -- register every scene name, and choose the first scene to show.
 --
--- A useful rule while reading the shim:
---   require("dm.something/v1")  = engine/modding API capability
---   require("darkmagic....")    = ordinary Lua from this example mod
+-- A useful rule while reading this mod:
+--   require("engine.something/v1")  = engine/modding API capability
+--   require("d2....")    = ordinary Lua from this example mod
 --
 -- Keeping that boundary visible is important. Lua gets useful operations; it
 -- does not get raw renderer pointers, filesystem objects, or engine internals.
 
 -- `local` means only this file can see this name. New mod code should prefer
 -- locals so one file cannot accidentally overwrite another file's variables.
-local render = require("dm.render/v1")
+local render = require("engine.render/v1")
 -- The scene capability owns the navigation stack: replacing root screens and
 -- pushing/popping/toggling overlays.
-local scenes = require("dm.scene/v1")
+local scenes = require("engine.scene/v1")
 -- The data capability loads versioned, validated manifests from mod content.
-local data = require("dm.data/v1")
--- This one is not an engine capability. It is another Lua file in the shim.
-local registry = require("darkmagic.bootstrap.scene_registry")
+local data = require("engine.data/v1")
+-- This one is not an engine capability. It is another Lua file in this mod.
+local registry = require("d2.bootstrap.scene_registry")
 
 -- The manifest is data, not executable policy. `assert` makes a broken mod fail
 -- here with a useful error instead of producing mysterious nil errors later.
 -- The schema string is also versioned, so the loader knows what shape to expect.
-local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "darkmagic.presentation/v1"))
+local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2.presentation/v1"))
 
 -- A Lua module returns one value. Here we return a component definition table.
 -- Dark Magic reads this table and calls the lifecycle functions below.
 return {
     -- Stable component identity. This is a name, not a filename dependency.
-    id = "darkmagic.boot",
+    id = "d2.boot",
     -- Version of this tiny boot-component contract.
     api = 1,
 

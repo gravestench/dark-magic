@@ -42,11 +42,11 @@ func RegisterSkillAssignments(session *Session) error {
 			if err != nil {
 				return err
 			}
-			controls, found := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+			controls, found := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 			if !found {
 				return nil
 			}
-			assignments, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_assignment")
+			assignments, found := akara.GetDynamicStore(engine.World(), "d2.player.skill_assignment")
 			if !found {
 				return nil
 			}
@@ -89,15 +89,15 @@ func RegisterSkillAssignments(session *Session) error {
 			if err != nil {
 				return err
 			}
-			controls, found := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+			controls, found := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 			if !found {
 				return nil
 			}
-			assignments, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_assignment")
+			assignments, found := akara.GetDynamicStore(engine.World(), "d2.player.skill_assignment")
 			if !found {
 				return nil
 			}
-			intents, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_intent")
+			intents, found := akara.GetDynamicStore(engine.World(), "d2.player.skill_intent")
 			if !found {
 				return nil
 			}
@@ -141,7 +141,7 @@ func RegisterSkillAssignments(session *Session) error {
 }
 
 func learnedSkillAllows(engine *gameecs.Engine, owner akara.Entity, skillID int64, side string) bool {
-	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
+	learned, found := akara.GetDynamicStore(engine.World(), "d2.player.learned_skill")
 	if !found {
 		return false
 	}

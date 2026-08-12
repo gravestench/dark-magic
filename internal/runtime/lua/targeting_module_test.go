@@ -11,7 +11,7 @@ import (
 
 func TestTargetingModuleReturnsCopiedSpawnedFacts(t *testing.T) {
 	engine := gameecs.New()
-	positions, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	selectables, _ := akara.RegisterSchema(engine.World(), targeting.Schema())
 	entity := engine.World().MustCreateEntity()
 	_, _ = positions.Set(entity, map[string]any{"x": 4.0, "y": 5.0})
@@ -25,7 +25,7 @@ func TestTargetingModuleReturnsCopiedSpawnedFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	script := fstest.MapFS{"test.lua": {Data: []byte(`local t=require("dm.targeting/v1").selectable_at(4,5);assert(t and t.id=="fallen:1" and t.kind=="hostile" and t.label=="Fallen")`)}}
+	script := fstest.MapFS{"test.lua": {Data: []byte(`local t=require("engine.targeting/v1").selectable_at(4,5);assert(t and t.id=="fallen:1" and t.kind=="hostile" and t.label=="Fallen")`)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

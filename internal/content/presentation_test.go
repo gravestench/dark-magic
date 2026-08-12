@@ -7,7 +7,7 @@ import (
 )
 
 func TestPresentationBootstrapComesFromManifest(t *testing.T) {
-	const manifest = `{"schema":"darkmagic.presentation/v1","palettes":{"loading":"palette.dat"},"screens":{"title":{"background":"title.dc6"},"game_loading":{"sheet":"loading.dc6","palette":"loading"},"game_world":{"map":{"ds1":"town.ds1","dt1":["floor.dt1"]}}}}`
+	const manifest = `{"schema":"d2.presentation/v1","palettes":{"loading":"palette.dat"},"screens":{"title":{"background":"title.dc6"},"game_loading":{"sheet":"loading.dc6","palette":"loading"},"game_world":{"map":{"ds1":"town.ds1","dt1":["floor.dt1"]}}}}`
 	source := fstest.MapFS{
 		presentationManifest: {Data: []byte(manifest)},
 		"title.dc6":          {Data: []byte("fixture")},

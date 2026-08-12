@@ -7,9 +7,9 @@ import (
 
 func TargetingModule(resolver *targeting.Resolver) Module {
 	return Module{
-		Name: "dm.targeting/v1",
+		Name: "engine.targeting/v1",
 		Help: documentedModule("Resolve copied authoritative spawned-entity pointer facts.", map[string]CommandHelp{
-			"selectable_at": commandHelp("dm.targeting.selectable_at(x, y)", "Return the highest-priority spawned entity footprint under a world-subtile point."),
+			"selectable_at": commandHelp("engine.targeting.selectable_at(x, y)", "Return the highest-priority spawned entity footprint under a world-subtile point."),
 		}, nil),
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{

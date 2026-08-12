@@ -79,7 +79,7 @@ attack request -> legal target -> hit/miss -> physical damage -> HP -> hit/death
 
 Use synthetic verified vectors. Leave advanced critical/absorb/poison/etc. layered for later.
 
-### 6. Consume `dm.player.skill_intent`
+### 6. Consume `d2.player.skill_intent`
 
 Turn the existing use-skill intent into a deterministic cast request that resolves the assigned skill and learned level exactly once.
 

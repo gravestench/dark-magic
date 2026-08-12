@@ -79,15 +79,15 @@ a dynamic manager for native and Lua-defined components, a layered content VFS,
 and versioned Lua capabilities. The Raylib backend remains isolated beneath
 `internal/platform/raylib`; scripts author scenes and overlays through retained rendering,
 input, audio, records, locale, save, simulation, and navigation capabilities.
-The `dm.ecs/v1` capability additionally lets trusted scripts define validated
+The `engine.ecs/v1` capability additionally lets trusted scripts define validated
 component schemas and deterministic, scope-owned systems over the shared Akara
 world. Systems declare their query and read/write access; structural mutations
 are applied at phase barriers rather than during query iteration.
 The shim also preserves Riiablo's recovered quest hierarchy and speech-to-string
-relationships as validated data exposed through `dm.quest_catalog/v1`; scripts
+relationships as validated data exposed through `engine.quest_catalog/v1`; scripts
 do not need to recreate executable-era Diablo II rules as hard-coded branches.
 Recovered DS1 definition and act-local object mappings are available separately
-through `dm.map_catalog/v1`.
+through `engine.map_catalog/v1`.
 
 ### Product binaries
 
@@ -127,30 +127,30 @@ application-log tail appear in their respective modal views; normal process
 log output remains available outside the game window as well. Every Lua view
 opens with a target- and policy-specific message of the day. The `dm` root
 (`darkmagic` is an alias) provides discoverable, policy-filtered capability
-access: use `dm.help()` and `dm.capabilities()`, friendly names such as
-`dm.app`, or `dm.modules["dm.app/v1"]` for an exact versioned module ID.
+access: use `d2.help()` and `d2.capabilities()`, friendly names such as
+`d2.app`, or `d2.modules["engine.app/v1"]` for an exact versioned module ID.
 Pass a module, command, or path to help for progressively more detail—for
-example `dm.help(dm.audio)`, `dm.help(dm.audio.play)`, or
-`dm.help("dm.audio.play")`. Lua module registrations own the summaries, usage,
+example `d2.help(d2.audio)`, `d2.help(engine.audio.play)`, or
+`d2.help("engine.audio.play")`. Lua module registrations own the summaries, usage,
 parameters, returns, and examples used by both help and completion. Existing
 commands without authored metadata are still listed with fallback help.
 
 Shell presentation settings are live Lua runtime values. For example:
 
 ```lua
-dm.shell.values()                  -- current native-resolution shell settings
-dm.shell.set("font_size", 22)     -- apply immediately for this process
-dm.shell.set_many({                -- validate and apply atomically
+engine.shell.values()                  -- current native-resolution shell settings
+engine.shell.set("font_size", 22)     -- apply immediately for this process
+engine.shell.set_many({                -- validate and apply atomically
     console_height = 0.7,
     opacity = 0.85,
     transcript_limit = 4000,
     animation_speed = 1.5,
 })
-dm.shell.defaults()                -- inspect built-in values
-dm.shell.reset()                   -- restore defaults in memory
-dm.shell.reload()                  -- discard edits and reload the saved file
-dm.shell.save()                    -- persist the active values
-dm.shell.status()                  -- persistence path and dirty state
+engine.shell.defaults()                -- inspect built-in values
+engine.shell.reset()                   -- restore defaults in memory
+engine.shell.reload()                  -- discard edits and reload the saved file
+engine.shell.save()                    -- persist the active values
+engine.shell.status()                  -- persistence path and dirty state
 ```
 
 Settings default to `shell.json` under the platform user-configuration
@@ -160,7 +160,7 @@ and tabular spacing in both graphical and terminal shell views.
 
 Game preferences are separate from developer-shell presentation. The authored
 in-game sound and music sliders update mixer buses immediately through
-`dm.settings/v1` and save to `preferences.json` under the platform
+`engine.settings/v1` and save to `preferences.json` under the platform
 user-configuration directory when the overlay closes. Set
 `DARK_MAGIC_PREFERENCES` to use another file.
 
@@ -168,13 +168,13 @@ Renderer residency diagnostics use the same persistent preference path and can
 be controlled directly from the Lua shell:
 
 ```lua
-local settings = require("dm.settings/v1")
+local settings = require("engine.settings/v1")
 settings.set("debug_texture_residency", true) -- native-resolution cache overlay
 settings.set("texture_upload_budget_mb", 16)  -- optional warm uploads per frame
 settings.set("texture_cache_budget_mb", 512) -- retained native texture capacity
 settings.save()                               -- retain these across launches
 
-local render = require("dm.render/v1")
+local render = require("engine.render/v1")
 render.diagnostics() -- decoded cache plus pending CPU/GPU warm work
 ```
 
@@ -182,8 +182,8 @@ Texture creation remains on the graphics-owner thread. Asset reads and bitmap
 preparation run in bounded workers; immutable textures are then uploaded within
 the configured frame budget and retained by content identity across scenes.
 
-Use `dm.apropos("music")` to search the permitted module and command
-descriptions. `dm.docs()` renders Markdown for the session's complete permitted
+Use `d2.apropos("music")` to search the permitted module and command
+descriptions. `d2.docs()` renders Markdown for the session's complete permitted
 Lua API from the same registration metadata used by help and completion.
 Built-in capability conformance tests reject public module functions that do
 not provide an authored summary and usage signature. Audio, video, and render
@@ -452,7 +452,7 @@ captures remain outside the repository.
 the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and
 decision trace without materializing renderer assets. Click its seed controls
 to produce another deterministic zone; DS1 Lab remains the separate, lazy
-materialization tool. The `dm.mapgen/v1` capability also retains the earlier
+materialization tool. The `engine.mapgen/v1` capability also retains the earlier
 typed Act I Tristram preset proof.
 
 `--start-scene=warp_lab` opens an argument-free spatial transition proof using

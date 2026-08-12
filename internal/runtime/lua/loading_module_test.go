@@ -20,7 +20,7 @@ func TestLoadingModuleStartsNamedEngineDependencies(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`local loading = require("dm.loading/v1"); loading.begin({"world"})`)
+		return state.DoString(`local loading = require("engine.loading/v1"); loading.begin({"world"})`)
 	}); err != nil {
 		t.Fatal(err)
 	}

@@ -7,9 +7,9 @@ import (
 
 // LootModule exposes deterministic rolling over typed treasure-class records.
 func LootModule(records loot.TreasureClassRecords) Module {
-	return Module{Name: "dm.loot/v1", Help: documentedModule("Perform deterministic loot-table rolls from game data.", map[string]CommandHelp{
-		"event_seed": commandHelp("dm.loot.event_seed(...) ", "Derive a deterministic seed for a loot event."),
-		"roll":       commandHelp("dm.loot.roll(table, seed)", "Roll a treasure class deterministically."),
+	return Module{Name: "engine.loot/v1", Help: documentedModule("Perform deterministic loot-table rolls from game data.", map[string]CommandHelp{
+		"event_seed": commandHelp("engine.loot.event_seed(...) ", "Derive a deterministic seed for a loot event."),
+		"roll":       commandHelp("engine.loot.roll(table, seed)", "Roll a treasure class deterministically."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"event_seed": func(state *lua.LState) int {

@@ -214,7 +214,7 @@ experiments behind the same canonical import boundary.
 ## M10: Capability-based Lua runtime
 
 - [x] Replace the mutable global export table with versioned modules such as
-  `dm.vfs/v1`, `dm.render/v1`, `dm.input/v1`, and `dm.audio/v1`.
+  `engine.vfs/v1`, `engine.render/v1`, `engine.input/v1`, and `engine.audio/v1`.
 - [x] Expose narrow engine capabilities rather than the application host or
   component registry itself.
 - [x] Make one goroutine own each Lua state and route every invocation, callback,
@@ -450,7 +450,7 @@ implementations. The remaining work is tracked explicitly below.
   backed Multiplayer, Credits, and Cinematics controls now navigate to their
   verified sibling backgrounds and return safely. The verified hand cursor is
   shared across front-end scenes, and Exit requests orderly client shutdown
-  through `dm.app/v1`. Localized legal copy and the real Go build version render
+  through `engine.app/v1`. Localized legal copy and the real Go build version render
   through the bitmap-font path. A reusable focus-isolated text-entry modal now
   drives manifest-backed TCP/IP Host/Join intent controls. The supplied
   `Sounds.txt` resolves menu music through `ESOUND_MUSIC_DIABLO`, preserving its
@@ -460,7 +460,7 @@ implementations. The remaining work is tracked explicitly below.
   English 640x292 BIK entries as VFS-aware localized controls; playback and
   startup sequencing proceed under M17.2.
 - [x] M17.2: Implement startup/trademark/cinematic sequencing and skip/failure
-  behavior. A scoped backend-neutral `dm.video/v1` capability now keeps large
+  behavior. A scoped backend-neutral `engine.video/v1` capability now keeps large
   MPQ payloads outside Lua and exposes deterministic playing/complete/failed/
   stopped lifecycle state. The verified Blizzard and Blizzard North startup
   BIKs sequence with explicit skip/failure policy, and the Cinematics selector
@@ -527,7 +527,7 @@ implementations. The remaining work is tracked explicitly below.
   across supported resolution, language, and game-version variants. An
   engine-owned coordinator now executes named character, loading-asset, and
   world readiness tasks and exposes immutable progress through
-  `dm.loading/v1`. The Lua loading screen animates toward that real progress,
+  `engine.loading/v1`. The Lua loading screen animates toward that real progress,
   treats its configured sweep duration as presentation smoothing only, reports
   failures, and cannot enter the world while a dependency remains blocked.
   Coordinator, capability, and end-to-end blocked-transition tests cover the
@@ -558,7 +558,7 @@ implementations. The remaining work is tracked explicitly below.
   from startup monotonic time to that device clock and retains bounded late-frame
   dropping.
 - [x] Implement stop, skip, completion, decode failure, device loss, resize, and
-  shutdown cleanup through the existing `dm.video/v1` lifecycle contract. The
+  shutdown cleanup through the existing `engine.video/v1` lifecycle contract. The
   embedded scheduler now uses bounded decode queues, one monotonic media clock,
   late-video dropping, lossless audio ordering, cancellation, and checked
   presenter/audio teardown. Resizable windows now publish owner-thread viewport
@@ -617,7 +617,7 @@ complete until its actions are driven by authoritative game state and commands.
   instances and transfers remain part of M19.
   The recovered Escape/options hierarchy now uses verified `OptBarC.dc6` and
   `OptSkull.dc6` controls for live, persistent sound and music preferences via
-  `dm.settings/v1`. Unsupported 3D bias, gamma, contrast, and key-binding rows
+  `engine.settings/v1`. Unsupported 3D bias, gamma, contrast, and key-binding rows
   remain explicitly unavailable until their engine effects and recovered ranges
   are implemented rather than displaying fabricated values.
 - [ ] Make panel geometry data-driven from Inventory.txt, SkillDesc.txt, and
@@ -644,16 +644,16 @@ complete until its actions are driven by authoritative game state and commands.
   target-aware MOTD, and exposes the policy-filtered `dm`/`darkmagic` root with
   friendly lazy capability aliases, help, discovery, and exact versioned module
   access. Versioned module registrations now own structured module and command
-  help (usage, parameters, returns, and examples); `dm.help` accepts module or
+  help (usage, parameters, returns, and examples); `d2.help` accepts module or
   command values and string paths, while legacy commands receive generated
   fallback documentation. Multiline values now preserve newlines and indentation
-  through both adapters. The shared `dm.shell/v1` capability exposes validated
+  through both adapters. The shared `engine.shell/v1` capability exposes validated
   live presentation settings; font-size edits apply immediately and explicit
   defaults, reset, dirty status, and atomic platform-native persistence are
   available from client, server, and realm shells. All built-in capability
   functions now carry authored summaries and usage signatures checked against
-  their actual exported Lua tables. Policy-filtered `dm.apropos` searches the
-  registry and `dm.docs()` renders Markdown from that same source of truth.
+  their actual exported Lua tables. Policy-filtered `d2.apropos` searches the
+  registry and `d2.docs()` renders Markdown from that same source of truth.
   Structured table output now uses deterministic multiline formatting with
   cycle/depth protection. Lua output has retained Page Up/Page Down scrollback
   and semantic heading/code/value coloring in both adapters. Persistent settings
@@ -722,7 +722,7 @@ complete until its actions are driven by authoritative game state and commands.
   tooltips. Assignments pass through a replayable command into the player ECS.
   The desktop selector opens upward in the five recovered logical rows, applies
   left/right eligibility and passive filtering, and closes its opposite side.
-  Choices come from session-owned `dm.player.learned_skill` entities seeded by
+  Choices come from session-owned `d2.player.learned_skill` entities seeded by
   typed general/start-skill records; Lua only arranges and describes them.
   Save-imported purchased skills and charged item skills remain M19 work.
   Riiablo's mobile controls were explicitly
@@ -874,7 +874,7 @@ complete until its actions are driven by authoritative game state and commands.
 - [ ] Import DS1/DT1 collision, orientation, material, warp, object, shadow, roof,
   and subtile flags into deterministic chunks and zones. DS1 dimensions,
   authored objects, and combined DT1 subtile collision flags now decode into a
-  renderer-independent immutable map exposed through `dm.world/v1`; remaining
+  renderer-independent immutable map exposed through `engine.world/v1`; remaining
   orientation/material/warp/roof facts and chunk ownership are pending.
 - [ ] Implement entity-size-aware A* navigation, path smoothing, collision,
   interaction range, line of sight, and movement modes.
@@ -1057,7 +1057,7 @@ complete until its actions are driven by authoritative game state and commands.
     the town campfire anchor; preserve character/session identity independently
     of the selected town layout.
     The entry command now records the server-selected act and level in an
-    authoritative `dm.world.location` component; creation and offline join use
+    authoritative `d2.world.location` component; creation and offline join use
     the generated Act I town and campfire anchor. The production-asset client
     seam now proves a frontend-created/selected character is admitted by the
     fixed-tick session at that exact anchor with Act 1 / level 1 authority.
@@ -1168,7 +1168,7 @@ focus must not replace pointer coordinates as the authoritative client request.
   snapshot carries only validated presentation recipes, never renderer paths.
   Diagonal velocity is normalized
   to the same walk/run speed as cardinal movement, and an authoritative
-  `dm.world.collider` radius now probes the player's full footprint while
+  `d2.world.collider` radius now probes the player's full footprint while
   retaining axis-separated wall sliding. Riiablo's player factory identifies
   players as `Size.MEDIUM = 2` and its physics adapter uses `size / 2`, confirming
   a one-subtile radius (two-subtile diameter), not one five-subtile map tile.
@@ -1254,7 +1254,7 @@ data owners; they do not introduce parallel gameplay authorities.
   keys and ordered source entries, applies validated replace/remove batches
   atomically, treats identical replacement as an idempotent no-op, increments a
   per-entity invalidation revision, rejects arithmetic overflow, and exports a
-  canonical `dm.stats/v1` replay participant. Tests prove parameter separation,
+  canonical `engine.stats/v1` replay participant. Tests prove parameter separation,
   equip-style attach/detach, failed-batch rollback, deterministic serialization,
   strict atomic restore, race-safe snapshots, and composite-checksum coverage.
 - [x] **M21.2: Fixed-point combat vocabulary.** Add typed physical, fire,
@@ -1309,13 +1309,13 @@ data owners; they do not introduce parallel gameplay authorities.
   leech, secondary states, and the full death transaction stay
   in their documented verification/dependency queues.
 - [x] **M21.6: Consume assigned skill intent.** Resolve the existing
-  `dm.player.skill_intent` into one deterministic cast request with assigned
+  `d2.player.skill_intent` into one deterministic cast request with assigned
   skill and learned level read exactly once. The intent-phase consumer treats
   the existing component as a mutable admission mailbox, preserves the skill
   already resolved from the authoritative assignment by command admission,
   resolves its learned-skill level once,
   and snapshots player, side, skill ID, learned level, semantic/point target,
-  and request tick into `dm.skill.cast_request`. It clears the mailbox in the
+  and request tick into `d2.skill.cast_request`. It clears the mailbox in the
   same update and refuses to overwrite an unconsumed request, so later skill
   reassignment or level changes cannot rewrite an in-flight action. Both the
   offline client authority and standalone session server install the consumer;
@@ -1688,7 +1688,7 @@ authority, persistence separation, and resilience acceptance remain open.
   now exist. `internal/game/session` now owns transport-independent admission,
   fixed stepping, canonical command ordering, checkpointing, and replay export;
   the client uses it for offline stepping and the standalone server owns its
-  timed lifecycle plus read-only `dm.session/v1` diagnostics. Listen-server,
+  timed lifecycle plus read-only `engine.session/v1` diagnostics. Listen-server,
   realm orchestration, gameplay-system composition, and transports remain.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
@@ -2004,7 +2004,7 @@ acceptance/documentation cleanup; it is no longer a general refactor mandate.
   The Lua records capability now uses the typed catalog as its generic-row
   gateway, so script-requested reloads also drop the typed snapshot rather than
   bypassing catalog invalidation through the raw store. The versioned
-  `dm.game_data/v1` capability now supplies copied, typed character starting
+  `engine.game_data/v1` capability now supplies copied, typed character starting
   attributes and ordered unique-title fragments without exposing Go records or
   coupling authored scripts to arbitrary TSV columns.
   The Lua loot capability likewise consumes typed `TreasureClassEx` records and
@@ -2040,7 +2040,7 @@ replay verification, and narrow audited administrator handlers.
   any entity conversion fails.
 - [x] Add deterministic Dark Magic phases, dependency ordering, stable query
   snapshots, declared read/write access, and structural command barriers.
-- [x] Expose checked entities and components through `dm.ecs/v1`, including
+- [x] Expose checked entities and components through `engine.ecs/v1`, including
   Lua-defined schemas, systems, queries, field mutation, and deferred spawning,
   addition, removal, and destruction.
 - [x] Tie Lua system registrations to disposable component scopes and prove that
@@ -2057,7 +2057,7 @@ replay verification, and narrow audited administrator handlers.
   presentation pixels.
 - [x] Preserve and validate Riiablo's recovered quest and speech tables in the
   shim, including quest prerequisites, stage localization keys, and logical
-  sound-to-localization joins exposed through `dm.quest_catalog/v1`.
+  sound-to-localization joins exposed through `engine.quest_catalog/v1`.
 - [x] Resolve DS1 static objects through recovered act-local `obj.txt` mappings
   and dynamic objects through act-local `MonPreset.txt` ordering before exposing
   immutable world records to Lua.
@@ -2077,7 +2077,7 @@ replay verification, and narrow audited administrator handlers.
   listen-server mode and verify exported client/server replays.
 - [x] Distinguish player, administrator, and system command authority at handler
   registration; reject privilege escalation and retain executed privileged
-  commands as a defensive, replay-correlated audit exposed by `dm.session/v1`.
+  commands as a defensive, replay-correlated audit exposed by `engine.session/v1`.
 - [ ] Add explicit audited administrator handlers for item/loot, monster, world,
   character, and session operations as their authoritative ECS archetypes and
   validation rules become available; never add arbitrary component mutation.

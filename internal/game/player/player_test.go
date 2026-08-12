@@ -37,7 +37,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	identity, found := akara.GetDynamicStore(engine.World(), "dm.player.identity")
+	identity, found := akara.GetDynamicStore(engine.World(), "d2.player.identity")
 	if !found || len(identity.Entities()) != 1 {
 		t.Fatalf("identity store = %v, %v", identity, found)
 	}
@@ -46,12 +46,12 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if player, _ := component.Get("player"); player != "player-1" {
 		t.Fatalf("player = %v", player)
 	}
-	position, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	position, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
 	transform, _ := position.Get(entity)
 	if x, _ := transform.Get("x"); x != float64(5) {
 		t.Fatalf("x = %v", x)
 	}
-	modes, found := akara.GetDynamicStore(engine.World(), "dm.player.movement_mode")
+	modes, found := akara.GetDynamicStore(engine.World(), "d2.player.movement_mode")
 	if !found {
 		t.Fatal("movement mode store was not materialized")
 	}
@@ -59,7 +59,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if running, _ := mode.Get("running"); running != false {
 		t.Fatalf("initial movement mode = %v, want walking", running)
 	}
-	appearanceStore, found := akara.GetDynamicStore(engine.World(), "dm.player.appearance")
+	appearanceStore, found := akara.GetDynamicStore(engine.World(), "d2.player.appearance")
 	if !found {
 		t.Fatal("appearance store was not materialized")
 	}
@@ -67,7 +67,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if token, _ := appearance.Get("token"); token != "AM" {
 		t.Fatalf("token = %v, want AM", token)
 	}
-	animationStore, found := akara.GetDynamicStore(engine.World(), "dm.player.animation")
+	animationStore, found := akara.GetDynamicStore(engine.World(), "d2.player.animation")
 	if !found {
 		t.Fatal("animation store was not materialized")
 	}
@@ -78,7 +78,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if weaponClass, _ := appearance.Get("weapon_class"); weaponClass != "HTH" {
 		t.Fatalf("weapon class = %v, want HTH", weaponClass)
 	}
-	meleeStore, found := akara.GetDynamicStore(engine.World(), "dm.combat.melee_profile")
+	meleeStore, found := akara.GetDynamicStore(engine.World(), "d2.combat.melee_profile")
 	if !found {
 		t.Fatal("melee profile store was not materialized")
 	}
@@ -88,7 +88,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if minimum != int64(256) || maximum != int64(512) {
 		t.Fatalf("unarmed damage = %v..%v raw, want 256..512", minimum, maximum)
 	}
-	beltStore, found := akara.GetDynamicStore(engine.World(), "dm.player.belt")
+	beltStore, found := akara.GetDynamicStore(engine.World(), "d2.player.belt")
 	if !found {
 		t.Fatal("belt store was not materialized")
 	}
@@ -99,7 +99,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if item, _ := belt.Get("slot_16"); item != "" {
 		t.Fatalf("initial belt slot 16 = %v, want empty", item)
 	}
-	selectableStore, found := akara.GetDynamicStore(engine.World(), "dm.world.selectable")
+	selectableStore, found := akara.GetDynamicStore(engine.World(), "d2.world.selectable")
 	if !found {
 		t.Fatal("selectable store was not materialized")
 	}
@@ -110,7 +110,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if kind, _ := selectable.Get("kind"); kind != "player" {
 		t.Fatalf("selectable kind = %v", kind)
 	}
-	colliderStore, found := akara.GetDynamicStore(engine.World(), "dm.world.collider")
+	colliderStore, found := akara.GetDynamicStore(engine.World(), "d2.world.collider")
 	if !found {
 		t.Fatal("collider store was not materialized")
 	}
@@ -121,7 +121,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if radius, _ := collider.Get("radius"); radius != PlayerColliderRadius {
 		t.Fatalf("player collider radius = %v, want %v", radius, PlayerColliderRadius)
 	}
-	locationStore, found := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	locationStore, found := akara.GetDynamicStore(engine.World(), "d2.world.location")
 	if !found {
 		t.Fatal("world location store was not materialized")
 	}
@@ -132,7 +132,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if level, _ := location.Get("level_id"); level != int64(1) {
 		t.Fatalf("entry level = %v", level)
 	}
-	assignments, found := akara.GetDynamicStore(engine.World(), "dm.player.skill_assignment")
+	assignments, found := akara.GetDynamicStore(engine.World(), "d2.player.skill_assignment")
 	if !found {
 		t.Fatal("skill assignments were not materialized")
 	}
@@ -140,7 +140,7 @@ func TestEntryCommandMaterializesAuthoritativePlayerAtomically(t *testing.T) {
 	if left, _ := assignment.Get("left"); left != int64(0) {
 		t.Fatalf("default left skill = %v, want basic Attack ID 0", left)
 	}
-	learned, found := akara.GetDynamicStore(engine.World(), "dm.player.learned_skill")
+	learned, found := akara.GetDynamicStore(engine.World(), "d2.player.learned_skill")
 	if !found || learned.Len() != 2 {
 		t.Fatalf("learned skills = %v, %v", learned, found)
 	}
@@ -173,11 +173,11 @@ func TestEntrySourceAdmitsSelectedCharacterOnce(t *testing.T) {
 	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
 		t.Fatal(err)
 	}
-	identities, found := akara.GetDynamicStore(engine.World(), "dm.player.identity")
+	identities, found := akara.GetDynamicStore(engine.World(), "d2.player.identity")
 	if !found || identities.Len() != 1 {
 		t.Fatalf("identities = %v, %v", identities, found)
 	}
-	positions, found := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(engine.World(), "d2.world.position")
 	if !found {
 		t.Fatal("position store is missing")
 	}
@@ -211,7 +211,7 @@ func TestEntrySourceRecordsServerSelectedTown(t *testing.T) {
 	if _, err := session.AdvanceWithSource(time.Second/25, source.Commands); err != nil {
 		t.Fatal(err)
 	}
-	store, found := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	store, found := akara.GetDynamicStore(engine.World(), "d2.world.location")
 	if !found {
 		t.Fatal("location store is missing")
 	}
@@ -249,8 +249,8 @@ func TestRemoteAdmissionUsesServerSelectedTownDestination(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	positions, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
-	locations, _ := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
+	locations, _ := akara.GetDynamicStore(engine.World(), "d2.world.location")
 	entity := positions.Entities()[0]
 	position, _ := positions.Get(entity)
 	location, _ := locations.Get(entity)

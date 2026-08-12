@@ -47,9 +47,9 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	defer runtime.Stop(ctx)
 
 	script := `
-local render = require("dm.render/v1")
-local settings = require("dm.settings/v1")
-local escape_menu = require("darkmagic.ui.escape_menu")
+local render = require("engine.render/v1")
+local settings = require("engine.settings/v1")
+local escape_menu = require("d2.ui.escape_menu")
 
 local function value(value)
   if value == nil then return "<nil>" end
@@ -168,7 +168,7 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 	scope := &modruntime.Scope{}
 	defer scope.Close()
 	if err := runtime.RunScoped(ctx, scope, func(state *glua.LState) error {
-		return state.DoString(`local overlay = require("darkmagic.overlays.options"); overlay:create()`)
+		return state.DoString(`local overlay = require("d2.overlays.options"); overlay:create()`)
 	}); err != nil {
 		t.Fatal(err)
 	}

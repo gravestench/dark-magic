@@ -38,7 +38,7 @@ func main() {
 	defer runtime.Stop(ctx)
 	var output any
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
-		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString("dm.loot/v1")); err != nil {
+		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString("engine.loot/v1")); err != nil {
 			return err
 		}
 		lootModule := state.Get(-1).(*lua.LTable)

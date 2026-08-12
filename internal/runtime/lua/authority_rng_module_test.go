@@ -32,7 +32,7 @@ func TestAuthorityRandomModuleUsesCheckpointedNamedStreams(t *testing.T) {
 		var result lua.LNumber
 		err := runtime.Run(ctx, func(state *lua.LState) error {
 			return state.DoString(`
-local random = require("dm.authority_random/v1")
+local random = require("engine.authority_random/v1")
 result = random.integer("d2legacy.combat.hit", 100)
 `)
 		})
@@ -69,7 +69,7 @@ func TestAuthorityRandomModuleRejectsUnregisteredPurpose(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 	err := runtime.Run(ctx, func(state *lua.LState) error {
-		return state.DoString(`require("dm.authority_random/v1").integer("typo", 10)`)
+		return state.DoString(`require("engine.authority_random/v1").integer("typo", 10)`)
 	})
 	if err == nil {
 		t.Fatal("unregistered random purpose was accepted")

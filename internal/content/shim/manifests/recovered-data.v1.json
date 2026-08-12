@@ -11,7 +11,7 @@
       "source": "assets/data/quests.txt",
       "path": "data/recovered/riiablo/quests.txt",
       "records": 31,
-      "capability": "dm.quest_catalog/v1",
+      "capability": "d2.quest_catalog/v1",
       "purpose": "Quest ordering, prerequisites, icons, and localization stage keys"
     },
     {
@@ -19,7 +19,7 @@
       "source": "assets/data/speech.txt",
       "path": "data/recovered/riiablo/speech.txt",
       "records": 185,
-      "capability": "dm.quest_catalog/v1",
+      "capability": "d2.quest_catalog/v1",
       "purpose": "Logical Sounds.txt identifiers joined to localization keys"
     },
     {
@@ -27,7 +27,7 @@
       "source": "assets/data/ds1types.txt",
       "path": "data/recovered/riiablo/ds1types.txt",
       "records": 1091,
-      "capability": "dm.map_catalog/v1",
+      "capability": "d2.map_catalog/v1",
       "purpose": "DS1 preset definition names joined to level types"
     },
     {
@@ -35,7 +35,7 @@
       "source": "assets/data/obj.txt",
       "path": "data/recovered/riiablo/obj.txt",
       "records": 750,
-      "capability": "dm.map_catalog/v1",
+      "capability": "d2.map_catalog/v1",
       "purpose": "Act-local DS1 object identifiers joined to Objects.txt IDs"
     }
   ]

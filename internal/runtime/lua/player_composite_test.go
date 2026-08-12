@@ -15,7 +15,7 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.RegisterModule(Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
+	if err := runtime.RegisterModule(Module{Name: "engine.render/v1", Loader: func(state *lua.LState) int {
 		module := state.NewTable()
 		state.SetField(module, "cof_info", state.NewFunction(func(state *lua.LState) int {
 			got := state.CheckString(1)
@@ -63,7 +63,7 @@ func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 	defer runtime.Stop(context.Background())
 
 	script := `
-local composite=require("darkmagic.gameplay.player_composite").unarmed({
+local composite=require("d2.gameplay.player_composite").unarmed({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
 })
 assert(string.sub(composite.key,1,12)=="AM:WL:HTH:14")
@@ -72,17 +72,17 @@ assert(composite.components.HD=="data/global/chars/AM/HD/AMHDLITWL1HT.dcc")
 assert(composite.components.RA=="data/global/chars/AM/RA/AMRALITWLHTH.dcc")
 assert(composite.components.RH==nil)
 assert(composite.rate==333 and composite.frames==8)
-local fine_direction=require("darkmagic.gameplay.player_composite").unarmed({
+local fine_direction=require("d2.gameplay.player_composite").unarmed({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=15,
 })
 assert(fine_direction.direction==15)
-local equipped=require("darkmagic.gameplay.player_composite").resolve({
+local equipped=require("d2.gameplay.player_composite").resolve({
   token="AM", mode="WL", weapon_class="HTH", palette="data/global/Palette/units/pal.dat", direction=3,
 },{active_weapon_set=0,items={{container="equipment",slot="rarm",weapon_set=0,weapon_class="1hs",composite={RH="ssd"}}}})
 assert(equipped.cof=="data/global/chars/AM/COF/AMWL1HS.cof")
 assert(equipped.components.RH=="data/global/chars/AM/RH/AMRHSSDWLHTH.dcc")
-local playback=require("darkmagic.gameplay.player_composite").new_playback({mode="A"})
-local crossed=require("darkmagic.gameplay.player_composite").advance(playback,{rate=256,frames=4,events={[2]=1,[3]=3},mode="A"},0.09)
+local playback=require("d2.gameplay.player_composite").new_playback({mode="A"})
+local crossed=require("d2.gameplay.player_composite").advance(playback,{rate=256,frames=4,events={[2]=1,[3]=3},mode="A"},0.09)
 assert(playback.frame==3 and #crossed==2 and crossed[1].event==1 and crossed[2].event==3)
 `
 	scope := &Scope{}
@@ -120,8 +120,8 @@ func TestRealArchivesComposeUnarmedPlayerModes(t *testing.T) {
 	defer runtime.Stop(context.Background())
 
 	script := `
-local render=require("dm.render/v1")
-local adapter=require("darkmagic.gameplay.player_composite")
+local render=require("engine.render/v1")
+local adapter=require("d2.gameplay.player_composite")
 for _,token in ipairs({"AM","SO","NE","PA","BA","AI","DZ"}) do
   for _,mode in ipairs({"NU","WL","RN"}) do
     local ok,err=pcall(function()

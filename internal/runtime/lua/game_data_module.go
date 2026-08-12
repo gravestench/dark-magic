@@ -19,12 +19,12 @@ type gameDataSnapshotter interface {
 // records. Lua receives fresh scalar tables rather than Go-owned records or
 // arbitrary columns from the underlying TSV files.
 func GameDataModule(catalog gameDataSnapshotter) Module {
-	return Module{Name: "dm.game_data/v1", Help: documentedModule("Query typed, normalized Diablo II game data.", map[string]CommandHelp{
-		"character_class": commandHelp("dm.game_data.character_class(class)", "Return the typed starting data for a character class."),
-		"unique_titles":   commandHelp("dm.game_data.unique_titles()", "Return the available unique-item titles."),
-		"skill":           commandHelp("dm.game_data.skill(id)", "Return typed skill icon, eligibility, and localization metadata."),
-		"monsters":        commandHelp("dm.game_data.monsters()", "Return coherent ordinary-monster presentation recipes for development inspection."),
-		"missiles":        commandHelp("dm.game_data.missiles()", "Return coherent missile presentation recipes for development inspection."),
+	return Module{Name: "engine.game_data/v1", Help: documentedModule("Query typed, normalized Diablo II game data.", map[string]CommandHelp{
+		"character_class": commandHelp("engine.game_data.character_class(class)", "Return the typed starting data for a character class."),
+		"unique_titles":   commandHelp("engine.game_data.unique_titles()", "Return the available unique-item titles."),
+		"skill":           commandHelp("engine.game_data.skill(id)", "Return typed skill icon, eligibility, and localization metadata."),
+		"monsters":        commandHelp("engine.game_data.monsters()", "Return coherent ordinary-monster presentation recipes for development inspection."),
+		"missiles":        commandHelp("engine.game_data.missiles()", "Return coherent missile presentation recipes for development inspection."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"character_class": func(state *lua.LState) int {

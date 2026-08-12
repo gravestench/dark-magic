@@ -13,7 +13,7 @@ import (
 // internals, files, networking, or native resources.
 func AuthorityStateModule(stores *simulation.StateStore) Module {
 	return Module{
-		Name: "dm.authority_state/v1",
+		Name: "engine.authority_state/v1",
 		Loader: func(state *lua.LState) int {
 			module := state.NewTable()
 			state.SetFuncs(module, map[string]lua.LGFunction{

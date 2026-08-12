@@ -46,8 +46,8 @@ func Identity(source fs.FS) (simulation.RuntimeIdentity, error) {
 		PackageHash: digest, AuthoritativeHash: digest,
 		ConfigurationHash: "d2legacy/default/v1",
 		CapabilityVersions: map[string]string{
-			"dm.authority_command": "v1", "dm.authority_random": "v1",
-			"dm.authority_state": "v1", "dm.ecs": "v1", "dm.records": "v1",
+			"d2.authority_command": "v1", "d2.authority_random": "v1",
+			"d2.authority_state": "v1", "d2.ecs": "v1", "d2.records": "v1",
 		},
 	}, nil
 }

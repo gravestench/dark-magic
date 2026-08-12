@@ -21,7 +21,7 @@ func TestAuthorityStateModuleRunsHeadlesslyAndUsesEngineOwnedState(t *testing.T)
 	defer runtime.Stop(ctx)
 
 	script := `
-local state = require("dm.authority_state/v1")
+local state = require("engine.authority_state/v1")
 
 -- The script decides that a counter should advance. The engine owns the bytes.
 state.register("d2legacy.example", "counter/v1", { value = 1 })

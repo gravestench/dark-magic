@@ -25,11 +25,11 @@ func QuestCatalogModule(catalog questCatalogSnapshotter, locale ...dialogueTextL
 	if len(locale) > 0 {
 		text = locale[0]
 	}
-	return Module{Name: "dm.quest_catalog/v1", Help: documentedModule("Query recovered Diablo II quest and speech relationships.", map[string]CommandHelp{
-		"quest":  commandHelp("dm.quest_catalog.quest(id)", "Return one normalized quest definition or nil."),
-		"quests": commandHelp("dm.quest_catalog.quests([act])", "Return quests in canonical ID order, optionally filtered by zero-based act."),
-		"speech": commandHelp("dm.quest_catalog.speech(sound)", "Return the localization key associated with a logical sound ID."),
-		"dialog": commandHelp("dm.quest_catalog.dialog(sound)", "Resolve a speech ID into its localization key, timed text payload, and sound ID."),
+	return Module{Name: "engine.quest_catalog/v1", Help: documentedModule("Query recovered Diablo II quest and speech relationships.", map[string]CommandHelp{
+		"quest":  commandHelp("engine.quest_catalog.quest(id)", "Return one normalized quest definition or nil."),
+		"quests": commandHelp("engine.quest_catalog.quests([act])", "Return quests in canonical ID order, optionally filtered by zero-based act."),
+		"speech": commandHelp("engine.quest_catalog.speech(sound)", "Return the localization key associated with a logical sound ID."),
+		"dialog": commandHelp("engine.quest_catalog.dialog(sound)", "Resolve a speech ID into its localization key, timed text payload, and sound ID."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"quest": func(state *lua.LState) int {

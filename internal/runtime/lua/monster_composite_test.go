@@ -13,7 +13,7 @@ func TestMonsterCompositeUsesJoinedMonStats2Pieces(t *testing.T) {
 	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.RegisterModule(Module{Name: "dm.render/v1", Loader: func(state *lua.LState) int {
+	if err := runtime.RegisterModule(Module{Name: "engine.render/v1", Loader: func(state *lua.LState) int {
 		module := state.NewTable()
 		state.SetField(module, "cof_info", state.NewFunction(func(state *lua.LState) int {
 			if got := state.CheckString(1); got != "data/global/monsters/FA/COF/FAWLHTH.cof" {
@@ -49,7 +49,7 @@ func TestMonsterCompositeUsesJoinedMonStats2Pieces(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	script := `
-local adapter=require("darkmagic.gameplay.monster_composite")
+local adapter=require("d2.gameplay.monster_composite")
 assert(adapter.facing(6,0,0)==6)
 assert(adapter.facing(0,1,0)==3)
 local composite=adapter.resolve({token="FA",mode="WL",weapon_class="HTH",components="HD=LIT,TR=MED",direction=3})

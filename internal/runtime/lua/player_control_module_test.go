@@ -18,7 +18,7 @@ func TestPlayerControlModuleQueuesMovementIntent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local player=require("dm.player/v1"); player.request_running(true); player.request_move(12.5, 44.25); player.assign_skill("right", 17); player.request_skill("right", 20.5, 30.25, "fallen:7")`
+	script := `local player=require("engine.player/v1"); player.request_running(true); player.request_move(12.5, 44.25); player.assign_skill("right", 17); player.request_skill("right", 20.5, 30.25, "fallen:7")`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

@@ -21,7 +21,7 @@ func TestScriptRuntimeManagementAndTransactionalReloadDoNotLeak(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	source := fstest.MapFS{"component.lua": &fstest.MapFile{Data: []byte(`local r=require("dm.render/v1"); return {id="dynamic",start=function(self) self.node=r.create("world") end}`)}}
+	source := fstest.MapFS{"component.lua": &fstest.MapFile{Data: []byte(`local r=require("engine.render/v1"); return {id="dynamic",start=function(self) self.node=r.create("world") end}`)}}
 	definition, err := modruntime.LoadDefinition(ctx, runtime, source, "component.lua")
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestScriptRuntimeManagementAndTransactionalReloadDoNotLeak(t *testing.T) {
 		t.Fatalf("status = %#v", status)
 	}
 
-	source["component.lua"] = &fstest.MapFile{Data: []byte(`local r=require("dm.render/v1"); return {id="dynamic",start=function(self) self.node=r.create("modal") end}`)}
+	source["component.lua"] = &fstest.MapFile{Data: []byte(`local r=require("engine.render/v1"); return {id="dynamic",start=function(self) self.node=r.create("modal") end}`)}
 	if err := modruntime.ReloadDefinition(ctx, manager, runtime, source, "component.lua"); err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,7 @@ func TestInteractionModuleExposesCopiesAndQueuesIntent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local i=require("dm.interaction/v1"); local s=i.snapshot(); assert(s.active and s.npc=="Akara" and s.categories[1]=="armo"); i.close(); i.open("act1-akara")`)}}
+	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local i=require("engine.interaction/v1"); local s=i.snapshot(); assert(s.active and s.npc=="Akara" and s.categories[1]=="armo"); i.close(); i.open("act1-akara")`)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

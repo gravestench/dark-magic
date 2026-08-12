@@ -16,8 +16,8 @@ import (
 
 const (
 	DeathSystemID     = "monster.death_transaction"
-	DeathTransaction  = "dm.monster.death"
-	DeathEvent        = "dm.monster.death_event"
+	DeathTransaction  = "d2.monster.death"
+	DeathEvent        = "d2.monster.death_event"
 	DeathEventKilled  = "monster_killed"
 	DeathEventLoot    = "monster_loot"
 	DeathEventQuest   = "monster_quest_kill"
@@ -80,14 +80,14 @@ type deathStores struct {
 func registerDeathStores(engine *gameecs.Engine) (deathStores, error) {
 	schemas := []akara.Schema{
 		{Name: gamecombat.CombatEvent, Version: 2, Fields: []akara.Field{{Name: "kind", Kind: akara.FieldString}, {Name: "tick", Kind: akara.FieldInt64}, {Name: "attacker_id", Kind: akara.FieldString}, {Name: "target_id", Kind: akara.FieldString}, {Name: "hit", Kind: akara.FieldBool}, {Name: "physical", Kind: akara.FieldInt64}, {Name: "damage_channel", Kind: akara.FieldString}, {Name: "damage", Kind: akara.FieldInt64}, {Name: "remaining_health", Kind: akara.FieldInt64}}},
-		{Name: "dm.monster.identity", Version: 2, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}, {Name: "treasure_class", Kind: akara.FieldString}}},
-		{Name: "dm.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
-		{Name: "dm.monster.appearance", Version: 3, Fields: []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}, {Name: "name_key", Kind: akara.FieldString}, {Name: "components", Kind: akara.FieldString}, {Name: "death_sound", Kind: akara.FieldString}}},
+		{Name: "d2.monster.identity", Version: 2, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}, {Name: "treasure_class", Kind: akara.FieldString}}},
+		{Name: "d2.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
+		{Name: "d2.monster.appearance", Version: 3, Fields: []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}, {Name: "name_key", Kind: akara.FieldString}, {Name: "components", Kind: akara.FieldString}, {Name: "death_sound", Kind: akara.FieldString}}},
 		aiSchema(),
-		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 		targeting.Schema(),
-		{Name: "dm.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
+		{Name: "d2.player.progress", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		deathSchema(), deathEventSchema(),
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))

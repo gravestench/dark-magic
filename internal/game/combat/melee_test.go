@@ -105,13 +105,13 @@ func TestPlayerAttackSkillUsesSharedMeleeTransaction(t *testing.T) {
 	mustSetEntity(t, stores.locations, player, map[string]any{"act": int64(1), "level_id": int64(2)})
 	mustSetEntity(t, stores.profiles, player, map[string]any{"range": 2.0, "physical_min": MustWhole(2).Raw(), "physical_max": MustWhole(2).Raw()})
 	mustSetEntity(t, stores.playerVitals, player, map[string]any{"health": int64(10), "max_health": int64(10), "mana": int64(0), "max_mana": int64(0), "mana_raw": int64(0), "max_mana_raw": int64(0)})
-	velocities, _ := akara.GetDynamicStore(engine.World(), "dm.world.velocity")
+	velocities, _ := akara.GetDynamicStore(engine.World(), "d2.world.velocity")
 	mustSetEntity(t, velocities, player, map[string]any{"x": 0.0, "y": 0.0})
-	animations, _ := akara.GetDynamicStore(engine.World(), "dm.player.animation")
+	animations, _ := akara.GetDynamicStore(engine.World(), "d2.player.animation")
 	mustSetEntity(t, animations, player, map[string]any{"direction": int64(3), "mode": "NU"})
-	appearances, _ := akara.GetDynamicStore(engine.World(), "dm.player.appearance")
+	appearances, _ := akara.GetDynamicStore(engine.World(), "d2.player.appearance")
 	mustSetEntity(t, appearances, player, map[string]any{"cof": "", "token": "AM", "palette": "units.dat", "weapon_class": "HTH"})
-	controls, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Version: 1, Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	mustSetEntity(t, controls, player, map[string]any{"player": "hero"})
 	mustSetEntity(t, stores.selectables, target, map[string]any{"id": "monster:fallen", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 0.5, "priority": int64(20)})
 	mustSetEntity(t, stores.positions, target, map[string]any{"x": 8.0, "y": 2.0})
@@ -193,9 +193,9 @@ func gameskillStores(t *testing.T, engine *gameecs.Engine) (*akara.DynamicStore,
 	requests, _ := akara.GetDynamicStore(engine.World(), gameskill.CastRequestComponent)
 	states, _ := akara.GetDynamicStore(engine.World(), gameskill.CastStateComponent)
 	events, _ := akara.GetDynamicStore(engine.World(), gameskill.CastEventComponent)
-	vitals, _ := akara.GetDynamicStore(engine.World(), "dm.player.vitals")
+	vitals, _ := akara.GetDynamicStore(engine.World(), "d2.player.vitals")
 	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
-	controls, _ := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+	controls, _ := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 	return requests, states, events, vitals, selectables, controls
 }
 
@@ -285,11 +285,11 @@ func meleeTestStores(t *testing.T, engine *gameecs.Engine) meleeStores {
 	requests, _ := akara.GetDynamicStore(engine.World(), BasicAttackRequest)
 	events, _ := akara.GetDynamicStore(engine.World(), CombatEvent)
 	selectables, _ := akara.GetDynamicStore(engine.World(), targeting.Component)
-	positions, _ := akara.GetDynamicStore(engine.World(), "dm.world.position")
-	locations, _ := akara.GetDynamicStore(engine.World(), "dm.world.location")
+	positions, _ := akara.GetDynamicStore(engine.World(), "d2.world.position")
+	locations, _ := akara.GetDynamicStore(engine.World(), "d2.world.location")
 	profiles, _ := akara.GetDynamicStore(engine.World(), MeleeProfile)
-	monsterStats, _ := akara.GetDynamicStore(engine.World(), "dm.monster.stats")
-	playerVitals, _ := akara.GetDynamicStore(engine.World(), "dm.player.vitals")
+	monsterStats, _ := akara.GetDynamicStore(engine.World(), "d2.monster.stats")
+	playerVitals, _ := akara.GetDynamicStore(engine.World(), "d2.player.vitals")
 	return meleeStores{requests, events, selectables, positions, locations, profiles, monsterStats, playerVitals}
 }
 

@@ -73,7 +73,7 @@ func TestVFSVersionedCapability(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
-local vfs = require("dm.vfs/v1")
+local vfs = require("engine.vfs/v1")
 value = assert(vfs.read("value.txt"))
 origin = assert(vfs.source("value.txt")).layer
 listed = assert(vfs.list(".", ".dt1"))

@@ -51,7 +51,7 @@ The embedded Lua shim explicitly states:
 - Lua reads safe snapshots;
 - Lua submits intent/commands;
 - UI does not directly change authoritative item/game tables;
-- versioned `dm.* /v1` capabilities form a stable modding boundary;
+- versioned `d2.* /v1` capabilities form a stable modding boundary;
 - retained render/audio handles are scope-owned presentation resources;
 - gameplay can keep simulating under overlays while input ownership changes;
 - pointer-first presentation converts clicks to movement/interaction/item/combat intents;

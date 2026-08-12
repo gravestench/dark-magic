@@ -40,7 +40,7 @@ func TestGameDataModuleExposesTypedCopies(t *testing.T) {
 
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
-			local data = require("dm.game_data/v1")
+			local data = require("engine.game_data/v1")
 			local amazon, err = data.character_class("amazon")
 			assert(err == nil and amazon.class == "Amazon")
 			assert(amazon.strength == 20 and amazon.dexterity == 25)

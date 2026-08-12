@@ -34,11 +34,11 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 		return nil
 	}
 	_ = apply(settings.Values())
-	return Module{Name: "dm.settings/v1", Help: documentedModule("Inspect, preview, and persist client game preferences.", map[string]CommandHelp{
-		"get":    commandHelp("dm.settings.get(name)", "Read one active preference."),
-		"set":    commandHelp("dm.settings.set(name, value)", "Validate and apply one preference immediately."),
-		"save":   commandHelp("dm.settings.save()", "Persist active preferences for future launches."),
-		"status": commandHelp("dm.settings.status()", "Return the persistence path and dirty state."),
+	return Module{Name: "engine.settings/v1", Help: documentedModule("Inspect, preview, and persist client game preferences.", map[string]CommandHelp{
+		"get":    commandHelp("engine.settings.get(name)", "Read one active preference."),
+		"set":    commandHelp("engine.settings.set(name, value)", "Validate and apply one preference immediately."),
+		"save":   commandHelp("engine.settings.save()", "Persist active preferences for future launches."),
+		"status": commandHelp("engine.settings.status()", "Return the persistence path and dirty state."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"get": func(state *lua.LState) int {

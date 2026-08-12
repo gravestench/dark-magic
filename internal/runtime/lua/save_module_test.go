@@ -18,7 +18,7 @@ func TestSaveModuleSelectsCharacter(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.save/v1"); assert(s.create("hero", "Hero", "Amazon")); assert(s.select(s.characters()[1].id)); name=s.selected().name`)}}, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("engine.save/v1"); assert(s.create("hero", "Hero", "Amazon")); assert(s.select(s.characters()[1].id)); name=s.selected().name`)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	selected, ok := store.Selected()
@@ -37,7 +37,7 @@ func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("dm.save/v1"); id=assert(s.create_named("Iron-Wolf", "paladin", false, true)); assert(s.select(id)); c=s.selected(); assert(not c.expansion and c.hardcore)`)}}, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("engine.save/v1"); id=assert(s.create_named("Iron-Wolf", "paladin", false, true)); assert(s.select(id)); c=s.selected(); assert(not c.expansion and c.hardcore)`)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
 	selected, ok := store.Selected()
@@ -56,7 +56,7 @@ func TestSaveModuleDeletesCharacterByOpaqueID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local s=require("dm.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`
+	script := `local s=require("engine.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestSaveModuleExposesImmutableAppearanceSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local c=require("dm.save/v1").characters()[1]
+	script := `local c=require("engine.save/v1").characters()[1]
 assert(c.appearance.cof=="hero.cof")
 assert(c.appearance.palette=="units.dat")
 assert(c.appearance.direction==3)
@@ -106,7 +106,7 @@ func TestSaveModuleExposesCharacterStats(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	script := `local s=require("dm.save/v1").characters()[1].stats
+	script := `local s=require("engine.save/v1").characters()[1].stats
 assert(s.strength==25 and s.health==70 and s.max_health==80 and s.fire_resistance==15)`
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)

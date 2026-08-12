@@ -55,7 +55,7 @@ func TestBloodMoorPopulationIsDeterministicInspectableAndMaterialized(t *testing
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	identities, found := akara.GetDynamicStore(engine.World(), "dm.monster.identity")
+	identities, found := akara.GetDynamicStore(engine.World(), "d2.monster.identity")
 	if !found || identities.Len() != len(left.Spawns) {
 		t.Fatalf("materialized=%d found=%v", identities.Len(), found)
 	}

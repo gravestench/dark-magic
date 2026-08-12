@@ -10,7 +10,7 @@ import (
 
 func TestShimLocalizationKeysLoadWithoutDiabloTables(t *testing.T) {
 	locale := New(content.Shim(), "English")
-	value, err := locale.Text("darkmagic.hud.title")
+	value, err := locale.Text("d2.hud.title")
 	if err != nil || value != "Dark Magic" {
 		t.Fatalf("title = %q, %v", value, err)
 	}

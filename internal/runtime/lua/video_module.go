@@ -8,7 +8,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-const videoPlaybackType = "dm.video.playback/v1"
+const videoPlaybackType = "engine.video.playback/v1"
 
 type ownedPlayback struct {
 	playback video.Playback
@@ -27,9 +27,9 @@ func VideoModule(runtime *Runtime, backend video.Backend, source fs.FS) Module {
 	if backend == nil {
 		backend = video.Unavailable{}
 	}
-	return Module{Name: "dm.video/v1", Help: documentedModule("Play cinematics through the configured video backend.", map[string]CommandHelp{
-		"available": commandHelp("dm.video.available()", "Report whether embedded video playback is available."),
-		"play":      commandHelp("dm.video.play(path [, options])", "Begin video playback and return a scoped handle."),
+	return Module{Name: "engine.video/v1", Help: documentedModule("Play cinematics through the configured video backend.", map[string]CommandHelp{
+		"available": commandHelp("engine.video.available()", "Report whether embedded video playback is available."),
+		"play":      commandHelp("engine.video.play(path [, options])", "Begin video playback and return a scoped handle."),
 	}, map[string]TypeHelp{videoPlaybackType: {Summary: "A scoped active video playback handle.", Methods: map[string]CommandHelp{
 		"status": commandHelp("playback:status()", "Return the current playback state and error."),
 		"stop":   commandHelp("playback:stop()", "Stop and release this playback."),
@@ -101,7 +101,7 @@ func checkPlayback(state *lua.LState, index int) *ownedPlayback {
 	userData := state.CheckUserData(index)
 	playback, ok := userData.Value.(*ownedPlayback)
 	if !ok {
-		state.ArgError(index, "dm.video/v1 playback expected")
+		state.ArgError(index, "engine.video/v1 playback expected")
 		return nil
 	}
 	return playback

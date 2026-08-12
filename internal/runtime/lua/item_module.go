@@ -10,13 +10,13 @@ import (
 // ItemModule exposes copied item facts and queues move intents. Scripts never
 // receive the mutable authority or its internal maps.
 func ItemModule(authority *gameitem.Authority, controller *gameitem.Controller, owner string) Module {
-	return Module{Name: "dm.items/v1", Help: documentedModule("Inspect authoritative item containers and request fixed-tick moves.", map[string]CommandHelp{
-		"snapshot":          commandHelp("dm.items.snapshot()", "Return copied item identities, placements, container layout, and active weapon set."),
-		"move":              commandHelp("dm.items.move(item_id, destination[, place_held])", "Queue a move or held-item grid placement for the next simulation tick."),
-		"select_weapon_set": commandHelp("dm.items.select_weapon_set(set)", "Queue selection of alternate hand-equipment set 0 or 1."),
-		"sell_held":         commandHelp("dm.items.sell_held(item_id, vendor, category)", "Queue priced sale and authority-owned vendor catalog arrangement."),
-		"buy_to_held":       commandHelp("dm.items.buy_to_held(item_id, vendor)", "Queue priced purchase of vendor stock into the authoritative held container."),
-		"complete_service":  commandHelp("dm.items.complete_service(service)", "Queue a server-defined quest or vendor service transaction."),
+	return Module{Name: "engine.items/v1", Help: documentedModule("Inspect authoritative item containers and request fixed-tick moves.", map[string]CommandHelp{
+		"snapshot":          commandHelp("engine.items.snapshot()", "Return copied item identities, placements, container layout, and active weapon set."),
+		"move":              commandHelp("engine.items.move(item_id, destination[, place_held])", "Queue a move or held-item grid placement for the next simulation tick."),
+		"select_weapon_set": commandHelp("engine.items.select_weapon_set(set)", "Queue selection of alternate hand-equipment set 0 or 1."),
+		"sell_held":         commandHelp("engine.items.sell_held(item_id, vendor, category)", "Queue priced sale and authority-owned vendor catalog arrangement."),
+		"buy_to_held":       commandHelp("engine.items.buy_to_held(item_id, vendor)", "Queue priced purchase of vendor stock into the authoritative held container."),
+		"complete_service":  commandHelp("engine.items.complete_service(service)", "Queue a server-defined quest or vendor service transaction."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"snapshot": func(state *lua.LState) int {

@@ -8,7 +8,7 @@ import (
 
 func TestResolverUsesSpawnedEntityKindsAndPriority(t *testing.T) {
 	engine := gameecs.New()
-	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	positions, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		t.Fatal(err)
 	}

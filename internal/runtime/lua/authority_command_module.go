@@ -16,7 +16,7 @@ import (
 // monotonic sequence numbers, and allowed authority classes before Lua runs.
 func AuthorityCommandModule(runtime *Runtime, session *gamesession.Session) Module {
 	return Module{
-		Name: "dm.authority_command/v1",
+		Name: "engine.authority_command/v1",
 		Loader: func(state *lua.LState) int {
 			module := state.NewTable()
 			state.SetFuncs(module, map[string]lua.LGFunction{

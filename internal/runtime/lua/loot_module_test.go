@@ -15,7 +15,7 @@ func TestLootModuleRollsLayeredTSVDeterministically(t *testing.T) {
 
 	source := fstest.MapFS{
 		"data/global/excel/TreasureClassEx.txt": &fstest.MapFile{Data: []byte("Treasure Class\tPicks\tNoDrop\tItem1\tProb1\nRoot\t1\t0\tr01\t1\n")},
-		"test.lua":                              &fstest.MapFile{Data: []byte(`local loot=require("dm.loot/v1"); event_seed=assert(loot.event_seed(9,"monster",17,2)); drops=assert(loot.roll("Root", event_seed))`)},
+		"test.lua":                              &fstest.MapFile{Data: []byte(`local loot=require("engine.loot/v1"); event_seed=assert(loot.event_seed(9,"monster",17,2)); drops=assert(loot.roll("Root", event_seed))`)},
 	}
 	runtime := New()
 	if err := runtime.RegisterModule(LootModule(gamedata.New(recordstore.New(source)))); err != nil {

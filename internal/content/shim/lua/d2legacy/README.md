@@ -1,8 +1,8 @@
 # d2legacy authoritative gameplay
 
 This tree is the first-party Diablo II rules mod. Its canonical name and Lua
-namespace are `d2legacy`. The repository's “Dark Magic shim” is the bundle that
-contains this mod; it is not a second mod with a separate gameplay identity.
+namespace are `d2legacy`. The repository embeds this canonical first-party mod;
+there is no separate gameplay package or “Dark Magic shim” identity.
 
 The Go host supplies generic tools—fixed ticks, ECS storage, command admission,
 deterministic random streams, checkpoints, decoded records, rendering, and

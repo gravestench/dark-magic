@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	sessionStateID      = "dm.items/v1"
+	sessionStateID      = "engine.items/v1"
 	sessionStateVersion = 1
 )
 

@@ -4,7 +4,7 @@
 -- Keeping schemas here lets readers inspect saved state without reading the
 -- cast, movement, collision, or damage rules.
 
-local ecs = require("dm.ecs/v1")
+local ecs = require("engine.ecs/v1")
 
 local M = {}
 

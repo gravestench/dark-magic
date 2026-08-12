@@ -130,7 +130,7 @@ func TestItemCommandsReplayCompleteAuthorityAndDetectConfigurationAndStateDesync
 	err = simulation.VerifyReplay(tampered, nil, func(_ *gameecs.Engine, command simulation.Command) error {
 		return apply(desynced, command)
 	}, desynced)
-	if !errors.As(err, &desync) || desync.Detail != `participant "dm.items/v1" state differs` {
+	if !errors.As(err, &desync) || desync.Detail != `participant "engine.items/v1" state differs` {
 		t.Fatalf("participant desync = %#v, %v", desync, err)
 	}
 }

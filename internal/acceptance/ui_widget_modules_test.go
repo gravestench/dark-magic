@@ -38,12 +38,12 @@ func TestLuaReusableWidgetModulesLoad(t *testing.T) {
 	scripts := fstest.MapFS{
 		"load.lua": &fstest.MapFile{Data: []byte(`
 local modules = {
-  "darkmagic.ui.slider",
-  "darkmagic.ui.scrollbar",
-  "darkmagic.ui.list",
-  "darkmagic.ui.tabs",
-  "darkmagic.ui.panel",
-  "darkmagic.ui.progress_bar",
+  "d2.ui.slider",
+  "d2.ui.scrollbar",
+  "d2.ui.list",
+  "d2.ui.tabs",
+  "d2.ui.panel",
+  "d2.ui.progress_bar",
 }
 for _, name in ipairs(modules) do
   local loaded = require(name)

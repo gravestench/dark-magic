@@ -71,8 +71,8 @@ func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
-local render = require("dm.render/v1")
-local scenes = require("dm.scene/v1")
+local render = require("engine.render/v1")
+local scenes = require("engine.scene/v1")
 local sink = require("test.sink/v1")
 return {
   id = "boot",
@@ -155,8 +155,8 @@ func TestNonfocusedLuaSceneCannotReadFocusedOverlayInput(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
-local input=require("dm.input/v1")
-local scenes=require("dm.scene/v1")
+local input=require("engine.input/v1")
+local scenes=require("engine.scene/v1")
 local focus=require("test.focus/v1")
 return {id="boot",api=1,start=function(self)
   scenes.register("world",{update=function(self,elapsed,focused)
@@ -214,7 +214,7 @@ func TestLuaSceneReplacementDestroysPreviousComposition(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
-local render=require("dm.render/v1"); local scenes=require("dm.scene/v1")
+local render=require("engine.render/v1"); local scenes=require("engine.scene/v1")
 local function screen(layer) return {create=function(self)
   self.root=render.create(layer); self.child=render.create(layer,self.root)
 end} end
@@ -239,7 +239,7 @@ end}`)}}
 		t.Fatalf("first scene nodes = %d", got)
 	}
 	err = runtime.Run(context.Background(), func(state *lua.LState) error {
-		return state.DoString(`require("dm.scene/v1").replace("two")`)
+		return state.DoString(`require("engine.scene/v1").replace("two")`)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestLuaSceneReentryDoesNotShareMutableDefinitionState(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	source := fstest.MapFS{"boot.lua": {Data: []byte(`
-local render=require("dm.render/v1"); local scenes=require("dm.scene/v1")
+local render=require("engine.render/v1"); local scenes=require("engine.scene/v1")
 local screen={
   create=function(self) self.root=render.create("hud") end,
   update=function(self) self.root:set_position(10,20) end,

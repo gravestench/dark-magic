@@ -8,12 +8,12 @@ import (
 // PlayerControlModule accepts local presentation intents without granting Lua
 // direct access to the authoritative session or ECS world.
 func PlayerControlModule(controller *gamesession.MovementController) Module {
-	return Module{Name: "dm.player/v1", Help: documentedModule("Request local-player actions through the authoritative fixed-tick command source.", map[string]CommandHelp{
-		"request_running":  commandHelp("dm.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
-		"assign_skill":     commandHelp("dm.player.assign_skill(slot, skill_id)", "Request an authoritative left or right skill assignment."),
-		"request_move":     commandHelp("dm.player.request_move(x, y)", "Request movement toward an authoritative world-subtile target."),
-		"request_skill":    commandHelp("dm.player.request_skill(side, x, y, target_id?)", "Request assigned-skill use at an authoritative world target."),
-		"movement_pending": commandHelp("dm.player.movement_pending()", "Report whether a pointer path target remains active."),
+	return Module{Name: "engine.player/v1", Help: documentedModule("Request local-player actions through the authoritative fixed-tick command source.", map[string]CommandHelp{
+		"request_running":  commandHelp("engine.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
+		"assign_skill":     commandHelp("engine.player.assign_skill(slot, skill_id)", "Request an authoritative left or right skill assignment."),
+		"request_move":     commandHelp("engine.player.request_move(x, y)", "Request movement toward an authoritative world-subtile target."),
+		"request_skill":    commandHelp("engine.player.request_skill(side, x, y, target_id?)", "Request assigned-skill use at an authoritative world target."),
+		"movement_pending": commandHelp("d2.player.movement_pending()", "Report whether a pointer path target remains active."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"request_running": func(state *lua.LState) int {

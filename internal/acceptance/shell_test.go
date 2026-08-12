@@ -415,11 +415,11 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
-	positions, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(entitySimulation.World(), "d2.world.position")
 	if !found {
 		t.Fatal("game world did not register position component")
 	}
-	players, found := akara.GetDynamicStore(entitySimulation.World(), "dm.world.player_control")
+	players, found := akara.GetDynamicStore(entitySimulation.World(), "d2.world.player_control")
 	if !found {
 		t.Fatal("game world did not register player-control component")
 	}
@@ -452,7 +452,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if after := afterValue.(float64); after <= before {
 		t.Fatalf("hero did not move: %v -> %v", before, after)
 	}
-	modes, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.movement_mode")
+	modes, found := akara.GetDynamicStore(entitySimulation.World(), "d2.player.movement_mode")
 	if !found {
 		t.Fatal("game world did not register movement-mode component")
 	}
@@ -470,7 +470,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	if _, err := authority.AdvanceWithSource(time.Second, commandSource); err != nil {
 		t.Fatal(err)
 	}
-	assignments, found := akara.GetDynamicStore(entitySimulation.World(), "dm.player.skill_assignment")
+	assignments, found := akara.GetDynamicStore(entitySimulation.World(), "d2.player.skill_assignment")
 	if !found {
 		t.Fatal("game world did not register skill-assignment component")
 	}

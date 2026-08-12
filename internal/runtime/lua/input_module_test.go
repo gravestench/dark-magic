@@ -23,7 +23,7 @@ func TestInputModuleReadsLogicalFrameSnapshot(t *testing.T) {
 	}
 	defer runtime.Stop(context.Background())
 	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
-local input = require("dm.input/v1")
+local input = require("engine.input/v1")
 confirmed = input.pressed("confirm")
 cursor_x, cursor_y = input.cursor()
 scroll_x, scroll_y = input.scroll()

@@ -22,7 +22,7 @@ func TestShellModuleEditsResetsAndSavesSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(context.Background())
-	source := `local shell = require("dm.shell/v1")
+	source := `local shell = require("engine.shell/v1")
 shell.set("font_size", 24)
 shell.set_many({opacity=0.8, console_height=0.7, transcript_limit=500, animation_speed=2})
 assert(shell.get("font_size") == 24)

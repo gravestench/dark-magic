@@ -20,7 +20,7 @@ func TestStraightMissileCastMovesHitsAndReplays(t *testing.T) {
 		t.Fatal(err)
 	}
 	requests := store(t, engine, gameskill.CastRequestComponent)
-	vitals := store(t, engine, "dm.player.vitals")
+	vitals := store(t, engine, "d2.player.vitals")
 	monsterStats := registerMonsterStats(t, engine)
 
 	caster := engine.World().MustCreateEntity()
@@ -79,7 +79,7 @@ func TestStraightMissileExpiresWithoutContact(t *testing.T) {
 	registerTestSystems(t, engine, skills, missiles)
 	stores, _ := registerStores(engine)
 	requests := store(t, engine, gameskill.CastRequestComponent)
-	vitals := store(t, engine, "dm.player.vitals")
+	vitals := store(t, engine, "d2.player.vitals")
 	caster := engine.World().MustCreateEntity()
 	set(t, stores.controls, caster, map[string]any{"player": "alpha"})
 	set(t, stores.positions, caster, map[string]any{"x": 0.0, "y": 0.0})
@@ -129,7 +129,7 @@ func store(t *testing.T, engine *gameecs.Engine, name string) *akara.DynamicStor
 }
 func registerMonsterStats(t *testing.T, engine *gameecs.Engine) *akara.DynamicStore {
 	t.Helper()
-	store, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}})
+	store, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,11 +9,11 @@ import (
 // context. Scripts may ask to open or close a known target, but the request is
 // only applied by the fixed-tick session on its next update.
 func InteractionModule(authority *gameinteraction.Authority, controller *gameinteraction.Controller, owner string) Module {
-	return Module{Name: "dm.interaction/v1", Help: documentedModule("Inspect and request authoritative NPC interactions.", map[string]CommandHelp{
-		"snapshot": commandHelp("dm.interaction.snapshot()", "Return a copy of the active NPC, vendor categories, and services."),
-		"open":     commandHelp("dm.interaction.open(target_id)", "Request entry into a server-known NPC interaction."),
-		"open_at":  commandHelp("dm.interaction.open_at(x, y)", "Request authoritative selection and interaction at world-subtile coordinates."),
-		"close":    commandHelp("dm.interaction.close()", "Request leaving the current NPC interaction."),
+	return Module{Name: "engine.interaction/v1", Help: documentedModule("Inspect and request authoritative NPC interactions.", map[string]CommandHelp{
+		"snapshot": commandHelp("engine.interaction.snapshot()", "Return a copy of the active NPC, vendor categories, and services."),
+		"open":     commandHelp("engine.interaction.open(target_id)", "Request entry into a server-known NPC interaction."),
+		"open_at":  commandHelp("engine.interaction.open_at(x, y)", "Request authoritative selection and interaction at world-subtile coordinates."),
+		"close":    commandHelp("engine.interaction.close()", "Request leaving the current NPC interaction."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"snapshot": func(state *lua.LState) int {

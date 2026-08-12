@@ -13,8 +13,8 @@ import (
 
 const (
 	AISystemID           = "monster.basic_ai"
-	AIComponent          = "dm.monster.ai"
-	BasicAttackComponent = "dm.combat.basic_attack_request"
+	AIComponent          = "d2.monster.ai"
+	BasicAttackComponent = "d2.combat.basic_attack_request"
 	AIIdle               = "idle"
 	AIChase              = "chase"
 	AIAttack             = "attack"
@@ -65,9 +65,9 @@ func RegisterAI(engine *gameecs.Engine, paths PathFinder) error {
 func registerAIStores(engine *gameecs.Engine) (ai, attacks, positions, velocities, locations, selectables *akara.DynamicStore, err error) {
 	schemas := []akara.Schema{
 		aiSchema(), attackSchema(),
-		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
+		{Name: "d2.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
 		targeting.Schema(),
 	}
 	stores := make([]*akara.DynamicStore, len(schemas))

@@ -34,11 +34,11 @@ func (authority *Authority) validateRange(engine *gameecs.Engine, owner, targetI
 }
 
 func ownerPosition(engine *gameecs.Engine, owner string) (float64, float64, error) {
-	controls, found := akara.GetDynamicStore(engine.World(), "dm.world.player_control")
+	controls, found := akara.GetDynamicStore(engine.World(), "d2.world.player_control")
 	if !found {
 		return 0, 0, fmt.Errorf("interaction: player control state is unavailable")
 	}
-	positions, found := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(engine.World(), "d2.world.position")
 	if !found {
 		return 0, 0, fmt.Errorf("interaction: world position state is unavailable")
 	}

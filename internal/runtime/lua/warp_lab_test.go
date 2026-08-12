@@ -33,7 +33,7 @@ func TestWarpLabIntentWalksToPortalAndArrivesAtPair(t *testing.T) {
 	scope := &Scope{}
 	if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
 		return state.DoString(`
-local fixture=require("darkmagic.dev.warp_lab.fixture")
+local fixture=require("d2.dev.warp_lab.fixture")
 warp_fixture_module=fixture
 warp_fixture=fixture.create({x=10.5,y=0.5},{x=100,y=50},{x=0.5,y=0.5})
 fixture.intent(warp_fixture,"warp-lab:a","0,0;10,0")
@@ -48,14 +48,14 @@ fixture.intent(warp_fixture,"warp-lab:a","0,0;10,0")
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
-local position=ecs.get(warp_fixture.player,"dm.world.position")
-local status=ecs.get(warp_fixture.player,"dm.lab.warp.state")
-local actor=ecs.get(warp_fixture.player,"dm.lab.warp.actor")
+local ecs=require("engine.ecs/v1")
+local position=ecs.get(warp_fixture.player,"d2.world.position")
+local status=ecs.get(warp_fixture.player,"d2.lab.warp.state")
+local actor=ecs.get(warp_fixture.player,"d2.lab.warp.actor")
 assert(position:get("x")==102 and position:get("y")==52)
 assert(status:get("warp_count")==1)
 assert(actor:get("direction")==3)
-assert(ecs.get(warp_fixture.player,"dm.lab.warp.intent")==nil)
+assert(ecs.get(warp_fixture.player,"d2.lab.warp.intent")==nil)
 `)
 	}); err != nil {
 		t.Fatal(err)
@@ -75,12 +75,12 @@ assert(ecs.get(warp_fixture.player,"dm.lab.warp.intent")==nil)
 	}
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
-local ecs=require("dm.ecs/v1")
-local position=ecs.get(warp_fixture.player,"dm.world.position")
-local actor=ecs.get(warp_fixture.player,"dm.lab.warp.actor")
+local ecs=require("engine.ecs/v1")
+local position=ecs.get(warp_fixture.player,"d2.world.position")
+local actor=ecs.get(warp_fixture.player,"d2.lab.warp.actor")
 assert(position:get("x")==110 and position:get("y")==52)
 assert(actor:get("direction")==2)
-assert(ecs.get(warp_fixture.player,"dm.lab.warp.move_intent")==nil)
+assert(ecs.get(warp_fixture.player,"d2.lab.warp.move_intent")==nil)
 `)
 	}); err != nil {
 		t.Fatal(err)

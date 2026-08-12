@@ -148,15 +148,15 @@ type stores struct {
 
 func registerStores(world *akara.World) (stores, error) {
 	schemas := []akara.Schema{
-		{Name: "dm.monster.identity", Version: 2, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}, {Name: "treasure_class", Kind: akara.FieldString}}},
-		{Name: "dm.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
+		{Name: "d2.monster.identity", Version: 2, Fields: []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}, {Name: "base_id", Kind: akara.FieldString}, {Name: "graphics_id", Kind: akara.FieldString}, {Name: "seed", Kind: akara.FieldString}, {Name: "treasure_class", Kind: akara.FieldString}}},
+		{Name: "d2.monster.stats", Version: 1, Fields: []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}, {Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}}},
 		{Name: gamecombat.MeleeProfile, Version: 1, Fields: []akara.Field{{Name: "range", Kind: akara.FieldFloat64}, {Name: "physical_min", Kind: akara.FieldInt64}, {Name: "physical_max", Kind: akara.FieldInt64}}},
-		{Name: "dm.monster.appearance", Version: 3, Fields: []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}, {Name: "name_key", Kind: akara.FieldString}, {Name: "components", Kind: akara.FieldString}, {Name: "death_sound", Kind: akara.FieldString}}},
+		{Name: "d2.monster.appearance", Version: 3, Fields: []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}, {Name: "weapon_class", Kind: akara.FieldString}, {Name: "name_key", Kind: akara.FieldString}, {Name: "components", Kind: akara.FieldString}, {Name: "death_sound", Kind: akara.FieldString}}},
 		aiSchema(),
-		{Name: "dm.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
-		{Name: "dm.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
-		{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}},
+		{Name: "d2.world.location", Version: 1, Fields: []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}}},
+		{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}},
 		targeting.Schema(),
 	}
 	registered := make([]*akara.DynamicStore, len(schemas))

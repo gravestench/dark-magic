@@ -1,0 +1,388 @@
+-- DS1 Lab composes a real map stamp from its declared DT1 dependencies. The
+-- image is presentation only; game-world collision remains d2.world authority.
+
+local render = require("engine.render/v1")
+local input = require("engine.input/v1")
+local text = require("d2.ui.text")
+local vfs = require("engine.vfs/v1")
+local fuzzy_picker = require("d2.ui.fuzzy_picker")
+
+local lab = {}
+local palettes = {
+    "data/global/palette/ACT1/pal.pl2", "data/global/palette/ACT2/pal.pl2",
+    "data/global/palette/ACT3/pal.pl2", "data/global/palette/ACT4/pal.pl2",
+    "data/global/palette/ACT5/pal.pl2",
+}
+local zoom_step = 0.05
+local preview = {left=40, top=95, right=760, bottom=525}
+local layer_names = {"all", "floor", "lower wall", "shadow", "upper wall", "roof"}
+
+-- Create these bands after the map node and before the labels. Retained nodes
+-- with the same layer draw in creation order, which keeps both the black
+-- backing and the text above even a very large, heavily panned map preview.
+local function text_backdrop(root, top, height)
+    local node = render.create("hud", root)
+    node:fill_rect(800, height, 0, 0, 0, 128)
+    node:set_position(400, top + height / 2)
+    return node
+end
+
+local function label(root, value, y, style)
+    local node = render.create("hud", root)
+    local _, height = text.set(node, style or "font_lab_caption", value, 760, "center")
+    node:set_position(400, y + height / 2)
+    return node
+end
+
+local function index_of(values, wanted)
+    wanted = tostring(wanted or ""):lower()
+    for index, value in ipairs(values) do if value:lower() == wanted then return index end end
+    return 1
+end
+
+local function file_name(path)
+    return tostring(path or ""):match("([^/]+)$") or tostring(path or "")
+end
+
+local function act_from_path(path)
+    local normalized = tostring(path or ""):lower()
+    -- Lord of Destruction stores Act V map art beneath "Expansion" rather
+    -- than an "Act5" directory, but it still uses the Act V display palette.
+    if normalized:match("/expansion/") then return 5 end
+    local matched = normalized:match("/act([1-5])/")
+    if not matched then return nil end
+    return tonumber(matched)
+end
+
+local function quantized_zoom(value)
+    local snapped = math.floor(value / zoom_step + 0.5) * zoom_step
+    return math.max(zoom_step, math.min(4, snapped))
+end
+
+local function quantized_fit(value)
+    local snapped = math.floor(value / zoom_step) * zoom_step
+    return math.max(zoom_step, math.min(4, snapped))
+end
+
+function lab:infer_palette()
+    local act = act_from_path(self.path)
+    if not act then return end
+    self.palette_index = act
+    self.palette = palettes[act]
+end
+
+-- DS1 composition can decode many DT1 files. Queue that CPU work on the
+-- bounded asset workers so a cold random map cannot consume the Lua update
+-- deadline. The old complete preview remains visible until the new one is
+-- ready, which also avoids presenting a partially composed map.
+function lab:queue_preview()
+    if self.path == "" or #self.tiles == 0 then
+        self.pending_job = nil
+        self.chunk_set = nil
+        self.width, self.height = nil, nil
+        self.dirty = true
+        return
+    end
+    self.pending_job = render.preload({{
+        kind = "ds1_chunks",
+        path = self.path,
+        tiles = self.tiles,
+        palette = self.palette,
+    }})
+    self.dirty = false
+    text.set(self.status, "font_lab_color", "[gold]LOADING[/] [blue]" .. file_name(self.path) .. "[/]", 760, "center")
+    text.set(self.detail, "font_lab_color", "[white]" .. self.path .. "[/]", 760, "center")
+end
+
+function lab:random_asset()
+    if #self.assets == 0 then return end
+    self.random_state = (self.random_state * 48271) % 2147483647
+    self.path = self.assets[(self.random_state % #self.assets) + 1]
+    self:infer_palette()
+    local ok, dependencies = pcall(render.ds1_dependencies, self.path)
+    self.tiles = ok and dependencies or {}
+    self.chunk_set, self.width, self.height = nil, nil, nil
+    if not ok then
+        self.pending_job = nil
+        self.map_root:set_visible(false); self:clear_chunks()
+        text.set(self.status, "font_lab_color", "[red]DS1 DEPENDENCY ERROR[/]", 760, "center")
+        text.set(self.detail, "font_lab_color", "[white]" .. tostring(dependencies) .. "[/]", 760, "center")
+        return
+    end
+    self:queue_preview()
+end
+
+function lab:create()
+    local dev = require("engine.dev/v1")
+    self.root = render.create("hud")
+    self.map_root = render.create("hud", self.root)
+    self.map_root:set_z(-100)
+    self.map_root:set_visible(false)
+    self.map_root:set_clip(preview.left, preview.top, preview.right - preview.left, preview.bottom - preview.top)
+    self.chunk_nodes = {}
+    self.top_text_backdrop = text_backdrop(self.root, 0, 94)
+    self.bottom_text_backdrop = text_backdrop(self.root, 525, 75)
+    self.title = label(self.root, "DS1 MAP LAB", 18, "font_lab_heading")
+    self.status = label(self.root, "", 62, "font_lab_color")
+    self.detail = label(self.root, "", 535, "font_lab_color")
+	self.help = label(self.root, "F: find asset   Enter: random   Tab: layer   F3: collision   Arrows/drag: pan   Scroll/Home/End: zoom", 565)
+	self.path = ""
+	self.tiles = {}
+	self.palette = palettes[1]
+    self.palette_index = index_of(palettes, self.palette)
+    self.palette = palettes[self.palette_index]
+    self:infer_palette()
+    self.assets = vfs.list("data/global/tiles", ".ds1") or {}
+	self.picker = fuzzy_picker.create(self.root, {title="SELECT DS1", items=self.assets, on_select=function(path)
+		-- Picker values normally come from the mounted VFS catalog. Resolve the
+		-- path again anyway: stale mounts and malformed developer input should
+		-- produce an in-scene error, never reach chunk arithmetic.
+		local source, source_error = vfs.source(path)
+		if not source then
+			self.path, self.tiles, self.chunk_set = "", {}, nil
+			self.width, self.height, self.pending_job = nil, nil, nil
+			self.map_root:set_visible(false); self:clear_chunks()
+			text.set(self.status, "font_lab_color", "[red]INVALID DS1 PATH[/]", 760, "center")
+			text.set(self.detail, "font_lab_color", "[white]" .. tostring(source_error or path) .. "[/]", 760, "center")
+			return
+		end
+		self.path = path
+		self:infer_palette()
+		local ok, dependencies = pcall(render.ds1_dependencies, self.path)
+		self.tiles = ok and dependencies or {}
+		self.chunk_set, self.width, self.height = nil, nil, nil
+		if not ok then
+			self.pending_job = nil
+			self.map_root:set_visible(false); self:clear_chunks()
+			text.set(self.status, "font_lab_color", "[red]DS1 DEPENDENCY ERROR[/]", 760, "center")
+			text.set(self.detail, "font_lab_color", "[white]" .. tostring(dependencies) .. "[/]", 760, "center")
+			return
+		end
+		self:queue_preview()
+	end})
+    self.random_state = dev.seed()
+	self.pan_x, self.pan_y, self.zoom, self.dirty = 0, 0, 1, false
+	self.dragging, self.drag_x, self.drag_y = false, 0, 0
+	self.high_resolution_scroll_frames = 0
+    self.layer_view = 0
+    self.collision_visible = false
+	self:random_asset()
+end
+
+function lab:fit()
+    -- Fit always rounds downward so snapping never makes the map overflow the
+    -- viewport it was supposed to fit inside.
+    self.zoom = quantized_fit(math.min(1, 720 / math.max(1, self.width), 430 / math.max(1, self.height)))
+    self.pan_x, self.pan_y = 0, 0
+end
+
+function lab:position_map()
+    self.map_root:set_scale(self.zoom, self.zoom)
+    -- The retained renderer anchors images at their center. Pan that center
+    -- around the middle of the map preview instead of applying top-left layout
+    -- math a second time.
+    self.map_root:set_position(400 + self.pan_x, 95 + 430 / 2 + self.pan_y)
+end
+
+function lab:clear_chunks()
+    for index, node in pairs(self.chunk_nodes) do
+        if node:exists() then node:destroy() end
+        self.chunk_nodes[index] = nil
+    end
+    if self.collision_node then
+        if self.collision_node:exists() then self.collision_node:destroy() end
+        self.collision_node = nil
+        self.collision_visible = false
+    end
+end
+
+-- Collision is deliberately lazy. The diagnostic full-map RGBA overlay should
+-- cost nothing during ordinary chunked map inspection.
+function lab:toggle_collision()
+    if not self.chunk_set then return end
+    if not self.collision_node then
+        self.collision_node = render.create("hud", self.map_root)
+        self.collision_node:set_ds1_collision(self.path, self.tiles)
+        self.collision_node:set_z(20)
+        self.collision_node:set_visible(false)
+    end
+    self.collision_visible = not self.collision_visible
+    self.collision_node:set_visible(self.collision_visible)
+end
+
+function lab:active_chunk_count()
+    local count = 0
+    for _ in pairs(self.chunk_nodes) do count = count + 1 end
+    return count
+end
+
+function lab:update_status()
+    if not self.chunk_set then return end
+    text.set(self.status, "font_lab_color", string.format(
+        "[blue]%s[/]   [white]%dx%d[/]   chunks %d/%d   objects %d   [gold]%s[/]   [white]zoom %.3fx[/]   [green]ACT%d[/]",
+        file_name(self.path), self.width, self.height, self:active_chunk_count(),
+        #self.chunk_set.chunks, #(self.chunk_set.objects or {}), layer_names[self.layer_view + 1], self.zoom, self.palette_index), 760, "center")
+end
+
+-- Only chunks intersecting the viewport own render nodes and therefore demand
+-- native textures. A small margin avoids churn while panning near one edge.
+function lab:refresh_chunks()
+    if not self.chunk_set then return false end
+    local center_x, center_y = 400 + self.pan_x, 95 + 430 / 2 + self.pan_y
+    local admitted = 0
+    local changed = false
+    for _, chunk in ipairs(self.chunk_set.chunks) do
+        local left = center_x + (chunk.x - self.width / 2) * self.zoom
+        local top = center_y + (chunk.y - self.height / 2) * self.zoom
+        local right = left + chunk.width * self.zoom
+        local bottom = top + chunk.height * self.zoom
+        local layer_visible = self.layer_view == 0 or chunk.layer == self.layer_view - 1
+        local visible = layer_visible and right >= preview.left - 64 and left <= preview.right + 64
+            and bottom >= preview.top - 64 and top <= preview.bottom + 64
+        local key = chunk.index + 1
+        if visible and not self.chunk_nodes[key] and admitted < 2 then
+            local node = render.create("hud", self.map_root)
+            node:set_ds1_chunk(self.path, self.tiles, self.palette, chunk.index)
+            node:set_position(chunk.x + chunk.width / 2 - self.width / 2,
+                chunk.y + chunk.height / 2 - self.height / 2)
+            -- Layer numbers are semantic filter identities, not draw-order
+            -- values. In the legacy background pass lower walls draw first and
+            -- floors cover their upper overlap (especially visible in the
+            -- Arcane Sanctuary). The native chunk depth already encodes that.
+            node:set_z(chunk.depth)
+            self.chunk_nodes[key] = node
+            admitted = admitted + 1
+            changed = true
+        elseif not visible and self.chunk_nodes[key] then
+            self.chunk_nodes[key]:destroy()
+            self.chunk_nodes[key] = nil
+            changed = true
+        end
+    end
+    return changed
+end
+
+function lab:set_zoom(value, anchor_x, anchor_y, continuous)
+    local next_zoom = continuous and math.max(0.01, math.min(4, value)) or quantized_zoom(value)
+    if next_zoom == self.zoom then return false end
+    anchor_x, anchor_y = anchor_x or 400, anchor_y or (95 + 430 / 2)
+    local center_x, center_y = 400 + self.pan_x, 95 + 430 / 2 + self.pan_y
+    local local_x = (anchor_x - center_x) / self.zoom
+    local local_y = (anchor_y - center_y) / self.zoom
+    self.pan_x = anchor_x - 400 - local_x * next_zoom
+    self.pan_y = anchor_y - (95 + 430 / 2) - local_y * next_zoom
+    self.zoom = next_zoom
+    return true
+end
+
+function lab:rebuild()
+    if self.path == "" or #self.tiles == 0 then
+        self.map_root:set_visible(false)
+        self:clear_chunks()
+        self.chunk_set = nil
+        text.set(self.status, "font_lab_color", "[gold]NO DS1 RECIPE SELECTED", 760, "center")
+		text.set(self.detail, "font_lab_color", "[white]No mounted DS1 recipe with neighboring DT1 assets was found", 760, "center")
+        self.dirty = false
+        return
+    end
+    local ok, chunks = pcall(function()
+        return render.ds1_chunks(self.path, self.tiles, self.palette)
+    end)
+    if ok then
+        self.chunk_set = chunks
+        self.width, self.height = chunks.width, chunks.height
+        self:clear_chunks()
+        self:fit()
+        self:position_map()
+        self.map_root:set_visible(true)
+        self:refresh_chunks()
+        self:update_status()
+        text.set(self.detail, "font_lab_color", "[white]" .. self.path, 760, "center")
+    else
+        self.map_root:set_visible(false)
+        self:clear_chunks()
+        self.chunk_set, self.width, self.height = nil, nil, nil
+        text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
+        text.set(self.detail, "font_lab_color", "[white]" .. tostring(chunks), 760, "center")
+    end
+    self.dirty = false
+end
+
+function lab:update()
+	if self.picker:update() then return end
+	if input.pressed("search") then self.picker:show(); return end
+    if self.pending_job then
+        local status = render.preload_status(self.pending_job)
+        if not status or not status.done then return end
+        self.pending_job = nil
+        if status.failed > 0 then
+            self.map_root:set_visible(false)
+            self.chunk_set, self.width, self.height = nil, nil, nil
+            self:clear_chunks()
+            text.set(self.status, "font_lab_color", "[red]DS1 ERROR", 760, "center")
+            text.set(self.detail, "font_lab_color", "[white]" .. tostring(status.errors[1] or "preview preload failed"), 760, "center")
+            return
+        end
+        -- set_ds1 now performs a cheap cache lookup and retained-node update.
+        self.dirty = true
+    end
+    if self.dirty then self:rebuild() end
+    if self:refresh_chunks() then self:update_status() end
+    if input.pressed("tab") and self.chunk_set then
+        self.layer_view = (self.layer_view + 1) % #layer_names
+        self:refresh_chunks()
+        self:update_status()
+        return
+    end
+    if input.pressed("debug_collision") then self:toggle_collision(); return end
+    if input.pressed("confirm") then self:random_asset(); return end
+    if input.pressed("page_up") then self.palette_index = ((self.palette_index - 2) % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
+    if input.pressed("page_down") then self.palette_index = (self.palette_index % #palettes) + 1; self.palette = palettes[self.palette_index]; self:queue_preview(); return end
+    if not self.width then return end
+    local moved = false
+    if input.pressed("left") then self.pan_x = self.pan_x - 24; moved = true end
+    if input.pressed("right") then self.pan_x = self.pan_x + 24; moved = true end
+    if input.pressed("up") then self.pan_y = self.pan_y - 24; moved = true end
+    if input.pressed("down") then self.pan_y = self.pan_y + 24; moved = true end
+    if input.pressed("home") then moved = self:set_zoom(self.zoom - zoom_step) or moved end
+    if input.pressed("end") then moved = self:set_zoom(self.zoom + zoom_step) or moved end
+    if input.pressed("space") then self:fit(); moved = true end
+
+    local pointer_x, pointer_y = input.cursor()
+    local pointer_inside = pointer_x >= preview.left and pointer_x <= preview.right
+        and pointer_y >= preview.top and pointer_y <= preview.bottom
+    local _, scroll_y = input.scroll()
+    if scroll_y ~= 0 and pointer_inside then
+        local fractional = math.abs(scroll_y - math.floor(scroll_y + 0.5)) > 0.0001
+        if fractional then self.high_resolution_scroll_frames = 8 end
+        if self.high_resolution_scroll_frames > 0 then
+            -- Trackpads are an analog gesture. Multiplicative zoom feels even at
+            -- every scale and deliberately bypasses the discrete 0.05 grid.
+            moved = self:set_zoom(self.zoom * math.exp(scroll_y * 0.12), pointer_x, pointer_y, true) or moved
+        else
+            -- A notched wheel remains predictable: one notch, one 0.05 step.
+            moved = self:set_zoom(self.zoom + scroll_y * zoom_step, pointer_x, pointer_y, false) or moved
+        end
+    elseif self.high_resolution_scroll_frames > 0 then
+        self.high_resolution_scroll_frames = self.high_resolution_scroll_frames - 1
+    end
+    if input.pressed("pointer_primary") and pointer_inside then
+        self.dragging, self.drag_x, self.drag_y = true, pointer_x, pointer_y
+    elseif input.released("pointer_primary") then
+        self.dragging = false
+    end
+    if self.dragging and input.down("pointer_primary") then
+        local delta_x, delta_y = pointer_x - self.drag_x, pointer_y - self.drag_y
+        if delta_x ~= 0 or delta_y ~= 0 then
+            self.pan_x, self.pan_y = self.pan_x + delta_x, self.pan_y + delta_y
+            self.drag_x, self.drag_y, moved = pointer_x, pointer_y, true
+        end
+    end
+    if moved then
+        self:position_map()
+        self:refresh_chunks()
+        self:update_status()
+    end
+end
+
+return lab

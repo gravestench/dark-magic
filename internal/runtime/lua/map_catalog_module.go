@@ -9,9 +9,9 @@ import (
 // MapCatalogModule exposes recovered DS1 definition names and act-local object
 // mappings without coupling Lua map generation to Riiablo's source layout.
 func MapCatalogModule(catalog questCatalogSnapshotter) Module {
-	return Module{Name: "dm.map_catalog/v1", Help: documentedModule("Query recovered DS1 and map-object relationships.", map[string]CommandHelp{
-		"ds1_type": commandHelp("dm.map_catalog.ds1_type(definition)", "Return the recovered DS1 definition and level type."),
-		"object":   commandHelp("dm.map_catalog.object(act, id)", "Resolve an act-local DS1 object ID to Objects.txt."),
+	return Module{Name: "engine.map_catalog/v1", Help: documentedModule("Query recovered DS1 and map-object relationships.", map[string]CommandHelp{
+		"ds1_type": commandHelp("engine.map_catalog.ds1_type(definition)", "Return the recovered DS1 definition and level type."),
+		"object":   commandHelp("engine.map_catalog.object(act, id)", "Resolve an act-local DS1 object ID to Objects.txt."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"ds1_type": func(state *lua.LState) int {

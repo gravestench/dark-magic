@@ -23,7 +23,7 @@ func RegisterMovement(engine *gameecs.Engine, paths PathFinder) error {
 	if err != nil {
 		return err
 	}
-	colliders, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
+	colliders, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return err
 	}

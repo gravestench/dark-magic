@@ -83,7 +83,7 @@ func TestItemCommerceRevalidatesSpatialInteraction(t *testing.T) {
 
 func moveControlledPosition(t *testing.T, engine *gameecs.Engine, x, y float64) {
 	t.Helper()
-	positions, found := akara.GetDynamicStore(engine.World(), "dm.world.position")
+	positions, found := akara.GetDynamicStore(engine.World(), "d2.world.position")
 	if !found {
 		t.Fatal("position store missing")
 	}

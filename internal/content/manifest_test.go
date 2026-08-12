@@ -58,7 +58,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatalf("decode presentation manifest: %v", err)
 	}
-	if manifest.Schema != "darkmagic.presentation/v1" || manifest.Version != 1 {
+	if manifest.Schema != "d2.presentation/v1" || manifest.Version != 1 {
 		t.Fatalf("unexpected presentation contract %q version %d", manifest.Schema, manifest.Version)
 	}
 	if manifest.Resolution.Width <= 0 || manifest.Resolution.Height <= 0 {

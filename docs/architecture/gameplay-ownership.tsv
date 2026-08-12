@@ -20,11 +20,11 @@ internal/game/mapgen/	d2-policy	lua:d2legacy	D2 generation policy; generic algor
 internal/game/world/	transitional	split:engine+d2legacy	geometry navigation and D2 world policy are mixed
 internal/game/targeting/	transitional	split:engine+d2legacy	spatial mechanism and D2 target semantics are mixed
 internal/runtime/lua/	adapter	go:runtime	Lua sandbox capabilities and transitional D2 facades
-internal/content/shim/lua/darkmagic/gameplay/	transitional	lua:d2legacy	legacy namespace inside the shim; gameplay helpers migrate into canonical d2legacy mod tree
-internal/content/shim/lua/darkmagic/dev/	adapter	lua:development	developer instruments consuming production boundaries
-internal/content/shim/lua/darkmagic/screens/	adapter	lua:presentation	first-party screens and labs
-internal/content/shim/lua/darkmagic/overlays/	adapter	lua:presentation	first-party overlay presentation
-internal/content/shim/lua/darkmagic/presentation/	adapter	lua:presentation	world presentation adapters
-internal/content/shim/lua/darkmagic/ui/	adapter	lua:presentation	reusable UI and input composition
-internal/content/shim/lua/darkmagic/bootstrap/	adapter	lua:composition	mod and presentation composition
-internal/content/shim/lua/d2legacy/	d2-policy	lua:d2legacy	canonical first-party gameplay mod bundled by the Dark Magic shim
+internal/content/shim/lua/d2/gameplay/	transitional	lua:d2legacy	concise d2 namespace; gameplay helpers migrate into canonical d2legacy authority modules
+internal/content/shim/lua/d2/dev/	adapter	lua:development	developer instruments consuming production boundaries
+internal/content/shim/lua/d2/screens/	adapter	lua:presentation	first-party screens and labs
+internal/content/shim/lua/d2/overlays/	adapter	lua:presentation	first-party overlay presentation
+internal/content/shim/lua/d2/presentation/	adapter	lua:presentation	world presentation adapters
+internal/content/shim/lua/d2/ui/	adapter	lua:presentation	reusable UI and input composition
+internal/content/shim/lua/d2/bootstrap/	adapter	lua:composition	mod and presentation composition
+internal/content/shim/lua/d2legacy/	d2-policy	lua:d2legacy	canonical first-party gameplay authority bundled with the application

@@ -8,13 +8,13 @@ import (
 // SaveModule exposes character metadata and selection without exposing save
 // file ownership or mutable Go objects to Lua.
 func SaveModule(store *persistence.Store) Module {
-	return Module{Name: "dm.save/v1", Help: documentedModule("Create, select, inspect, and delete local characters.", map[string]CommandHelp{
-		"create_named": commandHelp("dm.save.create_named(name, class)", "Create and persist a character with an explicit name."),
-		"create":       commandHelp("dm.save.create(class)", "Create and persist a character with a generated name."),
-		"characters":   commandHelp("dm.save.characters()", "Return all available character summaries."),
-		"select":       commandHelp("dm.save.select(id)", "Select the active character by identifier."),
-		"delete":       commandHelp("dm.save.delete(id)", "Delete a character by identifier."),
-		"selected":     commandHelp("dm.save.selected()", "Return the currently selected character, if any."),
+	return Module{Name: "engine.save/v1", Help: documentedModule("Create, select, inspect, and delete local characters.", map[string]CommandHelp{
+		"create_named": commandHelp("engine.save.create_named(name, class)", "Create and persist a character with an explicit name."),
+		"create":       commandHelp("engine.save.create(class)", "Create and persist a character with a generated name."),
+		"characters":   commandHelp("engine.save.characters()", "Return all available character summaries."),
+		"select":       commandHelp("engine.save.select(id)", "Select the active character by identifier."),
+		"delete":       commandHelp("engine.save.delete(id)", "Delete a character by identifier."),
+		"selected":     commandHelp("engine.save.selected()", "Return the currently selected character, if any."),
 	}), Loader: func(state *lua.LState) int {
 		characterTable := func(character persistence.Character) *lua.LTable {
 			entry := state.NewTable()

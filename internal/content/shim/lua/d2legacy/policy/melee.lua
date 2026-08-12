@@ -2,7 +2,7 @@
 -- The fixed chance intentionally preserves the old scaffold until the reviewed
 -- attack-rating/defense inputs are connected to the verified 5..95% formula.
 
-local random = require("dm.authority_random/v1")
+local random = require("engine.authority_random/v1")
 local M = { temporary_hit_chance = 75 }
 
 function M.hits()

@@ -17,7 +17,7 @@ const maximumExactLuaInteger = uint64(1<<53 - 1)
 // composition root; ordinary policy modules only consume their assigned name.
 func AuthorityRandomModule(streams *simulation.RandomStreams) Module {
 	return Module{
-		Name: "dm.authority_random/v1",
+		Name: "engine.authority_random/v1",
 		Loader: func(state *lua.LState) int {
 			module := state.NewTable()
 			state.SetFuncs(module, map[string]lua.LGFunction{

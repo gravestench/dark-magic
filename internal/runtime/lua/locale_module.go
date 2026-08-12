@@ -7,8 +7,8 @@ import (
 
 // LocaleModule exposes string lookup without exposing locale storage ownership.
 func LocaleModule(locale *localization.Locale) Module {
-	return Module{Name: "dm.locale/v1", Help: documentedModule("Resolve localized game strings.", map[string]CommandHelp{
-		"text": commandHelp("dm.locale.text(key)", "Return localized text for a string key."),
+	return Module{Name: "engine.locale/v1", Help: documentedModule("Resolve localized game strings.", map[string]CommandHelp{
+		"text": commandHelp("engine.locale.text(key)", "Return localized text for a string key."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"text": func(state *lua.LState) int {

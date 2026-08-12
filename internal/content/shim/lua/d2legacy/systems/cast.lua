@@ -4,14 +4,14 @@
 -- The cost is paid exactly once when the cast starts. The system then remembers
 -- effect and completion ticks so replay does not depend on animation frames.
 
-local ecs = require("dm.ecs/v1")
+local ecs = require("engine.ecs/v1")
 
 local M = {}
 
 local function learned_levels(entities)
     local levels = {}
     for _, entity in ipairs(entities) do
-        local learned = ecs.get(entity, "dm.player.learned_skill")
+        local learned = ecs.get(entity, "d2.player.learned_skill")
         if learned then
             local owner = learned:get("owner"):id()
             levels[owner] = levels[owner] or {}
@@ -22,7 +22,7 @@ local function learned_levels(entities)
 end
 
 local function begin_cast(context, player, request, definition, levels, commands)
-    local vitals = ecs.get(player, "dm.player.vitals")
+    local vitals = ecs.get(player, "d2.player.vitals")
     local available = vitals:get("mana_raw")
     if available == 0 then available = vitals:get("mana") * 256 end
 
@@ -57,15 +57,15 @@ function M.register(definition)
         phase = "pre_simulation",
         query = { any = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "dm.player.learned_skill",
+            "d2.player.learned_skill",
         } },
         read = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "dm.player.learned_skill", "dm.player.vitals",
+            "d2.player.learned_skill", "d2.player.vitals",
         },
         write = {
             "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "dm.player.vitals",
+            "d2.player.vitals",
         },
         update = function(context, entities, structural)
             local levels = learned_levels(entities)

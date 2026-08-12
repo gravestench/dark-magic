@@ -28,7 +28,7 @@ func TestItemModuleReturnsCopiesAndQueuesIntent(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`
-local items=require("dm.items/v1")
+local items=require("engine.items/v1")
 local snapshot=assert(items.snapshot())
 assert(snapshot.belt_capacity==4 and snapshot.active_weapon_set==0)
 assert(#snapshot.items==1 and snapshot.items[1].container=="inventory" and snapshot.items[1].weapon_set==0)

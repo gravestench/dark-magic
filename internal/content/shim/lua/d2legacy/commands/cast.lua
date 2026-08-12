@@ -4,8 +4,8 @@
 -- functions run. Validation below is Diablo policy: the payload must describe
 -- one finite target and a positive learned-skill level.
 
-local commands = require("dm.authority_command/v1")
-local ecs = require("dm.ecs/v1")
+local commands = require("engine.authority_command/v1")
+local ecs = require("engine.ecs/v1")
 
 local M = {}
 
@@ -15,16 +15,16 @@ local function finite(value)
 end
 
 local function find_player(player_id)
-    for _, entity in ipairs(ecs.query({ all = { "dm.player.identity" } })) do
-        local identity = ecs.get(entity, "dm.player.identity")
+    for _, entity in ipairs(ecs.query({ all = { "d2.player.identity" } })) do
+        local identity = ecs.get(entity, "d2.player.identity")
         if identity:get("player") == player_id then return entity end
     end
     return nil
 end
 
 local function learned_skill(player, skill_id)
-    for _, entity in ipairs(ecs.query({ all = { "dm.player.learned_skill" } })) do
-        local learned = ecs.get(entity, "dm.player.learned_skill")
+    for _, entity in ipairs(ecs.query({ all = { "d2.player.learned_skill" } })) do
+        local learned = ecs.get(entity, "d2.player.learned_skill")
         if learned:get("owner"):id() == player:id()
             and learned:get("skill_id") == skill_id then return learned end
     end
@@ -44,7 +44,7 @@ end
 
 function M.apply_assignment(command)
     local player = assert(find_player(command.player), "assignment player does not exist")
-    local assignment = assert(ecs.get(player, "dm.player.skill_assignment"))
+    local assignment = assert(ecs.get(player, "d2.player.skill_assignment"))
     for _, side in ipairs({ "left", "right" }) do
         local skill_id = command.payload[side]
         if skill_id ~= nil then
@@ -69,7 +69,7 @@ end
 function M.apply(command)
     local player = assert(find_player(command.player), "cast player does not exist")
     local payload = command.payload
-    local assignments = assert(ecs.get(player, "dm.player.skill_assignment"),
+    local assignments = assert(ecs.get(player, "d2.player.skill_assignment"),
         "cast player has no skill assignments")
     local skill_id = assignments:get(payload.side)
     local values = {
@@ -92,7 +92,7 @@ function M.apply(command)
     -- admission and Diablo policy no longer cross into the old Go lifecycle.
     assert(skill_id == 0, "assigned skill has not migrated to d2legacy")
     local learned = assert(learned_skill(player, skill_id), "skill is not learned")
-    ecs.create({["dm.skill.cast_event"] = {
+    ecs.create({["d2.skill.cast_event"] = {
         kind = "skill_effect", tick = command.tick, player = command.player,
         skill_id = skill_id, skill_level = learned:get("level"),
         behavior = "basic.melee",

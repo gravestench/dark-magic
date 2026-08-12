@@ -41,8 +41,8 @@ func TestQuestCatalogModuleExposesHierarchyAndSpeech(t *testing.T) {
 	t.Cleanup(func() { _ = runtime.Stop(context.Background()) })
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`
-local catalog=require("dm.quest_catalog/v1")
-local maps=require("dm.map_catalog/v1")
+local catalog=require("engine.quest_catalog/v1")
+local maps=require("engine.map_catalog/v1")
 local den=catalog.quest(1)
 assert(den.name=="Den" and den.prerequisite_id==0 and den.stages[1].string_key=="s1")
 assert(#catalog.quests(0)==2)

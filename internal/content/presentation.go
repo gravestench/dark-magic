@@ -53,8 +53,8 @@ func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 	if err := json.Unmarshal(data, &document); err != nil {
 		return PresentationBootstrap{}, fmt.Errorf("content: decode presentation manifest: %w", err)
 	}
-	if document.Schema != "darkmagic.presentation/v1" {
-		return PresentationBootstrap{}, fmt.Errorf("content: presentation schema is %q, want %q", document.Schema, "darkmagic.presentation/v1")
+	if document.Schema != "d2.presentation/v1" {
+		return PresentationBootstrap{}, fmt.Errorf("content: presentation schema is %q, want %q", document.Schema, "d2.presentation/v1")
 	}
 	loadingPalette := document.Palettes[document.Screens.GameLoading.Palette]
 	if document.Screens.Title.Background == "" || document.Screens.GameLoading.Sheet == "" || loadingPalette == "" {

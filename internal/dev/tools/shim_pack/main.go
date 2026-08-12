@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	output := flag.String("output", "dist/darkmagic.zip", "output ZIP path")
+	output := flag.String("output", "dist/d2.zip", "output ZIP path")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		flag.Usage()

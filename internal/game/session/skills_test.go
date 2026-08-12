@@ -9,15 +9,15 @@ import (
 
 func TestSkillSourceAppliesAuthoritativeAssignments(t *testing.T) {
 	engine := gameecs.New()
-	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	assignments, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.skill_assignment", Fields: []akara.Field{{Name: "left", Kind: akara.FieldInt64}, {Name: "right", Kind: akara.FieldInt64}}})
+	assignments, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.skill_assignment", Fields: []akara.Field{{Name: "left", Kind: akara.FieldInt64}, {Name: "right", Kind: akara.FieldInt64}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	intents, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.skill_intent", Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}})
+	intents, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.skill_intent", Fields: []akara.Field{{Name: "side", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64}, {Name: "target_x", Kind: akara.FieldFloat64}, {Name: "target_y", Kind: akara.FieldFloat64}, {Name: "target_id", Kind: akara.FieldString}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestSkillSourceAppliesAuthoritativeAssignments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	learned, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "dm.player.learned_skill", Fields: []akara.Field{
+	learned, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2.player.learned_skill", Fields: []akara.Field{
 		{Name: "owner", Kind: akara.FieldEntity}, {Name: "skill_id", Kind: akara.FieldInt64},
 		{Name: "left_allowed", Kind: akara.FieldBool}, {Name: "right_allowed", Kind: akara.FieldBool},
 	}})

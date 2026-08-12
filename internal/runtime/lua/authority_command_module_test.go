@@ -37,8 +37,8 @@ func TestAuthorityCommandModuleKeepsAdmissionInGoAndPolicyInLua(t *testing.T) {
 	defer runtime.Stop(ctx)
 
 	script := `
-local commands = require("dm.authority_command/v1")
-local state = require("dm.authority_state/v1")
+local commands = require("engine.authority_command/v1")
+local state = require("engine.authority_state/v1")
 
 commands.register({
     kind = "d2legacy.test.increment",
@@ -90,7 +90,7 @@ func TestAuthorityCommandLuaValidatorRejectsBeforeQueueing(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
-		return state.DoString(`require("dm.authority_command/v1").register({
+		return state.DoString(`require("engine.authority_command/v1").register({
             kind = "d2legacy.test.reject",
             validate = function() error("no") end,
             apply = function() end,

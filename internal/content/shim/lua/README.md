@@ -1,6 +1,6 @@
-# Dark Magic Lua shim: start here
+# Bundled d2legacy mod: start here
 
-The embedded shim is both Dark Magic's first-party presentation layer **and living documentation for mod authors**. If you are new to programming, that is intentional: you should be able to read this mod from the top, follow the comments, change something small, and gradually understand how a game is put together.
+The embedded `d2legacy` mod is Dark Magic's first-party Diablo II gameplay and presentation package **and living documentation for mod authors**. Its concise runtime namespace is `d2.*`; the canonical package identity is `d2legacy`. If you are new to programming, that is intentional: you should be able to read this mod from the top, follow the comments, change something small, and gradually understand how a game is put together.
 
 You do **not** need to understand all of Lua before starting. Read the comments first. Treat unfamiliar syntax like punctuation in a comic book: keep following the story, then come back to the punctuation later.
 
@@ -35,38 +35,38 @@ Dark Magic capability / authoritative Lua handler
 deterministic ECS and registered state/resources
 ```
 
-The `require("dm.something/v1")` calls are the modding API. The `/v1` matters: it is an explicit version boundary. A mod should not reach into Go packages or renderer internals.
+The `require("engine.something/v1")` calls are the modding API. The `/v1` matters: it is an explicit version boundary. A mod should not reach into Go packages or renderer internals.
 
-Ordinary modules such as `require("darkmagic.ui.button")` are just Lua code from this shim. You can read them, copy their patterns, or replace them in a mod.
+Ordinary modules such as `require("d2.ui.button")` are Lua code from the bundled mod. You can read them, copy their patterns, or replace them in another mod.
 
 ## Recommended reading order
 
 Do **not** begin with the largest file. This order builds one idea at a time:
 
 1. `../../boot.lua` — how a mod starts and how scene ownership begins.
-2. `darkmagic/bootstrap/scene_registry.lua` — how names such as `main_menu` become registered scenes.
-3. `darkmagic/bootstrap/overlay_routing.lua` — how a helper can wrap another scene without rewriting it.
-4. `darkmagic/screens/loading.lua` — a small real scene using engine capabilities.
-5. `darkmagic/screens/title.lua` — retained rendering, animation, audio, and navigation.
-6. `darkmagic/ui/controls.lua` — the shared input/focus brain behind widgets.
-7. `darkmagic/ui/button.lua` — how one visual widget plugs into that input brain.
-8. `darkmagic/screens/main_menu.lua` — several small systems composed into a complete screen.
-9. `darkmagic/ui/item_grid.lua` — presentation reads authoritative state and submits intent instead of mutating gameplay directly.
-10. `darkmagic/gameplay/world.lua` — ECS components, snapshots, and presentation binding.
-11. `darkmagic/screens/game_world.lua` — the world scene joins simulation, presentation, HUD, and overlays.
-12. `darkmagic/ui/game_hud.lua` — a larger capstone example.
-13. `darkmagic/screens/ui_lab.lua` — a playground showing the reusable widgets together.
-14. `darkmagic/screens/composite_lab.lua`, `monster_lab.lua`, `missile_lab.lua`, `combat_lab.lua`, `dt1_lab.lua`, `ds1_lab.lua`, `mapgen_lab.lua`, and `warp_lab.lua` — asset-backed animation, tile, map, generated-zone, and spatial portal instruments. Combat Lab deliberately wraps `game_world.lua` so its collision, culling, depth ordering, composites, HUD, and authoritative combat cannot drift into a lab-only implementation.
+2. `d2/bootstrap/scene_registry.lua` — how names such as `main_menu` become registered scenes.
+3. `d2/bootstrap/overlay_routing.lua` — how a helper can wrap another scene without rewriting it.
+4. `d2/screens/loading.lua` — a small real scene using engine capabilities.
+5. `d2/screens/title.lua` — retained rendering, animation, audio, and navigation.
+6. `d2/ui/controls.lua` — the shared input/focus brain behind widgets.
+7. `d2/ui/button.lua` — how one visual widget plugs into that input brain.
+8. `d2/screens/main_menu.lua` — several small systems composed into a complete screen.
+9. `d2/ui/item_grid.lua` — presentation reads authoritative state and submits intent instead of mutating gameplay directly.
+10. `d2/gameplay/world.lua` — ECS components, snapshots, and presentation binding.
+11. `d2/screens/game_world.lua` — the world scene joins simulation, presentation, HUD, and overlays.
+12. `d2/ui/game_hud.lua` — a larger capstone example.
+13. `d2/screens/ui_lab.lua` — a playground showing the reusable widgets together.
+14. `d2/screens/composite_lab.lua`, `monster_lab.lua`, `missile_lab.lua`, `combat_lab.lua`, `dt1_lab.lua`, `ds1_lab.lua`, `mapgen_lab.lua`, and `warp_lab.lua` — asset-backed animation, tile, map, generated-zone, and spatial portal instruments. Combat Lab deliberately wraps `game_world.lua` so its collision, culling, depth ordering, composites, HUD, and authoritative combat cannot drift into a lab-only implementation.
 
 After that, browse whichever overlay or widget resembles the thing you want to make.
 
 ## Structure
 
-- `darkmagic/bootstrap` wires scene names and shared routing policy together.
-- `darkmagic/screens` contains root navigation scenes: title screens, menus, character screens, and the game world.
-- `darkmagic/overlays` contains panels that appear above another scene.
-- `darkmagic/ui` contains reusable Lua presentation and interaction helpers.
-- `darkmagic/gameplay` contains Lua-defined gameplay/ECS helpers used by the shim.
+- `d2/bootstrap` wires scene names and shared routing policy together.
+- `d2/screens` contains root navigation scenes: title screens, menus, character screens, and the game world.
+- `d2/overlays` contains panels that appear above another scene.
+- `d2/ui` contains reusable Lua presentation and interaction helpers.
+- `d2/gameplay` contains transitional Lua gameplay/ECS helpers being folded into the canonical `d2legacy` authority.
 
 ## Tiny Lua glossary
 
@@ -102,7 +102,7 @@ Use only the callbacks a scene needs.
 
 Values stored on `self` are **instance state**. This matters because there can be old/outgoing and new/incoming instances of the same scene during a safe transition.
 
-Checked render, audio, video, subscription, and callback handles created inside a scene/component scope are owned by that scope. The engine reclaims those handles when the scope closes. This is why many shim scenes do not manually free every render node.
+Checked render, audio, video, subscription, and callback handles created inside a scene/component scope are owned by that scope. The engine reclaims those handles when the scope closes. This is why many mod scenes do not manually free every render node.
 
 ## Root scenes versus overlays
 
@@ -142,11 +142,11 @@ self.picture:set_position(x, y)
 
 The node is a checked handle. The engine owns the native renderer object behind it.
 
-Many APIs use **center positions**, while old Diablo II data often describes top-left positions or common animation anchors. Helpers such as `darkmagic.ui.dc6` exist so that conversion is explained and shared instead of repeated as mystery arithmetic.
+Many APIs use **center positions**, while old Diablo II data often describes top-left positions or common animation anchors. Helpers such as `d2.ui.dc6` exist so that conversion is explained and shared instead of repeated as mystery arithmetic.
 
 ## Controls versus visuals
 
-`darkmagic.ui.controls` owns interaction rules such as:
+`d2.ui.controls` owns interaction rules such as:
 
 - focus;
 - hit testing;
@@ -204,14 +204,14 @@ handler.
 
 ## Manifest-driven presentation
 
-Asset paths, palette choices, timing, layout, localization keys, and other presentation facts usually belong in versioned shim manifests rather than being scattered through Lua.
+Asset paths, palette choices, timing, layout, localization keys, and other presentation facts usually belong in versioned mod manifests rather than being scattered through Lua.
 
 Lua presentation code should mostly describe **composition and interaction**.
 Authoritative `d2legacy` Lua owns Diablo gameplay policy. Go capabilities own
 decoding, native rendering/audio resources, deterministic simulation
 mechanisms, persistence primitives, and capability/resource enforcement.
 
-`darkmagic.ui.compat` is a special compatibility catalog: it stores recovered Diablo II presentation facts that have been researched/corroborated. Keeping those facts separate from the widget implementation makes it easier to tell "this is observed D2 behavior" from "this is how Dark Magic chose to implement it."
+`d2.ui.compat` is a special compatibility catalog: it stores recovered Diablo II presentation facts that have been researched/corroborated. Keeping those facts separate from the widget implementation makes it easier to tell "this is observed D2 behavior" from "this is how Dark Magic chose to implement it."
 
 ## Headless-friendly code
 
@@ -233,7 +233,7 @@ This is a good example of the capability philosophy: expose the useful operation
 
 ## Style for living documentation
 
-The shim is an example mod, so clarity is a feature.
+The bundled `d2legacy` package is also the example mod, so clarity is a feature.
 
 - Use four spaces for indentation and no statement semicolons.
 - Prefer `local` names.
@@ -253,6 +253,6 @@ Every Lua file can be syntax-checked independently with:
 luac -p path/to/file.lua
 ```
 
-Engine-level behavior is exercised by Go acceptance tests, which boot the embedded shim through the same versioned capability boundary used by the client.
+Engine-level behavior is exercised by Go acceptance tests, which boot the embedded mod through the same versioned capability boundary used by the client.
 
 When changing comments only, it is also useful to compare executable Lua after stripping comments/whitespace. The goal of documentation-only work is for the program to behave exactly as before.

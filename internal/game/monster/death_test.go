@@ -140,7 +140,7 @@ func assertDeathConsequences(t *testing.T, engine *gameecs.Engine) {
 	if events.Len() != 4 {
 		t.Fatalf("semantic events = %d", events.Len())
 	}
-	progress, _ := akara.GetDynamicStore(engine.World(), "dm.player.progress")
+	progress, _ := akara.GetDynamicStore(engine.World(), "d2.player.progress")
 	playerProgress, _ := progress.Get(progress.Entities()[0])
 	experience, _ := playerProgress.Get("experience")
 	if experience != int64(5+ordinaryExperience(t)) {
@@ -150,11 +150,11 @@ func assertDeathConsequences(t *testing.T, engine *gameecs.Engine) {
 	if selectables.Len() != 2 {
 		t.Fatalf("selectables = %d", selectables.Len())
 	}
-	colliders, _ := akara.GetDynamicStore(engine.World(), "dm.world.collider")
+	colliders, _ := akara.GetDynamicStore(engine.World(), "d2.world.collider")
 	if colliders.Len() != 0 {
 		t.Fatalf("colliders = %d", colliders.Len())
 	}
-	appearance, _ := akara.GetDynamicStore(engine.World(), "dm.monster.appearance")
+	appearance, _ := akara.GetDynamicStore(engine.World(), "d2.monster.appearance")
 	component, _ := appearance.Get(deaths.Entities()[0])
 	mode, _ := component.Get("mode")
 	if mode != "DT" {
