@@ -1650,7 +1650,7 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   A reconstructed runtime continues reward and difficulty commands from a
   midpoint checkpoint to the identical final checksum.
 
-- [ ] **M21.14.12 — D2 map-generation and population-policy migration.** Move
+- [x] **M21.14.12 — D2 map-generation and population-policy migration.** Move
   act/level graph choices, preset/maze/outdoor selection, legacy hard-coded
   relationships, stamp joins, and population policy to `d2legacy`. Keep generic
   geometry, seeded graph/maze algorithms, collision, and navigation in Go only
@@ -1662,7 +1662,11 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   entry-world level selection, and Rogue Encampment campfire-marker selection
   execute in documented d2legacy Lua modules. Go transports admitted recipes
   and runs generic collision-space nearest-open-point and cardinal seam geometry
-  from the mod-authored specification only.
+  from the mod-authored specification only. Complete acceptance now generates
+  Rogue Encampment and Blood Moor together from typed immutable records, checks
+  the Lua-selected facing seam, snapshots both admitted recipes plus that seam,
+  reconstructs validated immutable zones without rerunning policy, and proves
+  the joined topology checksum is identical.
   Population choices are likewise Lua-owned while generic recipe/geometry
   contracts remain in Go. The joined Act I town-to-wilderness restore vector remains.
 
