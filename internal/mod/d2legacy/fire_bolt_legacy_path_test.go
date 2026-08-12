@@ -96,7 +96,7 @@ ecs.component({name="d2legacy.player.learned_skill",fields={
 }})
 ecs.component({name="d2legacy.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
 ecs.component({name="d2legacy.player.progress",fields={{name="level",type="i64"},{name="experience",type="i64"},{name="unspent_skill_points",type="i64"}}})
-ecs.component({name="d2legacy.player.combat_stats",fields={{name="attack_rating",type="i64"},{name="defense",type="i64"}}})
+ecs.component({name="d2legacy.player.combat_stats",fields={{name="base_attack_rating",type="i64"},{name="base_defense",type="i64"},{name="attack_rating",type="i64"},{name="defense",type="i64"}}})
 ecs.component({name="d2legacy.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
 ecs.component({name="d2legacy.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})
 ecs.component({name="d2legacy.world.collider",fields={{name="radius",type="f64"}}})
@@ -114,7 +114,7 @@ player = ecs.create({
     ["d2legacy.player.vitals"]={health=50,max_health=50,mana=10,max_mana=10,mana_raw=2560,max_mana_raw=2560},
     ["d2legacy.player.skill_assignment"]={left=36,right=36},
     ["d2legacy.player.progress"]={level=99,experience=0},
-    ["d2legacy.player.combat_stats"]={attack_rating=10000,defense=0},
+    ["d2legacy.player.combat_stats"]={base_attack_rating=10000,base_defense=0,attack_rating=10000,defense=0},
     ["d2legacy.world.position"]={x=0,y=0}, ["d2legacy.world.location"]={act=1,level_id=1},
     ["d2legacy.world.collider"]={radius=0.5},
     ["d2legacy.world.selectable"]={id="player:alice",kind="player",label="Hero",owner="alice",radius=0.5,priority=1},

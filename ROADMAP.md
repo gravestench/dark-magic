@@ -1450,6 +1450,12 @@ data owners; they do not introduce parallel gameplay authorities.
   upstream class/Dexterity, equipment, skill, and defense stat projection so
   the verified resolver receives real authoritative inputs rather than new
   placeholders.
+  Player attack rating now preserves its Dexterity-derived base separately from
+  named additive sources. The active equipped hand contributes an item-identity
+  source that is rebuilt into the effective value before combat and disappears
+  on unequip; checkpointed item acceptance proves both attachment and removal.
+  Affix/socket/passive-skill sources and their verified percentage ordering
+  remain before this milestone can replace its broader synthetic inputs.
 
 ### M21.14: Authoritative Lua Gameplay and d2legacy Isolation
 
