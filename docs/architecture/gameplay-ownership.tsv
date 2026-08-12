@@ -32,5 +32,6 @@ internal/content/d2legacy/lua/d2legacy/commands/	d2-policy	lua:d2legacy	authorit
 internal/content/d2legacy/lua/d2legacy/components/	d2-policy	lua:d2legacy	authoritative Diablo component schemas
 internal/content/d2legacy/lua/d2legacy/data/	d2-policy	lua:d2legacy	interpretation of decoded records as Diablo rules
 internal/content/d2legacy/lua/d2legacy/items/	d2-policy	lua:d2legacy	Diablo item container snapshots and policy helpers
+internal/content/d2legacy/lua/d2legacy/interactions/	d2-policy	lua:d2legacy	Diablo NPC interaction context and presentation adapter
 internal/content/d2legacy/lua/d2legacy/policy/	d2-policy	lua:d2legacy	Diablo formulas and decisions
 internal/content/d2legacy/lua/d2legacy/systems/	d2-policy	lua:d2legacy	authoritative Diablo fixed-tick systems
