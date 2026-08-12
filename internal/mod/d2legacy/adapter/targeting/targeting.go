@@ -1,4 +1,4 @@
-// Package targeting resolves pointer hits against authoritative spawned ECS
+// Package targeting resolves d2legacy pointer hits against authoritative ECS
 // entities. Authored DS1 stamps remain world facts; this package classifies the
 // live things created from those facts.
 package targeting

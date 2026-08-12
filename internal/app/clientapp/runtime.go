@@ -11,7 +11,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
-	gametargeting "github.com/gravestench/dark-magic/internal/game/targeting"
+	d2targeting "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
@@ -51,7 +51,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.LocaleModule(app.locale),
 		modruntime.SaveModule(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
-		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
+		modruntime.TargetingModule(d2targeting.New(app.entitySimulation)),
 		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
 	}
