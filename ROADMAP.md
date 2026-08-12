@@ -1632,19 +1632,23 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   character at its authored threshold, crosses an owned-unit expiration boundary
   from a checkpoint, and proves identical level, despawn, and final checksum.
 
-- [ ] **M21.14.11 — interactions, quests, transitions, and difficulty
+- [x] **M21.14.11 — interactions, quests, transitions, and difficulty
   migration.** Move D2 NPC/object interactions, quests, rewards, services,
   waypoints/warps, act progression, and difficulty policy to `d2legacy`.
   Acceptance: one quest/NPC reward path and one cross-zone transition are
   Lua-owned, replay-safe, and driven by immutable decoded records plus recovered
   relationships.
 
-  Ownership cutover and cross-zone warp behavior are complete. The production
+  Complete: ownership cutover and cross-zone warp behavior are complete. The production
   Act I town/Blood Moor seam now crosses through a fixed-tick Lua ECS system;
   Lua identifies the connected levels, authored roles, and facing edges while
   Go resolves only collision-safe endpoint geometry. Presentation observes the
-  committed level only. A full decoded quest/NPC reward path and difficulty
-  progression vector remain.
+  committed level only. The renderer-free authority installs the immutable
+  recovered quest/map catalogs; Lua commits Den of Evil completion, validates
+  Akara through the recovered quest plus live interaction relationship, awards
+  the skill point once, and advances difficulty only after Act V completion.
+  A reconstructed runtime continues reward and difficulty commands from a
+  midpoint checkpoint to the identical final checksum.
 
 - [ ] **M21.14.12 — D2 map-generation and population-policy migration.** Move
   act/level graph choices, preset/maze/outdoor selection, legacy hard-coded

@@ -9,6 +9,8 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	adaptercatalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -136,11 +138,13 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
 		return err
 	}
+	recoveredCatalog := recovered.New(source)
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
 		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(state), modruntime.AuthorityRandomModule(random),
 		modruntime.AuthorityCommandModule(runtime, session), modruntime.InitialDataModule(initial),
 		modruntime.NewECSCapability(runtime, engine).Module(),
+		adaptercatalog.QuestModule(recoveredCatalog), adaptercatalog.MapModule(recoveredCatalog),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
 			return err

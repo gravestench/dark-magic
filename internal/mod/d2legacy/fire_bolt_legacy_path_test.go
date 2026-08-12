@@ -95,7 +95,7 @@ ecs.component({name="d2legacy.player.learned_skill",fields={
     {name="left_allowed",type="bool"},{name="right_allowed",type="bool"},
 }})
 ecs.component({name="d2legacy.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
-ecs.component({name="d2legacy.player.progress",fields={{name="level",type="i64"},{name="experience",type="i64"}}})
+ecs.component({name="d2legacy.player.progress",fields={{name="level",type="i64"},{name="experience",type="i64"},{name="unspent_skill_points",type="i64"}}})
 ecs.component({name="d2legacy.player.combat_stats",fields={{name="attack_rating",type="i64"},{name="defense",type="i64"}}})
 ecs.component({name="d2legacy.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
 ecs.component({name="d2legacy.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})

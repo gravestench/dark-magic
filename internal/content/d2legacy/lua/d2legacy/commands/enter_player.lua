@@ -64,7 +64,10 @@ function M.apply(command)
     local left, right = initial_skills(learned)
     local player = ecs.create({
         ["d2legacy.player.identity"]={character_id=p.character_id,player=p.player,name=p.name,class=p.class},
-        ["d2legacy.player.progress"]={level=p.level,experience=p.experience},
+        ["d2legacy.player.progress"]={level=p.level,experience=p.experience,
+            unspent_skill_points=p.unspent_skill_points or 0},
+        ["d2legacy.player.difficulty"]={current=p.difficulty or 0,
+            highest_completed=p.highest_completed_difficulty or -1},
         -- Legacy base attack rating is five points per Dexterity. Equipment and
         -- skills add their own removable sources later; the host supplies only
         -- the durable Dexterity fact and does not interpret the D2 formula.
