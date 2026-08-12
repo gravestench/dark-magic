@@ -217,7 +217,9 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 	if !found {
 		return target
 	}
-	changed := source.pathTarget == nil || source.pathTarget.X != target.X || source.pathTarget.Y != target.Y || source.pathTarget.StopRadius != target.StopRadius
+	changed := source.pathTarget == nil || source.pathTarget.StopRadius != target.StopRadius ||
+		gameworld.CollisionCell(source.pathTarget.X) != gameworld.CollisionCell(target.X) ||
+		gameworld.CollisionCell(source.pathTarget.Y) != gameworld.CollisionCell(target.Y)
 	if changed {
 		path, err := source.navigation.FindPath(gameworld.PathRequest{Start: current, Goal: gameworld.Point{X: target.X, Y: target.Y}, Radius: radius, StopRadius: target.StopRadius})
 		if err != nil {
@@ -238,6 +240,16 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 			source.path = path
 			copyTarget := *target
 			source.pathTarget = &copyTarget
+		}
+	} else if source.pathTarget.X != target.X || source.pathTarget.Y != target.Y {
+		// Camera following changes the world coordinate beneath a held pointer by
+		// a fraction every frame. Navigation is collision-cell based, so preserve
+		// the accepted route and only move its exact final destination until the
+		// pointer actually crosses into another cell.
+		copyTarget := *target
+		source.pathTarget = &copyTarget
+		if len(source.path) > 0 {
+			source.path[len(source.path)-1] = gameworld.Point{X: target.X, Y: target.Y}
 		}
 	}
 	for len(source.path) > 1 && math.Hypot(current.X-source.path[1].X, current.Y-source.path[1].Y) <= 0.3 {
