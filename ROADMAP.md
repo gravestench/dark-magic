@@ -1550,17 +1550,20 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   checkpoint/restore and initial-snapshot replay parity both pass through a
   reconstructed authoritative Lua runtime.
 
-- [ ] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
+- [x] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
   mitigation, state, death, stat-definition, and derived-stat policy to
   `d2legacy`; retain only documented generic numeric, source-aggregation,
   transaction, and event primitives. Delete superseded Go policy. Acceptance:
   melee, missile, death, and checkpoint scenarios execute through Lua and keep
   their deterministic vectors.
 
-  Ownership cutover is complete: the former Go package is deleted and current
-  melee, missile, damage, timed-state, and death policy runs in Lua. This item
-  remains open for the broader mitigation/derived-stat and deterministic death
-  vectors named by its acceptance contract.
+  Complete: the former Go package is deleted and melee, missile, damage,
+  timed-state, and death policy runs in Lua. Source-tagged effective defenses
+  are rebuilt deterministically from durable base facts, and shared fixed-point
+  physical/Fire mitigation now feeds both melee and missile health mutation.
+  Executable vectors cover positive and negative stages, flat physical
+  reduction, exact lethal boundaries, and the existing checkpointed melee,
+  Fire Bolt, hostile-death, credit, and corpse transactions.
 
 - [ ] **M21.14.6 — skills and missiles migration.** Move D2 skill eligibility,
   costs, timing, targeting, effects, and missile behavior to `d2legacy`; retain

@@ -69,6 +69,9 @@ function M.apply(command)
         -- skills add their own removable sources later; the host supplies only
         -- the durable Dexterity fact and does not interpret the D2 formula.
         ["d2legacy.player.combat_stats"]={attack_rating=(p.dexterity or 0)*5,defense=p.defense or 0},
+        ["d2legacy.combat.defense"]={base_physical_resist=p.physical_resistance or 0,
+            base_fire_resist=p.fire_resistance or 0,physical_resist=p.physical_resistance or 0,
+            fire_resist=p.fire_resistance or 0,max_fire_resist=75,physical_reduction_raw=0},
         ["d2legacy.player.vitals"]={health=p.health,max_health=p.max_health,mana=p.mana,max_mana=p.max_mana,
             mana_raw=p.mana*256,max_mana_raw=p.max_mana*256},
         -- D2 synthesizes an unarmed profile when no weapon contributes one.
