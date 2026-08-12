@@ -31,7 +31,22 @@ type Authority struct {
 	component host.Component
 }
 
+// Config describes the deterministic inputs needed to start d2legacy. Restore
+// contains opaque participant snapshots from a replay or checkpoint. They are
+// applied before registration, so the session records the restored state as its
+// starting point instead of briefly observing fresh mod state.
+type Config struct {
+	Seed    uint64
+	Restore []simulation.ParticipantState
+}
+
 func Start(ctx context.Context, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, seed uint64) (*Authority, error) {
+	return StartWithConfig(ctx, source, records, engine, session, Config{Seed: seed})
+}
+
+// StartWithConfig constructs the same renderer-free authority used by clients,
+// servers, replay verification, and restored sessions.
+func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, config Config) (*Authority, error) {
 	if source == nil || records == nil || engine == nil || session == nil {
 		return nil, fmt.Errorf("d2legacy: content, records, engine, and session are required")
 	}
@@ -39,13 +54,36 @@ func Start(ctx context.Context, source fs.FS, records Records, engine *gameecs.E
 	if err != nil {
 		return nil, err
 	}
-	streams, err := NewRandomStreams(seed)
+	streams, err := NewRandomStreams(config.Seed)
 	if err != nil {
 		return nil, err
 	}
 	result := &Authority{Runtime: modruntime.New(), State: simulation.NewStateStore(), Random: streams}
-	if err := session.RegisterAuthoritativeRuntime(identity, result.State, streams); err != nil {
+	identityState, err := simulation.NewIdentityParticipant(identity)
+	if err != nil {
 		return nil, err
+	}
+	participants := map[string]simulation.StateParticipant{
+		identityState.StateID(): identityState,
+		streams.StateID():       streams,
+	}
+	var restoredState []byte
+	for _, restored := range config.Restore {
+		if restored.ID == result.State.StateID() {
+			restoredState = append([]byte(nil), restored.Data...)
+			continue
+		}
+		participant, found := participants[restored.ID]
+		if !found {
+			return nil, fmt.Errorf("d2legacy: unknown restored participant %q", restored.ID)
+		}
+		if err := participant.RestoreState(restored.Data); err != nil {
+			return nil, fmt.Errorf("d2legacy: restore participant %q: %w", restored.ID, err)
+		}
+		delete(participants, restored.ID)
+	}
+	if len(config.Restore) > 0 && (len(participants) > 0 || restoredState == nil) {
+		return nil, fmt.Errorf("d2legacy: restored state is missing %d participants", len(participants))
 	}
 	if err := result.Runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
 		return nil, err
@@ -72,6 +110,20 @@ func Start(ctx context.Context, source fs.FS, records Records, engine *gameecs.E
 		err = component.Start(ctx)
 	}
 	if err != nil {
+		_ = result.Runtime.Stop(context.Background())
+		return nil, err
+	}
+	// Lua has now declared every durable store and its schema. Restoring before
+	// this point would compare the checkpoint against an empty registry.
+	if restoredState != nil {
+		if err := result.State.RestoreState(restoredState); err != nil {
+			_ = component.Stop(context.Background())
+			_ = result.Runtime.Stop(context.Background())
+			return nil, fmt.Errorf("d2legacy: restore participant %q: %w", result.State.StateID(), err)
+		}
+	}
+	if err := session.RegisterAuthoritativeRuntime(identity, result.State, streams); err != nil {
+		_ = component.Stop(context.Background())
 		_ = result.Runtime.Stop(context.Background())
 		return nil, err
 	}
