@@ -1454,7 +1454,10 @@ data owners; they do not introduce parallel gameplay authorities.
   named additive sources. The active equipped hand contributes an item-identity
   source that is rebuilt into the effective value before combat and disappears
   on unequip; checkpointed item acceptance proves both attachment and removal.
-  Affix/socket/passive-skill sources and their verified percentage ordering
+  Equipped armor likewise contributes independent item-identity defense sources
+  on top of durable base defense, and unequipping removes only the matching
+  defense source without disturbing active-hand attack rating. Affix, socket,
+  passive-skill, and armor-roll sources plus their verified percentage ordering
   remain before this milestone can replace its broader synthetic inputs.
 
 ### M21.14: Authoritative Lua Gameplay and d2legacy Isolation

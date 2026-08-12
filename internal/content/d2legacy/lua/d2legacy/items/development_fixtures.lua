@@ -103,6 +103,7 @@ local function armor_items(items, armor)
     end
     local hireling = common("fixture-hireling-cap", row)
     hireling.body_slots = "head"
+    hireling.defense = integer(row.minac)
     hireling.composite = composite(row.component, row.alternategfx)
     append(items, hireling, {container = "hireling", slot = "head"})
 

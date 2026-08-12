@@ -70,6 +70,9 @@ local function register_item_views()
         { name = "attack_rating", type = "i64" },
         { name = "weapon_class", type = "string" },
     })
+    register("d2legacy.item.armor", {
+        { name = "defense", type = "i64" },
+    })
 end
 
 local function register_vendor_terms()

@@ -75,6 +75,9 @@ local function create_item(layout, item)
             attack_rating = item.attack_rating or 0,
             weapon_class = item.melee_weapon_class or "",
         },
+        ["d2legacy.item.armor"] = {
+            defense = item.defense or 0,
+        },
     })
 end
 
