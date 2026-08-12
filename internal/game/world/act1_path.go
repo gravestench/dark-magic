@@ -3,7 +3,7 @@ package world
 import (
 	"fmt"
 
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 // actOneDirtPathSequence maps the eight neighboring path cells to the authored
@@ -50,7 +50,7 @@ func pathNeighborMask(path map[[2]int]bool, x, y int) uint8 {
 	return mask
 }
 
-func (m *Map) realizeActOneDirtPath(paths []mapgen.PathTile, catalogs []*TileCatalog) error {
+func (m *Map) realizeActOneDirtPath(paths []worldgen.PathTile, catalogs []*TileCatalog) error {
 	path := make(map[[2]int]bool, len(paths))
 	for _, tile := range paths {
 		path[[2]int{tile.X, tile.Y}] = true

@@ -8,7 +8,8 @@ import (
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 )
 
 func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
@@ -25,7 +26,7 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9})
+	zone, err := d2mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +87,7 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1})
+	zone, err := d2mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,11 +131,11 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	town, err := mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 1})
+	town, err := d2mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	moor, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 2}, town.Stamps()[0])
+	moor, err := d2mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 2}, town.Stamps()[0])
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 var (
@@ -30,9 +30,9 @@ type stampLoader func(fs.FS, string, []string, ...ObjectResolver) (*Map, error)
 // native renderer work. Result becomes visible only after all steps succeed.
 type Materializer struct {
 	source       fs.FS
-	zone         *mapgen.Zone
+	zone         *worldgen.Zone
 	resolver     ObjectResolver
-	stamps       []mapgen.Stamp
+	stamps       []worldgen.Stamp
 	load         stampLoader
 	catalogs     map[string]*TileCatalog
 	catalogOrder []*TileCatalog
@@ -41,7 +41,7 @@ type Materializer struct {
 	done         bool
 }
 
-func NewMaterializer(source fs.FS, zone *mapgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
+func NewMaterializer(source fs.FS, zone *worldgen.Zone, resolvers ...ObjectResolver) (*Materializer, error) {
 	if source == nil || zone == nil {
 		return nil, errors.New("world: materializer requires an asset source and zone")
 	}
@@ -106,7 +106,7 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
-	if materializer.done && materializer.zone.Kind() == mapgen.Outdoor && materializer.zone.Request().Act == 1 {
+	if materializer.done && materializer.zone.Kind() == worldgen.Outdoor && materializer.zone.Request().Act == 1 {
 		if err := materializer.assembled.realizeActOneDirtPath(materializer.zone.Paths(), materializer.catalogOrder); err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	return nil
 }
 
-func (materializer *Materializer) loadCached(stamp mapgen.Stamp) (*Map, error) {
+func (materializer *Materializer) loadCached(stamp worldgen.Stamp) (*Map, error) {
 	key := strings.Join(stamp.TilePaths, "\x00")
 	catalog := materializer.catalogs[key]
 	if catalog == nil {

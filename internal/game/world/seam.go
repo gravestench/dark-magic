@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 // SeamEndpoint is one authoritative side of a level transition. Coordinates
@@ -21,7 +21,7 @@ type SeamEndpoint struct {
 // zones. Transition commands consume this value; presentation only observes it.
 type Seam struct{ Town, Wilderness SeamEndpoint }
 
-func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen.Zone, moorMap *Map) (Seam, error) {
+func NewActOneTownMoorSeam(townZone *worldgen.Zone, townMap *Map, moorZone *worldgen.Zone, moorMap *Map) (Seam, error) {
 	if townZone == nil || townMap == nil || moorZone == nil || moorMap == nil {
 		return Seam{}, fmt.Errorf("world: town/Blood Moor seam requires both zones and maps")
 	}
@@ -63,15 +63,15 @@ func NewActOneTownMoorSeam(townZone *mapgen.Zone, townMap *Map, moorZone *mapgen
 	}, nil
 }
 
-func warpByRole(warps []mapgen.Warp, role string) (mapgen.Warp, bool) {
-	var result mapgen.Warp
+func warpByRole(warps []worldgen.Warp, role string) (worldgen.Warp, bool) {
+	var result worldgen.Warp
 	found := false
 	for _, warp := range warps {
 		if warp.Role != role {
 			continue
 		}
 		if found {
-			return mapgen.Warp{}, false
+			return worldgen.Warp{}, false
 		}
 		result, found = warp, true
 	}

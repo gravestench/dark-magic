@@ -1,4 +1,4 @@
-package mapgen
+package worldgen
 
 import (
 	"crypto/sha256"

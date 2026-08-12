@@ -3,7 +3,7 @@ package world
 import (
 	"testing"
 
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 func TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge(t *testing.T) {

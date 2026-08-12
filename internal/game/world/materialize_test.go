@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
 func materializerFixture(t *testing.T) *Materializer {
