@@ -8,7 +8,13 @@ You do **not** need to understand all of Lua before starting. Read the comments 
 
 Dark Magic deliberately splits responsibilities between Lua and the engine.
 
-Think of the engine as the part that owns dangerous/heavy machinery: files, decoded game assets, rendering resources, audio devices, save data, authoritative simulation, networking, and other native state. Lua is the director: it asks for narrow, versioned capabilities and describes what should happen on screen or what intent the player expressed.
+Think of the engine as the part that owns dangerous/heavy machinery: files,
+decoded game assets, rendering resources, audio devices, deterministic
+scheduling, ECS storage, persistence primitives, networking, and other native
+state. Lua is the director: through narrow, versioned capabilities it may
+describe presentation, submit player intent, and implement authoritative mod
+gameplay. The first-party `d2legacy` mod is the intended owner of Diablo II
+rules. “Authoritative” does not mean “written in Go.”
 
 A typical mod therefore looks like this:
 
@@ -23,10 +29,10 @@ Lua scene / widget
     +--> create/update presentation nodes
     |
     v
-Dark Magic capability
+Dark Magic capability / authoritative Lua handler
     |
     v
-engine-owned state/resources
+deterministic ECS and registered state/resources
 ```
 
 The `require("dm.something/v1")` calls are the modding API. The `/v1` matters: it is an explicit version boundary. A mod should not reach into Go packages or renderer internals.
@@ -163,9 +169,12 @@ combat intents; keyboard events supply hotkeys, modifiers, text, and escape
 behavior. A future controller adapter may synthesize navigation or a world
 target, but Lua systems must not assume controller focus is the primary model.
 
-## Snapshots and intent: the most important gameplay rule
+## Presentation snapshots and authoritative gameplay
 
-Presentation should not quietly become gameplay authority.
+Presentation should not quietly become gameplay authority. That restriction is
+about responsibility, not language: a Lua module registered as a trusted
+`d2legacy` command handler or deterministic ECS system may own gameplay policy;
+a panel or retained scene may not.
 
 For example, an inventory panel does **not** directly change the authoritative item table. It reads a copied snapshot so it knows what to draw, then calls an engine capability to request a move.
 
@@ -181,19 +190,26 @@ player clicks equipment slot
 Lua submits move intent
         |
         v
-engine validates + mutates authority
+d2legacy validates policy through controlled engine APIs
         |
         v
 next snapshot shows the result
 ```
 
-This pattern makes saves, multiplayer, replay, validation, and debugging much safer.
+This pattern makes saves, multiplayer, replay, validation, and debugging much
+safer. Authoritative Lua uses deterministic scheduling and RNG, declared ECS
+access, restricted side effects, stable module/configuration identity, and
+registered serialized state so it participates in the same guarantees as a Go
+handler.
 
 ## Manifest-driven presentation
 
 Asset paths, palette choices, timing, layout, localization keys, and other presentation facts usually belong in versioned shim manifests rather than being scattered through Lua.
 
-Lua should mostly describe **composition and interaction**. Go capabilities own decoding, native rendering/audio resources, persistence, and authoritative simulation.
+Lua presentation code should mostly describe **composition and interaction**.
+Authoritative `d2legacy` Lua owns Diablo gameplay policy. Go capabilities own
+decoding, native rendering/audio resources, deterministic simulation
+mechanisms, persistence primitives, and capability/resource enforcement.
 
 `darkmagic.ui.compat` is a special compatibility catalog: it stores recovered Diablo II presentation facts that have been researched/corroborated. Keeping those facts separate from the widget implementation makes it easier to tell "this is observed D2 behavior" from "this is how Dark Magic chose to implement it."
 

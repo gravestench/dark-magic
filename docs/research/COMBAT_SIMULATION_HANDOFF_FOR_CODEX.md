@@ -1,5 +1,12 @@
 # Combat/simulation research handoff for Codex
 
+> Architecture note: this document records the implementation sequence and
+> package ownership that produced the original Go authority spine. Its
+> behavioral evidence and acceptance criteria remain useful, but permanent
+> ownership guidance is superseded by
+> [the engine/`d2legacy` boundary](../ARCHITECTURE.md). Completed Go systems are
+> migration sources for M21.14, not proof that Diablo policy must remain in Go.
+
 Status: implementation handoff derived from the second gameplay research tranche. Read the linked research documents before implementing broad systems.
 
 ## Read first

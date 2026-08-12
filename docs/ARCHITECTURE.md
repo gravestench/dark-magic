@@ -1,8 +1,9 @@
 # Dark Magic architecture
 
 Dark Magic is one application, not a collection of independently supported Go
-libraries. `cmd/darkmagic` is the composition root; engine implementation and
-Diablo-specific behavior belong under `internal`. A package remains under `pkg`
+libraries. `cmd/darkmagic` is the composition root. The reusable engine is
+implemented primarily in Go; the first-party `d2legacy` mod owns Diablo II game
+rules and mod-specific presentation in Lua. A package remains under `pkg`
 only when the project deliberately promises it as a stable, independently useful
 API. No current Go package has that commitment; an acceptance test rejects
 accidental public Go source until a deliberate API and compatibility policy are
@@ -12,13 +13,17 @@ documented.
 
 - Commands parse process configuration, construct the host, and translate final
   errors to exit status. They contain no game, rendering, or protocol behavior.
-- Foundation packages may not import presentation, Lua adapters, or game rules.
+- Foundation packages may not import presentation, Lua adapters, `d2legacy`, or
+  game rules.
 - Engine capabilities may depend on foundations, but not on the application
   host or a global registry.
-- Game-data and simulation packages may depend on engine contracts; platform
-  adapters and Lua modules depend inward on those contracts.
-- Lua modules adapt explicit capabilities. They never become service locators
-  and do not own native renderer, audio, filesystem, or persistence lifetimes.
+- Game-data decoders, engine simulation mechanisms, platform adapters, and Lua
+  modules may depend inward on engine contracts. Generic engine packages never
+  depend on `d2legacy` or other mod policy.
+- Lua modules use explicit, versioned capabilities. They never become service
+  locators and do not own native renderer, audio, filesystem, or persistence
+  lifetimes. They may own authoritative gameplay rules and serialized gameplay
+  state.
 - Raylib and other platform libraries stay behind internal renderer/input/audio
   boundaries. Headless contracts must remain testable without native startup.
 - Tools and test applications may compose internal packages but production code
@@ -28,17 +33,81 @@ documented.
 The intended dependency direction is:
 
 ```text
-cmd / tools / test apps
-          |
-          v
-host + Lua adapters + platform adapters
-          |
-          v
-engine capabilities + game systems
-          |
-          v
-content, records, handles, cache, paths, logging
+cmd / server / tools / test apps
+                 |
+                 v
+       host + platform adapters
+                 |
+       +---------+------------------+
+       |                            |
+       v                            v
+Lua runtime + engine APIs      first-party d2legacy mod
+       |                            |
+       +-------------+--------------+
+                     v
+ generic deterministic engine mechanisms
+                     |
+                     v
+ content, typed records, handles, cache, paths, logging
 ```
+
+The mod-to-engine arrow is one-way: `d2legacy` consumes engine capabilities.
+The engine does not import the mod or encode its rules.
+
+## Engine and mod ownership boundary
+
+“Authoritative” describes who is allowed to decide and commit gameplay state;
+it does **not** mean “implemented in Go.” Trusted Lua command handlers and ECS
+systems may execute authoritative gameplay logic. Determinism comes from stable
+module and configuration identity, controlled APIs, fixed scheduling,
+deterministic RNG streams, restricted side effects, and serialized state—not
+from the implementation language.
+
+The Go engine owns reusable mechanisms:
+
+- Lua runtime ownership, sandboxing, capabilities, and resource lifetimes;
+- deterministic fixed-tick scheduling, ECS storage, queries, declared access,
+  structural barriers, and command buffers;
+- command admission and transport-neutral replay infrastructure;
+- deterministic RNG primitives and named stream management;
+- serialization, checkpoint, restore, checksum, and persistence primitives;
+- networking, replication, interest-management, and protocol primitives;
+- VFS and file access, codecs, typed record decoding, validation, and immutable
+  data generations;
+- rendering, audio, input, localization, and platform adapters;
+- generic collision, geometry, spatial indexing, navigation, and reusable
+  algorithms that contain no Diablo-specific policy; and
+- capability enforcement, quotas, cancellation, and native resource lifetime
+  management.
+
+The first-party `d2legacy` Lua mod owns Diablo II policy:
+
+- combat formulas, damage policy, hit resolution, and death consequences;
+- monster selection, spawning policy, AI, and encounter population;
+- skills, casts, costs, targeting rules, and missile behavior;
+- item generation, treasure classes, quality, affixes, equipment rules, and
+  container policy;
+- vendors, prices, services, crafting, and economy rules;
+- character classes, stats, progression, experience, and difficulty rules;
+- quests, NPC behavior, interactions, transitions, and world progression;
+- Diablo II-specific map-generation policy and hard-coded legacy
+  relationships; and
+- presentation choices that are part of the mod rather than engine mechanics.
+
+Mechanism and policy must be separated deliberately. A generic fixed-point
+number, collision sweep, spatial query, stat-source container, or transactional
+inventory primitive may remain in Go. Diablo schemas and file decoding may also
+remain in Go. Deciding what a decoded record means to Diablo gameplay belongs
+in `d2legacy`. Migration reviews must not mechanically transliterate a Go
+package into Lua when its useful remainder is a smaller generic primitive.
+
+This is the target architecture, not the current state. Much of the working
+Diablo simulation is presently implemented under `internal/game`. Those
+packages are migration sources until each file is classified and either moved
+to `d2legacy`, reduced to an engine mechanism, retained as a data boundary, or
+deleted. Older research documents remain valuable behavioral evidence and
+current-state handoffs, but any recommendation that permanent Diablo policy or
+authority must live in Go is superseded by this document.
 
 ## Current package inventory
 
@@ -60,7 +129,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/loading` | Observable loading progress | command, Lua | Application | Keep |
 | `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
 | `internal/presentation/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
-| `internal/runtime/lua` | Serialized Lua runtimes and capabilities | command, reload | Application/scopes | Keep; split adapters by feature when useful |
+| `internal/runtime/lua` | Sandboxed Lua ownership, deterministic execution, capabilities, and scoped resources | command, reload, session | Application/scopes | Keep; add authoritative registration/state boundaries |
 | `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
 | `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
 | `internal/app/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
@@ -78,12 +147,15 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/assets/inspect` | Asset metadata and preview helpers | tools, world | Stateless | Keep internal |
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
-| `internal/game/loot` | Diablo loot rules and TSV compatibility | Lua, test apps | Session | Keep internal |
-| `internal/game/player` | Authoritative player entry and stable ECS archetype materialization | session composition | Game session | Keep internal |
-| `internal/game/ownedunit` | Generic owner/category/limit/lifecycle relation and ultimate-owner attribution | combat, skills, transitions, UI | Game session | Keep renderer-neutral |
-| `internal/game/world` | Immutable map facts, generated-zone composition, collision, and shared tile/subtile/pixel/camera transforms | session, Lua, presentation | Game session | Keep renderer-neutral |
+| `internal/game/{combat,skill,missile}` | Current D2 combat/cast/missile policy plus some reusable numeric and movement mechanisms | session, acceptance | Game session | Transitional migration sources; move D2 policy to `d2legacy`, extract only justified primitives |
+| `internal/game/{loot,item}` | Current D2 item generation, containers, equipment, vendors, and services | session, Lua, tests | Game session | Transitional migration sources; retain only generic transaction/storage primitives and typed data boundaries |
+| `internal/game/{monster,player,stats,state,action}` | Current D2 actor, AI, progression, stat, timed-state, and action policy | session, skills, combat | Game session | Classify file by file; D2 policy moves to `d2legacy` |
+| `internal/game/{interaction,transition}` | Current D2 interaction, commerce, and world-transition policy | session, Lua | Game session | Transitional migration sources; generic command/spatial mechanisms may remain |
+| `internal/game/mapgen` | Current D2 preset/outdoor/maze policy mixed with reusable generation algorithms | world, tests | Game session | Move D2 selection/relationship policy to `d2legacy`; keep generic algorithms only |
+| `internal/game/ownedunit` | Current owner/category/limit/lifecycle relation and attribution | combat, skills, transitions, UI | Game session | Split generic relation/attribution mechanism from D2 pet, summon, and hireling policy |
+| `internal/game/world` | Immutable map facts, collision, geometry, navigation, transforms, and current D2 zone composition | session, Lua, presentation | Game session | Keep generic spatial mechanisms; migrate D2 act/level/map policy |
 | `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
-| `internal/game/session` | Authoritative command admission, fixed stepping, checkpointing, and replay recording | client/server composition | Game session | Keep transport-neutral |
+| `internal/game/session` | Command admission, fixed stepping, checkpointing, and replay recording for Go- or Lua-owned systems | client/server composition | Game session | Keep transport-neutral and policy-neutral |
 | `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
 | `internal/paths` | Cross-platform host-path expansion | command and tools | Stateless | Migrated; guarded |
 | `internal/logging` | Process log formatting | command | Application | Migrated; guarded |
@@ -96,19 +168,19 @@ Moves should be incremental and behavior-preserving:
 ```text
 cmd/darkmagic              client composition root
 internal/app               host wiring and configuration
-internal/content           VFS, records, localization, authored shim
+internal/content           VFS, records, localization, bundled mods
 internal/assets            decode, cache, inspection, cataloging
 internal/platform/raylib   renderer, input, audio/video native adapters
-internal/runtime/lua       Lua ownership, capabilities, scopes
+internal/runtime/lua       sandbox, authoritative registration, capabilities, scopes
 internal/shell             shared sessions, Lua evaluator, terminal adapter
 internal/presentation      navigation, scenes, controls, transitions
-internal/game/data         typed Diablo records and validation
-internal/game/loot         deterministic item generation
-internal/game/player       authoritative player archetypes and entry
-internal/game/ownedunit    summons, traps, pets, and hireling ownership relation
-internal/game/ecs          deterministic entity schedule and structural barriers
-internal/game/simulation   replay contracts, RNG, and higher-level gameplay rules
-internal/game/session      shared authoritative session owner
+internal/game/data         typed Diablo records and validation (data boundary)
+internal/game/ecs          generic entity schedule and structural barriers
+internal/game/simulation   commands, deterministic RNG, replay primitives
+internal/game/session      policy-neutral authoritative session host
+internal/engine/*          extracted reusable gameplay-adjacent mechanisms
+internal/content/.../d2legacy
+                           first-party Lua gameplay systems and D2 policy
 internal/persistence       saves and future realm storage contracts
 internal/network           client/session/realm protocols
 internal/dev               profiling, capture, tools, test applications
@@ -146,17 +218,17 @@ deferred until the current system barrier.
 The shared game-session owner admits commands by stable actor identity, target
 tick, per-actor sequence, declared authority class, kind, and payload policy.
 Player, administrator, and system authority must be granted by each trusted
-handler. Administrative Lua may inspect replay and audit records, but concrete
-privileged mutations must remain explicit handlers; no generic ECS mutation
-backdoor is part of the administration contract.
+handler. A trusted handler may be registered by Go or by an identified,
+sandboxed Lua mod. Administrative and gameplay Lua use explicit handlers rather
+than a generic ECS mutation backdoor.
 
-The authoritative session checksum covers both the ECS snapshot and registered,
-stable-ID state participants. A subsystem whose command handlers mutate state
-outside Akara must provide deterministic snapshot and atomic restore operations
-and register before the first command or tick. Item authority uses its versioned
-container archives for this boundary and includes the identity of server-owned
-trade and service rules, so replay rejects configuration drift rather than
-silently accepting different transaction results.
+The authoritative session checksum covers the ECS snapshot, registered stable-ID
+state participants, and the identity/configuration digest of every authoritative
+Lua module. A Go or Lua subsystem whose handlers mutate state outside Akara must
+provide deterministic snapshot and atomic restore operations and register before
+the first command or tick. Replay and restore reject module/configuration drift
+unless an explicit state migration is selected. Lua hot reload cannot silently
+replace authoritative code in a running replayable session.
 
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The

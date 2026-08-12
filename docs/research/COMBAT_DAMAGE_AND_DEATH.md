@@ -1,5 +1,12 @@
 # Combat, damage, defense, and death research
 
+> Architecture note: the behavioral findings and deterministic vectors in this
+> document remain requirements. Recommendations that `internal/game/combat` or
+> another Go package permanently own Diablo policy are superseded by
+> [the engine/`d2legacy` boundary](../ARCHITECTURE.md) and M21.14. Migration must
+> preserve one authority and one stat/item model while moving D2 policy into
+> authoritative Lua; it must not create a parallel simulation.
+
 Status: implementation-oriented research baseline. The strongest runtime evidence in this document is D2MOO's reconstruction of Diablo II 1.10f. It is not yet a Dark Magic compatibility contract. Exact arithmetic and patch-sensitive behavior must graduate through owned-game traces or other independent verification before becoming golden compatibility requirements.
 
 This document extends [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md), [TIMING_RNG_AND_DETERMINISM.md](TIMING_RNG_AND_DETERMINISM.md), and the current authoritative session/ECS architecture. It does not propose a parallel combat world outside `internal/game/session` and Akara.
@@ -59,7 +66,10 @@ Dark Magic already has the pieces a combat subsystem should plug into:
 - `internal/game/world` owns collision and navigation facts;
 - the typed game-data catalog already loads `ItemStatCost`, `Properties`, `Skills`, `Missiles`, `States`, `MonStats`, `MonLvl`, `DifficultyLevels`, and related tables.
 
-The next combat work should **extend these owners**. Do not create a second stat store, a second item/equipment owner, or a Lua-only combat simulation.
+The next combat work must preserve these owners' tested invariants while M21.14
+migrates D2 policy into `d2legacy`. Do not create a second stat store, a second
+item/equipment owner, or a parallel combat simulation; replace each
+transitional Go owner through a complete vertical migration.
 
 ## D2MOO 1.10f damage pipeline evidence
 

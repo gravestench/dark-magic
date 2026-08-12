@@ -1,5 +1,11 @@
 # UI-visible gameplay state and intent contracts
 
+> Architecture note: presentation still reads snapshots and submits intents,
+> but the gameplay authority consuming those intents may be a trusted,
+> deterministic Lua system. “Engine-owned authority” below means the
+> policy-neutral session host owns admission and consistency; it does not
+> require Diablo rules to be implemented in Go.
+
 Status: implementation-oriented research baseline. Dark Magic's Lua shim already documents and enforces the core principle: presentation reads safe snapshots, submits semantic intent, and never owns authoritative gameplay state. This document turns that principle into explicit contracts for every major gameplay surface so multiplayer/realm work does not accidentally reintroduce client authority.
 
 ## Executive conclusion
