@@ -22,29 +22,60 @@ type recordsGateway interface {
 	Loaded(string) bool
 }
 
-// GenerateEntryZones asks d2legacy for the first town and wilderness recipes.
-// The short-lived runtime is intentionally headless: world policy must not
-// depend on a renderer, window, audio device, or native client startup.
-func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (*worldgen.Zone, *worldgen.Zone, error) {
-	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
-		return nil, nil, err
+// Runtime owns the minimal headless Lua host needed by d2legacy map policy.
+// Keeping this lifecycle wrapper here lets tests and tools exercise the same
+// mod code as production without importing a client composition root.
+type Runtime struct {
+	lua *modruntime.Runtime
+}
+
+func NewRuntime(ctx context.Context, source fs.FS, records recordsGateway) (*Runtime, error) {
+	luaRuntime := modruntime.New()
+	if err := luaRuntime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+		return nil, err
 	}
 	for _, module := range []modruntime.Module{
 		modruntime.RecordsModule(records),
 		modruntime.DeterministicModule(),
 		modruntime.WorldgenModule(),
 	} {
-		if err := runtime.RegisterModule(module); err != nil {
-			return nil, nil, err
+		if err := luaRuntime.RegisterModule(module); err != nil {
+			return nil, err
 		}
 	}
-	if err := runtime.Start(ctx); err != nil {
+	if err := luaRuntime.Start(ctx); err != nil {
+		return nil, err
+	}
+	return &Runtime{lua: luaRuntime}, nil
+}
+
+func (runtime *Runtime) Close(ctx context.Context) error {
+	if runtime == nil || runtime.lua == nil {
+		return nil
+	}
+	return runtime.lua.Stop(ctx)
+}
+
+// Generate invokes one named d2legacy map strategy. Arguments are deliberately
+// plain serialized values so this adapter cannot grow native Diablo policy.
+func (runtime *Runtime) Generate(ctx context.Context, strategy string, arguments ...any) (*worldgen.Zone, error) {
+	if runtime == nil || runtime.lua == nil {
+		return nil, fmt.Errorf("d2legacy mapgen runtime is not started")
+	}
+	return modruntime.GenerateWorldRecipe(ctx, runtime.lua, "d2legacy.mapgen."+strategy, "generate", arguments...)
+}
+
+// GenerateEntryZones asks d2legacy for the first town and wilderness recipes.
+// The short-lived runtime is intentionally headless: world policy must not
+// depend on a renderer, window, audio device, or native client startup.
+func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (*worldgen.Zone, *worldgen.Zone, error) {
+	runtime, err := NewRuntime(ctx, source, records)
+	if err != nil {
 		return nil, nil, err
 	}
-	defer runtime.Stop(context.Background())
+	defer runtime.Close(context.Background())
 
-	town, err := modruntime.GenerateWorldRecipe(ctx, runtime, "d2legacy.mapgen.preset", "generate", float64(1), float64(seed), float64(0))
+	town, err := runtime.Generate(ctx, "preset", float64(1), float64(seed), float64(0))
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate d2legacy entry town: %w", err)
 	}
@@ -53,7 +84,7 @@ func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGatewa
 		return nil, nil, fmt.Errorf("d2legacy entry town did not declare a cardinal exit")
 	}
 	exit := strings.TrimPrefix(stamps[0].Role, "act1-town:exit-")
-	moor, err := modruntime.GenerateWorldRecipe(ctx, runtime, "d2legacy.mapgen.outdoor", "generate", float64(2), float64(seed), exit, float64(0))
+	moor, err := runtime.Generate(ctx, "outdoor", float64(2), float64(seed), exit, float64(0))
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
 	}

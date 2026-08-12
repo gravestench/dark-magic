@@ -9,7 +9,7 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
-	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 )
 
 func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
@@ -22,11 +22,13 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	records := recordstore.New(source)
+	runtime, err := d2mapgen.NewRuntime(t.Context(), source, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := d2mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 42, Act: 1, LevelID: 9})
+	defer runtime.Close(t.Context())
+	zone, err := runtime.Generate(t.Context(), "maze", float64(9), float64(42), float64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,6 +47,10 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 	}
 	if worldMap.WidthTiles != zone.Bounds().Width || worldMap.HeightTiles != zone.Bounds().Height || len(worldMap.Tiles) == 0 {
 		t.Fatalf("materialized map dimensions/tiles = %dx%d/%d", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
+	}
+	snapshot, err := gamedata.New(records).Snapshot()
+	if err != nil {
+		t.Fatal(err)
 	}
 	transitions, err := worldMap.ResolveLevelTransitions(snapshot.LevelsByID[9], snapshot.LevelWarpsByID)
 	if err != nil {
@@ -83,11 +89,13 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
+	records := recordstore.New(source)
+	runtime, err := d2mapgen.NewRuntime(t.Context(), source, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	zone, err := d2mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 1})
+	defer runtime.Close(t.Context())
+	zone, err := runtime.Generate(t.Context(), "preset", float64(1), float64(1), float64(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,15 +135,8 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := gamedata.New(recordstore.New(source)).Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	town, err := d2mapgen.NewPresetGenerator(snapshot).Generate(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	moor, err := d2mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: 17, Act: 1, LevelID: 2}, town.Stamps()[0])
+	records := recordstore.New(source)
+	town, moor, err := d2mapgen.GenerateEntryZones(t.Context(), source, records, 17)
 	if err != nil {
 		t.Fatal(err)
 	}
