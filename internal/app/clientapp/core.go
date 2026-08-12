@@ -180,9 +180,6 @@ func (app *application) registerOfflineCommands() error {
 			return wrap("register "+name, err)
 		}
 	}
-	if err := gameinteraction.RegisterCommands(app.offlineSession, app.interactionAuthority); err != nil {
-		return wrap("register interaction commands", err)
-	}
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}
@@ -454,6 +451,16 @@ func (app *application) itemBootstrapData() map[string]any {
 		result["trade_terms"] = terms
 	}
 	return result
+}
+
+func (app *application) interactionBootstrapData() map[string]any {
+	initial := ""
+	if app.options.StartScene == "vendor" {
+		initial = "act1-akara"
+	}
+	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": []any{
+		map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)},
+	}}
 }
 
 func compositeRecipe(component, appearance string) map[string]string {

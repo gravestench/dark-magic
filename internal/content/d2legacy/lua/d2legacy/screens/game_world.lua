@@ -355,7 +355,7 @@ return {
             -- path that actually needs them.
             local player = require("engine.player/v1")
             self.player = player
-            self.interaction = require("engine.interaction/v1")
+            self.interaction = require("d2legacy.interactions.api")
 			self.targeting = require("engine.targeting/v1")
             local items = require("d2legacy.items.api")
             self.items = items

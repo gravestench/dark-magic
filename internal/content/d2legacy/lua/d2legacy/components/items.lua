@@ -37,5 +37,7 @@ function M.register()
         {name="vendor",type="string"},{name="buy_multiplier",type="i64"},
         {name="sell_multiplier",type="i64"},{name="max_buy",type="i64"},
     })
+    component("d2legacy.interaction.target",{{name="id",type="string"},{name="npc",type="string"},{name="vendor",type="string"},{name="categories",type="string"},{name="services",type="string"},{name="x",type="f64"},{name="y",type="f64"},{name="radius",type="f64"}})
+    component("d2legacy.interaction.context",{{name="owner",type="string"},{name="target",type="entity"}})
 end
 return M

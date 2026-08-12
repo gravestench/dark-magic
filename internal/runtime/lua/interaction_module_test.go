@@ -8,17 +8,10 @@ import (
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 )
 
-func TestInteractionModuleExposesCopiesAndQueuesIntent(t *testing.T) {
-	authority, err := gameinteraction.NewAuthority(gameinteraction.Target{ID: "act1-akara", NPC: "Akara", Vendor: "Akara", Categories: []string{"misc", "armo"}, Radius: 5})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := authority.RegisterOwner("alice", "act1-akara"); err != nil {
-		t.Fatal(err)
-	}
+func TestInteractionModuleQueuesIntent(t *testing.T) {
 	controller := &gameinteraction.Controller{}
 	runtime := New()
-	if err := runtime.RegisterModule(InteractionModule(authority, controller, "alice")); err != nil {
+	if err := runtime.RegisterModule(InteractionModule(controller)); err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
@@ -26,7 +19,7 @@ func TestInteractionModuleExposesCopiesAndQueuesIntent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local i=require("engine.interaction/v1"); local s=i.snapshot(); assert(s.active and s.npc=="Akara" and s.categories[1]=="armo"); i.close(); i.open("act1-akara")`)}}
+	script := fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local i=require("engine.interaction/v1"); i.close(); i.open("act1-akara")`)}}
 	if err := runtime.Execute(ctx, script, "test.lua"); err != nil {
 		t.Fatal(err)
 	}

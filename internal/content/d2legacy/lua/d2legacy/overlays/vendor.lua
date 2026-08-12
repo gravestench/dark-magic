@@ -118,7 +118,7 @@ return {
         if not render.assets_available() then return end
 
         self.items = require("d2legacy.items.api")
-        self.interaction = require("engine.interaction/v1")
+        self.interaction = require("d2legacy.interactions.api")
         self.context = assert(self.interaction.snapshot())
         assert(self.context.active and self.context.vendor ~= "", "vendor overlay requires an active vendor interaction")
 

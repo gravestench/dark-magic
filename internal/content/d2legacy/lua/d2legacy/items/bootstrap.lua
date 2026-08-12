@@ -35,5 +35,12 @@ function M.load()
             buy_multiplier=terms.buy_multiplier or 0,sell_multiplier=terms.sell_multiplier or 0,
             max_buy=terms.max_buy or 0}})
     end
+    local interactions=initial.get("d2legacy.interactions") or {}
+    local targets={}
+    for _,target in ipairs(interactions.targets or {}) do
+        targets[target.id]=ecs.create({["d2legacy.interaction.target"]={id=target.id,npc=target.npc,vendor=target.vendor or "",categories=target.categories or "",services=target.services or "",x=target.x,y=target.y,radius=target.radius}})
+    end
+    local no_target=ecs.create()
+    ecs.create({["d2legacy.interaction.context"]={owner=interactions.owner or data.owner,target=targets[interactions.initial_target or ""] or no_target}})
 end
 return M
