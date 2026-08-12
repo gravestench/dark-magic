@@ -5,6 +5,7 @@
 -- the death mode; XP is credited to the killer when it is a player.
 
 local ecs = require("engine.ecs/v1")
+local loot = require("d2legacy.loot.generate")
 local M = {}
 
 local function by_id(entities, wanted)
@@ -14,10 +15,10 @@ local function by_id(entities, wanted)
     end
 end
 
-local function emit(structural, kind, context, identity, killer, credited, xp, treasure)
+local function emit(structural, kind, context, identity, killer, credited, xp, treasure, drops)
     structural:create({["d2legacy.monster.death_event"]={kind=kind,tick=context.tick,
         monster_id=identity:get("spawn_id"),killer_id=killer,credited_id=credited,
-        xp=xp,loot_seed=identity:get("seed"),treasure_class=treasure,drops="[]"}})
+        xp=xp,loot_seed=identity:get("seed"),treasure_class=treasure,drops=drops}})
 end
 
 function M.register()
@@ -45,9 +46,10 @@ function M.register()
                     local killer_entity = by_id(entities, killer)
                     local progress = killer_entity and ecs.get(killer_entity,"d2legacy.player.progress")
                     if progress and xp > 0 then progress:set("experience",progress:get("experience")+xp) end
+                    local generated=loot.encode(loot.roll(identity:get("treasure_class"),{version=100,monster_level=stats:get("level"),magic_find=0}))
                     structural:set(monster,"d2legacy.monster.death",{tick=context.tick,killer_id=killer,
                         credited_id=credited,xp=xp,loot_seed=identity:get("seed"),
-                        treasure_class=identity:get("treasure_class"),drops="[]",active=false,corpse_usable=true})
+                        treasure_class=identity:get("treasure_class"),drops=generated,active=false,corpse_usable=true})
                     local appearance = ecs.get(monster,"d2legacy.monster.appearance")
                     if appearance then appearance:set("mode","DT") end
                     local velocity = ecs.get(monster,"d2legacy.world.velocity")
@@ -56,7 +58,7 @@ function M.register()
                     structural:remove(monster,"d2legacy.world.collider")
                     structural:remove(monster,"d2legacy.world.selectable")
                     for _, kind in ipairs({"monster_killed","monster_loot","monster_quest_kill","monster_death_presented"}) do
-                        emit(structural,kind,context,identity,killer,credited,xp,identity:get("treasure_class"))
+                        emit(structural,kind,context,identity,killer,credited,xp,identity:get("treasure_class"),generated)
                     end
                 end
             end

@@ -176,13 +176,6 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor); err != nil {
 		return wrap("register generic velocity movement", err)
 	}
-	for name, register := range map[string]func(*gamesession.Session) error{
-		"movement commands": gamesession.RegisterMovement,
-	} {
-		if err := register(app.offlineSession); err != nil {
-			return wrap("register "+name, err)
-		}
-	}
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}

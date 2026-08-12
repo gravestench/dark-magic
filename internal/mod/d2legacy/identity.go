@@ -63,6 +63,8 @@ func NewRandomStreams(seed uint64) (*simulation.RandomStreams, error) {
 		"d2legacy.monster.spawn.life",
 		"d2legacy.population.density", "d2legacy.population.family",
 		"d2legacy.population.group", "d2legacy.population.seed",
+		"d2legacy.loot.treasure_class", "d2legacy.loot.quality",
+		"d2legacy.loot.affix_slot", "d2legacy.loot.affix_choice", "d2legacy.loot.affix_value",
 	} {
 		if err := streams.Register(name); err != nil {
 			return nil, err

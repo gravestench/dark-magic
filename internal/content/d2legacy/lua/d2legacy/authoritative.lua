@@ -25,6 +25,7 @@ local item_bootstrap = require("d2legacy.items.bootstrap")
 local item_commands = require("d2legacy.commands.items")
 local interaction_commands = require("d2legacy.commands.interactions")
 local population = require("d2legacy.bootstrap.population")
+local move_player = require("d2legacy.commands.move_player")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -56,6 +57,7 @@ function M.start()
     item_commands.register()
     interaction_commands.register()
     population.register()
+    move_player.register()
 end
 
 function M.stop()
