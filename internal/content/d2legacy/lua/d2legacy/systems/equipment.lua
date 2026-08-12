@@ -39,7 +39,11 @@ local function sync_sources(entities,structural,player,prefix,stat,wanted)
             else structural:destroy(entity) end
         end
     end
-    for source_id,value in pairs(wanted) do
+    local source_ids={}
+    for source_id in pairs(wanted) do source_ids[#source_ids+1]=source_id end
+    table.sort(source_ids)
+    for _,source_id in ipairs(source_ids) do
+        local value=wanted[source_id]
         if value~=0 and not found[source_id] then
             structural:create({["d2legacy.stat.source"]={target=player,
                 source_id=source_id,stat=stat,value=value}})

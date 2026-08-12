@@ -12,8 +12,9 @@ import (
 
 func TestEquippedItemModifierSourcesPreserveAffixAndSocketProvenance(t *testing.T) {
 	initial := itemAcceptanceBootstrap()
-	items := initial["d2legacy.items"].(map[string]any)["items"].([]map[string]any)
-	for _, item := range items {
+	items := initial["d2legacy.items"].(map[string]any)["items"].([]any)
+	for _, value := range items {
+		item := value.(map[string]any)
 		switch item["id"] {
 		case "weapon":
 			item["stat_modifiers"] = []any{
@@ -51,6 +52,16 @@ func TestEquippedItemModifierSourcesPreserveAffixAndSocketProvenance(t *testing.
 		itemCommand(t, 1, 2, "item.move", map[string]any{
 			"item_id": "weapon", "destination": map[string]any{"container": "held"},
 		}),
+	}
+	for _, command := range commands {
+		if err := session.Submit(command); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []simulation.Command{
 		itemCommand(t, 2, 3, "item.move", map[string]any{
 			"item_id": "weapon", "place_held": true,
 			"destination": map[string]any{"container": "equipment", "slot": "rarm", "weapon_set": 0},
@@ -62,16 +73,16 @@ func TestEquippedItemModifierSourcesPreserveAffixAndSocketProvenance(t *testing.
 			"item_id": "armor", "place_held": true,
 			"destination": map[string]any{"container": "equipment", "slot": "head"},
 		}),
-	}
-	for _, command := range commands {
+	} {
 		if err := session.Submit(command); err != nil {
 			t.Fatal(err)
 		}
-	}
-	for range 5 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
 	}
 
 	assertPlayerCombatStat(t, engine, "attack_rating", 1100, 3)
