@@ -2,43 +2,49 @@
   "loading": {
     "max_retained_texture_bytes": 100663296,
     "max_active_resources": 256,
-    "max_decoded_weight": 67108864,
+    "max_decoded_weight": 402653184,
     "max_decode_time_ms": 15000
   },
   "title": {
     "max_retained_texture_bytes": 100663296,
     "max_active_resources": 256,
-    "max_decoded_weight": 67108864,
+    "max_decoded_weight": 402653184,
     "max_decode_time_ms": 15000
   },
   "main_menu": {
     "max_retained_texture_bytes": 100663296,
     "max_active_resources": 256,
-    "max_decoded_weight": 67108864,
+    "max_decoded_weight": 402653184,
     "max_decode_time_ms": 15000
   },
   "character_select": {
     "max_retained_texture_bytes": 134217728,
     "max_active_resources": 384,
-    "max_decoded_weight": 67108864,
+    "max_decoded_weight": 402653184,
     "max_decode_time_ms": 20000
   },
   "character_create": {
     "max_retained_texture_bytes": 134217728,
     "max_active_resources": 384,
-    "max_decoded_weight": 67108864,
+    "max_decoded_weight": 402653184,
     "max_decode_time_ms": 20000
   },
   "game_loading": {
     "max_retained_texture_bytes": 268435456,
     "max_active_resources": 1024,
-    "max_decoded_weight": 67108864,
-    "max_decode_time_ms": 30000
+    "max_decoded_weight": 402653184,
+    "max_decode_time_ms": 30000,
+    "min_frame_samples": 10,
+    "max_frame_p95_ms": 34,
+    "max_update_p95_ms": 25
   },
   "game_world": {
     "max_retained_texture_bytes": 536870912,
     "max_active_resources": 4096,
-    "max_decoded_weight": 67108864,
-    "max_decode_time_ms": 60000
+    "max_decoded_weight": 402653184,
+    "max_decode_time_ms": 60000,
+    "min_frame_samples": 120,
+    "max_frame_p95_ms": 25,
+    "max_update_p95_ms": 12
   }
 }

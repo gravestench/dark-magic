@@ -37,6 +37,18 @@ func TestContiguousRGBAUsesDecodedBuffer(t *testing.T) {
 	}
 }
 
+func TestContiguousNRGBAUsesDecodedVideoBuffer(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	img.SetNRGBA(0, 0, color.NRGBA{R: 10, G: 20, B: 30, A: 40})
+	pixels, ok := contiguousRGBA(img)
+	if !ok || len(pixels) != 16 {
+		t.Fatalf("contiguous NRGBA = %d bytes, %v", len(pixels), ok)
+	}
+	if pixels[0] != 10 || pixels[3] != 40 {
+		t.Fatalf("NRGBA bytes were converted: %v", pixels[:4])
+	}
+}
+
 func TestContiguousRGBARejectsPaddedSubimage(t *testing.T) {
 	parent := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	subimage := parent.SubImage(image.Rect(1, 1, 3, 3))
@@ -71,12 +83,22 @@ func TestLeafCullingUsesLogicalViewport(t *testing.T) {
 
 func BenchmarkTexturePixelPreparation(b *testing.B) {
 	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
+	video := image.NewNRGBA(image.Rect(0, 0, 800, 600))
 	b.Run("direct-rgba", func(b *testing.B) {
 		b.ReportAllocs()
 		for range b.N {
 			pixels, ok := contiguousRGBA(img)
 			if !ok || len(pixels) == 0 {
 				b.Fatal("direct path unavailable")
+			}
+		}
+	})
+	b.Run("direct-nrgba-video", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			pixels, ok := contiguousRGBA(video)
+			if !ok || len(pixels) == 0 {
+				b.Fatal("direct video path unavailable")
 			}
 		}
 	})
@@ -88,4 +110,17 @@ func BenchmarkTexturePixelPreparation(b *testing.B) {
 			}
 		}
 	})
+}
+
+func BenchmarkNodeBoundsCulling(b *testing.B) {
+	node := &node{image: image.NewRGBA(image.Rect(0, 0, 160, 160)), origin: rl.Vector2{X: .5, Y: .5}, local: rl.MatrixIdentity(), world: rl.MatrixIdentity()}
+	node.SetPosition(400, 300)
+	node.SetRotation(0)
+	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+	b.ReportAllocs()
+	for b.Loop() {
+		if node.outside(800, 600) {
+			b.Fatal("visible node was culled")
+		}
+	}
 }

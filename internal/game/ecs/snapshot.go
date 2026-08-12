@@ -227,6 +227,7 @@ func (engine *Engine) Restore(snapshot Snapshot) error {
 	engine.world = restored.world
 	engine.systems = candidate
 	engine.order = order
+	engine.schedule.Store(&compiledSchedule{systems: order})
 	engine.tick = snapshot.Tick
 	restored.world = akara.NewWorld() // keep restored.Close from closing the adopted world
 	_ = restored.Close()

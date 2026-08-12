@@ -353,6 +353,17 @@ func (c *Composer) UpdateTexture(id ResourceID, pixels image.Image) error {
 		return fmt.Errorf("rendercore: resource %v is %q, want texture", id, resource.Kind)
 	}
 	resource.Payload = pixels
+	for index := len(c.pending) - 1; index >= 0; index-- {
+		pending := &c.pending[index]
+		if pending.ResourceID != id {
+			continue
+		}
+		if pending.Kind == "resource-update" {
+			pending.Resource = *resource
+			return nil
+		}
+		break
+	}
 	c.pending = append(c.pending, Change{Kind: "resource-update", Resource: *resource, ResourceID: id})
 	c.textureUploads++
 	c.textureBytes += resourceTextureBytes(*resource)
@@ -455,6 +466,9 @@ func (c *Composer) Update(id NodeID, update func(*Node)) error {
 	}
 	candidate := *node
 	update(&candidate)
+	if candidate == *node {
+		return nil
+	}
 	if candidate.Resource != (ResourceID{}) {
 		resource, err := c.resource(candidate.Resource)
 		if err != nil {

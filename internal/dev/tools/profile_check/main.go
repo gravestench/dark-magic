@@ -19,17 +19,25 @@ type budget struct {
 	MaxActiveResources      int    `json:"max_active_resources"`
 	MaxDecodedWeight        int    `json:"max_decoded_weight"`
 	MaxDecodeTimeMS         int64  `json:"max_decode_time_ms"`
+	MinFrameSamples         int    `json:"min_frame_samples"`
+	MaxFrameP95MS           int64  `json:"max_frame_p95_ms"`
+	MaxUpdateP95MS          int64  `json:"max_update_p95_ms"`
 }
 
 type snapshot struct {
-	Decoded struct {
-		Weight int
-	}
-	Retained struct {
-		ActiveResources      int
-		RetainedTextureBytes uint64
-	}
-	DecodeTime time.Duration
+	Composition struct {
+		Decoded  struct{ Weight int }
+		Retained struct {
+			ActiveResources      int
+			RetainedTextureBytes uint64
+		}
+		DecodeTime time.Duration
+	} `json:"composition"`
+	FrameTiming map[string]struct {
+		Samples   int
+		FrameP95  time.Duration `json:"frame_p95"`
+		UpdateP95 time.Duration `json:"update_p95"`
+	} `json:"frame_timing"`
 }
 
 func main() {
@@ -82,17 +90,27 @@ func checkSnapshot(scene, path string, limits budget) error {
 		return fmt.Errorf("profile check: parse %s: %w", path, err)
 	}
 	var result error
-	if got.Retained.RetainedTextureBytes > limits.MaxRetainedTextureBytes {
-		result = errors.Join(result, fmt.Errorf("profile check: %s retained texture bytes %d exceed %d", scene, got.Retained.RetainedTextureBytes, limits.MaxRetainedTextureBytes))
+	if got.Composition.Retained.RetainedTextureBytes > limits.MaxRetainedTextureBytes {
+		result = errors.Join(result, fmt.Errorf("profile check: %s retained texture bytes %d exceed %d", scene, got.Composition.Retained.RetainedTextureBytes, limits.MaxRetainedTextureBytes))
 	}
-	if got.Retained.ActiveResources > limits.MaxActiveResources {
-		result = errors.Join(result, fmt.Errorf("profile check: %s active resources %d exceed %d", scene, got.Retained.ActiveResources, limits.MaxActiveResources))
+	if got.Composition.Retained.ActiveResources > limits.MaxActiveResources {
+		result = errors.Join(result, fmt.Errorf("profile check: %s active resources %d exceed %d", scene, got.Composition.Retained.ActiveResources, limits.MaxActiveResources))
 	}
-	if got.Decoded.Weight > limits.MaxDecodedWeight {
-		result = errors.Join(result, fmt.Errorf("profile check: %s decoded weight %d exceeds %d", scene, got.Decoded.Weight, limits.MaxDecodedWeight))
+	if got.Composition.Decoded.Weight > limits.MaxDecodedWeight {
+		result = errors.Join(result, fmt.Errorf("profile check: %s decoded weight %d exceeds %d", scene, got.Composition.Decoded.Weight, limits.MaxDecodedWeight))
 	}
-	if got.DecodeTime > time.Duration(limits.MaxDecodeTimeMS)*time.Millisecond {
-		result = errors.Join(result, fmt.Errorf("profile check: %s cumulative decode time %s exceeds %dms", scene, got.DecodeTime, limits.MaxDecodeTimeMS))
+	if got.Composition.DecodeTime > time.Duration(limits.MaxDecodeTimeMS)*time.Millisecond {
+		result = errors.Join(result, fmt.Errorf("profile check: %s cumulative decode time %s exceeds %dms", scene, got.Composition.DecodeTime, limits.MaxDecodeTimeMS))
+	}
+	timing := got.FrameTiming[scene]
+	if limits.MinFrameSamples > 0 && timing.Samples < limits.MinFrameSamples {
+		result = errors.Join(result, fmt.Errorf("profile check: %s frame samples %d below %d", scene, timing.Samples, limits.MinFrameSamples))
+	}
+	if limits.MaxFrameP95MS > 0 && timing.FrameP95 > time.Duration(limits.MaxFrameP95MS)*time.Millisecond {
+		result = errors.Join(result, fmt.Errorf("profile check: %s p95 frame interval %s exceeds %dms", scene, timing.FrameP95, limits.MaxFrameP95MS))
+	}
+	if limits.MaxUpdateP95MS > 0 && timing.UpdateP95 > time.Duration(limits.MaxUpdateP95MS)*time.Millisecond {
+		result = errors.Join(result, fmt.Errorf("profile check: %s p95 update time %s exceeds %dms", scene, timing.UpdateP95, limits.MaxUpdateP95MS))
 	}
 	return result
 }

@@ -25,6 +25,11 @@ func (app *application) attachFramePipeline() error {
 }
 
 func (app *application) updateFrame() {
+	started := time.Now()
+	scene, ok := app.navigator.Focused()
+	if !ok {
+		scene = "none"
+	}
 	frameContext := app.scenes.FrameContext(context.Background())
 	pprof.SetGoroutineLabels(frameContext)
 	app.publishInput(frameContext)
@@ -32,6 +37,7 @@ func (app *application) updateFrame() {
 	now := time.Now()
 	elapsed := now.Sub(app.lastFrame)
 	app.lastFrame = now
+	defer func() { app.frameMetrics.Record(scene, elapsed, time.Since(started)) }()
 	if err := app.advanceGame(elapsed); err != nil {
 		app.reportSceneError(err)
 		return

@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -140,5 +141,23 @@ func TestEngineAdvanceUsesFixedStepsAndLimitsCatchUp(t *testing.T) {
 	}
 	if !reflect.DeepEqual(ticks, []uint64{1, 2, 3, 4}) {
 		t.Fatalf("ticks = %v", ticks)
+	}
+}
+
+func BenchmarkEngineSteadyStateTick(b *testing.B) {
+	engine := New()
+	b.Cleanup(func() { _ = engine.Close() })
+	update := func(Context, []akara.Entity, *akara.CommandBuffer) error { return nil }
+	for index := range 24 {
+		if err := engine.Register(Definition{ID: fmt.Sprintf("system-%02d", index), Phase: PhaseMovement, Update: update}); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		if err := engine.Update(DefaultStep); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

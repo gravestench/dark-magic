@@ -1871,16 +1871,16 @@ M26 is independent performance/lifecycle debt. Its shutdown-order checkpoint is
 safety-sensitive; the remaining upload and accounting work should stay in
 separate profiling PRs unless a measured gameplay budget requires it sooner.
 
-- [ ] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
+- [x] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
   layout is already compatible with raylib, retaining conversion for genuinely
   incompatible color models and padded subimages.
-- [ ] Measure cinematic upload bandwidth and distinguish frame-update traffic
+- [x] Measure cinematic upload bandwidth and distinguish frame-update traffic
   from resident GPU texture bytes in scene diagnostics and budgets.
 - [x] Drain final composition commands on the renderer owner thread, release all
   backend nodes and palette effects, clear GPU caches, and only then close the
   native renderer. Architecture tests reject restoration of the legacy renderer
   object API and direct-native world adapter.
-- [ ] Repeat the interactive acceptance profile through `game_loading` and
+- [x] Repeat the interactive acceptance profile through `game_loading` and
   `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
   against the latest frontend-only baseline.
 

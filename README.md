@@ -340,13 +340,18 @@ scene's owned resources are released.
 
 Every scene snapshot also receives `diagnostics-NNN.json`, containing decoded
 cache residency and hit/miss/eviction counts, cumulative decode time, retained
-render resources and estimated RGBA bytes, and texture upload volume. A
+render resources and estimated RGBA bytes, texture upload volume, and bounded
+per-scene p50/p95/p99 frame-interval and update-work timing. A
 repeatable frontend acceptance run is available with:
 
 ```shell
 MPQ_DIRECTORY=/path/to/diablo-ii make profile
 make profile-check
 ```
+
+`make profile-acceptance` runs every budgeted scene deterministically and exits
+through capture completion. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for
+the measured baseline, benchmark commands, and interpretation rules.
 
 `profile-check` requires every scene listed in `docs/profile-budgets.json` to
 have been visited and rejects snapshots exceeding the tracked budgets. Override

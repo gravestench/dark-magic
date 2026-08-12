@@ -140,6 +140,56 @@ func TestTextureUpdatesRemainCheckedAndOrdered(t *testing.T) {
 	}
 }
 
+func TestNoOpNodeUpdatesAreNotQueued(t *testing.T) {
+	var composer Composer
+	node, err := composer.Create(NodeID{}, LayerWorld)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	backend.changes = nil
+	if err := composer.Update(node, func(current *Node) { current.Visible = true }); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.changes) != 0 {
+		t.Fatalf("no-op update queued %d changes", len(backend.changes))
+	}
+}
+
+func TestStreamingTextureUpdatesKeepOnlyNewestPendingFrame(t *testing.T) {
+	var composer Composer
+	first := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	texture, err := composer.CreateResource(ResourceTexture, first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	backend.changes = nil
+	second := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	newest := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	if err := composer.UpdateTexture(texture, second); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.UpdateTexture(texture, newest); err != nil {
+		t.Fatal(err)
+	}
+	if err := composer.Drain(backend); err != nil {
+		t.Fatal(err)
+	}
+	if len(backend.changes) != 1 || backend.changes[0].Resource.Payload != newest {
+		t.Fatalf("streaming updates = %#v, want newest frame only", backend.changes)
+	}
+}
+
 func TestDiagnosticsTrackTextureResidencyAndUploadVolume(t *testing.T) {
 	composer := &Composer{}
 	texture, err := composer.CreateResource(ResourceTexture, image.NewRGBA(image.Rect(0, 0, 4, 3)))
@@ -160,6 +210,76 @@ func TestDiagnosticsTrackTextureResidencyAndUploadVolume(t *testing.T) {
 	if diagnostics.RetainedTextureBytes != 0 || diagnostics.ResourceDestroys != 1 {
 		t.Fatalf("diagnostics after destroy = %#v", diagnostics)
 	}
+}
+
+func BenchmarkComposerNoOpNodeUpdates(b *testing.B) {
+	var composer Composer
+	nodes := make([]NodeID, 512)
+	for index := range nodes {
+		var err error
+		nodes[index], err = composer.Create(NodeID{}, LayerWorld)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		b.Fatal(err)
+	}
+	backend.changes = nil
+	queued := 0
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		for _, id := range nodes {
+			if err := composer.Update(id, func(node *Node) { node.Visible = true }); err != nil {
+				b.Fatal(err)
+			}
+		}
+		if err := composer.Drain(backend); err != nil {
+			b.Fatal(err)
+		}
+		queued += len(backend.changes)
+		backend.changes = backend.changes[:0]
+	}
+	b.StopTimer()
+	b.ReportMetric(float64(queued)/float64(b.N), "queued-changes/op")
+}
+
+func BenchmarkComposerStreamingTextureCoalescing(b *testing.B) {
+	var composer Composer
+	texture, err := composer.CreateResource(ResourceTexture, image.NewNRGBA(image.Rect(0, 0, 640, 480)))
+	if err != nil {
+		b.Fatal(err)
+	}
+	backend := &recordingBackend{}
+	if err := composer.Drain(backend); err != nil {
+		b.Fatal(err)
+	}
+	backend.changes = nil
+	queued := 0
+	frames := []*image.NRGBA{
+		image.NewNRGBA(image.Rect(0, 0, 640, 480)),
+		image.NewNRGBA(image.Rect(0, 0, 640, 480)),
+		image.NewNRGBA(image.Rect(0, 0, 640, 480)),
+		image.NewNRGBA(image.Rect(0, 0, 640, 480)),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		for _, frame := range frames {
+			if err := composer.UpdateTexture(texture, frame); err != nil {
+				b.Fatal(err)
+			}
+		}
+		if err := composer.Drain(backend); err != nil {
+			b.Fatal(err)
+		}
+		queued += len(backend.changes)
+		backend.changes = backend.changes[:0]
+	}
+	b.StopTimer()
+	b.ReportMetric(float64(queued)/float64(b.N), "queued-changes/op")
 }
 
 func TestAnimationLoopModeValidation(t *testing.T) {

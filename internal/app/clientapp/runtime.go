@@ -90,6 +90,7 @@ func (app *application) registerPresentationModules() error {
 				"composition":    renderCapability.Diagnostics(),
 				"raylib_backend": app.renderer.BackendDiagnostics(),
 				"texture_cache":  app.renderer.CacheDiagnostics(),
+				"frame_timing":   app.frameMetrics.Snapshot(),
 			}
 		})
 	}

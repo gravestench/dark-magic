@@ -131,13 +131,14 @@ type application struct {
 	shellSession *shell.Session
 	console      *raylibshell.Overlay
 
-	sceneErrors chan error
-	capture     Capture
-	stopScene   func()
-	stopOverlay func()
-	stopCapture func()
-	hostStopped bool
-	lastFrame   time.Time
+	sceneErrors  chan error
+	capture      Capture
+	stopScene    func()
+	stopOverlay  func()
+	stopCapture  func()
+	hostStopped  bool
+	lastFrame    time.Time
+	frameMetrics frameMetrics
 }
 
 func noCleanup() {}
