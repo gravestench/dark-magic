@@ -1871,18 +1871,29 @@ M26 is independent performance/lifecycle debt. Its shutdown-order checkpoint is
 safety-sensitive; the remaining upload and accounting work should stay in
 separate profiling PRs unless a measured gameplay budget requires it sooner.
 
-- [ ] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
+- [x] Upload contiguous FFmpeg `image.NRGBA` frames directly when their byte
   layout is already compatible with raylib, retaining conversion for genuinely
   incompatible color models and padded subimages.
-- [ ] Measure cinematic upload bandwidth and distinguish frame-update traffic
+- [x] Measure cinematic upload bandwidth and distinguish frame-update traffic
   from resident GPU texture bytes in scene diagnostics and budgets.
 - [x] Drain final composition commands on the renderer owner thread, release all
   backend nodes and palette effects, clear GPU caches, and only then close the
   native renderer. Architecture tests reject restoration of the legacy renderer
   object API and direct-native world adapter.
-- [ ] Repeat the interactive acceptance profile through `game_loading` and
+- [x] Repeat the interactive acceptance profile through `game_loading` and
   `game_world`, enforce every tracked scene budget, and compare CPU/heap PDFs
   against the latest frontend-only baseline.
+  The completed follow-up also records bounded frame/update percentiles,
+  simulation and Lua p95 work, composition/native-render/upload durations, and
+  a real 640x480 BIK upload-bandwidth capture. A measured spatial-parent tile
+  grouping increased traversal/update work and was rejected; Raylib's existing
+  compatible draw batching remains the faster path for the current workload.
+
+Deferred renderer scaling work is recorded in `docs/PERFORMANCE.md`: padded
+atlases or texture arrays, compatible instance batches, static-world buffers,
+aggregate-bound spatial culling, indexed sprite storage, and acknowledged video
+buffer pooling. Reopen those items when dense gameplay crosses the documented
+native-render, draw-submission, residency, upload, or retained-traversal triggers.
 
 ## M27: Diablo UI styling fidelity
 

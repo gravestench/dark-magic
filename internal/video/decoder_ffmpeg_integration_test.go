@@ -110,6 +110,34 @@ func TestFFmpegDecoderReadsRealBIK(t *testing.T) {
 	}
 }
 
+func BenchmarkFFmpegDecoderRealBIK(b *testing.B) {
+	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
+	if mpqPath == "" {
+		b.Skip("set DARK_MAGIC_TEST_VIDEO_MPQ to d2video.mpq")
+	}
+	archive, err := content.MPQ(mpqPath)
+	if err != nil {
+		b.Fatal(err)
+	}
+	data, err := fs.ReadFile(archive, "data/local/video/New_Bliz640x480.bik")
+	if err != nil {
+		b.Fatal(err)
+	}
+	decoder := video.FFmpegDecoder{}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(data)))
+	for b.Loop() {
+		frames := 0
+		err := decoder.Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
+			frames++
+			return nil
+		})
+		if err != nil || frames == 0 {
+			b.Fatalf("decode = %v, frames = %d", err, frames)
+		}
+	}
+}
+
 func TestEmbeddedBackendPresentsRealBIKFrame(t *testing.T) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
 	if mpqPath == "" {

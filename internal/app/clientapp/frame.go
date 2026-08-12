@@ -25,6 +25,12 @@ func (app *application) attachFramePipeline() error {
 }
 
 func (app *application) updateFrame() {
+	started := time.Now()
+	var simulationWork, luaWork time.Duration
+	scene, ok := app.navigator.Focused()
+	if !ok {
+		scene = "none"
+	}
 	frameContext := app.scenes.FrameContext(context.Background())
 	pprof.SetGoroutineLabels(frameContext)
 	app.publishInput(frameContext)
@@ -32,10 +38,14 @@ func (app *application) updateFrame() {
 	now := time.Now()
 	elapsed := now.Sub(app.lastFrame)
 	app.lastFrame = now
+	defer func() { app.frameMetrics.Record(scene, elapsed, time.Since(started), simulationWork, luaWork) }()
+	simulationStarted := time.Now()
 	if err := app.advanceGame(elapsed); err != nil {
 		app.reportSceneError(err)
 		return
 	}
+	simulationWork = time.Since(simulationStarted)
+	luaStarted := time.Now()
 	if err := app.scenes.Update(frameContext, elapsed); err != nil {
 		app.reportSceneError(fmt.Errorf("updating Lua scenes: %w", err))
 		return
@@ -48,6 +58,7 @@ func (app *application) updateFrame() {
 	if err := app.scenes.Render(frameContext); err != nil {
 		app.reportSceneError(fmt.Errorf("rendering Lua scenes: %w", err))
 	}
+	luaWork = time.Since(luaStarted)
 }
 
 func (app *application) publishInput(frameContext context.Context) {

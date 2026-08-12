@@ -44,14 +44,20 @@ type TileBucket struct {
 // deliberately renderer-neutral: a backend may use ordinary retained nodes,
 // instancing, or a future tile batch without changing authoritative map data.
 type TileSet struct {
-	Width, Height int
-	Graphics      []*TileGraphic
-	Draws         []TileDraw
-	BucketSize    int
-	Buckets       []TileBucket
-	source        fs.FS
-	palette       color.Palette
-	buckets       map[[2]int][]int
+	Width, Height  int
+	Graphics       []*TileGraphic
+	Draws          []TileDraw
+	BucketSize     int
+	Buckets        []TileBucket
+	source         fs.FS
+	palette        color.Palette
+	buckets        map[[2]int][]int
+	visibilityPool sync.Pool
+}
+
+type visibilityScratch struct {
+	marks      []uint32
+	generation uint32
 }
 
 // Place builds shared DT1 graphics and lightweight draw commands. Unlike the
@@ -211,21 +217,34 @@ func (set *TileSet) Visible(view image.Rectangle, destination []int) []int {
 		set.buildBuckets()
 	}
 	start := len(destination)
-	seen := make(map[int]struct{})
+	value := set.visibilityPool.Get()
+	scratch, _ := value.(*visibilityScratch)
+	if scratch == nil {
+		scratch = &visibilityScratch{}
+	}
+	if len(scratch.marks) < len(set.Draws) {
+		scratch.marks = make([]uint32, len(set.Draws))
+	}
+	scratch.generation++
+	if scratch.generation == 0 {
+		clear(scratch.marks)
+		scratch.generation = 1
+	}
 	firstColumn, lastColumn := view.Min.X/set.BucketSize, (view.Max.X-1)/set.BucketSize
 	firstRow, lastRow := view.Min.Y/set.BucketSize, (view.Max.Y-1)/set.BucketSize
 	for row := firstRow; row <= lastRow; row++ {
 		for column := firstColumn; column <= lastColumn; column++ {
 			for _, index := range set.buckets[[2]int{column, row}] {
-				if _, duplicate := seen[index]; duplicate || set.Draws[index].Bounds.Intersect(view).Empty() {
+				if scratch.marks[index] == scratch.generation || set.Draws[index].Bounds.Intersect(view).Empty() {
 					continue
 				}
-				seen[index] = struct{}{}
+				scratch.marks[index] = scratch.generation
 				destination = append(destination, index)
 			}
 		}
 	}
 	sort.Ints(destination[start:])
+	set.visibilityPool.Put(scratch)
 	return destination
 }
 

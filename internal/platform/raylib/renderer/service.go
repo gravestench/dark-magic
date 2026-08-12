@@ -57,6 +57,10 @@ type Service struct {
 	lastFrameNodesVisited   atomic.Uint64
 	lastFrameSubtreesCulled atomic.Uint64
 	lastFrameTextureUpdates atomic.Uint64
+	lastFrameCompositionNS  atomic.Uint64
+	lastFrameRenderNS       atomic.Uint64
+	lastFrameUploadNS       atomic.Uint64
+	textureUploadNS         atomic.Uint64
 }
 
 // BackendDiagnostics reports native-adapter work without exposing Raylib
@@ -65,6 +69,8 @@ type BackendDiagnostics struct {
 	Frames, DrawCalls, NodesVisited, SubtreesCulled, TextureUpdates uint64
 	LastFrameDrawCalls, LastFrameNodesVisited                       uint64
 	LastFrameSubtreesCulled, LastFrameTextureUpdates                uint64
+	LastFrameCompositionNS, LastFrameRenderNS, LastFrameUploadNS    uint64
+	TextureUploadNS                                                 uint64
 }
 
 // BackendDiagnostics returns lock-free cumulative counters suitable for overlays.
@@ -77,6 +83,10 @@ func (s *Service) BackendDiagnostics() BackendDiagnostics {
 		LastFrameNodesVisited:   s.lastFrameNodesVisited.Load(),
 		LastFrameSubtreesCulled: s.lastFrameSubtreesCulled.Load(),
 		LastFrameTextureUpdates: s.lastFrameTextureUpdates.Load(),
+		LastFrameCompositionNS:  s.lastFrameCompositionNS.Load(),
+		LastFrameRenderNS:       s.lastFrameRenderNS.Load(),
+		LastFrameUploadNS:       s.lastFrameUploadNS.Load(),
+		TextureUploadNS:         s.textureUploadNS.Load(),
 	}
 }
 

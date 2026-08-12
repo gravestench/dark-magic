@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gravestench/akara"
@@ -69,7 +70,44 @@ type Context struct {
 
 // UpdateFunc executes against a stable entity snapshot. Structural mutations
 // must be submitted to commands and are applied after the callback returns.
-type UpdateFunc func(Context, []akara.Entity, *akara.CommandBuffer) error
+type UpdateFunc func(Context, []akara.Entity, *StructuralCommands) error
+
+// StructuralCommands allocates Akara's synchronized command buffer only when a
+// system actually submits a structural mutation. Most steady-state systems only
+// read or update component values and therefore remain allocation-free here.
+type StructuralCommands struct{ buffer *akara.CommandBuffer }
+
+func (commands *StructuralCommands) native() *akara.CommandBuffer {
+	if commands.buffer == nil {
+		commands.buffer = akara.NewCommandBuffer()
+	}
+	return commands.buffer
+}
+
+func (commands *StructuralCommands) CreateDynamic(world *akara.World, components map[*akara.DynamicStore]map[string]any) {
+	commands.native().CreateDynamic(world, components)
+}
+
+func (commands *StructuralCommands) AddDynamic(store *akara.DynamicStore, entity akara.Entity, values map[string]any) {
+	commands.native().AddDynamic(store, entity, values)
+}
+
+func (commands *StructuralCommands) Remove(component akara.ComponentType, entity akara.Entity) {
+	commands.native().Remove(component, entity)
+}
+
+func (commands *StructuralCommands) Destroy(world *akara.World, entity akara.Entity) {
+	commands.native().Destroy(world, entity)
+}
+
+func (commands *StructuralCommands) apply() error {
+	if commands.buffer == nil {
+		return nil
+	}
+	err := commands.buffer.Apply()
+	commands.buffer = nil
+	return err
+}
 
 // Definition declares one ordered ECS system and its component access contract.
 type Definition struct {
@@ -88,7 +126,10 @@ type Definition struct {
 type registeredSystem struct {
 	definition   Definition
 	subscription *akara.Subscription
+	commands     StructuralCommands
 }
+
+type compiledSchedule struct{ systems []*registeredSystem }
 
 // Engine owns one Akara world and a deterministic, dependency-ordered schedule.
 type Engine struct {
@@ -96,6 +137,7 @@ type Engine struct {
 	mu       sync.RWMutex
 	systems  map[string]*registeredSystem
 	order    []*registeredSystem
+	schedule atomic.Pointer[compiledSchedule]
 	tick     uint64
 	step     time.Duration
 	lag      time.Duration
@@ -118,10 +160,12 @@ func NewWithClock(step time.Duration, maxCatchUp int) *Engine {
 	if maxCatchUp <= 0 {
 		maxCatchUp = DefaultMaxCatchUp
 	}
-	return &Engine{
+	engine := &Engine{
 		world: akara.NewWorld(), systems: make(map[string]*registeredSystem),
 		step: step, maxSteps: maxCatchUp,
 	}
+	engine.schedule.Store(&compiledSchedule{})
+	return engine
 }
 
 // World exposes component storage to trusted game systems and capability
@@ -171,6 +215,7 @@ func (engine *Engine) Register(definition Definition) error {
 	}
 	engine.systems = candidate
 	engine.order = order
+	engine.schedule.Store(&compiledSchedule{systems: order})
 	return nil
 }
 
@@ -208,6 +253,7 @@ func (engine *Engine) Unregister(id string) bool {
 		return false
 	}
 	engine.systems, engine.order = candidate, order
+	engine.schedule.Store(&compiledSchedule{systems: order})
 	engine.mu.Unlock()
 	_ = entry.subscription.Close()
 	return true
@@ -242,17 +288,21 @@ func (engine *Engine) Advance(elapsed time.Duration) (int, error) {
 }
 
 func (engine *Engine) update(delta time.Duration) error {
-	engine.mu.RLock()
-	order := append([]*registeredSystem(nil), engine.order...)
+	engine.mu.Lock()
 	engine.tick++
 	context := Context{Tick: engine.tick, Delta: delta}
-	engine.mu.RUnlock()
-	for _, system := range order {
-		commands := akara.NewCommandBuffer()
-		if err := system.definition.Update(context, system.subscription.Entities(), commands); err != nil {
+	engine.mu.Unlock()
+	for _, system := range engine.schedule.Load().systems {
+		commands := &system.commands
+		var entities []akara.Entity
+		if system.subscription.Len() > 0 {
+			entities = system.subscription.Entities()
+		}
+		if err := system.definition.Update(context, entities, commands); err != nil {
+			commands.buffer = nil
 			return fmt.Errorf("game ecs: update %q: %w", system.definition.ID, err)
 		}
-		if err := commands.Apply(); err != nil {
+		if err := commands.apply(); err != nil {
 			return fmt.Errorf("game ecs: apply %q structural changes: %w", system.definition.ID, err)
 		}
 	}
@@ -278,6 +328,7 @@ func (engine *Engine) Close() error {
 	}
 	engine.systems = make(map[string]*registeredSystem)
 	engine.order = nil
+	engine.schedule.Store(&compiledSchedule{})
 	engine.mu.Unlock()
 	return engine.world.Close()
 }

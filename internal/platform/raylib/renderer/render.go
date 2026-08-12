@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -17,9 +18,11 @@ func (s *Service) render() {
 	// frame starts so the debug overlay can also answer the much more useful
 	// question: "how much work did the frame I can see require?"
 	start := s.BackendDiagnostics()
+	started := time.Now()
 	s.frames.Add(1)
 	s.renderRecursively(s.rootNode, nil)
 	s.recordFrameWork(start)
+	s.lastFrameRenderNS.Store(uint64(time.Since(started)))
 }
 
 func (s *Service) recordFrameWork(start BackendDiagnostics) {
@@ -27,6 +30,7 @@ func (s *Service) recordFrameWork(start BackendDiagnostics) {
 	s.lastFrameNodesVisited.Store(s.nodesVisited.Load() - start.NodesVisited)
 	s.lastFrameSubtreesCulled.Store(s.subtreesCulled.Load() - start.SubtreesCulled)
 	s.lastFrameTextureUpdates.Store(s.textureUpdates.Load() - start.TextureUpdates)
+	s.lastFrameUploadNS.Store(s.textureUploadNS.Load() - start.TextureUploadNS)
 }
 
 func (s *Service) renderRecursively(renderable *node, inheritedClip *rl.Rectangle) {
@@ -94,6 +98,7 @@ func (s *Service) renderNode(node *node) {
 
 	if node.dirty() {
 		s.textureUpdates.Add(1)
+		started := time.Now()
 		img := node.Image()
 		if px, ok := contiguousRGBA(img); ok {
 			if len(px) < 4 {
@@ -108,6 +113,7 @@ func (s *Service) renderNode(node *node) {
 
 			rl.UpdateTexture(tx, px)
 		}
+		s.textureUploadNS.Add(uint64(time.Since(started)))
 	}
 
 	//rl.DrawTextureEx(
@@ -159,20 +165,24 @@ func (s *Service) renderNode(node *node) {
 // or performing color-model conversion. Decoded and normalized engine assets
 // use this layout; subimages with padded rows safely take the fallback path.
 func contiguousRGBA(img image.Image) ([]byte, bool) {
-	rgba, ok := img.(*image.RGBA)
-	if !ok {
-		return nil, false
-	}
-	bounds := rgba.Bounds()
+	bounds := img.Bounds()
 	size := bounds.Dx() * bounds.Dy() * 4
-	if size == 0 || rgba.Stride != bounds.Dx()*4 {
+	stride, pixels, offset := 0, []byte(nil), 0
+	switch typed := img.(type) {
+	case *image.RGBA:
+		stride, pixels, offset = typed.Stride, typed.Pix, typed.PixOffset(bounds.Min.X, bounds.Min.Y)
+	case *image.NRGBA:
+		stride, pixels, offset = typed.Stride, typed.Pix, typed.PixOffset(bounds.Min.X, bounds.Min.Y)
+	default:
 		return nil, false
 	}
-	start := rgba.PixOffset(bounds.Min.X, bounds.Min.Y)
-	if start < 0 || start+size > len(rgba.Pix) {
+	if size == 0 || stride != bounds.Dx()*4 {
 		return nil, false
 	}
-	return rgba.Pix[start : start+size], true
+	if offset < 0 || offset+size > len(pixels) {
+		return nil, false
+	}
+	return pixels[offset : offset+size], true
 }
 
 func getAllPixelData(img image.Image) []color.RGBA {

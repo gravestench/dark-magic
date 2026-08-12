@@ -137,7 +137,7 @@ func TestRestorePreservesRegisteredSystemQueries(t *testing.T) {
 		t.Fatal(err)
 	}
 	seen := 0
-	if err := engine.Register(Definition{ID: "observe", Phase: PhaseInput, All: []akara.ComponentType{store}, Update: func(_ Context, entities []akara.Entity, _ *akara.CommandBuffer) error {
+	if err := engine.Register(Definition{ID: "observe", Phase: PhaseInput, All: []akara.ComponentType{store}, Update: func(_ Context, entities []akara.Entity, _ *StructuralCommands) error {
 		seen = len(entities)
 		return nil
 	}}); err != nil {

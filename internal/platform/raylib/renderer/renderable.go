@@ -52,6 +52,7 @@ type node struct {
 	children       []*node
 	childrenSorted bool
 	transformDirty bool
+	worldRotation  float32
 
 	isDirty bool
 }
@@ -119,12 +120,19 @@ func (n *node) SetPosition(x, y float32) {
 }
 
 func (n *node) Rotation() (degrees float32) {
+	return n.worldRotation
+}
+
+func matrixRotation(matrix rl.Matrix) float32 {
 	// Compute scale factors
-	scaleX := math.Sqrt(float64(n.world.M0*n.world.M0 + n.world.M1*n.world.M1 + n.world.M2*n.world.M2))
+	scaleX := math.Sqrt(float64(matrix.M0*matrix.M0 + matrix.M1*matrix.M1 + matrix.M2*matrix.M2))
+	if scaleX == 0 {
+		return 0
+	}
 
 	// Normalize matrix components to remove scale
-	m0Prime := n.world.M0 / float32(scaleX)
-	m1Prime := n.world.M1 / float32(scaleX)
+	m0Prime := matrix.M0 / float32(scaleX)
+	m1Prime := matrix.M1 / float32(scaleX)
 
 	// Get rotation in radians
 	theta := math.Atan2(float64(m1Prime), float64(m0Prime))
@@ -395,6 +403,7 @@ func (n *node) UpdateWorldMatrix(parent rl.Matrix, parentDirty bool) {
 	dirty := parentDirty || n.transformDirty
 	if dirty {
 		n.world = rl.MatrixMultiply(n.local, parent)
+		n.worldRotation = matrixRotation(n.world)
 		n.transformDirty = false
 	}
 
