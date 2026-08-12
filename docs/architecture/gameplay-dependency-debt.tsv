@@ -1,3 +1,4 @@
 # importer	dependency	reason
 internal/game/session/movement.go	internal/game/action	transitional player movement action state moves with the first authoritative Lua domain slice
+internal/game/session/movement.go	internal/game/world	transitional navigation adapter still depends on the mixed world package until geometry is split from D2 policy
 internal/game/session/skills.go	internal/game/action	transitional player skill action state moves with the Fire Bolt slice

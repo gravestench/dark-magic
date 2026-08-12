@@ -298,7 +298,10 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	// and HD/TR components recovered from OpenDiablo2 and visually checked against
 	// mounted production assets. Random map/tile paths remain dynamic VFS
 	// discoveries and therefore do not pretend every mounted asset is manifest-owned.
-	const auditedFingerprint = "e0236c0359e6dc548a93ebc9d6c32b3a8933a0d6e5dfcbde1182b25033de8e23"
+	// The d2legacy authoritative Fire Bolt slice adds Skills.txt and Missiles.txt
+	// as code-owned decoded data inputs. They are deliberately not presentation
+	// assets, but the coverage report tracks every literal content dependency.
+	const auditedFingerprint = "2533eb6ca1cf6d2bbaa0663faf4b01c0e9db4c154f66d8f6d47173df1b69ab6f"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
