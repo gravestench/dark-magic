@@ -436,7 +436,7 @@ func ownershipClassForPath(rules []ownershipRule, path string) string {
 }
 
 func isProductionOwnershipFile(path string) bool {
-	if strings.HasSuffix(path, "_test.go") {
+	if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_test.lua") {
 		return false
 	}
 	return strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".lua")
