@@ -3,7 +3,6 @@ package d2legacy_test
 import (
 	"context"
 	"testing"
-	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -27,12 +26,7 @@ func TestD2LegacyBuildsSkillCommandsThroughGenericIntentMailbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	script := fstest.MapFS{"test.lua": {Data: []byte(`
-local player=require("d2legacy.player_intents")
-player.assign_skill("right",17)
-player.request_skill("right",20.5,30.25,"fallen:7")
-`)}}
-	if err := runtime.Execute(context.Background(), script, "test.lua"); err != nil {
+	if err := runtime.Execute(context.Background(), content.D2Legacy(), "lua/d2legacy/tests/integration/player_intents.lua"); err != nil {
 		t.Fatal(err)
 	}
 	source, err := gamesession.NewIntentSource(controller, "alice")

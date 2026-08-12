@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -44,6 +45,12 @@ type Config struct {
 	// InitialData contains immutable import/bootstrap values. It is deliberately
 	// absent from mutable runtime APIs after d2legacy materializes its own state.
 	InitialData map[string]any
+	// ExecutionBudget overrides the Lua runtime invocation budget when positive.
+	// DisableExecutionBudget is reserved for bounded offline tools and large
+	// deterministic test vectors; interactive and network hosts should keep a
+	// finite budget.
+	ExecutionBudget        time.Duration
+	DisableExecutionBudget bool
 }
 
 func Start(ctx context.Context, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, seed uint64) (*Authority, error) {
@@ -65,6 +72,15 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 		return nil, err
 	}
 	result := &Authority{Runtime: modruntime.New(), State: simulation.NewStateStore(), Random: streams, Identity: identity}
+	if config.DisableExecutionBudget {
+		if err := result.Runtime.SetExecutionBudget(0); err != nil {
+			return nil, err
+		}
+	} else if config.ExecutionBudget > 0 {
+		if err := result.Runtime.SetExecutionBudget(config.ExecutionBudget); err != nil {
+			return nil, err
+		}
+	}
 	identityState, err := simulation.NewIdentityParticipant(identity)
 	if err != nil {
 		return nil, err

@@ -297,11 +297,31 @@ func (r *Runtime) runWithBudget(ctx context.Context, budget time.Duration, fn fu
 
 // Execute loads and runs a Lua source file from a content filesystem.
 func (r *Runtime) Execute(ctx context.Context, source fs.FS, name string) error {
+	return r.execute(ctx, nil, source, name)
+}
+
+// ExecuteScoped loads and runs a Lua source file with resources assigned to
+// scope. It is the file-backed counterpart to RunScoped and lets integration
+// harnesses keep Lua assertions in Lua files rather than Go string literals.
+func (r *Runtime) ExecuteScoped(ctx context.Context, scope *Scope, source fs.FS, name string) error {
+	if scope == nil {
+		return errors.New("modruntime: nil invocation scope")
+	}
+	return r.execute(ctx, scope, source, name)
+}
+
+func (r *Runtime) execute(ctx context.Context, scope *Scope, source fs.FS, name string) error {
 	data, err := fs.ReadFile(source, name)
 	if err != nil {
 		return fmt.Errorf("modruntime: read %q: %w", name, err)
 	}
-	return r.Run(ctx, func(state *lua.LState) error {
+	run := r.Run
+	if scope != nil {
+		run = func(ctx context.Context, callback func(*lua.LState) error) error {
+			return r.RunScoped(ctx, scope, callback)
+		}
+	}
+	return run(ctx, func(state *lua.LState) error {
 		function, err := state.Load(bytes.NewReader(data), "@"+name)
 		if err != nil {
 			return scriptError(name, "compile", err)

@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"testing"
-	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -35,23 +34,7 @@ func TestLuaReusableWidgetModulesLoad(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 
-	scripts := fstest.MapFS{
-		"load.lua": &fstest.MapFile{Data: []byte(`
-local modules = {
-  "d2legacy.ui.slider",
-  "d2legacy.ui.scrollbar",
-  "d2legacy.ui.list",
-  "d2legacy.ui.tabs",
-  "d2legacy.ui.panel",
-  "d2legacy.ui.progress_bar",
-}
-for _, name in ipairs(modules) do
-  local loaded = require(name)
-  assert(type(loaded) == "table", name .. " did not return a module")
-end
-`)},
-	}
-	if err := runtime.Execute(ctx, scripts, "load.lua"); err != nil {
+	if err := runtime.Execute(ctx, content.D2Legacy(), "lua/d2legacy/tests/integration/ui_widgets.lua"); err != nil {
 		t.Fatal(err)
 	}
 }

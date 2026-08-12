@@ -1,0 +1,8 @@
+local s=require("d2legacy.save/v1")
+local id=assert(s.create_named("Iron-Wolf","paladin",false,true))
+assert(id=="paladin-iron-wolf" and s.select(id))
+local c=s.selected()
+assert(c.class=="Paladin" and not c.expansion and c.hardcore)
+assert(s.create_named("A","amazon")==nil)
+assert(s.create_named("Valid","monk")==nil)
+assert(s.create_named("Iron-Wolf","amazon")==nil)

@@ -1,15 +1,15 @@
 # retired Go policy family	new authoritative evidence	status	behavioral contract
-internal/game/combat	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	ordered hit resolution damage and Fire Bolt end-to-end
-internal/game/skill	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	assignment cast timing mana cost and effect emission
-internal/game/missile	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	projectile movement contact damage and removal
-internal/game/action	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	exclusive melee approach animation and impact lifecycle
-internal/game/stats	internal/mod/d2legacy/fire_bolt_legacy_path_test.go	covered	attack-rating versus defense hit chance clamps and integer order
+internal/game/combat	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	ordered damage resolution and Fire Bolt end-to-end
+internal/game/skill	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	assignment cast timing mana cost and effect emission
+internal/game/missile	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	projectile movement contact damage and removal
+internal/game/action	internal/content/d2legacy/lua/d2legacy/systems/player_melee_test.lua	covered	exclusive melee approach animation and impact lifecycle
+internal/game/stats	internal/content/d2legacy/lua/d2legacy/policy/melee_test.lua	covered	attack-rating versus defense hit chance clamps and integer order
 internal/game/item	internal/content/d2legacy/lua/d2legacy/items/bootstrap_test.lua	covered	Lua suite owns bootstrap and movement policy; Go item acceptance retains reconnect corpse recovery equipment vendor service and reconstructed-runtime parity evidence
 internal/game/interaction	internal/mod/d2legacy/authority_test.go	partial	Lua owns spatial open close policy; a focused checkpointed NPC reward vector remains fidelity work
 internal/game/loot	internal/mod/d2legacy/authority_test.go	covered	fixed nested treasure quality affix value and property vectors plus checkpointed monster-drop restore parity in hostile_lifecycle_restore_test.go
 internal/game/monster	internal/mod/d2legacy/hostile_lifecycle_restore_test.go	covered	generated population spawn AI acquisition skill damage atomic death corpse credit XP loot events and reconstructed-runtime restore parity
 internal/game/player	internal/content/d2legacy/lua/d2legacy/systems/player_movement_test.lua	partial	Lua owns entry and movement policy in the production suite harness; Go retains progression reconstruction and restore mechanics, and a complete creation-to-level-up vector remains fidelity work
-internal/game/transition	internal/mod/d2legacy/warp_lab_test.go	covered	approach collision warp relocation and presentation transition
+internal/game/transition	internal/content/d2legacy/lua/d2legacy/dev/warp_lab/fixture_test.lua	covered	approach collision warp relocation and presentation transition
 internal/game/ownedunit	internal/mod/d2legacy/authority_test.go	covered	category and group limits stable replacement attribution and checkpointed ownership state
 internal/game/state	internal/content/d2legacy/lua/d2legacy/systems/timed_state_test.lua	covered	Lua suite owns timed lifecycle assertions; Go retains reconstructed-runtime checkpoint restore and replay parity
-internal/mod/d2legacy/mapgen	internal/mod/d2legacy/mapgen_outdoor_test.go	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua
+internal/mod/d2legacy/mapgen	internal/content/d2legacy/lua/d2legacy/mapgen/outdoor_test.lua	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua

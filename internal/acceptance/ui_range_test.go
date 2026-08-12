@@ -2,8 +2,8 @@ package acceptance
 
 import (
 	"context"
+	"io/fs"
 	"testing"
-	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -25,18 +25,9 @@ func TestLuaControlsSliderKeyboardAndDragSemantics(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 
-	scripts := fstest.MapFS{
-		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui=require("d2legacy.ui.controls")
-manager=ui.new()
-slider=manager:add_slider({id="volume",x=10,y=10,width=100,height=20,min=0,max=100,step=10,value=40})
-`)},
-		"update.lua": &fstest.MapFile{Data: []byte(`manager:update()`)},
-		"assert_keyboard.lua": &fstest.MapFile{Data: []byte(`
-local a=manager:accessibility()
-assert(slider.value==50 and a[1].role=="slider" and a[1].focused==true)
-`)},
-		"assert_drag.lua": &fstest.MapFile{Data: []byte(`assert(slider.value==80)`)},
+	scripts, err := fs.Sub(content.D2Legacy(), "lua/d2legacy/tests/integration/ui_range")
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
 		t.Fatal(err)
