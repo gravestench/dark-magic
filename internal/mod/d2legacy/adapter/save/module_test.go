@@ -6,11 +6,10 @@ import (
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-func policyRuntime(t *testing.T, store *persistence.Store) *modruntime.Runtime {
+func policyRuntime(t *testing.T, store *Store) *modruntime.Runtime {
 	t.Helper()
 	runtime := modruntime.New()
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
@@ -34,7 +33,7 @@ func execute(t *testing.T, runtime *modruntime.Runtime, script string) {
 }
 
 func TestLuaPolicyCreatesAndSelectsCharacter(t *testing.T) {
-	store := persistence.New()
+	store := New()
 	runtime := policyRuntime(t, store)
 	execute(t, runtime, `local s=require("d2legacy.save/v1"); local id=assert(s.create("hero", "Hero", "Amazon")); assert(id=="hero"); assert(s.select(id)); assert(s.selected().name=="Hero")`)
 	selected, ok := store.Selected()
@@ -44,7 +43,7 @@ func TestLuaPolicyCreatesAndSelectsCharacter(t *testing.T) {
 }
 
 func TestLuaPolicyOwnsNameClassAndCreationOptions(t *testing.T) {
-	store := persistence.New()
+	store := New()
 	runtime := policyRuntime(t, store)
 	execute(t, runtime, `
 local s=require("d2legacy.save/v1")
@@ -58,16 +57,16 @@ assert(s.create_named("Iron-Wolf", "amazon")==nil)
 }
 
 func TestLuaPolicyDeletesCharacterByOpaqueID(t *testing.T) {
-	store := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	store := New(Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	runtime := policyRuntime(t, store)
 	execute(t, runtime, `local s=require("d2legacy.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`)
 }
 
 func TestAdapterReturnsDefensiveAppearanceAndStatsSnapshots(t *testing.T) {
-	store := persistence.New(persistence.Character{
+	store := New(Character{
 		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
-		Appearance: &persistence.Appearance{COF: "hero.cof", Palette: "units.dat", Direction: 3, Components: map[string]string{"HD": "head.dcc", "TR": "torso.dcc"}},
-		Stats:      &persistence.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
+		Appearance: &Appearance{COF: "hero.cof", Palette: "units.dat", Direction: 3, Components: map[string]string{"HD": "head.dcc", "TR": "torso.dcc"}},
+		Stats:      &Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
 	})
 	runtime := policyRuntime(t, store)
 	execute(t, runtime, `

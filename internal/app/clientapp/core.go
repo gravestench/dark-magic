@@ -26,9 +26,9 @@ import (
 	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -120,7 +120,7 @@ func (app *application) loadGameCatalogs() error {
 
 func (app *application) buildOfflineSession() error {
 	fixtures := DevelopmentCharacters(app.options.FixtureCharacters)
-	app.saves = persistence.New(fixtures...)
+	app.saves = d2save.New(fixtures...)
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)

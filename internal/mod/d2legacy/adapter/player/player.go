@@ -9,7 +9,7 @@ import (
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	"github.com/gravestench/dark-magic/internal/persistence"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
 // EnterCommand materializes a selected durable character into session-owned ECS
@@ -66,7 +66,7 @@ func NewDestination(x, y, width, height float64, act, levelID int64) (Destinatio
 // AdmissionCommand converts a durable character selected by a trusted host
 // into one replayable entry command. Network clients may request a join, but
 // they cannot choose their spawn or mint this system/admin-authority command.
-func AdmissionCommand(character persistence.Character, player string, destination Destination, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
+func AdmissionCommand(character d2save.Character, player string, destination Destination, actor string, sequence, tick uint64, authority simulation.Authority) (simulation.Command, error) {
 	if authority != simulation.AuthoritySystem && authority != simulation.AuthorityAdmin {
 		return simulation.Command{}, fmt.Errorf("player: admission requires system or admin authority")
 	}
@@ -84,7 +84,7 @@ func AdmissionCommand(character persistence.Character, player string, destinatio
 // gameplay state and Lua only observes them.
 type EntrySource struct {
 	engine      *gameecs.Engine
-	saves       *persistence.Store
+	saves       *d2save.Store
 	player      string
 	destination Destination
 	sequence    uint64
@@ -92,18 +92,18 @@ type EntrySource struct {
 
 // NewEntrySource creates the offline adapter that emits one entry command for
 // the selected character. Remote sessions receive equivalent commands elsewhere.
-func NewEntrySource(engine *gameecs.Engine, saves *persistence.Store, player string, width, height float64) (*EntrySource, error) {
+func NewEntrySource(engine *gameecs.Engine, saves *d2save.Store, player string, width, height float64) (*EntrySource, error) {
 	return NewEntrySourceAt(engine, saves, player, width/2, height/2, width, height)
 }
 
 // NewEntrySourceAt admits the player at a server-selected map coordinate.
-func NewEntrySourceAt(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64) (*EntrySource, error) {
+func NewEntrySourceAt(engine *gameecs.Engine, saves *d2save.Store, player string, x, y, width, height float64) (*EntrySource, error) {
 	return NewEntrySourceAtLocation(engine, saves, player, x, y, width, height, 1, 1)
 }
 
 // NewEntrySourceAtLocation records the server-selected act and town level in
 // the same authoritative command as the server-selected spawn coordinate.
-func NewEntrySourceAtLocation(engine *gameecs.Engine, saves *persistence.Store, player string, x, y, width, height float64, act, levelID int64) (*EntrySource, error) {
+func NewEntrySourceAtLocation(engine *gameecs.Engine, saves *d2save.Store, player string, x, y, width, height float64, act, levelID int64) (*EntrySource, error) {
 	destination, err := NewDestination(x, y, width, height, act, levelID)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func NewEntrySourceAtLocation(engine *gameecs.Engine, saves *persistence.Store, 
 
 // NewEntrySourceForDestination adapts local save selection to the same
 // destination contract used by trusted remote admission.
-func NewEntrySourceForDestination(engine *gameecs.Engine, saves *persistence.Store, player string, destination Destination) (*EntrySource, error) {
+func NewEntrySourceForDestination(engine *gameecs.Engine, saves *d2save.Store, player string, destination Destination) (*EntrySource, error) {
 	player = strings.TrimSpace(player)
 	validated, err := NewDestination(destination.X, destination.Y, destination.Width, destination.Height, destination.Act, destination.LevelID)
 	if err != nil || engine == nil || saves == nil || player == "" {
@@ -152,7 +152,7 @@ func (source *EntrySource) entered(characterID string) bool {
 }
 
 // EntryFromCharacter copies the admitted durable subset into a command value.
-func EntryFromCharacter(character persistence.Character, player string, x, y, width, height float64) Entry {
+func EntryFromCharacter(character d2save.Character, player string, x, y, width, height float64) Entry {
 	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)

@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
-	"github.com/gravestench/dark-magic/internal/persistence"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 )
 
@@ -85,7 +85,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		_ = content.Close(assets)
 	})
 
-	character := persistence.Character{ID: "amazon-campfirehero", Name: "CampfireHero", Class: "Amazon", Level: 1, Expansion: true}
+	character := d2save.Character{ID: "amazon-campfirehero", Name: "CampfireHero", Class: "Amazon", Level: 1, Expansion: true}
 	if err := app.saves.Create(character); err != nil {
 		t.Fatal(err)
 	}

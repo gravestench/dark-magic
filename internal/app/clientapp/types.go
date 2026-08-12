@@ -26,8 +26,8 @@ import (
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
-	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -109,7 +109,7 @@ type application struct {
 	gameData            *gamedata.Catalog
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
-	saves               *persistence.Store
+	saves               *d2save.Store
 	entitySimulation    *gameecs.Engine
 	offlineSession      *gamesession.Session
 	authoritativeState  *simulation.StateStore

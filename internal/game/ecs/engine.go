@@ -23,7 +23,8 @@ var (
 )
 
 const (
-	// DefaultStep is Diablo II's authoritative 25 Hz simulation cadence.
+	// DefaultStep is the host's default fixed-tick cadence. Mods may select a
+	// different explicit cadence when constructing their session.
 	DefaultStep = 40 * time.Millisecond
 	// DefaultMaxCatchUp bounds recovery after a slow host frame.
 	DefaultMaxCatchUp = 5

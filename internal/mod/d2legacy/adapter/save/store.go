@@ -1,5 +1,4 @@
-// Package persistence owns engine-side character metadata exposed to the Lua shell.
-package persistence
+package save
 
 import (
 	"errors"
@@ -7,9 +6,9 @@ import (
 	"sync"
 )
 
-// Character is the current engine-side character selection record. It is not a
-// Diablo II save-file schema: future importers translate durable saves into this
-// validated value boundary and preserve unsupported bytes separately.
+// Character is d2legacy's current durable character-selection record. Future
+// importers translate legacy save bytes into this adapter value and preserve
+// unsupported bytes separately.
 type Character struct {
 	ID         string
 	Name       string
