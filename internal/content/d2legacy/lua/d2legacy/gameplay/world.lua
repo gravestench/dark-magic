@@ -144,7 +144,8 @@ end
 
 -- Semantic events are also copied. Consumers can remember entity_id to avoid
 -- presenting one durable event more than once; observation itself is read-only.
-function M.semantic_cues()
+function M.semantic_cues(observed)
+    observed = observed or {}
     local result = {}
     local entities, known = {}, {}
     for _, component in ipairs({"d2legacy.monster.death_event", "d2legacy.missile.event",
@@ -152,7 +153,11 @@ function M.semantic_cues()
         local ok, matches = pcall(ecs.query, {all = {component}})
         if ok then
             for _, entity in ipairs(matches) do
-                if not known[entity:id()] then entities[#entities + 1] = entity; known[entity:id()] = true end
+                local id = entity:id()
+                if not observed[id] and not known[id] then
+                    entities[#entities + 1] = entity
+                    known[id] = true
+                end
             end
         end
     end

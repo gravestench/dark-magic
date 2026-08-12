@@ -8,6 +8,7 @@ local text = require("d2legacy.ui.text")
 
 local M = {}
 local fixed_one = 256
+local refresh_seconds = 0.1
 
 -- Font rasterization is cached, but asking it to rebuild identical text every
 -- frame is still needless work in a performance lab. Remember each last value.
@@ -144,17 +145,26 @@ local function update_markers(state, scene, snapshot)
 end
 
 function M.create(scene)
-    local state = {visible=true, markers={}, panel=create_panel(scene)}
+    local state = {
+        visible=true,
+        markers={},
+        panel=create_panel(scene),
+        refresh_elapsed=refresh_seconds,
+    }
     return state
 end
 
-function M.update(state, scene)
+function M.update(state, scene, elapsed)
     if input.pressed("debug_combat") then
         state.visible = not state.visible
         state.panel.root:set_visible(state.visible)
         for _, marker in pairs(state.markers) do marker.root:set_visible(state.visible) end
+        if state.visible then state.refresh_elapsed = refresh_seconds end
     end
     if not state.visible then return end
+    state.refresh_elapsed = state.refresh_elapsed + (elapsed or 0)
+    if state.refresh_elapsed < refresh_seconds then return end
+    state.refresh_elapsed = state.refresh_elapsed % refresh_seconds
     local level_id = scene.world_level_id or 2
     local snapshot = ecs_snapshot.read(level_id)
     update_panel(state, snapshot)

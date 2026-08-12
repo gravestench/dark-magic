@@ -40,6 +40,7 @@ local cues = world.semantic_cues()
 assert(#cues == 1)
 assert(cues[1].cue_type == "combat")
 assert(cues[1].kind == "hit_resolved")
+assert(#world.semantic_cues({[cues[1].entity_id]=true}) == 0)
 `
 	if err := runtime.RunScoped(ctx, &modruntime.Scope{}, func(state *lua.LState) error {
 		return state.DoString(script)
