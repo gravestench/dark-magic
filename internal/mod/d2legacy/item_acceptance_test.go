@@ -144,25 +144,101 @@ func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
 	assertPlayerAttackRating(t, engine, 100, 0)
 }
 
+func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixtureRecords{}, engine, session,
+		Config{Seed: 93, InitialData: itemAcceptanceBootstrap()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(t.Context())
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: itemAcceptancePlayerPayload(t)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
+		"item_id": "sale", "vendor": "charsi", "category": "weap",
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 1, 2, "item.move", map[string]any{
+		"item_id": "armor", "destination": map[string]any{"container": "held"},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 2, 3, "item.move", map[string]any{
+		"item_id": "armor", "place_held": true,
+		"destination": map[string]any{"container": "equipment", "slot": "head"},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPlayerCombatStat(t, engine, "defense", 40, 1)
+	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
+		"item_id": "weapon", "destination": map[string]any{"container": "held"},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 5, 5, "item.move", map[string]any{
+		"item_id": "weapon", "place_held": true,
+		"destination": map[string]any{"container": "equipment", "slot": "rarm", "weapon_set": 0},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPlayerCombatStat(t, engine, "defense", 40, 1)
+	assertPlayerAttackRating(t, engine, 1000, 1)
+	if err := session.Submit(itemCommand(t, 7, 6, "item.move", map[string]any{
+		"item_id": "armor", "destination": map[string]any{"container": "inventory", "x": 4, "y": 0},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPlayerCombatStat(t, engine, "defense", 0, 0)
+	assertPlayerAttackRating(t, engine, 1000, 1)
+}
+
 func assertPlayerAttackRating(t *testing.T, engine *gameecs.Engine, wanted int64, sources int) {
+	assertPlayerCombatStat(t, engine, "attack_rating", wanted, sources)
+}
+
+func assertPlayerCombatStat(t *testing.T, engine *gameecs.Engine, statName string, wanted int64, sources int) {
 	t.Helper()
 	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.combat_stats")
 	value, _ := stats.Get(stats.Entities()[0])
-	rating, _ := value.Get("attack_rating")
+	rating, _ := value.Get(statName)
 	if rating != wanted {
-		t.Fatalf("attack rating = %v, want %d", rating, wanted)
+		t.Fatalf("%s = %v, want %d", statName, rating, wanted)
 	}
 	store, _ := akara.GetDynamicStore(engine.World(), "d2legacy.stat.source")
 	count := 0
 	for _, entity := range store.Entities() {
 		source, _ := store.Get(entity)
 		stat, _ := source.Get("stat")
-		if stat == "attack_rating" {
+		if stat == statName {
 			count++
 		}
 	}
 	if count != sources {
-		t.Fatalf("attack-rating sources = %d, want %d", count, sources)
+		t.Fatalf("%s sources = %d, want %d", statName, count, sources)
 	}
 }
 
@@ -295,6 +371,10 @@ func itemAcceptanceBootstrap() map[string]any {
 	weapon["melee_range"], weapon["physical_min"], weapon["physical_max"] = 3.0, 512.0, 1024.0
 	weapon["melee_weapon_class"] = "1HS"
 	weapon["attack_rating"] = 900.0
+	armor := item("armor", "cap", "inventory")
+	armor["x"], armor["y"] = 4.0, 0.0
+	armor["body_slots"] = "head"
+	armor["defense"] = 40.0
 	sale := item("sale", "cap", "held")
 	sale["base_cost"] = 100.0
 	corpse := item("corpse-boots", "lbt", "corpse")
@@ -308,7 +388,7 @@ func itemAcceptanceBootstrap() map[string]any {
 			"stash_width": 6.0, "stash_height": 8.0, "cube_width": 3.0, "cube_height": 4.0,
 			"belt_capacity": 4.0, "vendor_width": 10.0, "vendor_height": 10.0,
 			"carried_gold": 1000.0, "stashed_gold": 0.0,
-			"items": []any{sale, weapon, corpse, target, material},
+			"items": []any{sale, weapon, armor, corpse, target, material},
 			"trade_terms": map[string]any{"charsi": map[string]any{
 				"buy_multiplier": 512.0, "sell_multiplier": 1024.0, "max_buy": 0.0,
 			}},
