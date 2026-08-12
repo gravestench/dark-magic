@@ -14,6 +14,7 @@ internal/content/d2legacy/lua/d2legacy/overlays/	adapter	lua:presentation	first-
 internal/content/d2legacy/lua/d2legacy/presentation/	adapter	lua:presentation	world presentation adapters
 internal/content/d2legacy/lua/d2legacy/ui/	adapter	lua:presentation	reusable UI and input composition
 internal/content/d2legacy/lua/d2legacy/authoritative.lua	d2-policy	lua:d2legacy	canonical authoritative gameplay composition root
+internal/content/d2legacy/lua/d2legacy/audio.lua	d2-policy	lua:d2legacy	Diablo Sounds.txt selection path and playback policy
 internal/content/d2legacy/lua/d2legacy/bootstrap/	adapter	lua:composition	presentation composition and scene registration
 internal/content/d2legacy/lua/d2legacy/commands/	d2-policy	lua:d2legacy	authoritative Diablo command validation and admission
 internal/content/d2legacy/lua/d2legacy/components/	d2-policy	lua:d2legacy	authoritative Diablo component schemas

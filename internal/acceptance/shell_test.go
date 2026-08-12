@@ -10,8 +10,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -88,7 +86,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.RecordsModule(shellD2Records{}),
 		modruntime.CommandIntentModule(intentController),
 		modruntime.InputModule(&input),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		modruntime.VideoModule(runtime, video.Unavailable{}, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),

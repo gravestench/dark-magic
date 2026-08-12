@@ -7,7 +7,6 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -34,7 +33,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 	scenes := NewScenes(runtime, navigation.New())
 	modules := []Module{
 		AppModule("test", func() {}),
-		VFSModule(contentFS), DataModule(contentFS), WorldModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
+		VFSModule(contentFS), DataModule(contentFS), WorldModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source),
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
@@ -46,7 +45,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.vfs/v1": {"list", "read", "read_text", "source"}, "engine.input/v1": {"down", "pressed", "released", "cursor", "text"},
 		"engine.data/v1":  {"load", "load_manifest"},
 		"engine.world/v1": {"load"},
-		"engine.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "engine.records/v1": {"load", "reload", "loaded"},
+		"engine.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "set_bus_volume", "stop_group"}, "engine.records/v1": {"load", "reload", "loaded"},
 		"engine.settings/v1":       {"get", "save", "set", "status"},
 		"engine.video/v1":          {"available", "play"},
 		"engine.locale/v1":         {"text"},

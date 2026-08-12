@@ -20,6 +20,7 @@ local input = require("engine.input/v1")
 local scenes = require("engine.scene/v1")
 local vfs = require("engine.vfs/v1")
 local audio = require("engine.audio/v1")
+local legacy_audio = require("d2legacy.audio")
 local saves = require("d2legacy.save/v1")
 local data = require("engine.data/v1")
 local game_hud = require("d2legacy.ui.game_hud")
@@ -257,12 +258,12 @@ local function observe_semantic_cues(self)
 					if monster.spawn_id == cue.monster_id and monster.death_sound ~= "" then
 						-- MonSounds points to a Sounds.txt record. The audio catalog
 						-- resolves localization, variants, volume, and output bus.
-						pcall(audio.play_record, monster.death_sound, cue.tick or 0)
+						pcall(legacy_audio.play_record, monster.death_sound, cue.tick or 0)
 					end
 				end
 			end
 			if cue.cue_type == "missile" and cue.sound and cue.sound ~= "" then
-				pcall(audio.play_record, cue.sound, cue.tick or 0)
+				pcall(legacy_audio.play_record, cue.sound, cue.tick or 0)
 			end
 		end
 	end

@@ -10,7 +10,6 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -193,7 +192,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 		modruntime.DataModule(contentFS),
 		modruntime.RecordsModule(recordstore.New(contentFS)),
 		modruntime.InputModule(&input),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		modruntime.VideoModule(runtime, backend, contentFS),
 		modruntime.LocaleModule(localization.New(contentFS, "English")),

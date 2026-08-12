@@ -46,7 +46,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.DevModule(map[string]any{
 			"random_seed": int(time.Now().UnixNano()%2147483646) + 1,
 		}),
-		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
+		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
 		d2catalog.QuestModule(app.questCatalog, app.locale),
 		d2catalog.MapModule(app.questCatalog),

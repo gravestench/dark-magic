@@ -6,8 +6,6 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -35,7 +33,7 @@ func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 		modruntime.InputModule(&input),
 		modruntime.DataModule(contentFS),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -153,7 +151,7 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 		modruntime.InputModule(&input),
 		modruntime.DataModule(contentFS, d2presentation.ManifestTransforms(profile)),
 		modruntime.RenderModule(runtime, &composer),
-		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
+		modruntime.AudioModule(runtime, &mixer, contentFS),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
 		scenes.Module(),
 	} {
