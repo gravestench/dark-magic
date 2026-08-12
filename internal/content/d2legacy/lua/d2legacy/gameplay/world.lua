@@ -101,8 +101,9 @@ end
 function M.composite_snapshot(entity)
     local appearance = assert(ecs.get(entity, "d2legacy.player.appearance"))
     local animation = assert(ecs.get(entity, "d2legacy.player.animation"))
+    local facing = assert(ecs.get(entity, "d2legacy.world.facing"))
     local snapshot = appearance:snapshot()
-    snapshot.direction = animation:get("direction")
+    snapshot.direction = facing:get("direction")
     snapshot.mode = animation:get("mode")
     return snapshot
 end
@@ -114,13 +115,14 @@ function M.monster_snapshots()
     local result = {}
     local entities = ecs.query({ all = {
         "d2legacy.monster.identity", "d2legacy.monster.appearance", "d2legacy.world.position",
-        "d2legacy.world.velocity", "d2legacy.world.location",
+        "d2legacy.world.velocity", "d2legacy.world.facing", "d2legacy.world.location",
     }})
     for _, entity in ipairs(entities) do
         local identity = ecs.get(entity, "d2legacy.monster.identity"):snapshot()
         local appearance = ecs.get(entity, "d2legacy.monster.appearance"):snapshot()
         local position = ecs.get(entity, "d2legacy.world.position")
         local velocity = ecs.get(entity, "d2legacy.world.velocity")
+        local facing = ecs.get(entity, "d2legacy.world.facing")
         local location = ecs.get(entity, "d2legacy.world.location")
         local ai = ecs.get(entity, "d2legacy.monster.ai")
         local mode = appearance.mode
@@ -136,6 +138,7 @@ function M.monster_snapshots()
             name_key = appearance.name_key, death_sound = appearance.death_sound,
             x = position:get("x"), y = position:get("y"),
             velocity_x = velocity:get("x"), velocity_y = velocity:get("y"),
+            direction = facing:get("direction"),
             act = location:get("act"), level_id = location:get("level_id"),
         }
     end

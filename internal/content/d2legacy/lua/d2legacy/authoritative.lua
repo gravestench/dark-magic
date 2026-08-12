@@ -28,6 +28,7 @@ local population = require("d2legacy.bootstrap.population")
 local move_player = require("d2legacy.commands.move_player")
 local owned_units = require("d2legacy.commands.owned_units")
 local owned_unit_component = require("d2legacy.components.owned_unit")
+local facing = require("d2legacy.systems.facing")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -62,6 +63,7 @@ function M.start()
     population.register()
     move_player.register()
     owned_units.register()
+    facing.register()
 end
 
 function M.stop()

@@ -14,17 +14,6 @@ local RUN_SPEED = 15
 local ARRIVAL_DISTANCE = 0.2
 local DIAGONAL_SCALE = 0.7071067811865476
 
-local directions = {
-    ["0,1"] = 0,
-    ["-1,0"] = 1,
-    ["0,-1"] = 2,
-    ["1,0"] = 3,
-    ["1,1"] = 4,
-    ["-1,1"] = 5,
-    ["-1,-1"] = 6,
-    ["1,-1"] = 7,
-}
-
 local function is_finite(value)
     return type(value) == "number"
         and value == value
@@ -42,16 +31,6 @@ local function controlled_player(player_name)
         end
     end
     return nil
-end
-
-local function sign(value)
-    if value < 0 then return -1 end
-    if value > 0 then return 1 end
-    return 0
-end
-
-local function logical_direction(x, y)
-    return directions[sign(x) .. "," .. sign(y)] or 0
 end
 
 local function cancel_attack(entity)
@@ -97,7 +76,6 @@ local function update_animation(entity, x, y, running)
     end
 
     animation:set("mode", running and "RN" or "WL")
-    animation:set("direction", logical_direction(x, y))
 end
 
 function M.validate(command)

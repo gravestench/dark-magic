@@ -42,6 +42,9 @@ function M.register()
     component("d2legacy.player.belt", belt)
     component("d2legacy.world.position", {{name="x",type="f64"},{name="y",type="f64"}})
     component("d2legacy.world.velocity", {{name="x",type="f64"},{name="y",type="f64"}})
+    component("d2legacy.world.facing", {
+        {name="direction",type="i64"},{name="directions",type="i64"},
+    })
     -- Empty opt-in marker consumed by the engine's generic velocity integrator.
     component("engine.world.velocity_mover", {})
     component("d2legacy.world.player_control", {{name="player",type="string"}})

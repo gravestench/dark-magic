@@ -51,8 +51,9 @@ func TestMonsterCompositeUsesJoinedMonStats2Pieces(t *testing.T) {
 	defer runtime.Stop(context.Background())
 	script := `
 local adapter=require("d2legacy.gameplay.monster_composite")
-assert(adapter.facing(6,0,0)==6)
-assert(adapter.facing(0,1,0)==3)
+local direction=require("d2legacy.policy.direction")
+assert(direction.quantize(1,0,8)==3)
+assert(direction.quantize(1,1,8)==4)
 local composite=adapter.resolve({token="FA",mode="WL",weapon_class="HTH",components="HD=LIT,TR=MED",direction=3})
 assert(composite.direction==7)
 assert(composite.components.HD=="data/global/monsters/FA/HD/FAHDLITWLHTH.dcc")

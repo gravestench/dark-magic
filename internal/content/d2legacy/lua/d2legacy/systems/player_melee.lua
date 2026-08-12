@@ -5,6 +5,7 @@
 -- lets melee resolution choose an enemy already within weapon reach.
 
 local ecs = require("engine.ecs/v1")
+local direction = require("d2legacy.policy.direction")
 local melee = require("d2legacy.policy.melee")
 local M = {}
 
@@ -22,14 +23,6 @@ local function selected(entities, wanted)
     end
 end
 
-local function direction(dx, dy)
-    local sx = dx < 0 and -1 or (dx > 0 and 1 or 0)
-    local sy = dy < 0 and -1 or (dy > 0 and 1 or 0)
-    local keys = {["0,1"]=0,["-1,0"]=1,["0,-1"]=2,["1,0"]=3,
-        ["1,1"]=4,["-1,1"]=5,["-1,-1"]=6,["1,-1"]=7}
-    return keys[sx .. "," .. sy] or 0
-end
-
 local function stop(entity, mode)
     local velocity, animation = ecs.get(entity, "d2legacy.world.velocity"), ecs.get(entity, "d2legacy.player.animation")
     if velocity then velocity:set("x", 0); velocity:set("y", 0) end
@@ -38,8 +31,10 @@ end
 
 local function start_swing(context, attacker, target_id, dx, dy, structural)
     stop(attacker, "A1")
-    local animation = ecs.get(attacker, "d2legacy.player.animation")
-    if animation then animation:set("direction", direction(dx, dy)) end
+    local facing = ecs.get(attacker, "d2legacy.world.facing")
+    if facing and (dx ~= 0 or dy ~= 0) then
+        facing:set("direction", direction.quantize(dx, dy, facing:get("directions")))
+    end
     -- These reviewed fallback ticks keep simulation independent of renderer
     -- frames. Typed AnimData timing will replace the defaults through mod data.
     structural:set(attacker, "d2legacy.combat.attack_animation", {
@@ -83,7 +78,7 @@ function M.register()
         read={"d2legacy.combat.attack_approach","d2legacy.world.selectable","d2legacy.world.position",
             "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile"},
         write={"d2legacy.combat.attack_approach","d2legacy.combat.attack_animation",
-            "d2legacy.world.velocity","d2legacy.player.animation"},
+            "d2legacy.world.velocity","d2legacy.world.facing","d2legacy.player.animation"},
         update=function(context, entities, structural)
             for _, attacker in ipairs(entities) do
                 local approach, profile = ecs.get(attacker, "d2legacy.combat.attack_approach"), ecs.get(attacker, "d2legacy.combat.melee_profile")
@@ -111,7 +106,7 @@ function M.register()
                             local velocity = ecs.get(attacker, "d2legacy.world.velocity")
                             velocity:set("x", dx/length*10); velocity:set("y", dy/length*10)
                             local animation = ecs.get(attacker, "d2legacy.player.animation")
-                            if animation then animation:set("mode", "WL"); animation:set("direction", direction(dx,dy)) end
+                            if animation then animation:set("mode", "WL") end
                         end
                     end
                 end
