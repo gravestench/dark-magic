@@ -18,6 +18,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -54,8 +55,8 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer mod.Stop(ctx)
-	movementController := &gamesession.MovementController{}
-	movementSource, err := gamesession.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
+	movementController := &d2movement.MovementController{}
+	movementSource, err := d2movement.NewMovementSource(entitySimulation, &input, "local-player", "game_world", movementController)
 	if err != nil {
 		t.Fatal(err)
 	}

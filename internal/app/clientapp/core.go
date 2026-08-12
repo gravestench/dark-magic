@@ -26,6 +26,7 @@ import (
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
@@ -179,8 +180,8 @@ func (app *application) registerOfflineCommands() error {
 	if err := app.queueEntryPopulation(); err != nil {
 		return err
 	}
-	movement := &gamesession.MovementController{}
-	movementSource, err := gamesession.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
+	movement := &d2movement.MovementController{}
+	movementSource, err := d2movement.NewMovementSource(app.entitySimulation, app.inputState, "local-player", "game_world", movement)
 	if err != nil {
 		return wrap("create offline movement source", err)
 	}

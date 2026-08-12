@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 )
 
 func TestD2LegacyBuildsSkillCommandsThroughGenericIntentMailbox(t *testing.T) {
@@ -15,7 +16,7 @@ func TestD2LegacyBuildsSkillCommandsThroughGenericIntentMailbox(t *testing.T) {
 	if err := runtime.RegisterModule(CommandIntentModule(controller)); err != nil {
 		t.Fatal(err)
 	}
-	if err := runtime.RegisterModule(PlayerControlModule(&gamesession.MovementController{})); err != nil {
+	if err := runtime.RegisterModule(PlayerControlModule(&d2movement.MovementController{})); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {

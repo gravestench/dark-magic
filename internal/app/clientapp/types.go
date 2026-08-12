@@ -25,6 +25,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
@@ -113,8 +114,8 @@ type application struct {
 	offlineSession      *gamesession.Session
 	authoritativeState  *simulation.StateStore
 	authoritativeRandom *simulation.RandomStreams
-	playerControl       *gamesession.MovementController
-	movementSource      *gamesession.MovementSource
+	playerControl       *d2movement.MovementController
+	movementSource      *d2movement.MovementSource
 	transitionAuthority *gametransition.Authority
 	transitionSource    *gametransition.Source
 	commandIntents      *gamesession.IntentController

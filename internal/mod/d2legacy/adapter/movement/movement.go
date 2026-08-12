@@ -1,4 +1,7 @@
-package session
+// Package movement adapts native pointer/keyboard input into d2legacy player
+// movement commands. Pathfinding and command transport are generic engine
+// mechanisms; schema names and player.move payload policy belong to the mod.
+package movement
 
 import (
 	"bytes"
@@ -52,10 +55,10 @@ func (controller *MovementController) SetMoveTarget(x, y float64) error {
 
 func (controller *MovementController) SetMoveTargetWithRadius(x, y, stopRadius float64) error {
 	if math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
-		return fmt.Errorf("game session: movement target must be finite")
+		return fmt.Errorf("d2legacy movement: target must be finite")
 	}
 	if stopRadius < 0 || math.IsNaN(stopRadius) || math.IsInf(stopRadius, 0) {
-		return fmt.Errorf("game session: movement stop radius must be non-negative and finite")
+		return fmt.Errorf("d2legacy movement: stop radius must be non-negative and finite")
 	}
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -120,7 +123,7 @@ func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, 
 	player = strings.TrimSpace(player)
 	focusID = strings.TrimSpace(focusID)
 	if engine == nil || input == nil || player == "" || focusID == "" {
-		return nil, fmt.Errorf("game session: movement source requires engine, input, player, and focus owner")
+		return nil, fmt.Errorf("d2legacy movement: source requires engine, input, player, and focus owner")
 	}
 	control := &MovementController{}
 	if len(controllers) > 0 && controllers[0] != nil {

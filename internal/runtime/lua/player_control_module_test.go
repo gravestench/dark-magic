@@ -5,11 +5,11 @@ import (
 	"testing"
 	"testing/fstest"
 
-	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 )
 
 func TestPlayerControlModuleQueuesMovementIntent(t *testing.T) {
-	controller := &gamesession.MovementController{}
+	controller := &d2movement.MovementController{}
 	runtime := New()
 	if err := runtime.RegisterModule(PlayerControlModule(controller)); err != nil {
 		t.Fatal(err)

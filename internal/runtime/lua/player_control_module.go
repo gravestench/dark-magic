@@ -1,13 +1,21 @@
 package modruntime
 
 import (
-	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	lua "github.com/yuin/gopher-lua"
 )
 
+// PlayerIntentController is the generic presentation-facing mailbox contract.
+// The engine Lua host does not know which mod schemas or command names the
+// concrete controller uses behind this interface.
+type PlayerIntentController interface {
+	SetRunning(bool)
+	SetMoveTargetWithRadius(float64, float64, float64) error
+	HasMoveTarget() bool
+}
+
 // PlayerControlModule accepts local presentation intents without granting Lua
 // direct access to the authoritative session or ECS world.
-func PlayerControlModule(controller *gamesession.MovementController) Module {
+func PlayerControlModule(controller PlayerIntentController) Module {
 	return Module{Name: "engine.player/v1", Help: documentedModule("Request local-player actions through the authoritative fixed-tick command source.", map[string]CommandHelp{
 		"request_running":  commandHelp("engine.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
 		"request_move":     commandHelp("engine.player.request_move(x, y)", "Request movement toward an authoritative world-subtile target."),
