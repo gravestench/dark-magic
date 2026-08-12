@@ -32,6 +32,20 @@ type Flags struct {
 	BlockWalk, BlockLOS, BlockJump, BlockPlayerWalk, BlockLight bool
 }
 
+// NewOpenMap creates an empty traversable collision map. It is useful to
+// generic tools, generated-world assembly, and tests that need geometry
+// without first decoding a DS1 stamp.
+func NewOpenMap(widthSubtiles, heightSubtiles int) (*Map, error) {
+	if widthSubtiles <= 0 || heightSubtiles <= 0 {
+		return nil, fmt.Errorf("world: open map dimensions must be positive")
+	}
+	return &Map{
+		WidthSubtiles: widthSubtiles, HeightSubtiles: heightSubtiles,
+		WidthTiles: widthSubtiles / SubtilesPerTile, HeightTiles: heightSubtiles / SubtilesPerTile,
+		flags: make([]Flags, widthSubtiles*heightSubtiles),
+	}, nil
+}
+
 // Blocked reports whether a player-sized point cannot walk through this
 // subtile. BlockWalk is shared terrain collision; BlockPlayerWalk is the
 // additional player-specific restriction encoded by DT1.

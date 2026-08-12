@@ -3,13 +3,13 @@ package clientapp
 import (
 	"testing"
 
-	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
-	seam := gameworld.Seam{
-		Town:       gameworld.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
-		Wilderness: gameworld.SeamEndpoint{ArrivalX: 21, ArrivalY: 22},
+	seam := gametransition.Seam{
+		Town:       gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
+		Wilderness: gametransition.SeamEndpoint{ArrivalX: 21, ArrivalY: 22},
 	}
 
 	entry, err := entryWorldSpawns("entry", seam, 1, 2)

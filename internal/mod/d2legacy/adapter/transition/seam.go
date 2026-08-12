@@ -1,9 +1,10 @@
-package world
+package transition
 
 import (
 	"fmt"
 	"strings"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
@@ -21,7 +22,7 @@ type SeamEndpoint struct {
 // zones. Transition commands consume this value; presentation only observes it.
 type Seam struct{ Town, Wilderness SeamEndpoint }
 
-func NewActOneTownMoorSeam(townZone *worldgen.Zone, townMap *Map, moorZone *worldgen.Zone, moorMap *Map) (Seam, error) {
+func NewActOneTownMoorSeam(townZone *worldgen.Zone, townMap *gameworld.Map, moorZone *worldgen.Zone, moorMap *gameworld.Map) (Seam, error) {
 	if townZone == nil || townMap == nil || moorZone == nil || moorMap == nil {
 		return Seam{}, fmt.Errorf("world: town/Blood Moor seam requires both zones and maps")
 	}
@@ -45,7 +46,7 @@ func NewActOneTownMoorSeam(townZone *worldgen.Zone, townMap *Map, moorZone *worl
 	if !found {
 		return Seam{}, fmt.Errorf("world: town exit is blocked")
 	}
-	moorX, moorY, found := moorMap.OpenPointNearSubtile(float64(townEntry.X*SubtilesPerTile)+2.5, float64(townEntry.Y*SubtilesPerTile)+2.5)
+	moorX, moorY, found := moorMap.OpenPointNearSubtile(float64(townEntry.X*gameworld.SubtilesPerTile)+2.5, float64(townEntry.Y*gameworld.SubtilesPerTile)+2.5)
 	if !found {
 		return Seam{}, fmt.Errorf("world: Blood Moor town edge is blocked")
 	}
@@ -78,14 +79,14 @@ func warpByRole(warps []worldgen.Warp, role string) (worldgen.Warp, bool) {
 	return result, found
 }
 
-func insetArrival(world *Map, x, y float64, edge string) (float64, float64, bool) {
+func insetArrival(world *gameworld.Map, x, y float64, edge string) (float64, float64, bool) {
 	delta := map[string][2]float64{"north": {0, 6}, "east": {-6, 0}, "south": {0, -6}, "west": {6, 0}}[edge]
 	return world.OpenPointNearSubtile(x+delta[0], y+delta[1])
 }
 
-func cardinalTownAnchor(anchors []ExitAnchor, direction string) (ExitAnchor, bool) {
+func cardinalTownAnchor(anchors []gameworld.ExitAnchor, direction string) (gameworld.ExitAnchor, bool) {
 	if len(anchors) == 0 {
-		return ExitAnchor{}, false
+		return gameworld.ExitAnchor{}, false
 	}
 	best := anchors[0]
 	for _, candidate := range anchors[1:] {
@@ -107,7 +108,7 @@ func cardinalTownAnchor(anchors []ExitAnchor, direction string) (ExitAnchor, boo
 				best = candidate
 			}
 		default:
-			return ExitAnchor{}, false
+			return gameworld.ExitAnchor{}, false
 		}
 	}
 	return best, true

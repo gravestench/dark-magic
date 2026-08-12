@@ -12,7 +12,6 @@ import (
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
 const CommandKind = "system.world.transition"
@@ -29,11 +28,11 @@ type Payload struct {
 	WorldHeight      float64 `json:"world_height"`
 }
 type Authority struct {
-	seam     gameworld.Seam
+	seam     Seam
 	observer func(int)
 }
 
-func NewAuthority(seam gameworld.Seam) (*Authority, error) {
+func NewAuthority(seam Seam) (*Authority, error) {
 	if seam.Town.LevelID != 1 || seam.Wilderness.LevelID != 2 {
 		return nil, fmt.Errorf("transition: Act I seam is incomplete")
 	}

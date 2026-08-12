@@ -29,7 +29,7 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("materialize Blood Moor", err)
 	}
-	seam, err := gameworld.NewActOneTownMoorSeam(townZone, townMap, moorZone, moorMap)
+	seam, err := gametransition.NewActOneTownMoorSeam(townZone, townMap, moorZone, moorMap)
 	if err != nil {
 		return wrap("join Act I town to Blood Moor", err)
 	}
@@ -97,7 +97,7 @@ func (app *application) syncActiveWorldFromPlayer() {
 // entryWorldSpawns keeps the real admission rule and the screenshot fixture
 // choice visibly separate. Players normally enter town at the campfire. A
 // development capture may instead stand just inside either side of the seam.
-func entryWorldSpawns(fixtureSpawn string, seam gameworld.Seam, townX, townY float64) (map[int][2]float64, error) {
+func entryWorldSpawns(fixtureSpawn string, seam gametransition.Seam, townX, townY float64) (map[int][2]float64, error) {
 	switch fixtureSpawn {
 	case "", "entry":
 		return map[int][2]float64{1: {townX, townY}, 2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY}}, nil

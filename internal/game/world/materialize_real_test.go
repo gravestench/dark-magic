@@ -10,6 +10,7 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
@@ -195,7 +196,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seam, err := gameworld.NewActOneTownMoorSeam(town, townMap, moor, worldMap)
+	seam, err := gametransition.NewActOneTownMoorSeam(town, townMap, moor, worldMap)
 	if err != nil {
 		t.Fatal(err)
 	}

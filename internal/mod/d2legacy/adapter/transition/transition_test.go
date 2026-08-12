@@ -6,16 +6,15 @@ import (
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 func TestSourceTransitionsPlayerAcrossVerifiedSeamWithoutBounce(t *testing.T) {
 	engine := gameecs.New()
 	defer engine.Close()
-	seam := gameworld.Seam{
-		Town:       gameworld.SeamEndpoint{LevelID: 1, X: 10, Y: 10, ArrivalX: 5, ArrivalY: 5, Width: 100, Height: 80, Direction: "east"},
-		Wilderness: gameworld.SeamEndpoint{LevelID: 2, X: 0, Y: 40, ArrivalX: 6, ArrivalY: 40, Width: 400, Height: 400, Direction: "west"},
+	seam := transition.Seam{
+		Town:       transition.SeamEndpoint{LevelID: 1, X: 10, Y: 10, ArrivalX: 5, ArrivalY: 5, Width: 100, Height: 80, Direction: "east"},
+		Wilderness: transition.SeamEndpoint{LevelID: 2, X: 0, Y: 40, ArrivalX: 6, ArrivalY: 40, Width: 400, Height: 400, Direction: "west"},
 	}
 	authority, err := transition.NewAuthority(seam)
 	if err != nil {
