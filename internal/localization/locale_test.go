@@ -8,7 +8,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 )
 
-func TestShimLocalizationKeysLoadWithoutDiabloTables(t *testing.T) {
+func TestD2LegacyLocalizationKeysLoadWithoutDiabloTables(t *testing.T) {
 	locale := New(content.D2Legacy(), "English")
 	value, err := locale.Text("d2legacy.hud.title")
 	if err != nil || value != "Dark Magic" {

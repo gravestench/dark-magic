@@ -59,6 +59,48 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 	}
 }
 
+// TestMigratedGameplayCoverageInventoryHasNoUnknownStatus makes replacement
+// coverage a checked migration artifact. A deleted Go policy family cannot
+// silently disappear: it must name its authoritative evidence and whether that
+// evidence is complete, partial, transitional, or still pending.
+func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
+	root := repositoryRoot(t)
+	path := filepath.Join(root, "docs", "architecture", "d2legacy-test-coverage.tsv")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	seen := map[string]bool{}
+	allowed := map[string]bool{
+		"covered": true, "partial": true, "pending": true, "transitional": true,
+	}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		if len(fields) != 4 {
+			t.Fatalf("invalid coverage row %q", line)
+		}
+		if seen[fields[0]] {
+			t.Errorf("duplicate coverage family %q", fields[0])
+		}
+		seen[fields[0]] = true
+		if !allowed[fields[2]] {
+			t.Errorf("coverage family %q has unknown status %q", fields[0], fields[2])
+		}
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields[1]))); err != nil {
+			t.Errorf("coverage evidence %q is missing: %v", fields[1], err)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter
 // abbreviation from blurring generic engine APIs with the d2legacy mod again. Engine doors
 // use engine.*; Diablo runtime state and bundled modules use d2legacy.* or d2legacy.*.

@@ -8,7 +8,7 @@ import (
 	"testing/fstest"
 )
 
-func TestCatalogLoadsRecoveredShimTables(t *testing.T) {
+func TestCatalogLoadsRecoveredD2LegacyTables(t *testing.T) {
 	source := fstest.MapFS{
 		QuestsPath:   &fstest.MapFile{Data: []byte("id\tname\tact\torder\tvisible\ticon\tquestdone\tqstr\tqsts1\tqsts1a\tqsts1b\n0\tPrologue\t0\t\t\t\t\tq0\ts0\t\t\n1\tFirst Quest\t0\t1\t1\ta1q1\t0\tq1\ts1\ts1a\ts1b\n")},
 		SpeechPath:   &fstest.MapFile{Data: []byte("sound\tsoundstr\nakara_intro\tAkaraIntroGossip1\n")},

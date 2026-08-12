@@ -27,7 +27,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
-func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
+func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
