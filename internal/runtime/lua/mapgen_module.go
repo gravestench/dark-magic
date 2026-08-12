@@ -1,8 +1,6 @@
 package modruntime
 
 import (
-	"fmt"
-
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 	lua "github.com/yuin/gopher-lua"
@@ -17,7 +15,6 @@ type gameDataSnapshotter interface {
 // use the same Go generator without a Lua VM.
 func MapgenModule(catalog gameDataSnapshotter) Module {
 	return Module{Name: "d2legacy.mapgen.native/v1", Help: documentedModule("Temporary parity oracle while Diablo II map strategies move into Lua.", map[string]CommandHelp{
-		"maze":    commandHelp("d2legacy.mapgen.maze(level_id, seed [, difficulty])", "Generate a typed maze zone and return rooms, links, recipes, and trace."),
 		"outdoor": commandHelp("d2legacy.mapgen.outdoor(level_id, seed, town_exit [, difficulty])", "Generate Blood Moor joined to a north/east/south/west town exit."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -28,26 +25,6 @@ func MapgenModule(catalog gameDataSnapshotter) Module {
 				}
 				levelID := state.CheckInt(1)
 				zone, err := mapgen.NewActOneOutdoorGenerator(snapshot).GenerateFromTown(mapgen.Request{Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)), Act: 1, LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(4, 0))}, mapgen.Stamp{Role: "act1-town:exit-" + state.CheckString(3)})
-				if err != nil {
-					return pushLuaError(state, err)
-				}
-				state.Push(zoneToLua(state, zone))
-				return 1
-			},
-			"maze": func(state *lua.LState) int {
-				snapshot, err := catalog.Snapshot()
-				if err != nil {
-					return pushLuaError(state, err)
-				}
-				levelID := state.CheckInt(1)
-				level, found := snapshot.LevelsByID[levelID]
-				if !found {
-					return pushLuaError(state, fmt.Errorf("mapgen: level %d is absent from Levels", levelID))
-				}
-				zone, err := mapgen.NewMazeGenerator(snapshot).Generate(mapgen.Request{
-					Version: mapgen.ContractVersion, Seed: uint64(state.CheckNumber(2)), Act: uint8(level.Act + 1),
-					LevelID: levelID, Difficulty: mapgen.Difficulty(state.OptInt(3, 0)),
-				})
 				if err != nil {
 					return pushLuaError(state, err)
 				}

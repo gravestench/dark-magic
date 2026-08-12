@@ -9,6 +9,7 @@ local paths = {
     levels = "data/global/excel/Levels.txt",
     presets = "data/global/excel/LvlPrest.txt",
     types = "data/global/excel/LvlTypes.txt",
+    mazes = "data/global/excel/LvlMaze.txt",
 }
 
 function M.integer(value, fallback)
@@ -30,6 +31,14 @@ end
 
 function M.preset_for_level(level_id)
     return find(assert(records.load(paths.presets)), "LevelId", level_id)
+end
+
+function M.preset_by_definition(definition)
+    return find(assert(records.load(paths.presets)), "Def", definition)
+end
+
+function M.maze_for_level(level_id)
+    return find(assert(records.load(paths.mazes)), "Level", level_id)
 end
 
 -- LvlTypes has no explicit ID. Diablo uses its zero-based row position, while
