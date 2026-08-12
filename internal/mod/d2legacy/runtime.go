@@ -144,9 +144,17 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(state), modruntime.AuthorityRandomModule(random),
 		modruntime.AuthorityCommandModule(runtime, session), modruntime.InitialDataModule(initial),
 		modruntime.NewECSCapability(runtime, engine).Module(),
-		adaptercatalog.QuestModule(recoveredCatalog), adaptercatalog.MapModule(recoveredCatalog),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
+			return err
+		}
+	}
+	// Interactive clients install locale-aware catalogs first; renderer-free
+	// servers receive these policy-neutral defaults instead.
+	for _, module := range []modruntime.Module{
+		adaptercatalog.QuestModule(recoveredCatalog), adaptercatalog.MapModule(recoveredCatalog),
+	} {
+		if err := runtime.RegisterModuleDefault(module); err != nil {
 			return err
 		}
 	}
