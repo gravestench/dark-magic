@@ -1,19 +1,19 @@
-package modruntime
+package targeting
 
 import (
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // TargetingModule is a temporary d2legacy presentation adapter. It stays out of
 // the authoritative capability set and will disappear once pointer selection
 // consumes a generic spatial-query primitive directly.
-func TargetingModule(resolver *targeting.Resolver) Module {
-	return Module{
+func Module(resolver *Resolver) modruntime.Module {
+	return modruntime.Module{
 		Name: "d2legacy.targeting/v1",
-		Help: documentedModule("Resolve copied authoritative spawned-entity pointer facts.", map[string]CommandHelp{
-			"selectable_at": commandHelp("engine.targeting.selectable_at(x, y)", "Return the highest-priority spawned entity footprint under a world-subtile point."),
-		}, nil),
+		Help: modruntime.ModuleHelp{Summary: "Resolve copied authoritative spawned-entity pointer facts.", Commands: map[string]modruntime.CommandHelp{
+			"selectable_at": {Usage: "d2legacy.targeting.selectable_at(x, y)", Summary: "Return the highest-priority spawned entity footprint under a world-subtile point."},
+		}},
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 				"selectable_at": func(state *lua.LState) int {

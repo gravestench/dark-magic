@@ -1,10 +1,10 @@
-package modruntime
+package targeting
 
 import (
 	"context"
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
-	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"testing"
 	"testing/fstest"
 )
@@ -12,12 +12,12 @@ import (
 func TestTargetingModuleReturnsCopiedSpawnedFacts(t *testing.T) {
 	engine := gameecs.New()
 	positions, _ := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
-	selectables, _ := akara.RegisterSchema(engine.World(), targeting.Schema())
+	selectables, _ := akara.RegisterSchema(engine.World(), Schema())
 	entity := engine.World().MustCreateEntity()
 	_, _ = positions.Set(entity, map[string]any{"x": 4.0, "y": 5.0})
-	_, _ = selectables.Set(entity, map[string]any{"id": "fallen:1", "kind": targeting.KindHostile, "label": "Fallen", "owner": "", "radius": 1.0, "priority": int64(2)})
-	runtime := New()
-	if err := runtime.RegisterModule(TargetingModule(targeting.New(engine))); err != nil {
+	_, _ = selectables.Set(entity, map[string]any{"id": "fallen:1", "kind": KindHostile, "label": "Fallen", "owner": "", "radius": 1.0, "priority": int64(2)})
+	runtime := modruntime.New()
+	if err := runtime.RegisterModule(Module(New(engine))); err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
