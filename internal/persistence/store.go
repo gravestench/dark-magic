@@ -4,14 +4,8 @@ package persistence
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 )
-
-var characterClasses = map[string]string{
-	"amazon": "Amazon", "sorceress": "Sorceress", "necromancer": "Necromancer",
-	"paladin": "Paladin", "barbarian": "Barbarian", "assassin": "Assassin", "druid": "Druid",
-}
 
 // Character is the current engine-side character selection record. It is not a
 // Diablo II save-file schema: future importers translate durable saves into this
@@ -50,17 +44,10 @@ type Appearance struct {
 }
 
 func (s *Store) Create(character Character) error {
-	character.ID = strings.TrimSpace(character.ID)
-	character.Name = strings.TrimSpace(character.Name)
-	character.Class = characterClasses[strings.ToLower(strings.TrimSpace(character.Class))]
-	if character.ID == "" || character.Name == "" || character.Class == "" {
-		return errors.New("persistence: character ID, name, and a supported class are required")
-	}
-	if err := validateCharacterName(character.Name); err != nil {
-		return err
-	}
-	if character.Level < 1 {
-		character.Level = 1
+	// This store is deliberately policy-free. The owning mod validates and
+	// normalizes its record before crossing this persistence boundary.
+	if character.ID == "" {
+		return errors.New("persistence: record ID is required")
 	}
 	character = cloneCharacter(character)
 	s.mu.Lock()
@@ -69,68 +56,8 @@ func (s *Store) Create(character Character) error {
 		if existing.ID == character.ID {
 			return fmt.Errorf("persistence: character %q already exists", character.ID)
 		}
-		if strings.EqualFold(existing.Name, character.Name) {
-			return fmt.Errorf("persistence: character name %q already exists", character.Name)
-		}
 	}
 	s.entries = append(s.entries, character)
-	return nil
-}
-
-// CreateNamed assigns the storage identity. Scripted presentation code chooses
-// player-facing metadata but never owns save-file naming or collision policy.
-func (s *Store) CreateNamed(name, class string) (Character, error) {
-	return s.CreateNamedWithOptions(name, class, true, false)
-}
-
-// CreateNamedWithOptions creates the character metadata selected by the
-// front-end while retaining save identity and validation inside the engine.
-func (s *Store) CreateNamedWithOptions(name, class string, expansion, hardcore bool) (Character, error) {
-	id := strings.ToLower(strings.TrimSpace(class)) + "-" + strings.ToLower(strings.TrimSpace(name))
-	id = strings.Map(func(current rune) rune {
-		if current >= 'a' && current <= 'z' || current >= '0' && current <= '9' {
-			return current
-		}
-		if current == ' ' || current == '-' || current == '\'' {
-			return '-'
-		}
-		return -1
-	}, id)
-	id = strings.Trim(id, "-")
-	character := Character{ID: id, Name: name, Class: class, Level: 1, Expansion: expansion, Hardcore: hardcore}
-	if err := s.Create(character); err != nil {
-		return Character{}, err
-	}
-	return s.characterByID(id)
-}
-
-func (s *Store) characterByID(id string) (Character, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, character := range s.entries {
-		if character.ID == id {
-			return character, nil
-		}
-	}
-	return Character{}, errors.New("persistence: created character is unavailable")
-}
-
-func validateCharacterName(name string) error {
-	runes := []rune(name)
-	if len(runes) < 2 || len(runes) > 15 {
-		return errors.New("persistence: character name must contain 2 to 15 characters")
-	}
-	punctuation := false
-	for index, current := range runes {
-		if current >= 'A' && current <= 'Z' || current >= 'a' && current <= 'z' {
-			punctuation = false
-			continue
-		}
-		if (current != '-' && current != '\'') || index == 0 || index == len(runes)-1 || punctuation {
-			return errors.New("persistence: character name may contain ASCII letters and single internal hyphens or apostrophes")
-		}
-		punctuation = true
-	}
 	return nil
 }
 

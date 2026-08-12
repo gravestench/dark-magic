@@ -9,13 +9,12 @@ import (
 // Module exposes d2legacy character metadata and selection without exposing
 // persistence internals or mutable Go objects to Lua.
 func Module(store *persistence.Store) modruntime.Module {
-	return modruntime.Module{Name: "d2legacy.save/v1", Help: modruntime.ModuleHelp{Summary: "Create, select, inspect, and delete d2legacy characters.", Commands: map[string]modruntime.CommandHelp{
-		"create_named": {Usage: "d2legacy.save.create_named(name, class)", Summary: "Create and persist a character with an explicit name."},
-		"create":       {Usage: "d2legacy.save.create(id, name, class)", Summary: "Persist an imported character identity."},
-		"characters":   {Usage: "d2legacy.save.characters()", Summary: "Return all available character summaries."},
-		"select":       {Usage: "d2legacy.save.select(id)", Summary: "Select the active character by identifier."},
-		"delete":       {Usage: "d2legacy.save.delete(id)", Summary: "Delete a character by identifier."},
-		"selected":     {Usage: "d2legacy.save.selected()", Summary: "Return the currently selected character, if any."},
+	return modruntime.Module{Name: "d2legacy.save_store/v1", Help: modruntime.ModuleHelp{Summary: "Persist already-validated d2legacy character records.", Commands: map[string]modruntime.CommandHelp{
+		"create":     {Usage: "d2legacy.save_store.create(record)", Summary: "Persist an already-validated character record."},
+		"characters": {Usage: "d2legacy.save.characters()", Summary: "Return all available character summaries."},
+		"select":     {Usage: "d2legacy.save.select(id)", Summary: "Select the active character by identifier."},
+		"delete":     {Usage: "d2legacy.save.delete(id)", Summary: "Delete a character by identifier."},
+		"selected":   {Usage: "d2legacy.save.selected()", Summary: "Return the currently selected character, if any."},
 	}}, Loader: func(state *lua.LState) int {
 		characterTable := func(character persistence.Character) *lua.LTable {
 			entry := state.NewTable()
@@ -58,26 +57,20 @@ func Module(store *persistence.Store) modruntime.Module {
 			return entry
 		}
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"create_named": func(state *lua.LState) int {
-				character, err := store.CreateNamedWithOptions(
-					state.CheckString(1), state.CheckString(2), state.OptBool(3, true), state.OptBool(4, false),
-				)
+			"create": func(state *lua.LState) int {
+				record := state.CheckTable(1)
+				character := persistence.Character{
+					ID: string(record.RawGetString("id").(lua.LString)), Name: string(record.RawGetString("name").(lua.LString)),
+					Class: string(record.RawGetString("class").(lua.LString)), Level: int(lua.LVAsNumber(record.RawGetString("level"))),
+					Expansion: lua.LVAsBool(record.RawGetString("expansion")), Hardcore: lua.LVAsBool(record.RawGetString("hardcore")),
+				}
+				err := store.Create(character)
 				if err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))
 					return 2
 				}
 				state.Push(lua.LString(character.ID))
-				return 1
-			},
-			"create": func(state *lua.LState) int {
-				err := store.Create(persistence.Character{ID: state.CheckString(1), Name: state.CheckString(2), Class: state.CheckString(3), Level: 1})
-				if err != nil {
-					state.Push(lua.LNil)
-					state.Push(lua.LString(err.Error()))
-					return 2
-				}
-				state.Push(lua.LTrue)
 				return 1
 			},
 			"characters": func(state *lua.LState) int {

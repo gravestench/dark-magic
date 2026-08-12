@@ -64,47 +64,16 @@ func TestCharacterStatsAreDefensivelyCopied(t *testing.T) {
 	}
 }
 
-func TestCreateValidatesCharacterIdentity(t *testing.T) {
+func TestCreateRequiresOpaqueIdentityAndRejectsDuplicateID(t *testing.T) {
 	store := New()
-	for _, character := range []Character{
-		{ID: "short", Name: "A", Class: "Amazon"},
-		{ID: "punctuation", Name: "-Hero", Class: "Amazon"},
-		{ID: "unknown", Name: "Hero", Class: "Monk"},
-	} {
-		if err := store.Create(character); err == nil {
-			t.Fatalf("expected validation error for %#v", character)
-		}
+	if err := store.Create(Character{}); err == nil {
+		t.Fatal("expected missing ID error")
 	}
-	if err := store.Create(Character{ID: "hero", Name: "D'Artagnan", Class: "amazon"}); err != nil {
+	if err := store.Create(Character{ID: "opaque", Name: "mod-owned value", Class: "anything"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := store.Characters()[0].Class; got != "Amazon" {
-		t.Fatalf("canonical class = %q", got)
-	}
-	if err := store.Create(Character{ID: "other", Name: "d'artagnan", Class: "Druid"}); err == nil {
-		t.Fatal("expected case-insensitive duplicate-name error")
-	}
-}
-
-func TestCreateNamedOwnsStorageIdentity(t *testing.T) {
-	store := New()
-	character, err := store.CreateNamed("D'Artagnan", "druid")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if character.ID != "druid-d-artagnan" || character.Class != "Druid" || character.Level != 1 {
-		t.Fatalf("created character = %#v", character)
-	}
-}
-
-func TestCreateNamedStoresCreationOptions(t *testing.T) {
-	store := New()
-	character, err := store.CreateNamedWithOptions("Iron-Wolf", "Paladin", false, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if character.Expansion || !character.Hardcore {
-		t.Fatalf("creation options = expansion %v, hardcore %v", character.Expansion, character.Hardcore)
+	if err := store.Create(Character{ID: "opaque", Name: "different", Class: "different"}); err == nil {
+		t.Fatal("expected duplicate ID error")
 	}
 }
 

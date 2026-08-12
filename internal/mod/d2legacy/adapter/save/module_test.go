@@ -5,111 +5,77 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-func TestSaveModuleSelectsCharacter(t *testing.T) {
+func policyRuntime(t *testing.T, store *persistence.Store) *modruntime.Runtime {
+	t.Helper()
 	runtime := modruntime.New()
-	store := persistence.New()
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
+		t.Fatal(err)
+	}
 	if err := runtime.RegisterModule(Module(store)); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("d2legacy.save/v1"); assert(s.create("hero", "Hero", "Amazon")); assert(s.select(s.characters()[1].id)); name=s.selected().name`)}}, "test.lua"); err != nil {
+	t.Cleanup(func() { _ = runtime.Stop(context.Background()) })
+	return runtime
+}
+
+func execute(t *testing.T, runtime *modruntime.Runtime, script string) {
+	t.Helper()
+	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestLuaPolicyCreatesAndSelectsCharacter(t *testing.T) {
+	store := persistence.New()
+	runtime := policyRuntime(t, store)
+	execute(t, runtime, `local s=require("d2legacy.save/v1"); local id=assert(s.create("hero", "Hero", "Amazon")); assert(id=="hero"); assert(s.select(id)); assert(s.selected().name=="Hero")`)
 	selected, ok := store.Selected()
 	if !ok || selected.Name != "Hero" {
 		t.Fatalf("selected = %#v", selected)
 	}
 }
 
-func TestSaveModuleCreatesNamedCharacter(t *testing.T) {
-	runtime := modruntime.New()
+func TestLuaPolicyOwnsNameClassAndCreationOptions(t *testing.T) {
 	store := persistence.New()
-	if err := runtime.RegisterModule(Module(store)); err != nil {
-		t.Fatal(err)
-	}
-	if err := runtime.Start(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	defer runtime.Stop(context.Background())
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": &fstest.MapFile{Data: []byte(`local s=require("d2legacy.save/v1"); id=assert(s.create_named("Iron-Wolf", "paladin", false, true)); assert(s.select(id)); c=s.selected(); assert(not c.expansion and c.hardcore)`)}}, "test.lua"); err != nil {
-		t.Fatal(err)
-	}
-	selected, ok := store.Selected()
-	if !ok || selected.ID != "paladin-iron-wolf" || selected.Class != "Paladin" || selected.Expansion || !selected.Hardcore {
-		t.Fatalf("selected = %#v", selected)
-	}
+	runtime := policyRuntime(t, store)
+	execute(t, runtime, `
+local s=require("d2legacy.save/v1")
+local id=assert(s.create_named("Iron-Wolf", "paladin", false, true))
+assert(id=="paladin-iron-wolf" and s.select(id))
+local c=s.selected(); assert(c.class=="Paladin" and not c.expansion and c.hardcore)
+assert(s.create_named("A", "amazon")==nil)
+assert(s.create_named("Valid", "monk")==nil)
+assert(s.create_named("Iron-Wolf", "amazon")==nil)
+`)
 }
 
-func TestSaveModuleDeletesCharacterByOpaqueID(t *testing.T) {
-	runtime := modruntime.New()
+func TestLuaPolicyDeletesCharacterByOpaqueID(t *testing.T) {
 	store := persistence.New(persistence.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
-	if err := runtime.RegisterModule(Module(store)); err != nil {
-		t.Fatal(err)
-	}
-	if err := runtime.Start(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	defer runtime.Stop(context.Background())
-	script := `local s=require("d2legacy.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
-		t.Fatal(err)
-	}
+	runtime := policyRuntime(t, store)
+	execute(t, runtime, `local s=require("d2legacy.save/v1"); assert(s.select("hero")); assert(s.delete("hero")); assert(#s.characters()==0); assert(s.selected()==nil)`)
 }
 
-func TestSaveModuleExposesImmutableAppearanceSnapshot(t *testing.T) {
-	t.Parallel()
-
+func TestAdapterReturnsDefensiveAppearanceAndStatsSnapshots(t *testing.T) {
 	store := persistence.New(persistence.Character{
 		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
-		Appearance: &persistence.Appearance{
-			COF: "hero.cof", Palette: "units.dat", Direction: 3,
-			Components: map[string]string{"HD": "head.dcc", "TR": "torso.dcc"},
-		},
+		Appearance: &persistence.Appearance{COF: "hero.cof", Palette: "units.dat", Direction: 3, Components: map[string]string{"HD": "head.dcc", "TR": "torso.dcc"}},
+		Stats:      &persistence.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
 	})
-	runtime := modruntime.New()
-	if err := runtime.RegisterModule(Module(store)); err != nil {
-		t.Fatal(err)
-	}
-	if err := runtime.Start(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	defer runtime.Stop(context.Background())
-	script := `local c=require("d2legacy.save/v1").characters()[1]
-assert(c.appearance.cof=="hero.cof")
-assert(c.appearance.palette=="units.dat")
-assert(c.appearance.direction==3)
-assert(c.appearance.components.HD=="head.dcc")
-assert(c.appearance.components.TR=="torso.dcc")`
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSaveModuleExposesCharacterStats(t *testing.T) {
-	t.Parallel()
-
-	store := persistence.New(persistence.Character{
-		ID: "hero", Name: "Hero", Class: "Amazon", Level: 12,
-		Stats: &persistence.Stats{Strength: 25, Health: 70, MaxHealth: 80, FireResistance: 15},
-	})
-	runtime := modruntime.New()
-	if err := runtime.RegisterModule(Module(store)); err != nil {
-		t.Fatal(err)
-	}
-	if err := runtime.Start(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	defer runtime.Stop(context.Background())
-	script := `local s=require("d2legacy.save/v1").characters()[1].stats
-assert(s.strength==25 and s.health==70 and s.max_health==80 and s.fire_resistance==15)`
-	if err := runtime.Execute(context.Background(), fstest.MapFS{"test.lua": {Data: []byte(script)}}, "test.lua"); err != nil {
-		t.Fatal(err)
-	}
+	runtime := policyRuntime(t, store)
+	execute(t, runtime, `
+local c=require("d2legacy.save/v1").characters()[1]
+assert(c.appearance.cof=="hero.cof" and c.appearance.palette=="units.dat")
+assert(c.appearance.direction==3 and c.appearance.components.HD=="head.dcc")
+assert(c.stats.strength==25 and c.stats.health==70 and c.stats.max_health==80)
+c.appearance.components.HD="mutated"
+assert(require("d2legacy.save/v1").characters()[1].appearance.components.HD=="head.dcc")
+`)
 }
