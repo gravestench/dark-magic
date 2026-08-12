@@ -1,13 +1,25 @@
--- Small Diablo-policy decisions for the first melee migration.
--- The fixed chance intentionally preserves the old scaffold until the reviewed
--- attack-rating/defense inputs are connected to the verified 5..95% formula.
+-- Diablo II 1.10f melee hit policy, preserving the recovered integer order.
 
 local random = require("engine.authority_random/v1")
-local M = { temporary_hit_chance = 75 }
+local M = {}
 
-function M.hits()
+function M.hit_chance(attacker_level, defender_level, attack_rating, defense)
+    assert(attacker_level > 0 and defender_level > 0, "unit levels must be positive")
+    if defense < 0 then attack_rating, defense = attack_rating-defense, 0 end
+    if attack_rating < 0 then defense, attack_rating = defense-attack_rating, 0 end
+    if defense < 0 then defense = 0 end
+    local rating_factor = 100
+    if attack_rating + defense ~= 0 then
+        rating_factor = math.floor(100 * attack_rating / (attack_rating + defense))
+    end
+    local chance = math.floor(2 * attacker_level * rating_factor / (attacker_level + defender_level))
+    return math.max(5, math.min(95, chance))
+end
+
+function M.hits(attacker_level, defender_level, attack_rating, defense)
+    local chance = M.hit_chance(attacker_level, defender_level, attack_rating, defense)
     return random.integer("d2legacy.combat.basic_melee.hit", 100)
-        < M.temporary_hit_chance
+        < chance
 end
 
 function M.damage(minimum, maximum)

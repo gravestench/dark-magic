@@ -65,6 +65,7 @@ function M.apply(command)
     local player = ecs.create({
         ["d2legacy.player.identity"]={character_id=p.character_id,player=p.player,name=p.name,class=p.class},
         ["d2legacy.player.progress"]={level=p.level,experience=p.experience},
+        ["d2legacy.player.combat_stats"]={attack_rating=p.attack_rating or 0,defense=p.defense or 0},
         ["d2legacy.player.vitals"]={health=p.health,max_health=p.max_health,mana=p.mana,max_mana=p.max_mana,
             mana_raw=p.mana*256,max_mana_raw=p.max_mana*256},
         ["d2legacy.combat.melee_profile"]={range=p.melee_range,physical_min=p.physical_min_raw,

@@ -29,7 +29,8 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	defer authority.Stop(ctx)
 	payload, _ := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
-		"level": 1, "experience": 0, "health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"level": 1, "experience": 0, "attack_rating": 100, "defense": 20,
+		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
 		"expansion": true, "hardcore": false, "cof": "", "token": "AM",
 		"palette": "data/global/Palette/units/pal.dat", "direction": 0, "mode": "NU", "weapon_class": "HTH",
 		"melee_range": 2, "physical_min_raw": 256, "physical_max_raw": 512,

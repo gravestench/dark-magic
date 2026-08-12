@@ -33,6 +33,8 @@ type Entry struct {
 	Class          string  `json:"class"`
 	Level          int64   `json:"level"`
 	Experience     int64   `json:"experience"`
+	AttackRating   int64   `json:"attack_rating"`
+	Defense        int64   `json:"defense"`
 	Health         int64   `json:"health"`
 	MaxHealth      int64   `json:"max_health"`
 	Mana           int64   `json:"mana"`
@@ -193,6 +195,9 @@ func EntryFromCharacter(character persistence.Character, player string, x, y, wi
 	entry := Entry{CharacterID: character.ID, Player: player, Name: character.Name, Class: character.Class, Level: int64(character.Level), Expansion: character.Expansion, Hardcore: character.Hardcore, Token: classToken(character.Class), Palette: "data/global/Palette/units/pal.dat", Direction: 0, Mode: "NU", WeaponClass: "HTH", MeleeRange: 2, PhysicalMinRaw: gamecombat.MustWhole(1).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(2).Raw(), X: x, Y: y, WorldWidth: width, WorldHeight: height, Act: 1, LevelID: 1}
 	if character.Stats != nil {
 		entry.Experience = int64(character.Stats.Experience)
+		// Legacy character attack rating starts with five points per point of
+		// dexterity before item/skill sources. Lua owns the live hit formula.
+		entry.AttackRating, entry.Defense = int64(character.Stats.Dexterity*5), int64(character.Stats.Defense)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
 		entry.Mana, entry.MaxMana = int64(character.Stats.Mana), int64(character.Stats.MaxMana)
 	}

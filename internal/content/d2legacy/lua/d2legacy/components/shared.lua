@@ -76,6 +76,9 @@ function M.register()
     component("d2legacy.player.progress", {
         {name="level",type="i64"},{name="experience",type="i64"},
     })
+    component("d2legacy.player.combat_stats", {
+        {name="attack_rating",type="i64"},{name="defense",type="i64"},
+    })
     component("d2legacy.monster.death", {
         {name="tick",type="i64"},{name="killer_id",type="string"},
         {name="credited_id",type="string"},{name="xp",type="i64"},

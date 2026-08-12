@@ -47,6 +47,14 @@ local function hurt(target, damage)
     return remaining * 256
 end
 
+local function combat_values(entity)
+    local monster = ecs.get(entity, "d2legacy.monster.stats")
+    if monster then return monster:get("level"), monster:get("attack_rating"), monster:get("defense") end
+    local progress = assert(ecs.get(entity,"d2legacy.player.progress"), "player has no progress")
+    local stats = assert(ecs.get(entity,"d2legacy.player.combat_stats"), "player has no combat stats")
+    return progress:get("level"), stats:get("attack_rating"), stats:get("defense")
+end
+
 local function event(structural, values)
     structural:create({["d2legacy.combat.melee_event"] = values})
 end
@@ -58,7 +66,8 @@ function M.register()
         -- tick is running.
         query={any={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable"}},
         read={"d2legacy.combat.basic_attack_request","d2legacy.world.selectable","d2legacy.world.position",
-            "d2legacy.world.location","d2legacy.combat.melee_profile","d2legacy.monster.stats","d2legacy.player.vitals"},
+            "d2legacy.world.location","d2legacy.combat.melee_profile","d2legacy.monster.stats","d2legacy.player.vitals",
+            "d2legacy.player.progress","d2legacy.player.combat_stats"},
         write={"d2legacy.combat.basic_attack_request","d2legacy.monster.stats","d2legacy.player.vitals",
             "d2legacy.combat.melee_event"},
         update=function(context, entities, structural)
@@ -71,10 +80,14 @@ function M.register()
                     structural:remove(attacker, "d2legacy.combat.basic_attack_request")
                     local base = {kind="hit_resolved",tick=context.tick,attacker_id=identity(attacker),
                         target_id=target_id,hit=false,damage_raw=0,remaining_health_raw=0}
-                    if target and policy.hits() then
+                    if target then
+                        local attacker_level, attack_rating = combat_values(attacker)
+                        local defender_level, _, defense = combat_values(target)
+                        if policy.hits(attacker_level, defender_level, attack_rating, defense) then
                         local damage = policy.damage(profile:get("physical_min"), profile:get("physical_max"))
                         base.hit, base.damage_raw = true, damage
                         base.remaining_health_raw = hurt(target, damage)
+                        end
                     end
                     event(structural, base)
                 end

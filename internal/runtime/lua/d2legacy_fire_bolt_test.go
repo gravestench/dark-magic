@@ -94,6 +94,8 @@ ecs.component({name="d2legacy.player.learned_skill",fields={
     {name="left_allowed",type="bool"},{name="right_allowed",type="bool"},
 }})
 ecs.component({name="d2legacy.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
+ecs.component({name="d2legacy.player.progress",fields={{name="level",type="i64"},{name="experience",type="i64"}}})
+ecs.component({name="d2legacy.player.combat_stats",fields={{name="attack_rating",type="i64"},{name="defense",type="i64"}}})
 ecs.component({name="d2legacy.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
 ecs.component({name="d2legacy.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})
 ecs.component({name="d2legacy.world.collider",fields={{name="radius",type="f64"}}})
@@ -110,6 +112,8 @@ player = ecs.create({
     ["d2legacy.player.identity"]={character_id="hero",player="alice",name="Hero",class="Sorceress"},
     ["d2legacy.player.vitals"]={health=50,max_health=50,mana=10,max_mana=10,mana_raw=2560,max_mana_raw=2560},
     ["d2legacy.player.skill_assignment"]={left=36,right=36},
+    ["d2legacy.player.progress"]={level=99,experience=0},
+    ["d2legacy.player.combat_stats"]={attack_rating=10000,defense=0},
     ["d2legacy.world.position"]={x=0,y=0}, ["d2legacy.world.location"]={act=1,level_id=1},
     ["d2legacy.world.collider"]={radius=0.5},
     ["d2legacy.world.selectable"]={id="player:alice",kind="player",label="Hero",owner="alice",radius=0.5,priority=1},
@@ -123,7 +127,6 @@ monster = ecs.create({
 })
 require("d2legacy.authoritative").start()
 ecs.set(player,"d2legacy.combat.melee_profile",{range=5,physical_min=256,physical_max=256})
-require("d2legacy.policy.melee").temporary_hit_chance=100
 `
 	if err := runtime.RunScoped(ctx, scope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
 		t.Fatal(err)
@@ -167,6 +170,40 @@ local melee=ecs.query({all={"d2legacy.combat.melee_event"}})
 assert(#melee==1)
 local melee_event=ecs.get(melee[1],"d2legacy.combat.melee_event")
 assert(melee_event:get("hit") and melee_event:get("damage_raw")==256)
+`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestD2LegacyMeleeHitChancePreservesRecoveredIntegerOrder(t *testing.T) {
+	streams := simulation.NewRandomStreams(1)
+	for _, name := range []string{"d2legacy.combat.basic_melee.hit", "d2legacy.combat.basic_melee.damage"} {
+		if err := streams.Register(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runtime := New()
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.RegisterModule(AuthorityRandomModule(streams)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		return state.DoString(`
+local melee=require("d2legacy.policy.melee")
+assert(melee.hit_chance(10,10,100,100)==50)
+assert(melee.hit_chance(7,11,101,100)==38)
+assert(melee.hit_chance(1,99,1,10000)==5)
+assert(melee.hit_chance(99,1,10000,1)==95)
+assert(melee.hit_chance(10,10,0,0)==95)
+assert(melee.hit_chance(10,10,50,-50)==95)
+assert(melee.hit_chance(10,10,-50,50)==5)
 `)
 	}); err != nil {
 		t.Fatal(err)
