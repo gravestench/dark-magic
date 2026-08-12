@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	if err := content.WriteShimArchive(file); err != nil {
+	if err := content.WriteD2LegacyArchive(file); err != nil {
 		_ = file.Close()
 		fail(err)
 	}
@@ -37,4 +37,4 @@ func main() {
 	}
 }
 
-func fail(err error) { fmt.Fprintf(os.Stderr, "shim-pack: %v\n", err); os.Exit(1) }
+func fail(err error) { fmt.Fprintf(os.Stderr, "d2legacy-pack: %v\n", err); os.Exit(1) }

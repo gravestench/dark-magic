@@ -9,10 +9,10 @@ import (
 
 func TestShimArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
 	var first, second bytes.Buffer
-	if err := WriteShimArchive(&first); err != nil {
+	if err := WriteD2LegacyArchive(&first); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteShimArchive(&second); err != nil {
+	if err := WriteD2LegacyArchive(&second); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(first.Bytes(), second.Bytes()) {

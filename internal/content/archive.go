@@ -11,9 +11,9 @@ import (
 
 var archiveTimestamp = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
-// WriteShimArchive writes the embedded, redistributable Dark Magic content as
+// WriteD2LegacyArchive writes the embedded, redistributable d2legacy mod as
 // a deterministic ZIP suitable for mounting or distribution.
-func WriteShimArchive(destination io.Writer) error {
+func WriteD2LegacyArchive(destination io.Writer) error {
 	writer := zip.NewWriter(destination)
 	source := D2Legacy()
 	err := fs.WalkDir(source, ".", func(name string, entry fs.DirEntry, walkErr error) error {
@@ -41,10 +41,10 @@ func WriteShimArchive(destination io.Writer) error {
 	})
 	if err != nil {
 		_ = writer.Close()
-		return fmt.Errorf("content: archive shim: %w", err)
+		return fmt.Errorf("content: archive d2legacy: %w", err)
 	}
 	if err := writer.Close(); err != nil {
-		return fmt.Errorf("content: close shim archive: %w", err)
+		return fmt.Errorf("content: close d2legacy archive: %w", err)
 	}
 	return nil
 }
