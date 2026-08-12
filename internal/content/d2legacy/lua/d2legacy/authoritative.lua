@@ -19,6 +19,7 @@ local monster_death = require("d2legacy.systems.monster_death")
 local enter_player = require("d2legacy.commands.enter_player")
 local transition = require("d2legacy.commands.transition")
 local timed_state = require("d2legacy.systems.timed_state")
+local item_components = require("d2legacy.components.items")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -28,6 +29,7 @@ function M.start()
     shared_components.register()
     components.register()
     melee_components.register()
+    item_components.register()
 
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.
