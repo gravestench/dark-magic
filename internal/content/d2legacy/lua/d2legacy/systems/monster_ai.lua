@@ -5,6 +5,7 @@
 -- desired velocity, and the movement phase validates the resulting position.
 
 local ecs = require("engine.ecs/v1")
+local melee = require("d2legacy.policy.melee")
 local M = {}
 
 local function distance(a, b)
@@ -74,7 +75,10 @@ function M.register()
                     else
                         local selected = ecs.get(target, "d2legacy.world.selectable")
                         local id = selected:get("id")
-                        local range = brain:get("attack_range") + selected:get("radius")
+                        local range = melee.reach(
+                            brain:get("attack_range"),
+                            ecs.get(monster, "d2legacy.world.collider"):get("radius"),
+                            ecs.get(target, "d2legacy.world.collider"):get("radius"))
                         local length, dx, dy = distance(ecs.get(monster, "d2legacy.world.position"), ecs.get(target, "d2legacy.world.position"))
                         brain:set("target_id", id)
                         if length <= range then

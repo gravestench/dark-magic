@@ -3,6 +3,16 @@
 local random = require("engine.authority_random/v1")
 local M = {}
 
+-- Melee range is clearance between the physical footprints of two actors, not
+-- center-to-center distance. Selectable radii describe pointer affordances and
+-- may differ from collision footprints, so callers pass collider radii here.
+function M.reach(attack_range, attacker_radius, target_radius)
+    assert(attack_range >= 0, "melee range must be non-negative")
+    assert(attacker_radius >= 0 and target_radius >= 0,
+        "melee collider radii must be non-negative")
+    return attack_range + attacker_radius + target_radius
+end
+
 function M.hit_chance(attacker_level, defender_level, attack_rating, defense)
     assert(attacker_level > 0 and defender_level > 0, "unit levels must be positive")
     if defense < 0 then attack_rating, defense = attack_rating-defense, 0 end

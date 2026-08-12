@@ -198,6 +198,8 @@ func TestD2LegacyMeleeHitChancePreservesRecoveredIntegerOrder(t *testing.T) {
 	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
 		return state.DoString(`
 local melee=require("d2legacy.policy.melee")
+assert(melee.reach(1,1,1)==3)
+assert(melee.reach(2,0.75,1.25)==4)
 assert(melee.hit_chance(10,10,100,100)==50)
 assert(melee.hit_chance(7,11,101,100)==38)
 assert(melee.hit_chance(1,99,1,10000)==5)

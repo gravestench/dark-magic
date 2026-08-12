@@ -5,6 +5,7 @@
 -- lets melee resolution choose an enemy already within weapon reach.
 
 local ecs = require("engine.ecs/v1")
+local melee = require("d2legacy.policy.melee")
 local M = {}
 
 local function controlled(entities, player)
@@ -80,7 +81,7 @@ function M.register()
     ecs.system({id="d2legacy.combat.player_melee_approach",phase="pre_simulation",
         query={any={"d2legacy.combat.attack_approach","d2legacy.world.selectable"}},
         read={"d2legacy.combat.attack_approach","d2legacy.world.selectable","d2legacy.world.position",
-            "d2legacy.world.location","d2legacy.combat.melee_profile"},
+            "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile"},
         write={"d2legacy.combat.attack_approach","d2legacy.combat.attack_animation",
             "d2legacy.world.velocity","d2legacy.player.animation"},
         update=function(context, entities, structural)
@@ -97,10 +98,13 @@ function M.register()
                         stop(attacker); structural:remove(attacker, "d2legacy.combat.attack_approach")
                     else
                         local target_position = ecs.get(target, "d2legacy.world.position")
-                        local selectable = ecs.get(target, "d2legacy.world.selectable")
                         local dx, dy = target_position:get("x")-position:get("x"), target_position:get("y")-position:get("y")
                         local length = math.sqrt(dx*dx+dy*dy)
-                        if length <= profile:get("range") + selectable:get("radius") then
+                        local range = melee.reach(
+                            profile:get("range"),
+                            ecs.get(attacker, "d2legacy.world.collider"):get("radius"),
+                            ecs.get(target, "d2legacy.world.collider"):get("radius"))
+                        if length <= range then
                             structural:remove(attacker, "d2legacy.combat.attack_approach")
                             start_swing(context, attacker, target_id, dx, dy, structural)
                         elseif length > 0 then
