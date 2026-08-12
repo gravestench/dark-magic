@@ -203,30 +203,6 @@ func (app *application) registerOfflineCommands() error {
 		return errors.New("load offline entry map: session world is unavailable")
 	}
 	movementSource.SetNavigation(worldMap)
-	app.interactionAuthority.ConfigureWorld(worldMap)
-	selectables := worldMap.Selectables()
-	interactionTargets := make([]gameinteraction.Target, 0, len(selectables))
-	objectsBySelectionID := make(map[string]gameworld.Object, len(worldMap.Objects))
-	for index, object := range worldMap.Objects {
-		objectsBySelectionID[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
-	}
-	for _, selected := range selectables {
-		object := objectsBySelectionID[selected.ID]
-		name := strings.TrimSpace(object.Description)
-		if name == "" {
-			name = strings.TrimSpace(object.Class)
-		}
-		if name == "" {
-			continue
-		}
-		interactionTargets = append(interactionTargets, gameinteraction.Target{
-			ID: selected.ID, NPC: name, X: selected.X, Y: selected.Y,
-			Radius: 4, SelectRadius: selected.Radius,
-		})
-	}
-	if err := app.interactionAuthority.AddTargets(interactionTargets...); err != nil {
-		return wrap("materialize authored interaction targets", err)
-	}
 	spawn, found := app.gameWorldSpawns[entryLevel]
 	if !found {
 		return errors.New("create offline player entry source: world has no trusted spawn subtile")
@@ -287,23 +263,8 @@ func (app *application) queueEntryPopulation() error {
 }
 
 func (app *application) buildInteractionAuthority() error {
-	var err error
-	app.interactionAuthority, err = gameinteraction.NewAuthority(gameinteraction.Target{
-		ID: "act1-akara", NPC: "Akara", Vendor: "Akara",
-		Categories: []string{"armo", "weap", "misc"},
-		X:          4096, Y: 4096, Radius: 160,
-	})
-	if err != nil {
-		return wrap("create interaction authority", err)
-	}
-	initialTarget := ""
-	if app.options.StartScene == "vendor" {
-		initialTarget = "act1-akara"
-	}
-	if err := app.interactionAuthority.RegisterOwner("local-player", initialTarget); err != nil {
-		return wrap("register local interaction owner", err)
-	}
 	app.interactionControl = &gameinteraction.Controller{}
+	var err error
 	app.interactionSource, err = gameinteraction.NewSource(app.interactionControl, "local-player")
 	return wrap("create local interaction command source", err)
 }
@@ -319,20 +280,15 @@ func (app *application) buildItemAuthority() error {
 	if err != nil {
 		return wrap("create local item state", err)
 	}
-	app.itemAuthority = gameitem.NewAuthority()
 	catalogSnapshot, err := app.gameData.Snapshot()
 	if err != nil {
 		return wrap("load vendor trade terms", err)
 	}
-	trades := make(gameitem.TradeCatalog, len(catalogSnapshot.NPCTradesByID))
+	trades := make(map[string]any, len(catalogSnapshot.NPCTradesByID))
 	for vendor, record := range catalogSnapshot.NPCTradesByID {
-		trades[vendor] = gameitem.TradeTerms{BuyMultiplier: int64(record.BuyMult), SellMultiplier: int64(record.SellMult), MaxBuy: int64(record.MaxBuy)}
+		trades[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
 	}
-	app.itemAuthority.SetTradeCatalog(trades)
-	app.itemAuthority.SetInteractionPolicy(app.interactionAuthority)
-	if err := app.itemAuthority.Register("local-player", state); err != nil {
-		return wrap("register local item state", err)
-	}
+	app.itemInitialData = itemBootstrapFromState(state, trades)
 	app.itemControl = &gameitem.Controller{}
 	app.itemSource, err = gameitem.NewSource(app.itemControl, "local-player")
 	return wrap("create local item command source", err)
@@ -399,13 +355,11 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 // itemBootstrapData converts the host/import boundary to policy-neutral value
 // trees. Lua receives a deep copy and decides what these Diablo item facts mean.
 func (app *application) itemBootstrapData() map[string]any {
-	if app.itemAuthority == nil {
-		return nil
-	}
-	layout, items, placements, err := app.itemAuthority.Snapshot("local-player")
-	if err != nil {
-		return nil
-	}
+	return app.itemInitialData
+}
+
+func itemBootstrapFromState(state *gameitem.State, tradeTerms map[string]any) map[string]any {
+	layout, items, placements := state.Snapshot()
 	result := map[string]any{
 		"owner": "local-player", "belt_capacity": float64(layout.BeltCapacity),
 		"active_weapon_set": float64(layout.ActiveWeaponSet), "vendor_width": float64(layout.VendorGrid.Width),
@@ -443,13 +397,7 @@ func (app *application) itemBootstrapData() map[string]any {
 		})
 	}
 	result["items"] = entries
-	if catalog, catalogErr := app.gameData.Snapshot(); catalogErr == nil {
-		terms := make(map[string]any, len(catalog.NPCTradesByID))
-		for vendor, record := range catalog.NPCTradesByID {
-			terms[vendor] = map[string]any{"buy_multiplier": float64(record.BuyMult), "sell_multiplier": float64(record.SellMult), "max_buy": float64(record.MaxBuy)}
-		}
-		result["trade_terms"] = terms
-	}
+	result["trade_terms"] = tradeTerms
 	return result
 }
 
@@ -458,9 +406,25 @@ func (app *application) interactionBootstrapData() map[string]any {
 	if app.options.StartScene == "vendor" {
 		initial = "act1-akara"
 	}
-	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": []any{
-		map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)},
-	}}
+	targets := []any{map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)}}
+	for _, worldMap := range app.gameWorlds {
+		objects := make(map[string]gameworld.Object, len(worldMap.Objects))
+		for index, object := range worldMap.Objects {
+			objects[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
+		}
+		for _, selected := range worldMap.Selectables() {
+			object := objects[selected.ID]
+			name := strings.TrimSpace(object.Description)
+			if name == "" {
+				name = strings.TrimSpace(object.Class)
+			}
+			if name == "" {
+				continue
+			}
+			targets = append(targets, map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)})
+		}
+	}
+	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": targets}
 }
 
 func compositeRecipe(component, appearance string) map[string]string {

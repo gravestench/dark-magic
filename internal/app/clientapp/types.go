@@ -106,33 +106,32 @@ type application struct {
 	scenes           *modruntime.Scenes
 	renderCapability *modruntime.RenderCapability
 
-	records              *recordstore.Store
-	gameData             *gamedata.Catalog
-	questCatalog         *recovered.Catalog
-	worldObjectResolver  *worldobjects.Resolver
-	saves                *persistence.Store
-	entitySimulation     *gameecs.Engine
-	offlineSession       *gamesession.Session
-	authoritativeState   *simulation.StateStore
-	authoritativeRandom  *simulation.RandomStreams
-	playerControl        *gamesession.MovementController
-	movementSource       *gamesession.MovementSource
-	transitionAuthority  *gametransition.Authority
-	transitionSource     *gametransition.Source
-	interactionAuthority *gameinteraction.Authority
-	interactionControl   *gameinteraction.Controller
-	interactionSource    *gameinteraction.Source
-	itemAuthority        *gameitem.Authority
-	itemControl          *gameitem.Controller
-	itemSource           *gameitem.Source
-	commandSource        func(uint64) []simulation.Command
-	worldMu              sync.RWMutex
-	gameWorlds           map[int]*gameworld.Map
-	gameWorldZones       map[int]*mapgen.Zone
-	gameWorldSpawns      map[int][2]float64
-	activeWorldLevel     int
-	loading              *loadcore.Coordinator
-	pointerAcceptance    *pointerMovementAcceptance
+	records             *recordstore.Store
+	gameData            *gamedata.Catalog
+	questCatalog        *recovered.Catalog
+	worldObjectResolver *worldobjects.Resolver
+	saves               *persistence.Store
+	entitySimulation    *gameecs.Engine
+	offlineSession      *gamesession.Session
+	authoritativeState  *simulation.StateStore
+	authoritativeRandom *simulation.RandomStreams
+	playerControl       *gamesession.MovementController
+	movementSource      *gamesession.MovementSource
+	transitionAuthority *gametransition.Authority
+	transitionSource    *gametransition.Source
+	interactionControl  *gameinteraction.Controller
+	interactionSource   *gameinteraction.Source
+	itemInitialData     map[string]any
+	itemControl         *gameitem.Controller
+	itemSource          *gameitem.Source
+	commandSource       func(uint64) []simulation.Command
+	worldMu             sync.RWMutex
+	gameWorlds          map[int]*gameworld.Map
+	gameWorldZones      map[int]*mapgen.Zone
+	gameWorldSpawns     map[int][2]float64
+	activeWorldLevel    int
+	loading             *loadcore.Coordinator
+	pointerAcceptance   *pointerMovementAcceptance
 
 	components   *host.Manager
 	engineHost   *host.Host

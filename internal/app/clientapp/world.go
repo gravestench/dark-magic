@@ -161,7 +161,4 @@ func (app *application) activateWorld(levelID int) {
 	if app.movementSource != nil {
 		app.movementSource.SetNavigation(worldMap)
 	}
-	if app.interactionAuthority != nil {
-		app.interactionAuthority.ConfigureWorld(worldMap)
-	}
 }
