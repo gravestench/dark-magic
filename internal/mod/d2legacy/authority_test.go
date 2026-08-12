@@ -164,15 +164,6 @@ func (records fixtureRecords) Load(path string) ([]map[string]string, error) {
 func (fixtureRecords) Invalidate(string)  {}
 func (fixtureRecords) Loaded(string) bool { return true }
 
-func TestHeadlessD2LegacyBootsWithoutRendererOrClientStartup(t *testing.T) {
-	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
-	fixture.run(t, `
-local ecs = require("engine.ecs/v1")
-assert(type(require("d2legacy.authoritative")) == "table")
-assert(type(ecs.query({all={"d2legacy.player.identity"}})) == "table")
-`)
-}
-
 func TestD2LegacyItemMovementAndHeldSwapAreAuthoritative(t *testing.T) {
 	initial := map[string]any{
 		"d2legacy.items": map[string]any{
@@ -220,62 +211,6 @@ for _, entity in ipairs(ecs.query({all={
 end
 assert(found.held == "inventory")
 assert(found.placed == "held")
-`)
-}
-
-func TestD2LegacyPlayerEntryAndMovementRunThroughLuaAuthority(t *testing.T) {
-	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
-	fixture.submitSystem(t, 1, 1, "system.player.enter", `{
-"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",
-"level":1,"experience":0,"dexterity":20,"defense":0,
-"health":50,"max_health":50,"mana":20,"max_mana":20,
-"expansion":true,"hardcore":false,"cof":"","palette":"units",
-"direction":0,"mode":"NU","x":10,"y":12,
-"world_width":100,"world_height":80,"act":1,"level_id":1,"skills":[]
-}`)
-	fixture.step(t)
-	fixture.submit(
-		t,
-		2,
-		1,
-		"alice",
-		"player.move",
-		`{"x":1,"y":1,"running":true}`,
-	)
-	fixture.step(t)
-	fixture.run(t, `
-local ecs = require("engine.ecs/v1")
-local players = ecs.query({all={
-    "d2legacy.player.identity",
-    "d2legacy.world.velocity",
-    "d2legacy.player.animation",
-}})
-assert(#players == 1)
-local velocity = ecs.get(players[1], "d2legacy.world.velocity")
-local animation = ecs.get(players[1], "d2legacy.player.animation")
-local facing = ecs.get(players[1], "d2legacy.world.facing")
-local mode = ecs.get(players[1], "d2legacy.player.movement_mode")
-local expected = 15 * 0.7071067811865476
-assert(math.abs(velocity:get("x") - expected) < 0.000000001)
-assert(math.abs(velocity:get("y") - expected) < 0.000000001)
-assert(animation:get("mode") == "RN" and facing:get("direction") == 4)
-assert(mode:get("running") == true)
-`)
-	fixture.submit(
-		t,
-		3,
-		2,
-		"alice",
-		"player.move",
-		`{"x":0,"y":0,"running":false,"target":{"x":20,"y":16}}`,
-	)
-	fixture.step(t)
-	fixture.run(t, `
-local ecs = require("engine.ecs/v1")
-local player = ecs.query({all={"d2legacy.player.identity"}})[1]
-local animation = ecs.get(player, "d2legacy.player.animation")
-local facing = ecs.get(player, "d2legacy.world.facing")
-assert(animation:get("mode") == "WL" and facing:get("direction") == 15)
 `)
 }
 
@@ -329,41 +264,6 @@ for _,entity in ipairs(events) do
 end
 assert(kinds.attack_started and kinds.attack_impact and kinds.attack_completed)
 assert(ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed)
-`)
-}
-
-func TestD2LegacyDerivedMitigationAndLethalDamageVectors(t *testing.T) {
-	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
-	fixture.submitSystem(t, 1, 1, "system.player.enter", `{
-"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",
-"level":1,"experience":0,"dexterity":20,"defense":0,"fire_resistance":20,
-"health":10,"max_health":10,"mana":20,"max_mana":20,
-"expansion":true,"hardcore":false,"cof":"","palette":"units",
-"direction":0,"mode":"NU","x":10,"y":12,
-"world_width":100,"world_height":80,"act":1,"level_id":1,"skills":[]
-}`)
-	fixture.step(t)
-	fixture.run(t, `
-local ecs=require("engine.ecs/v1")
-local player=ecs.query({all={"d2legacy.player.identity"}})[1]
-ecs.create({["d2legacy.stat.source"]={target=player,source_id="shield:fire",stat="fire_resist",value=30}})
-ecs.create({["d2legacy.stat.source"]={target=player,source_id="armor:physical",stat="physical_resist",value=25}})
-ecs.create({["d2legacy.stat.source"]={target=player,source_id="armor:flat",stat="physical_reduction_raw",value=20}})
-`)
-	fixture.step(t)
-	fixture.run(t, `
-local ecs=require("engine.ecs/v1")
-local mitigation=require("d2legacy.policy.mitigation")
-local damage=require("d2legacy.policy.damage")
-local player=ecs.query({all={"d2legacy.player.identity"}})[1]
-local defense=ecs.get(player,"d2legacy.combat.defense")
-assert(defense:get("fire_resist")==50 and defense:get("physical_resist")==25)
-assert(mitigation.apply(1000,"fire",defense)==500)
-assert(mitigation.apply(1000,"physical",defense)==730)
-local remaining,lethal,applied=damage.apply(player,4096,ecs,"fire")
-assert(applied==2048 and remaining==512 and not lethal)
-remaining,lethal,applied=damage.apply(player,1024,ecs,"fire")
-assert(applied==512 and remaining==0 and lethal)
 `)
 }
 

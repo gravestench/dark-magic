@@ -41,10 +41,65 @@ purpose-named engine stream, so replay and checkpoint restore reproduce them.
 
 ## Testing ownership
 
-Renderer-free authority and deterministic restore tests live in
-`internal/mod/d2legacy`. Presentation and composition tests for this mod live
-there or in `internal/acceptance`; generic runtime tests under
-`internal/runtime/lua` deliberately boot synthetic mods instead. The checked
-coverage ledger at `docs/architecture/d2legacy-test-coverage.tsv` distinguishes
-completed migration evidence from broader legacy-fidelity scenarios that have
-not been implemented yet.
+Lua-owned policy and authoritative behavior tests live beside their production
+modules as `*_test.lua`. Cross-domain scenarios may live under `tests/`. The Go
+entry point in `internal/mod/d2legacy/lua_suite_test.go` discovers every suite
+from the embedded production mod and exposes each Lua case as a named Go
+subtest.
+
+A suite returns a table with a `tests` map. Every test is an ordered array of
+actions:
+
+```lua
+return {
+    tests = {
+        moves_the_player = {
+            {submit = {
+                tick = 1, sequence = 1, player = "alice",
+                kind = "player.move", payload = [[{"x":1,"y":0}]],
+            }},
+            {step = 1},
+            {run = function()
+                local ecs = require("engine.ecs/v1")
+                -- Assertions execute inside the real production Lua authority.
+                assert(#ecs.query({all={"d2legacy.world.velocity"}}) == 1)
+            end},
+        },
+    },
+}
+```
+
+Supported actions are `run`, `step`, `checkpoint_restore`, `submit`, and
+`submit_system`. `checkpoint_restore` takes the latest checkpoint, tears down
+the authority, reconstructs the ECS and every deterministic participant, and
+continues the remaining Lua-authored phases in the replacement runtime. A suite
+may also provide `seed`, `initial_data_json`, and `records_json`. The JSON values
+are decoded as immutable host inputs before each case boots. Every case gets a
+fresh ECS engine, session, deterministic streams, state store, component tree,
+and Lua VM through the same `StartWithConfig` composition root used by the
+headless server.
+
+The phased contract is intentional. Calling `session.Step` from a Lua callback
+would re-enter the serialized runtime while its owner goroutine was already
+executing. Go therefore performs host actions between callbacks, while the
+complete scenario and all gameplay assertions remain authored in Lua.
+
+Run every suite with:
+
+```text
+go test ./internal/mod/d2legacy -run TestLuaSuites
+```
+
+Select one suite or case with the normal Go test path, for example:
+
+```text
+go test ./internal/mod/d2legacy -run 'TestLuaSuites/d2legacy/policy/mitigation'
+```
+
+Go remains responsible for runtime construction, checkpoint serialization,
+reconstruction, native adapters, and resource lifetime. Presentation and
+composition integration tests remain in `internal/mod/d2legacy` or
+`internal/acceptance`; generic runtime tests under `internal/runtime/lua`
+deliberately boot synthetic mods instead. The checked coverage ledger at
+`docs/architecture/d2legacy-test-coverage.tsv` records both Lua policy evidence
+and the Go integration evidence that must remain at the host boundary.
