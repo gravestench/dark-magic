@@ -1598,17 +1598,20 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   restored generated-hostile lifecycle also checkpoints a deterministic
   monster drop and reproduces the same unique item facts and checksum.
 
-- [ ] **M21.14.9 — inventory, equipment, vendors, and services migration.** Move
+- [x] **M21.14.9 — inventory, equipment, vendors, and services migration.** Move
   D2 container footprints, held/belt/corpse behavior, equipment eligibility,
   vendor paging/stock/prices, crafting, and service policy to `d2legacy`.
   Acceptance: inventory rearrangement, held-item reconnect, corpse recovery,
   equip/stat activation, vendor sale, and one service transaction execute via
   Lua while generic atomic storage primitives remain reusable.
 
-  Ownership cutover is complete; current containers, held swaps, equipment,
-  vendor arrangement/commerce, services, and corpse state are Lua-owned. The
-  focused reconnect, recovery, vendor-sale, and service acceptance matrix is
-  still tracked here rather than being inferred from source presence.
+  Complete: current containers, held swaps, equipment, vendor
+  arrangement/commerce, services, and corpse state are Lua-owned. A focused
+  reconstructed-runtime matrix proves held-item reconnect, corpse-item
+  recovery, equipment-to-combat activation, capped integer vendor sale,
+  material-consuming paid service completion, and identical final checksums.
+  Item bootstrap is idempotent over restored ECS state, so immutable creation
+  facts cannot duplicate durable layouts or items during reconnect.
 
 - [ ] **M21.14.10 — character progression and owned units migration.** Move D2
   class definitions, base/derived stats, XP/leveling, hirelings, pets, summons,

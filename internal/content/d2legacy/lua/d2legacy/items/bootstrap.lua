@@ -8,6 +8,17 @@ local ecs = require("engine.ecs/v1")
 local development_fixtures = require("d2legacy.items.development_fixtures")
 local M = {}
 
+local function layout_exists(owner)
+    for _, entity in ipairs(ecs.query({
+        all = { "d2legacy.items.layout" },
+    })) do
+        if ecs.get(entity, "d2legacy.items.layout"):get("owner") == owner then
+            return true
+        end
+    end
+    return false
+end
+
 local function create_layout(data)
     return ecs.create({
         ["d2legacy.items.layout"] = {
@@ -153,8 +164,14 @@ function M.load()
 			carried_gold = 0, stashed_gold = 0,
 			items = {},
 		}
-	end
+    end
     if not data or not data.owner then return end
+
+    -- A reconstructed runtime registers schemas and runs this composition root
+    -- before checkpoint participant state is attached. Its ECS snapshot already
+    -- contains the durable layout, items, vendor terms, service rules, and
+    -- interaction context. Never import immutable creation facts a second time.
+    if layout_exists(data.owner) then return end
 
     local layout = create_layout(data)
     for _, item in ipairs(data.items or {}) do
