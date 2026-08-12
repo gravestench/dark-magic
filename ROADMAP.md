@@ -1705,7 +1705,7 @@ M21.14 is complete only when all of the following are true:
   dependency, configuration, and capability identity pinned for the session.
 - [x] Incompatible clients, reconnects, late joins, checkpoints, restored
   sessions, and replays are rejected instead of silently changing rules.
-- [ ] Client prediction is optional and untrusted; reconciliation preserves the
+- [x] Client prediction is optional and untrusted; reconciliation preserves the
   game server's canonical outcome.
 - [x] Existing gameplay acceptance scenarios pass through the Lua
   implementation.
@@ -1717,6 +1717,12 @@ style allocation is derived from the identity registered by that exact running
 runtime; admission and reconnect validate against it, and replay participants
 prove the session pinned the same value. Headless acceptance rejects changed
 packages, stale session tokens, and unknown prediction contracts before play.
+The session can export a checksummed canonical checkpoint without mutating its
+replay log. Reconciliation verifies that full ECS-plus-authoritative-participant
+checksum, treats an optional client prediction only as comparison input, and
+applies a defensive copy of the server snapshot on divergence. Headless
+`d2legacy` acceptance proves a malicious future-tick claim is corrected while
+the server outcome remains unchanged.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits

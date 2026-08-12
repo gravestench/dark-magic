@@ -19,6 +19,11 @@ import (
 )
 
 func (app *application) registerLuaRuntime() error {
+	for _, module := range app.hostOverrideLuaModules() {
+		if err := app.scripts.RegisterModuleOverride(module); err != nil {
+			return fmt.Errorf("register Lua host override %s: %w", module.Name, err)
+		}
+	}
 	for _, module := range app.baseLuaModules() {
 		if err := app.scripts.RegisterModule(module); err != nil {
 			return fmt.Errorf("register Lua module %s: %w", module.Name, err)
@@ -28,6 +33,13 @@ func (app *application) registerLuaRuntime() error {
 		return err
 	}
 	return app.registerPresentationModules()
+}
+
+func (app *application) hostOverrideLuaModules() []modruntime.Module {
+	return []modruntime.Module{
+		d2catalog.QuestModule(app.questCatalog, app.locale),
+		d2catalog.MapModule(app.questCatalog),
+	}
 }
 
 // baseLuaModules are small doors into engine-owned services. Lua receives the
@@ -45,8 +57,6 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		}),
 		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
-		d2catalog.QuestModule(app.questCatalog, app.locale),
-		d2catalog.MapModule(app.questCatalog),
 		modruntime.LocaleModule(app.locale),
 		d2save.Module(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),

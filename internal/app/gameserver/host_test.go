@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
@@ -64,6 +65,34 @@ func TestHeadlessHostPinsRunningAuthorityToAdmissionAndReconnect(t *testing.T) {
 	}
 	if err := host.ValidateReconnect(token, host.Authority.Identity); err != nil {
 		t.Fatal(err)
+	}
+	canonical, err := host.Session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	predictedEngine := gameecs.New()
+	defer predictedEngine.Close()
+	predicted, err := predictedEngine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	predicted.Tick = canonical.Tick + 100
+	correction, err := gamesession.ReconcilePrediction(token.Prediction, &predicted, canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !correction.Corrected {
+		t.Fatal("divergent d2legacy client prediction was accepted as canonical")
+	}
+	if err := correction.Apply(predictedEngine); err != nil {
+		t.Fatal(err)
+	}
+	corrected, err := predictedEngine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if difference := gameecs.FirstDifference(*canonical.Snapshot, corrected); difference != "" {
+		t.Fatalf("corrected d2legacy client differs: %s", difference)
 	}
 
 	mismatch := host.Authority.Identity
