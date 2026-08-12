@@ -19,6 +19,10 @@ type VelocityPathFinder interface {
 	FindPath(PathRequest) ([]Point, error)
 }
 
+type velocityStepValidator interface {
+	WalkableStep(Point, Point, float64) bool
+}
+
 // VelocityComponents names the mod-owned spatial schemas consumed by the
 // generic integrator. The engine does not prescribe a mod namespace.
 type VelocityComponents struct {
@@ -69,9 +73,21 @@ func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 				if math.IsNaN(nx) || math.IsNaN(ny) || math.IsInf(nx, 0) || math.IsInf(ny, 0) {
 					return fmt.Errorf("world: velocity movement produced a non-finite position")
 				}
-				if paths != nil {
-					route, e := paths.FindPath(PathRequest{Start: Point{X: x, Y: y}, Goal: Point{X: nx, Y: ny}, Radius: rv.(float64)})
-					if e != nil || len(route) == 0 {
+				// Collision is cell-based. Movement inside the current collision
+				// cell cannot enter a new blocked footprint, so avoid allocating a
+				// complete A* search for every small fixed-tick velocity step.
+				startCellX, startCellY := CollisionCell(x), CollisionCell(y)
+				goalCellX, goalCellY := CollisionCell(nx), CollisionCell(ny)
+				if paths != nil && (startCellX != goalCellX || startCellY != goalCellY) {
+					allowed := false
+					dx, dy := absInt(goalCellX-startCellX), absInt(goalCellY-startCellY)
+					if validator, ok := paths.(velocityStepValidator); ok && dx <= 1 && dy <= 1 {
+						allowed = validator.WalkableStep(Point{X: x, Y: y}, Point{X: nx, Y: ny}, rv.(float64))
+					} else {
+						route, e := paths.FindPath(PathRequest{Start: Point{X: x, Y: y}, Goal: Point{X: nx, Y: ny}, Radius: rv.(float64)})
+						allowed = e == nil && len(route) > 0
+					}
+					if !allowed {
 						_ = v.Set("x", float64(0))
 						_ = v.Set("y", float64(0))
 						continue

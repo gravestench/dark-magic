@@ -77,8 +77,7 @@ end
 
 local function copy_events()
     local result = {}
-    for _, component in ipairs({"d2legacy.combat.event", "d2legacy.combat.melee_event",
-        "d2legacy.combat.event"}) do
+    for _, component in ipairs({"d2legacy.combat.event", "d2legacy.combat.melee_event"}) do
         local ok, entities = pcall(ecs.query, {all={component}})
         if ok then
             for _, entity in ipairs(entities) do

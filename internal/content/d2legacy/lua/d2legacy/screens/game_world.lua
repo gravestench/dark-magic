@@ -248,7 +248,7 @@ end
 local function observe_semantic_cues(self)
 	self.observed_cues = self.observed_cues or {}
 	self.semantic_cues = {}
-	for _, cue in ipairs(self.gameplay_world.semantic_cues()) do
+	for _, cue in ipairs(self.gameplay_world.semantic_cues(self.observed_cues)) do
 		if not self.observed_cues[cue.entity_id] then
 			self.observed_cues[cue.entity_id] = true
 			-- This copied queue is the narrow hand-off to visual/audio adapters.

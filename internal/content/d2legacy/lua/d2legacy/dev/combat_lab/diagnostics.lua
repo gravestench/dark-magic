@@ -8,6 +8,7 @@ local text = require("d2legacy.ui.text")
 
 local M = {}
 local fixed_one = 256
+local refresh_seconds = 0.1
 
 -- Font rasterization is cached, but asking it to rebuild identical text every
 -- frame is still needless work in a performance lab. Remember each last value.
@@ -101,16 +102,16 @@ local function update_panel(state, snapshot)
     local phase = player.attack and "ATTACK"
         or (player.approach and "APPROACH" or "READY")
     set_text(state.panel, "player", state.panel.player, string.format(
-        "[blue]%s[/]  POS [white]%.1f,%.1f[/]  MODE [green]%s[/]  PHASE [gold]%s[/]  RANGE %.1f  DAMAGE %g-%g",
-        player.id, player.position.x, player.position.y, animation.mode or "?", phase,
+        "[blue]%s[/]  MODE [green]%s[/]  PHASE [gold]%s[/]  RANGE %.1f  DAMAGE %g-%g",
+        player.id, animation.mode or "?", phase,
         profile.range or 0, (profile.physical_min or 0)/fixed_one,
         (profile.physical_max or 0)/fixed_one))
     local nearest, distance = nearest_monster(player, snapshot.monsters)
     if nearest then
         local stats, ai = nearest.stats or {}, nearest.ai or {}
         set_text(state.panel, "target", state.panel.target, string.format(
-            "[red]%d HOSTILES[/]  NEAREST [gold]%s[/] @ %.1f,%.1f  DIST [white]%.1f[/]  HP [green]%g/%g[/]  AI [blue]%s[/]",
-            #snapshot.monsters, nearest.label, nearest.position.x, nearest.position.y, distance,
+            "[red]%d HOSTILES[/]  NEAREST [gold]%s[/]  HP [green]%g/%g[/]  AI [blue]%s[/]",
+            #snapshot.monsters, nearest.label,
             (stats.health or 0)/fixed_one, (stats.max_health or 0)/fixed_one,
             ai.state or "?"))
     else
@@ -144,17 +145,26 @@ local function update_markers(state, scene, snapshot)
 end
 
 function M.create(scene)
-    local state = {visible=true, markers={}, panel=create_panel(scene)}
+    local state = {
+        visible=true,
+        markers={},
+        panel=create_panel(scene),
+        refresh_elapsed=refresh_seconds,
+    }
     return state
 end
 
-function M.update(state, scene)
+function M.update(state, scene, elapsed)
     if input.pressed("debug_combat") then
         state.visible = not state.visible
         state.panel.root:set_visible(state.visible)
         for _, marker in pairs(state.markers) do marker.root:set_visible(state.visible) end
+        if state.visible then state.refresh_elapsed = refresh_seconds end
     end
     if not state.visible then return end
+    state.refresh_elapsed = state.refresh_elapsed + (elapsed or 0)
+    if state.refresh_elapsed < refresh_seconds then return end
+    state.refresh_elapsed = state.refresh_elapsed % refresh_seconds
     local level_id = scene.world_level_id or 2
     local snapshot = ecs_snapshot.read(level_id)
     update_panel(state, snapshot)

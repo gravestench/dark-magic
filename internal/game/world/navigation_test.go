@@ -59,3 +59,19 @@ func TestFindPathRespectsEntityRadius(t *testing.T) {
 		t.Fatal("wide entity fit through one-cell gap")
 	}
 }
+
+func TestWalkableStepChecksDestinationAndDiagonalCorners(t *testing.T) {
+	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
+	if !m.WalkableStep(Point{1, 1}, Point{2, 1}, 0) {
+		t.Fatal("open adjacent step was rejected")
+	}
+	m.flags[1*5+2].BlockWalk = true
+	if m.WalkableStep(Point{1, 1}, Point{2, 1}, 0) {
+		t.Fatal("blocked destination step was accepted")
+	}
+	m.flags[1*5+2].BlockWalk = false
+	m.flags[1*5+2].BlockPlayerWalk = true
+	if m.WalkableStep(Point{1, 1}, Point{2, 2}, 0) {
+		t.Fatal("diagonal step cut a blocked cardinal corner")
+	}
+}

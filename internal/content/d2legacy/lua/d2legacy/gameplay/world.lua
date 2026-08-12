@@ -23,6 +23,16 @@ local systems = require("d2legacy.gameplay.systems.init")
 
 local M = {}
 
+-- Presentation may run with only the schemas supplied by the active authority
+-- composition. Missing optional event families mean "no cue", not a fatal
+-- scene error. ecs.get still reports real failures for required components in
+-- the focused snapshot functions below.
+local function optional_component(entity, name)
+    local ok, component = pcall(ecs.get, entity, name)
+    if not ok then return nil end
+    return component
+end
+
 function M.create(width, height, collision, player)
     -- world.lua is the composition root: it chooses which data and behavior
     -- make up this playable world, while the imported modules explain details.
@@ -134,7 +144,8 @@ end
 
 -- Semantic events are also copied. Consumers can remember entity_id to avoid
 -- presenting one durable event more than once; observation itself is read-only.
-function M.semantic_cues()
+function M.semantic_cues(observed)
+    observed = observed or {}
     local result = {}
     local entities, known = {}, {}
     for _, component in ipairs({"d2legacy.monster.death_event", "d2legacy.missile.event",
@@ -142,19 +153,23 @@ function M.semantic_cues()
         local ok, matches = pcall(ecs.query, {all = {component}})
         if ok then
             for _, entity in ipairs(matches) do
-                if not known[entity:id()] then entities[#entities + 1] = entity; known[entity:id()] = true end
+                local id = entity:id()
+                if not observed[id] and not known[id] then
+                    entities[#entities + 1] = entity
+                    known[id] = true
+                end
             end
         end
     end
     for _, entity in ipairs(entities) do
         local kind, values
-        local death = ecs.get(entity, "d2legacy.monster.death_event")
+        local death = optional_component(entity, "d2legacy.monster.death_event")
         if death then kind, values = "monster_death", death:snapshot() end
-        local missile = ecs.get(entity, "d2legacy.missile.event")
+        local missile = optional_component(entity, "d2legacy.missile.event")
         if missile then kind, values = "missile", missile:snapshot() end
-        local melee = ecs.get(entity, "d2legacy.combat.melee_event")
+        local melee = optional_component(entity, "d2legacy.combat.melee_event")
         if melee then kind, values = "combat", melee:snapshot() end
-        local combat = ecs.get(entity, "d2legacy.combat.event")
+        local combat = optional_component(entity, "d2legacy.combat.event")
         if combat then kind, values = "combat", combat:snapshot() end
         if values then
             -- Dynamic entity fields are checked ECS handles. Collapse the

@@ -18,7 +18,7 @@ end
 
 function lab:update(elapsed, focused, input_allowed, world_view)
     game_world.update(self, elapsed, focused, input_allowed, world_view)
-    diagnostics.update(self.combat_diagnostics, self)
+    diagnostics.update(self.combat_diagnostics, self, elapsed)
 end
 
 function lab:destroy()
