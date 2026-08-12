@@ -171,19 +171,25 @@ end
 -- events. A renderer follows these values; it never predicts or advances them.
 function M.missile_snapshots()
     local result = {}
-    local ok, entities = pcall(ecs.query, { all = {
-        "dm.missile.instance", "dm.world.position", "dm.world.location",
-    } })
-    if not ok then return result end
-    for _, entity in ipairs(entities) do
-        local snapshot = ecs.get(entity, "dm.missile.instance"):snapshot()
-        local position = ecs.get(entity, "dm.world.position")
-        local location = ecs.get(entity, "dm.world.location")
-        snapshot.entity_id = entity:id()
-        snapshot.owner_entity = nil
-        snapshot.x, snapshot.y = position:get("x"), position:get("y")
-        snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
-        result[#result + 1] = snapshot
+    -- During the migration both schemas may exist: basic melee still uses a
+    -- small transitional Go path, while Fire Bolt is fully owned by d2legacy.
+    -- Presentation reads either shape without deciding how either one behaves.
+    for _, component in ipairs({ "dm.missile.instance", "d2legacy.missile.projectile" }) do
+        local ok, entities = pcall(ecs.query, { all = {
+            component, "dm.world.position", "dm.world.location",
+        } })
+        if ok then
+            for _, entity in ipairs(entities) do
+                local snapshot = ecs.get(entity, component):snapshot()
+                local position = ecs.get(entity, "dm.world.position")
+                local location = ecs.get(entity, "dm.world.location")
+                snapshot.entity_id = entity:id()
+                snapshot.owner_entity = nil
+                snapshot.x, snapshot.y = position:get("x"), position:get("y")
+                snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
+                result[#result + 1] = snapshot
+            end
+        end
     end
     return result
 end

@@ -113,6 +113,8 @@ type application struct {
 	saves                *persistence.Store
 	entitySimulation     *gameecs.Engine
 	offlineSession       *gamesession.Session
+	authoritativeState   *simulation.StateStore
+	authoritativeRandom  *simulation.RandomStreams
 	playerControl        *gamesession.MovementController
 	movementSource       *gamesession.MovementSource
 	transitionAuthority  *gametransition.Authority

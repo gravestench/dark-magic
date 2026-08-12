@@ -1535,11 +1535,15 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   projectile, geometry, and damage modules. Its command consumes the generic
   mouse-side intent, derives skill identity/level from authoritative ECS state,
   uses checkpointed named RNG, and passes swept-contact/damage acceptance tests.
-  Production cutover remains coupled to the default melee attack because the
-  current Go `player.use_skill` router and cast lifecycle serve both behaviors.
-  The next slice migrates that shared router/basic attack together, switches
-  client composition to `d2legacy.authoritative`, adds replay parity, and then
-  deletes the superseded Go Fire Bolt normalizer and policy registrations.
+  Production client composition now loads `d2legacy.authoritative` by default,
+  pins the exact Lua package identity and named RNG in session checkpoints, and
+  routes skill assignment/use through the Lua command boundary. Fire Bolt no
+  longer registers Go cast/missile policy: the superseded Go normalizer and its
+  production registrations are deleted, while presentation passively observes
+  the Lua-owned projectile facts. Basic melee remains behind one explicit
+  temporary Lua-to-Go intent bridge until the combat/stats migration. Remaining
+  work for this item is midpoint checkpoint/restore and initial-snapshot replay
+  parity through a reconstructed authoritative Lua runtime.
 
 - [ ] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
   mitigation, state, death, stat-definition, and derived-stat policy to

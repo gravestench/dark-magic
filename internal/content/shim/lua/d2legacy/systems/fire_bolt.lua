@@ -56,6 +56,16 @@ function M.register(definition)
                             minimum_damage_raw = definition.minimum_damage_raw,
                             maximum_damage_raw = definition.maximum_damage_raw,
                             damage_channel = definition.damage_channel,
+                            missile_id = definition.missile_id,
+                            dcc = definition.dcc, palette = definition.palette,
+                            travel_sound = definition.travel_sound,
+                            hit_sound = definition.hit_sound,
+                            directions = definition.directions,
+                            frames_per_second = definition.frames_per_second,
+                            loop = definition.loop,
+                            offset_x = definition.offset_x,
+                            offset_y = definition.offset_y,
+                            offset_z = definition.offset_z,
                         },
                     })
                     cast:set("effect_emitted", true)

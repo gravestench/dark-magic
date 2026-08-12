@@ -27,6 +27,9 @@ func (fireBoltRecords) Load(path string) ([]map[string]string, error) {
 	return []map[string]string{{
 		"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1",
 		"CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2",
+		"CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16",
+		"LoopAnim": "1", "TravelSound": "firebolt", "HitSound": "fireboltimpact",
+		"Xoffset": "1", "Yoffset": "2", "Zoffset": "3",
 	}}, nil
 }
 

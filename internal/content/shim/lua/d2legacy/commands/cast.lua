@@ -22,6 +22,39 @@ local function find_player(player_id)
     return nil
 end
 
+local function learned_skill(player, skill_id)
+    for _, entity in ipairs(ecs.query({ all = { "dm.player.learned_skill" } })) do
+        local learned = ecs.get(entity, "dm.player.learned_skill")
+        if learned:get("owner"):id() == player:id()
+            and learned:get("skill_id") == skill_id then return learned end
+    end
+    return nil
+end
+
+function M.validate_assignment(command)
+    local payload = command.payload
+    assert(type(payload) == "table", "assignment payload must be a table")
+    assert(payload.left ~= nil or payload.right ~= nil, "assignment is empty")
+    for _, side in ipairs({ "left", "right" }) do
+        local skill_id = payload[side]
+        assert(skill_id == nil or type(skill_id) == "number" and skill_id >= 0,
+            side .. " skill must be a non-negative number")
+    end
+end
+
+function M.apply_assignment(command)
+    local player = assert(find_player(command.player), "assignment player does not exist")
+    local assignment = assert(ecs.get(player, "dm.player.skill_assignment"))
+    for _, side in ipairs({ "left", "right" }) do
+        local skill_id = command.payload[side]
+        if skill_id ~= nil then
+            local learned = assert(learned_skill(player, skill_id), "skill is not learned")
+            assert(learned:get(side .. "_allowed"), "skill is not allowed on " .. side)
+            assignment:set(side, skill_id)
+        end
+    end
+end
+
 function M.validate(command)
     local payload = command.payload
     assert(type(payload) == "table", "cast payload must be a table")
@@ -39,7 +72,7 @@ function M.apply(command)
     local assignments = assert(ecs.get(player, "dm.player.skill_assignment"),
         "cast player has no skill assignments")
     local skill_id = assignments:get(payload.side)
-    ecs.set(player, "d2legacy.skill.cast_request", {
+    local values = {
         player = command.player,
         skill_id = skill_id,
         -- The lifecycle resolves the authoritative learned level. Input never
@@ -49,10 +82,30 @@ function M.apply(command)
         target_y = payload.target_y,
         target_id = payload.target_id or "",
         request_tick = command.tick,
+    }
+    if skill_id == 36 then
+        ecs.set(player, "d2legacy.skill.cast_request", values)
+        return
+    end
+
+    -- Temporary migration bridge: basic melee still uses the old approach and
+    -- animation systems. This branch disappears when those systems move in the
+    -- next slice; no Fire Bolt policy crosses back into Go.
+    assert(skill_id == 0, "assigned skill has not migrated to d2legacy")
+    ecs.set(player, "dm.player.skill_intent", {
+        side = payload.side, skill_id = skill_id,
+        target_x = payload.target_x, target_y = payload.target_y,
+        target_id = payload.target_id or "",
     })
 end
 
 function M.register()
+    commands.register({
+        kind = "player.assign_skills",
+        authorities = { "player" },
+        validate = M.validate_assignment,
+        apply = M.apply_assignment,
+    })
     commands.register({
         kind = "player.use_skill",
         authorities = { "player" },

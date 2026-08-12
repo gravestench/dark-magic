@@ -23,7 +23,6 @@ import (
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
-	gamemissile "github.com/gravestench/dark-magic/internal/game/missile"
 	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -145,6 +144,18 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create offline game session", err)
 	}
 	app.offlineSession = session
+	app.authoritativeState = simulation.NewStateStore()
+	app.authoritativeRandom = simulation.NewRandomStreams(0)
+	if err := app.authoritativeRandom.Register("d2legacy.combat.fire_bolt.damage"); err != nil {
+		return wrap("register d2legacy random streams", err)
+	}
+	identity, err := app.d2legacyIdentity()
+	if err != nil {
+		return wrap("identify d2legacy mod", err)
+	}
+	if err := session.RegisterAuthoritativeRuntime(identity, app.authoritativeState, app.authoritativeRandom); err != nil {
+		return wrap("register d2legacy authoritative runtime", err)
+	}
 	if err := app.buildInteractionAuthority(); err != nil {
 		return err
 	}
@@ -164,31 +175,16 @@ func (app *application) registerOfflineCommands() error {
 	if err := gameskill.RegisterIntentConsumer(app.entitySimulation); err != nil {
 		return wrap("register skill intent consumer", err)
 	}
-	combatData, err := app.gameData.Snapshot()
-	if err != nil {
-		return wrap("load player combat data", err)
-	}
-	fireBoltSkill, fireBoltMissile, err := gamemissile.FireBoltFromCatalog(combatData)
-	if err != nil {
-		return wrap("normalize Fire Bolt", err)
-	}
 	basicAttackSkill := gameskill.Definition{
 		SkillID: 0, Behavior: gameskill.BehaviorBasicMelee, TargetPolicy: gameskill.TargetUnit,
 		EffectDelay: 1, CompleteDelay: 2, Interruptible: true,
 	}
-	skillRegistry, err := gameskill.NewRegistry(basicAttackSkill, fireBoltSkill)
+	skillRegistry, err := gameskill.NewRegistry(basicAttackSkill)
 	if err != nil {
 		return wrap("build production skill registry", err)
 	}
-	missileRegistry, err := gamemissile.NewRegistry(fireBoltMissile)
-	if err != nil {
-		return wrap("build production missile registry", err)
-	}
 	if err := gameskill.RegisterCastLifecycle(app.entitySimulation, skillRegistry); err != nil {
 		return wrap("register production skill lifecycle", err)
-	}
-	if err := gamemissile.Register(app.entitySimulation, missileRegistry); err != nil {
-		return wrap("register production missiles", err)
 	}
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
@@ -226,7 +222,6 @@ func (app *application) registerOfflineCommands() error {
 	}
 	for name, register := range map[string]func(*gamesession.Session) error{
 		"movement commands": gamesession.RegisterMovement,
-		"skill commands":    gamesession.RegisterSkillAssignments,
 		"player commands":   gameplayer.Register,
 		"monster commands":  gamemonster.Register,
 	} {

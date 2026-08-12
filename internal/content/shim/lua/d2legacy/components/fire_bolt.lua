@@ -54,6 +54,17 @@ function M.register()
             { name = "minimum_damage_raw", type = "i64" },
             { name = "maximum_damage_raw", type = "i64" },
             { name = "damage_channel", type = "string" },
+            { name = "missile_id", type = "string" },
+            { name = "dcc", type = "string" },
+            { name = "palette", type = "string" },
+            { name = "travel_sound", type = "string" },
+            { name = "hit_sound", type = "string" },
+            { name = "directions", type = "i64" },
+            { name = "frames_per_second", type = "i64" },
+            { name = "loop", type = "bool" },
+            { name = "offset_x", type = "f64" },
+            { name = "offset_y", type = "f64" },
+            { name = "offset_z", type = "f64" },
         },
     })
 
