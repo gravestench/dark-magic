@@ -78,8 +78,9 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			}
 			text := string(data)
 			retiredShort := "d" + "m."
+			retiredModShort := "d" + "2."
 			retiredLong := "dark" + "magic"
-			if strings.Contains(text, retiredShort) || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
+			if strings.Contains(text, retiredShort) || strings.Contains(text, retiredModShort) || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
 				relative, _ := filepath.Rel(root, path)
 				t.Errorf("%s uses a retired Lua namespace; use engine.*, d2legacy.*, or d2legacy.*", filepath.ToSlash(relative))
 			}
