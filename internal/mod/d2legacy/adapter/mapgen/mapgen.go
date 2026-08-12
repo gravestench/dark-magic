@@ -8,27 +8,51 @@ package mapgen
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
-	"strings"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// ActOneTownEntry resolves the d2legacy Rogue Encampment spawn near its
-// authored bonfire object. Object type/ID and search inset are mod policy.
-func ActOneTownEntry(world *gameworld.Map) (float64, float64, bool) {
-	if world == nil {
+// TownEntry asks d2legacy to choose a marker from copied decoded object facts,
+// then applies only the generic collision-space nearest-open-point algorithm.
+func (runtime *Runtime) TownEntry(ctx context.Context, world *gameworld.Map) (float64, float64, bool) {
+	if runtime == nil || world == nil {
 		return 0, 0, false
 	}
+	objects := make([]any, 0, len(world.Objects))
 	for _, object := range world.Objects {
-		if object.Type == gameworld.ObjectTypeStatic && object.ID == 2 {
-			return world.OpenPointNear(float64(object.X), float64(object.Y), 4)
-		}
+		objects = append(objects, map[string]any{"type": int(object.Type), "id": int(object.ID), "x": int(object.X), "y": int(object.Y)})
 	}
-	return 0, 0, false
+	selected, err := modruntime.Call(nonNilContext(ctx), runtime.lua, "d2legacy.mapgen.town_spawn", "choose", objects)
+	if err != nil || selected == nil {
+		return 0, 0, false
+	}
+	facts, ok := selected.(map[string]any)
+	if !ok {
+		return 0, 0, false
+	}
+	x, xOK := facts["x"].(float64)
+	y, yOK := facts["y"].(float64)
+	inset, insetOK := facts["search_inset"].(float64)
+	if !xOK || !yOK || !insetOK || inset < 0 {
+		return 0, 0, false
+	}
+	return world.OpenPointNear(x, y, int(inset))
+}
+
+// ResolveTownEntry owns the short-lived policy runtime needed after DS1 object
+// decoding. It keeps the interactive client from naming campfire identities.
+func ResolveTownEntry(ctx context.Context, source fs.FS, records recordsGateway, world *gameworld.Map) (float64, float64, bool) {
+	runtime, err := NewRuntime(nonNilContext(ctx), source, records)
+	if err != nil {
+		return 0, 0, false
+	}
+	defer runtime.Close(context.Background())
+	return runtime.TownEntry(ctx, world)
 }
 
 type recordsGateway interface {
@@ -81,6 +105,13 @@ func (runtime *Runtime) Generate(ctx context.Context, strategy string, arguments
 	return modruntime.GenerateWorldRecipe(nonNilContext(ctx), runtime.lua, "d2legacy.mapgen."+strategy, "generate", arguments...)
 }
 
+func (runtime *Runtime) generateFrom(ctx context.Context, module, function string, arguments ...any) (*worldgen.Zone, error) {
+	if runtime == nil || runtime.lua == nil {
+		return nil, fmt.Errorf("d2legacy mapgen runtime is not started")
+	}
+	return modruntime.GenerateWorldRecipe(nonNilContext(ctx), runtime.lua, module, function, arguments...)
+}
+
 // GenerateEntryZones asks d2legacy for the first town and wilderness recipes.
 // The short-lived runtime is intentionally headless: world policy must not
 // depend on a renderer, window, audio device, or native client startup.
@@ -92,16 +123,19 @@ func GenerateEntryZones(ctx context.Context, source fs.FS, records recordsGatewa
 	}
 	defer runtime.Close(context.Background())
 
-	town, err := runtime.Generate(ctx, "preset", float64(1), float64(seed), float64(0))
+	town, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "town", float64(seed), float64(0))
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate d2legacy entry town: %w", err)
 	}
-	stamps := town.Stamps()
-	if len(stamps) == 0 || !strings.HasPrefix(stamps[0].Role, "act1-town:exit-") {
-		return nil, nil, fmt.Errorf("d2legacy entry town did not declare a cardinal exit")
+	encodedTown, err := town.MarshalJSON()
+	if err != nil {
+		return nil, nil, fmt.Errorf("encode d2legacy entry town: %w", err)
 	}
-	exit := strings.TrimPrefix(stamps[0].Role, "act1-town:exit-")
-	moor, err := runtime.Generate(ctx, "outdoor", float64(2), float64(seed), exit, float64(0))
+	var townFacts map[string]any
+	if err := json.Unmarshal(encodedTown, &townFacts); err != nil {
+		return nil, nil, fmt.Errorf("decode d2legacy entry town facts: %w", err)
+	}
+	moor, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "wilderness", float64(seed), float64(0), townFacts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
 	}

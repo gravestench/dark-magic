@@ -137,7 +137,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		}
 	}
 
-	wantX, wantY, found := d2mapgen.ActOneTownEntry(app.gameWorlds[1])
+	wantX, wantY, found := d2mapgen.ResolveTownEntry(t.Context(), app.options.Content, app.records, app.gameWorlds[1])
 	if !found {
 		t.Fatal("generated town has no campfire entry anchor")
 	}

@@ -126,7 +126,7 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	x, y, found := d2mapgen.ActOneTownEntry(worldMap)
+	x, y, found := runtime.TownEntry(t.Context(), worldMap)
 	if !found {
 		t.Fatal("materialized town has no campfire-relative entry")
 	}

@@ -36,7 +36,7 @@ func (app *application) buildEntryWorld() error {
 	app.transitionSeam = seam
 	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	townSpawnX, townSpawnY, found := d2mapgen.ActOneTownEntry(townMap)
+	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, app.options.Content, app.records, townMap)
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}

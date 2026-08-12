@@ -232,7 +232,7 @@ func TestD2MapTilePolicyStaysInD2LegacyLua(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			for _, forbidden := range []string{"actOneDirtPathSequence", "RealizeActOneDirtPath"} {
+			for _, forbidden := range []string{"actOneDirtPathSequence", "RealizeActOneDirtPath", "ActOneTownEntry", "ObjectTypeStatic && object.ID == 2"} {
 				if strings.Contains(string(data), forbidden) {
 					relative, _ := filepath.Rel(root, path)
 					t.Errorf("%s restores native D2 map-tile policy through %q", filepath.ToSlash(relative), forbidden)

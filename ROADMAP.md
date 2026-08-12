@@ -1639,8 +1639,11 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   to the same topology checksum.
 
   Ownership cutover is complete: preset, maze, outdoor, route, structure, asset,
-  and population choices are Lua-owned while generic recipe/geometry contracts
-  remain in Go. The joined Act I town-to-wilderness restore vector remains.
+  entry-world level selection, and Rogue Encampment campfire-marker selection
+  execute in documented d2legacy Lua modules. Go transports admitted recipes
+  and runs generic collision-space nearest-open-point and seam geometry only.
+  Population choices are likewise Lua-owned while generic recipe/geometry
+  contracts remain in Go. The joined Act I town-to-wilderness restore vector remains.
 
 - [x] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
   alternate mod without loading `d2legacy`; prove generic engine packages have
