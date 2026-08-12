@@ -91,6 +91,81 @@ func TestItemReconnectRecoveryEquipmentVendorAndServiceRestoreIdentically(t *tes
 	assertItemAcceptanceOutcome(t, restoredEngine)
 }
 
+func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixtureRecords{}, engine, session,
+		Config{Seed: 92, InitialData: itemAcceptanceBootstrap()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(t.Context())
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: itemAcceptancePlayerPayload(t)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
+		"item_id": "sale", "vendor": "charsi", "category": "weap",
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 1, 2, "item.move", map[string]any{
+		"item_id": "weapon", "destination": map[string]any{"container": "held"},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(itemCommand(t, 2, 3, "item.move", map[string]any{
+		"item_id": "weapon", "place_held": true,
+		"destination": map[string]any{"container": "equipment", "slot": "rarm", "weapon_set": 0},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPlayerAttackRating(t, engine, 1000, 1)
+	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
+		"item_id": "weapon", "destination": map[string]any{"container": "inventory", "x": 2, "y": 0},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPlayerAttackRating(t, engine, 100, 0)
+}
+
+func assertPlayerAttackRating(t *testing.T, engine *gameecs.Engine, wanted int64, sources int) {
+	t.Helper()
+	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.combat_stats")
+	value, _ := stats.Get(stats.Entities()[0])
+	rating, _ := value.Get("attack_rating")
+	if rating != wanted {
+		t.Fatalf("attack rating = %v, want %d", rating, wanted)
+	}
+	store, _ := akara.GetDynamicStore(engine.World(), "d2legacy.stat.source")
+	count := 0
+	for _, entity := range store.Entities() {
+		source, _ := store.Get(entity)
+		stat, _ := source.Get("stat")
+		if stat == "attack_rating" {
+			count++
+		}
+	}
+	if count != sources {
+		t.Fatalf("attack-rating sources = %d, want %d", count, sources)
+	}
+}
+
 func submitItemAcceptanceCommands(t *testing.T, session *gamesession.Session) {
 	t.Helper()
 	commands := []simulation.Command{
@@ -219,6 +294,7 @@ func itemAcceptanceBootstrap() map[string]any {
 	weapon["body_slots"] = "rarm,larm"
 	weapon["melee_range"], weapon["physical_min"], weapon["physical_max"] = 3.0, 512.0, 1024.0
 	weapon["melee_weapon_class"] = "1HS"
+	weapon["attack_rating"] = 900.0
 	sale := item("sale", "cap", "held")
 	sale["base_cost"] = 100.0
 	corpse := item("corpse-boots", "lbt", "corpse")

@@ -83,6 +83,7 @@ function M.register()
         {name="unspent_skill_points",type="i64"},
     })
     component("d2legacy.player.combat_stats", {
+        {name="base_attack_rating",type="i64"},{name="base_defense",type="i64"},
         {name="attack_rating",type="i64"},{name="defense",type="i64"},
     })
     component("d2legacy.combat.defense", {

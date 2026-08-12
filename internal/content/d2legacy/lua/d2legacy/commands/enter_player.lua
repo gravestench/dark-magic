@@ -71,7 +71,8 @@ function M.apply(command)
         -- Legacy base attack rating is five points per Dexterity. Equipment and
         -- skills add their own removable sources later; the host supplies only
         -- the durable Dexterity fact and does not interpret the D2 formula.
-        ["d2legacy.player.combat_stats"]={attack_rating=(p.dexterity or 0)*5,defense=p.defense or 0},
+        ["d2legacy.player.combat_stats"]={base_attack_rating=(p.dexterity or 0)*5,
+            base_defense=p.defense or 0,attack_rating=(p.dexterity or 0)*5,defense=p.defense or 0},
         ["d2legacy.combat.defense"]={base_physical_resist=p.physical_resistance or 0,
             base_fire_resist=p.fire_resistance or 0,physical_resist=p.physical_resistance or 0,
             fire_resist=p.fire_resistance or 0,max_fire_resist=75,physical_reduction_raw=0},
