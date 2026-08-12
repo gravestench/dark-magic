@@ -16,6 +16,11 @@ The directory is intentionally split by responsibility:
 - `commands/` validates player intent and writes authoritative requests.
 - `systems/` advances requests during fixed simulation phases.
 - `policy/` contains formulas and decisions that do not own scheduling.
+- `items/`, `loot/`, `owned_units/`, and `mapgen/` keep larger domains split
+  into small rule-focused helpers rather than hiding a subsystem in one file.
+- `save/` owns Diablo character-roster policy over a narrow opaque Go store.
+- `gameplay/`, `presentation/`, `screens/`, `overlays/`, and `ui/` consume safe
+  authoritative facts; they never become a second gameplay authority.
 
 A new reader should be able to open one file and learn one idea. Functions stay
 short, module dependencies are explicit, and comments explain legacy meaning,
@@ -33,3 +38,13 @@ state lifetime, units, and ordering rather than restating Lua syntax.
 
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
+
+## Testing ownership
+
+Renderer-free authority and deterministic restore tests live in
+`internal/mod/d2legacy`. Presentation and composition tests for this mod live
+there or in `internal/acceptance`; generic runtime tests under
+`internal/runtime/lua` deliberately boot synthetic mods instead. The checked
+coverage ledger at `docs/architecture/d2legacy-test-coverage.tsv` distinguishes
+completed migration evidence from broader legacy-fidelity scenarios that have
+not been implemented yet.

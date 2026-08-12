@@ -302,7 +302,7 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// Missiles.txt inputs directly. They are code-owned data rather than
 	// presentation assets; missile art remains covered by the audited dynamic
 	// data/global/missiles prefix.
-	const auditedFingerprint = "3716f2b4c45fd566467250872f0213d06a6ebcbaee962c11efbce4953d32b2ac"
+	const auditedFingerprint = "350b41d968c4ad5430dfb5b9a7b6a207892b84b21bef3f3732d14f36577019fb"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

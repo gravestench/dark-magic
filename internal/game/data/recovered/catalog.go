@@ -1,5 +1,5 @@
 // Package recovered parses declarative game relationships recovered by
-// clean-room engine projects and carried in Dark Magic's shim.
+// clean-room engine projects and carried in the first-party d2legacy mod.
 package recovered
 
 import (
@@ -126,7 +126,7 @@ func ValidateReferences(snapshot Snapshot, soundNames map[string]struct{}, text 
 }
 
 // Catalog loads the provenance-backed recovered family once and returns deep
-// copies. Unlike mod-authored TSV data, these relationships ship with the shim.
+// copies. Unlike user-authored TSV data, these relationships ship with d2legacy.
 type Catalog struct {
 	source fs.FS
 	once   sync.Once

@@ -2,6 +2,13 @@
 
 Status: research baseline complete / implementation and verification program active. This document is not a runtime API contract.
 
+> Architecture supersession: package-owner names below describe the repository
+> when this research was assembled. The committed current boundary is defined
+> by `docs/ARCHITECTURE.md` and `docs/GAMEPLAY_OWNERSHIP.md`: generic mechanisms
+> and decoded data remain in Go, while authoritative Diablo policy belongs to
+> the first-party `d2legacy` Lua mod. Treat former `internal/game/*` gameplay
+> packages as migration evidence, not destinations for new policy.
+
 All 28 workstreams in [GAME_SYSTEMS_INDEX.md](GAME_SYSTEMS_INDEX.md) now have implementation-oriented baseline documents. That means ownership, major state/data relationships, implementation slices, and explicit unknowns are documented. It does **not** mean all legacy behavior is implemented or empirically validated.
 
 Dark Magic also moved substantially while this research was being assembled: the authoritative simulation now includes shared stat-source provenance, fixed-point combat vocabulary, ordinary hostile materialization, scheduled basic monster AI, a semantic melee transaction, immutable cast requests, and a checkpointed generic skill cast lifecycle. Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) together with `ROADMAP.md` to determine the current implementation cursor.
@@ -91,12 +98,12 @@ The following are **existing owners to extend**, not proposals to replace:
 | skill admission, immutable cast requests, and cast lifecycle | `internal/game/session` plus current skill simulation owner | extend M21.6/M21.7 with timed states and missiles; raw Skills formulas/server-function IDs remain explicit promotion/verification boundaries |
 | deterministic loot generation | `internal/game/loot` | research remaining quality/stat/lifecycle fidelity instead of writing a second generator |
 | authoritative item placement and transactions | `internal/game/item` | extend item instance/location semantics and runtime effects |
-| selected-character shell state | `internal/persistence` | keep separate from legacy `.d2s` codec and from live ECS authority |
+| selected-character shell state | `internal/mod/d2legacy/adapter/save` | keep the opaque host store separate from legacy `.d2s` decoding and from Lua-owned live gameplay policy |
 | live player state | `internal/game/player` + ECS | progression research expands admitted/live components and commands |
 | map/world facts and DRLG | `internal/game/world` and current map generation work | reuse the existing map research; add gameplay systems that consume semantic world facts |
-| cross-level relocation | `internal/game/transition` | generalize the trusted seam/endpoint authority for stairs, waypoints and portals instead of creating parallel travel systems |
+| cross-level relocation | generic world/transport mechanisms plus `d2legacy` transition policy | reuse trusted seam/endpoint mechanisms for stairs, waypoints and portals instead of creating parallel travel systems |
 | audio resources/backend | `internal/audio` | add semantic gameplay/world cue and soundscape policy above the existing owner-thread mixer; audio is never gameplay authority |
-| Lua | versioned capabilities under `internal/runtime/lua` | presentation reads copied/revisioned snapshots and submits intent; it is not gameplay authority |
+| Lua | versioned capabilities under `internal/runtime/lua` | presentation reads snapshots and submits intent; trusted `d2legacy` Lua may also execute authoritative policy through deterministic capabilities |
 | standalone game worker | `cmd/darkmagic-server` + `internal/game/session` | networking must transport the same semantic commands/snapshots rather than fork simulation logic |
 | realm control-plane shell | `cmd/darkmagic-realm` | add allocation, leases, durable-character and directory services without moving gameplay simulation into the realm |
 

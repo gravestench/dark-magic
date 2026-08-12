@@ -31,6 +31,12 @@ func TestD2LegacyLuaOwnsBloodMoorRecipeAndStructurePolicy(t *testing.T) {
 		records["data/global/excel/LvlPrest.txt"] = append(records["data/global/excel/LvlPrest.txt"], row)
 	}
 	runtime := New()
+	// The race detector intentionally makes this large deterministic generation
+	// several times slower than a normal authoritative invocation. This fixture
+	// validates topology, not the runtime's one-second budget (covered elsewhere).
+	if err := runtime.SetExecutionBudget(0); err != nil {
+		t.Fatal(err)
+	}
 	for _, module := range []Module{RecordsModule(records), DeterministicModule(), WorldgenModule()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)

@@ -1,7 +1,8 @@
 # Gameplay ownership migration inventory
 
-Status: M21.14.1 migration contract. This inventory classifies production code
-by architectural destination; it does not claim that the move is complete.
+Status: enforced M21.14 ownership contract. This inventory classifies the
+post-migration production code and prevents the deleted Go policy boundary from
+returning.
 
 The machine-checked source is
 [`docs/architecture/gameplay-ownership.tsv`](architecture/gameplay-ownership.tsv).
@@ -27,14 +28,12 @@ must use ECS or registered, versioned engine stores.
 
 | Current area | Current contents | Intended result |
 | --- | --- | --- |
-| `internal/game/ecs`, `simulation`, `session` | ECS schedule, command envelopes, RNG/replay, plus some D2 handlers | Keep mechanisms; move embedded D2 handlers to `d2legacy` |
+| `internal/game/ecs`, `simulation`, `session` | ECS schedule, command envelopes, RNG, transactional ticks, checkpoints, and replay | Generic mechanisms only |
 | `internal/game/data/**` | Typed D2 schemas, immutable catalogs, recovered records | Keep decoding/data in Go; Lua interprets gameplay meaning |
-| `combat`, `skill`, `missile` | D2 hit/cast/missile policy mixed with reusable fixed-point/spatial work | Migrate policy together; extract only proven generic primitives |
-| `monster`, `loot`, `item`, `player`, `stats`, `state`, `action` | Most current authoritative D2 simulation | Migration source, not permanent engine API |
-| `mapgen`, `world`, `targeting` | Reusable geometry/navigation mixed with D2 act/level/population policy | Split mechanisms from D2 selection and relationships |
-| `interaction`, `transition`, `ownedunit` | Generic relations/transactions mixed with D2 services and lifecycle policy | Split, then migrate D2 policy |
-| `internal/runtime/lua` | Runtime mechanisms plus subsystem-shaped Go-owned D2 facades | Keep runtime/adapters; retire facades as policy moves into Lua |
-| bundled Lua content | The first-party `d2legacy` mod, `d2legacy.*` presentation, and labs | `d2legacy` is the canonical package; `d2legacy.*` is its concise runtime namespace; neither is a second mod |
+| former Go gameplay packages | Deleted migration sources for combat, skills, missiles, monsters, loot, items, players, progression, interactions, transitions, owned units, and D2 map generation | Production policy now lives under `d2legacy` Lua |
+| `internal/game/world`, `worldgen` | Decoded map facts, geometry, collision, navigation, materialization, and immutable recipe contracts | Keep reusable mechanisms/data; Lua chooses D2 topology and population policy |
+| `internal/runtime/lua` | Sandboxed runtime, versioned capabilities, authoritative registration, and resource scopes | Keep generic and mod-neutral |
+| bundled Lua content | Canonical first-party `d2legacy` authority, presentation, and labs | One mod and one `d2legacy.*` namespace |
 
 ## Migration execution policy
 

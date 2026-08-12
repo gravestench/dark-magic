@@ -8,6 +8,12 @@
 
 Status: implementation-oriented baseline. The current in-memory persistence store is intentionally not a `.d2s` schema. A loss-preserving legacy codec and a durable Dark Magic character model still need to be built.
 
+> Architecture supersession: the narrow opaque roster store now lives under
+> `internal/mod/d2legacy/adapter/save`, and `d2legacy` Lua owns character
+> creation/admission policy. References below to `internal/game/player` or a Go
+> gameplay owner describe the pre-migration implementation, not the destination
+> for new Diablo policy.
+
 ## Executive result
 
 Keep three layers separate:
@@ -34,7 +40,12 @@ Dark Magic already points in this direction: `internal/persistence.Character` ex
 
 ## Current Dark Magic baseline
 
-The current store owns opaque character ID, name/class, level, expansion/hardcore flags, immutable appearance, a character-sheet `Stats` snapshot, and roster selection. `internal/game/player` copies an admitted subset into authoritative ECS through a system-only command. Once admitted, ECS is live gameplay authority.
+The current store owns opaque character ID, name/class, level,
+expansion/hardcore flags, immutable appearance, a character-sheet `Stats`
+snapshot, and roster selection. A narrow `d2legacy` adapter emits a trusted
+system command; authoritative Lua validates and materializes the admitted
+subset into ECS. Once admitted, ECS plus registered runtime state is live
+gameplay state.
 
 ## Independent legacy layout evidence
 

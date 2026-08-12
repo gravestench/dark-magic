@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local loot = require("d2legacy.loot.generate")
+local attribution = require("d2legacy.owned_units.attribution")
 local M = {}
 
 local function selectable_by_id(entities, wanted)
@@ -50,11 +51,11 @@ local function roll_loot(identity, stats)
     return loot.encode(drops)
 end
 
-local function death_values(context, identity, killer, experience, drops)
+local function death_values(context, identity, killer, credited, experience, drops)
     return {
         tick = context.tick,
         killer_id = killer,
-        credited_id = killer,
+        credited_id = credited,
         xp = experience,
         loot_seed = identity:get("seed"),
         treasure_class = identity:get("treasure_class"),
@@ -112,14 +113,17 @@ local function commit_death(context, entities, structural, monster, killers)
 
     local monster_id = monster_selectable_id(monster, identity)
     local killer = killers[monster_id] or ""
+    local ownership = attribution.resolve(entities, killer)
+    local credited = ownership.ultimate_owner_id
     local experience = stats:get("experience")
-    credit_experience(entities, killer, experience)
+    credit_experience(entities, credited, experience)
 
     local drops = roll_loot(identity, stats)
     local values = death_values(
         context,
         identity,
         killer,
+        credited,
         experience,
         drops
     )
@@ -153,6 +157,7 @@ function M.register()
             "d2legacy.combat.melee_event",
             "d2legacy.combat.event",
             "d2legacy.world.selectable",
+            "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
         },

@@ -6,7 +6,12 @@
 > policy-neutral session host owns admission and consistency; it does not
 > require Diablo rules to be implemented in Go.
 
-Status: implementation-oriented research baseline. Dark Magic's Lua shim already documents and enforces the core principle: presentation reads safe snapshots, submits semantic intent, and never owns authoritative gameplay state. This document turns that principle into explicit contracts for every major gameplay surface so multiplayer/realm work does not accidentally reintroduce client authority.
+Status: implementation-oriented research baseline. Dark Magic's `d2legacy` Lua
+mod already documents and enforces the core principle: presentation reads safe
+snapshots and submits semantic intent, while trusted authoritative Lua—not UI
+code—may decide gameplay through controlled engine capabilities. This document
+turns that principle into explicit contracts for every major gameplay surface
+so multiplayer/realm work does not accidentally reintroduce client authority.
 
 ## Executive conclusion
 
@@ -45,13 +50,14 @@ Lua presentation/widgets
 
 ## Existing Dark Magic presentation contract is already correct
 
-The embedded Lua shim explicitly states:
+The embedded `d2legacy` mod explicitly states:
 
-- engine owns save data, authoritative simulation, networking and native state;
+- engine owns deterministic state mechanisms, admission, networking, and native
+  resources while `d2legacy` owns Diablo gameplay decisions;
 - Lua reads safe snapshots;
 - Lua submits intent/commands;
 - UI does not directly change authoritative item/game tables;
-- versioned `d2legacy.* /v1` capabilities form a stable modding boundary;
+- versioned `engine.* /v1` capabilities form the controlled engine boundary;
 - retained render/audio handles are scope-owned presentation resources;
 - gameplay can keep simulating under overlays while input ownership changes;
 - pointer-first presentation converts clicks to movement/interaction/item/combat intents;

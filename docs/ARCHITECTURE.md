@@ -145,13 +145,14 @@ remain in Go. Deciding what a decoded record means to Diablo gameplay belongs
 in `d2legacy`. Migration reviews must not mechanically transliterate a Go
 package into Lua when its useful remainder is a smaller generic primitive.
 
-This is the target architecture, not the current state. Much of the working
-Diablo simulation is presently implemented under `internal/game`. Those
-packages are migration sources until each file is classified and either moved
-to `d2legacy`, reduced to an engine mechanism, retained as a data boundary, or
-deleted. Older research documents remain valuable behavioral evidence and
-current-state handoffs, but any recommendation that permanent Diablo policy or
-authority must live in Go is superseded by this document.
+This is now the enforced production boundary. The former Go combat, skill,
+missile, monster, loot, item, player, progression, interaction, transition,
+owned-unit, and D2 map-generation packages were migration sources and have been
+deleted after their active policy moved to `d2legacy`. `internal/game` retains
+only generic deterministic mechanisms, D2 data/codec boundaries, and reusable
+world geometry. Older research documents remain behavioral evidence, but any
+recommendation that permanent Diablo policy or authority must live in Go is
+superseded by this document.
 
 ## Current package inventory
 
@@ -162,7 +163,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | --- | --- | --- | --- | --- |
 | `cmd/darkmagic` | Client composition root | executable | Process | Keep thin |
 | `internal/app/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
-| `internal/content` | Layered directory/MPQ/ZIP/shim VFS | command, reload, Lua, tools | Application | Keep |
+| `internal/content` | Layered directory/MPQ/ZIP/mod VFS | command, reload, Lua, tools | Application | Keep |
 | `internal/game/data/store` | Generic immutable TSV generations | typed catalog, audio, Lua | Application | Keep internal |
 | `internal/game/data/catalog` | Typed Diablo data snapshots and indexes | command | Application | Keep; split consumers by domain |
 | `internal/presentation/render` | Retained renderer contracts and handles | Lua, raylib, video | Application/scopes | Keep internal |
@@ -171,9 +172,9 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/inputstate` | Serialized input state | command, Lua, raylib | Application | Keep |
 | `internal/localization` | TBL-backed localization | command, Lua | Application | Keep |
 | `internal/loading` | Observable loading progress | command, Lua | Application | Keep |
-| `internal/persistence` | Current character persistence boundary | command, Lua | Application | Keep; replace format |
+| `internal/mod/d2legacy/adapter/save` | Opaque first-party character roster persistence adapter | command, Lua | Application | Keep narrow; future realm storage implements the same boundary |
 | `internal/presentation/navigation` | Scene/overlay navigation | command, Lua | Application | Keep |
-| `internal/runtime/lua` | Sandboxed Lua ownership, deterministic execution, capabilities, and scoped resources | command, reload, session | Application/scopes | Keep; add authoritative registration/state boundaries |
+| `internal/runtime/lua` | Sandboxed Lua ownership, deterministic execution, authoritative capabilities, and scoped resources | command, reload, session | Application/scopes | Keep mod-neutral |
 | `internal/app/hotreload` | Transactional script/content reload | command | Application | Keep |
 | `internal/app/filewatch` | Filesystem change observation | command | Application | Keep |
 | `internal/app/runtimeapi` | Local runtime-management HTTP API | command | Application | Keep |
@@ -182,22 +183,18 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `internal/platform/raylib/common` | Native adapter logging | raylib adapters | Application | Keep under platform |
 | `internal/platform/raylib/input` | Raylib input adapter | command, world | Application | Keep under platform |
 | `internal/platform/raylib/renderer` | Raylib renderer/audio owner thread | command, world | Application | Keep under platform |
-| `internal/platform/raylib/world` | Legacy native world presentation | command/tests | Scene | Transitional; replace |
 | `internal/acceptance` | Cross-system acceptance fixtures | tests | Test | Keep |
-| `internal/dev/tools/*` | Asset, profile, shim, and extraction CLIs | developer | Process | Keep |
+| `internal/dev/tools/*` | Asset, profile, mod, and extraction CLIs | developer | Process | Keep |
 | `internal/dev/testapps/*` | Manual diagnostics and experiments | developer | Process | Keep |
 | `internal/assets/decode` | Engine-specific decoded asset helpers | Lua, video, tools | Stateless/cache | Keep internal |
 | `internal/assets/catalog` | Presentation asset research/catalog output | tools | Stateless | Keep internal |
 | `internal/assets/inspect` | Asset metadata and preview helpers | tools, world | Stateless | Keep internal |
 | `internal/cache` | Weighted generation-aware LRU | Lua, renderer | Application | Migrated; guarded |
 | `internal/presentation/easing` | Preserved tween easing functions | future presentation runtime | Stateless | Migrated; guarded |
-| `internal/game/{combat,skill,missile}` | Current D2 combat/cast/missile policy plus some reusable numeric and movement mechanisms | session, acceptance | Game session | Transitional migration sources; move D2 policy to `d2legacy`, extract only justified primitives |
-| `internal/game/{loot,item}` | Current D2 item generation, containers, equipment, vendors, and services | session, Lua, tests | Game session | Transitional migration sources; retain only generic transaction/storage primitives and typed data boundaries |
-| `internal/game/{monster,player,stats,state,action}` | Current D2 actor, AI, progression, stat, timed-state, and action policy | session, skills, combat | Game session | Classify file by file; D2 policy moves to `d2legacy` |
-| `internal/game/{interaction,transition}` | Current D2 interaction, commerce, and world-transition policy | session, Lua | Game session | Transitional migration sources; generic command/spatial mechanisms may remain |
-| `internal/game/mapgen` | Current D2 preset/outdoor/maze policy mixed with reusable generation algorithms | world, tests | Game session | Move D2 selection/relationship policy to `d2legacy`; keep generic algorithms only |
-| `internal/game/ownedunit` | Current owner/category/limit/lifecycle relation and attribution | combat, skills, transitions, UI | Game session | Split generic relation/attribution mechanism from D2 pet, summon, and hireling policy |
-| `internal/game/world` | Immutable map facts, collision, geometry, navigation, transforms, and current D2 zone composition | session, Lua, presentation | Game session | Keep generic spatial mechanisms; migrate D2 act/level/map policy |
+| `internal/mod/d2legacy` | Headless first-party authority composition and narrow save/map/movement/targeting adapters | client, server, tests | Game session | Keep adapters policy-thin; Lua owns rules |
+| `internal/content/d2legacy/lua/d2legacy` | Authoritative D2 rules, data interpretation, systems, UI, and presentation | d2legacy authority, client | Game session/scenes | Canonical first-party mod |
+| `internal/game/world` | Immutable decoded map facts, collision, geometry, navigation, transforms, and reusable materialization | session, Lua, presentation | Game session | Keep generic spatial/data mechanisms |
+| `internal/game/worldgen` | Immutable generated-zone recipe contract, validation, and checksums | d2legacy map policy, world | Game session | Keep policy-neutral |
 | `internal/game/ecs` | Deterministic Akara-backed phases, queries, access contracts, and structural barriers | command, Lua | Game session | Keep internal |
 | `internal/game/session` | Command admission, fixed stepping, checkpointing, and replay recording for Go- or Lua-owned systems | client/server composition | Game session | Keep transport-neutral and policy-neutral |
 | `internal/game/data/model` | Diablo TSV schemas and legacy enums | game data | Application data | Keep internal |
@@ -223,9 +220,9 @@ internal/game/ecs          generic entity schedule and structural barriers
 internal/game/simulation   commands, deterministic RNG, replay primitives
 internal/game/session      policy-neutral authoritative session host
 internal/engine/*          extracted reusable gameplay-adjacent mechanisms
-internal/content/.../d2legacy
+internal/content/d2legacy/lua/d2legacy
                            first-party Lua gameplay systems and D2 policy
-internal/persistence       saves and future realm storage contracts
+internal/mod/d2legacy      first-party host adapters and authority composition
 internal/network           client/session/realm protocols
 internal/dev               profiling, capture, tools, test applications
 ```
@@ -237,7 +234,7 @@ real-asset, race, and relevant interactive acceptance checks green.
 
 ## Finding the main execution paths
 
-The client boots in `cmd/d2/main.go`. It parses process configuration,
+The client boots in `cmd/darkmagic/main.go`. It parses process configuration,
 opens the layered content filesystem, constructs shared application capabilities,
 registers Lua modules, and gives those components to `internal/app/host` for ordered
 startup and shutdown. Keep this file as wiring: capability behavior belongs in
@@ -329,13 +326,14 @@ rule prediction is optional later work, never an authority transfer.
 Executable-era relationships recovered by Riiablo live verbatim under
 `internal/content/d2legacy/data/recovered/riiablo`, accompanied by provenance. The
 `internal/game/data/recovered` catalog validates and normalizes those files;
-`engine.quest_catalog/v1` exposes identifiers to Lua while localization and audio
-remain separate capabilities responsible for resolving strings and assets.
+narrow adapters under `internal/mod/d2legacy/adapter/catalog` expose facts to
+the mod while localization and audio remain separate capabilities responsible
+for resolving strings and assets.
 
 The production game-world scene defines hero position, velocity, bounds, player
 control, and camera-follow components in Lua through `engine.ecs/v1`. Its
-`d2/gameplay/components` modules group small related schemas, while
-`d2/gameplay/systems` gives each update rule its own documented file.
+`d2legacy/gameplay/components` modules group small related schemas, while
+`d2legacy/gameplay/systems` gives each update rule its own documented file.
 `world.lua` is their composition root and retains only player binding plus
 presentation-safe snapshot helpers. Native input is normalized into one admitted
 `player.move` command per active fixed tick; the session-owned handler applies

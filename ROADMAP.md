@@ -1477,23 +1477,22 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
 
 - [x] **M21.14.1 — inventory and classification.** The machine-checked
   `docs/architecture/gameplay-ownership.tsv` now gives every production file
-  under `internal/game`, `internal/runtime/lua`, and the bundled Lua shim exactly
+  under `internal/game`, `internal/runtime/lua`, and bundled `d2legacy` Lua exactly
   one mechanism, D2-policy, data, adapter, or transitional destination. The
   companion guide records domain dispositions, migration sequencing, the
   pre-refactor tag, and the rule that coherent moves may cross intentionally
   non-buildable intermediate commits. Architecture CI rejects unclassified
-  files and new mechanism-to-policy/transitional imports; the two existing
-  session-to-action edges are explicit debt that must disappear with movement
-  and Fire Bolt migration. Publish a file-level catalog
-  of production `internal/game/**`, related `internal/runtime/lua/**`, and shim
-  gameplay code. Classify every unit as engine mechanism, D2 policy,
+  files and new mechanism-to-policy/transitional imports; the former dependency
+  debt is empty after the policy cutover. Publish a file-level catalog
+  of production `internal/game/**`, related `internal/runtime/lua/**`, and
+  `d2legacy` gameplay code. Classify every unit as engine mechanism, D2 policy,
   data/codec, adapter, or obsolete/transitional; record its destination and the
   reason. Add a CI architecture test that fails when a generic engine package
   imports `d2legacy`, a D2 rule package, or a forbidden D2 policy identifier.
   Acceptance: every production gameplay file has exactly one classification,
   and a fixture that introduces a forbidden engine-to-mod dependency fails.
 
-- [ ] **M21.14.2 — authoritative Lua foundation.** Add versioned APIs for trusted
+- [x] **M21.14.2 — authoritative Lua foundation.** Add versioned APIs for trusted
   Lua command-handler registration and deterministic ECS-system registration,
   including declared read/write access and structural barriers. Expose named,
   deterministic RNG streams without wall-clock, process, filesystem, network,
@@ -1519,7 +1518,7 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   mismatched client/reconnect/checkpoint/replay, and prove changed scripts affect
   new sessions only unless an explicit state migration is supplied.
 
-- [ ] **M21.14.4 — Fire Bolt vertical migration.** Move one complete production
+- [x] **M21.14.4 — Fire Bolt vertical migration.** Move one complete production
   path into `d2legacy`: input intent -> command admission -> skill validation ->
   cast timing and cost -> Lua missile policy -> engine movement and collision ->
   Lua damage and death consequences -> authoritative snapshots. Keep command
@@ -1530,7 +1529,7 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   midpoint checkpoint/restore and initial-snapshot replay produce identical
   checksums, and no production Go handler contains Fire Bolt rules.
 
-  Progress: the canonical bundled `d2legacy` mod now owns a complete headless
+  Completed: the canonical bundled `d2legacy` mod owns a complete headless
   Fire Bolt path, split into documented data normalization, command, cast,
   projectile, geometry, and damage modules. Its command consumes the generic
   mouse-side intent, derives skill identity/level from authoritative ECS state,
@@ -1543,11 +1542,10 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   the Lua-owned projectile facts. Basic-melee admission, targeting, hit/damage
   RNG, health mutation, and events now execute in `d2legacy`; the Go skill
   mailbox and cast lifecycle are no longer part of production composition.
-  Collision-aware approach and authored attack-animation timing remain as a
-  narrow transitional mechanism consuming a Lua-emitted semantic effect until
-  the generic navigation/timing capability is exposed directly. Remaining
-  work for this item is midpoint checkpoint/restore and initial-snapshot replay
-  parity through a reconstructed authoritative Lua runtime.
+  Collision-aware approach and authored attack-animation timing use generic
+  navigation/timing mechanisms driven by Lua-owned semantic requests. Midpoint
+  checkpoint/restore and initial-snapshot replay parity both pass through a
+  reconstructed authoritative Lua runtime.
 
 - [ ] **M21.14.5 — combat and stats migration.** Move D2 hit, damage,
   mitigation, state, death, stat-definition, and derived-stat policy to
@@ -1556,11 +1554,20 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   melee, missile, death, and checkpoint scenarios execute through Lua and keep
   their deterministic vectors.
 
+  Ownership cutover is complete: the former Go package is deleted and current
+  melee, missile, damage, timed-state, and death policy runs in Lua. This item
+  remains open for the broader mitigation/derived-stat and deterministic death
+  vectors named by its acceptance contract.
+
 - [ ] **M21.14.6 — skills and missiles migration.** Move D2 skill eligibility,
   costs, timing, targeting, effects, and missile behavior to `d2legacy`; retain
   only generic scheduling, movement/collision, and spatial primitives that are
   demonstrably mod-neutral. Acceptance: representative targeted, ground,
   targetless, state, and missile skills have Lua-owned policy and replay parity.
+
+  Ownership cutover and Fire Bolt parity are complete. Representative ground,
+  targetless, and non-damage state-skill vectors remain before this broader
+  fidelity item can be checked.
 
 - [ ] **M21.14.7 — monsters, AI, spawning, and death migration.** Move D2
   monster definition interpretation, encounter population, AI decisions,
@@ -1569,12 +1576,20 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   headless, Lua-owned, checkpointable, and independent of presentation
   residency.
 
+  Ownership cutover is complete and Lua owns current population, spawn, AI,
+  attack, death, corpse, credit, XP, and loot behavior. A single restored
+  generated-zone hostile-lifecycle acceptance vector remains.
+
 - [ ] **M21.14.8 — loot and item generation migration.** Move treasure classes,
   quality, affixes, properties, item rolls, drop policy, and D2 item identity
   interpretation to `d2legacy`; retain typed record decoding and any justified
   generic RNG/transaction primitives in Go. Acceptance: fixed-seed generation
   vectors and monster-drop replay match through Lua, and superseded Go policy is
   deleted.
+
+  Ownership cutover is complete and all former Go generation modules now have
+  Lua policy owners. Broader fixed legacy quality/affix/property vectors and a
+  checkpointed monster-drop vector remain.
 
 - [ ] **M21.14.9 — inventory, equipment, vendors, and services migration.** Move
   D2 container footprints, held/belt/corpse behavior, equipment eligibility,
@@ -1583,11 +1598,21 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   equip/stat activation, vendor sale, and one service transaction execute via
   Lua while generic atomic storage primitives remain reusable.
 
+  Ownership cutover is complete; current containers, held swaps, equipment,
+  vendor arrangement/commerce, services, and corpse state are Lua-owned. The
+  focused reconnect, recovery, vendor-sale, and service acceptance matrix is
+  still tracked here rather than being inferred from source presence.
+
 - [ ] **M21.14.10 — character progression and owned units migration.** Move D2
   class definitions, base/derived stats, XP/leveling, hirelings, pets, summons,
   limits, attribution, and lifecycle policy to `d2legacy`. Acceptance: character
   creation through level-up and one owned-unit lifecycle restore identically
   from a checkpoint without Go-owned D2 policy.
+
+  Ownership cutover is complete. Lua now owns category/group limits, stable
+  replacement, immediate/ultimate attribution, lifetime flags, and checkpointed
+  owned-unit state. Creation-to-level-up and active lifetime/despawn acceptance
+  remain before the full item is complete.
 
 - [ ] **M21.14.11 — interactions, quests, transitions, and difficulty
   migration.** Move D2 NPC/object interactions, quests, rewards, services,
@@ -1595,6 +1620,9 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   Acceptance: one quest/NPC reward path and one cross-zone transition are
   Lua-owned, replay-safe, and driven by immutable decoded records plus recovered
   relationships.
+
+  Ownership cutover and cross-zone warp behavior are complete. A full decoded
+  quest/NPC reward path and difficulty progression vector remain.
 
 - [ ] **M21.14.12 — D2 map-generation and population-policy migration.** Move
   act/level graph choices, preset/maze/outdoor selection, legacy hard-coded
@@ -1604,7 +1632,11 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   wilderness are selected by Lua policy from typed immutable inputs and restore
   to the same topology checksum.
 
-- [ ] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
+  Ownership cutover is complete: preset, maze, outdoor, route, structure, asset,
+  and population choices are Lua-owned while generic recipe/geometry contracts
+  remain in Go. The joined Act I town-to-wilderness restore vector remains.
+
+- [x] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
   alternate mod without loading `d2legacy`; prove generic engine packages have
   no dependency on D2 rule packages or D2 identifiers; require migrated-system
   replay/checkpoint parity in CI; remove transitional capabilities that expose
@@ -1616,13 +1648,15 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
 
 M21.14 is complete only when all of the following are true:
 
-- [ ] The application can run its generic host without `d2legacy`.
-- [ ] Loading `d2legacy` supplies all Diablo II gameplay systems and policies.
-- [ ] No production Go package implements Diablo-specific combat, skill,
+- [x] The application can run its generic host without `d2legacy`.
+- [ ] Loading `d2legacy` supplies all Diablo II gameplay systems and policies;
+  current implemented policy is isolated there, while the open domain vectors
+  above identify fidelity that has not been implemented yet.
+- [x] No production Go package implements Diablo-specific combat, skill,
   monster, loot, item, quest, progression, economy, or map-generation rules.
-- [ ] Remaining Go gameplay-adjacent code is documented as a reusable mechanism
+- [x] Remaining Go gameplay-adjacent code is documented as a reusable mechanism
   or data/codec boundary.
-- [ ] Authoritative Lua state participates in deterministic checksums, replay,
+- [x] Authoritative Lua state participates in deterministic checksums, replay,
   checkpoint, and restore.
 - [ ] A headless game server runs authoritative `d2legacy` with the exact mod,
   dependency, configuration, and capability identity pinned for the session.
@@ -1630,9 +1664,9 @@ M21.14 is complete only when all of the following are true:
   sessions, and replays are rejected instead of silently changing rules.
 - [ ] Client prediction is optional and untrusted; reconciliation preserves the
   game server's canonical outcome.
-- [ ] Existing gameplay acceptance scenarios pass through the Lua
+- [x] Existing gameplay acceptance scenarios pass through the Lua
   implementation.
-- [ ] CI prevents reintroducing D2-specific policy into the engine.
+- [x] CI prevents reintroducing D2-specific policy into the engine.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits

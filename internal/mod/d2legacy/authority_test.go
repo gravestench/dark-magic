@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -253,6 +254,95 @@ assert(math.abs(velocity:get("y") - expected) < 0.000000001)
 assert(animation:get("mode") == "RN" and animation:get("direction") == 4)
 assert(mode:get("running") == true)
 `)
+}
+
+func TestD2LegacyOwnedUnitLimitsAndAttributionAreAuthoritative(t *testing.T) {
+	fixture := newAuthorityFixture(t, fixtureRecords{}, nil)
+	fixture.run(t, `
+local ecs = require("engine.ecs/v1")
+local function actor(id, kind)
+    return ecs.create({
+        ["d2legacy.world.selectable"]={
+            id=id,kind=kind,label=id,owner="",radius=1,priority=1,
+        },
+    })
+end
+actor("player:hero", "player")
+actor("monster:skeleton-one", "friendly")
+actor("monster:skeleton-two", "friendly")
+`)
+	category := `"category":{"id":"skeleton","group":1,"base_max":1,` +
+		`"replacement":"replace_oldest","warp_with_owner":true}`
+	fixture.submitSystem(t, 1, 1, "system.owned_unit.attach", `{
+"unit_id":"monster:skeleton-one","owner_id":"player:hero",
+"ultimate_owner_id":"player:hero",`+category+`}`)
+	fixture.step(t)
+	fixture.submitSystem(t, 2, 2, "system.owned_unit.attach", `{
+"unit_id":"monster:skeleton-two","owner_id":"player:hero",
+"ultimate_owner_id":"player:hero",`+category+`}`)
+	fixture.step(t)
+	fixture.run(t, `
+local ecs = require("engine.ecs/v1")
+local attribution = require("d2legacy.owned_units.attribution")
+local limits = require("d2legacy.owned_units.limits")
+local active, inactive = 0, 0
+for _, entity in ipairs(ecs.query({all={"d2legacy.owned_unit"}})) do
+    local relation = ecs.get(entity, "d2legacy.owned_unit")
+    if relation:get("active") then active = active + 1 else inactive = inactive + 1 end
+    assert(relation:get("owner_id") == "player:hero")
+    assert(relation:get("warp_with_owner") == true)
+end
+assert(active == 1 and inactive == 1)
+local entities = ecs.query({all={"d2legacy.world.selectable"}})
+local credit = attribution.resolve(entities, "monster:skeleton-two")
+assert(credit.source_id == "monster:skeleton-two")
+assert(credit.immediate_owner_id == "player:hero")
+assert(credit.ultimate_owner_id == "player:hero")
+
+-- The pure policy helper also proves the less common group-conflict and
+-- newest-replacement branches without constructing unrelated world entities.
+local function fake(id) return {id=function() return id end} end
+local candidates = {
+    {entity=fake(7),category="wolf",group=2,active=true,created_tick=1},
+    {entity=fake(8),category="skeleton",group=1,active=true,created_tick=2},
+    {entity=fake(9),category="skeleton",group=1,active=true,created_tick=3},
+}
+local victims = limits.victims(candidates, {
+    id="skeleton",group=2,base_max=2,replacement="replace_newest",
+})
+assert(#victims == 2 and victims[1].entity:id() == 7 and victims[2].entity:id() == 9)
+local ok = pcall(function()
+    limits.victims(candidates, {
+        id="skeleton",group=1,base_max=1,replacement="reject",
+    })
+end)
+assert(not ok)
+`)
+	replay, err := fixture.session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	restored, err := gameecs.RestoreSnapshot(*checkpoint.Snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	store, found := akara.GetDynamicStore(restored.World(), "d2legacy.owned_unit")
+	if !found || store.Len() != 2 {
+		t.Fatalf("restored owned-unit relations = %d, want 2", store.Len())
+	}
+	active := 0
+	for _, entity := range store.Entities() {
+		value, _ := store.Get(entity)
+		isActive, _ := value.Get("active")
+		if isActive == true {
+			active++
+		}
+	}
+	if active != 1 {
+		t.Fatalf("restored active owned units = %d, want 1", active)
+	}
 }
 
 func TestNestedTreasureClassesKeepStrongestQualityModifiers(t *testing.T) {

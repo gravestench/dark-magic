@@ -26,6 +26,8 @@ local item_commands = require("d2legacy.commands.items")
 local interaction_commands = require("d2legacy.commands.interactions")
 local population = require("d2legacy.bootstrap.population")
 local move_player = require("d2legacy.commands.move_player")
+local owned_units = require("d2legacy.commands.owned_units")
+local owned_unit_component = require("d2legacy.components.owned_unit")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -36,6 +38,7 @@ function M.start()
     components.register()
     melee_components.register()
     item_components.register()
+    owned_unit_component.register()
     item_bootstrap.load()
 
     -- Record interpretation happens once during composition. Systems receive a
@@ -58,6 +61,7 @@ function M.start()
     interaction_commands.register()
     population.register()
     move_player.register()
+    owned_units.register()
 end
 
 function M.stop()

@@ -58,9 +58,10 @@ baseline from behavior that has actually been validated.
 
 * `cmd` contains the client, game-session server, and realm composition roots.
   Commands perform wiring and process configuration, not gameplay.
-* `internal/game` currently mixes typed Diablo records and transitional rule
-  implementations with deterministic engine mechanisms. Diablo-specific rules
-  are being moved into `d2legacy`; generic scheduling and data boundaries remain.
+* `internal/game` contains generic deterministic ECS/session/world mechanisms
+  and typed Diablo record boundaries. Production Diablo gameplay policy lives
+  in the first-party `d2legacy` Lua mod, with narrow Go adapters under
+  `internal/mod/d2legacy` where host integration is unavoidable.
 * `internal/content` owns the layered directory/MPQ/ZIP VFS and redistributable
   first-party `d2legacy` Lua mod.
 * `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
@@ -84,11 +85,10 @@ The `engine.ecs/v1` capability additionally lets trusted scripts define validate
 component schemas and deterministic, scope-owned systems over the shared Akara
 world. Systems declare their query and read/write access; structural mutations
 are applied at phase barriers rather than during query iteration.
-The `d2legacy` mod also preserves Riiablo's recovered quest hierarchy and speech-to-string
-relationships as validated data exposed through `engine.quest_catalog/v1`; scripts
-do not need to recreate executable-era Diablo II rules as hard-coded branches.
-Recovered DS1 definition and act-local object mappings are available separately
-through `engine.map_catalog/v1`.
+The `d2legacy` mod also preserves Riiablo's recovered quest hierarchy,
+speech-to-string relationships, DS1 definitions, and act-local object mappings.
+Go validates these immutable recovered catalogs; narrow `d2legacy` adapters
+expose their facts to Lua, which alone decides their gameplay meaning.
 
 ### Product binaries
 
@@ -126,9 +126,9 @@ control independent scrollback.
 Lua `print(...)`, `printregs()`/`_printregs()`, and the bounded structured
 application-log tail appear in their respective modal views; normal process
 log output remains available outside the game window as well. Every Lua view
-opens with a target- and policy-specific message of the day. The `dm` root
-(`darkmagic` is an alias) provides discoverable, policy-filtered capability
-access: use `d2legacy.help()` and `d2legacy.capabilities()`, friendly names such as
+opens with a target- and policy-specific message of the day. The `d2legacy`
+root provides discoverable, policy-filtered capability access: use
+`d2legacy.help()` and `d2legacy.capabilities()`, friendly names such as
 `d2legacy.app`, or `d2legacy.modules["engine.app/v1"]` for an exact versioned module ID.
 Pass a module, command, or path to help for progressively more detail—for
 example `d2legacy.help(d2legacy.audio)`, `d2legacy.help(engine.audio.play)`, or
