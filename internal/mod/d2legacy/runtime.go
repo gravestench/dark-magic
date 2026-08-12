@@ -53,7 +53,7 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if source == nil || records == nil || engine == nil || session == nil {
 		return nil, fmt.Errorf("d2legacy: content, records, engine, and session are required")
 	}
-	identity, err := Identity(source)
+	identity, err := Identity(source, config.InitialData)
 	if err != nil {
 		return nil, err
 	}

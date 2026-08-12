@@ -142,7 +142,11 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("register d2legacy random streams", err)
 	}
-	identity, err := d2legacymod.Identity(app.options.Content)
+	initialData := map[string]any{
+		"d2legacy.development_items": map[string]any{"enabled": app.options.FixtureCharacters > 0},
+		"d2legacy.interactions":      app.interactionBootstrapData(),
+	}
+	identity, err := d2legacymod.Identity(app.options.Content, initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}
@@ -155,10 +159,7 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create local command intent source", err)
 	}
 	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
-		app.authoritativeState, app.authoritativeRandom, map[string]any{
-			"d2legacy.development_items": map[string]any{"enabled": app.options.FixtureCharacters > 0},
-			"d2legacy.interactions":      app.interactionBootstrapData(),
-		}); err != nil {
+		app.authoritativeState, app.authoritativeRandom, initialData); err != nil {
 		return wrap("configure canonical d2legacy runtime", err)
 	}
 	if err := app.registerOfflineCommands(); err != nil {

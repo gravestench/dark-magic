@@ -6,6 +6,7 @@ package d2legacy
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"io/fs"
 	"sort"
 	"strings"
@@ -15,7 +16,7 @@ import (
 
 // Identity pins the exact authoritative Lua bytes used by one session. Sorted
 // file order makes the result independent of filesystem traversal order.
-func Identity(source fs.FS) (simulation.RuntimeIdentity, error) {
+func Identity(source fs.FS, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
 	var names []string
 	err := fs.WalkDir(source, "lua/d2legacy", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -41,10 +42,19 @@ func Identity(source fs.FS) (simulation.RuntimeIdentity, error) {
 		_, _ = hash.Write(data)
 	}
 	digest := hex.EncodeToString(hash.Sum(nil))
+	configured := map[string]any{}
+	if len(configuration) > 0 && configuration[0] != nil {
+		configured = configuration[0]
+	}
+	encodedConfiguration, err := json.Marshal(configured)
+	if err != nil {
+		return simulation.RuntimeIdentity{}, err
+	}
+	configurationDigest := sha256.Sum256(encodedConfiguration)
 	return simulation.RuntimeIdentity{
 		ModID: "d2legacy", ContractVersion: "v1",
 		PackageHash: digest, AuthoritativeHash: digest,
-		ConfigurationHash: "d2legacy/default/v1",
+		ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
 		CapabilityVersions: map[string]string{
 			"engine.authority_command": "v1", "engine.authority_random": "v1",
 			"engine.authority_state": "v1", "engine.ecs": "v1", "engine.records": "v1",
