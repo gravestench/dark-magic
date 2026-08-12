@@ -1889,6 +1889,12 @@ separate profiling PRs unless a measured gameplay budget requires it sooner.
   grouping increased traversal/update work and was rejected; Raylib's existing
   compatible draw batching remains the faster path for the current workload.
 
+Deferred renderer scaling work is recorded in `docs/PERFORMANCE.md`: padded
+atlases or texture arrays, compatible instance batches, static-world buffers,
+aggregate-bound spatial culling, indexed sprite storage, and acknowledged video
+buffer pooling. Reopen those items when dense gameplay crosses the documented
+native-render, draw-submission, residency, upload, or retained-traversal triggers.
+
 ## M27: Diablo UI styling fidelity
 
 - [x] Preserve palette-authored bitmap-font shading, DC6 frame offsets, and a

@@ -61,3 +61,38 @@ make profile-check
 
 Raw profiles remain ignored under `profiles/acceptance`; the budget file and
 this matched summary are the reviewable repository artifacts.
+
+## Deferred renderer opportunities
+
+Revisit the following only after representative dense gameplay makes native
+rendering or draw submission a measured bottleneck. The current Blood Moor
+native-render stage is about 0.38 ms, so these would add complexity without a
+material frame-time benefit today.
+
+- Pack stable DT1, DC6, or DCC surfaces into padded texture atlases or texture
+  arrays when profiles show texture switching or draw submission dominating.
+  Preserve nearest filtering, transparent borders, semantic cache identity,
+  palette behavior, and independent resource lifetimes.
+- Instance repeated world tiles, missiles, particles, ground items, or creature
+  layers when dense scenes produce thousands of compatible visible placements.
+  Batch keys must include texture/atlas, palette, shader, blend mode, and clip.
+- Separate static world geometry from dynamic entities so floors and unchanged
+  walls can use chunk meshes or persistent instance buffers without delaying
+  moving creatures, missiles, overlays, or animated objects.
+- Add aggregate bounds and a quadtree or spatial render hierarchy when retained
+  offscreen regions make traversal scale with explored world size. A simple
+  spatial-parent experiment regressed the current workload, so a future design
+  must update bounds incrementally and demonstrate fewer visited nodes.
+- Consider indexed GPU sprite storage and palette lookup for large creature or
+  effect populations only when RGBA residency or upload bandwidth exceeds its
+  checked budget. Preserve deterministic decoded output and golden captures.
+- Revisit decode-buffer pooling and explicit renderer acknowledgements if long
+  cinematics make frame allocation a live-heap or GC bottleneck. Buffers cannot
+  be safely reused until the owner thread has consumed the queued upload.
+
+Suggested triggers for reopening this work are sustained native rendering above
+2 ms p95, draw submission among the top CPU-profile entries, frame time growing
+with offscreen retained nodes, repeated upload-budget failures, or a supported
+dense combat fixture missing its frame-time budget. Every accepted redesign
+should include matched dense-world and combat captures plus a simpler scene to
+catch regressions caused by extra hierarchy or batching overhead.
