@@ -6,7 +6,12 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 
 ## P0: architecture-shaping probes
 
-- Pin exact chance-to-hit arithmetic, clamps, and integer rounding for the target legacy runtime.
+- [x] Pin final 1.10f chance-to-hit rating/level arithmetic, 5/95 clamps,
+  modulo comparison, negative-rating normalization, and integer truncation
+  order from `SUNITDMG_IsHitSuccessful`; executable vectors live in
+  `internal/game/combat/hit_chance_test.go`.
+- [ ] Pin and project every upstream attack-rating and defense contribution
+  before replacing the production synthetic hit policy.
 - Pin one complete physical-damage transaction including fixed-point scale, min/max roll boundaries, resistance/reduction, exact lethal threshold, and RNG before/after.
 - Enumerate the `Skills.txt` server start/do behavior IDs present in mounted LoD data and identify which shared behavior families are required for an initial playable Act I slice.
 - Build a headless state-instance experiment proving refresh/expiration semantics for at least stun, chill, poison, and one aura/curse source.
