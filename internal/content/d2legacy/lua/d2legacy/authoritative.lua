@@ -12,6 +12,8 @@ local fire_bolt_system = require("d2legacy.systems.fire_bolt")
 local projectile_system = require("d2legacy.systems.projectile")
 local melee_components = require("d2legacy.components.melee")
 local melee_system = require("d2legacy.systems.melee")
+local monster_ai = require("d2legacy.systems.monster_ai")
+local player_melee = require("d2legacy.systems.player_melee")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -30,6 +32,8 @@ function M.start()
     fire_bolt_system.register(M.fire_bolt)
     projectile_system.register()
     melee_system.register()
+    monster_ai.register()
+    player_melee.register()
 end
 
 function M.stop()

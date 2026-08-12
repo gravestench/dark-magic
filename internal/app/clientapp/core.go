@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	assetdecode "github.com/gravestench/dark-magic/internal/assets/decode"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
@@ -22,7 +21,6 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
-	gameloot "github.com/gravestench/dark-magic/internal/game/loot"
 	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -176,30 +174,8 @@ func (app *application) registerOfflineCommands() error {
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
 	}
-	animationData, err := assetdecode.AnimationData(app.options.Content, "data/global/AnimData.d2")
-	if err != nil {
-		return wrap("load authoritative player animation timing", err)
-	}
-	attackTimings := newCombatTimingAdapter(animationData)
-	if err := gamecombat.RegisterPlayerBasicAttack(app.entitySimulation, 0, bloodMoor, attackTimings); err != nil {
-		return wrap("register player basic attack", err)
-	}
-	if err := gamemonster.RegisterAI(app.entitySimulation, bloodMoor); err != nil {
-		return wrap("register monster AI", err)
-	}
 	if err := gamemonster.RegisterMovement(app.entitySimulation, bloodMoor); err != nil {
 		return wrap("register monster movement", err)
-	}
-	lootCatalog, err := gameloot.CatalogFromRecords(app.gameData)
-	if err != nil {
-		return wrap("build monster death loot catalog", err)
-	}
-	worldSeed := uint64(0)
-	if zone := app.gameWorldZones[2]; zone != nil {
-		worldSeed = zone.Request().Seed
-	}
-	if err := gamemonster.RegisterDeath(app.entitySimulation, gamemonster.DeathPolicy{WorldSeed: worldSeed, Loot: lootCatalog}); err != nil {
-		return wrap("register monster death transaction", err)
 	}
 	for name, register := range map[string]func(*gamesession.Session) error{
 		"movement commands": gamesession.RegisterMovement,

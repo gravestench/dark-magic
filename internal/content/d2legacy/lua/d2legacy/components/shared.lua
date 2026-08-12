@@ -26,6 +26,9 @@ function M.register()
         {name="left",type="i64"},{name="right",type="i64"},
     })
     component("d2legacy.world.position", {{name="x",type="f64"},{name="y",type="f64"}})
+    component("d2legacy.world.velocity", {{name="x",type="f64"},{name="y",type="f64"}})
+    component("d2legacy.world.player_control", {{name="player",type="string"}})
+    component("d2legacy.player.animation", {{name="direction",type="i64"},{name="mode",type="string"}})
     component("d2legacy.world.location", {{name="act",type="i64"},{name="level_id",type="i64"}})
     component("d2legacy.world.collider", {{name="radius",type="f64"}})
     component("d2legacy.world.selectable", {
@@ -37,6 +40,15 @@ function M.register()
         {name="defense",type="i64"},{name="attack_rating",type="i64"},
         {name="physical_min",type="i64"},{name="physical_max",type="i64"},
         {name="experience",type="i64"},
+    })
+    component("d2legacy.monster.ai", {
+        {name="behavior",type="string"},{name="state",type="string"},
+        {name="target_id",type="string"},{name="next_think_tick",type="i64"},
+        {name="think_interval",type="i64"},{name="aggro_radius",type="f64"},
+        {name="attack_range",type="f64"},{name="speed",type="f64"},
+    })
+    component("d2legacy.player.progress", {
+        {name="level",type="i64"},{name="experience",type="i64"},
     })
 end
 
