@@ -14,7 +14,6 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	gamecombat "github.com/gravestench/dark-magic/internal/game/combat"
 	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/recovered"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
@@ -326,7 +325,7 @@ func (app *application) developmentItems() ([]gameitem.Item, map[string]gameitem
 	placements := make(map[string]gameitem.Placement)
 	if weapon, found := snapshot.WeaponsByCode["ssd"]; found {
 		weaponPresentation := gameitem.Presentation{InventoryDC6: itemAsset(weapon.InvFile), WorldDC6: itemAsset(weapon.FlippyFile), WorldAnimated: true, Composite: compositeRecipe(weapon.Component, weapon.AlternateGfx), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
-		weaponMelee := gameitem.Melee{Range: float64(1 + weapon.RangeAdder), PhysicalMinRaw: gamecombat.MustWhole(int64(weapon.MinDam)).Raw(), PhysicalMaxRaw: gamecombat.MustWhole(int64(weapon.MaxDam)).Raw(), WeaponClass: strings.ToUpper(weapon.WeaponClass)}
+		weaponMelee := gameitem.Melee{Range: float64(1 + weapon.RangeAdder), PhysicalMinRaw: int64(weapon.MinDam) * 256, PhysicalMaxRaw: int64(weapon.MaxDam) * 256, WeaponClass: strings.ToUpper(weapon.WeaponClass)}
 		items = append(items, gameitem.Item{ID: "fixture-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
 		placements["fixture-short-sword"] = gameitem.Placement{Container: gameitem.ContainerInventory, X: 0, Y: 0}
 		items = append(items, gameitem.Item{ID: "fixture-vendor-short-sword", Code: weapon.Code, Width: weapon.InvWidth, Height: weapon.InvHeight, BaseCost: int64(weapon.Cost), BodySlots: []string{"rarm", "larm"}, Presentation: weaponPresentation, Melee: weaponMelee})
