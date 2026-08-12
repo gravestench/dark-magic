@@ -52,6 +52,21 @@ local function append_service(item, service_id)
     item:set("applied_services", table.concat(applied, ","))
 end
 
+local function destroy_item(item_entity)
+    -- Item modifiers are immutable children of the item identity. Remove them
+    -- first so a consumed service material cannot leave a dangling entity
+    -- reference that later equipment/checkpoint code might inspect.
+    for _, entity in ipairs(ecs.query({
+        all = { "d2legacy.item.stat_modifier" },
+    })) do
+        local modifier = ecs.get(entity, "d2legacy.item.stat_modifier")
+        if modifier:get("item"):id() == item_entity:id() then
+            ecs.destroy(entity)
+        end
+    end
+    ecs.destroy(item_entity)
+end
+
 function M.validate(command)
     local service = command.payload and command.payload.service
     assert(type(service) == "string" and service ~= "",
@@ -80,7 +95,7 @@ function M.apply(command)
 
     append_service(target, rule:get("id"))
     for _, material in ipairs(materials) do
-        ecs.destroy(material)
+        destroy_item(material)
     end
     layout:set(
         "carried_gold",
