@@ -1572,16 +1572,18 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   targetless, and non-damage state-skill vectors remain before this broader
   fidelity item can be checked.
 
-- [ ] **M21.14.7 — monsters, AI, spawning, and death migration.** Move D2
+- [x] **M21.14.7 — monsters, AI, spawning, and death migration.** Move D2
   monster definition interpretation, encounter population, AI decisions,
   spawn/death/corpse/credit policy, and difficulty variants to `d2legacy`.
   Acceptance: a generated-zone population and full hostile lifecycle are
   headless, Lua-owned, checkpointable, and independent of presentation
   residency.
 
-  Ownership cutover is complete and Lua owns current population, spawn, AI,
-  attack, death, corpse, credit, XP, and loot behavior. A single restored
-  generated-zone hostile-lifecycle acceptance vector remains.
+  Complete: Lua owns current population, spawn, AI, attack, death, corpse,
+  credit, XP, and loot behavior. A generated Blood Moor population fixture now
+  restores a live acquired hostile into a reconstructed authoritative runtime,
+  completes skill damage and atomic death, and reproduces corpse, XP credit,
+  loot/quest/presentation events, untargetability, and the final checksum.
 
 - [ ] **M21.14.8 — loot and item generation migration.** Move treasure classes,
   quality, affixes, properties, item rolls, drop policy, and D2 item identity
