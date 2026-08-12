@@ -489,7 +489,8 @@ func TestFireBoltCheckpointRestoreParity(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	castPayload, _ := json.Marshal(map[string]any{"side": "left", "target_x": 8, "target_y": 0, "target_id": "monster:fallen-firebolt"})
+	// No unit target is supplied: this is the ground-targeted missile vector.
+	castPayload, _ := json.Marshal(map[string]any{"side": "left", "target_x": 8, "target_y": 0})
 	if err := session.Submit(simulation.Command{Tick: 2, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "player.use_skill", Payload: castPayload}); err != nil {
 		t.Fatal(err)
 	}
