@@ -243,6 +243,36 @@ func TestGameplayMechanismsDoNotGainPolicyDependencies(t *testing.T) {
 	}
 }
 
+// TestGenericEngineDoesNotImportFirstPartyMod is the hard architectural wall:
+// engine packages may expose generic capabilities used by d2legacy, but the
+// dependency arrow can never point back from the engine into the bundled mod.
+func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
+	root := repositoryRoot(t)
+	const projectPrefix = "github.com/gravestench/dark-magic/"
+	for _, relativeRoot := range []string{"internal/game", "internal/runtime/lua"} {
+		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
+			if err != nil {
+				return err
+			}
+			for _, imported := range file.Imports {
+				name, err := strconv.Unquote(imported.Path.Value)
+				if err == nil && strings.HasPrefix(name, projectPrefix+"internal/mod/d2legacy") {
+					relative, _ := filepath.Rel(root, path)
+					t.Errorf("%s imports first-party mod package %s", filepath.ToSlash(relative), name)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 	t.Helper()
 	file, err := os.Open(path)

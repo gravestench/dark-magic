@@ -19,7 +19,7 @@ func PlayerControlModule(controller PlayerIntentController) Module {
 	return Module{Name: "engine.player/v1", Help: documentedModule("Request local-player actions through the authoritative fixed-tick command source.", map[string]CommandHelp{
 		"request_running":  commandHelp("engine.player.request_running(running)", "Request walk or run mode for the next admitted movement command."),
 		"request_move":     commandHelp("engine.player.request_move(x, y)", "Request movement toward an authoritative world-subtile target."),
-		"movement_pending": commandHelp("d2legacy.player.movement_pending()", "Report whether a pointer path target remains active."),
+		"movement_pending": commandHelp("engine.player.movement_pending()", "Report whether a pointer path target remains active."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"request_running": func(state *lua.LState) int {
