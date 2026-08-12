@@ -49,8 +49,11 @@ The active dependency queue, reassessed after that gate, is:
    spatial and combat facts. Grow that production-backed instrument with each
    subsequent M21 cast, effect, equipment, and combat-fidelity slice.
 3. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
-   evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
-   resistance, death/corpse consequences, and difficulty rules.
+   evidence-backed slices. The exact 1.10f integer rating/level resolver, 5/95
+   clamps, negative-rating normalization, and strict modulo roll boundary are
+   now executable; upstream player attack-rating/stat projection must land
+   before it replaces the live policy. Avoidance/block, mitigation, resistance,
+   death/corpse consequences, and difficulty rules follow separately.
 4. **M19/M21 item-stat activation:** project equipped weapons, armor, charms,
    sockets, sets, runewords, charges, auras, and procs into the shared stat-source
    authority while preserving container and source identity.
@@ -1431,6 +1434,11 @@ data owners; they do not introduce parallel gameplay authorities.
   pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.
+  The recovered 1.10f final hit resolver is now pinned separately with
+  executable integer edge vectors; production replacement waits only on the
+  upstream class/Dexterity, equipment, skill, and defense stat projection so
+  the verified resolver receives real authoritative inputs rather than new
+  placeholders.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits

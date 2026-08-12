@@ -212,14 +212,32 @@ Do not have Lua scan ECS after the fact to infer that a hit occurred.
 
 ## Hit chance, block, dodge, and avoidance
 
-D2MOO clearly routes attack resolution through `SUnitDmg`/combat helpers, but this research pass has not yet promoted the exact chance-to-hit arithmetic to a verified vector.
+D2MOO's pinned 1.10f `SUNITDMG_IsHitSuccessful` now provides the exact final
+rating/level arithmetic and roll boundary. Dark Magic preserves it in
+`combat.LegacyHitChance` and executable integer vectors:
+
+```text
+ratingFactor = 100 * attackRating / (attackRating + defense)
+chance = 2 * attackerLevel * ratingFactor / (attackerLevel + defenderLevel)
+chance = clamp(chance, 5, 95)
+hit = random % 100 < chance
+```
+
+These are ordered integer operations: rating division truncates before the
+level factor. Negative defense transfers its magnitude into attack rating;
+negative attack rating transfers its magnitude into defense, then both are
+floored at zero. When the combined divisor is zero, the recovered function
+retains a rating factor of 100.
+
+This verifies the final resolver, not every upstream stat contribution.
+Before replacing the production policy, project and test:
 
 Before implementing a compatibility claim, capture:
 
 - attacker attack rating;
 - defender defense;
 - attacker and defender levels;
-- final hit chance and clamps;
+- class/Dexterity base attack rating and flat/percent modifiers;
 - block chance and animation/state prerequisites;
 - Amazon dodge/avoid/evade and similar skill-specific avoidance ordering;
 - effects that ignore target defense or always hit;
