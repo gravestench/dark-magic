@@ -70,3 +70,41 @@ func TestSettingsModuleAppliesPersistentRenderDiagnosticsPreferences(t *testing.
 		t.Fatalf("persisted values = %#v", values)
 	}
 }
+
+func TestSettingsModulePersistsCameraFollowPreferences(t *testing.T) {
+	runtime := New()
+	settings, err := preferences.New(t.TempDir() + "/preferences.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mixer audio.Mixer
+	if err := runtime.RegisterModule(SettingsModule(settings, &mixer)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	script := `local s=require("engine.settings/v1")
+s.set("camera_follow_strategy","back_out")
+s.set("camera_follow_duration",0.25)
+s.set("camera_follow_param_1",2.25)
+s.set("camera_follow_param_2",3)
+s.set("camera_follow_param_3",4)
+s.save()
+assert(s.get("camera_follow_strategy")=="back_out")
+assert(s.get("camera_follow_duration")==0.25 and s.get("camera_follow_param_1")==2.25)
+assert(s.get("camera_follow_param_2")==3 and s.get("camera_follow_param_3")==4)`
+	if err := runtime.Execute(t.Context(), fstest.MapFS{"script.lua": {Data: []byte(script)}}, "script.lua"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := preferences.New(settings.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := reloaded.Values()
+	if values.CameraFollowStrategy != "back_out" || values.CameraFollowDuration != .25 ||
+		values.CameraFollowParam1 != 2.25 || values.CameraFollowParam2 != 3 || values.CameraFollowParam3 != 4 {
+		t.Fatalf("camera preferences = %#v", values)
+	}
+}

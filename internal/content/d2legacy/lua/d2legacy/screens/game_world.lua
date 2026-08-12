@@ -531,6 +531,7 @@ return {
 
         -- ECS positions are semantic SUBTILES until this exact presentation boundary.
         local hero_x, hero_y = self.gameplay_world.position(self.gameplay.hero)
+        self.gameplay_world.refresh_camera_settings(self.gameplay.camera)
         local camera_x, camera_y = self.gameplay_world.position(self.gameplay.camera)
 		if input.pressed("debug_collision") then
 			self.collision_visible = not self.collision_visible

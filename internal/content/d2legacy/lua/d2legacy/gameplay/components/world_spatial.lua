@@ -55,6 +55,16 @@ function M.register()
         fields = {
             -- Entity references remain generation-checked ECS handles.
             { name = "target", type = "entity" },
+            { name = "strategy", type = "string" },
+            { name = "duration", type = "f64" },
+            { name = "param_1", type = "f64" },
+            { name = "param_2", type = "f64" },
+            { name = "param_3", type = "f64" },
+            { name = "origin_x", type = "f64" },
+            { name = "origin_y", type = "f64" },
+            { name = "destination_x", type = "f64" },
+            { name = "destination_y", type = "f64" },
+            { name = "elapsed", type = "f64" },
         },
     })
 end

@@ -54,6 +54,16 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 					state.Push(lua.LNumber(values.TextureUploadBudgetMB))
 				case "texture_cache_budget_mb":
 					state.Push(lua.LNumber(values.TextureCacheBudgetMB))
+				case "camera_follow_strategy":
+					state.Push(lua.LString(values.CameraFollowStrategy))
+				case "camera_follow_duration":
+					state.Push(lua.LNumber(values.CameraFollowDuration))
+				case "camera_follow_param_1":
+					state.Push(lua.LNumber(values.CameraFollowParam1))
+				case "camera_follow_param_2":
+					state.Push(lua.LNumber(values.CameraFollowParam2))
+				case "camera_follow_param_3":
+					state.Push(lua.LNumber(values.CameraFollowParam3))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}
@@ -72,6 +82,16 @@ func SettingsModule(settings *preferences.Settings, mixer *audio.Mixer, renderTa
 					values.TextureUploadBudgetMB = float64(state.CheckNumber(2))
 				case "texture_cache_budget_mb":
 					values.TextureCacheBudgetMB = float64(state.CheckNumber(2))
+				case "camera_follow_strategy":
+					values.CameraFollowStrategy = state.CheckString(2)
+				case "camera_follow_duration":
+					values.CameraFollowDuration = float64(state.CheckNumber(2))
+				case "camera_follow_param_1":
+					values.CameraFollowParam1 = float64(state.CheckNumber(2))
+				case "camera_follow_param_2":
+					values.CameraFollowParam2 = float64(state.CheckNumber(2))
+				case "camera_follow_param_3":
+					values.CameraFollowParam3 = float64(state.CheckNumber(2))
 				default:
 					state.RaiseError("unknown game preference %q", name)
 				}

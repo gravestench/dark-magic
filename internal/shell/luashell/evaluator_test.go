@@ -176,3 +176,35 @@ func TestEvaluatorExposesDiscoverableD2LegacyRoot(t *testing.T) {
 		t.Fatalf("command completion = %#v, %v", candidates, err)
 	}
 }
+
+func TestEvaluatorExposesEngineCapabilityWithoutVersionedRequire(t *testing.T) {
+	runtime := modruntime.New()
+	if err := runtime.RegisterModule(modruntime.Module{Name: "engine.settings/v1", Help: modruntime.ModuleHelp{
+		Summary: "Client settings.",
+	}, Loader: func(state *glua.LState) int {
+		module := state.NewTable()
+		module.RawSetString("name", glua.LString("settings"))
+		state.Push(module)
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	evaluator, err := NewForPolicy(runtime, shell.Policy{Name: "developer", Mutable: true,
+		Capabilities: []string{"engine.settings/v1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer evaluator.Close()
+	result, err := evaluator.Evaluate(t.Context(), `engine.settings.name`)
+	if err != nil || result.Text != `"settings"` {
+		t.Fatalf("engine.settings = %#v, %v", result, err)
+	}
+	candidates, err := evaluator.Complete(t.Context(), "engine.set")
+	if err != nil || len(candidates) != 1 || candidates[0].Value != "engine.settings" {
+		t.Fatalf("settings completion = %#v, %v", candidates, err)
+	}
+}
