@@ -47,37 +47,63 @@ entry point in `internal/mod/d2legacy/lua_suite_test.go` discovers every suite
 from the embedded production mod and exposes each Lua case as a named Go
 subtest.
 
-A suite returns a table with a `tests` map. Every test is an ordered array of
-actions:
+A suite uses `d2legacy.tests/v1`. New tests should use `test.case`; the builder
+makes production phases explicit without exposing the Go bridge:
 
 ```lua
-return {
-    tests = {
-        moves_the_player = {
-            {submit = {
-                tick = 1, sequence = 1, player = "alice",
-                kind = "player.move", payload = [[{"x":1,"y":0}]],
-            }},
-            {step = 1},
-            {run = function()
-                local ecs = require("engine.ecs/v1")
-                -- Assertions execute inside the real production Lua authority.
-                assert(#ecs.query({all={"d2legacy.world.velocity"}}) == 1)
-            end},
-        },
+local test = require("d2legacy.tests/v1")
+local fixtures = require("d2legacy.tests.support.fixtures")
+
+return test.suite({
+    profile = "authority",
+    tier = "fast",
+    cases = {
+        test.case("moves the player", function(t)
+            t:system_command("system.player.enter", fixtures.amazon_entry, { tick = 1, sequence = 1 })
+            t:step()
+            t:command("player.move", { x = 1, y = 0 }, {
+                tick = 2, sequence = 1, player = "alice",
+            })
+            t:step()
+            t:check(function()
+                local entity = test.only_entity_with("d2legacy.world.velocity")
+                local velocity = require("engine.ecs/v1").get(entity, "d2legacy.world.velocity")
+                test.expect(velocity:get("x"), "horizontal velocity"):equals(15)
+            end)
+        end),
     },
-}
+})
 ```
 
-Supported actions are `run`, `step`, `checkpoint_restore`, `submit`, and
-`submit_system`. `checkpoint_restore` takes the latest checkpoint, tears down
+Test code follows the same living-documentation standard as production Lua.
+Use named local helpers for fixture construction and multi-part assertions,
+keep each suite focused on its sibling module or one cross-domain scenario,
+share repeated semantic fixtures through `d2legacy.tests.support`, and keep
+lines at or below 120 columns. Do not compress suites into generated one-line
+tables merely because Lua accepts them.
+
+The builder supports `arrange`/`run`, `check`, `step`, `update`, `command`,
+`system_command`, `restore_checkpoint`, and `expect_checkpoint_parity`.
+Commands and suite `initial_data` and `records` are ordinary Lua tables; the
+host owns the JSON boundary. `restore_checkpoint` takes the latest checkpoint, tears down
 the authority, reconstructs the ECS and every deterministic participant, and
 continues the remaining Lua-authored phases in the replacement runtime. A suite
-may also provide `seed`, `initial_data_json`, and `records_json`. The JSON values
-are decoded as immutable host inputs before each case boots. Every case gets a
+may also provide `seed`, `initial_data`, and `records`. Large bounded
+offline vectors may set `disable_execution_budget = true`; ordinary gameplay
+tests must retain the production deadline. Host inputs are copied before each case boots. Every case gets a
 fresh ECS engine, session, deterministic streams, state store, component tree,
 and Lua VM through the same `StartWithConfig` composition root used by the
 headless server.
+
+Profiles declare the production boundary under test: `authority`, `policy`,
+`presentation`, `client`, or `real_assets`. The default is `authority`. Tiers
+are `fast`, `integration`, `real_assets`, and `stress`; normal `go test` runs
+`fast,integration`. Select tiers with `DARK_MAGIC_LUA_TEST_TIERS`, and repeat
+every isolated case with `DARK_MAGIC_LUA_TEST_REPEAT` to expose hidden state
+dependencies. `DARK_MAGIC_LUA_TEST_ORDER_SEED` shuffles case discovery with a
+reproducible seed. Use `test.array()` when structured input needs an empty JSON
+array; an unmarked empty Lua table is an object. Use `test.property` for deterministic input matrices and
+`test.expect` for labeled, path-aware failures.
 
 The phased contract is intentional. Calling `session.Step` from a Lua callback
 would re-enter the serialized runtime while its owner goroutine was already
@@ -96,10 +122,20 @@ Select one suite or case with the normal Go test path, for example:
 go test ./internal/mod/d2legacy -run 'TestLuaSuites/d2legacy/policy/mitigation'
 ```
 
+CI can repeat each case or opt into expensive tiers:
+
+```text
+DARK_MAGIC_LUA_TEST_REPEAT=3 go test ./internal/mod/d2legacy -run TestLuaSuites
+DARK_MAGIC_LUA_TEST_TIERS=fast,integration,real_assets go test ./internal/mod/d2legacy
+```
+
 Go remains responsible for runtime construction, checkpoint serialization,
 reconstruction, native adapters, and resource lifetime. Presentation and
-composition integration tests remain in `internal/mod/d2legacy` or
-`internal/acceptance`; generic runtime tests under `internal/runtime/lua`
+composition integration drivers remain in `internal/mod/d2legacy` or
+`internal/acceptance`, but their Lua programs live under `tests/integration/`
+and execute with `Runtime.Execute` or `Runtime.ExecuteScoped`. This keeps native
+fixtures and assertions at their appropriate boundary without embedding Lua in
+Go strings. Generic runtime tests under `internal/runtime/lua`
 deliberately boot synthetic mods instead. The checked coverage ledger at
 `docs/architecture/d2legacy-test-coverage.tsv` records both Lua policy evidence
 and the Go integration evidence that must remain at the host boundary.

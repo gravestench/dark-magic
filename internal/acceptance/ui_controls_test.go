@@ -2,8 +2,8 @@ package acceptance
 
 import (
 	"context"
+	"io/fs"
 	"testing"
-	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/inputstate"
@@ -24,28 +24,9 @@ func TestLuaControlsPointerKeyboardFocusAndAccessibility(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	scripts := fstest.MapFS{
-		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui = require("d2legacy.ui.controls")
-manager = ui.new()
-activated = ""
-visual_state = ""
-manager:add({id="one", label="First", x=0, y=0, width=20, height=20, on_activate=function(c) activated=c.id end})
-manager:add({id="two", label="Second", x=30, y=0, width=20, height=20,
-    on_activate=function(c) activated=c.id end,
-    on_state=function(_, state) visual_state=state end})
-`)},
-		"update.lua": &fstest.MapFile{Data: []byte(`manager:update()`)},
-		"assert_down.lua": &fstest.MapFile{Data: []byte(`
-local a=manager:accessibility()
-assert(activated=="" and visual_state=="pressed" and a[2].focused and a[2].role=="button")
-`)},
-		"assert_up.lua": &fstest.MapFile{Data: []byte(`
-local a=manager:accessibility()
-assert(activated=="two" and visual_state=="hover" and a[2].focused)
-`)},
-		"clear.lua":            &fstest.MapFile{Data: []byte(`activated=""`)},
-		"assert_cancelled.lua": &fstest.MapFile{Data: []byte(`assert(activated=="")`)},
+	scripts, err := fs.Sub(content.D2Legacy(), "lua/d2legacy/tests/integration/ui_controls_pointer")
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
 		t.Fatal(err)
@@ -100,21 +81,9 @@ func TestLuaControlsFormFieldsAndFocusScopes(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(ctx)
-	scripts := fstest.MapFS{
-		"setup.lua": &fstest.MapFile{Data: []byte(`
-local ui=require("d2legacy.ui.controls")
-manager=ui.new()
-manager:add({id="outside",x=0,y=0,width=10,height=10})
-manager:add_checkbox({id="check",scope="form",x=20,y=0,width=10,height=10})
-manager:add_text_field({id="name",scope="form",x=40,y=0,width=10,height=10,max_length=3})
-manager:add_scrollbar({id="volume",scope="form",x=60,y=0,width=20,height=10,min=0,max=10,value=5,step=2})
-manager:set_scope("form")
-`)},
-		"update.lua": &fstest.MapFile{Data: []byte(`manager:update()`)},
-		"assert.lua": &fstest.MapFile{Data: []byte(`
-local a=manager:accessibility()
-assert(a[1].focused==false and a[2].checked==true and a[3].value=="é" and a[4].value==7 and a[4].focused==true)
-`)},
+	scripts, err := fs.Sub(content.D2Legacy(), "lua/d2legacy/tests/integration/ui_controls_form")
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := runtime.Execute(ctx, scripts, "setup.lua"); err != nil {
 		t.Fatal(err)

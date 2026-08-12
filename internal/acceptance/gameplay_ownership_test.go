@@ -101,6 +101,111 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 	}
 }
 
+// TestD2LegacyLuaTestsStayReadable protects the bundled mod's role as living
+// documentation. Syntax and behavior are covered by the suite runner; this
+// gate catches the compact generated style that makes otherwise-correct Lua
+// difficult for mod authors to learn from or maintain.
+func TestD2LegacyLuaTestsStayReadable(t *testing.T) {
+	root := repositoryRoot(t)
+	luaRoot := filepath.Join(root, "internal", "content", "d2legacy", "lua", "d2legacy")
+	err := filepath.WalkDir(luaRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		relative, _ := filepath.Rel(luaRoot, path)
+		relative = filepath.ToSlash(relative)
+		isSuite := strings.HasSuffix(path, "_test.lua")
+		isSupport := strings.HasPrefix(relative, "tests/") && strings.HasSuffix(path, ".lua")
+		if !isSuite && !isSupport {
+			return nil
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		line := 0
+		for scanner.Scan() {
+			line++
+			text := scanner.Text()
+			if strings.ContainsRune(text, '\t') {
+				t.Errorf("%s:%d uses a tab; d2legacy Lua uses four spaces", relative, line)
+			}
+			if len(text) > 120 {
+				t.Errorf("%s:%d is %d columns; split fixtures and expressions for readability", relative, line, len(text))
+			}
+		}
+		return scanner.Err()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestD2LegacyLuaTestArchitecture keeps test ownership from drifting back into
+// Go strings or private one-off Lua runners. Suites use the versioned authoring
+// API and structured data so the host remains a generic production launcher.
+func TestD2LegacyLuaTestArchitecture(t *testing.T) {
+	root := repositoryRoot(t)
+	luaRoot := filepath.Join(root, "internal", "content", "d2legacy", "lua", "d2legacy")
+	err := filepath.WalkDir(luaRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".lua") {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		text := string(data)
+		relative, _ := filepath.Rel(luaRoot, path)
+		relative = filepath.ToSlash(relative)
+		if strings.HasSuffix(path, "_test.lua") {
+			for _, required := range []string{
+				`require("d2legacy.tests/v1")`, "return test.suite(", "profile = ", "tier = ",
+			} {
+				if !strings.Contains(text, required) {
+					t.Errorf("%s bypasses the versioned Lua test API; missing %q", relative, required)
+				}
+			}
+			for _, forbidden := range []string{"initial_data_json", "records_json", "payload = [["} {
+				if strings.Contains(text, forbidden) {
+					t.Errorf("%s uses %q; use structured Lua tables so the harness owns serialization", relative, forbidden)
+				}
+			}
+			return nil
+		}
+		if !strings.HasPrefix(relative, "tests/") && strings.Contains(text, "d2legacy.tests") {
+			t.Errorf("production module %s imports test-only support", relative)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	goRoot := filepath.Join(root, "internal", "mod", "d2legacy")
+	err = filepath.WalkDir(goRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, forbidden := range []string{"DoString(", "lua.DoString", "L.DoString"} {
+			if strings.Contains(string(data), forbidden) {
+				relative, _ := filepath.Rel(root, path)
+				t.Errorf("%s embeds Lua through %q; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), forbidden)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter
 // abbreviation from blurring generic engine APIs with the d2legacy mod again. Engine doors
 // use engine.*; Diablo runtime state and bundled modules use d2legacy.*.
@@ -437,6 +542,9 @@ func ownershipClassForPath(rules []ownershipRule, path string) string {
 
 func isProductionOwnershipFile(path string) bool {
 	if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_test.lua") {
+		return false
+	}
+	if strings.Contains(filepath.ToSlash(path), "/lua/d2legacy/tests/") {
 		return false
 	}
 	return strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".lua")
