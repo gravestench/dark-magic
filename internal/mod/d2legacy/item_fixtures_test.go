@@ -1,4 +1,4 @@
-package modruntime
+package d2legacy_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	. "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 // This test deliberately boots the policy headlessly. It proves the Go client

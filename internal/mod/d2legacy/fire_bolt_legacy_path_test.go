@@ -1,4 +1,4 @@
-package modruntime
+package d2legacy_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	. "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 

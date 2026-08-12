@@ -124,3 +124,36 @@ func TestSnapshotRestoresEntityIdentityTickAndAllocator(t *testing.T) {
 		t.Fatalf("next entity = %d, want %d", next, hero+1)
 	}
 }
+
+func TestRestorePreservesRegisteredSystemQueries(t *testing.T) {
+	engine := New()
+	defer engine.Close()
+	store, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "example.marker", Version: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := store.Set(entity, map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	if err := engine.Register(Definition{ID: "observe", Phase: PhaseInput, All: []akara.ComponentType{store}, Update: func(_ Context, entities []akara.Entity, _ *akara.CommandBuffer) error {
+		seen = len(entities)
+		return nil
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	before, err := engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Restore(before); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Update(DefaultStep); err != nil {
+		t.Fatal(err)
+	}
+	if seen != 1 {
+		t.Fatalf("restored system query saw %d entities", seen)
+	}
+}

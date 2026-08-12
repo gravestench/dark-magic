@@ -1,4 +1,4 @@
-package modruntime
+package d2legacy_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	. "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 func TestD2LegacyLuaOwnsBloodMoorRecipeAndStructurePolicy(t *testing.T) {

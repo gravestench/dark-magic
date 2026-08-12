@@ -147,16 +147,7 @@ func (engine *Engine) Register(definition Definition) error {
 	if _, valid := phaseIndex[definition.Phase]; !valid {
 		return fmt.Errorf("%w: %q", ErrSystemPhase, definition.Phase)
 	}
-	options := make([]akara.FilterOption, 0, 3)
-	if len(definition.All) > 0 {
-		options = append(options, akara.All(definition.All...))
-	}
-	if len(definition.Any) > 0 {
-		options = append(options, akara.Any(definition.Any...))
-	}
-	if len(definition.None) > 0 {
-		options = append(options, akara.None(definition.None...))
-	}
+	options := filterOptions(definition)
 	subscription, err := engine.world.Subscribe(options...)
 	if err != nil {
 		return err
@@ -181,6 +172,20 @@ func (engine *Engine) Register(definition Definition) error {
 	engine.systems = candidate
 	engine.order = order
 	return nil
+}
+
+func filterOptions(definition Definition) []akara.FilterOption {
+	options := make([]akara.FilterOption, 0, 3)
+	if len(definition.All) > 0 {
+		options = append(options, akara.All(definition.All...))
+	}
+	if len(definition.Any) > 0 {
+		options = append(options, akara.Any(definition.Any...))
+	}
+	if len(definition.None) > 0 {
+		options = append(options, akara.None(definition.None...))
+	}
+	return options
 }
 
 // Unregister removes a system and closes its query subscription.

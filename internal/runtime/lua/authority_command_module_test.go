@@ -3,6 +3,7 @@ package modruntime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -104,5 +105,59 @@ func TestAuthorityCommandLuaValidatorRejectsBeforeQueueing(t *testing.T) {
 	}
 	if status := session.Status(); status.Pending != 0 {
 		t.Fatalf("rejected command entered queue: %+v", status)
+	}
+}
+
+func TestAuthorityCommandFailureRollsBackLuaOwnedState(t *testing.T) {
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stores := simulation.NewStateStore()
+	if err := stores.Register("example.counter", "counter/v1", []byte(`{"count":0}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.RegisterStateParticipant(stores); err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := New()
+	if err := runtime.RegisterModule(AuthorityStateModule(stores)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.RegisterModule(AuthorityCommandModule(runtime, session)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		return state.DoString(`
+local commands=require("engine.authority_command/v1")
+local state=require("engine.authority_state/v1")
+commands.register({kind="example.fail",validate=function() end,apply=function()
+  local value=state.read("example.counter")
+  value.count=value.count+1
+  state.replace("example.counter","counter/v1",value)
+  error("fail after mutation")
+end})`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "example.fail", Payload: json.RawMessage(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); !errors.Is(err, gamesession.ErrCommandApply) {
+		t.Fatalf("step error = %v", err)
+	}
+	got, _ := stores.Read("example.counter")
+	if string(got.Data) != `{"count":0}` {
+		t.Fatalf("failed handler committed state: %s", got.Data)
+	}
+	if status := session.Status(); status.Tick != 0 || status.Commands != 0 || status.Pending != 1 {
+		t.Fatalf("failed tick was partially committed: %+v", status)
 	}
 }

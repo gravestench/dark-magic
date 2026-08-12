@@ -180,6 +180,94 @@ func RestoreSnapshot(snapshot Snapshot) (_ *Engine, err error) {
 	return engine, nil
 }
 
+// Restore replaces the engine's world with a snapshot while preserving its
+// registered systems and fixed-step configuration. Rebuilding subscriptions
+// is important: query subscriptions belong to one Akara world and cannot be
+// reused after a transactional rollback swaps that world out.
+func (engine *Engine) Restore(snapshot Snapshot) error {
+	restored, err := RestoreSnapshot(snapshot)
+	if err != nil {
+		return err
+	}
+
+	engine.updateMu.Lock()
+	defer engine.updateMu.Unlock()
+	engine.mu.Lock()
+	defer engine.mu.Unlock()
+
+	candidate := make(map[string]*registeredSystem, len(engine.systems))
+	for id, current := range engine.systems {
+		definition := cloneDefinition(current.definition)
+		definition, remapErr := remapDynamicDefinition(definition, restored.world)
+		if remapErr != nil {
+			_ = restored.Close()
+			return fmt.Errorf("game ecs: restore system %q: %w", id, remapErr)
+		}
+		options := filterOptions(definition)
+		subscription, subscribeErr := restored.world.Subscribe(options...)
+		if subscribeErr != nil {
+			_ = restored.Close()
+			for _, registered := range candidate {
+				_ = registered.subscription.Close()
+			}
+			return fmt.Errorf("game ecs: restore subscription %q: %w", id, subscribeErr)
+		}
+		candidate[id] = &registeredSystem{definition: definition, subscription: subscription}
+	}
+	order, err := compileOrder(candidate)
+	if err != nil {
+		_ = restored.Close()
+		return fmt.Errorf("game ecs: restore system order: %w", err)
+	}
+
+	oldWorld := engine.world
+	for _, registered := range engine.systems {
+		_ = registered.subscription.Close()
+	}
+	engine.world = restored.world
+	engine.systems = candidate
+	engine.order = order
+	engine.tick = snapshot.Tick
+	restored.world = akara.NewWorld() // keep restored.Close from closing the adopted world
+	_ = restored.Close()
+	return oldWorld.Close()
+}
+
+func remapDynamicDefinition(definition Definition, world *akara.World) (Definition, error) {
+	remap := func(source []akara.ComponentType) ([]akara.ComponentType, error) {
+		result := make([]akara.ComponentType, 0, len(source))
+		for _, component := range source {
+			store, dynamic := component.(*akara.DynamicStore)
+			if !dynamic {
+				return nil, fmt.Errorf("snapshot rollback cannot restore non-dynamic component filter %T", component)
+			}
+			restored, found := akara.GetDynamicStore(world, store.Schema().Name)
+			if !found {
+				return nil, fmt.Errorf("restored component %q is missing", store.Schema().Name)
+			}
+			result = append(result, restored)
+		}
+		return result, nil
+	}
+	var err error
+	if definition.All, err = remap(definition.All); err != nil {
+		return Definition{}, err
+	}
+	if definition.Any, err = remap(definition.Any); err != nil {
+		return Definition{}, err
+	}
+	if definition.None, err = remap(definition.None); err != nil {
+		return Definition{}, err
+	}
+	if definition.Read, err = remap(definition.Read); err != nil {
+		return Definition{}, err
+	}
+	if definition.Write, err = remap(definition.Write); err != nil {
+		return Definition{}, err
+	}
+	return definition, nil
+}
+
 func snapshotValue(kind akara.FieldKind, value any) (ValueSnapshot, error) {
 	result := ValueSnapshot{}
 	switch kind {

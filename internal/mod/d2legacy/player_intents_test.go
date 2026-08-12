@@ -1,4 +1,4 @@
-package modruntime
+package d2legacy_test
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
+	. "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 func TestD2LegacyBuildsSkillCommandsThroughGenericIntentMailbox(t *testing.T) {
