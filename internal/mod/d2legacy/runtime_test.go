@@ -366,6 +366,113 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 	}
 }
 
+// TestFireBoltCheckpointRestoreParity covers the complete migrated vertical
+// path rather than a synthetic state mutation: Lua admits the player command,
+// pays mana, advances cast timing, creates and moves a missile, resolves swept
+// contact, applies damage, and emits the combat result. A newly constructed Lua
+// runtime must continue the in-flight cast to the identical session checksum.
+func TestFireBoltCheckpointRestoreParity(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 123)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	playerPayload, _ := json.Marshal(map[string]any{
+		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
+		"level": 1, "experience": 0, "dexterity": 20, "defense": 0,
+		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
+		"direction": 0, "mode": "NU", "x": 0, "y": 0,
+		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
+	})
+	monsterPayload, _ := json.Marshal(map[string]any{
+		"spawn_id": "fallen-firebolt", "seed": 9, "x": 4, "y": 0, "act": 1, "level_id": 1,
+		"definition": map[string]any{
+			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
+			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
+			"life_min": 4096, "life_max": 4096, "level": 1, "defense": 0, "attack_rating": 0,
+			"physical_min": 256, "physical_max": 256, "experience": 5, "treasure_class": "",
+			"collider_radius": 0.5, "select_radius": 0.5, "velocity": 0,
+			"think_interval": 100, "aggro_radius": 0, "attack_range": 1,
+		},
+	})
+	for _, command := range []simulation.Command{
+		{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.player.enter", Payload: playerPayload},
+		{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.monster.spawn", Payload: monsterPayload},
+	} {
+		if err := session.Submit(command); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	castPayload, _ := json.Marshal(map[string]any{"side": "left", "target_x": 8, "target_y": 0, "target_id": "monster:fallen-firebolt"})
+	if err := session.Submit(simulation.Command{Tick: 2, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "player.use_skill", Payload: castPayload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+
+	for range 6 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	originalReplay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := originalReplay.Checkpoints[len(originalReplay.Checkpoints)-1]
+	if err := authority.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	restoredEngine, err := gameecs.RestoreSnapshot(*checkpoint.Snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restoredEngine.Close()
+	restoredSession, err := gamesession.New(restoredEngine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restoredSession.Close()
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 123, Restore: checkpoint.Participants})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Stop(ctx)
+	for range 6 {
+		if err := restoredSession.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	restoredReplay, err := restoredSession.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	continued := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1]
+	if continued.Checksum != original.Checksum {
+		t.Fatalf("Fire Bolt continuation checksum = %s, want %s", continued.Checksum, original.Checksum)
+	}
+}
+
 func assertParticipantIDs(t *testing.T, states []simulation.ParticipantState, expected ...string) {
 	t.Helper()
 	if len(states) != len(expected) {
