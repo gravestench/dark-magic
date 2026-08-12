@@ -327,7 +327,7 @@ only the game server admits commands and publishes canonical outcomes. Shared
 rule prediction is optional later work, never an authority transfer.
 
 Executable-era relationships recovered by Riiablo live verbatim under
-`internal/content/shim/data/recovered/riiablo`, accompanied by provenance. The
+`internal/content/d2legacy/data/recovered/riiablo`, accompanied by provenance. The
 `internal/game/data/recovered` catalog validates and normalizes those files;
 `engine.quest_catalog/v1` exposes identifiers to Lua while localization and audio
 remain separate capabilities responsible for resolving strings and assets.
@@ -346,7 +346,7 @@ examples but is no longer registered by the client.
 
 Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
 state belongs to `internal/presentation`; and authored screen behavior belongs in
-the `d2legacy` Lua mod under `internal/content/shim`. Lua modules expose explicit
+the `d2legacy` Lua mod under `internal/content/d2legacy`. Lua modules expose explicit
 capabilities but do not own native resources or discover arbitrary services.
 
 Assets enter through `internal/content`, which resolves layered directory, MPQ,

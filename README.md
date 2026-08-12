@@ -522,7 +522,7 @@ without extracting or committing any Blizzard-owned pixels:
 go run ./internal/dev/tools/asset_catalog \
   -mpq-dir /path/to/diablo-ii \
   -no-sheets \
-  -fixture internal/content/shim/manifests/asset-fixture.v1.json
+  -fixture internal/content/d2legacy/manifests/asset-fixture.v1.json
 ```
 
 View a Bink cinematic directly from an MPQ directory (FFmpeg/`ffplay` is

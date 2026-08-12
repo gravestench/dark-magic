@@ -26,7 +26,7 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 	roots := []string{
 		"internal/game",
 		"internal/runtime/lua",
-		"internal/content/shim/lua",
+		"internal/content/d2legacy/lua",
 	}
 	for _, relativeRoot := range roots {
 		absoluteRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
@@ -60,8 +60,7 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 }
 
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter
-// abbreviation from blurring generic engine APIs with mod APIs again.
-// from blurring generic engine APIs with the d2legacy mod again. Engine doors
+// abbreviation from blurring generic engine APIs with the d2legacy mod again. Engine doors
 // use engine.*; Diablo runtime state and bundled modules use d2.* or d2legacy.*.
 func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 	root := repositoryRoot(t)

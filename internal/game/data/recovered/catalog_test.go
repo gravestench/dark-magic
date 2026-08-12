@@ -67,8 +67,8 @@ func TestReferenceValidationReportsSoundAndStringJoins(t *testing.T) {
 	}
 }
 
-func TestRepositoryShimDataParses(t *testing.T) {
-	source := repositoryShim(t)
+func TestRepositoryD2LegacyDataParses(t *testing.T) {
+	source := repositoryD2Legacy(t)
 	snapshot, err := New(source).Snapshot()
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +78,7 @@ func TestRepositoryShimDataParses(t *testing.T) {
 	}
 }
 
-func repositoryShim(t *testing.T) fs.FS {
+func repositoryD2Legacy(t *testing.T) fs.FS {
 	t.Helper()
-	return os.DirFS("../../../content/shim")
+	return os.DirFS("../../../content/d2legacy")
 }

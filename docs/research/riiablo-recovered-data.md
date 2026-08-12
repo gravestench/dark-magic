@@ -2,7 +2,7 @@
 
 This audit separates portable Diablo II knowledge from Riiablo implementation
 details. The source project is Apache-2.0 licensed; imported tables retain their
-original bytes and provenance under `internal/content/shim/data/recovered`.
+original bytes and provenance under `internal/content/d2legacy/data/recovered`.
 
 ## Imported declarative sources
 
