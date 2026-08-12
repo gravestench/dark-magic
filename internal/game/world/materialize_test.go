@@ -13,7 +13,7 @@ import (
 func materializerFixture(t *testing.T) *Materializer {
 	t.Helper()
 	zone, err := mapgen.NewZone(mapgen.Definition{
-		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 9}, Kind: mapgen.Maze,
+		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 9}, Kind: "maze",
 		Bounds: mapgen.Bounds{Width: 4, Height: 2},
 		Stamps: []mapgen.Stamp{{ID: 1, Role: "previous-level", Width: 2, Height: 2, DS1Path: "one.ds1"}, {ID: 2, Role: "next-level", X: 2, Width: 2, Height: 2, DS1Path: "two.ds1"}},
 		Rooms:  []mapgen.Room{{ID: 1, Width: 2, Height: 2, StampID: 1}, {ID: 2, X: 2, Width: 2, Height: 2, StampID: 2}},
@@ -109,7 +109,7 @@ func TestMaterializerHonorsCancellationWithoutAdvancing(t *testing.T) {
 
 func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
 	zone, err := mapgen.NewZone(mapgen.Definition{
-		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2}, Kind: mapgen.Outdoor,
+		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2}, Kind: "outdoor",
 		Bounds: mapgen.Bounds{Width: 1, Height: 1},
 		Stamps: []mapgen.Stamp{
 			{ID: 1, Width: 1, Height: 1, DS1Path: "fill.ds1"},

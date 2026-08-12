@@ -19,14 +19,9 @@ var (
 	ErrZone    = errors.New("mapgen: invalid zone")
 )
 
-// Difficulty uses the ordering authored by the legacy level tables.
+// Difficulty is an opaque mod-defined variant number. The engine records it so
+// recipes can be replayed, but it does not assign meaning to individual values.
 type Difficulty uint8
-
-const (
-	Normal Difficulty = iota
-	Nightmare
-	Hell
-)
 
 // Request contains every input allowed to influence deterministic generation.
 // Version makes future algorithm changes explicit instead of silently changing
@@ -43,14 +38,8 @@ func (request Request) Validate() error {
 	if request.Version != ContractVersion {
 		return fmt.Errorf("%w: unsupported version %d", ErrRequest, request.Version)
 	}
-	if request.Act < 1 || request.Act > 5 {
-		return fmt.Errorf("%w: act %d is outside 1..5", ErrRequest, request.Act)
-	}
 	if request.LevelID <= 0 {
 		return fmt.Errorf("%w: level ID must be positive", ErrRequest)
-	}
-	if request.Difficulty > Hell {
-		return fmt.Errorf("%w: difficulty %d is outside 0..2", ErrRequest, request.Difficulty)
 	}
 	return nil
 }
@@ -62,14 +51,8 @@ type Generator interface {
 	Generate(Request) (*Zone, error)
 }
 
-// Kind names the legacy generation family used for a zone.
+// Kind is an opaque, stable policy identifier supplied by the mod.
 type Kind string
-
-const (
-	Preset  Kind = "preset"
-	Maze    Kind = "maze"
-	Outdoor Kind = "outdoor"
-)
 
 // Bounds is a half-open rectangle in world-tile coordinates.
 type Bounds struct {
@@ -164,8 +147,8 @@ func validateDefinition(def Definition) error {
 	if err := def.Request.Validate(); err != nil {
 		return err
 	}
-	if def.Kind != Preset && def.Kind != Maze && def.Kind != Outdoor {
-		return fmt.Errorf("%w: unknown kind %q", ErrZone, def.Kind)
+	if strings.TrimSpace(string(def.Kind)) == "" {
+		return fmt.Errorf("%w: kind is required", ErrZone)
 	}
 	if !def.Bounds.valid() {
 		return fmt.Errorf("%w: bounds must have positive dimensions", ErrZone)
@@ -234,17 +217,14 @@ func validateDefinition(def Definition) error {
 		if tile.X < def.Bounds.X || tile.Y < def.Bounds.Y || tile.X >= def.Bounds.X+def.Bounds.Width || tile.Y >= def.Bounds.Y+def.Bounds.Height {
 			return fmt.Errorf("%w: out-of-bounds structure tile %d,%d", ErrZone, tile.X, tile.Y)
 		}
-		if tile.Kind != "river" && tile.Kind != "cliff" && tile.Kind != "bridge" {
-			return fmt.Errorf("%w: unknown structure kind %q", ErrZone, tile.Kind)
+		if strings.TrimSpace(tile.Kind) == "" {
+			return fmt.Errorf("%w: structure kind is required", ErrZone)
 		}
 		position := [2]int{tile.X, tile.Y}
 		if _, duplicate := seenStructure[position]; duplicate {
 			return fmt.Errorf("%w: overlapping structure tile %d,%d", ErrZone, tile.X, tile.Y)
 		}
 		seenStructure[position] = struct{}{}
-		if tile.Kind != "bridge" && tile.Passable {
-			return fmt.Errorf("%w: %s %d,%d cannot be passable", ErrZone, tile.Kind, tile.X, tile.Y)
-		}
 	}
 	return nil
 }

@@ -106,7 +106,7 @@ func (materializer *Materializer) Step(ctx context.Context) error {
 	}
 	materializer.next++
 	materializer.done = materializer.next == len(materializer.stamps)
-	if materializer.done && materializer.zone.Kind() == worldgen.Outdoor && materializer.zone.Request().Act == 1 {
+	if materializer.done && materializer.zone.Kind() == "outdoor" && materializer.zone.Request().Act == 1 {
 		if err := materializer.assembled.realizeActOneDirtPath(materializer.zone.Paths(), materializer.catalogOrder); err != nil {
 			return err
 		}

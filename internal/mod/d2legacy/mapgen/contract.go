@@ -19,9 +19,9 @@ var (
 type Difficulty = worldgen.Difficulty
 
 const (
-	Normal    = worldgen.Normal
-	Nightmare = worldgen.Nightmare
-	Hell      = worldgen.Hell
+	Normal Difficulty = iota
+	Nightmare
+	Hell
 )
 
 type Request = worldgen.Request
@@ -29,9 +29,9 @@ type Generator = worldgen.Generator
 type Kind = worldgen.Kind
 
 const (
-	Preset  = worldgen.Preset
-	Maze    = worldgen.Maze
-	Outdoor = worldgen.Outdoor
+	Preset  Kind = "preset"
+	Maze    Kind = "maze"
+	Outdoor Kind = "outdoor"
 )
 
 type Bounds = worldgen.Bounds
