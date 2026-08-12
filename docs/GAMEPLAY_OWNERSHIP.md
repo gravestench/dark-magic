@@ -34,7 +34,7 @@ must use ECS or registered, versioned engine stores.
 | `mapgen`, `world`, `targeting` | Reusable geometry/navigation mixed with D2 act/level/population policy | Split mechanisms from D2 selection and relationships |
 | `interaction`, `transition`, `ownedunit` | Generic relations/transactions mixed with D2 services and lifecycle policy | Split, then migrate D2 policy |
 | `internal/runtime/lua` | Runtime mechanisms plus subsystem-shaped Go-owned D2 facades | Keep runtime/adapters; retire facades as policy moves into Lua |
-| bundled `darkmagic` Lua | Presentation, labs, and early gameplay helpers | Separate generic examples from first-party `d2legacy` mod |
+| bundled shim Lua | The first-party `d2legacy` mod plus Dark Magic presentation and labs | `d2legacy` is the canonical gameplay mod/namespace; the shim is its bundle, not a separate mod |
 
 ## Migration execution policy
 
