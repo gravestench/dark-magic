@@ -33,6 +33,7 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"debug_collision":   actionState(s.KeyState(rl.KeyF3)),
 			"debug_map_tiles":   actionState(s.KeyState(rl.KeyF4)),
 			"debug_origins":     actionState(s.KeyState(rl.KeyF5)),
+			"debug_combat":      actionState(s.KeyState(rl.KeyF6)),
 			"pointer_primary":   pointer,
 			"pointer_secondary": pointerSecondary,
 			"confirm":           confirm,

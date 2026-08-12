@@ -448,6 +448,9 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
 		t.Fatalf("incomplete HUD asset facts: %#v", hud)
 	}
+	// The expansion panel begins with a 117px globe and 48px skill well.
+	// Riiablo places the belt at x=177 inside the following control widget:
+	// 117 + 48 + 177 = 342.
 	if hud.Belt.Sheet == "" || hud.Belt.X != 342 || hud.Belt.Y != 561 || hud.Belt.Columns != 4 || hud.Belt.Rows != 4 || hud.Belt.CellWidth != 31 || hud.Belt.CellHeight != 31 {
 		t.Fatalf("unexpected desktop belt facts: %#v", hud.Belt)
 	}

@@ -39,9 +39,13 @@ The active dependency queue, reassessed after that gate, is:
    Its checkpointed pending action now follows a still-valid target through the
    collision-aware world pathfinder and admits melee only after reaching range.
 2. **Developer labs:** the lab-specific arguments have left the client
-   composition root, and the labs now share one modal fuzzy finder. The new
-   no-argument combat lab drives the production melee request/event transaction
-   with disposable ECS fixtures; grow it with M21 casts, effects, and equipment.
+   composition root, and the labs now share one modal fuzzy finder. Combat Lab
+   now delegates directly to the production game-world lifecycle in generated
+   Blood Moor: the admitted player and hostile population exercise the same
+   collision-aware pointer intents, A*, sparse residency/culling, depth order,
+   composites, HUD, melee events, death, and loot while F3-F6 expose read-only
+   spatial and combat facts. Grow that production-backed instrument with each
+   subsequent M21 cast, effect, equipment, and combat-fidelity slice.
 3. **M21 combat fidelity:** replace the explicit synthetic hit policy in small,
    evidence-backed slices: attack rating/defense, avoidance/block, mitigation,
    resistance, death/corpse consequences, and difficulty rules.
@@ -714,8 +718,12 @@ complete until its actions are driven by authoritative game state and commands.
   The belt now has an authoritative 16-slot identity component with a four-slot
   no-belt baseline. Its retained desktop control uses the original 4x4, 31px
   geometry and `ctrlpnl_popbelt.DC6`, revealing only capacity granted by the
-  equipped belt. Item entities, cursor transfers, and consumption remain M19
-  dependencies and are not simulated with presentation-owned placeholders.
+  equipped belt. A populated MPQ-backed review still needs to verify the item
+  DC6 anchor and pointer rectangles against those authored cells; the source-
+  corroborated screen origin remains `(342,561)` rather than hiding the observed
+  offset with an unverified panel-coordinate adjustment. Item entities, cursor
+  transfers, and consumption remain M19 dependencies and are not simulated
+  with presentation-owned placeholders.
   Cursor presentation now distinguishes the original animated five-FPS in-game
   pointer from static normal, pressed, and interaction-hand modes. OpenDiablo2,
   riiablo, and AbyssEngine provenance is retained in the asset catalog; item and
@@ -1395,8 +1403,12 @@ data owners; they do not introduce parallel gameplay authorities.
   cleanly when that target disappears or becomes unreachable. Complete this
   checkpoint now projects the active equipment hand set's typed base-weapon
   range, physical damage, and weapon class into the player ECS profile before
-  combat. Finish affix/socket/attribute stat sources, true dual-wield attack
-  selection, and an asset-backed pointer-to-hit acceptance capture. The current
+  combat. The no-argument Combat Lab now runs this transaction inside the
+  production generated Blood Moor scene and overlays authoritative player,
+  hostile, AI, health, attack-phase, and semantic-event facts without owning a
+  second simulation or renderer. Finish affix/socket/attribute stat sources,
+  true dual-wield attack selection, and a repeatable asset-backed
+  pointer-to-hit acceptance capture. The current
   75-percent production hit chance remains explicitly synthetic pending the
   verified attack-rating/defense formula.
 

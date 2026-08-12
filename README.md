@@ -430,6 +430,21 @@ through the ordinary capture flags.
 Press F to find a specific mounted DS1 by any subsequence of its path. Monster
 and missile labs expose the same picker for their typed record IDs.
 
+`--start-scene=combat_lab` is a production-world combat instrument, not a
+second miniature combat implementation. `make play-combat-lab` selects a
+development character, enters the generated Act I Blood Moor, admits its typed
+hostile population, and then delegates the complete scene lifecycle to
+`game_world`. Pointer traversal and hostile selection therefore exercise the
+same fixed-tick intents, collision-aware A*, sparse tile residency and culling,
+camera, entity depth ordering, player/monster composites, missiles, HUD,
+damage, death, and loot cues used by ordinary play. F3 toggles decoded
+collision, F4 tile geometry, F5 entity origins, and F6 the lab-only read-only
+combat panel and hostile markers. The panel reports authoritative positions,
+animation/attack phase, equipment-derived melee range and damage, nearest
+hostile health/AI, and the latest semantic combat event. Run
+`make capture-combat-lab` for a local MPQ-backed review image; game assets and
+captures remain outside the repository.
+
 `--start-scene=mapgen_lab` opens the pointer-driven generation proof. It shows
 the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and
 decision trace without materializing renderer assets. Click its seed controls

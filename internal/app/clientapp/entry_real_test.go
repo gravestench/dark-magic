@@ -133,3 +133,67 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	}
 	t.Fatal("created and selected character was not admitted to the session")
 }
+
+// Combat Lab is intentionally just another client of the production Blood
+// Moor session. This protects its startup recipe from silently returning to a
+// presentation-only actor or an unselected character fixture.
+func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
+	if os.Getenv("MPQ_DIRECTORY") == "" {
+		t.Skip("MPQ_DIRECTORY is not configured")
+	}
+	assets, err := content.FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &application{
+		options: Options{
+			Content:           assets,
+			StartScene:        "combat_lab",
+			FixtureCharacters: 1,
+			FixtureWorldLevel: 2,
+		},
+		inputState: &inputstate.Store{},
+		locale:     localization.New(assets, "English"),
+	}
+	if err := app.loadGameCatalogs(); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.buildOfflineSession(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		app.loading.Close()
+		_ = app.offlineSession.Close()
+		_ = app.entitySimulation.Close()
+		_ = content.Close(assets)
+	})
+
+	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
+		t.Fatal(err)
+	}
+	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.player.identity")
+	if !ok {
+		t.Fatal("Combat Lab admitted no player identity store")
+	}
+	if identities.Len() != 1 {
+		t.Fatalf("Combat Lab admitted players = %d, want 1", identities.Len())
+	}
+	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.world.location")
+	if !ok {
+		t.Fatal("Combat Lab has no authoritative world locations")
+	}
+	for _, entity := range identities.Entities() {
+		location, found := locations.Get(entity)
+		if !found {
+			t.Fatal("Combat Lab player has no authoritative location")
+		}
+		level, _ := location.Get("level_id")
+		if level != int64(2) {
+			t.Fatalf("Combat Lab player level = %v, want Blood Moor level 2", level)
+		}
+	}
+	monsters, ok := akara.GetDynamicStore(app.entitySimulation.World(), "dm.monster.identity")
+	if !ok || monsters.Len() == 0 {
+		t.Fatal("Combat Lab admitted no production Blood Moor hostiles")
+	}
+}
