@@ -25,9 +25,8 @@ end
 function M.validate(command)
     local payload = command.payload
     assert(type(payload) == "table", "cast payload must be a table")
-    assert(payload.skill_id == 36, "only migrated skill 36 is available")
-    assert(type(payload.skill_level) == "number" and payload.skill_level >= 1,
-        "skill level must be positive")
+    assert(payload.side == "left" or payload.side == "right",
+        "cast side must be left or right")
     assert(finite(payload.target_x) and finite(payload.target_y),
         "cast target must be finite")
     assert(payload.target_id == nil or type(payload.target_id) == "string",
@@ -37,10 +36,15 @@ end
 function M.apply(command)
     local player = assert(find_player(command.player), "cast player does not exist")
     local payload = command.payload
+    local assignments = assert(ecs.get(player, "dm.player.skill_assignment"),
+        "cast player has no skill assignments")
+    local skill_id = assignments:get(payload.side)
     ecs.set(player, "d2legacy.skill.cast_request", {
         player = command.player,
-        skill_id = payload.skill_id,
-        skill_level = payload.skill_level,
+        skill_id = skill_id,
+        -- The lifecycle resolves the authoritative learned level. Input never
+        -- gets to claim a level supplied by the client.
+        skill_level = 0,
         target_x = payload.target_x,
         target_y = payload.target_y,
         target_id = payload.target_id or "",
@@ -50,7 +54,7 @@ end
 
 function M.register()
     commands.register({
-        kind = "d2legacy.skill.cast",
+        kind = "player.use_skill",
         authorities = { "player" },
         validate = M.validate,
         apply = M.apply,

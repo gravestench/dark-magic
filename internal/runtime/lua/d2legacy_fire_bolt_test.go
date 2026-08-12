@@ -85,6 +85,7 @@ ecs.component({name="dm.player.learned_skill",fields={
     {name="level",type="i64"},{name="list_row",type="i64"},
     {name="left_allowed",type="bool"},{name="right_allowed",type="bool"},
 }})
+ecs.component({name="dm.player.skill_assignment",fields={{name="left",type="i64"},{name="right",type="i64"}}})
 ecs.component({name="dm.world.position",fields={{name="x",type="f64"},{name="y",type="f64"}}})
 ecs.component({name="dm.world.location",fields={{name="act",type="i64"},{name="level_id",type="i64"}}})
 ecs.component({name="dm.world.collider",fields={{name="radius",type="f64"}}})
@@ -100,6 +101,7 @@ ecs.component({name="dm.monster.stats",fields={
 player = ecs.create({
     ["dm.player.identity"]={character_id="hero",player="alice",name="Hero",class="Sorceress"},
     ["dm.player.vitals"]={health=50,max_health=50,mana=10,max_mana=10,mana_raw=2560,max_mana_raw=2560},
+    ["dm.player.skill_assignment"]={left=36,right=36},
     ["dm.world.position"]={x=0,y=0}, ["dm.world.location"]={act=1,level_id=1},
     ["dm.world.collider"]={radius=0.5},
     ["dm.world.selectable"]={id="player:alice",kind="player",label="Hero",owner="alice",radius=0.5,priority=1},
@@ -117,8 +119,8 @@ require("d2legacy.bootstrap.authoritative").start()
 		t.Fatal(err)
 	}
 
-	payload, _ := json.Marshal(map[string]any{"skill_id": 36, "skill_level": 1, "target_x": 8, "target_y": 0})
-	if err := session.Submit(simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "d2legacy.skill.cast", Payload: payload}); err != nil {
+	payload, _ := json.Marshal(map[string]any{"side": "left", "target_x": 8, "target_y": 0})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "player.use_skill", Payload: payload}); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Step(); err != nil {

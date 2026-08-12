@@ -26,11 +26,11 @@ local function begin_cast(context, player, request, definition, levels, commands
     local available = vitals:get("mana_raw")
     if available == 0 then available = vitals:get("mana") * 256 end
 
-    local requested_level = request:get("skill_level")
     local player_levels = levels[player:id()] or {}
     local known_level = player_levels[request:get("skill_id")] or 0
     local valid = request:get("request_tick") <= context.tick
-        and requested_level <= known_level
+        and request:get("skill_id") == definition.skill_id
+        and known_level > 0
         and available >= definition.mana_cost_raw
 
     if valid then
@@ -39,7 +39,7 @@ local function begin_cast(context, player, request, definition, levels, commands
         vitals:set("mana", math.floor(remaining / 256))
         commands:set(player, "d2legacy.skill.cast", {
             skill_id = request:get("skill_id"),
-            skill_level = requested_level,
+            skill_level = known_level,
             target_x = request:get("target_x"),
             target_y = request:get("target_y"),
             target_id = request:get("target_id"),
