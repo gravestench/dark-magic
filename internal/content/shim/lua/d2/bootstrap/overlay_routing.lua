@@ -1,7 +1,7 @@
 -- Shared keyboard/controller routing for gameplay overlays.
 --
 -- This file is small, but it demonstrates one of the cleverest patterns in the
--- shim: **wrapping** an existing scene definition to add policy without copying
+-- d2legacy mod: **wrapping** an existing scene definition to add policy without copying
 -- or subclassing it.
 --
 -- Imagine an inventory overlay already knows how to draw itself. We still want

@@ -168,7 +168,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...persistence.Character) 
 	}
 	contentFS, err := content.New(
 		content.Layer{Name: "videos", FS: videos},
-		content.Layer{Name: "darkmagic", FS: content.Shim()},
+		content.Layer{Name: "darkmagic", FS: content.D2Legacy()},
 	)
 	if err != nil {
 		t.Fatal(err)

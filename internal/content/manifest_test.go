@@ -16,7 +16,7 @@ import (
 func TestShimPresentationManifestContract(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestShimPresentationManifestContract(t *testing.T) {
 func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 			}
 			validatePresentationGeometry(t, validatedScreens, width, height, "screens")
 			language := profile["language"].(string)
-			localeData, err := fs.ReadFile(Shim(), "locales/"+language+".json")
+			localeData, err := fs.ReadFile(D2Legacy(), "locales/"+language+".json")
 			if err != nil {
 				t.Fatalf("read %s locale: %v", language, err)
 			}
@@ -251,7 +251,7 @@ func sumJSONNumbers(values []any) float64 {
 func TestShimAssetFixtureContract(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,11 +270,11 @@ func TestShimAssetFixtureContract(t *testing.T) {
 func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	t.Parallel()
 
-	manifestData, err := fs.ReadFile(Shim(), "manifests/asset-catalog.v1.json")
+	manifestData, err := fs.ReadFile(D2Legacy(), "manifests/asset-catalog.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fixtureData, err := fs.ReadFile(Shim(), "manifests/asset-fixture.v1.json")
+	fixtureData, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 	if err := json.Unmarshal(fixtureData, &fixture); err != nil {
 		t.Fatal(err)
 	}
-	coverage, err := assetcatalog.BuildCoverage(Shim(), manifest, fixture)
+	coverage, err := assetcatalog.BuildCoverage(D2Legacy(), manifest, fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func TestShimPresentationAssetCoverageBaseline(t *testing.T) {
 func TestCharacterCreationTransitionFacts(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 func TestGameHUDCompositionFacts(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +493,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -539,7 +539,7 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "manifests/presentation.v1.json")
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}

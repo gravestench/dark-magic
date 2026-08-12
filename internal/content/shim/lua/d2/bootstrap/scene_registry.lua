@@ -1,4 +1,4 @@
--- Scene registry: the shim's phone book.
+-- Scene registry: the d2legacy mod's phone book.
 --
 -- A scene is just a Lua table with callbacks such as create/update/destroy.
 -- The engine does not need to know filenames like `d2.screens.title`.
@@ -11,9 +11,9 @@
 
 -- Engine capability: owns the scene catalog and navigation stack.
 local scenes = require("engine.scene/v1")
--- Ordinary shim module: adds software-cursor behavior around scene callbacks.
+-- Ordinary d2legacy module: adds software-cursor behavior around scene callbacks.
 local cursor = require("d2.ui.cursor")
--- Ordinary shim module: adds the common gameplay-overlay keyboard rules.
+-- Ordinary d2legacy module: adds the common gameplay-overlay keyboard rules.
 local routing = require("d2.bootstrap.overlay_routing")
 -- Registers placeholder/shell interfaces that do not yet need custom Lua.
 local shells = require("d2.bootstrap.shell_registry")

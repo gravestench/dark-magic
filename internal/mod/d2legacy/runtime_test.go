@@ -29,7 +29,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.Shim(), fixtureRecords{}, engine, session, 7)
+	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.Shim(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestAuthorityBootsWithoutClientOrRenderer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(context.Background(), content.Shim(), fixtureRecords{}, engine, session, 7)
+	authority, err := Start(context.Background(), content.D2Legacy(), fixtureRecords{}, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}

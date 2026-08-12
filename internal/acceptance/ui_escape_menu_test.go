@@ -18,7 +18,7 @@ import (
 
 func TestLuaEscapeMenuRecoveredNavigation(t *testing.T) {
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestLuaOptionsOverlayCentersInClassicViewport(t *testing.T) {
 func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY float64) {
 	t.Helper()
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}

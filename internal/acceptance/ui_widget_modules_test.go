@@ -16,7 +16,7 @@ func TestLuaReusableWidgetModulesLoad(t *testing.T) {
 	var input inputstate.Store
 	runtime := modruntime.New()
 	composer := &render.Composer{}
-	shim := content.Shim()
+	shim := content.D2Legacy()
 
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(shim, "lua")); err != nil {
 		t.Fatal(err)

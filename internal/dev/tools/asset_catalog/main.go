@@ -193,7 +193,7 @@ func loadManifest(name string) (assetcatalog.Manifest, error) {
 	var data []byte
 	var err error
 	if name == "" {
-		data, err = fs.ReadFile(content.Shim(), "manifests/asset-catalog.v1.json")
+		data, err = fs.ReadFile(content.D2Legacy(), "manifests/asset-catalog.v1.json")
 	} else {
 		data, err = os.ReadFile(name)
 	}

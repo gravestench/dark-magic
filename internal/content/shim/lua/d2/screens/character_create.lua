@@ -1,6 +1,6 @@
 -- Expansion character-creation scene.
 --
--- This is one of the most sophisticated Lua scenes in the shim, but it is still
+-- This is one of the most sophisticated Lua scenes in d2legacy, but it is still
 -- built from the same small ideas you have already seen:
 --
 --   * retained render nodes for pictures;

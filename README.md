@@ -58,10 +58,11 @@ baseline from behavior that has actually been validated.
 
 * `cmd` contains the client, game-session server, and realm composition roots.
   Commands perform wiring and process configuration, not gameplay.
-* `internal/game` owns typed Diablo records, deterministic ECS scheduling,
-  simulation primitives, world decoding, and loot rules.
+* `internal/game` currently mixes typed Diablo records and transitional rule
+  implementations with deterministic engine mechanisms. Diablo-specific rules
+  are being moved into `d2legacy`; generic scheduling and data boundaries remain.
 * `internal/content` owns the layered directory/MPQ/ZIP VFS and redistributable
-  first-party Lua shim.
+  first-party `d2legacy` Lua mod.
 * `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
   Lua runtimes with disposable resource scopes.
 * `internal/presentation` defines backend-neutral retained rendering and scene
@@ -83,7 +84,7 @@ The `engine.ecs/v1` capability additionally lets trusted scripts define validate
 component schemas and deterministic, scope-owned systems over the shared Akara
 world. Systems declare their query and read/write access; structural mutations
 are applied at phase barriers rather than during query iteration.
-The shim also preserves Riiablo's recovered quest hierarchy and speech-to-string
+The `d2legacy` mod also preserves Riiablo's recovered quest hierarchy and speech-to-string
 relationships as validated data exposed through `engine.quest_catalog/v1`; scripts
 do not need to recreate executable-era Diablo II rules as hard-coded branches.
 Recovered DS1 definition and act-local object mappings are available separately

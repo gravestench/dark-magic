@@ -16,7 +16,7 @@ import (
 func TestWarpLabIntentWalksToPortalAndArrivesAtPair(t *testing.T) {
 	engine := gameecs.New()
 	runtime := New()
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(NewECSCapability(runtime, engine).Module()); err != nil {

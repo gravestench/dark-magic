@@ -22,7 +22,7 @@ func TestShimArchiveMatchesEmbeddedTreeAndIsDeterministic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Shim()
+	want := D2Legacy()
 	seen := 0
 	if err := fs.WalkDir(want, ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() {

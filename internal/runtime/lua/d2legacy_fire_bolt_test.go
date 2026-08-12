@@ -57,7 +57,7 @@ func TestD2LegacyFireBoltCastRunsHeadlesslyThroughLua(t *testing.T) {
 	}
 
 	runtime := New()
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	for _, module := range []Module{

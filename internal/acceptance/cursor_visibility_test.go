@@ -17,7 +17,7 @@ func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 	var input inputstate.Store
 	var composer render.Composer
 	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {

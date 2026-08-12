@@ -5,7 +5,7 @@
 -- they show that a mod author should compose an existing helper instead of
 -- copying hundreds of lines just to change one panel ID.
 
--- Ordinary Lua helper from the shim.
+-- Ordinary Lua helper from d2legacy.
 local fixed = require("d2.ui.fixed_panel")
 
 -- Build the scene from the `cube` presentation manifest entry and place it in

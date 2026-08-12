@@ -29,7 +29,7 @@ function M.create(width, height, collision, player)
     components.register()
     systems.register(collision)
 
-    -- Default logical player ID used by the local single-player shim.
+    -- Default logical player ID used by the local single-player d2legacy mod.
     player = player or "local-player"
 
     -- `state` is presentation-side binding state, not a second simulation world.

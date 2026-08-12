@@ -30,7 +30,7 @@ func TestEmbeddedShimNavigationAndResourceLifetime(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.Shim()})
+	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}

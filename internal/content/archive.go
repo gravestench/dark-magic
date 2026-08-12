@@ -15,7 +15,7 @@ var archiveTimestamp = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 // a deterministic ZIP suitable for mounting or distribution.
 func WriteShimArchive(destination io.Writer) error {
 	writer := zip.NewWriter(destination)
-	source := Shim()
+	source := D2Legacy()
 	err := fs.WalkDir(source, ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr

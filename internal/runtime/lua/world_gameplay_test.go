@@ -49,7 +49,7 @@ func TestShimWorldGameplayUsesLuaDefinedECSSystems(t *testing.T) {
 	var input inputstate.Store
 	engine := gameecs.New()
 	runtime := New()
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(InputModule(&input)); err != nil {
@@ -142,7 +142,7 @@ func TestShimWorldGameplayRejectsBlockedMovement(t *testing.T) {
 	var input inputstate.Store
 	engine := gameecs.New()
 	runtime := New()
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(InputModule(&input)); err != nil {

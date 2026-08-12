@@ -1,7 +1,7 @@
 -- Higher-level helpers for composing Diablo II DC6 presentation assets.
 --
 -- DC6 is a legacy sprite format. The engine capability knows how to decode it;
--- THIS Lua file knows how the shim wants to arrange decoded pictures on screen.
+-- THIS Lua file knows how d2legacy wants to arrange decoded pictures on screen.
 -- That distinction is important for modding:
 --
 --   binary decoding / checked native resources -> engine capability

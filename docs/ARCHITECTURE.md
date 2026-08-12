@@ -346,11 +346,11 @@ examples but is no longer registered by the client.
 
 Scene navigation belongs to `internal/presentation/navigation`; renderer-independent scene
 state belongs to `internal/presentation`; and authored screen behavior belongs in
-the shim Lua scripts under `internal/content/shim`. Lua modules expose explicit
+the `d2legacy` Lua mod under `internal/content/shim`. Lua modules expose explicit
 capabilities but do not own native resources or discover arbitrary services.
 
 Assets enter through `internal/content`, which resolves layered directory, MPQ,
-ZIP, and shim sources. `internal/assets/decode` converts supported formats,
+ZIP, and mod sources. `internal/assets/decode` converts supported formats,
 `internal/presentation/render` describes retained resources, and the Raylib adapter owns
 uploads and disposal. Inspection and catalog tools reuse the same content and
 decode paths under `internal/assets/inspect` and `internal/assets/catalog`.

@@ -1,4 +1,4 @@
--- Reusable retained-mode control manager for shim and mod-authored screens.
+-- Reusable retained-mode control manager for d2legacy screens.
 --
 -- THIS FILE IS THE INPUT BRAIN FOR MOST SHIM WIDGETS.
 --

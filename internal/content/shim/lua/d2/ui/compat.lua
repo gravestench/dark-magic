@@ -1,4 +1,4 @@
--- Recovered Diablo II UI presentation facts shared by shim screens.
+-- Recovered Diablo II UI presentation facts shared by d2legacy screens.
 --
 -- THIS FILE IS MOSTLY DATA ON PURPOSE.
 --

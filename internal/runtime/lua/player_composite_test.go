@@ -12,7 +12,7 @@ import (
 
 func TestPlayerCompositeResolvesCOFLayerWeaponClasses(t *testing.T) {
 	runtime := New()
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(Module{Name: "engine.render/v1", Loader: func(state *lua.LState) int {
@@ -107,7 +107,7 @@ func TestRealArchivesComposeUnarmedPlayerModes(t *testing.T) {
 
 	runtime := New()
 	var composer render.Composer
-	if err := runtime.RegisterInstaller(ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	capability := NewRenderCapability(runtime, &composer, assets)

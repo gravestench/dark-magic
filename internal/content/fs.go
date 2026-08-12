@@ -35,7 +35,7 @@ func FromEnvironment() (*FS, error) {
 		}
 		layers = append(layers, Layer{Name: "user-mods", FS: Directory(mods)})
 	}
-	layers = append(layers, Layer{Name: "darkmagic", FS: Shim()})
+	layers = append(layers, Layer{Name: "d2legacy", FS: D2Legacy()})
 	if configured := os.Getenv("MPQ_DIRECTORY"); configured != "" {
 		for index, entry := range strings.Split(configured, ",") {
 			directory := strings.TrimSpace(entry)

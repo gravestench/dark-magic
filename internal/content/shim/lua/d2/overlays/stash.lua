@@ -5,7 +5,7 @@
 -- the point: a mod file can be two executable lines when the shared abstraction
 -- already expresses the feature.
 
--- Load an ordinary Lua helper from this shim (not an engine capability).
+-- Load an ordinary d2legacy Lua helper (not an engine capability).
 local fixed = require("d2.ui.fixed_panel")
 
 -- Ask the helper to build the scene definition for the manifest entry named

@@ -128,7 +128,7 @@ func TestZIPAndDirectoryNormalizePaths(t *testing.T) {
 func TestShimContainsBoot(t *testing.T) {
 	t.Parallel()
 
-	data, err := fs.ReadFile(Shim(), "boot.lua")
+	data, err := fs.ReadFile(D2Legacy(), "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestFromEnvironmentAppliesConfiguredModPriority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"user-mods", "darkmagic"}) {
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"user-mods", "d2legacy"}) {
 		t.Fatalf("layers = %v", got)
 	}
 	data, err := fs.ReadFile(contentFS, "boot.lua")
@@ -266,7 +266,7 @@ func TestFromEnvironmentMountsMultipleMPQDirectoriesInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"darkmagic", "mpq-0-directory", "mpq-1-directory"}) {
+	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"d2legacy", "mpq-0-directory", "mpq-1-directory"}) {
 		t.Fatalf("layers = %v", got)
 	}
 	shared, err := fs.ReadFile(contentFS, "shared.gpl")

@@ -14,7 +14,7 @@ func TestLuaControlsPointerKeyboardFocusAndAccessibility(t *testing.T) {
 	ctx := context.Background()
 	var input inputstate.Store
 	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {
@@ -90,7 +90,7 @@ func TestLuaControlsFormFieldsAndFocusScopes(t *testing.T) {
 	ctx := context.Background()
 	var input inputstate.Store
 	runtime := modruntime.New()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.Shim(), "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {
