@@ -148,6 +148,10 @@ function M.register()
                 "d2legacy.monster.stats",
                 "d2legacy.combat.melee_event",
                 "d2legacy.combat.event",
+                -- Player entities carry the selectable ID used for kill
+                -- credit, but no monster/event component. Include them in the
+                -- system snapshot so credited XP can reach player.progress.
+                "d2legacy.world.selectable",
             },
         },
         read = {
