@@ -12,4 +12,4 @@ internal/game/player	internal/mod/d2legacy/authority_test.go	partial	entry and m
 internal/game/transition	internal/runtime/lua/warp_lab_test.go	covered	approach collision warp relocation and presentation transition
 internal/game/ownedunit	internal/mod/d2legacy/authority_test.go	pending	hireling summon ownership persistence and death consequences
 internal/game/state	internal/runtime/lua/d2legacy_fire_bolt_test.go	partial	timed lifecycle covered; replay and restore parity pending
-internal/mod/d2legacy/mapgen	internal/runtime/lua/mapgen_module_test.go	transitional	Go policy vectors retained until equivalent Lua generators replace implementation
+internal/mod/d2legacy/mapgen	internal/runtime/lua/d2legacy_mapgen_outdoor_test.go	covered	preset maze outdoor topology structures and deterministic recipe admission execute in authoritative Lua
