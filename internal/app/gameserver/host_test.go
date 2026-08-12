@@ -1,0 +1,95 @@
+package gameserver
+
+import (
+	"context"
+	"errors"
+	"reflect"
+	"testing"
+
+	"github.com/gravestench/dark-magic/internal/content"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
+)
+
+type fixtureRecords struct{}
+
+func (fixtureRecords) Invalidate(string)  {}
+func (fixtureRecords) Loaded(string) bool { return true }
+func (fixtureRecords) Load(path string) ([]map[string]string, error) {
+	switch path {
+	case "data/global/excel/charstats.txt":
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}}, nil
+	case "data/global/excel/skilldesc.txt":
+		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil
+	case "data/global/excel/skills.txt":
+		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "skilldesc": "firebolt", "leftskill": "1", "general": "0", "passive": "0", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
+	case "data/global/excel/Missiles.txt":
+		return []map[string]string{{"Missile": "firebolt", "Skill": "Fire Bolt", "pSrvDoFunc": "1", "CollideType": "3", "CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt", "AnimSpeed": "16", "NumDirections": "16", "LoopAnim": "1"}}, nil
+	default:
+		return nil, nil
+	}
+}
+
+func TestHeadlessHostPinsRunningAuthorityToAdmissionAndReconnect(t *testing.T) {
+	host, err := Start(t.Context(), content.D2Legacy(), fixtureRecords{}, Config{
+		SessionID: "game-7", Seed: 42, Prediction: gamesession.PredictionLimited,
+		InitialData: map[string]any{"difficulty": "normal"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer host.Close(context.Background())
+
+	if !reflect.DeepEqual(host.Allocation.Identity, host.Authority.Identity) {
+		t.Fatal("allocation identity differs from running d2legacy authority")
+	}
+	replay, err := host.Session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned, err := simulation.RuntimeIdentityFromParticipants(replay.InitialParticipants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(pinned, host.Allocation.Identity) {
+		t.Fatal("session participant identity differs from allocation")
+	}
+
+	token, err := host.Admit("character:alice", host.Authority.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if token.SessionID != "game-7" || token.Prediction != gamesession.PredictionLimited {
+		t.Fatalf("admission token = %#v", token)
+	}
+	if err := host.ValidateReconnect(token, host.Authority.Identity); err != nil {
+		t.Fatal(err)
+	}
+
+	mismatch := host.Authority.Identity
+	mismatch.PackageHash = "different-package"
+	if _, err := host.Admit("character:bob", mismatch); !errors.Is(err, gamesession.ErrCompatibility) {
+		t.Fatalf("mismatched admission error = %v", err)
+	}
+	if err := host.ValidateReconnect(token, mismatch); !errors.Is(err, gamesession.ErrCompatibility) {
+		t.Fatalf("mismatched reconnect error = %v", err)
+	}
+	stale := token
+	stale.SessionID = "old-game"
+	if err := host.ValidateReconnect(stale, host.Authority.Identity); !errors.Is(err, gamesession.ErrCompatibility) {
+		t.Fatalf("stale reconnect error = %v", err)
+	}
+}
+
+func TestHeadlessHostRejectsUnknownPredictionContract(t *testing.T) {
+	host, err := Start(t.Context(), content.D2Legacy(), fixtureRecords{}, Config{
+		SessionID: "game-invalid", Prediction: gamesession.PredictionTier("client_decides"),
+	})
+	if host != nil {
+		_ = host.Close(context.Background())
+		t.Fatal("invalid prediction returned a host")
+	}
+	if !errors.Is(err, gamesession.ErrCompatibility) {
+		t.Fatalf("invalid prediction error = %v", err)
+	}
+}

@@ -26,9 +26,10 @@ type Records interface {
 // composition roots use the same object so neither can quietly acquire a
 // different set of capabilities, streams, or lifecycle rules.
 type Authority struct {
-	Runtime *modruntime.Runtime
-	State   *simulation.StateStore
-	Random  *simulation.RandomStreams
+	Runtime  *modruntime.Runtime
+	State    *simulation.StateStore
+	Random   *simulation.RandomStreams
+	Identity simulation.RuntimeIdentity
 
 	component host.Component
 }
@@ -63,7 +64,7 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if err != nil {
 		return nil, err
 	}
-	result := &Authority{Runtime: modruntime.New(), State: simulation.NewStateStore(), Random: streams}
+	result := &Authority{Runtime: modruntime.New(), State: simulation.NewStateStore(), Random: streams, Identity: identity}
 	identityState, err := simulation.NewIdentityParticipant(identity)
 	if err != nil {
 		return nil, err

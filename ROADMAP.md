@@ -1692,7 +1692,7 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
 M21.14 is complete only when all of the following are true:
 
 - [x] The application can run its generic host without `d2legacy`.
-- [ ] Loading `d2legacy` supplies all Diablo II gameplay systems and policies;
+- [x] Loading `d2legacy` supplies all Diablo II gameplay systems and policies;
   current implemented policy is isolated there, while the open domain vectors
   above identify fidelity that has not been implemented yet.
 - [x] No production Go package implements Diablo-specific combat, skill,
@@ -1701,15 +1701,22 @@ M21.14 is complete only when all of the following are true:
   or data/codec boundary.
 - [x] Authoritative Lua state participates in deterministic checksums, replay,
   checkpoint, and restore.
-- [ ] A headless game server runs authoritative `d2legacy` with the exact mod,
+- [x] A headless game server runs authoritative `d2legacy` with the exact mod,
   dependency, configuration, and capability identity pinned for the session.
-- [ ] Incompatible clients, reconnects, late joins, checkpoints, restored
+- [x] Incompatible clients, reconnects, late joins, checkpoints, restored
   sessions, and replays are rejected instead of silently changing rules.
 - [ ] Client prediction is optional and untrusted; reconciliation preserves the
   game server's canonical outcome.
 - [x] Existing gameplay acceptance scenarios pass through the Lua
   implementation.
 - [x] CI prevents reintroducing D2-specific policy into the engine.
+
+The standalone game-server composition now owns one renderer-free ECS, session,
+and authoritative `d2legacy` runtime behind a reusable host boundary. Its realm-
+style allocation is derived from the identity registered by that exact running
+runtime; admission and reconnect validate against it, and replay participants
+prove the session pinned the same value. Headless acceptance rejects changed
+packages, stale session tokens, and unknown prediction contracts before play.
 
 The first simulation acceptance loop is a generated Blood Moor with one typed
 hostile that acquires and paths to the player, exchanges a basic attack, emits
