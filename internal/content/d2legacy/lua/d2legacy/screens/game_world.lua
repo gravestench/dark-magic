@@ -7,7 +7,7 @@
 --   d2legacy.gameplay.world -> ECS binding + camera helper
 --   engine.player/v1         -> authoritative player intents
 --   engine.items/v1          -> item snapshots/intents
---   engine.game_data/v1      -> immutable skill metadata
+--   d2legacy.data.skill      -> skill presentation interpreted by this mod
 --   game_hud.lua         -> disposable HUD presentation
 --   engine.scene/v1          -> overlay navigation
 --
@@ -26,6 +26,7 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local skill_data = require("d2legacy.data.skill")
 local chunked_map = require("d2legacy.presentation.chunked_map")
 local tooltip = require("d2legacy.ui.tooltip")
 local text = require("d2legacy.ui.text")
@@ -359,7 +360,6 @@ return {
 			self.targeting = require("engine.targeting/v1")
             local items = require("d2legacy.items.api")
             self.items = items
-            self.game_data = require("engine.game_data/v1")
 
             -- Instead of giving game_hud raw capabilities, pass the small
             -- operations it needs. This is dependency injection with plain Lua tables.
@@ -496,12 +496,12 @@ return {
             -- Skill metadata is immutable. Cache detail records until assigned ID changes.
             if self.left_skill_id ~= snapshot.left_skill then
                 self.left_skill_id = snapshot.left_skill
-                self.left_skill = self.game_data.skill(snapshot.left_skill)
+                self.left_skill = skill_data.load(snapshot.left_skill)
             end
 
             if self.right_skill_id ~= snapshot.right_skill then
                 self.right_skill_id = snapshot.right_skill
-                self.right_skill = self.game_data.skill(snapshot.right_skill)
+                self.right_skill = skill_data.load(snapshot.right_skill)
             end
 
             snapshot.left_skill_detail = self.left_skill
@@ -511,7 +511,7 @@ return {
             -- sides). Merge immutable display metadata into those COPIED tables so
             -- the selector can render names/icons without mutating live ECS components.
             for _, skill in ipairs(snapshot.learned_skills) do
-                local detail = self.game_data.skill(skill.skill_id)
+                local detail = skill_data.load(skill.skill_id)
                 if detail then
                     for key, value in pairs(detail) do skill[key] = value end
                     skill.level = skill.level or 1

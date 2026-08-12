@@ -18,7 +18,7 @@ local function label(root, value, y, style)
 end
 
 function lab:create()
-    local data = require("engine.game_data/v1")
+    local data = require("d2legacy.data.monster")
     self.root = render.create("hud")
     self.actor = render.create("hud", self.root)
     self.actor:set_position(400, 335); self.actor:set_scale(2, 2)
@@ -26,7 +26,7 @@ function lab:create()
     self.status = label(self.root, "", 68)
 	self.help = label(self.root, "F: find monster   Left/Right: direction   Up/Down: mode   PgUp/PgDn: browse   Enter: random", 548)
     self.detail = label(self.root, "", 574)
-    self.records = data.monsters()
+    self.records = data.all(0)
 	local choices = {}
 	for _, record in ipairs(self.records) do choices[#choices + 1] = record.id end
 	self.picker = fuzzy_picker.create(self.root, {title="SELECT MONSTER", items=choices, on_select=function(value)

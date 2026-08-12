@@ -63,10 +63,16 @@ function M.apply(command)
         ["d2legacy.world.velocity"]={x=0,y=0},
         ["d2legacy.world.location"]={act=spawn.act,level_id=spawn.level_id},
         ["d2legacy.world.collider"]={radius=definition.collider_radius},
+        ["engine.world.velocity_mover"]={},
         ["d2legacy.world.selectable"]={id="monster:"..spawn.spawn_id,kind="hostile",
             label=definition.name_key,owner="",radius=definition.select_radius,priority=20},
     })
 end
+
+-- Startup population is already trusted mod policy and does not need to forge
+-- a synthetic transport command. Reusing this function keeps one monster
+-- materializer for startup, admin spawning, replay, and tests.
+M.materialize = M.apply
 
 function M.register()
     commands.register({kind="system.monster.spawn",authorities={"system","administrator"},

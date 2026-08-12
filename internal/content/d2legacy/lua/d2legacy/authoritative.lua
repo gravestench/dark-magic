@@ -24,6 +24,7 @@ local equipment = require("d2legacy.systems.equipment")
 local item_bootstrap = require("d2legacy.items.bootstrap")
 local item_commands = require("d2legacy.commands.items")
 local interaction_commands = require("d2legacy.commands.interactions")
+local population = require("d2legacy.bootstrap.population")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -54,6 +55,7 @@ function M.start()
     equipment.register()
     item_commands.register()
     interaction_commands.register()
+    population.register()
 end
 
 function M.stop()

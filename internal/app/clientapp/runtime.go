@@ -17,9 +17,6 @@ import (
 )
 
 func (app *application) registerLuaRuntime() error {
-	if err := app.scripts.RegisterInstaller(modruntime.ContentRequire(app.options.Content, "lua")); err != nil {
-		return err
-	}
 	for _, module := range app.baseLuaModules() {
 		if err := app.scripts.RegisterModule(module); err != nil {
 			return fmt.Errorf("register Lua module %s: %w", module.Name, err)
@@ -47,12 +44,6 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		}),
 		modruntime.AudioModule(app.scripts, app.mixer, app.options.Content, app.gameData),
 		modruntime.SettingsModule(app.gameSettings, app.mixer, app.renderer),
-		modruntime.RecordsModule(app.gameData),
-		modruntime.AuthorityStateModule(app.authoritativeState),
-		modruntime.AuthorityRandomModule(app.authoritativeRandom),
-		modruntime.AuthorityCommandModule(app.scripts, app.offlineSession),
-		modruntime.InitialDataModule(map[string]any{"d2legacy.items": app.itemBootstrapData(), "d2legacy.interactions": app.interactionBootstrapData()}),
-		modruntime.GameDataModule(app.gameData),
 		modruntime.QuestCatalogModule(app.questCatalog, app.locale),
 		modruntime.MapCatalogModule(app.questCatalog),
 		modruntime.LocaleModule(app.locale),
@@ -61,7 +52,6 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.TargetingModule(gametargeting.New(app.entitySimulation)),
 		modruntime.InteractionModule(app.interactionControl),
 		modruntime.ItemModule(app.itemControl),
-		modruntime.NewECSCapability(app.scripts, app.entitySimulation).Module(),
 		modruntime.LoadingModule(app.loading),
 	}
 }

@@ -2,6 +2,7 @@ package clientapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -21,7 +22,6 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameinteraction "github.com/gravestench/dark-magic/internal/game/interaction"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
-	gamemonster "github.com/gravestench/dark-magic/internal/game/monster"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -159,6 +159,10 @@ func (app *application) buildOfflineSession() error {
 	if err := app.buildItemAuthority(); err != nil {
 		return err
 	}
+	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
+		app.authoritativeState, app.authoritativeRandom, map[string]any{"d2legacy.items": app.itemBootstrapData(), "d2legacy.interactions": app.interactionBootstrapData()}); err != nil {
+		return wrap("configure canonical d2legacy runtime", err)
+	}
 	if err := app.registerOfflineCommands(); err != nil {
 		return err
 	}
@@ -170,8 +174,8 @@ func (app *application) registerOfflineCommands() error {
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
 	}
-	if err := gamemonster.RegisterMovement(app.entitySimulation, bloodMoor); err != nil {
-		return wrap("register monster movement", err)
+	if err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor); err != nil {
+		return wrap("register generic velocity movement", err)
 	}
 	for name, register := range map[string]func(*gamesession.Session) error{
 		"movement commands": gamesession.RegisterMovement,
@@ -236,30 +240,46 @@ func (app *application) registerOfflineCommands() error {
 }
 
 func (app *application) queueEntryPopulation() error {
-	snapshot, err := app.gameData.Snapshot()
+	payload, err := json.Marshal(app.populationBootstrapData())
 	if err != nil {
-		return wrap("load Blood Moor population records", err)
+		return wrap("encode entry population geometry", err)
 	}
-	plan, err := gamemonster.BuildBloodMoorPopulation(app.gameWorldZones[2], app.gameWorlds[2], snapshot)
-	if err != nil {
-		return wrap("plan Blood Moor population", err)
+	return wrap("queue d2legacy entry population", app.offlineSession.Submit(simulation.Command{
+		Tick: 1, Player: "d2legacy.population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: payload,
+	}))
+}
+
+func (app *application) populationBootstrapData() map[string]any {
+	zone, worldMap := app.gameWorldZones[2], app.gameWorlds[2]
+	if zone == nil || worldMap == nil {
+		return nil
 	}
-	if defaults := developmentScenes[app.options.StartScene]; defaults.nearbyHostiles > 0 {
-		spawn := app.gameWorldSpawns[2]
-		plan, err = placeDevelopmentEncounter(plan, app.gameWorlds[2], spawn, defaults.nearbyHostiles)
-		if err != nil {
-			return wrap("place development combat encounter", err)
+	request := zone.Request()
+	populated := map[uint32]bool{}
+	for _, stamp := range zone.Stamps() {
+		populated[stamp.ID] = stamp.Populate
+	}
+	nearby := developmentScenes[app.options.StartScene].nearbyHostiles
+	player := app.gameWorldSpawns[2]
+	rooms := make([]any, 0, len(zone.Rooms()))
+	for _, room := range zone.Rooms() {
+		points := make([]any, 0, 8)
+		anchors := [][2]float64{}
+		if nearby > 0 {
+			anchors = [][2]float64{{player[0] + 10, player[1]}, {player[0] + 7, player[1] + 7}, {player[0], player[1] + 10}, {player[0] - 7, player[1] + 7}}
+		} else {
+			centerX, centerY := float64((room.X+room.Width/2)*5)+2, float64((room.Y+room.Height/2)*5)+2
+			anchors = [][2]float64{{centerX, centerY}, {centerX + 1, centerY}, {centerX, centerY + 1}, {centerX - 1, centerY}}
 		}
+		for _, anchor := range anchors {
+			if x, y, ok := worldMap.OpenPointNearSubtile(anchor[0], anchor[1]); ok {
+				points = append(points, map[string]any{"x": x, "y": y})
+			}
+		}
+		rooms = append(rooms, map[string]any{"id": float64(room.ID), "populate": populated[room.StampID], "points": points})
 	}
-	if err := gamemonster.SubmitPopulation(app.offlineSession, plan, "population", 1); err != nil {
-		return wrap("queue Blood Moor population", err)
-	}
-	checksum, err := plan.Checksum()
-	if err != nil {
-		return wrap("checksum Blood Moor population", err)
-	}
-	slog.Info("planned Blood Moor population", "spawns", len(plan.Spawns), "trace_entries", len(plan.Trace), "checksum", checksum)
-	return nil
+	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
 }
 
 func (app *application) buildInteractionAuthority() error {

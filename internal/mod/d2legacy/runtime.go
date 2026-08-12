@@ -88,18 +88,8 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if len(config.Restore) > 0 && (len(participants) > 0 || restoredState == nil) {
 		return nil, fmt.Errorf("d2legacy: restored state is missing %d participants", len(participants))
 	}
-	if err := result.Runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+	if err := ConfigureRuntime(result.Runtime, source, records, engine, session, result.State, streams, config.InitialData); err != nil {
 		return nil, err
-	}
-	for _, module := range []modruntime.Module{
-		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(result.State),
-		modruntime.AuthorityRandomModule(streams), modruntime.AuthorityCommandModule(result.Runtime, session),
-		modruntime.InitialDataModule(config.InitialData),
-		modruntime.NewECSCapability(result.Runtime, engine).Module(),
-	} {
-		if err := result.Runtime.RegisterModule(module); err != nil {
-			return nil, err
-		}
 	}
 	if err := result.Runtime.Start(ctx); err != nil {
 		return nil, err
@@ -133,6 +123,29 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	}
 	result.component = component
 	return result, nil
+}
+
+// ConfigureRuntime installs the one canonical authoritative d2legacy capability
+// set into a stopped Lua runtime. The interactive client adds presentation
+// capabilities to this same runtime; headless servers add nothing. Keeping the
+// authority wiring here prevents the two hosts from quietly drifting apart.
+func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, state *simulation.StateStore, random *simulation.RandomStreams, initial map[string]any) error {
+	if runtime == nil || source == nil || records == nil || engine == nil || session == nil || state == nil || random == nil {
+		return fmt.Errorf("d2legacy: complete runtime dependencies are required")
+	}
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+		return err
+	}
+	for _, module := range []modruntime.Module{
+		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(state), modruntime.AuthorityRandomModule(random),
+		modruntime.AuthorityCommandModule(runtime, session), modruntime.InitialDataModule(initial),
+		modruntime.NewECSCapability(runtime, engine).Module(),
+	} {
+		if err := runtime.RegisterModule(module); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (authority *Authority) Stop(ctx context.Context) error {

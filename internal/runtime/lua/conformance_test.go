@@ -7,7 +7,6 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	gameitem "github.com/gravestench/dark-magic/internal/game/item"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -46,8 +45,8 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		VFSModule(contentFS), DataModule(contentFS), WorldModule(contentFS), InputModule(&input), AudioModule(runtime, &mixer, source, gamedata.New(recordstore.New(source))),
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
-		RecordsModule(recordstore.New(source)), GameDataModule(staticGameData{snapshot: gamedata.Snapshot{}}), LocaleModule(localization.New(source, "English")),
-		LootModule(gamedata.New(recordstore.New(source))), SaveModule(persistence.New()), PlayerControlModule(&gamesession.MovementController{}), ItemModule(&gameitem.Controller{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
+		SaveModule(persistence.New()), PlayerControlModule(&gamesession.MovementController{}), ItemModule(&gameitem.Controller{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
@@ -58,8 +57,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.audio/v1": {"diagnostics", "exists", "play", "play_persistent", "play_record", "set_bus_volume", "stop_group"}, "engine.records/v1": {"load", "reload", "loaded"},
 		"engine.settings/v1":  {"get", "save", "set", "status"},
 		"engine.video/v1":     {"available", "play"},
-		"engine.game_data/v1": {"character_class", "missiles", "monsters", "skill", "unique_titles"},
-		"engine.locale/v1":    {"text"}, "engine.loot/v1": {"event_seed", "roll"},
+		"engine.locale/v1": {"text"},
 		"engine.save/v1":       {"characters", "create", "create_named", "delete", "select", "selected"},
 		"engine.player/v1":     {"assign_skill", "request_running"},
 		"engine.items/v1":      {"move"},
