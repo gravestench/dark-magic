@@ -20,7 +20,7 @@ func TestAuthorityCommandModuleKeepsAdmissionInGoAndPolicyInLua(t *testing.T) {
 		t.Fatal(err)
 	}
 	stores := simulation.NewStateStore()
-	if err := stores.Register("d2legacy.test.commands", "counter/v1", []byte(`{"count":0}`)); err != nil {
+	if err := stores.Register("example.commands", "counter/v1", []byte(`{"count":0}`)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -42,7 +42,7 @@ local commands = require("engine.authority_command/v1")
 local state = require("engine.authority_state/v1")
 
 commands.register({
-    kind = "d2legacy.test.increment",
+    kind = "example.increment",
     authorities = { "player" },
     validate = function(command)
         if command.payload.amount < 1 then
@@ -50,9 +50,9 @@ commands.register({
         end
     end,
     apply = function(command)
-        local counter = state.read("d2legacy.test.commands")
+        local counter = state.read("example.commands")
         counter.count = counter.count + command.payload.amount
-        state.replace("d2legacy.test.commands", "counter/v1", counter)
+        state.replace("example.commands", "counter/v1", counter)
     end,
 })
 `
@@ -61,14 +61,14 @@ commands.register({
 	}
 
 	payload, _ := json.Marshal(map[string]int{"amount": 3})
-	command := simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "d2legacy.test.increment", Payload: payload}
+	command := simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "example.increment", Payload: payload}
 	if err := session.Submit(command); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := stores.Read("d2legacy.test.commands")
+	got, _ := stores.Read("example.commands")
 	if string(got.Data) != `{"count":3}` {
 		t.Fatalf("Lua-applied state = %s", got.Data)
 	}
@@ -92,14 +92,14 @@ func TestAuthorityCommandLuaValidatorRejectsBeforeQueueing(t *testing.T) {
 	defer runtime.Stop(ctx)
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
 		return state.DoString(`require("engine.authority_command/v1").register({
-            kind = "d2legacy.test.reject",
+            kind = "example.reject",
             validate = function() error("no") end,
             apply = function() end,
         })`)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	command := simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "d2legacy.test.reject", Payload: json.RawMessage(`{}`)}
+	command := simulation.Command{Tick: 1, Player: "alice", Sequence: 1, Kind: "example.reject", Payload: json.RawMessage(`{}`)}
 	if err := session.Submit(command); err == nil {
 		t.Fatal("Lua validator accepted rejected command")
 	}

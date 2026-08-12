@@ -10,7 +10,7 @@ import (
 
 func TestAuthorityRandomModuleUsesCheckpointedNamedStreams(t *testing.T) {
 	streams := simulation.NewRandomStreams(99)
-	if err := streams.Register("d2legacy.combat.hit"); err != nil {
+	if err := streams.Register("example.roll"); err != nil {
 		t.Fatal(err)
 	}
 	checkpoint, err := streams.SnapshotState()
@@ -33,7 +33,7 @@ func TestAuthorityRandomModuleUsesCheckpointedNamedStreams(t *testing.T) {
 		err := runtime.Run(ctx, func(state *lua.LState) error {
 			return state.DoString(`
 local random = require("engine.authority_random/v1")
-result = random.integer("d2legacy.combat.hit", 100)
+result = random.integer("example.roll", 100)
 `)
 		})
 		if err != nil {

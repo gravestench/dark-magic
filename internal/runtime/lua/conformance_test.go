@@ -11,7 +11,6 @@ import (
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
-	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -37,7 +36,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		SettingsModule(preferences.NewTransient(), &mixer),
 		VideoModule(runtime, video.Unavailable{}, source),
 		RecordsModule(recordstore.New(source)), LocaleModule(localization.New(source, "English")),
-		PlayerControlModule(&d2movement.MovementController{}), CommandIntentModule(&gamesession.IntentController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
+		PlayerControlModule(&testPlayerController{}), CommandIntentModule(&gamesession.IntentController{}), SimulationModule(NewSimulation(scene.New(1, 10, 10))),
 		RenderModule(runtime, &composer), scenes.Module(),
 	}
 	expected := map[string][]string{
