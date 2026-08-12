@@ -137,6 +137,7 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 		return err
 	}
 	for _, module := range []modruntime.Module{
+		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
 		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(state), modruntime.AuthorityRandomModule(random),
 		modruntime.AuthorityCommandModule(runtime, session), modruntime.InitialDataModule(initial),
 		modruntime.NewECSCapability(runtime, engine).Module(),

@@ -3,9 +3,14 @@ package modruntime
 import (
 	"fmt"
 
+	gamedata "github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/mapgen"
 	lua "github.com/yuin/gopher-lua"
 )
+
+type gameDataSnapshotter interface {
+	Snapshot() (gamedata.Snapshot, error)
+}
 
 // MapgenModule exposes generated value snapshots, never mutable generator or
 // catalog ownership. Lua labs can inspect recipes while gameplay sessions can

@@ -1,9 +1,11 @@
 package modruntime
 
 import (
+	"context"
 	"testing"
 
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func TestCommandIntentModuleQueuesSerializableModCommand(t *testing.T) {
@@ -12,13 +14,17 @@ func TestCommandIntentModuleQueuesSerializableModCommand(t *testing.T) {
 	if err := runtime.RegisterModule(CommandIntentModule(controller)); err != nil {
 		t.Fatal(err)
 	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
 	defer runtime.Stop(t.Context())
 
-	if _, err := runtime.Eval(t.Context(), `
+	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
+		return state.DoString(`
 local intents = require("engine.command_intent/v1")
 intents.submit("example.command", { value = 42, nested = { ok = true } })
-return true
-`); err != nil {
+`)
+	}); err != nil {
 		t.Fatal(err)
 	}
 

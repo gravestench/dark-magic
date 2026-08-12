@@ -23,7 +23,7 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 7)
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 99)
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 99)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestAuthorityRunsTimedStateLifecycleThroughLua(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 3)
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestAuthorityMaterializesInitialItemsIntoLuaOwnedECS(t *testing.T) {
 			"weapon_set": float64(0), "page": float64(0), "melee_range": float64(2),
 			"physical_min": float64(512), "physical_max": float64(1024), "melee_weapon_class": "1HS"}},
 	}}
-	authority, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
+	authority, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestAuthorityMovesItemsThroughLuaOwnedPolicy(t *testing.T) {
 		"items": []any{map[string]any{"id": "sword", "code": "ssd", "width": float64(1), "height": float64(3),
 			"body_slots": "rarm,larm", "container": "inventory"}},
 	}}
-	authority, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
+	authority, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{Seed: 4, InitialData: bootstrap})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,11 +226,11 @@ func TestAuthorityMovesItemsThroughLuaOwnedPolicy(t *testing.T) {
 	}
 }
 
-type fixtureRecords struct{}
+type runtimeFixtureRecords struct{}
 
-func (fixtureRecords) Invalidate(string)  {}
-func (fixtureRecords) Loaded(string) bool { return true }
-func (fixtureRecords) Load(path string) ([]map[string]string, error) {
+func (runtimeFixtureRecords) Invalidate(string)  {}
+func (runtimeFixtureRecords) Loaded(string) bool { return true }
+func (runtimeFixtureRecords) Load(path string) ([]map[string]string, error) {
 	if path == "data/global/excel/skills.txt" {
 		return []map[string]string{{"Id": "36", "skill": "Fire Bolt", "srvmissile": "firebolt", "etype": "fire", "interrupt": "1", "srvstfunc": "", "srvdofunc": "", "mana": "5", "manashift": "7", "emin": "3", "emax": "6", "HitShift": "8"}}, nil
 	}
@@ -244,7 +244,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 7)
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 77)
+	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 77)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 77, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 77, Restore: checkpoint.Participants})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestAuthorityBootsWithoutClientOrRenderer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(context.Background(), content.D2Legacy(), fixtureRecords{}, engine, session, 7)
+	authority, err := Start(context.Background(), content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}

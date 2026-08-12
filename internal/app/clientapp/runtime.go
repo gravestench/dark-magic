@@ -36,6 +36,8 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
 		modruntime.DataModule(app.options.Content, app.profile.ID),
+		modruntime.DeterministicModule(),
+		modruntime.WorldgenModule(),
 		modruntime.SessionWorldModule(app.options.Content, app.currentWorld, app.worldObjectResolver),
 		modruntime.MapgenModule(app.gameData),
 		modruntime.InputModule(app.inputState),
