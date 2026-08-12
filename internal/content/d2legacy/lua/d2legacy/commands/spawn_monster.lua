@@ -4,6 +4,7 @@
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
+local random = require("engine.authority_random/v1")
 local M = {}
 
 local function encode_components(values)
@@ -33,9 +34,15 @@ end
 function M.apply(command)
     local spawn, definition = command.payload, command.payload.definition
     assert(not existing(spawn.spawn_id), "monster spawn already exists")
-    -- Definitions carry reviewed 8.8 raw values. A deterministic midpoint is
-    -- sufficient until spawn variance is moved onto its named Lua RNG stream.
-    local health = math.floor((definition.life_min + definition.life_max) / 2)
+    -- Monster life endpoints are authored as whole values encoded in Diablo's
+    -- 8.8 fixed-point unit. Draw a whole point, then restore the raw scale.
+    -- The named engine stream is checkpointed, replayed, and unavailable to
+    -- presentation code; no clock or process-global random state leaks in.
+    assert(definition.life_min % 256 == 0 and definition.life_max % 256 == 0,
+        "monster life endpoints must be whole 8.8 values")
+    local minimum, maximum = definition.life_min / 256, definition.life_max / 256
+    local health = (minimum + random.integer("d2legacy.monster.spawn.life",
+        maximum - minimum + 1)) * 256
     ecs.create({
         ["d2legacy.monster.identity"]={spawn_id=spawn.spawn_id,definition_id=definition.id,
             base_id=definition.base_id or "",graphics_id=definition.graphics_id or "",

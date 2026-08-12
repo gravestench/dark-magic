@@ -60,6 +60,56 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	}
 }
 
+func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	defer engine.Close()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	authority, err := Start(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, 99)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+	payload, _ := json.Marshal(map[string]any{
+		"spawn_id": "fallen-1", "seed": 123, "x": 10, "y": 20, "act": 1, "level_id": 2,
+		"definition": map[string]any{
+			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
+			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
+			"life_min": 256, "life_max": 768, "level": 1, "defense": 0, "attack_rating": 0,
+			"physical_min": 256, "physical_max": 256, "experience": 5, "treasure_class": "Act 1 H2H A",
+			"collider_radius": 1, "select_radius": 1, "velocity": 5, "think_interval": 1,
+			"aggro_radius": 20, "attack_range": 1,
+		},
+	})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.monster.spawn", Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	stats, found := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+	if !found || stats.Len() != 1 {
+		t.Fatalf("Lua spawn created %d monster stats", stats.Len())
+	}
+	value, _ := stats.Get(stats.Entities()[0])
+	health, _ := value.Get("health")
+	if health != int64(256) && health != int64(512) && health != int64(768) {
+		t.Fatalf("spawned health = %v, want authored whole point", health)
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(replay.InitialParticipants) != 3 {
+		t.Fatalf("participant states = %d, want identity, Lua state, and RNG", len(replay.InitialParticipants))
+	}
+}
+
 type fixtureRecords struct{}
 
 func (fixtureRecords) Invalidate(string)  {}

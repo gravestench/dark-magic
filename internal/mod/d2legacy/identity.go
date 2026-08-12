@@ -60,6 +60,7 @@ func NewRandomStreams(seed uint64) (*simulation.RandomStreams, error) {
 		"d2legacy.combat.fire_bolt.damage",
 		"d2legacy.combat.basic_melee.hit",
 		"d2legacy.combat.basic_melee.damage",
+		"d2legacy.monster.spawn.life",
 	} {
 		if err := streams.Register(name); err != nil {
 			return nil, err
