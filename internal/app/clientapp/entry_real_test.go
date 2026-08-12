@@ -11,6 +11,7 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 )
 
@@ -106,7 +107,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		}
 	}
 
-	wantX, wantY, found := app.gameWorlds[1].ActOneTownEntry()
+	wantX, wantY, found := d2mapgen.ActOneTownEntry(app.gameWorlds[1])
 	if !found {
 		t.Fatal("generated town has no campfire entry anchor")
 	}

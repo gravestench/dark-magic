@@ -312,17 +312,13 @@ func (m *Map) OpenPointNearSubtile(x, y float64) (float64, float64, bool) {
 	return m.openPointNear(CollisionCell(x), CollisionCell(y), 0)
 }
 
-// ActOneTownEntry returns a deterministic open point near the authored Rogue
-// Encampment bonfire. The bonfire is the stable town landmark shared by all
-// four cardinal layouts; using it avoids tying session entry to screen pixels
-// or to whichever shape happens to surround the map's numeric center.
-func (m *Map) ActOneTownEntry() (float64, float64, bool) {
-	for _, object := range m.Objects {
-		if object.Type == ObjectTypeStatic && object.ID == 2 { // act-local RogueBonfire
-			return m.openPointNear(int(object.X), int(object.Y), 4)
-		}
+// OpenPointNear resolves a traversable point at or outside a caller-selected
+// radius. The caller owns why that inset is appropriate.
+func (m *Map) OpenPointNear(x, y float64, firstRadius int) (float64, float64, bool) {
+	if firstRadius < 0 {
+		return 0, 0, false
 	}
-	return 0, 0, false
+	return m.openPointNear(CollisionCell(x), CollisionCell(y), firstRadius)
 }
 
 func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64, bool) {

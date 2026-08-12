@@ -174,7 +174,9 @@ func (app *application) registerOfflineCommands() error {
 	if bloodMoor == nil {
 		return errors.New("register hostile simulation: Blood Moor world is unavailable")
 	}
-	if err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor); err != nil {
+	if err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor, gameworld.VelocityComponents{
+		Position: "d2legacy.world.position", Velocity: "d2legacy.world.velocity", Collider: "d2legacy.world.collider",
+	}); err != nil {
 		return wrap("register generic velocity movement", err)
 	}
 	if err := app.queueEntryPopulation(); err != nil {

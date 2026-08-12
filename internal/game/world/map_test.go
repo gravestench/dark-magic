@@ -131,22 +131,3 @@ func TestOpenPointNearCenterSkipsBlockedCenterDeterministically(t *testing.T) {
 		t.Fatalf("open point = %v,%v,%v; want first perimeter point 1,1", x, y, found)
 	}
 }
-
-func TestActOneTownEntryUsesAuthoredBonfireAndAvoidsItsCenter(t *testing.T) {
-	m := &Map{WidthSubtiles: 20, HeightSubtiles: 20, Objects: []Object{{Type: ObjectTypeStatic, ID: 2, X: 10, Y: 10}}}
-	m.flags = make([]Flags, 400)
-	x, y, found := m.ActOneTownEntry()
-	if !found {
-		t.Fatal("expected an entry point")
-	}
-	if x != 6 || y != 6 {
-		t.Fatalf("entry = (%v,%v), want deterministic first point at radius four", x, y)
-	}
-}
-
-func TestActOneTownEntryRequiresAuthoredBonfire(t *testing.T) {
-	m := &Map{WidthSubtiles: 20, HeightSubtiles: 20, flags: make([]Flags, 400)}
-	if _, _, found := m.ActOneTownEntry(); found {
-		t.Fatal("invented an entry without a bonfire")
-	}
-}

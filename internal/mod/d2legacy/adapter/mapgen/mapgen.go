@@ -12,9 +12,24 @@ import (
 	"io/fs"
 	"strings"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
+
+// ActOneTownEntry resolves the d2legacy Rogue Encampment spawn near its
+// authored bonfire object. Object type/ID and search inset are mod policy.
+func ActOneTownEntry(world *gameworld.Map) (float64, float64, bool) {
+	if world == nil {
+		return 0, 0, false
+	}
+	for _, object := range world.Objects {
+		if object.Type == gameworld.ObjectTypeStatic && object.ID == 2 {
+			return world.OpenPointNear(float64(object.X), float64(object.Y), 4)
+		}
+	}
+	return 0, 0, false
+}
 
 type recordsGateway interface {
 	Load(string) ([]map[string]string, error)

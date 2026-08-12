@@ -19,23 +19,32 @@ type VelocityPathFinder interface {
 	FindPath(PathRequest) ([]Point, error)
 }
 
-func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder) error {
+// VelocityComponents names the mod-owned spatial schemas consumed by the
+// generic integrator. The engine does not prescribe a mod namespace.
+type VelocityComponents struct {
+	Position, Velocity, Collider string
+}
+
+func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, components VelocityComponents) error {
 	if engine == nil {
 		return fmt.Errorf("world: velocity movement requires an engine")
+	}
+	if components.Position == "" || components.Velocity == "" || components.Collider == "" {
+		return fmt.Errorf("world: velocity movement requires position, velocity, and collider schemas")
 	}
 	marker, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "engine.world.velocity_mover", Version: 1})
 	if err != nil {
 		return err
 	}
-	position, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.position", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	position, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: components.Position, Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return err
 	}
-	velocity, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.velocity", Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
+	velocity, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: components.Velocity, Version: 1, Fields: []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return err
 	}
-	collider, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.collider", Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
+	collider, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: components.Collider, Version: 1, Fields: []akara.Field{{Name: "radius", Kind: akara.FieldFloat64}}})
 	if err != nil {
 		return err
 	}

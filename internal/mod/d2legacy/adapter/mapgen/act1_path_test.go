@@ -41,3 +41,16 @@ func TestActOneDirtPathNeighborMaskUsesLegacyDirectionOrder(t *testing.T) {
 		t.Fatalf("east/west dirt sequence = %#x, want 0x07", got)
 	}
 }
+
+func TestActOneTownEntryUsesAuthoredBonfire(t *testing.T) {
+	m, _ := gameworld.NewOpenMap(20, 20)
+	m.Objects = []gameworld.Object{{Type: gameworld.ObjectTypeStatic, ID: 2, X: 10, Y: 10}}
+	x, y, found := ActOneTownEntry(m)
+	if !found || x != 6 || y != 6 {
+		t.Fatalf("entry = (%v,%v,%v)", x, y, found)
+	}
+	empty, _ := gameworld.NewOpenMap(20, 20)
+	if _, _, found := ActOneTownEntry(empty); found {
+		t.Fatal("invented an entry without a bonfire")
+	}
+}

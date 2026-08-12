@@ -39,7 +39,7 @@ func (app *application) buildEntryWorld() error {
 	}
 	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	townSpawnX, townSpawnY, found := townMap.ActOneTownEntry()
+	townSpawnX, townSpawnY, found := d2mapgen.ActOneTownEntry(townMap)
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}
