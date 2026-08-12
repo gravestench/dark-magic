@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"testing/fstest"
+
+	"github.com/gravestench/dark-magic/internal/content"
 )
 
 func TestDataModuleLoadsJSONAsLuaValues(t *testing.T) {
@@ -61,7 +63,12 @@ func TestDataModuleAppliesSelectedPresentationProfile(t *testing.T) {
           {"id":"classic","game_version":"test","language":"English","resolution":{"width":640,"height":480},
            "overrides":{"screens":{"world":{"hud":{"sheet":"640.dc6","x":320}}}}}
         ]}`)}}
-	if err := runtime.RegisterModule(DataModule(source, "classic")); err != nil {
+	if err := runtime.RegisterModule(DataModule(source, map[string]ManifestTransform{
+		"d2legacy.presentation/v1": func(document map[string]any) (map[string]any, error) {
+			result, _, err := content.ApplyPresentationProfile(document, "classic")
+			return result, err
+		},
+	})); err != nil {
 		t.Fatal(err)
 	}
 	if err := runtime.Start(context.Background()); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
 	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
+	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	d2targeting "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -37,7 +38,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.AppModule(BuildVersion(), app.stop),
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
-		modruntime.DataModule(app.options.Content, app.profile.ID),
+		modruntime.DataModule(app.options.Content, d2presentation.ManifestTransforms(app.profile.ID)),
 		modruntime.DeterministicModule(),
 		modruntime.WorldgenModule(),
 		modruntime.SessionWorldModule(app.options.Content, app.currentWorld, app.worldObjectResolver),

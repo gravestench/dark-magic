@@ -9,16 +9,19 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gravestench/dark-magic/internal/content"
 	lua "github.com/yuin/gopher-lua"
 )
 
+// ManifestTransform lets composition install schema-specific immutable-data
+// adaptation without teaching the generic runtime any mod schema names.
+type ManifestTransform func(map[string]any) (map[string]any, error)
+
 // DataModule exposes immutable JSON shim data as native Lua values. It keeps
 // data ownership in the layered VFS while avoiding a second JSON parser in Lua.
-func DataModule(source fs.FS, presentationProfiles ...string) Module {
-	presentationProfile := ""
-	if len(presentationProfiles) > 0 {
-		presentationProfile = presentationProfiles[0]
+func DataModule(source fs.FS, transforms ...map[string]ManifestTransform) Module {
+	bySchema := map[string]ManifestTransform{}
+	if len(transforms) > 0 && transforms[0] != nil {
+		bySchema = transforms[0]
 	}
 	return Module{Name: "engine.data/v1", Help: documentedModule("Load structured data and Lua manifests from mounted content.", map[string]CommandHelp{
 		"load":          commandHelp("engine.data.load(path)", "Decode a structured data asset into Lua values."),
@@ -44,9 +47,10 @@ func DataModule(source fs.FS, presentationProfiles ...string) Module {
 				if err == nil {
 					err = validateManifest(decoded, expectedSchema)
 				}
-				if err == nil && expectedSchema == "d2legacy.presentation/v1" {
-					document := decoded.(map[string]any)
-					decoded, _, err = content.ApplyPresentationProfile(document, presentationProfile)
+				if err == nil {
+					if transform := bySchema[expectedSchema]; transform != nil {
+						decoded, err = transform(decoded.(map[string]any))
+					}
 				}
 				if err != nil {
 					return pushLuaError(state, err)

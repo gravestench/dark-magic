@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/data/catalog"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -150,7 +151,7 @@ func assertLuaOptionsBackdropCenter(t *testing.T, profile string, wantX, wantY f
 	scenes := modruntime.NewScenes(runtime, navigation.New())
 	for _, module := range []modruntime.Module{
 		modruntime.InputModule(&input),
-		modruntime.DataModule(contentFS, profile),
+		modruntime.DataModule(contentFS, d2presentation.ManifestTransforms(profile)),
 		modruntime.RenderModule(runtime, &composer),
 		modruntime.AudioModule(runtime, &mixer, contentFS, gamedata.New(recordstore.New(contentFS))),
 		modruntime.SettingsModule(preferences.NewTransient(), &mixer),
