@@ -11,19 +11,19 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
 	"github.com/gravestench/dark-magic/internal/content"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
-	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/logging"
-	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
 func main() {
 	logLevel := flag.String("log-level", "info", "log verbosity: debug, info, warn, or error")
+	sessionID := flag.String("session-id", "standalone", "stable allocated game-session ID")
 	flag.Parse()
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {
@@ -32,31 +32,25 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	engine := gameecs.New()
-	authority, err := gamesession.New(engine, gamesession.Config{})
-	if err != nil {
-		_ = engine.Close()
-		slog.Error("creating authoritative session", "error", err)
-		return
-	}
-	defer authority.Close()
 	contentFS, err := content.FromEnvironment()
 	if err != nil {
 		slog.Error("mounting authoritative content", "error", err)
 		return
 	}
 	records := recordstore.New(contentFS)
-	mod, err := d2legacymod.Start(ctx, contentFS, records, engine, authority, 0)
+	host, err := gameserver.Start(ctx, contentFS, records, gameserver.Config{
+		SessionID: *sessionID, Prediction: gamesession.PredictionLimited,
+	})
 	if err != nil {
-		slog.Error("starting d2legacy authority", "error", err)
+		slog.Error("starting authoritative game server", "error", err)
 		return
 	}
-	defer mod.Stop(context.Background())
+	defer host.Close(context.Background())
 	sessionContext, stopSession := context.WithCancel(ctx)
 	sessionErrors := make(chan error, 1)
-	go func() { sessionErrors <- authority.Run(sessionContext) }()
+	go func() { sessionErrors <- host.Session.Run(sessionContext) }()
 	policy := shell.Policy{Name: "local-server-admin", Mutable: true}
-	shellErr := headlessshell.Run(ctx, "server", policy, level, os.Stdin, os.Stdout, modruntime.SessionModule(authority))
+	shellErr := headlessshell.Run(ctx, "server", policy, level, os.Stdin, os.Stdout, modruntime.SessionModule(host.Session))
 	stopSession()
 	sessionErr := <-sessionErrors
 	if errors.Is(sessionErr, context.Canceled) {

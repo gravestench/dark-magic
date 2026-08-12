@@ -45,14 +45,23 @@ func Allocate(sessionID string, identity simulation.RuntimeIdentity, prediction 
 	if strings.TrimSpace(sessionID) == "" {
 		return Allocation{}, fmt.Errorf("%w: session ID is required", ErrCompatibility)
 	}
-	if prediction != PredictionNone && prediction != PredictionLimited && prediction != PredictionSharedRules {
-		return Allocation{}, fmt.Errorf("%w: unknown prediction tier", ErrCompatibility)
+	if err := ValidatePredictionTier(prediction); err != nil {
+		return Allocation{}, err
 	}
 	hash, err := identity.Digest()
 	if err != nil {
 		return Allocation{}, err
 	}
 	return Allocation{SessionID: sessionID, Identity: identity, IdentityHash: hash, Prediction: prediction}, nil
+}
+
+// ValidatePredictionTier rejects client contracts the authority does not
+// explicitly support. Hosts use it before allocating expensive runtime state.
+func ValidatePredictionTier(prediction PredictionTier) error {
+	if prediction != PredictionNone && prediction != PredictionLimited && prediction != PredictionSharedRules {
+		return fmt.Errorf("%w: unknown prediction tier", ErrCompatibility)
+	}
+	return nil
 }
 
 func (allocation Allocation) Admit(characterID string, client simulation.RuntimeIdentity) (AdmissionToken, error) {
