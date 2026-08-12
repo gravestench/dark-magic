@@ -137,7 +137,8 @@ end
 function M.semantic_cues()
     local result = {}
     local entities, known = {}, {}
-    for _, component in ipairs({"dm.monster.death_event", "dm.missile.event"}) do
+    for _, component in ipairs({"dm.monster.death_event", "dm.missile.event",
+        "d2legacy.combat.melee_event", "d2legacy.combat.event"}) do
         local ok, matches = pcall(ecs.query, {all = {component}})
         if ok then
             for _, entity in ipairs(matches) do
@@ -151,6 +152,10 @@ function M.semantic_cues()
         if death then kind, values = "monster_death", death:snapshot() end
         local missile = ecs.get(entity, "dm.missile.event")
         if missile then kind, values = "missile", missile:snapshot() end
+        local melee = ecs.get(entity, "d2legacy.combat.melee_event")
+        if melee then kind, values = "combat", melee:snapshot() end
+        local combat = ecs.get(entity, "d2legacy.combat.event")
+        if combat then kind, values = "combat", combat:snapshot() end
         if values then
             -- Dynamic entity fields are checked ECS handles. Collapse the
             -- missile reference to a number before this table crosses into

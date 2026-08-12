@@ -149,6 +149,12 @@ func (app *application) buildOfflineSession() error {
 	if err := app.authoritativeRandom.Register("d2legacy.combat.fire_bolt.damage"); err != nil {
 		return wrap("register d2legacy random streams", err)
 	}
+	if err := app.authoritativeRandom.Register("d2legacy.combat.basic_melee.hit"); err != nil {
+		return wrap("register d2legacy melee hit stream", err)
+	}
+	if err := app.authoritativeRandom.Register("d2legacy.combat.basic_melee.damage"); err != nil {
+		return wrap("register d2legacy melee damage stream", err)
+	}
 	identity, err := app.d2legacyIdentity()
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
@@ -203,11 +209,6 @@ func (app *application) registerOfflineCommands() error {
 	}
 	if err := gamemonster.RegisterMovement(app.entitySimulation, bloodMoor); err != nil {
 		return wrap("register monster movement", err)
-	}
-	// This fixed hit chance remains explicitly synthetic until the verified
-	// attacker/defender chance-to-hit formula replaces the M21 scaffold.
-	if err := gamecombat.RegisterBasicMelee(app.entitySimulation, gamecombat.BasicMeleePolicy{HitChance: 75}); err != nil {
-		return wrap("register basic melee combat", err)
 	}
 	lootCatalog, err := gameloot.CatalogFromRecords(app.gameData)
 	if err != nil {

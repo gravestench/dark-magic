@@ -77,13 +77,17 @@ end
 
 local function copy_events()
     local result = {}
-    local ok, entities = pcall(ecs.query, {all={"dm.combat.event"}})
-    if not ok then return result end
-    for _, entity in ipairs(entities) do
-        local event = optional(entity, "dm.combat.event")
-        if event then
-            event.entity_id = entity:id()
-            result[#result + 1] = event
+    for _, component in ipairs({"dm.combat.event", "d2legacy.combat.melee_event",
+        "d2legacy.combat.event"}) do
+        local ok, entities = pcall(ecs.query, {all={component}})
+        if ok then
+            for _, entity in ipairs(entities) do
+                local event = optional(entity, component)
+                if event then
+                    event.entity_id = entity:id()
+                    result[#result + 1] = event
+                end
+            end
         end
     end
     table.sort(result, function(left, right)

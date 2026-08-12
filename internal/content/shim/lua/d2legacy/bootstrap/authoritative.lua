@@ -9,6 +9,8 @@ local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
 local fire_bolt_system = require("d2legacy.systems.fire_bolt")
 local projectile_system = require("d2legacy.systems.projectile")
+local melee_components = require("d2legacy.components.melee")
+local melee_system = require("d2legacy.systems.melee")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -16,6 +18,7 @@ local M = {
 
 function M.start()
     components.register()
+    melee_components.register()
 
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.
@@ -24,6 +27,7 @@ function M.start()
     cast_system.register(M.fire_bolt)
     fire_bolt_system.register(M.fire_bolt)
     projectile_system.register()
+    melee_system.register()
 end
 
 function M.stop()

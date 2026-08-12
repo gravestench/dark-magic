@@ -47,6 +47,11 @@ func TestD2LegacyFireBoltCastRunsHeadlesslyThroughLua(t *testing.T) {
 	if err := streams.Register("d2legacy.combat.fire_bolt.damage"); err != nil {
 		t.Fatal(err)
 	}
+	for _, name := range []string{"d2legacy.combat.basic_melee.hit", "d2legacy.combat.basic_melee.damage"} {
+		if err := streams.Register(name); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := session.RegisterStateParticipant(streams); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +122,8 @@ monster = ecs.create({
     ["dm.world.selectable"]={id="monster:fallen",kind="hostile",label="Fallen",owner="",radius=0.5,priority=1},
 })
 require("d2legacy.bootstrap.authoritative").start()
+ecs.set(player,"dm.combat.melee_profile",{range=5,physical_min=256,physical_max=256})
+require("d2legacy.policy.melee").temporary_hit_chance=100
 `
 	if err := runtime.RunScoped(ctx, scope, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
 		t.Fatal(err)
@@ -134,6 +141,14 @@ require("d2legacy.bootstrap.authoritative").start()
 			t.Fatal(err)
 		}
 	}
+	if err := runtime.Run(ctx, func(state *lua.LState) error {
+		return state.DoString(`local ecs=require("dm.ecs/v1"); ecs.set(player,"dm.combat.basic_attack_request",{target_id="monster:fallen",request_tick=7})`)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := runtime.Run(ctx, func(state *lua.LState) error {
 		return state.DoString(`
@@ -148,6 +163,10 @@ assert(#events==1)
 local event=ecs.get(events[1],"d2legacy.combat.event")
 assert(event:get("target_id")=="monster:fallen")
 assert(event:get("damage_channel")=="fire")
+local melee=ecs.query({all={"d2legacy.combat.melee_event"}})
+assert(#melee==1)
+local melee_event=ecs.get(melee[1],"d2legacy.combat.melee_event")
+assert(melee_event:get("hit") and melee_event:get("damage_raw")==256)
 `)
 	}); err != nil {
 		t.Fatal(err)
