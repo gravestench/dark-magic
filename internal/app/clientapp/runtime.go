@@ -14,7 +14,6 @@ import (
 	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
 	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
-	d2targeting "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/targeting"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
@@ -51,7 +50,6 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.LocaleModule(app.locale),
 		d2save.Module(app.saves),
 		modruntime.PlayerControlModule(app.playerControl),
-		d2targeting.Module(d2targeting.New(app.entitySimulation)),
 		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
 	}
