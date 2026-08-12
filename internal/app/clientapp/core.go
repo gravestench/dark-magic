@@ -33,6 +33,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	"github.com/gravestench/dark-magic/internal/persistence"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
@@ -144,17 +145,11 @@ func (app *application) buildOfflineSession() error {
 	}
 	app.offlineSession = session
 	app.authoritativeState = simulation.NewStateStore()
-	app.authoritativeRandom = simulation.NewRandomStreams(0)
-	if err := app.authoritativeRandom.Register("d2legacy.combat.fire_bolt.damage"); err != nil {
+	app.authoritativeRandom, err = d2legacymod.NewRandomStreams(0)
+	if err != nil {
 		return wrap("register d2legacy random streams", err)
 	}
-	if err := app.authoritativeRandom.Register("d2legacy.combat.basic_melee.hit"); err != nil {
-		return wrap("register d2legacy melee hit stream", err)
-	}
-	if err := app.authoritativeRandom.Register("d2legacy.combat.basic_melee.damage"); err != nil {
-		return wrap("register d2legacy melee damage stream", err)
-	}
-	identity, err := app.d2legacyIdentity()
+	identity, err := d2legacymod.Identity(app.options.Content)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}

@@ -4,6 +4,7 @@
 -- show which small modules make up the mod and register them in readable order.
 
 local components = require("d2legacy.components.fire_bolt")
+local shared_components = require("d2legacy.components.shared")
 local fire_bolt_data = require("d2legacy.data.fire_bolt")
 local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
@@ -17,6 +18,7 @@ local M = {
 }
 
 function M.start()
+    shared_components.register()
     components.register()
     melee_components.register()
 

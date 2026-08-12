@@ -12,12 +12,14 @@ import (
 	"syscall"
 
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
+	"github.com/gravestench/dark-magic/internal/content"
+	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameplayer "github.com/gravestench/dark-magic/internal/game/player"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
-	gameskill "github.com/gravestench/dark-magic/internal/game/skill"
 	gamestate "github.com/gravestench/dark-magic/internal/game/state"
 	"github.com/gravestench/dark-magic/internal/logging"
+	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 )
@@ -40,20 +42,24 @@ func main() {
 		return
 	}
 	defer authority.Close()
+	contentFS, err := content.FromEnvironment()
+	if err != nil {
+		slog.Error("mounting authoritative content", "error", err)
+		return
+	}
+	records := recordstore.New(contentFS)
+	mod, err := d2legacymod.Start(ctx, contentFS, records, engine, authority, 0)
+	if err != nil {
+		slog.Error("starting d2legacy authority", "error", err)
+		return
+	}
+	defer mod.Stop(context.Background())
 	if err := gameplayer.Register(authority); err != nil {
 		slog.Error("registering authoritative player commands", "error", err)
 		return
 	}
 	if err := gamesession.RegisterMovement(authority); err != nil {
 		slog.Error("registering authoritative movement commands", "error", err)
-		return
-	}
-	if err := gamesession.RegisterSkillAssignments(authority); err != nil {
-		slog.Error("registering authoritative skill commands", "error", err)
-		return
-	}
-	if err := gameskill.RegisterIntentConsumer(engine); err != nil {
-		slog.Error("registering authoritative skill intent consumer", "error", err)
 		return
 	}
 	if err := gamestate.Register(engine); err != nil {
