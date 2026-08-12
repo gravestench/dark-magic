@@ -191,6 +191,12 @@ local function finish_monster_preload(monster, composite)
 			monster.playback.seconds)
 		monster.node:set_visible(true)
 		monster.composite_key = pending.key
+		monster.failed_composite_key = nil
+	elseif pending then
+		-- A missing component must not enqueue the same failed preload forever.
+		-- Keep the actor hidden until its authoritative appearance changes; the
+		-- renderer's global busy flag can then settle and captures can complete.
+		monster.failed_composite_key = pending.key
 	end
 	monster.pending_job, monster.pending_composite = nil, nil
 end
@@ -204,7 +210,8 @@ local function update_monster(self, monster, snapshot, elapsed)
 		monster.playback = monster_composite.new_playback(composite)
 	end
 	if composite then monster.events = monster_composite.advance(monster.playback, composite, elapsed) end
-	if composite and composite.key ~= monster.composite_key and not monster.pending_job then
+	if composite and composite.key ~= monster.composite_key
+		and composite.key ~= monster.failed_composite_key and not monster.pending_job then
 		monster.pending_job = render.preload({monster_composite.preload_request(composite)})
 		monster.pending_composite = composite
 	end
@@ -275,7 +282,7 @@ local function update_missiles(self)
 				self.missiles[key] = missile
 			end
 			local recipe = missile_presentation.resolve(snapshot)
-			if recipe and not missile.pending_job and not missile.ready then
+			if recipe and not missile.pending_job and not missile.ready and not missile.failed then
 				missile.recipe = recipe
 				missile.pending_job = render.preload({{kind="dcc", path=recipe.path,
 					palette=recipe.palette, direction=recipe.direction}})
@@ -289,6 +296,10 @@ local function update_missiles(self)
 							ready.direction, ready.frames_per_second, ready.loop)
 						missile.node:set_visible(true)
 						missile.ready = true
+					else
+						-- Do not keep a permanently unavailable projectile asset in
+						-- the background residency queue every frame.
+						missile.failed = true
 					end
 					missile.pending_job = nil
 				end
@@ -438,7 +449,8 @@ return {
                 self.hero_playback = player_composite.new_playback(composite)
             end
             self.hero_animation_events = player_composite.advance(self.hero_playback, composite, elapsed)
-            if composite.key ~= self.hero_composite_key and not self.hero_pending_job then
+            if composite.key ~= self.hero_composite_key
+				and composite.key ~= self.hero_failed_composite_key and not self.hero_pending_job then
                 -- Never decode a cold multi-layer character during this frame.
                 -- Keep the previous complete character visible while workers
                 -- prepare the newest authoritative appearance/facing request.
@@ -463,6 +475,11 @@ return {
                         self.hero:set_scale(screen.hero.scale, screen.hero.scale)
                         self.hero:set_visible(true)
                         self.hero_composite_key = pending.key
+						self.hero_failed_composite_key = nil
+					elseif pending then
+						-- Failed cold assets stay passive until the requested appearance
+						-- changes. Retrying every frame keeps the whole client "busy".
+						self.hero_failed_composite_key = pending.key
                     end
                     self.hero_pending_job = nil
                     self.hero_pending_key = nil

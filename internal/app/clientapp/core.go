@@ -542,7 +542,7 @@ func (app *application) buildLoadingCoordinator() error {
 
 func fixtureNeedsSelection(scene string) bool {
 	switch scene {
-	case "game_world", "game_loading", "inventory", "character", "skills", "vendor":
+	case "game_world", "game_loading", "combat_lab", "inventory", "character", "skills", "vendor":
 		return true
 	default:
 		return false

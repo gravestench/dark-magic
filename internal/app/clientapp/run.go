@@ -13,6 +13,7 @@ import (
 // Run builds one client, lets it run, and then takes it apart in reverse.
 // Each helper below owns one small part of that story.
 func Run(options Options) error {
+	options = applyDevelopmentSceneDefaults(options)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	app := &application{
 		options:     options,

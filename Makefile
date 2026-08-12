@@ -82,7 +82,7 @@ play-missile-lab:
 	go run -tags ffmpeg ./cmd/darkmagic --start-scene missile_lab
 
 play-combat-lab:
-	go run -tags ffmpeg ./cmd/darkmagic --start-scene combat_lab
+	go run -tags ffmpeg ./cmd/darkmagic --start-scene combat_lab --fixture-characters 1 --fixture-world-level 2
 
 play-warp-lab:
 	go run -tags ffmpeg ./cmd/darkmagic --start-scene warp_lab
@@ -94,7 +94,7 @@ capture-missile-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=missile_lab START_SCENE=missile_lab CAPTURE_SETTLE=30
 
 capture-combat-lab:
-	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=combat_lab START_SCENE=combat_lab CAPTURE_SETTLE=30
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=combat_lab START_SCENE=combat_lab FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 CAPTURE_SETTLE=60
 
 capture-warp-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=warp_lab START_SCENE=warp_lab CAPTURE_SETTLE=60

@@ -41,7 +41,7 @@ func main() {
 	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
 	startOverlays := flag.String("start-overlays", os.Getenv("DARK_MAGIC_START_OVERLAYS"), "development-only comma-separated overlays to open above the start scene")
 	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
-	fixtureWorldLevel := flag.Int("fixture-world-level", 1, "development-only authoritative level for the selected fixture character")
+	fixtureWorldLevel := flag.Int("fixture-world-level", 0, "development-only authoritative level for the selected fixture character (scene default when omitted)")
 	fixtureWorldSpawn := flag.String("fixture-world-spawn", "entry", "development-only fixture spawn: entry or seam")
 	fixturePointerMove := flag.Bool("fixture-pointer-move", false, "development-only click-to-move acceptance before capture")
 	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
