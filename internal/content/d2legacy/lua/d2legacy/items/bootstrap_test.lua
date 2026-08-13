@@ -3,6 +3,7 @@ local test = require("d2legacy.tests/v1")
 return test.suite({
     profile = "authority",
     tier = "fast",
+    covers = { "internal/game/item" },
     initial_data = {
         ["d2legacy.items"] = {
             owner = "alice",
@@ -45,41 +46,41 @@ return test.suite({
             },
         },
     },
-    tests = {
-        materializes_initial_items_into_lua_owned_ecs = {
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    assert(#ecs.query({ all = { "d2legacy.items.layout" } }) == 1)
-                    assert(#ecs.query({ all = { "d2legacy.item.identity" } }) == 1)
-                end,
-            },
-        },
-        moves_items_through_lua_owned_policy = {
-            {
-                submit = {
-                    tick = 1,
-                    sequence = 1,
-                    player = "alice",
-                    kind = "item.move",
-                    payload = { item_id = "sword", destination = { container = "held" } },
-                },
-            },
-            { step = 1 },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    local items = ecs.query({
-                        all = {
-                            "d2legacy.item.identity",
-                            "d2legacy.item.placement",
-                        },
-                    })
-                    assert(#items == 1)
-                    local placement = ecs.get(items[1], "d2legacy.item.placement")
-                    assert(placement:get("container") == "held")
-                end,
-            },
-        },
+    cases = {
+        test.case("materializes_initial_items_into_lua_owned_ecs", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.items.layout" } }) == 1,
+                    [=[#ecs.query({ all = { "d2legacy.items.layout" } }) == 1]=]
+                )
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.item.identity" } }) == 1,
+                    [=[#ecs.query({ all = { "d2legacy.item.identity" } }) == 1]=]
+                )
+            end),
+        }),
+        test.case("moves_items_through_lua_owned_policy", {
+            test.submit({
+                tick = 1,
+                sequence = 1,
+                player = "alice",
+                kind = "item.move",
+                payload = { item_id = "sword", destination = { container = "held" } },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local items = ecs.query({
+                    all = {
+                        "d2legacy.item.identity",
+                        "d2legacy.item.placement",
+                    },
+                })
+                test.assert(#items == 1, [=[#items == 1]=])
+                local placement = ecs.get(items[1], "d2legacy.item.placement")
+                test.assert(placement:get("container") == "held", [=[placement:get("container") == "held"]=])
+            end),
+        }),
     },
 })

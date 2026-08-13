@@ -90,14 +90,23 @@ the authority, reconstructs the ECS and every deterministic participant, and
 continues the remaining Lua-authored phases in the replacement runtime. A suite
 may also provide `seed`, `initial_data`, and `records`. Large bounded
 offline vectors may set `disable_execution_budget = true`; ordinary gameplay
-tests must retain the production deadline. Host inputs are copied before each case boots. Every case gets a
-fresh ECS engine, session, deterministic streams, state store, component tree,
-and Lua VM through the same `StartWithConfig` composition root used by the
-headless server.
+tests must retain the production deadline. Host inputs are copied before each
+case boots. Every case gets a fresh ECS engine, session, deterministic streams,
+and Lua VM. Authority cases use the same `StartWithConfig` composition root as
+the headless server.
 
-Profiles declare the production boundary under test: `authority`, `policy`,
-`presentation`, `client`, or `real_assets`. The default is `authority`. Tiers
-are `fast`, `integration`, `real_assets`, and `stress`; normal `go test` runs
+Profiles enforce the production boundary under test:
+
+- `module` installs content loading, records, deterministic helpers, worldgen,
+  initial data, and checkpoint-compatible random streams, but no ECS or command
+  authority.
+- `ecs` adds the production ECS capability and production shared component
+  schemas, but no commands or authoritative systems.
+- `authority` boots the complete renderer-free production authority.
+
+Asset-backed renderer and interactive-client tests remain native integration
+tests because a headless Lua suite must not claim it booted those environments.
+Tiers are `fast`, `integration`, `real_assets`, and `stress`; normal `go test` runs
 `fast,integration`. Select tiers with `DARK_MAGIC_LUA_TEST_TIERS`, and repeat
 every isolated case with `DARK_MAGIC_LUA_TEST_REPEAT` to expose hidden state
 dependencies. `DARK_MAGIC_LUA_TEST_ORDER_SEED` shuffles case discovery with a

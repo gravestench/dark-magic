@@ -49,6 +49,46 @@ function M.player_entry(overrides)
     return entry
 end
 
+function M.monster_spawn(overrides)
+    local spawn = {
+        spawn_id = "fallen",
+        seed = 1,
+        x = 4,
+        y = 0,
+        act = 1,
+        level_id = 1,
+        definition = {
+            id = "fallen",
+            base_id = "fallen",
+            graphics_id = "fallen",
+            name_key = "Fallen",
+            ai = "fallen",
+            token = "FA",
+            weapon_class = "HTH",
+            components = {},
+            life_min = 4096,
+            life_max = 4096,
+            level = 1,
+            defense = 0,
+            attack_rating = 0,
+            physical_min = 0,
+            physical_max = 0,
+            experience = 0,
+            treasure_class = "",
+            collider_radius = 0.5,
+            select_radius = 0.5,
+            velocity = 0,
+            think_interval = 100,
+            aggro_radius = 0,
+            attack_range = 1,
+        },
+    }
+    for key, value in pairs(overrides or {}) do
+        spawn[key] = copy(value)
+    end
+    return spawn
+end
+
 M.amazon_entry = M.player_entry()
 M.amazon_level_up_entry = M.player_entry({ experience = 5 })
 M.fire_bolt_entry = M.player_entry({

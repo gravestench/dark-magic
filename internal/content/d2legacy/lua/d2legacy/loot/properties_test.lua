@@ -63,26 +63,27 @@ local function quality_affix_and_property_vectors()
         rare = 0,
         magic = 1024,
     })
-    assert(rolled == "magic")
+    test.assert(rolled == "magic", [=[rolled == "magic"]=])
 
     local prefixes = roll_prefixes(affixes, sword, rolled)
-    assert(prefixes[1].name == "Strong")
-    assert(prefixes[1].modifiers[1].value == 7)
+    test.assert(prefixes[1].name == "Strong", [=[prefixes[1].name == "Strong"]=])
+    test.assert(prefixes[1].modifiers[1].value == 7, [=[prefixes[1].modifiers[1].value == 7]=])
 
     local stats, effects, unsupported = properties.apply(prefixes, {})
-    assert(#stats == 1)
-    assert(stats[1].code == "item_maxdamage")
-    assert(stats[1].value == 7 and stats[1].fn == 1)
-    assert(#effects == 0 and #unsupported == 0)
+    test.assert(#stats == 1, [=[#stats == 1]=])
+    test.assert(stats[1].code == "item_maxdamage", [=[stats[1].code == "item_maxdamage"]=])
+    test.assert(stats[1].value == 7 and stats[1].fn == 1, [=[stats[1].value == 7 and stats[1].fn == 1]=])
+    test.assert(#effects == 0 and #unsupported == 0, [=[#effects == 0 and #unsupported == 0]=])
 end
 
 return test.suite({
-    profile = "policy",
+    profile = "module",
     tier = "fast",
+    covers = { "internal/game/loot" },
     records = records,
-    tests = {
-        quality_affix_and_property_vectors = {
+    cases = {
+        test.case("quality_affix_and_property_vectors", {
             { run = quality_affix_and_property_vectors },
-        },
+        }),
     },
 })

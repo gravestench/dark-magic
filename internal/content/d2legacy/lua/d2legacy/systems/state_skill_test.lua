@@ -42,46 +42,40 @@ return test.suite({
             { skilldesc = "frozenarmor", ListRow = "1", IconCel = "1" },
         },
     },
-    tests = {
-        targetless_non_damage_skill_applies_self_state = {
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.player.enter",
-                    payload = fixtures.amazon_entry,
-                },
-            },
-            { step = 1 },
-            {
-                submit = {
-                    tick = 2,
-                    sequence = 1,
-                    player = "alice",
-                    kind = "player.use_skill",
-                    payload = { side = "left" },
-                },
-            },
-            { step = 1 },
-            { checkpoint_restore = true },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
-                    local instances = ecs.query({ all = { "d2legacy.state.instance" } })
-                    assert(#instances == 1)
-                    local state = ecs.get(instances[1], "d2legacy.state.instance")
-                    assert(
-                        state:get("target"):id() == player:id()
-                            and state:get("state_id") == "frozen_armor"
-                            and state:get("source_id") == "skill:alice:40"
-                    )
-                    local events = ecs.query({ all = { "d2legacy.skill.cast_event" } })
-                    assert(
-                        #events == 1 and ecs.get(events[1], "d2legacy.skill.cast_event"):get("behavior") == "state.self"
-                    )
-                end,
-            },
-        },
+    cases = {
+        test.case("targetless_non_damage_skill_applies_self_state", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.use_skill",
+                payload = { side = "left" },
+            }),
+            test.step(1),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local instances = ecs.query({ all = { "d2legacy.state.instance" } })
+                test.assert(#instances == 1, [=[#instances == 1]=])
+                local state = ecs.get(instances[1], "d2legacy.state.instance")
+                test.assert(
+                    state:get("target"):id() == player:id()
+                        and state:get("state_id") == "frozen_armor"
+                        and state:get("source_id") == "skill:alice:40"
+                )
+                local events = ecs.query({ all = { "d2legacy.skill.cast_event" } })
+                test.assert(
+                    #events == 1 and ecs.get(events[1], "d2legacy.skill.cast_event"):get("behavior") == "state.self"
+                )
+            end),
+        }),
     },
 })

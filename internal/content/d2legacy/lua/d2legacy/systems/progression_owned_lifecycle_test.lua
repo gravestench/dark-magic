@@ -16,50 +16,48 @@ local attach = {
 return test.suite({
     profile = "authority",
     tier = "fast",
-    tests = {
-        level_and_owned_unit_expiration_restore_identically = {
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.player.enter",
-                    payload = fixtures.amazon_level_up_entry,
-                },
-            },
-            { step = 1 },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    ecs.create({
-                        ["d2legacy.world.selectable"] = {
-                            id = "monster:wolf",
-                            kind = "friendly",
-                            label = "Wolf",
-                            owner = "alice",
-                            radius = 1,
-                            priority = 1,
-                        },
-                    })
-                end,
-            },
-            {
-                submit_system = {
-                    tick = 2,
-                    sequence = 2,
-                    kind = "system.owned_unit.attach",
-                    payload = attach,
-                },
-            },
-            { step = 1 },
-            { checkpoint_parity_steps = 1 },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    local player = ecs.query({ all = { "d2legacy.player.progress" } })[1]
-                    assert(ecs.get(player, "d2legacy.player.progress"):get("level") == 2)
-                    assert(#ecs.query({ all = { "d2legacy.owned_unit" } }) == 0)
-                end,
-            },
-        },
+    cases = {
+        test.case("level_and_owned_unit_expiration_restore_identically", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_level_up_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.create({
+                    ["d2legacy.world.selectable"] = {
+                        id = "monster:wolf",
+                        kind = "friendly",
+                        label = "Wolf",
+                        owner = "alice",
+                        radius = 1,
+                        priority = 1,
+                    },
+                })
+            end),
+            test.submit_system({
+                tick = 2,
+                sequence = 2,
+                kind = "system.owned_unit.attach",
+                payload = attach,
+            }),
+            test.step(1),
+            test.expect_checkpoint_parity(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.progress" } })[1]
+                test.assert(
+                    ecs.get(player, "d2legacy.player.progress"):get("level") == 2,
+                    [=[ecs.get(player, "d2legacy.player.progress"):get("level") == 2]=]
+                )
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.owned_unit" } }) == 0,
+                    [=[#ecs.query({ all = { "d2legacy.owned_unit" } }) == 0]=]
+                )
+            end),
+        }),
     },
 })

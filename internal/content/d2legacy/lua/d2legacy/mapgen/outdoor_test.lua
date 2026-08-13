@@ -39,17 +39,26 @@ local function verify(direction)
     package.loaded["d2legacy.mapgen.outdoor"] = nil
     local outdoor = require("d2legacy.mapgen.outdoor")
     local zone = outdoor.generate(2, 42, direction, 0)
-    assert(zone.kind == "outdoor" and #zone.rooms == 100 and #zone.links == 180 and #zone.stamps >= 120)
-    assert(zone.checksum == outdoor.generate(2, 42, direction, 0).checksum)
+    test.assert(
+        zone.kind == "outdoor" and #zone.rooms == 100 and #zone.links == 180 and #zone.stamps >= 120,
+        [=[zone.kind == "outdoor" and #zone.rooms == 100 and #zone.links == 180 and #zone.stamps >= 120]=]
+    )
+    test.assert(
+        zone.checksum == outdoor.generate(2, 42, direction, 0).checksum,
+        [=[zone.checksum == outdoor.generate(2, 42, direction, 0).checksum]=]
+    )
     local path = {}
     for _, tile in ipairs(zone.paths) do
         path[tile.x .. ":" .. tile.y] = true
     end
-    assert(path[zone.warps[1].x .. ":" .. zone.warps[1].y] and path[zone.warps[2].x .. ":" .. zone.warps[2].y])
+    test.assert(
+        path[zone.warps[1].x .. ":" .. zone.warps[1].y] and path[zone.warps[2].x .. ":" .. zone.warps[2].y],
+        [=[path[zone.warps[1].x .. ":" .. zone.warps[1].y] and path[zone.warps[2].x .. ":" .. zone.warps[2].y]]=]
+    )
     local bridge, passable = 0, 0
     for _, tile in ipairs(zone.structures) do
         if path[tile.x .. ":" .. tile.y] then
-            assert(tile.passable)
+            test.assert(tile.passable, [=[tile.passable]=])
         end
         if tile.kind == "bridge" then
             bridge = bridge + 1
@@ -58,41 +67,34 @@ local function verify(direction)
             end
         end
     end
-    assert(bridge == 64 and passable == 48)
+    test.assert(bridge == 64 and passable == 48, [=[bridge == 64 and passable == 48]=])
 end
 
 return test.suite({
-    profile = "policy",
+    profile = "module",
     tier = "fast",
+    covers = { "internal/mod/d2legacy/mapgen" },
     disable_execution_budget = true,
-    tests = {
-        north_recipe_and_structures = {
-            {
-                run = function()
-                    verify("north")
-                end,
-            },
-        },
-        east_recipe_and_structures = {
-            {
-                run = function()
-                    verify("east")
-                end,
-            },
-        },
-        south_recipe_and_structures = {
-            {
-                run = function()
-                    verify("south")
-                end,
-            },
-        },
-        west_recipe_and_structures = {
-            {
-                run = function()
-                    verify("west")
-                end,
-            },
-        },
+    cases = {
+        test.case("north_recipe_and_structures", {
+            test.run(function()
+                verify("north")
+            end),
+        }),
+        test.case("east_recipe_and_structures", {
+            test.run(function()
+                verify("east")
+            end),
+        }),
+        test.case("south_recipe_and_structures", {
+            test.run(function()
+                verify("south")
+            end),
+        }),
+        test.case("west_recipe_and_structures", {
+            test.run(function()
+                verify("west")
+            end),
+        }),
     },
 })

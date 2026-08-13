@@ -24,20 +24,23 @@ local function nested_classes_keep_strongest_quality_modifiers()
     local treasure = require("d2legacy.loot.treasure_class")
     local drops = treasure.roll("root")
 
-    assert(#drops == 1)
-    assert(drops[1].code == "rin")
-    assert(drops[1].quality.unique == 200)
-    assert(drops[1].quality.set == 300)
-    assert(require("d2legacy.loot.generate").encode({}) == "[]")
+    test.assert(#drops == 1, [=[#drops == 1]=])
+    test.assert(drops[1].code == "rin", [=[drops[1].code == "rin"]=])
+    test.assert(drops[1].quality.unique == 200, [=[drops[1].quality.unique == 200]=])
+    test.assert(drops[1].quality.set == 300, [=[drops[1].quality.set == 300]=])
+    test.assert(
+        require("d2legacy.loot.generate").encode({}) == "[]",
+        [=[require("d2legacy.loot.generate").encode({}) == "[]"]=]
+    )
 end
 
 return test.suite({
-    profile = "policy",
+    profile = "module",
     tier = "fast",
     records = records,
-    tests = {
-        nested_classes_keep_strongest_quality_modifiers = {
+    cases = {
+        test.case("nested_classes_keep_strongest_quality_modifiers", {
             { run = nested_classes_keep_strongest_quality_modifiers },
-        },
+        }),
     },
 })

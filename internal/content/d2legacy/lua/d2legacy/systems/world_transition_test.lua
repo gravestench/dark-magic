@@ -20,28 +20,33 @@ return test.suite({
             },
         },
     },
-    tests = {
-        entry_crosses_authored_seam = {
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.player.enter",
-                    payload = fixtures.amazon_entry,
-                },
-            },
-            { step = 1 },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
-                    assert(ecs.get(player, "d2legacy.world.location"):get("level_id") == 2)
-                    local position = ecs.get(player, "d2legacy.world.position")
-                    assert(position:get("x") == 6 and position:get("y") == 40)
-                    local bounds = ecs.get(player, "d2legacy.world.bounds")
-                    assert(bounds:get("width") == 400 and bounds:get("height") == 400)
-                end,
-            },
-        },
+    cases = {
+        test.case("entry_crosses_authored_seam", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
+                test.assert(
+                    ecs.get(player, "d2legacy.world.location"):get("level_id") == 2,
+                    [=[ecs.get(player, "d2legacy.world.location"):get("level_id") == 2]=]
+                )
+                local position = ecs.get(player, "d2legacy.world.position")
+                test.assert(
+                    position:get("x") == 6 and position:get("y") == 40,
+                    [=[position:get("x") == 6 and position:get("y") == 40]=]
+                )
+                local bounds = ecs.get(player, "d2legacy.world.bounds")
+                test.assert(
+                    bounds:get("width") == 400 and bounds:get("height") == 400,
+                    [=[bounds:get("width") == 400 and bounds:get("height") == 400]=]
+                )
+            end),
+        }),
     },
 })

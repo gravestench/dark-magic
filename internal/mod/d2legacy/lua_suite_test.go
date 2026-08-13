@@ -149,6 +149,71 @@ func luaTestRepeat(t *testing.T) int {
 	return repeat
 }
 
+func TestLuaHarnessContract(t *testing.T) {
+	t.Run("table encoding distinguishes arrays and objects", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		object := state.NewTable()
+		encoded, err := luaValueToGo(object, map[*lua.LTable]bool{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := encoded.(map[string]any); !ok {
+			t.Fatalf("empty table encoded as %T, want object", encoded)
+		}
+		array := state.NewTable()
+		metatable := state.NewTable()
+		metatable.RawSetString("__d2legacy_test_array", lua.LTrue)
+		array.Metatable = metatable
+		encoded, err = luaValueToGo(array, map[*lua.LTable]bool{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if values, ok := encoded.([]any); !ok || len(values) != 0 {
+			t.Fatalf("marked empty array encoded as %#v", encoded)
+		}
+	})
+
+	t.Run("cyclic input is rejected", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		table := state.NewTable()
+		table.RawSetString("self", table)
+		if _, err := luaValueToGo(table, map[*lua.LTable]bool{}); err == nil || !strings.Contains(err.Error(), "cyclic") {
+			t.Fatalf("cyclic table error = %v", err)
+		}
+	})
+
+	t.Run("tier selection is explicit", func(t *testing.T) {
+		t.Setenv("DARK_MAGIC_LUA_TEST_TIERS", "fast,stress")
+		if !luaTestTierEnabled("fast") || !luaTestTierEnabled("stress") || luaTestTierEnabled("real_assets") {
+			t.Fatal("tier filter did not honor the configured set")
+		}
+	})
+
+	t.Run("order randomization is reproducible", func(t *testing.T) {
+		t.Setenv("DARK_MAGIC_LUA_TEST_ORDER_SEED", "73")
+		left := []string{"a", "b", "c", "d", "e"}
+		right := append([]string(nil), left...)
+		shuffleLuaTestCases(t, left)
+		shuffleLuaTestCases(t, right)
+		if strings.Join(left, ",") != strings.Join(right, ",") {
+			t.Fatalf("seeded orders differ: %v and %v", left, right)
+		}
+	})
+
+	t.Run("authority actions reject narrower profiles", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		action := state.NewTable()
+		action.RawSetString("step", lua.LNumber(1))
+		err := runLuaAction(t, &luaSuiteFixture{config: luaSuiteConfig{profile: "module"}}, action)
+		if err == nil || !strings.Contains(err.Error(), "requires the authority profile") {
+			t.Fatalf("module step error = %v", err)
+		}
+	})
+}
+
 type luaSuiteFixture struct {
 	engine    *gameecs.Engine
 	session   *gamesession.Session
@@ -293,9 +358,7 @@ func newLuaSuiteFixture(t *testing.T, source fs.FS, configs ...luaSuiteConfig) *
 		engine.Close()
 		t.Fatal(err)
 	}
-	authority, err := StartWithConfig(t.Context(), source, config.records, engine, session, Config{
-		Seed: config.seed, InitialData: config.initialData, DisableExecutionBudget: config.disableBudget,
-	})
+	authority, err := startLuaSuiteProfile(t.Context(), source, config, engine, session)
 	if err != nil {
 		session.Close()
 		engine.Close()
@@ -309,6 +372,87 @@ func newLuaSuiteFixture(t *testing.T, source fs.FS, configs ...luaSuiteConfig) *
 		_ = fixture.engine.Close()
 	})
 	return fixture
+}
+
+func startLuaSuiteProfile(ctx context.Context, source fs.FS, config luaSuiteConfig, engine *gameecs.Engine, session *gamesession.Session) (*Authority, error) {
+	if config.profile == "" || config.profile == "authority" {
+		return StartWithConfig(ctx, source, config.records, engine, session, Config{
+			Seed: config.seed, InitialData: config.initialData, DisableExecutionBudget: config.disableBudget,
+		})
+	}
+	if config.profile != "module" && config.profile != "ecs" {
+		return nil, fmt.Errorf("d2legacy Lua test: unsupported runtime profile %q", config.profile)
+	}
+	streams, err := NewRandomStreams(config.seed)
+	if err != nil {
+		return nil, err
+	}
+	runtime := modruntime.New()
+	if config.disableBudget {
+		if err := runtime.SetExecutionBudget(0); err != nil {
+			return nil, err
+		}
+	}
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+		return nil, err
+	}
+	modules := []modruntime.Module{
+		modruntime.DeterministicModule(),
+		modruntime.WorldgenModule(),
+		modruntime.RecordsModule(config.records),
+		modruntime.AuthorityRandomModule(streams),
+		modruntime.InitialDataModule(config.initialData),
+	}
+	if config.profile == "ecs" {
+		modules = append(modules, modruntime.NewECSCapability(runtime, engine).Module())
+	}
+	for _, module := range modules {
+		if err := runtime.RegisterModule(module); err != nil {
+			return nil, err
+		}
+	}
+	if err := runtime.Start(ctx); err != nil {
+		return nil, err
+	}
+	if config.profile == "ecs" {
+		if err := runtime.Run(ctx, func(state *lua.LState) error {
+			for _, moduleName := range []string{"d2legacy.components.shared", "d2legacy.components.melee"} {
+				module, err := requireLuaModule(state, moduleName)
+				if err != nil {
+					return err
+				}
+				register, ok := module.RawGetString("register").(*lua.LFunction)
+				if !ok {
+					return fmt.Errorf("Lua test ECS profile: %s has no register function", moduleName)
+				}
+				if err := state.CallByParam(lua.P{Fn: register, Protect: true}); err != nil {
+					return fmt.Errorf("Lua test ECS profile: register %s: %w", moduleName, err)
+				}
+			}
+			return nil
+		}); err != nil {
+			_ = runtime.Stop(context.Background())
+			return nil, err
+		}
+	}
+	return &Authority{Runtime: runtime, Random: streams}, nil
+}
+
+func requireLuaModule(state *lua.LState, name string) (*lua.LTable, error) {
+	require, ok := state.GetGlobal("require").(*lua.LFunction)
+	if !ok {
+		return nil, fmt.Errorf("Lua require function is unavailable")
+	}
+	if err := state.CallByParam(lua.P{Fn: require, NRet: 1, Protect: true}, lua.LString(name)); err != nil {
+		return nil, err
+	}
+	value := state.Get(-1)
+	state.Pop(1)
+	module, ok := value.(*lua.LTable)
+	if !ok {
+		return nil, fmt.Errorf("Lua module %s returned %s, want table", name, value.Type())
+	}
+	return module, nil
 }
 
 func loadLuaSuite(state *lua.LState, source fs.FS, path string) (*lua.LTable, error) {
@@ -372,6 +516,9 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		})
 	}
 	if value := action.RawGetString("step"); value != lua.LNil {
+		if fixture.config.profile != "authority" {
+			return fmt.Errorf("step requires the authority profile, got %q", fixture.config.profile)
+		}
 		count := int(lua.LVAsNumber(value))
 		if count < 1 {
 			return fmt.Errorf("step count must be positive")
@@ -384,9 +531,15 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		return nil
 	}
 	if action.RawGetString("checkpoint_restore") == lua.LTrue {
+		if fixture.config.profile != "authority" {
+			return fmt.Errorf("checkpoint restore requires the authority profile, got %q", fixture.config.profile)
+		}
 		return restoreLuaSuiteCheckpoint(t, fixture)
 	}
 	if value := action.RawGetString("checkpoint_parity_steps"); value != lua.LNil {
+		if fixture.config.profile != "authority" {
+			return fmt.Errorf("checkpoint parity requires the authority profile, got %q", fixture.config.profile)
+		}
 		return compareLuaSuiteCheckpoint(t, fixture, int(lua.LVAsNumber(value)))
 	}
 	if value := action.RawGetString("engine_update_ms"); value != lua.LNil {
@@ -398,6 +551,9 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		command, ok := action.RawGetString(field).(*lua.LTable)
 		if !ok {
 			continue
+		}
+		if fixture.config.profile != "authority" {
+			return fmt.Errorf("command submission requires the authority profile, got %q", fixture.config.profile)
 		}
 		player := command.RawGetString("player").String()
 		if authority == simulation.AuthoritySystem && player == "nil" {
@@ -523,6 +679,7 @@ func compareLuaSuiteCheckpoint(t *testing.T, fixture *luaSuiteFixture, steps int
 		engine.Close()
 		return err
 	}
+	fixture.engine, fixture.session, fixture.authority, fixture.scope = engine, session, authority, &modruntime.Scope{}
 	for range steps {
 		if err := session.Step(); err != nil {
 			return err
@@ -536,6 +693,5 @@ func compareLuaSuiteCheckpoint(t *testing.T, fixture *luaSuiteFixture, steps int
 	if restoredChecksum != originalChecksum {
 		return fmt.Errorf("continued checksum = %s, want %s", restoredChecksum, originalChecksum)
 	}
-	fixture.engine, fixture.session, fixture.authority, fixture.scope = engine, session, authority, &modruntime.Scope{}
 	return nil
 }

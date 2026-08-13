@@ -16,9 +16,12 @@ return test.suite({
                 test.expect(_G.lua_test_private_value, "global leaked from another case"):is_nil()
             end)
         end),
-        test.property("generated_cases_are_reproducible", { seeds = { 1, 42 } }, function(t, seed)
+        test.property("generated_cases_are_reproducible", {
+            seeds = { 1, 42 },
+            generator = test.generators.integer(-100, 100),
+        }, function(t, value)
             t:run(function()
-                test.expect(seed * 2, "seeded example"):equals(seed + seed)
+                test.expect(value * 2, "seeded example"):equals(value + value)
             end)
         end),
     },
