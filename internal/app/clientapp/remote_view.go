@@ -93,6 +93,24 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 		app.remoteMirrors = map[string]akara.Entity{}
 	}
 	seen := map[string]bool{}
+	localKey := "local:" + hud.Player.PlayerID
+	seen[localKey] = true
+	local, exists := app.remoteMirrors[localKey]
+	if !exists {
+		var err error
+		local, err = world.CreateEntity()
+		if err != nil {
+			return err
+		}
+		app.remoteMirrors[localKey] = local
+	}
+	if err := installPlayerMirror(world, local, playeradapter.WorldEntity{
+		ID: "player:" + hud.Player.PlayerID, Kind: "player", Owner: hud.Player.PlayerID,
+		Label: hud.Player.Name, Class: hud.Player.Class, Token: classToken(hud.Player.Class),
+		Mode: hud.Animation.Mode, Direction: hud.Animation.Direction, Position: hud.Position,
+	}, hud.Location); err != nil {
+		return err
+	}
 	for _, remote := range projected.Entities {
 		if remote.Kind != "player" {
 			continue
@@ -107,29 +125,37 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 			}
 			app.remoteMirrors[remote.ID] = entity
 		}
-		values := map[string]map[string]any{
-			"d2legacy.player.identity":   {"character_id": remote.ID, "player": remote.Owner, "name": remote.Label, "class": remote.Class},
-			"d2legacy.player.appearance": {"cof": "", "token": remote.Token, "palette": "data/global/Palette/units/pal.dat", "weapon_class": "HTH"},
-			"d2legacy.player.animation":  {"direction": remote.Direction, "mode": remote.Mode},
-			"d2legacy.world.facing":      {"direction": remote.Direction, "directions": int64(16)},
-			"d2legacy.world.location":    {"act": hud.Location.Act, "level_id": hud.Location.LevelID},
-		}
-		if err := moveMirrorToward(world, entity, remote.Position, 0.35); err != nil {
+		if err := installPlayerMirror(world, entity, remote, hud.Location); err != nil {
 			return err
-		}
-		for name, fields := range values {
-			store, ok := akara.GetDynamicStore(world, name)
-			if ok {
-				if _, err := store.Set(entity, fields); err != nil {
-					return err
-				}
-			}
 		}
 	}
 	for id, entity := range app.remoteMirrors {
 		if !seen[id] {
 			world.DestroyEntity(entity)
 			delete(app.remoteMirrors, id)
+		}
+	}
+	return nil
+}
+
+func installPlayerMirror(world *akara.World, entity akara.Entity, player playeradapter.WorldEntity, location playeradapter.HUDLocation) error {
+	values := map[string]map[string]any{
+		"d2legacy.player.identity":   {"character_id": player.ID, "player": player.Owner, "name": player.Label, "class": player.Class},
+		"d2legacy.player.appearance": {"cof": "", "token": player.Token, "palette": "data/global/Palette/units/pal.dat", "weapon_class": "HTH"},
+		"d2legacy.player.animation":  {"direction": player.Direction, "mode": player.Mode},
+		"d2legacy.world.facing":      {"direction": player.Direction, "directions": int64(16)},
+		"d2legacy.world.location":    {"act": location.Act, "level_id": location.LevelID},
+	}
+	if err := moveMirrorToward(world, entity, player.Position, 0.35); err != nil {
+		return err
+	}
+	for name, fields := range values {
+		store, ok := akara.GetDynamicStore(world, name)
+		if !ok {
+			return fmt.Errorf("remote presentation: component %q is unavailable", name)
+		}
+		if _, err := store.Set(entity, fields); err != nil {
+			return err
 		}
 	}
 	return nil

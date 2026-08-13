@@ -127,7 +127,10 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, firstWorld := connected.View()
-		if containsWorldEntity(firstWorld.Entities, "player:alice-2", "player") {
+		if peer, found := findWorldEntity(firstWorld.Entities, "player:alice-2", "player"); found {
+			if peer.Owner != "alice-2" || peer.Class != "Barbarian" || peer.Token != "BA" || peer.Position.X != 12 || peer.Position.Y != 10 {
+				t.Fatalf("second player projection = %#v", peer)
+			}
 			break
 		}
 		if attempt == 3 {
@@ -192,13 +195,18 @@ func assertCanceledLoop(t *testing.T, ctx context.Context, result <-chan error, 
 	}
 }
 
-func containsWorldEntity(entities []playeradapter.WorldEntity, id, kind string) bool {
+func findWorldEntity(entities []playeradapter.WorldEntity, id, kind string) (playeradapter.WorldEntity, bool) {
 	for _, entity := range entities {
 		if entity.ID == id && entity.Kind == kind {
-			return true
+			return entity, true
 		}
 	}
-	return false
+	return playeradapter.WorldEntity{}, false
+}
+
+func containsWorldEntity(entities []playeradapter.WorldEntity, id, kind string) bool {
+	_, found := findWorldEntity(entities, id, kind)
+	return found
 }
 
 // liveGameworldRecords are synthetic authored facts, not alternate gameplay

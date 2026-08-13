@@ -255,7 +255,8 @@ local function update_players(self, elapsed)
     end
     self.remote_players = self.remote_players or {}
     local visible = {}
-    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id(), network_connected())) do
+    local excluded = network_connected() and self.gameplay and self.gameplay.hero or nil
+    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id(), network_connected(), excluded)) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             visible[key] = true

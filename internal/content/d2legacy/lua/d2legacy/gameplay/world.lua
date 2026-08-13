@@ -194,8 +194,9 @@ function M.monster_snapshots()
     return result
 end
 
-function M.player_snapshots(local_player, include_local)
+function M.player_snapshots(local_player, include_local, excluded_entity)
     local result = {}
+    local excluded_id = excluded_entity and excluded_entity:id() or nil
     for _, entity in
         ipairs(ecs.query({
             all = {
@@ -209,7 +210,7 @@ function M.player_snapshots(local_player, include_local)
         }))
     do
         local identity = ecs.get(entity, "d2legacy.player.identity")
-        if include_local or identity:get("player") ~= local_player then
+        if entity:id() ~= excluded_id and (include_local or identity:get("player") ~= local_player) then
             local snapshot = ecs.get(entity, "d2legacy.player.appearance"):snapshot()
             local position = ecs.get(entity, "d2legacy.world.position")
             local facing = ecs.get(entity, "d2legacy.world.facing")
