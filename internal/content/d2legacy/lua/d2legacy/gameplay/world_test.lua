@@ -21,7 +21,7 @@ return test.suite({
                 )
             end),
         }),
-        test.case("connected_roster_excludes_compatibility_hero_but_keeps_local_and_peer_mirrors", {
+        test.case("connected_roster_keeps_peers_and_excludes_the_authenticated_owner", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local world = require("d2legacy.gameplay.world")
@@ -47,16 +47,13 @@ return test.suite({
                     })
                 end
 
-                local compatibility = player("player-2", "Assassin", "AI", 10)
                 player("player-2", "Barbarian", "BA", 18)
                 player("player-1", "Assassin", "AI", 10)
 
-                local snapshots = world.player_snapshots("player-2", true, compatibility)
-                test.assert(#snapshots == 2, [=[#snapshots == 2]=])
-                local by_token = {}
-                for _, snapshot in ipairs(snapshots) do by_token[snapshot.token] = snapshot end
-                test.assert(by_token.BA and by_token.BA.x == 18, [=[by_token.BA and by_token.BA.x == 18]=])
-                test.assert(by_token.AI and by_token.AI.x == 10, [=[by_token.AI and by_token.AI.x == 10]=])
+                local snapshots = world.player_snapshots("player-2", false)
+                test.assert(#snapshots == 1, [=[#snapshots == 1]=])
+                test.assert(snapshots[1].token == "AI", [=[snapshots[1].token == "AI"]=])
+                test.assert(snapshots[1].x == 10, [=[snapshots[1].x == 10]=])
             end),
         }),
     },

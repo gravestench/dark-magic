@@ -111,6 +111,7 @@ type application struct {
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
 	remoteMirrors       map[string]akara.Entity
+	networkRosterLogKey string
 	saves               *d2save.Store
 	networkTrust        *networktrust.Store
 	playerProfilePath   string

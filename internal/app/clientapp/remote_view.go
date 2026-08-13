@@ -2,7 +2,9 @@ package clientapp
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
+	"sort"
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/app/clientsession"
@@ -93,24 +95,6 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 		app.remoteMirrors = map[string]akara.Entity{}
 	}
 	seen := map[string]bool{}
-	localKey := "local:" + hud.Player.PlayerID
-	seen[localKey] = true
-	local, exists := app.remoteMirrors[localKey]
-	if !exists {
-		var err error
-		local, err = world.CreateEntity()
-		if err != nil {
-			return err
-		}
-		app.remoteMirrors[localKey] = local
-	}
-	if err := installPlayerMirror(world, local, playeradapter.WorldEntity{
-		ID: "player:" + hud.Player.PlayerID, Kind: "player", Owner: hud.Player.PlayerID,
-		Label: hud.Player.Name, Class: hud.Player.Class, Token: classToken(hud.Player.Class),
-		Mode: hud.Animation.Mode, Direction: hud.Animation.Direction, Position: hud.Position,
-	}, hud.Location); err != nil {
-		return err
-	}
 	for _, remote := range projected.Entities {
 		if remote.Kind != "player" {
 			continue
@@ -135,7 +119,49 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 			delete(app.remoteMirrors, id)
 		}
 	}
+	app.logNetworkRoster(hud)
 	return nil
+}
+
+func (app *application) logNetworkRoster(hud playeradapter.HUD) {
+	world := app.entitySimulation.World()
+	identities, identityOK := akara.GetDynamicStore(world, "d2legacy.player.identity")
+	appearances, appearanceOK := akara.GetDynamicStore(world, "d2legacy.player.appearance")
+	positions, positionOK := akara.GetDynamicStore(world, "d2legacy.world.position")
+	if !identityOK || !appearanceOK || !positionOK {
+		return
+	}
+	type rosterEntry struct {
+		Entity uint64
+		Owner  string
+		Class  string
+		Token  string
+		X      float64
+		Y      float64
+	}
+	entries := make([]rosterEntry, 0, identities.Len())
+	for _, entity := range identities.Entities() {
+		identity, identityFound := identities.Get(entity)
+		appearance, appearanceFound := appearances.Get(entity)
+		position, positionFound := positions.Get(entity)
+		if !identityFound || !appearanceFound || !positionFound {
+			continue
+		}
+		owner, _ := identity.Get("player")
+		class, _ := identity.Get("class")
+		token, _ := appearance.Get("token")
+		x, _ := position.Get("x")
+		y, _ := position.Get("y")
+		entries = append(entries, rosterEntry{Entity: uint64(entity), Owner: owner.(string), Class: class.(string), Token: token.(string), X: x.(float64), Y: y.(float64)})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Entity < entries[j].Entity })
+	key := fmt.Sprintf("%s:%s:%v", hud.Player.PlayerID, hud.Player.Class, entries)
+	if key == app.networkRosterLogKey {
+		return
+	}
+	app.networkRosterLogKey = key
+	slog.Info("connected player presentation roster", "authenticated_player", hud.Player.PlayerID,
+		"authenticated_class", hud.Player.Class, "entities", entries)
 }
 
 func installPlayerMirror(world *akara.World, entity akara.Entity, player playeradapter.WorldEntity, location playeradapter.HUDLocation) error {

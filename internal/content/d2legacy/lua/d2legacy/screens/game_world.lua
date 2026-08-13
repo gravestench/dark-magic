@@ -255,8 +255,7 @@ local function update_players(self, elapsed)
     end
     self.remote_players = self.remote_players or {}
     local visible = {}
-    local excluded = network_connected() and self.gameplay and self.gameplay.hero or nil
-    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id(), network_connected(), excluded)) do
+    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id(), false)) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             visible[key] = true
@@ -654,10 +653,9 @@ return {
                     self.hero_pending_composite = nil
                 end
             end
-			-- Connected players all use update_players above. One roster renderer
-			-- prevents the authenticated owner and peers from diverging through
-			-- separate preload/cache behavior. This node remains the offline hero.
-			if network_connected() then self.hero:set_visible(false) end
+			-- The authenticated character stays on the established hero renderer,
+			-- including its asynchronous asset preload and retry behavior. The
+			-- retained roster above renders only other player owners.
         end
 
         if self.hud then

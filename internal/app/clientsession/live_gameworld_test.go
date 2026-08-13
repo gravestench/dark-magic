@@ -117,6 +117,11 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if second.HUD.Player.PlayerID != "alice-2" || second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
 	}
+	if hostPeer, found := findWorldEntity(second.World.Entities, "player:alice-1", "player"); !found {
+		t.Fatalf("host player absent from second client's initial projection: %#v", second.World.Entities)
+	} else if hostPeer.Owner != "alice-1" || hostPeer.Class != "Amazon" || hostPeer.Token != "AM" || hostPeer.Position.X != 10 || hostPeer.Position.Y != 10 {
+		t.Fatalf("host player projection = %#v", hostPeer)
+	}
 	t.Cleanup(func() {
 		closeContext, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
