@@ -110,6 +110,27 @@ would re-enter the serialized runtime while its owner goroutine was already
 executing. Go therefore performs host actions between callbacks, while the
 complete scenario and all gameplay assertions remain authored in Lua.
 
+## Lua style guide
+
+Lua tests and production modules are living documentation. A reader should be
+able to open one file and understand one idea without memorizing Lua syntax.
+
+- Keep every line at or below 120 columns.
+- Prefer short declarations, one idea per line, and whitespace over dense
+  inline tables.
+- Use explanatory comments for legacy concepts, state lifetimes, units, and
+  ordering rules. Explain *why* a value matters, not just what the syntax does.
+- Extract repeated setup and assertions into named local helpers. Tests should
+  read like a short story: arrange, act, assert.
+- Break long payloads and record tables into smaller named pieces or helper
+  functions. Do not compress suites into giant one-line tables merely because
+  Lua accepts them.
+- Keep test data semantically meaningful. Named fixtures belong in
+  `d2legacy.tests.support`; scenario-specific setup belongs in short local
+  helpers beside the test that uses them.
+- Use `test.expect` and `test.property` for labeled, path-aware failures when
+  the assertion is part of the documented contract.
+
 Run every suite with:
 
 ```text
