@@ -303,6 +303,16 @@ the rule/schema compatibility metadata needed to decide whether admission or
 migration is legal. No path may silently restore, join, or replay a session with
 different authoritative code or configuration.
 
+Persisted session replays use the versioned `dark-magic-replay` container in
+`internal/game/simulation`. The envelope carries the deterministic initial
+snapshot, participants, admitted commands, checkpoints, schema-tagged manifests,
+and optional ordered semantic events. It has independent whole-envelope
+integrity in addition to checkpoint simulation checksums. Readers apply byte and
+section-count limits before admission, reject unknown fields and trailing data,
+and require an explicitly registered sequential migration for every older
+container version. Atomic private-file writes are a replay/debugging boundary,
+not durable-character save persistence.
+
 Live sessions keep their pinned identity. Changed scripts apply to new sessions
 by default. Changing an active production session requires an explicit,
 versioned state migration whose input/output identities and failure behavior are

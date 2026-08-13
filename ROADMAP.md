@@ -1777,8 +1777,15 @@ authority, persistence separation, and resilience acceptance remain open.
 - [x] Define deterministic simulation snapshots, purpose-named RNG streams,
   admitted command logs, canonical per-tick execution, checksums, restoration,
   replay verification, and first-field desync diagnostics.
-- [ ] Add bounded, versioned on-disk replay containers and migration policy for
+- [x] Add bounded, versioned on-disk replay containers and migration policy for
   manifests, initial snapshots, admitted commands, events, and checkpoints.
+  The generic simulation owner wraps deterministic replay state in a strict
+  `dark-magic-replay` envelope with schema-tagged manifests and ordered semantic
+  events. Readers bound total bytes and every repeated section, reject unknown
+  fields and trailing data, verify whole-envelope SHA-256 integrity, and require
+  explicit one-version-at-a-time migrations whose results are revalidated.
+  Private `0600` writes sync a temporary file and destination directory before
+  atomic replacement, and sessions export defensive container evidence.
 - [x] Keep `cmd/darkmagic` as the first-class client composition root and move
   its offline fixed-step ECS advancement behind the shared authoritative
   session owner without coupling that owner to Raylib or Lua.

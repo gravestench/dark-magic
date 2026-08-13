@@ -390,6 +390,30 @@ func (session *Session) Replay() (simulation.Replay, error) {
 	return simulation.Replay{Version: simulation.ReplayVersion, StepNanos: int64(session.config.Step), Initial: initial, InitialParticipants: cloneParticipantStates(session.initialParticipants), Commands: commands, Checkpoints: checkpoints}, nil
 }
 
+// ReplayContainer exports the current replay with defensive copies of the
+// caller's versioned manifests and semantic event evidence. The returned value
+// can be encoded or atomically persisted by simulation's replay-container API.
+func (session *Session) ReplayContainer(manifests map[string]simulation.ReplayManifest,
+	events []simulation.ReplayEvent,
+) (simulation.ReplayContainer, error) {
+	replay, err := session.Replay()
+	if err != nil {
+		return simulation.ReplayContainer{}, err
+	}
+	container := simulation.NewReplayContainer(replay)
+	container.Manifests = make(map[string]simulation.ReplayManifest, len(manifests))
+	for name, manifest := range manifests {
+		manifest.Data = append([]byte(nil), manifest.Data...)
+		container.Manifests[name] = manifest
+	}
+	container.Events = make([]simulation.ReplayEvent, len(events))
+	for index, event := range events {
+		container.Events[index] = event
+		container.Events[index].Payload = append([]byte(nil), event.Payload...)
+	}
+	return container, nil
+}
+
 func (session *Session) snapshotParticipantsLocked() ([]simulation.ParticipantState, error) {
 	result := make([]simulation.ParticipantState, 0, len(session.participants))
 	for _, participant := range session.participants {
