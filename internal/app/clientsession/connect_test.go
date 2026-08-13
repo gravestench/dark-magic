@@ -85,6 +85,22 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if len(delta.Upserts) != 0 || len(delta.Removed) != 0 {
 		t.Fatalf("unchanged refresh delta = %#v", delta)
 	}
+	watchContext, cancelWatch := context.WithCancel(ctx)
+	deltas, watchErrors, err := connected.Watch(watchContext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case delta := <-deltas:
+		if len(delta.Upserts) != 0 || len(delta.Removed) != 0 {
+			t.Fatalf("watch delta = %#v", delta)
+		}
+	case err := <-watchErrors:
+		t.Fatalf("watch error = %v", err)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	cancelWatch()
 	firstCredential := connected.credential
 	if err := connected.Reconnect(ctx); err != nil {
 		t.Fatal(err)
@@ -100,6 +116,19 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 func TestConnectRejectsMalformedDiscoveryBeforeDial(t *testing.T) {
 	if _, err := Connect(context.Background(), realm.JoinAssignment{GameID: "game", Ticket: "ticket", Endpoint: realm.GameEndpoint{Address: "https://example", TLSFingerprint: "bad"}}, &tls.Config{}); err == nil {
 		t.Fatal("malformed discovery was accepted")
+	}
+}
+
+func TestCorrectionRejectsStaleAndConflictingSnapshots(t *testing.T) {
+	current := gameserver.Snapshot{Tick: 8, Checksum: "current"}
+	if err := validateCorrection(current, gameserver.Snapshot{Tick: 7, Checksum: "old"}); err != ErrStaleCorrection {
+		t.Fatalf("stale error = %v", err)
+	}
+	if err := validateCorrection(current, gameserver.Snapshot{Tick: 8, Checksum: "different"}); err != ErrStaleCorrection {
+		t.Fatalf("conflict error = %v", err)
+	}
+	if err := validateCorrection(current, gameserver.Snapshot{Tick: 9, Checksum: "next"}); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -38,6 +38,7 @@ const (
 	operationJoin      operation = "join"
 	operationSubmit    operation = "submit"
 	operationRefresh   operation = "refresh"
+	operationWatch     operation = "watch"
 	operationReconnect operation = "reconnect"
 	operationLeave     operation = "leave"
 )
@@ -99,12 +100,51 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 				_ = writeFrame(stream, response{Error: err.Error()})
 				return
 			}
+			if message.Operation == operationWatch {
+				if !validShape(message) || len(message.Credential) > MaxCredentialBytes {
+					_ = writeFrame(stream, response{Error: ErrWire.Error()})
+					return
+				}
+				server.watch(ctx, stream, message.Credential)
+				return
+			}
 			_ = writeFrame(stream, server.dispatch(ctx, message))
 		}()
 	}
 }
 
+const correctionInterval = 500 * time.Millisecond
+
+func (server *Server) watch(ctx context.Context, stream *quic.Stream, credential gameserver.SessionCredential) {
+	ticker := time.NewTicker(correctionInterval)
+	defer ticker.Stop()
+	lastTick, lastChecksum := ^uint64(0), ""
+	for {
+		snapshot, err := server.endpoint.Refresh(credential)
+		if err != nil {
+			_ = writeFrame(stream, response{Error: err.Error()})
+			return
+		}
+		if snapshot.Tick != lastTick || snapshot.Checksum != lastChecksum {
+			if err := writeFrame(stream, response{Snapshot: &snapshot}); err != nil {
+				return
+			}
+			lastTick, lastChecksum = snapshot.Tick, snapshot.Checksum
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-stream.Context().Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 func (server *Server) dispatch(ctx context.Context, message request) response {
+	if !validShape(message) {
+		return response{Error: ErrWire.Error()}
+	}
 	switch message.Operation {
 	case operationJoin:
 		if message.Join == nil || len(message.Join.Credential) > MaxCredentialBytes {
@@ -139,6 +179,21 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 		return errorResponse(server.endpoint.Leave(message.Credential))
 	default:
 		return response{Error: ErrWire.Error()}
+	}
+}
+
+func validShape(message request) bool {
+	switch message.Operation {
+	case operationJoin:
+		return message.Join != nil && message.Command == nil && message.Reconnect == nil && message.Credential == ""
+	case operationSubmit:
+		return message.Join == nil && message.Command != nil && message.Reconnect == nil && message.Credential != ""
+	case operationRefresh, operationWatch, operationLeave:
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != ""
+	case operationReconnect:
+		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Credential == ""
+	default:
+		return false
 	}
 }
 
@@ -182,6 +237,61 @@ func (client *Client) Refresh(ctx context.Context, credential gameserver.Session
 		return gameserver.Snapshot{}, ErrWire
 	}
 	return *result.Snapshot, nil
+}
+
+// Watch opens one long-lived reliable correction stream. The bounded channel
+// applies backpressure directly to QUIC; corrections are never queued without
+// limit in application memory.
+func (client *Client) Watch(ctx context.Context, credential gameserver.SessionCredential) (<-chan gameserver.Snapshot, <-chan error, error) {
+	stream, err := client.connection.OpenStreamSync(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := writeFrame(stream, request{Operation: operationWatch, Credential: credential}); err != nil {
+		stream.CancelRead(1)
+		stream.CancelWrite(1)
+		return nil, nil, err
+	}
+	snapshots := make(chan gameserver.Snapshot, 1)
+	errorsOut := make(chan error, 1)
+	go func() {
+		defer close(snapshots)
+		defer close(errorsOut)
+		defer stream.Close()
+		done := make(chan struct{})
+		defer close(done)
+		go func() {
+			select {
+			case <-ctx.Done():
+				stream.CancelRead(0)
+				stream.CancelWrite(0)
+			case <-done:
+			}
+		}()
+		for {
+			var result response
+			if err := readFrame(stream, &result); err != nil {
+				if ctx.Err() == nil {
+					errorsOut <- err
+				}
+				return
+			}
+			if result.Error != "" {
+				errorsOut <- errors.New(result.Error)
+				return
+			}
+			if result.Snapshot == nil {
+				errorsOut <- ErrWire
+				return
+			}
+			select {
+			case snapshots <- *result.Snapshot:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return snapshots, errorsOut, nil
 }
 
 func (client *Client) Reconnect(ctx context.Context, reconnect gameserver.ReconnectRequest) (gameserver.JoinResponse, error) {

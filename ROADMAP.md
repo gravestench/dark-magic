@@ -1828,8 +1828,12 @@ authority, persistence separation, and resilience acceptance remain open.
   installs the canonical correction view atomically. `ClientView/v1` now adds a
   bounded, nearby, explicitly public `WorldView/v1`; authenticated reliable
   refreshes derive deterministic `WorldDelta/v1` upserts/removals and force a
-  full reset whenever truncation makes removal inference unsafe. Long-lived
-  streams, compact datagrams, and latency/loss acceptance remain open.
+  full reset whenever truncation makes removal inference unsafe. A bounded
+  long-lived reliable stream now emits immediate and changed corrections with
+  application backpressure; clients reject stale or same-tick conflicting
+  corrections. Strict operation shapes and per-membership command/correction
+  token buckets bound malformed and burst traffic, and reconnect cannot reset
+  those budgets. Compact datagrams and latency/loss acceptance remain open.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
