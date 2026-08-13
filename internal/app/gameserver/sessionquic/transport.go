@@ -110,6 +110,7 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 		}
 		go func() {
 			defer stream.Close()
+			defer stream.CancelRead(0)
 			var message request
 			if err := readFrame(stream, &message); err != nil {
 				_ = writeFrame(stream, response{Error: err.Error()})
@@ -345,6 +346,7 @@ func (client *Client) call(ctx context.Context, message request) (response, erro
 		return response{}, err
 	}
 	defer stream.Close()
+	defer stream.CancelRead(0)
 	if err := writeFrame(stream, message); err != nil {
 		return response{}, err
 	}

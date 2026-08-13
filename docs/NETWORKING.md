@@ -39,6 +39,12 @@ connections under deterministic bidirectional packet loss and cyclic delay.
 That acceptance covers handshake, join, the long-lived correction stream,
 command submission, reconnect, and leave. It proves bounded recovery behavior;
 it is not a substitute for sustained load, diverse paths, or platform testing.
+The adapter accepts at most 16 concurrent bidirectional streams per connection,
+disables peer-initiated unidirectional streams, caps a stream receive window at
+4 MiB and a connection receive window at 8 MiB, and explicitly releases both
+sides of completed unary streams. A repeated malformed-stream test verifies
+that 256 rejected requests neither exhaust stream credit nor prevent a later
+valid session lifecycle on the same connection.
 
 Primary references:
 
