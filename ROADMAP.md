@@ -1869,7 +1869,10 @@ authority, persistence separation, and resilience acceptance remain open.
   d2legacy Lua authority and fixed-step headless host, populates a Blood Moor
   hostile through the production ECS systems, admits a selected profile over a
   real pinned-TLS QUIC connection, and verifies coherent `PlayerHUD/v1`,
-  `WorldView/v1`, and later correction ticks without requiring owned MPQ data.
+  `WorldView/v1`, player movement command replication, and the resulting
+  correction without requiring owned MPQ data. Headless authorities install
+  position integration themselves; interactive worlds only supply collision
+  maps and presentation systems.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 

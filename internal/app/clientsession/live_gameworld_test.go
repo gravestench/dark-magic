@@ -14,6 +14,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
@@ -27,7 +28,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	host, err := gameserver.Start(ctx, content.D2Legacy(), liveGameworldRecords{}, gameserver.Config{
 		Mode: gameserver.ModeStandalone, SessionID: "live-gameworld", Seed: 314,
 		Prediction: gamesession.PredictionLimited,
-		Session:    gamesession.Config{Step: 5 * time.Millisecond, CheckpointInterval: 1},
+		Session:    gamesession.Config{Step: 40 * time.Millisecond, CheckpointInterval: 1},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +38,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	population, err := json.Marshal(map[string]any{
 		"act": 1, "level_id": 2, "difficulty": 0,
 		"rooms": []map[string]any{{"id": "blood-moor-network", "populate": true,
-			"points": []map[string]any{{"x": 4, "y": 0}}}},
+			"points": []map[string]any{{"x": 14, "y": 10}}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = server.Close() })
-	destination, err := playeradapter.NewDestination(0, 0, 100, 100, 1, 2)
+	destination, err := playeradapter.NewDestination(10, 10, 100, 100, 1, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,14 +101,40 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
-	initialTick := connected.World.Tick
-	for connected.World.Tick <= initialTick {
-		if _, err := connected.Refresh(ctx); err != nil {
-			t.Fatal(err)
+	movePayload, err := json.Marshal(movement.MovePayload{X: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	commandTick := connected.World.Tick + 2
+	watchContext, stopWatch := context.WithCancel(ctx)
+	deltas, watchErrors, err := connected.Watch(watchContext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopWatch()
+	if err := connected.Submit(ctx, gameserver.CommandIntent{Tick: commandTick, Sequence: 1,
+		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
+		t.Fatal(err)
+	}
+	_, currentWorld := connected.View()
+	initialTick, initialX := currentWorld.Tick, currentWorld.Origin.X
+	for currentWorld.Tick <= initialTick || currentWorld.Origin.X <= initialX {
+		select {
+		case _, open := <-deltas:
+			if !open {
+				t.Fatal("correction stream closed before movement")
+			}
+			_, currentWorld = connected.View()
+		case err := <-watchErrors:
+			t.Fatalf("correction stream error = %v", err)
+		case <-ctx.Done():
+			replay, _ := host.Session.Replay()
+			t.Fatalf("movement correction timed out: %v; world=%#v commands=%#v", ctx.Err(), currentWorld, replay.Commands)
 		}
 	}
-	if connected.HUD.Tick != connected.World.Tick {
-		t.Fatalf("correction HUD/world ticks differ: %d/%d", connected.HUD.Tick, connected.World.Tick)
+	currentHUD, currentWorld := connected.View()
+	if currentHUD.Tick != currentWorld.Tick {
+		t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
 	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)

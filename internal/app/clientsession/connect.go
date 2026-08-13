@@ -45,6 +45,27 @@ type SelfHostedAssignment struct {
 	ProfileCredential string
 }
 
+// View returns one coherent defensive copy while a correction stream may be
+// installing newer state. Presentation code should use this accessor instead
+// of reading the exported initial-view fields concurrently with Watch.
+func (session *Session) View() (playeradapter.HUD, playeradapter.WorldView) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	hud, world := session.HUD, session.World
+	world.Entities = append([]playeradapter.WorldEntity(nil), session.World.Entities...)
+	for index := range world.Entities {
+		if health := world.Entities[index].Health; health != nil {
+			value := *health
+			world.Entities[index].Health = &value
+		}
+		if maximum := world.Entities[index].MaxHealth; maximum != nil {
+			value := *maximum
+			world.Entities[index].MaxHealth = &value
+		}
+	}
+	return hud, world
+}
+
 func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tls.Config) (*Session, error) {
 	if tlsConfig == nil || strings.TrimSpace(assignment.Ticket) == "" || strings.TrimSpace(assignment.GameID) == "" {
 		return nil, ErrAssignment

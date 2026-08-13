@@ -204,11 +204,11 @@ func TestMonsterMeleeReachIncludesBothActorFootprints(t *testing.T) {
 		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
 		"health": 500, "max_health": 500, "mana": 20, "max_mana": 20,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
-		"direction": 0, "mode": "NU", "x": 0, "y": 0,
+		"direction": 0, "mode": "NU", "x": 10, "y": 10,
 		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
 	})
 	monster, _ := json.Marshal(map[string]any{
-		"spawn_id": "spacing-fallen", "seed": 9, "x": 2.5, "y": 0, "act": 1, "level_id": 1,
+		"spawn_id": "spacing-fallen", "seed": 9, "x": 12.5, "y": 10, "act": 1, "level_id": 1,
 		"definition": map[string]any{
 			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
 			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
