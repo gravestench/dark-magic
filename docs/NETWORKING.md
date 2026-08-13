@@ -73,6 +73,16 @@ and hidden server facts. Realm admission must load and lease the durable
 character and submit the trusted player-entry command before join; a client
 credential never materializes authoritative character state.
 
+`ClientView/v1` envelopes `PlayerHUD/v1` and `WorldView/v1` at one canonical
+tick. The world projection includes only explicitly public selectable fields
+within 80 subtiles, excludes the authenticated player's own entity, sorts by
+distance then stable public ID, rejects malformed or duplicate IDs, and caps
+the result at 256 entities. Monster health is exposed only through this reviewed
+projection; AI targets, damage, raw components, far entities, inventories, and
+other hidden facts remain excluded. `WorldDelta/v1` contains deterministic
+upserts and removals. A truncated base or result forces a complete bounded
+reset because removals cannot otherwise be proven.
+
 Realm join is a transaction across the durable character repository and the
 allocated worker. It acquires an exclusive revisioned lease owned by the
 account, validates the character's pinned runtime compatibility, creates the
@@ -88,9 +98,13 @@ accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
 configuration, and additionally pins the leaf certificate to the realm's
 `sha256:` fingerprint before sending the one-use ticket. It then verifies the
-server admission session/runtime and decodes exactly `PlayerHUD/v1`. Reconnect
-rotates the session credential and atomically replaces the correction HUD;
-command submission, reconnect, and close serialize credential access.
+server admission session/runtime and decodes exactly `ClientView/v1`. Reconnect
+rotates the session credential and atomically replaces the correction view;
+command submission, refresh, reconnect, and close serialize credential access.
+Authenticated refresh currently carries a complete bounded view over a reliable
+QUIC stream, from which the client derives `WorldDelta/v1`. This is the
+correctness baseline before long-lived streams or compact lossy datagrams;
+correctness and removals never depend on a datagram.
 
 ## Join-time mod acquisition
 

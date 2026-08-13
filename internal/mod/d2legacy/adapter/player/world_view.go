@@ -1,0 +1,123 @@
+package player
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math"
+	"sort"
+	"strings"
+
+	"github.com/gravestench/dark-magic/internal/game/simulation"
+)
+
+const (
+	WorldViewVersion     uint32 = 1
+	WorldViewRadius             = 80.0
+	MaxWorldViewEntities        = 256
+	maxWorldIDBytes             = 128
+	maxWorldKindBytes           = 32
+	maxWorldLabelBytes          = 256
+)
+
+var ErrWorldView = errors.New("player world view: invalid public projection")
+
+type WorldView struct {
+	Version   uint32        `json:"version"`
+	Tick      uint64        `json:"tick"`
+	Origin    HUDPosition   `json:"origin"`
+	Entities  []WorldEntity `json:"entities"`
+	Truncated bool          `json:"truncated"`
+}
+
+type WorldEntity struct {
+	ID        string      `json:"id"`
+	Kind      string      `json:"kind"`
+	Label     string      `json:"label,omitempty"`
+	Owner     string      `json:"owner,omitempty"`
+	Position  HUDPosition `json:"position"`
+	Radius    float64     `json:"radius"`
+	Priority  int64       `json:"priority"`
+	Health    *int64      `json:"health,omitempty"`
+	MaxHealth *int64      `json:"max_health,omitempty"`
+	distance2 float64
+}
+
+// ProjectWorldView exposes only nearby entities carrying the mod's explicit
+// public selectable contract. Raw ECS identity and non-allowlisted components
+// never enter the result.
+func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.RawMessage, error) {
+	if checkpoint.Snapshot == nil || strings.TrimSpace(playerID) == "" {
+		return nil, ErrWorldView
+	}
+	snapshot := *checkpoint.Snapshot
+	identities, found := findComponent(snapshot, "d2legacy.player.identity")
+	if !found {
+		return nil, ErrWorldView
+	}
+	playerEntity, _, found := findString(identities, "player", playerID)
+	if !found {
+		return nil, ErrWorldView
+	}
+	positions, found := findComponent(snapshot, "d2legacy.world.position")
+	if !found {
+		return nil, ErrWorldView
+	}
+	originFields, found := findInstance(positions, playerEntity)
+	if !found {
+		return nil, ErrWorldView
+	}
+	origin := HUDPosition{X: floatField(originFields, "x"), Y: floatField(originFields, "y")}
+	selectables, found := findComponent(snapshot, "d2legacy.world.selectable")
+	if !found {
+		return json.Marshal(WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}})
+	}
+	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
+	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}}
+	seen := make(map[string]struct{})
+	for _, instance := range selectables.Instances {
+		if instance.Entity == playerEntity {
+			continue
+		}
+		public, ok := findInstance(selectables, instance.Entity)
+		position, positioned := findInstance(positions, instance.Entity)
+		if !ok || !positioned {
+			continue
+		}
+		entity := WorldEntity{ID: stringField(public, "id"), Kind: stringField(public, "kind"), Label: stringField(public, "label"), Owner: stringField(public, "owner"), Position: HUDPosition{X: floatField(position, "x"), Y: floatField(position, "y")}, Radius: floatField(public, "radius"), Priority: intField(public, "priority")}
+		if err := validateWorldEntity(entity); err != nil {
+			return nil, err
+		}
+		if _, duplicate := seen[entity.ID]; duplicate {
+			return nil, fmt.Errorf("%w: duplicate public ID %q", ErrWorldView, entity.ID)
+		}
+		seen[entity.ID] = struct{}{}
+		dx, dy := entity.Position.X-origin.X, entity.Position.Y-origin.Y
+		entity.distance2 = dx*dx + dy*dy
+		if entity.distance2 > WorldViewRadius*WorldViewRadius {
+			continue
+		}
+		if stats, found := findInstance(monsters, instance.Entity); found {
+			health, maximum := intField(stats, "health"), intField(stats, "max_health")
+			entity.Health, entity.MaxHealth = &health, &maximum
+		}
+		view.Entities = append(view.Entities, entity)
+	}
+	sort.Slice(view.Entities, func(i, j int) bool {
+		if view.Entities[i].distance2 != view.Entities[j].distance2 {
+			return view.Entities[i].distance2 < view.Entities[j].distance2
+		}
+		return view.Entities[i].ID < view.Entities[j].ID
+	})
+	if len(view.Entities) > MaxWorldViewEntities {
+		view.Entities, view.Truncated = view.Entities[:MaxWorldViewEntities], true
+	}
+	return json.Marshal(view)
+}
+
+func validateWorldEntity(entity WorldEntity) error {
+	if entity.ID == "" || entity.Kind == "" || len(entity.ID) > maxWorldIDBytes || len(entity.Kind) > maxWorldKindBytes || len(entity.Label) > maxWorldLabelBytes || len(entity.Owner) > maxWorldIDBytes || math.IsNaN(entity.Position.X) || math.IsNaN(entity.Position.Y) || math.IsInf(entity.Position.X, 0) || math.IsInf(entity.Position.Y, 0) || entity.Radius < 0 || math.IsNaN(entity.Radius) || math.IsInf(entity.Radius, 0) {
+		return ErrWorldView
+	}
+	return nil
+}

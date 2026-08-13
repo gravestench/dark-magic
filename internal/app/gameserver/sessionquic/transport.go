@@ -37,6 +37,7 @@ type operation string
 const (
 	operationJoin      operation = "join"
 	operationSubmit    operation = "submit"
+	operationRefresh   operation = "refresh"
 	operationReconnect operation = "reconnect"
 	operationLeave     operation = "leave"
 )
@@ -116,6 +117,15 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 			return response{Error: ErrWire.Error()}
 		}
 		return errorResponse(server.endpoint.Submit(message.Credential, *message.Command))
+	case operationRefresh:
+		if len(message.Credential) > MaxCredentialBytes {
+			return response{Error: ErrWire.Error()}
+		}
+		snapshot, err := server.endpoint.Refresh(message.Credential)
+		if err != nil {
+			return response{Error: err.Error()}
+		}
+		return response{Snapshot: &snapshot}
 	case operationReconnect:
 		if message.Reconnect == nil || len(message.Reconnect.Credential) > MaxCredentialBytes {
 			return response{Error: ErrWire.Error()}
@@ -161,6 +171,17 @@ func (client *Client) Join(ctx context.Context, join gameserver.JoinRequest) (ga
 func (client *Client) Submit(ctx context.Context, credential gameserver.SessionCredential, command gameserver.CommandIntent) error {
 	_, err := client.call(ctx, request{Operation: operationSubmit, Credential: credential, Command: &command})
 	return err
+}
+
+func (client *Client) Refresh(ctx context.Context, credential gameserver.SessionCredential) (gameserver.Snapshot, error) {
+	result, err := client.call(ctx, request{Operation: operationRefresh, Credential: credential})
+	if err != nil {
+		return gameserver.Snapshot{}, err
+	}
+	if result.Snapshot == nil {
+		return gameserver.Snapshot{}, ErrWire
+	}
+	return *result.Snapshot, nil
 }
 
 func (client *Client) Reconnect(ctx context.Context, reconnect gameserver.ReconnectRequest) (gameserver.JoinResponse, error) {

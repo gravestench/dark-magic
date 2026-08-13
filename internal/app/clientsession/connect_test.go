@@ -47,8 +47,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{CharacterID: "character", Name: "Hero", Class: "Amazon"}}
+	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud, World: playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}}}
 	endpoint, err := gameserver.NewEndpoint(&gameserver.Host{Engine: engine, Session: session, Allocation: allocation}, authority,
-		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(hud) })
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(view) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +77,13 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	}
 	if connected.HUD.Player.Name != "Hero" || connected.Admission.Admission.IdentityHash != allocation.IdentityHash {
 		t.Fatalf("session = %#v", connected)
+	}
+	delta, err := connected.Refresh(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(delta.Upserts) != 0 || len(delta.Removed) != 0 {
+		t.Fatalf("unchanged refresh delta = %#v", delta)
 	}
 	firstCredential := connected.credential
 	if err := connected.Reconnect(ctx); err != nil {
