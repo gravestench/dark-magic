@@ -15,6 +15,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
@@ -286,13 +287,20 @@ func (session *Session) Close(ctx context.Context) error {
 		return nil
 	}
 	session.mu.Lock()
-	defer session.mu.Unlock()
 	if session.closed {
+		session.mu.Unlock()
 		return nil
 	}
 	session.closed = true
-	leaveErr := session.transport.Leave(ctx, session.credential)
-	closeErr := session.transport.Close()
+	transport, credential := session.transport, session.credential
+	session.mu.Unlock()
+	var leaveErr error
+	if ctx.Err() == nil {
+		leaveContext, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
+		leaveErr = transport.Leave(leaveContext, credential)
+		cancel()
+	}
+	closeErr := transport.Close()
 	return errors.Join(leaveErr, closeErr)
 }
 

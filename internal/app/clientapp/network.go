@@ -267,20 +267,31 @@ func (controller *networkController) Advance(ctx context.Context) error {
 		return nil
 	}
 	_, world := client.View()
+	if controller.app.movementSource != nil {
+		for _, command := range controller.app.movementSource.Commands(world.Tick + 2) {
+			if err := controller.submit(ctx, client, command.Tick, command.Kind, command.Payload); err != nil {
+				return err
+			}
+		}
+	}
 	for _, intent := range controller.app.commandIntents.Drain() {
 		payload, err := json.Marshal(intent.Payload)
 		if err != nil {
 			return err
 		}
-		controller.mu.Lock()
-		controller.sequence++
-		sequence := controller.sequence
-		controller.mu.Unlock()
-		if err := client.Submit(ctx, gameserver.CommandIntent{Tick: world.Tick + 2, Sequence: sequence, Kind: intent.Kind, Payload: payload}); err != nil {
+		if err := controller.submit(ctx, client, world.Tick+2, intent.Kind, payload); err != nil {
 			return err
 		}
 	}
 	return controller.app.installRemoteView(client)
+}
+
+func (controller *networkController) submit(ctx context.Context, client *clientsession.Session, tick uint64, kind string, payload json.RawMessage) error {
+	controller.mu.Lock()
+	controller.sequence++
+	sequence := controller.sequence
+	controller.mu.Unlock()
+	return client.Submit(ctx, gameserver.CommandIntent{Tick: tick, Sequence: sequence, Kind: kind, Payload: payload})
 }
 
 func (controller *networkController) Connected() bool {
@@ -295,14 +306,14 @@ func (controller *networkController) Close() error {
 	controller.cancel, controller.client, controller.server, controller.host = nil, nil, nil, nil
 	controller.phase = "closed"
 	controller.mu.Unlock()
-	if cancel != nil {
-		cancel()
-	}
 	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
 	var err error
 	if client != nil {
 		err = errors.Join(err, client.Close(ctx))
+	}
+	if cancel != nil {
+		cancel()
 	}
 	if server != nil {
 		err = errors.Join(err, server.Close())
