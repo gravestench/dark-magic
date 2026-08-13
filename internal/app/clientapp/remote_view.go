@@ -24,14 +24,35 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 	if !ok {
 		return fmt.Errorf("remote presentation: player control store is unavailable")
 	}
+	identities, _ := akara.GetDynamicStore(world, "d2legacy.player.identity")
+	selected, _ := app.saves.Selected()
 	var hero akara.Entity
+	var stale []akara.Entity
 	for _, entity := range controls.Entities() {
 		control, _ := controls.Get(entity)
 		owner, _ := control.Get("player")
-		if owner == "local-player" {
-			hero = entity
-			break
+		if owner != "local-player" {
+			continue
 		}
+		matchesSelection := false
+		if identity, found := identities.Get(entity); found {
+			characterID, _ := identity.Get("character_id")
+			matchesSelection = characterID == selected.ID
+		}
+		if hero == 0 || matchesSelection {
+			if hero != 0 {
+				stale = append(stale, hero)
+			}
+			hero = entity
+			continue
+		}
+		// Character selection may happen after the offline fixture admitted an
+		// earlier roster entry. Connected presentation has exactly one local
+		// owner; destroy stale mirrors so Lua cannot bind whichever appears first.
+		stale = append(stale, entity)
+	}
+	for _, entity := range stale {
+		world.DestroyEntity(entity)
 	}
 	if hero == 0 {
 		return fmt.Errorf("remote presentation: local hero mirror is unavailable")

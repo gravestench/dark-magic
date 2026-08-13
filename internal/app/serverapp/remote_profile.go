@@ -70,6 +70,11 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 	}
 	admissions.sequence++
 	sequence := admissions.sequence
+	destination := admissions.config.Destination
+	// Direct/listen players need distinct visible and collision-valid entry
+	// positions. Keep the host-selected anchor authoritative while spreading a
+	// small deterministic row inside world bounds.
+	destination.X = min(destination.X+float64(sequence-1)*2, destination.Width-1)
 	principal := gameserver.Principal{ID: fmt.Sprintf("%s-%d", admissions.config.PrincipalID, admissions.sequence), CharacterID: character.ID,
 		PlayerID: fmt.Sprintf("%s-%d", admissions.config.PlayerID, admissions.sequence), RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
 	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
@@ -77,7 +82,7 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 		return "", err
 	}
 	err = admissions.host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
-		return playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
+		return playeradapter.AdmissionCommand(character, principal.PlayerID, destination,
 			"self-host:remote-profile", sequence, tick, simulation.AuthoritySystem)
 	})
 	if err != nil {

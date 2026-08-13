@@ -387,6 +387,11 @@ func (client *Client) call(ctx context.Context, message request) (response, erro
 	}
 	defer stream.Close()
 	defer stream.CancelRead(0)
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := stream.SetDeadline(deadline); err != nil {
+			return response{}, err
+		}
+	}
 	if err := writeFrame(stream, message); err != nil {
 		return response{}, err
 	}

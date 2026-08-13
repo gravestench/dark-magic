@@ -117,7 +117,24 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
 	}
-	t.Cleanup(func() { _ = second.Close(context.Background()) })
+	t.Cleanup(func() {
+		closeContext, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = second.Close(closeContext)
+	})
+	for attempt := 0; attempt < 4; attempt++ {
+		if _, err := connected.Refresh(ctx); err != nil {
+			t.Fatal(err)
+		}
+		_, firstWorld := connected.View()
+		if containsWorldEntity(firstWorld.Entities, "player:alice-2", "player") {
+			break
+		}
+		if attempt == 3 {
+			t.Fatalf("second player absent from first client's projection: %#v", firstWorld.Entities)
+		}
+		time.Sleep(550 * time.Millisecond)
+	}
 	movePayload, err := json.Marshal(movement.MovePayload{X: 1})
 	if err != nil {
 		t.Fatal(err)
