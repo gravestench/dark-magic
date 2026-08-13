@@ -24,8 +24,8 @@ var (
 )
 
 const (
-	commandBurst     = 32
-	commandRate      = 16.0
+	commandBurst     = 64
+	commandRate      = 32.0
 	refreshBurst     = 4
 	refreshRate      = 2.0
 	joinReadyTimeout = 2 * time.Second

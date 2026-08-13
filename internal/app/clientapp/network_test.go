@@ -45,3 +45,18 @@ func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T
 		t.Fatalf("join selection status = %#v", status)
 	}
 }
+
+func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) {
+	controller := newNetworkController(&application{})
+	if !controller.sampleMovement(12) {
+		t.Fatal("first tick was not sampled")
+	}
+	for range 120 {
+		if controller.sampleMovement(12) {
+			t.Fatal("render frames resampled one authoritative tick")
+		}
+	}
+	if !controller.sampleMovement(13) {
+		t.Fatal("next authoritative tick was not sampled")
+	}
+}

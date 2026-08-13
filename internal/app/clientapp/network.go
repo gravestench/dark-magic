@@ -32,10 +32,12 @@ type networkController struct {
 	client                        *clientsession.Session
 	cancel                        context.CancelFunc
 	sequence                      uint64
+	lastMovementTick              uint64
+	submissions                   chan gameserver.CommandIntent
 }
 
 func newNetworkController(app *application) *networkController {
-	return &networkController{app: app, phase: "idle"}
+	return &networkController{app: app, phase: "idle", submissions: make(chan gameserver.CommandIntent, 64)}
 }
 
 func (controller *networkController) Host() error {
@@ -111,6 +113,7 @@ func (controller *networkController) startJoin(address string) {
 	controller.mu.Lock()
 	controller.client, controller.cancel, controller.phase = client, cancel, "connected"
 	controller.mu.Unlock()
+	go controller.send(ctx, client)
 	controller.watch(ctx, client)
 }
 
@@ -228,7 +231,24 @@ func (controller *networkController) startHost() {
 	controller.host, controller.server, controller.client, controller.cancel = host, server, client, cancel
 	controller.phase, controller.address = "connected", server.Addr()
 	controller.mu.Unlock()
+	go controller.send(ctx, client)
 	controller.watch(ctx, client)
+}
+
+func (controller *networkController) send(ctx context.Context, client *clientsession.Session) {
+	for {
+		select {
+		case intent := <-controller.submissions:
+			if err := client.Submit(ctx, intent); err != nil {
+				if ctx.Err() == nil {
+					controller.fail(err)
+				}
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (controller *networkController) watch(ctx context.Context, client *clientsession.Session) {
@@ -268,14 +288,16 @@ func (controller *networkController) Advance(ctx context.Context) error {
 		return nil
 	}
 	_, world := client.View()
-	if controller.app.movementSource != nil {
-		for _, command := range controller.app.movementSource.Commands(world.Tick + 2) {
+	targetTick := world.Tick + 2
+	sampleMovement := controller.sampleMovement(targetTick)
+	if sampleMovement && controller.app.movementSource != nil {
+		for _, command := range controller.app.movementSource.Commands(targetTick) {
 			var movementPayload movement.MovePayload
 			if command.Kind == movement.MoveCommand && json.Unmarshal(command.Payload, &movementPayload) == nil &&
 				movementPayload.X == 0 && movementPayload.Y == 0 && movementPayload.Target == nil {
 				continue
 			}
-			if err := controller.submit(ctx, client, command.Tick, command.Kind, command.Payload); err != nil {
+			if err := controller.submit(command.Kind, command.Payload); err != nil {
 				return err
 			}
 		}
@@ -285,19 +307,35 @@ func (controller *networkController) Advance(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := controller.submit(ctx, client, world.Tick+2, intent.Kind, payload); err != nil {
+		if err := controller.submit(intent.Kind, payload); err != nil {
 			return err
 		}
 	}
 	return controller.app.installRemoteView(client)
 }
 
-func (controller *networkController) submit(ctx context.Context, client *clientsession.Session, tick uint64, kind string, payload json.RawMessage) error {
+func (controller *networkController) sampleMovement(targetTick uint64) bool {
 	controller.mu.Lock()
-	controller.sequence++
-	sequence := controller.sequence
-	controller.mu.Unlock()
-	return client.Submit(ctx, gameserver.CommandIntent{Sequence: sequence, Kind: kind, Payload: payload})
+	defer controller.mu.Unlock()
+	if targetTick <= controller.lastMovementTick {
+		return false
+	}
+	controller.lastMovementTick = targetTick
+	return true
+}
+
+func (controller *networkController) submit(kind string, payload json.RawMessage) error {
+	controller.mu.Lock()
+	intent := gameserver.CommandIntent{Sequence: controller.sequence + 1, Kind: kind, Payload: append(json.RawMessage(nil), payload...)}
+	select {
+	case controller.submissions <- intent:
+		controller.sequence++
+		controller.mu.Unlock()
+		return nil
+	default:
+		controller.mu.Unlock()
+		return errors.New("network input queue is full")
+	}
 }
 
 func (controller *networkController) Connected() bool {
