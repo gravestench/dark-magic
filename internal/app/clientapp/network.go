@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/logging"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
@@ -49,6 +51,7 @@ func (controller *networkController) Host() error {
 		return controller.rejectLocked("host", errors.New("network operation already active"))
 	}
 	controller.phase, controller.mode, controller.address, controller.failure = "selecting", "host", "", ""
+	slog.Debug("network host requested; awaiting character selection")
 	return nil
 }
 
@@ -62,6 +65,7 @@ func (controller *networkController) StartSelected() error {
 		return controller.rejectLocked(controller.mode, errors.New("select a character before continuing"))
 	}
 	controller.phase, controller.failure = "starting", ""
+	slog.Debug("network operation starting", "mode", controller.mode, "address", controller.address)
 	if controller.mode == "host" {
 		go controller.startHost()
 	} else {
@@ -89,10 +93,12 @@ func (controller *networkController) Join(address string) error {
 		address = net.JoinHostPort(address, "6112")
 	}
 	controller.phase, controller.mode, controller.address, controller.failure = "selecting", "join", address, ""
+	slog.Debug("network join requested; awaiting character selection", "address", address)
 	return nil
 }
 
 func (controller *networkController) startJoin(address string) {
+	slog.Debug("dialing self-hosted game", "address", address)
 	ctx, cancel := context.WithCancel(controller.app.ctx)
 	identity, err := d2legacy.Identity(controller.app.options.Content)
 	if err != nil {
@@ -115,6 +121,8 @@ func (controller *networkController) startJoin(address string) {
 	controller.mu.Lock()
 	controller.client, controller.cancel, controller.phase = client, cancel, "connected"
 	controller.mu.Unlock()
+	hud, _ := client.View()
+	slog.Debug("joined self-hosted game", "address", address, "player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
 	go controller.send(ctx, client)
 	controller.watch(ctx, client)
 }
@@ -123,6 +131,7 @@ func (controller *networkController) fail(err error) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 	controller.phase, controller.failure = "failed", err.Error()
+	slog.Debug("network operation failed", "mode", controller.mode, "address", controller.address, "error", err)
 }
 
 func (controller *networkController) rejectLocked(mode string, err error) error {
@@ -145,6 +154,7 @@ func (controller *networkController) Status() map[string]any {
 }
 
 func (controller *networkController) startHost() {
+	slog.Debug("starting listen server", "address", ":6112")
 	ctx, cancel := context.WithCancel(controller.app.ctx)
 	fail := func(err error) {
 		cancel()
@@ -247,6 +257,8 @@ func (controller *networkController) startHost() {
 	controller.host, controller.server, controller.client, controller.cancel = host, server, client, cancel
 	controller.phase, controller.address = "connected", server.Addr()
 	controller.mu.Unlock()
+	hud, _ := client.View()
+	slog.Debug("listen server connected local player", "address", server.Addr(), "player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
 	go controller.send(ctx, client)
 	controller.watch(ctx, client)
 }
@@ -255,6 +267,7 @@ func (controller *networkController) send(ctx context.Context, client *clientses
 	for {
 		select {
 		case intent := <-controller.submissions:
+			logging.Trace(slog.Default(), "sending network command", "sequence", intent.Sequence, "kind", intent.Kind)
 			if err := client.Submit(ctx, intent); err != nil {
 				if ctx.Err() == nil {
 					controller.fail(err)
@@ -276,10 +289,11 @@ func (controller *networkController) watch(ctx context.Context, client *clientse
 	go func() {
 		for deltas != nil || failures != nil {
 			select {
-			case _, open := <-deltas:
+			case delta, open := <-deltas:
 				if !open {
 					deltas = nil
 				}
+				logging.Trace(slog.Default(), "received network correction", "tick", delta.Tick, "upserts", len(delta.Upserts), "removed", len(delta.Removed))
 			case err, open := <-failures:
 				if !open {
 					failures = nil
@@ -380,6 +394,7 @@ func (controller *networkController) Connected() bool {
 }
 
 func (controller *networkController) Close() error {
+	slog.Debug("closing network controller")
 	controller.mu.Lock()
 	cancel, client, server, host := controller.cancel, controller.client, controller.server, controller.host
 	controller.cancel, controller.client, controller.server, controller.host = nil, nil, nil, nil

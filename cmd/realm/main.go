@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	logLevel := flag.String("log-level", "info", "log verbosity: debug, info, warn, or error")
+	logLevel := flag.String("log-level", "info", "log verbosity: trace, debug, info, warn, or error")
 	flag.Parse()
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {

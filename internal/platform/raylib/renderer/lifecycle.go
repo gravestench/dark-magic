@@ -10,6 +10,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 
 	"github.com/gravestench/dark-magic/internal/branding"
+	"github.com/gravestench/dark-magic/internal/logging"
 )
 
 // Start initializes Raylib on the calling main thread and returns when native
@@ -36,11 +37,11 @@ func (s *Service) Start(context.Context) error {
 		case level == int(rl.LogWarning) && strings.HasPrefix(message, "FONT: Requested codepoints glyphs found:"):
 			// Raylib reports the intentionally sparse Diablo II bitmap-font
 			// codepoint set while successfully installing fallback glyphs.
-			s.logger.Debug(message)
+			logging.Trace(s.logger, message)
 		case level == int(rl.LogWarning):
 			s.logger.Warn(message)
 		default:
-			s.logger.Debug(message)
+			logging.Trace(s.logger, message)
 		}
 	})
 	if flags := windowConfigFlags(*s.config); flags != 0 {

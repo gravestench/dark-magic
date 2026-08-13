@@ -160,7 +160,7 @@ func (app *application) logNetworkRoster(hud playeradapter.HUD) {
 		return
 	}
 	app.networkRosterLogKey = key
-	slog.Info("connected player presentation roster", "authenticated_player", hud.Player.PlayerID,
+	slog.Debug("connected player presentation roster", "authenticated_player", hud.Player.PlayerID,
 		"authenticated_class", hud.Player.Class, "entities", entries)
 }
 
