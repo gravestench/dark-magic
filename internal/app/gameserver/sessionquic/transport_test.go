@@ -55,7 +55,9 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	endpoint, err := gameserver.NewEndpoint(
 		&gameserver.Host{Engine: engine, Session: session, Allocation: allocation},
 		authenticator{},
-		func(player string) (json.RawMessage, error) { return json.Marshal(map[string]string{"player": player}) },
+		func(player string, _ simulation.Checkpoint) (json.RawMessage, error) {
+			return json.Marshal(map[string]string{"player": player})
+		},
 	)
 	if err != nil {
 		t.Fatal(err)

@@ -36,7 +36,7 @@ type Authenticator interface {
 
 // SnapshotProjector builds the public/private semantic view allowed for one
 // player. It deliberately prevents the protocol from exposing raw ECS state.
-type SnapshotProjector func(playerID string) (json.RawMessage, error)
+type SnapshotProjector func(playerID string, checkpoint simulation.Checkpoint) (json.RawMessage, error)
 
 type JoinRequest struct {
 	Version    uint32
@@ -194,7 +194,7 @@ func (endpoint *Endpoint) snapshot(playerID string) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	payload, err := endpoint.project(playerID)
+	payload, err := endpoint.project(playerID, checkpoint)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("game server protocol: project snapshot: %w", err)
 	}

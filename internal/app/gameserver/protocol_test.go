@@ -50,7 +50,7 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	endpoint, err := NewEndpoint(host, testAuthenticator{
 		credential: "realm-ticket",
 		principal:  Principal{ID: "account:7", CharacterID: "character:11", PlayerID: "player:3"},
-	}, func(playerID string) (json.RawMessage, error) {
+	}, func(playerID string, _ simulation.Checkpoint) (json.RawMessage, error) {
 		return json.Marshal(map[string]string{"player_id": playerID})
 	})
 	if err != nil {
@@ -114,7 +114,7 @@ func TestEndpointRejectsUntrustedAndIncompatibleClients(t *testing.T) {
 	endpoint, err := NewEndpoint(
 		&Host{Engine: engine, Session: session, Allocation: allocation},
 		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
-		func(string) (json.RawMessage, error) { return json.RawMessage(`{}`), nil },
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil },
 	)
 	if err != nil {
 		t.Fatal(err)
