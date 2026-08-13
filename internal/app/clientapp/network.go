@@ -171,6 +171,7 @@ func (controller *networkController) startHost() {
 		fail(err)
 		return
 	}
+	slog.Debug("listen authority started")
 	secret, err := randomBytes(32)
 	if err != nil {
 		_ = host.Close(context.Background())
@@ -202,6 +203,7 @@ func (controller *networkController) startHost() {
 		fail(err)
 		return
 	}
+	slog.Debug("listen transport bound", "address", server.Addr())
 	level := controller.app.activeWorldLevel
 	world, zone := controller.app.gameWorlds[level], controller.app.gameWorldZones[level]
 	spawn, found := controller.app.gameWorldSpawns[level]
@@ -217,6 +219,7 @@ func (controller *networkController) startHost() {
 		fail(err)
 		return
 	}
+	slog.Debug("listen authority collision installed", "level_id", level)
 	request := zone.Request()
 	destination, err := playeradapter.NewDestination(spawn[0], spawn[1], float64(world.WidthSubtiles), float64(world.HeightSubtiles), int64(request.Act), int64(request.LevelID))
 	if err != nil {
@@ -243,8 +246,18 @@ func (controller *networkController) startHost() {
 		return
 	}
 	server.SetProfileAdmissions(profiles)
-	go host.Session.Run(ctx)
-	go server.Serve(ctx)
+	slog.Debug("listen profile admission configured")
+	go func() {
+		if runErr := host.Session.Run(ctx); runErr != nil && ctx.Err() == nil {
+			controller.fail(runErr)
+		}
+	}()
+	go func() {
+		if serveErr := server.Serve(ctx); serveErr != nil && ctx.Err() == nil {
+			controller.fail(serveErr)
+		}
+	}()
+	slog.Debug("connecting host player to listen authority")
 	client, err := clientsession.ConnectSelfHosted(ctx, clientsession.SelfHostedAssignment{
 		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: "127.0.0.1:6112", TLSFingerprint: fingerprint},
 		Runtime: host.Authority.Identity, ProfileCredential: profileCredential,

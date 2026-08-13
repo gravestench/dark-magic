@@ -18,6 +18,7 @@ local audio = require("engine.audio/v1")
 local loading = require("engine.loading/v1")
 local compat = require("d2legacy.ui.compat")
 local loading_graphic = require("d2legacy.ui.loading_graphic")
+local network_ok, network = pcall(require, "engine.network/v1")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.game_loading
@@ -54,10 +55,14 @@ return {
 
     update = function(self, elapsed)
         local status = loading.status()
+		local network_status = network_ok and network.status() or { phase = "idle" }
 
         if status.state == "failed" then
             error(status.error or "game dependencies failed to load")
         end
+		if network_status.phase == "failed" then
+			error(network_status.error or "network session failed to start")
+		end
 
         -- Convert elapsed seconds into maximum visual progress this frame.
         local step = elapsed / screen.sweep_seconds
@@ -72,7 +77,8 @@ return {
 
         -- Do not enter gameplay merely because real work finished; let the
         -- smoothed display finish its sweep too so the transition remains legible.
-        if status.state == "complete" and self.displayed_progress >= 1 then
+		local network_ready = network_status.phase == "idle" or network_status.phase == "connected"
+        if status.state == "complete" and self.displayed_progress >= 1 and network_ready then
             scenes.replace("game_world")
         end
     end,
