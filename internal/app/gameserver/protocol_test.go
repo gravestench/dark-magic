@@ -228,6 +228,13 @@ func TestEndpointRateLimitsPerMembershipAndRefills(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// Server-paced observation has its own correction ticker and must remain
+	// available after the client-paced unary refresh budget is exhausted.
+	for range refreshBurst * 3 {
+		if _, err := endpoint.Observe(joined.Credential); err != nil {
+			t.Fatalf("server-paced observation consumed refresh budget: %v", err)
+		}
+	}
 	if _, err := endpoint.Refresh(joined.Credential); !errors.Is(err, ErrRateLimit) {
 		t.Fatalf("rate error = %v", err)
 	}

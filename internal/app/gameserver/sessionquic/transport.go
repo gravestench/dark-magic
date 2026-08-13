@@ -151,7 +151,7 @@ func (server *Server) watch(ctx context.Context, stream *quic.Stream, credential
 	defer ticker.Stop()
 	lastTick, lastChecksum := ^uint64(0), ""
 	for {
-		snapshot, err := server.endpoint.Refresh(credential)
+		snapshot, err := server.endpoint.Observe(credential)
 		if err != nil {
 			_ = writeFrame(stream, response{Error: err.Error()})
 			return

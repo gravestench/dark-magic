@@ -206,6 +206,18 @@ func (endpoint *Endpoint) Refresh(credential SessionCredential) (Snapshot, error
 	return endpoint.snapshot(member.principal.PlayerID)
 }
 
+// Observe returns a correction for an authenticated long-lived server-paced
+// watch stream. Unlike client-paced Refresh, it does not consume the unary
+// refresh token bucket: the server's correction ticker is already the rate
+// limiter, and charging both would terminate every healthy watch stream.
+func (endpoint *Endpoint) Observe(credential SessionCredential) (Snapshot, error) {
+	member, err := endpoint.connection(credential)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return endpoint.snapshot(member.principal.PlayerID)
+}
+
 func (endpoint *Endpoint) consume(credential SessionCredential, refresh bool) (connection, error) {
 	endpoint.mu.Lock()
 	defer endpoint.mu.Unlock()
