@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net"
 	"strings"
@@ -29,6 +30,7 @@ type networkController struct {
 	server                        *sessionquic.Server
 	client                        *clientsession.Session
 	cancel                        context.CancelFunc
+	sequence                      uint64
 }
 
 func newNetworkController(app *application) *networkController {
@@ -86,6 +88,7 @@ func (controller *networkController) Join(address string) error {
 }
 
 func (controller *networkController) startJoin(address string) {
+	ctx, cancel := context.WithCancel(controller.app.ctx)
 	identity, err := d2legacy.Identity(controller.app.options.Content)
 	if err != nil {
 		controller.fail(err)
@@ -96,16 +99,18 @@ func (controller *networkController) startJoin(address string) {
 		controller.fail(err)
 		return
 	}
-	client, err := clientsession.ConnectSelfHosted(controller.app.ctx, clientsession.SelfHostedAssignment{
+	client, err := clientsession.ConnectSelfHosted(ctx, clientsession.SelfHostedAssignment{
 		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
 	}, clientTLS, controller.app.saves)
 	if err != nil {
+		cancel()
 		controller.fail(err)
 		return
 	}
 	controller.mu.Lock()
-	controller.client, controller.phase = client, "connected"
+	controller.client, controller.cancel, controller.phase = client, cancel, "connected"
 	controller.mu.Unlock()
+	controller.watch(ctx, client)
 }
 
 func (controller *networkController) fail(err error) {
@@ -222,6 +227,66 @@ func (controller *networkController) startHost() {
 	controller.host, controller.server, controller.client, controller.cancel = host, server, client, cancel
 	controller.phase, controller.address = "connected", server.Addr()
 	controller.mu.Unlock()
+	controller.watch(ctx, client)
+}
+
+func (controller *networkController) watch(ctx context.Context, client *clientsession.Session) {
+	deltas, failures, err := client.Watch(ctx)
+	if err != nil {
+		controller.fail(err)
+		return
+	}
+	go func() {
+		for deltas != nil || failures != nil {
+			select {
+			case _, open := <-deltas:
+				if !open {
+					deltas = nil
+				}
+			case err, open := <-failures:
+				if !open {
+					failures = nil
+					continue
+				}
+				if err != nil && ctx.Err() == nil {
+					controller.fail(err)
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (controller *networkController) Advance(ctx context.Context) error {
+	controller.mu.Lock()
+	client := controller.client
+	controller.mu.Unlock()
+	if client == nil {
+		return nil
+	}
+	_, world := client.View()
+	for _, intent := range controller.app.commandIntents.Drain() {
+		payload, err := json.Marshal(intent.Payload)
+		if err != nil {
+			return err
+		}
+		controller.mu.Lock()
+		controller.sequence++
+		sequence := controller.sequence
+		controller.mu.Unlock()
+		if err := client.Submit(ctx, gameserver.CommandIntent{Tick: world.Tick + 2, Sequence: sequence, Kind: intent.Kind, Payload: payload}); err != nil {
+			return err
+		}
+	}
+	return controller.app.installRemoteView(client)
+}
+
+func (controller *networkController) Connected() bool {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return controller.phase == "connected" && controller.client != nil
 }
 
 func (controller *networkController) Close() error {

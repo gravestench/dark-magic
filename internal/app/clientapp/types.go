@@ -7,6 +7,7 @@ package clientapp
 
 import (
 	"context"
+	"github.com/gravestench/akara"
 	"sync"
 	"time"
 
@@ -109,6 +110,7 @@ type application struct {
 	records             *recordstore.Store
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
+	remoteMirrors       map[string]akara.Entity
 	saves               *d2save.Store
 	networkTrust        *networktrust.Store
 	playerProfilePath   string

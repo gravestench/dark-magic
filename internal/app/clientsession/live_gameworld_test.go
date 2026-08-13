@@ -101,6 +101,23 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
+	barbarian := d2save.Character{ID: "barbarian", Name: "Conan", Class: "Barbarian", Level: 1, Expansion: true,
+		Stats: &d2save.Stats{Dexterity: 20, Health: 60, MaxHealth: 60, Mana: 10, MaxMana: 10}}
+	barbarianProfile := d2save.New(barbarian)
+	if err := barbarianProfile.Select(barbarian.ID); err != nil {
+		t.Fatal(err)
+	}
+	second, err := ConnectSelfHosted(ctx, SelfHostedAssignment{
+		GameID: "live-gameworld", Endpoint: realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
+		Runtime: host.Authority.Identity, ProfileCredential: "profile-secret",
+	}, clientTLS, barbarianProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
+		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
+	}
+	t.Cleanup(func() { _ = second.Close(context.Background()) })
 	movePayload, err := json.Marshal(movement.MovePayload{X: 1})
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +194,7 @@ func (liveGameworldRecords) Loaded(string) bool { return true }
 func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
 	case "data/global/excel/charstats.txt":
-		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}}, nil
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}, {"class": "Barbarian", "StartSkill": "Fire Bolt"}}, nil
 	case "data/global/excel/levels.txt":
 		return []map[string]string{{"Id": "2", "MonDen": "100000", "NumMon": "1", "mon1": "fallen"}}, nil
 	case "data/global/excel/monstats.txt":

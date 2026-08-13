@@ -56,6 +56,11 @@ func (controller *IntentController) drain() []CommandIntent {
 	return requests
 }
 
+// Drain returns the queued copied intents for an authenticated remote-session
+// adapter. Offline sessions use IntentSource; both paths consume the same
+// presentation mailbox exactly once.
+func (controller *IntentController) Drain() []CommandIntent { return controller.drain() }
+
 // IntentSource turns queued requests into transport-neutral player commands.
 type IntentSource struct {
 	controller *IntentController

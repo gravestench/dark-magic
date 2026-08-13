@@ -69,6 +69,7 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
 	}
 	admissions.sequence++
+	sequence := admissions.sequence
 	principal := gameserver.Principal{ID: fmt.Sprintf("%s-%d", admissions.config.PrincipalID, admissions.sequence), CharacterID: character.ID,
 		PlayerID: fmt.Sprintf("%s-%d", admissions.config.PlayerID, admissions.sequence), RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
 	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
@@ -77,7 +78,7 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 	}
 	err = admissions.host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
 		return playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
-			"self-host:remote-profile", admissions.sequence, tick, simulation.AuthoritySystem)
+			"self-host:remote-profile", sequence, tick, simulation.AuthoritySystem)
 	})
 	if err != nil {
 		_ = admissions.tickets.Revoke(ticket)

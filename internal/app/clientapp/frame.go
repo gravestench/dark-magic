@@ -85,6 +85,12 @@ func (app *application) focusOwner() inputstate.FocusOwner {
 }
 
 func (app *application) advanceGame(elapsed time.Duration) error {
+	if app.network != nil && app.network.Connected() {
+		if err := app.network.Advance(app.ctx); err != nil {
+			return fmt.Errorf("updating remote game session: %w", err)
+		}
+		return nil
+	}
 	if _, err := app.offlineSession.AdvanceWithSource(elapsed, app.commandSource); err != nil {
 		return fmt.Errorf("updating offline game session: %w", err)
 	}

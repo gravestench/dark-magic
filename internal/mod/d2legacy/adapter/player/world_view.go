@@ -40,6 +40,10 @@ type WorldEntity struct {
 	Priority  int64       `json:"priority"`
 	Health    *int64      `json:"health,omitempty"`
 	MaxHealth *int64      `json:"max_health,omitempty"`
+	Class     string      `json:"class,omitempty"`
+	Token     string      `json:"token,omitempty"`
+	Mode      string      `json:"mode,omitempty"`
+	Direction int64       `json:"direction,omitempty"`
 	distance2 float64
 }
 
@@ -73,6 +77,10 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		return json.Marshal(WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}})
 	}
 	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
+	players, _ := findComponent(snapshot, "d2legacy.player.identity")
+	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
+	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
+	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
 	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}}
 	seen := make(map[string]struct{})
 	for _, instance := range selectables.Instances {
@@ -100,6 +108,18 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		if stats, found := findInstance(monsters, instance.Entity); found {
 			health, maximum := intField(stats, "health"), intField(stats, "max_health")
 			entity.Health, entity.MaxHealth = &health, &maximum
+		}
+		if identity, found := findInstance(players, instance.Entity); found {
+			entity.Class = stringField(identity, "class")
+			if appearance, ok := findInstance(appearances, instance.Entity); ok {
+				entity.Token = stringField(appearance, "token")
+			}
+			if animation, ok := findInstance(animations, instance.Entity); ok {
+				entity.Mode = stringField(animation, "mode")
+			}
+			if facing, ok := findInstance(facings, instance.Entity); ok {
+				entity.Direction = intField(facing, "direction")
+			}
 		}
 		view.Entities = append(view.Entities, entity)
 	}

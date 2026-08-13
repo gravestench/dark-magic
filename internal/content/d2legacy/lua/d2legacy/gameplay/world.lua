@@ -29,7 +29,9 @@ local M = {}
 -- the focused snapshot functions below.
 local function optional_component(entity, name)
     local ok, component = pcall(ecs.get, entity, name)
-    if not ok then return nil end
+    if not ok then
+        return nil
+    end
     return component
 end
 
@@ -55,14 +57,21 @@ end
 -- can try again next update. We NEVER manufacture a second player as a shortcut.
 function M.bind(state)
     -- Already bound and still alive: nothing to do.
-    if state.hero and state.hero:exists() then return true end
+    if state.hero and state.hero:exists() then
+        return true
+    end
 
     -- Find entities that have the complete set needed by world presentation.
     local entities = ecs.query({
         all = {
-            "d2legacy.player.identity", "d2legacy.player.appearance", "d2legacy.player.animation",
-            "d2legacy.world.position", "d2legacy.world.velocity",
-            "d2legacy.world.player_control", "d2legacy.world.bounds", "d2legacy.world.collider",
+            "d2legacy.player.identity",
+            "d2legacy.player.appearance",
+            "d2legacy.player.animation",
+            "d2legacy.world.position",
+            "d2legacy.world.velocity",
+            "d2legacy.world.player_control",
+            "d2legacy.world.bounds",
+            "d2legacy.world.collider",
         },
     })
 
@@ -117,8 +126,8 @@ function M.refresh_camera_settings(entity)
 end
 
 function M.set_collision(state, collision)
-	state.collision = collision
-	systems.set_collision(collision)
+    state.collision = collision
+    systems.set_collision(collision)
 end
 
 function M.composite_snapshot(entity)
@@ -136,10 +145,16 @@ end
 -- handles. Entity ID is included only as a stable presentation-node key.
 function M.monster_snapshots()
     local result = {}
-    local entities = ecs.query({ all = {
-        "d2legacy.monster.identity", "d2legacy.monster.appearance", "d2legacy.world.position",
-        "d2legacy.world.velocity", "d2legacy.world.facing", "d2legacy.world.location",
-    }})
+    local entities = ecs.query({
+        all = {
+            "d2legacy.monster.identity",
+            "d2legacy.monster.appearance",
+            "d2legacy.world.position",
+            "d2legacy.world.velocity",
+            "d2legacy.world.facing",
+            "d2legacy.world.location",
+        },
+    })
     for _, entity in ipairs(entities) do
         local identity = ecs.get(entity, "d2legacy.monster.identity"):snapshot()
         local appearance = ecs.get(entity, "d2legacy.monster.appearance"):snapshot()
@@ -155,15 +170,55 @@ function M.monster_snapshots()
             mode = "WL"
         end
         result[#result + 1] = {
-            entity_id = entity:id(), spawn_id = identity.spawn_id,
-            token = appearance.token, mode = mode,
-            weapon_class = appearance.weapon_class, components = appearance.components,
-            name_key = appearance.name_key, death_sound = appearance.death_sound,
-            x = position:get("x"), y = position:get("y"),
-            velocity_x = velocity:get("x"), velocity_y = velocity:get("y"),
+            entity_id = entity:id(),
+            spawn_id = identity.spawn_id,
+            token = appearance.token,
+            mode = mode,
+            weapon_class = appearance.weapon_class,
+            components = appearance.components,
+            name_key = appearance.name_key,
+            death_sound = appearance.death_sound,
+            x = position:get("x"),
+            y = position:get("y"),
+            velocity_x = velocity:get("x"),
+            velocity_y = velocity:get("y"),
             direction = facing:get("direction"),
-            act = location:get("act"), level_id = location:get("level_id"),
+            act = location:get("act"),
+            level_id = location:get("level_id"),
         }
+    end
+    return result
+end
+
+function M.player_snapshots(local_player)
+    local result = {}
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.player.identity",
+                "d2legacy.player.appearance",
+                "d2legacy.player.animation",
+                "d2legacy.world.position",
+                "d2legacy.world.facing",
+                "d2legacy.world.location",
+            },
+        }))
+    do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        if identity:get("player") ~= local_player then
+            local snapshot = ecs.get(entity, "d2legacy.player.appearance"):snapshot()
+            local position = ecs.get(entity, "d2legacy.world.position")
+            local facing = ecs.get(entity, "d2legacy.world.facing")
+            local animation = ecs.get(entity, "d2legacy.player.animation")
+            local location = ecs.get(entity, "d2legacy.world.location")
+            snapshot.entity_id = entity:id()
+            snapshot.name = identity:get("name")
+            snapshot.direction = facing:get("direction")
+            snapshot.mode = animation:get("mode")
+            snapshot.x, snapshot.y = position:get("x"), position:get("y")
+            snapshot.level_id = location:get("level_id")
+            result[#result + 1] = snapshot
+        end
     end
     return result
 end
@@ -174,10 +229,14 @@ function M.semantic_cues(observed)
     observed = observed or {}
     local result = {}
     local entities, known = {}, {}
-    for _, component in ipairs({"d2legacy.monster.death_event", "d2legacy.missile.event",
+    for _, component in ipairs({
+        "d2legacy.monster.death_event",
+        "d2legacy.missile.event",
         "d2legacy.combat.attack_animation_event",
-        "d2legacy.combat.melee_event", "d2legacy.combat.event"}) do
-        local ok, matches = pcall(ecs.query, {all = {component}})
+        "d2legacy.combat.melee_event",
+        "d2legacy.combat.event",
+    }) do
+        local ok, matches = pcall(ecs.query, { all = { component } })
         if ok then
             for _, entity in ipairs(matches) do
                 local id = entity:id()
@@ -191,15 +250,25 @@ function M.semantic_cues(observed)
     for _, entity in ipairs(entities) do
         local kind, values
         local death = optional_component(entity, "d2legacy.monster.death_event")
-        if death then kind, values = "monster_death", death:snapshot() end
+        if death then
+            kind, values = "monster_death", death:snapshot()
+        end
         local missile = optional_component(entity, "d2legacy.missile.event")
-        if missile then kind, values = "missile", missile:snapshot() end
+        if missile then
+            kind, values = "missile", missile:snapshot()
+        end
         local animation = optional_component(entity, "d2legacy.combat.attack_animation_event")
-        if animation then kind, values = "combat", animation:snapshot() end
+        if animation then
+            kind, values = "combat", animation:snapshot()
+        end
         local melee = optional_component(entity, "d2legacy.combat.melee_event")
-        if melee then kind, values = "combat", melee:snapshot() end
+        if melee then
+            kind, values = "combat", melee:snapshot()
+        end
         local combat = optional_component(entity, "d2legacy.combat.event")
-        if combat then kind, values = "combat", combat:snapshot() end
+        if combat then
+            kind, values = "combat", combat:snapshot()
+        end
         if values then
             -- Dynamic entity fields are checked ECS handles. Collapse the
             -- missile reference to a number before this table crosses into
@@ -223,9 +292,14 @@ function M.missile_snapshots()
     -- Projectile schemas are d2legacy authority facts. Presentation copies
     -- either supported shape without deciding how the projectile behaves.
     for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile" }) do
-        local ok, entities = pcall(ecs.query, { all = {
-            component, "d2legacy.world.position", "d2legacy.world.location",
-        } })
+        local ok, entities = pcall(
+            ecs.query,
+            { all = {
+                component,
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+            } }
+        )
         if ok then
             for _, entity in ipairs(entities) do
                 local snapshot = ecs.get(entity, component):snapshot()
@@ -257,7 +331,9 @@ function M.hud_snapshot(entity, saved)
     local belt = assert(ecs.get(entity, "d2legacy.player.belt"))
 
     local belt_slots = {}
-    for slot = 1, 16 do belt_slots[slot] = belt:get("slot_" .. slot) end
+    for slot = 1, 16 do
+        belt_slots[slot] = belt:get("slot_" .. slot)
+    end
 
     local learned_skills = {}
     for _, learned in ipairs(ecs.query({ all = { "d2legacy.player.learned_skill" } })) do
@@ -288,12 +364,16 @@ function M.hud_snapshot(entity, saved)
 end
 
 function M.destroy(state)
-    if not state then return end
+    if not state then
+        return
+    end
 
     -- Hero belongs to the authoritative session, so DO NOT destroy it here.
     -- The presentation-only camera entity was created above, so this helper owns
     -- exactly that entity and may tear it down when the scene disappears.
-    if state.camera and state.camera:exists() then ecs.destroy(state.camera) end
+    if state.camera and state.camera:exists() then
+        ecs.destroy(state.camera)
+    end
 end
 
 return M
