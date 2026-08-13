@@ -240,7 +240,24 @@ floored at zero. When the combined divisor is zero, the recovered function
 retains a rating factor of 100.
 
 This verifies the final resolver, not every upstream stat contribution.
-Before replacing the production policy, project and test:
+
+Pinned D2MOO commit `3b21043b99e987bad41cf0f7b49f1f246db52d5c`
+also supplies the upstream player inputs used by the production d2legacy
+resolver:
+
+- `UNITS_GetAttackRate` in `D2Common/src/Units/Units.cpp` computes
+  `STAT_TOHIT + 5 * (Dexterity - 7) + CharStats.ToHitFactor`;
+- `UNITS_GetDefense` computes `Dexterity / 4 + STAT_ARMORCLASS`, then applies
+  the combined item/skill armor percentage with integer truncation;
+- `SUNITDMG_IsHitSuccessful` adds percentage attack-rating sources before the
+  final rating/level calculation above;
+- `sub_6FC7C7B0` and `D2Common_10434` make hand selection a `Skills.txt`
+  `weapsel` decision and restrict player dual wielding to Barbarian and
+  Assassin, rather than alternating merely because both hand slots are full.
+
+Dark Magic projects those inputs as named flat or percentage sources, resolves
+them in a deterministic flat-then-percentage phase, and records the resolved
+attack rating, defense, chance, and selected hand on every melee event.
 
 Before implementing a compatibility claim, capture:
 
