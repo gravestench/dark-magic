@@ -1837,7 +1837,10 @@ authority, persistence separation, and resilience acceptance remain open.
   deterministic bidirectional loss/delay/jitter acceptance test covers TLS
   handshake, join, correction streaming, commands, reconnect, and leave using
   the real QUIC paths. Compact datagrams and broader sustained-network
-  acceptance remain open.
+  acceptance remain open. Unary stream halves are now explicitly released;
+  an exhaustive operation-shape matrix and a 256-request malformed-stream soak
+  prove rejection isolation and continued valid use on the same connection.
+  Concurrent stream and receive-window ceilings are pinned by tests.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,

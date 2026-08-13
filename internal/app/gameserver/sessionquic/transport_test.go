@@ -79,6 +79,27 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
+	for attempt := 0; attempt < 256; attempt++ {
+		stream, err := client.connection.OpenStreamSync(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		malformed := []byte(`{"operation":"leave","credential":"forged","unknown":true}`)
+		var size [4]byte
+		binary.BigEndian.PutUint32(size[:], uint32(len(malformed)))
+		if err := writeAll(stream, append(size[:], malformed...)); err != nil {
+			t.Fatal(err)
+		}
+		var rejected response
+		if err := readFrame(stream, &rejected); err != nil {
+			t.Fatal(err)
+		}
+		if rejected.Error == "" {
+			t.Fatalf("malformed stream %d was accepted", attempt)
+		}
+		stream.CancelRead(0)
+		_ = stream.Close()
+	}
 	joined, err := client.Join(ctx, gameserver.JoinRequest{Version: gameserver.SessionProtocolVersion, Credential: "realm-ticket", Identity: identity})
 	if err != nil {
 		t.Fatal(err)
@@ -159,9 +180,42 @@ func TestWireOperationsRejectAmbiguousShapes(t *testing.T) {
 	}
 }
 
+func TestWireOperationShapesAreExhaustive(t *testing.T) {
+	operations := []operation{operationJoin, operationSubmit, operationRefresh, operationWatch, operationReconnect, operationLeave, "unknown"}
+	for _, candidate := range operations {
+		for mask := 0; mask < 8; mask++ {
+			message := request{Operation: candidate}
+			if mask&1 != 0 {
+				message.Credential = "credential"
+			}
+			if mask&2 != 0 {
+				message.Join = &gameserver.JoinRequest{}
+			}
+			if mask&4 != 0 {
+				message.Command = &gameserver.CommandIntent{}
+			}
+			// Reconnect is tested separately because it is mutually exclusive
+			// with every field represented by the mask.
+			valid := validShape(message)
+			expected := (candidate == operationJoin && mask == 2) ||
+				(candidate == operationSubmit && mask == 5) ||
+				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1)
+			if valid != expected {
+				t.Fatalf("operation=%q mask=%03b valid=%t want=%t", candidate, mask, valid, expected)
+			}
+			message.Reconnect = &gameserver.ReconnectRequest{}
+			if got := validShape(message); got != (candidate == operationReconnect && mask == 0) {
+				t.Fatalf("reconnect operation=%q mask=%03b valid=%t", candidate, mask, got)
+			}
+		}
+	}
+}
+
 func TestQUICConfigurationUsesConservativeInitialPacketSize(t *testing.T) {
 	config := quicConfig()
-	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || config.EnableDatagrams {
+	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || config.EnableDatagrams ||
+		config.MaxIncomingStreams != 16 || config.MaxIncomingUniStreams != -1 ||
+		config.MaxStreamReceiveWindow != MaxFrameBytes || config.MaxConnectionReceiveWindow != 2*MaxFrameBytes {
 		t.Fatalf("unsafe QUIC configuration: %#v", config)
 	}
 }
