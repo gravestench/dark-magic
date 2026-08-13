@@ -18,8 +18,8 @@ Status: implementation handoff for the final major gameplay research cluster.
 - Local intent sources and remote/network commands both converge on semantic `simulation.Command` admission.
 - Akara ECS plus registered `StateParticipant`s remain canonical game/checkpoint state.
 - item/player/world/quest/etc. packages remain gameplay owners.
-- `cmd/darkmagic-server` remains the game-worker composition root.
-- `cmd/darkmagic-realm` remains the realm/control-plane composition root.
+- `cmd/server` remains the game-worker composition root.
+- `cmd/realm` remains the realm/control-plane composition root.
 - local runtime component HTTP API remains development/admin-only, not a realm/player protocol.
 - Lua presentation reads snapshots and submits intents through versioned capabilities.
 
@@ -94,7 +94,7 @@ Test stale-worker/crash/concurrent-game scenarios.
 
 ### 9. Realm game directory/worker registry
 
-`darkmagic-realm` owns:
+`realm` owns:
 
 - registered game workers/capacity;
 - create/list/join directory;

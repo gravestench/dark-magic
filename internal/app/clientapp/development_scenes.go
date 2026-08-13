@@ -5,7 +5,7 @@ import ()
 // developmentSceneDefaults describes only the disposable state a laboratory
 // needs before its real scene code can run. Keeping this policy beside the
 // composition root prevents labs from creating fake saves or swapping maps in
-// Lua, and prevents cmd/darkmagic from growing one special case per lab.
+// Lua, and prevents cmd/client from growing one special case per lab.
 type developmentSceneDefaults struct {
 	characters     int
 	worldLevel     int

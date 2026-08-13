@@ -1,4 +1,4 @@
-// Command darkmagic-server is the standalone game-session composition root.
+// Command server is the standalone game-session composition root.
 package main
 
 import (
@@ -39,7 +39,7 @@ func main() {
 	}
 	records := recordstore.New(contentFS)
 	host, err := gameserver.Start(ctx, contentFS, records, gameserver.Config{
-		SessionID: *sessionID, Prediction: gamesession.PredictionLimited,
+		Mode: gameserver.ModeStandalone, SessionID: *sessionID, Prediction: gamesession.PredictionLimited,
 	})
 	if err != nil {
 		slog.Error("starting authoritative game server", "error", err)

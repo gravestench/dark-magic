@@ -19,7 +19,7 @@ item, quest, NPC, or network state capability exists.
 Run one with:
 
 ```sh
-go run -tags ffmpeg ./cmd/darkmagic --start-scene <name>
+go run -tags ffmpeg ./cmd/client --start-scene <name>
 ```
 
 Or capture it with the existing `START_SCENE=<name> make capture` workflow.

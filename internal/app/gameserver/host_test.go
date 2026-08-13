@@ -122,3 +122,36 @@ func TestHeadlessHostRejectsUnknownPredictionContract(t *testing.T) {
 		t.Fatalf("invalid prediction error = %v", err)
 	}
 }
+
+func TestSharedHostRunsStandaloneListenAndRealmModes(t *testing.T) {
+	for _, mode := range []Mode{ModeStandalone, ModeListen, ModeRealm} {
+		t.Run(string(mode), func(t *testing.T) {
+			host, err := Start(t.Context(), content.D2Legacy(), fixtureRecords{}, Config{
+				Mode: mode, SessionID: "mode-" + string(mode), Seed: 42,
+				Prediction: gamesession.PredictionLimited,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer host.Close(context.Background())
+			if host.Mode != mode || host.Session == nil || host.Authority == nil {
+				t.Fatalf("host composition = mode %q session %v authority %v",
+					host.Mode, host.Session != nil, host.Authority != nil)
+			}
+			if err := host.Session.Step(); err != nil {
+				t.Fatal(err)
+			}
+			replay, err := host.Session.Replay()
+			if err != nil {
+				t.Fatal(err)
+			}
+			identity, err := simulation.RuntimeIdentityFromParticipants(replay.InitialParticipants)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(identity, host.Allocation.Identity) {
+				t.Fatal("hosting mode changed the authoritative runtime identity")
+			}
+		})
+	}
+}

@@ -104,8 +104,8 @@ The following are **existing owners to extend**, not proposals to replace:
 | cross-level relocation | generic world/transport mechanisms plus `d2legacy` transition policy | reuse trusted seam/endpoint mechanisms for stairs, waypoints and portals instead of creating parallel travel systems |
 | audio resources/backend | `internal/audio` | add semantic gameplay/world cue and soundscape policy above the existing owner-thread mixer; audio is never gameplay authority |
 | Lua | versioned capabilities under `internal/runtime/lua` | presentation reads snapshots and submits intent; trusted `d2legacy` Lua may also execute authoritative policy through deterministic capabilities |
-| standalone game worker | `cmd/darkmagic-server` + `internal/game/session` | networking must transport the same semantic commands/snapshots rather than fork simulation logic |
-| realm control-plane shell | `cmd/darkmagic-realm` | add allocation, leases, durable-character and directory services without moving gameplay simulation into the realm |
+| standalone game worker | `cmd/server` + `internal/game/session` | networking must transport the same semantic commands/snapshots rather than fork simulation logic |
+| realm control-plane shell | `cmd/realm` | add allocation, leases, durable-character and directory services without moving gameplay simulation into the realm |
 
 The current authoritative session runs a bounded fixed clock and records canonical commands/checkpoints. Research or implementation that introduces hidden clocks, global gameplay RNG, direct Lua mutation, mutable data-catalog lookups during a live session, or transport-specific game logic conflicts with the current architecture and requires a very strong reason.
 
