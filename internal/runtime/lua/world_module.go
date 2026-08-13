@@ -17,6 +17,10 @@ func SetWorldMap(ctx context.Context, runtime *Runtime, moduleName, setterName s
 		return fmt.Errorf("world module: runtime, module, setter, and map are required")
 	}
 	return runtime.Run(ctx, func(state *lua.LState) error {
+		// Headless/listen authorities may receive a native world map without
+		// installing engine.world/v1. Register the userdata contract at this
+		// boundary so methods such as blocked_position always exist.
+		registerWorldMapType(state)
 		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString(moduleName)); err != nil {
 			return err
 		}
