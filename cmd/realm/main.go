@@ -1,4 +1,4 @@
-// Command darkmagic-realm is the realm control-plane composition root.
+// Command realm is the realm control-plane composition root.
 package main
 
 import (

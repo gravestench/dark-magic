@@ -7,7 +7,7 @@ screens. It is a compatibility/diagnostic scene, not a parallel GUI toolkit.
 Launch it directly with a directory containing supported game archives:
 
 ```sh
-MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run -tags ffmpeg ./cmd/darkmagic --start-scene ui_lab
+MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run -tags ffmpeg ./cmd/client --start-scene ui_lab
 ```
 
 The scene now covers the reusable UI surface rather than only the original four

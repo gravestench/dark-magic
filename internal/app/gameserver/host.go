@@ -17,6 +17,7 @@ import (
 // Config contains the deterministic and compatibility inputs fixed when a
 // standalone session is allocated.
 type Config struct {
+	Mode        Mode
 	SessionID   string
 	Seed        uint64
 	Prediction  gamesession.PredictionTier
@@ -24,22 +25,38 @@ type Config struct {
 	InitialData map[string]any
 }
 
+type Mode string
+
+const (
+	ModeStandalone Mode = "standalone"
+	ModeListen     Mode = "listen"
+	ModeRealm      Mode = "realm"
+)
+
 // Host owns one authoritative ECS, session, and d2legacy runtime. Allocation
 // uses the identity registered by that exact runtime, never a client claim.
 type Host struct {
+	Mode       Mode
 	Engine     *gameecs.Engine
 	Session    *gamesession.Session
 	Authority  *d2legacy.Authority
 	Allocation gamesession.Allocation
 }
 
-// Start creates the same renderer-free composition used by darkmagic-server.
+// Start creates the renderer-free composition used by cmd/server, realm-owned
+// workers, and future in-process listen servers.
 func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config Config) (*Host, error) {
 	if ctx == nil || source == nil || records == nil {
 		return nil, errors.New("game server: context, content, and records are required")
 	}
 	if strings.TrimSpace(config.SessionID) == "" {
 		return nil, errors.New("game server: session ID is required")
+	}
+	if config.Mode == "" {
+		config.Mode = ModeStandalone
+	}
+	if config.Mode != ModeStandalone && config.Mode != ModeListen && config.Mode != ModeRealm {
+		return nil, fmt.Errorf("game server: unknown hosting mode %q", config.Mode)
 	}
 	if err := gamesession.ValidatePredictionTier(config.Prediction); err != nil {
 		return nil, err
@@ -65,7 +82,7 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 		_ = engine.Close()
 		return nil, fmt.Errorf("game server: allocate session: %w", err)
 	}
-	return &Host{Engine: engine, Session: session, Authority: authority, Allocation: allocation}, nil
+	return &Host{Mode: config.Mode, Engine: engine, Session: session, Authority: authority, Allocation: allocation}, nil
 }
 
 // Admit validates a client against the exact runtime already running here.

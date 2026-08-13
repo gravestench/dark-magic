@@ -51,9 +51,9 @@ combat mutation.
 
 ## Current Dark Magic composition roots
 
-### `darkmagic-server`
+### `server`
 
-Current `cmd/darkmagic-server` already creates:
+Current `cmd/server` already creates:
 
 - one Akara ECS engine;
 - one authoritative `internal/game/session.Session`;
@@ -65,9 +65,9 @@ This is the correct **game-session worker** direction.
 
 The server should gain transport/client membership/snapshot adapters around the session rather than embed networking into ECS/gameplay packages.
 
-### `darkmagic-realm`
+### `realm`
 
-Current `cmd/darkmagic-realm` is intentionally a realm control-plane composition root, but today it only runs a mutable headless admin shell.
+Current `cmd/realm` is intentionally a realm control-plane composition root, but today it only runs a mutable headless admin shell.
 
 That is a good placeholder. Grow it into account/character/game-directory/allocation/persistence coordination, not gameplay simulation.
 
@@ -520,7 +520,7 @@ Expose one typed per-client authoritative snapshot/delta stream with private-sta
 
 ### R5 — realm game create/join allocation
 
-Have `darkmagic-realm` manage worker registration/capacity, create a game on `darkmagic-server`, and issue opaque admission tokens.
+Have `realm` manage worker registration/capacity, create a game on `server`, and issue opaque admission tokens.
 
 ### R6 — disconnect/reconnect/checkpoint
 
@@ -555,7 +555,7 @@ Only after semantic APIs are stable, research/implement BNCS/MCP/D2GS packet com
 
 ## Primary sources inspected
 
-- Current Dark Magic `cmd/darkmagic-server`, `cmd/darkmagic-realm`, `internal/game/session`, persistence/player/item/game-rules research and local runtime admin API.
+- Current Dark Magic `cmd/server`, `cmd/realm`, `internal/game/session`, persistence/player/item/game-rules research and local runtime admin API.
 - PvPGN pinned repository commit `9cd173f4e02ba3d9f8f15a67ca308b5eb78723e4`, especially `d2cs` and `d2dbs` configuration/source split as independent historical implementation evidence.
 - D2MOO gameplay server/client/session code for game-side authority behavior.
 

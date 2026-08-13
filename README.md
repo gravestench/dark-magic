@@ -207,7 +207,7 @@ the window never makes shell glyphs inherit the game's low-resolution scaling.
 Game presentation defaults to aspect-preserving centered letterboxing:
 
 ```shell
-go run -tags ffmpeg ./cmd/darkmagic --viewport-fit contain
+go run -tags ffmpeg ./cmd/client --viewport-fit contain
 ```
 
 Use `--viewport-fit stretch` to fill the entire window without preserving the
@@ -278,8 +278,8 @@ Client logging defaults to `info`. Select `debug`, `info`, `warn`, or `error`
 with either the command-line flag or its environment equivalent:
 
 ```shell
-go run -tags ffmpeg ./cmd/darkmagic --log-level debug
-DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/darkmagic
+go run -tags ffmpeg ./cmd/client --log-level debug
+DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/client
 ```
 
 Quantize the final composed display with an optional GPU post-process. The
@@ -287,7 +287,7 @@ lookup cube emits only colors from the selected palette while preserving source
 alpha:
 
 ```shell
-go run -tags ffmpeg ./cmd/darkmagic \
+go run -tags ffmpeg ./cmd/client \
   --output-palette data/global/Palette/fechar/pal.dat
 ```
 
@@ -312,7 +312,7 @@ shutdown with:
 
 ```shell
 MPQ_DIRECTORY=/path/to/diablo-ii \
-  go run -tags ffmpeg ./cmd/darkmagic --profile-dir ./profiles/menu-review
+  go run -tags ffmpeg ./cmd/client --profile-dir ./profiles/menu-review
 ```
 
 Exit the client normally after exercising the behavior of interest. The output
@@ -328,7 +328,7 @@ Add `--profile-scenes title,main_menu,character_create` (or
 snapshots for individual scenes. Use `all` to capture every visited scene:
 
 ```shell
-go run -tags ffmpeg ./cmd/darkmagic \
+go run -tags ffmpeg ./cmd/client \
   --profile-dir ./profiles/frontend-review \
   --profile-scenes all
 ```
@@ -396,7 +396,7 @@ to the class presentation for legacy metadata-only records.
 Open the integrated composite animation laboratory against mounted MPQs with:
 
 ```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
+MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
   --start-scene=composite_lab
 ```
 
@@ -409,7 +409,7 @@ arguments leak through the production client composition root.
 Browse a DT1 tileset through the engine's lazy tile decoder with:
 
 ```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
+MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
   --start-scene=dt1_lab
 ```
 
@@ -431,7 +431,7 @@ offsets.
 Open a DS1 stamp with its authored DT1 sources using:
 
 ```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/darkmagic \
+MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
   --start-scene=ds1_lab
 ```
 
@@ -555,7 +555,7 @@ Build the client with `-tags ffmpeg` and link FFmpeg development libraries via
 window:
 
 ```sh
-MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/darkmagic
+MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/client
 ```
 
 Portable builds retain `ffplay` as a separate-window diagnostic fallback. If it
@@ -606,7 +606,7 @@ listed paths are ordered from highest to lowest priority and support
 cross-platform aliases:
 
 ```shell
-MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run ./cmd/darkmagic
+MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run ./cmd/client
 ```
 
 To explore a real DS1 layout from an MPQ:

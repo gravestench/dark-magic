@@ -7,7 +7,7 @@ shipped products:
 - `scene_demo` runs the standalone interactive scene harness.
 
 The asset-backed composite laboratory is an integrated engine scene rather than
-a second renderer. Start it with `go run ./cmd/darkmagic
+a second renderer. Start it with `go run ./cmd/client
 --start-scene=composite_lab`; see the root README for recipe flags and controls.
 - `shell` runs the renderer-free Charmbracelet frontend for the shared Lua
   shell used by future client, game-server, and realm targets.

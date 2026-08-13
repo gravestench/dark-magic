@@ -1,7 +1,7 @@
 # Dark Magic architecture
 
 Dark Magic is one application, not a collection of independently supported Go
-libraries. `cmd/darkmagic` is the composition root. The reusable engine is
+libraries. `cmd/client` is the composition root. The reusable engine is
 implemented primarily in Go; the first-party `d2legacy` mod owns Diablo II game
 rules and mod-specific presentation in Lua. A package remains under `pkg`
 only when the project deliberately promises it as a stable, independently useful
@@ -161,7 +161,9 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 
 | Package | Responsibility | Main importers | Owner | Disposition |
 | --- | --- | --- | --- | --- |
-| `cmd/darkmagic` | Client composition root | executable | Process | Keep thin |
+| `cmd/client` | Client composition root | executable | Process | Keep thin |
+| `cmd/server` | Standalone authoritative game-worker composition root | executable | Process | Keep thin |
+| `cmd/realm` | Realm/control-plane composition root | executable | Process | Never own gameplay simulation |
 | `internal/app/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
 | `internal/content` | Layered directory/MPQ/ZIP/mod VFS | command, reload, Lua, tools | Application | Keep |
 | `internal/game/data/store` | Generic immutable TSV rows, provenance, caching, and invalidation | Lua, typed decoding, tools | Application | Keep internal and mod-neutral |
@@ -207,7 +209,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 Moves should be incremental and behavior-preserving:
 
 ```text
-cmd/darkmagic              client composition root
+cmd/client              client composition root
 internal/app               host wiring and configuration
 internal/content           VFS, records, localization, bundled mods
 internal/assets            decode, cache, inspection, cataloging
@@ -234,7 +236,7 @@ real-asset, race, and relevant interactive acceptance checks green.
 
 ## Finding the main execution paths
 
-The client boots in `cmd/darkmagic/main.go`. It parses process configuration,
+The client boots in `cmd/client/main.go`. It parses process configuration,
 opens the layered content filesystem, constructs shared application capabilities,
 registers Lua modules, and gives those components to `internal/app/host` for ordered
 startup and shutdown. Keep this file as wiring: capability behavior belongs in
@@ -327,6 +329,13 @@ Clients may use one of three prediction levels:
    canonical snapshots; or
 3. shared `d2legacy` prediction: run compatible Lua locally with rollback and
    reconciliation.
+
+`internal/app/gameserver.Host` is the shared renderer-free authoritative owner
+for standalone, in-process listen, and realm-worker modes. Hosting mode changes
+lifetime/orchestration only; every mode uses the same ECS, `game/session`,
+d2legacy authority, allocation identity, admission, checkpoint, and replay
+contracts. `internal/app/realm.Manager` allocates and releases those hosts by
+stable session ID. The realm never advances gameplay itself.
 
 Limited movement and presentation prediction is the initial realm-capable
 design. Client Lua remains untrusted even when its hash matches the server mod;

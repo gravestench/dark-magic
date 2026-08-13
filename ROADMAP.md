@@ -680,7 +680,7 @@ complete until its actions are driven by authoritative game state and commands.
 - [x] Expose this exact shell/session contract through the graphical client,
   standalone game server, and realm targets. Headless targets use the shared
   Charmbracelet modal TUI; the in-game console supplies only a different view
-  adapter. Initial `darkmagic-server` and `darkmagic-realm` composition roots
+  adapter. Initial `server` and `realm` composition roots
   now own that same renderer-free administration surface.
 - [ ] Gate mutation/debug capabilities by session policy: full local developer
   access when enabled, read-only inspection where appropriate, and no path from
@@ -1786,17 +1786,20 @@ authority, persistence separation, and resilience acceptance remain open.
   explicit one-version-at-a-time migrations whose results are revalidated.
   Private `0600` writes sync a temporary file and destination directory before
   atomic replacement, and sessions export defensive container evidence.
-- [x] Keep `cmd/darkmagic` as the first-class client composition root and move
+- [x] Keep `cmd/client` as the first-class client composition root and move
   its offline fixed-step ECS advancement behind the shared authoritative
   session owner without coupling that owner to Raylib or Lua.
-- [ ] Run one authoritative deterministic game-session implementation in-process,
+- [x] Run one authoritative deterministic game-session implementation in-process,
   as a listen server, as a standalone self-hosted server, or under a realm.
-  The `cmd/darkmagic-server` composition root and shared administration shell
-  now exist. `internal/game/session` now owns transport-independent admission,
-  fixed stepping, canonical command ordering, checkpointing, and replay export;
-  the client uses it for offline stepping and the standalone server owns its
-  timed lifecycle plus read-only `engine.session/v1` diagnostics. Listen-server,
-  realm orchestration, gameplay-system composition, and transports remain.
+  `internal/game/session` remains the only transport-independent admission,
+  fixed-step, canonical-command, checkpoint, and replay implementation. The
+  shared `gameserver.Host` now names standalone, in-process listen, and
+  realm-worker modes without changing its ECS, d2legacy authority, allocation,
+  or identity contract; a mode matrix proves all three produce the same pinned
+  authority. The realm manager owns a stable-ID registry of those hosts,
+  rejects duplicate allocation, and releases workers without moving gameplay
+  into the control plane. `cmd/client`, `cmd/server`, and `cmd/realm` now name
+  the three process roles directly. Network transports remain the next item.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
 - [ ] Preserve offline characters safely and separate trusted server characters
@@ -1808,7 +1811,7 @@ authority, persistence separation, and resilience acceptance remain open.
 
 - [ ] Add a first-class `cmd` realm providing accounts, authentication, game
   creation/discovery, session assignment, and operational administration. The
-  `cmd/darkmagic-realm` composition root and shared administration shell now
+  `cmd/realm` composition root and shared administration shell now
   exist; realm services and capability modules remain.
 - [ ] Define signed/versioned mod manifests containing dependency order, engine
   and capability compatibility, payload identities, hashes, sizes, and trust
