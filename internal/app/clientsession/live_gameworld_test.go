@@ -129,7 +129,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stopWatch()
-	if err := connected.Submit(ctx, gameserver.CommandIntent{Tick: commandTick, Sequence: 1,
+	if err := connected.Submit(ctx, gameserver.CommandIntent{ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 1,
 		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
 		t.Fatal(err)
 	}

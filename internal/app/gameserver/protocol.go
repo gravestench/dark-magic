@@ -15,7 +15,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const SessionProtocolVersion uint32 = 1
+const SessionProtocolVersion uint32 = 2
 
 var (
 	ErrAuthentication = errors.New("game server protocol: authentication failed")
@@ -62,10 +62,12 @@ type SessionCredential string
 func (credential SessionCredential) String() string { return string(credential) }
 
 type Snapshot struct {
-	Version  uint32          `json:"version"`
-	Tick     uint64          `json:"tick"`
-	Checksum string          `json:"checksum"`
-	Payload  json.RawMessage `json:"payload"`
+	Version           uint32          `json:"version"`
+	Tick              uint64          `json:"tick"`
+	StepNanos         int64           `json:"step_nanos"`
+	Checksum          string          `json:"checksum"`
+	AcknowledgedInput uint64          `json:"acknowledged_input"`
+	Payload           json.RawMessage `json:"payload"`
 }
 
 type JoinResponse struct {
@@ -82,10 +84,11 @@ type ReconnectRequest struct {
 // CommandIntent contains only client-controlled gameplay input. Identity and
 // authority are supplied by Endpoint from authenticated connection state.
 type CommandIntent struct {
-	Tick     uint64
-	Sequence uint64
-	Kind     string
-	Payload  json.RawMessage
+	ObservedServerTick uint64          `json:"observed_server_tick"`
+	TargetTick         uint64          `json:"target_tick"`
+	Sequence           uint64          `json:"sequence"`
+	Kind               string          `json:"kind"`
+	Payload            json.RawMessage `json:"payload"`
 }
 
 type connection struct {
@@ -185,10 +188,13 @@ func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandInt
 	if err != nil {
 		return err
 	}
-	return endpoint.host.Session.Submit(simulation.Command{
-		Tick: intent.Tick, Player: member.principal.PlayerID, Authority: simulation.AuthorityPlayer,
-		Sequence: intent.Sequence, Kind: intent.Kind, Payload: intent.Payload,
-	})
+	target := intent.TargetTick
+	if target == 0 {
+		target = intent.ObservedServerTick + 2
+	}
+	_, err = endpoint.host.Session.SubmitNetwork(simulation.Command{Tick: target, Player: member.principal.PlayerID,
+		Authority: simulation.AuthorityPlayer, Sequence: intent.Sequence, Kind: intent.Kind, Payload: intent.Payload})
+	return err
 }
 
 // Refresh returns the latest canonical per-player correction projection.
@@ -303,7 +309,8 @@ func (endpoint *Endpoint) snapshot(playerID string) (Snapshot, error) {
 	if !json.Valid(payload) {
 		return Snapshot{}, errors.New("game server protocol: projector returned invalid JSON")
 	}
-	return Snapshot{Version: SessionProtocolVersion, Tick: checkpoint.Tick, Checksum: checkpoint.Checksum, Payload: append(json.RawMessage(nil), payload...)}, nil
+	return Snapshot{Version: SessionProtocolVersion, Tick: checkpoint.Tick, Checksum: checkpoint.Checksum,
+		StepNanos: int64(endpoint.host.Session.StepDuration()), AcknowledgedInput: endpoint.host.Session.ProcessedSequence(playerID), Payload: append(json.RawMessage(nil), payload...)}, nil
 }
 
 func newSessionCredential() (SessionCredential, error) {

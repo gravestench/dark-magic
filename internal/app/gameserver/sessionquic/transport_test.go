@@ -118,7 +118,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{Tick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`)}); err != nil {
+	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{TargetTick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.Refresh(ctx, joined.Credential); err != nil {
@@ -247,7 +247,7 @@ func TestTypicalCommandEncodingFitsReservedDatagramBudget(t *testing.T) {
 		Operation:  operationSubmit,
 		Credential: gameserver.SessionCredential("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
 		Command: &gameserver.CommandIntent{
-			Tick: 120, Sequence: 41, Kind: "player.move",
+			ObservedServerTick: 118, TargetTick: 120, Sequence: 41, Kind: "player.move",
 			Payload: json.RawMessage(`{"destination":{"x":123.25,"y":94.5}}`),
 		},
 	}

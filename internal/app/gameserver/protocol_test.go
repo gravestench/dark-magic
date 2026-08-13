@@ -69,7 +69,7 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 		t.Fatalf("unexpected join response: %#v", joined)
 	}
 	if err := endpoint.Submit(joined.Credential, CommandIntent{
-		Tick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":4}`),
+		TargetTick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":4}`),
 	}); err != nil {
 		t.Fatal(err)
 	}

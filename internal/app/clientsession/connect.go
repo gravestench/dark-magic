@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,8 @@ type Session struct {
 	Admission  gameserver.JoinResponse
 	HUD        playeradapter.HUD
 	World      playeradapter.WorldView
+	pending    map[uint64]gameserver.CommandIntent
+	receivedAt time.Time
 }
 
 type SelfHostedAssignment struct {
@@ -162,7 +165,8 @@ func joinVerified(ctx context.Context, transport *sessionquic.Client, gameID str
 		_ = transport.Close()
 		return nil, ErrAssignment
 	}
-	return &Session{transport: transport, credential: joined.Credential, identity: identity, Admission: joined, HUD: view.HUD, World: view.World}, nil
+	return &Session{transport: transport, credential: joined.Credential, identity: identity, Admission: joined, HUD: view.HUD, World: view.World,
+		pending: make(map[uint64]gameserver.CommandIntent), receivedAt: time.Now()}, nil
 }
 
 func (session *Session) Submit(ctx context.Context, intent gameserver.CommandIntent) error {
@@ -171,7 +175,47 @@ func (session *Session) Submit(ctx context.Context, intent gameserver.CommandInt
 	if session.closed {
 		return errors.New("client session: closed")
 	}
-	return session.transport.Submit(ctx, session.credential, intent)
+	if intent.ObservedServerTick == 0 {
+		intent.ObservedServerTick = session.observedServerTickLocked(time.Now())
+	}
+	if intent.TargetTick == 0 {
+		intent.TargetTick = intent.ObservedServerTick + 2
+	}
+	if err := session.transport.Submit(ctx, session.credential, intent); err != nil {
+		return err
+	}
+	session.pending[intent.Sequence] = intent
+	return nil
+}
+
+func (session *Session) observedServerTickLocked(now time.Time) uint64 {
+	tick := session.Admission.Snapshot.Tick
+	step := time.Duration(session.Admission.Snapshot.StepNanos)
+	if step <= 0 || session.receivedAt.IsZero() || now.Before(session.receivedAt) {
+		return tick
+	}
+	// Extrapolation is only scheduling guidance. Bounding it prevents a paused
+	// client from manufacturing commands far ahead of server admission.
+	return tick + min(uint64(now.Sub(session.receivedAt)/step), uint64(4))
+}
+
+// PendingInputs returns defensive, sequence-ordered input history retained for
+// acknowledgement and future local prediction replay.
+func (session *Session) PendingInputs() []gameserver.CommandIntent {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	result := make([]gameserver.CommandIntent, 0, len(session.pending))
+	sequences := make([]uint64, 0, len(session.pending))
+	for sequence := range session.pending {
+		sequences = append(sequences, sequence)
+	}
+	sort.Slice(sequences, func(i, j int) bool { return sequences[i] < sequences[j] })
+	for _, sequence := range sequences {
+		intent := session.pending[sequence]
+		intent.Payload = append(json.RawMessage(nil), intent.Payload...)
+		result = append(result, intent)
+	}
+	return result
 }
 
 func (session *Session) Reconnect(ctx context.Context) error {
@@ -189,6 +233,8 @@ func (session *Session) Reconnect(ctx context.Context) error {
 		return err
 	}
 	session.credential, session.Admission, session.HUD, session.World = joined.Credential, joined, view.HUD, view.World
+	session.receivedAt = time.Now()
+	session.discardAcknowledgedLocked(joined.Snapshot.AcknowledgedInput)
 	return nil
 }
 
@@ -272,7 +318,17 @@ func (session *Session) applyCorrection(snapshot gameserver.Snapshot) (playerada
 	}
 	delta := playeradapter.DiffWorldView(session.World, view.World)
 	session.Admission.Snapshot, session.HUD, session.World = snapshot, view.HUD, view.World
+	session.receivedAt = time.Now()
+	session.discardAcknowledgedLocked(snapshot.AcknowledgedInput)
 	return delta, nil
+}
+
+func (session *Session) discardAcknowledgedLocked(acknowledged uint64) {
+	for sequence := range session.pending {
+		if sequence <= acknowledged {
+			delete(session.pending, sequence)
+		}
+	}
 }
 
 func validateCorrection(previous, next gameserver.Snapshot) error {

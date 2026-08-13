@@ -161,7 +161,7 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 	}
 	stopWatch()
 	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{
-		Tick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`),
+		TargetTick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`),
 	}); err != nil {
 		t.Fatal(err)
 	}

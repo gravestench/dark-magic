@@ -175,6 +175,23 @@ func TestViewReturnsDefensiveWorldEntityState(t *testing.T) {
 	}
 }
 
+func TestCorrectionAcknowledgesOnlyContiguousInputHistory(t *testing.T) {
+	session := &Session{pending: map[uint64]gameserver.CommandIntent{
+		1: {Sequence: 1, Payload: json.RawMessage(`{"x":1}`)},
+		2: {Sequence: 2, Payload: json.RawMessage(`{"x":2}`)},
+		3: {Sequence: 3, Payload: json.RawMessage(`{"x":3}`)},
+	}}
+	session.discardAcknowledgedLocked(2)
+	pending := session.PendingInputs()
+	if len(pending) != 1 || pending[0].Sequence != 3 {
+		t.Fatalf("pending inputs = %#v", pending)
+	}
+	pending[0].Payload[0] = '['
+	if string(session.pending[3].Payload) != `{"x":3}` {
+		t.Fatal("pending input payload was not defensively copied")
+	}
+}
+
 func connectTLS(t *testing.T) (*tls.Config, *tls.Config, string) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

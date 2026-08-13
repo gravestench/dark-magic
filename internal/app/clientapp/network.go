@@ -19,6 +19,7 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
@@ -269,6 +270,11 @@ func (controller *networkController) Advance(ctx context.Context) error {
 	_, world := client.View()
 	if controller.app.movementSource != nil {
 		for _, command := range controller.app.movementSource.Commands(world.Tick + 2) {
+			var movementPayload movement.MovePayload
+			if command.Kind == movement.MoveCommand && json.Unmarshal(command.Payload, &movementPayload) == nil &&
+				movementPayload.X == 0 && movementPayload.Y == 0 && movementPayload.Target == nil {
+				continue
+			}
 			if err := controller.submit(ctx, client, command.Tick, command.Kind, command.Payload); err != nil {
 				return err
 			}
@@ -291,7 +297,7 @@ func (controller *networkController) submit(ctx context.Context, client *clients
 	controller.sequence++
 	sequence := controller.sequence
 	controller.mu.Unlock()
-	return client.Submit(ctx, gameserver.CommandIntent{Tick: tick, Sequence: sequence, Kind: kind, Payload: payload})
+	return client.Submit(ctx, gameserver.CommandIntent{Sequence: sequence, Kind: kind, Payload: payload})
 }
 
 func (controller *networkController) Connected() bool {

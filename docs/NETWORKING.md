@@ -185,6 +185,22 @@ command submission, refresh, reconnect, and close serialize credential access.
 Corrections are monotonic: the client rejects an older tick and rejects a
 different checksum for an already-installed tick.
 
+Protocol v2 also publishes the authoritative fixed-step duration and highest
+contiguous input sequence applied for that player. The client schedules inputs
+two ticks ahead of a bounded extrapolation of the latest authoritative clock,
+retains unacknowledged inputs in sequence order, and discards them only when
+that contiguous acknowledgement advances.
+
+Normal network reordering is not a simulation error. Network admission
+validates identity, authority, schema, payload, and maximum lead independently
+of arrival order, rejects duplicate player sequences, and sorts admitted input
+canonically at execution. Input arriving after its intended tick restores a
+complete ECS plus registered-runtime frame and deterministically replays at
+most eight ticks. Restore/replay is transactional: failure restores the live
+world, participant state, pending commands, replay log, checkpoints, history,
+and acknowledgement state together. Older input is rejected and corrected by
+the next canonical projection.
+
 The live game-world acceptance in `internal/app/clientsession` crosses this
 entire boundary without substituting a fake projection: it starts the embedded
 production d2legacy Lua authority, advances the authoritative ECS session,
@@ -209,7 +225,7 @@ connected session instead of the offline ECS.
 
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction
-stream sends an immediate view and then changed views at no more than 2 Hz. Its
+stream sends an immediate view and then changed views at no more than 10 Hz. Its
 one-element application channel deliberately propagates a slow consumer back
 to QUIC flow control instead of building an unbounded queue. Each membership
 has independent token buckets allowing a burst of 32 commands at a sustained

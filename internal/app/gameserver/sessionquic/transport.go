@@ -142,7 +142,9 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 	}
 }
 
-const correctionInterval = 500 * time.Millisecond
+// A 10 Hz authoritative stream leaves two to three 25 Hz simulation samples
+// between corrections for interpolation without flooding full projections.
+const correctionInterval = 100 * time.Millisecond
 
 func (server *Server) watch(ctx context.Context, stream *quic.Stream, credential gameserver.SessionCredential) {
 	ticker := time.NewTicker(correctionInterval)
