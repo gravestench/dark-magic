@@ -73,6 +73,19 @@ local function register_item_views()
     register("d2legacy.item.armor", {
         { name = "defense", type = "i64" },
     })
+    -- Generated properties remain immutable item facts until location policy
+    -- activates them. Keep the original source identity/kind and ordering so a
+    -- later ItemStatCost-derived resolver can add percentage/op semantics
+    -- without reconstructing provenance from an already-flattened total.
+    register("d2legacy.item.stat_modifier", {
+        { name = "item", type = "entity" },
+        { name = "source_id", type = "string" },
+        { name = "source_kind", type = "string" },
+        { name = "stat", type = "string" },
+        { name = "operation", type = "string" },
+        { name = "value", type = "i64" },
+        { name = "order", type = "i64" },
+    })
 end
 
 local function register_vendor_terms()
