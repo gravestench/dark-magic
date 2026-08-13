@@ -86,6 +86,9 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{Tick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`)}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := client.Refresh(ctx, joined.Credential); err != nil {
+		t.Fatal(err)
+	}
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}

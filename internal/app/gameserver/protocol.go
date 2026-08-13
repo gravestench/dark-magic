@@ -142,6 +142,15 @@ func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandInt
 	})
 }
 
+// Refresh returns the latest canonical per-player correction projection.
+func (endpoint *Endpoint) Refresh(credential SessionCredential) (Snapshot, error) {
+	member, err := endpoint.connection(credential)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return endpoint.snapshot(member.principal.PlayerID)
+}
+
 // Leave revokes a connection credential. Character lease release and durable
 // save commit remain realm responsibilities layered above this endpoint.
 func (endpoint *Endpoint) Leave(credential SessionCredential) error {

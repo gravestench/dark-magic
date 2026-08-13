@@ -33,6 +33,7 @@ type Session struct {
 	closed     bool
 	Admission  gameserver.JoinResponse
 	HUD        playeradapter.HUD
+	World      playeradapter.WorldView
 }
 
 func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tls.Config) (*Session, error) {
@@ -78,12 +79,12 @@ func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tl
 		_ = transport.Close()
 		return nil, ErrAssignment
 	}
-	hud, err := decodeHUD(joined.Snapshot)
+	view, err := decodeView(joined.Snapshot)
 	if err != nil {
 		_ = transport.Close()
 		return nil, err
 	}
-	return &Session{transport: transport, credential: joined.Credential, identity: assignment.Runtime, Admission: joined, HUD: hud}, nil
+	return &Session{transport: transport, credential: joined.Credential, identity: assignment.Runtime, Admission: joined, HUD: view.HUD, World: view.World}, nil
 }
 
 func (session *Session) Submit(ctx context.Context, intent gameserver.CommandIntent) error {
@@ -105,12 +106,33 @@ func (session *Session) Reconnect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	hud, err := decodeHUD(joined.Snapshot)
+	view, err := decodeView(joined.Snapshot)
 	if err != nil {
 		return err
 	}
-	session.credential, session.Admission, session.HUD = joined.Credential, joined, hud
+	session.credential, session.Admission, session.HUD, session.World = joined.Credential, joined, view.HUD, view.World
 	return nil
+}
+
+// Refresh fetches one reliable canonical correction and returns the public
+// world delta from the previously installed view.
+func (session *Session) Refresh(ctx context.Context) (playeradapter.WorldDelta, error) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	if session.closed {
+		return playeradapter.WorldDelta{}, errors.New("client session: closed")
+	}
+	snapshot, err := session.transport.Refresh(ctx, session.credential)
+	if err != nil {
+		return playeradapter.WorldDelta{}, err
+	}
+	view, err := decodeView(snapshot)
+	if err != nil {
+		return playeradapter.WorldDelta{}, err
+	}
+	delta := playeradapter.DiffWorldView(session.World, view.World)
+	session.Admission.Snapshot, session.HUD, session.World = snapshot, view.HUD, view.World
+	return delta, nil
 }
 
 func (session *Session) Close(ctx context.Context) error {
@@ -128,12 +150,12 @@ func (session *Session) Close(ctx context.Context) error {
 	return errors.Join(leaveErr, closeErr)
 }
 
-func decodeHUD(snapshot gameserver.Snapshot) (playeradapter.HUD, error) {
-	var hud playeradapter.HUD
-	if err := json.Unmarshal(snapshot.Payload, &hud); err != nil || hud.Version != playeradapter.HUDVersion || hud.Tick != snapshot.Tick {
-		return playeradapter.HUD{}, fmt.Errorf("%w: invalid PlayerHUD/v1", ErrAssignment)
+func decodeView(snapshot gameserver.Snapshot) (playeradapter.ClientView, error) {
+	var view playeradapter.ClientView
+	if err := json.Unmarshal(snapshot.Payload, &view); err != nil || view.Version != playeradapter.ClientViewVersion || view.Tick != snapshot.Tick || view.HUD.Version != playeradapter.HUDVersion || view.HUD.Tick != snapshot.Tick || view.World.Version != playeradapter.WorldViewVersion || view.World.Tick != snapshot.Tick {
+		return playeradapter.ClientView{}, fmt.Errorf("%w: invalid ClientView/v1", ErrAssignment)
 	}
-	return hud, nil
+	return view, nil
 }
 
 func parseFingerprint(value string) ([]byte, error) {

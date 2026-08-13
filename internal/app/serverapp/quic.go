@@ -38,7 +38,7 @@ func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, e
 	if err != nil {
 		return nil, err
 	}
-	endpoint, err := gameserver.NewEndpoint(host, authenticator, playeradapter.ProjectHUD)
+	endpoint, err := gameserver.NewEndpoint(host, authenticator, playeradapter.ProjectClientView)
 	if err != nil {
 		return nil, err
 	}
