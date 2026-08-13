@@ -75,3 +75,45 @@ func TestMemoryCharactersExpiresAndRejectsStaleLease(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMemoryCharactersCommitsOnlyThroughActiveLease(t *testing.T) {
+	repository, err := NewMemoryCharacters(CharacterRecord{
+		AccountID: "account", Revision: 3,
+		Character: d2save.Character{ID: "character", Name: "Before", Stats: &d2save.Stats{Health: 10}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Unix(100, 0)
+	repository.now = func() time.Time { return now }
+	_, lease, err := repository.Acquire(context.Background(), "account", "character", "game", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.Commit(context.Background(), CharacterLease{}, d2save.Character{ID: "character"}); !errors.Is(err, ErrCharacterCommit) {
+		t.Fatalf("unleased commit error = %v", err)
+	}
+	if _, err := repository.Commit(context.Background(), lease, d2save.Character{ID: "offline-character"}); !errors.Is(err, ErrCharacterCommit) {
+		t.Fatalf("foreign character commit error = %v", err)
+	}
+	committed, err := repository.Commit(context.Background(), lease, d2save.Character{
+		ID: "character", Name: "After", Stats: &d2save.Stats{Health: 25},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if committed.Revision != 4 || committed.Character.Name != "After" {
+		t.Fatalf("committed = %#v", committed)
+	}
+	committed.Character.Stats.Health = 0
+	if _, err := repository.Commit(context.Background(), lease, d2save.Character{ID: "character"}); !errors.Is(err, ErrCharacterCommit) {
+		t.Fatalf("replayed lease commit error = %v", err)
+	}
+	reloaded, current, err := repository.Acquire(context.Background(), "account", "character", "next-game", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Revision != 4 || reloaded.Character.Stats.Health != 25 || current.Revision != 4 {
+		t.Fatalf("reloaded = %#v lease=%#v", reloaded, current)
+	}
+}

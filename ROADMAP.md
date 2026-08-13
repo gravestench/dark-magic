@@ -1841,8 +1841,15 @@ authority, persistence separation, and resilience acceptance remain open.
   an exhaustive operation-shape matrix and a 256-request malformed-stream soak
   prove rejection isolation and continued valid use on the same connection.
   Concurrent stream and receive-window ceilings are pinned by tests.
-- [ ] Preserve offline characters safely and separate trusted server characters
-  from client-controlled saves.
+- [ ] Preserve player-profile characters safely for single-player, listen-server,
+  and self-hosted dedicated-server play; keep them separate from account-owned
+  realm characters. Realm flow requires account login, account-scoped character
+  selection, then realm game browse/create/join. Client assignments no longer expose the
+  realm/worker lease. Atomic trusted commits require that active unexpired
+  lease, preserve identity, increment revision, consume the lease, and reject
+  foreign or replayed writes. The d2legacy roster is explicitly player-profile-owned
+  and cannot satisfy the realm repository contract. Versioned durable offline
+  file round-trips and worker checkpoint-to-character projection remain open.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 

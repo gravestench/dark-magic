@@ -41,7 +41,7 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if assignment.Endpoint.Address != "game.example:4433" || assignment.Runtime.ModID != identity.ModID || assignment.Lease.Revision != 4 {
+	if assignment.Endpoint.Address != "game.example:4433" || assignment.Runtime.ModID != identity.ModID || assignment.CharacterRevision != 4 {
 		t.Fatalf("assignment = %#v", assignment)
 	}
 	principal, err := authority.Authenticate(context.Background(), assignment.Ticket)
@@ -63,6 +63,18 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	}
 	if len(replay.Commands) != 1 || replay.Commands[0].Kind != playeradapter.EnterCommand || replay.Commands[0].Authority != simulation.AuthoritySystem {
 		t.Fatalf("commands = %#v", replay.Commands)
+	}
+	committed, err := admissions.CommitMembership(context.Background(), "game", "player", d2save.Character{
+		ID: "character", Name: "Saved Hero", Class: "Amazon", Level: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if committed.Revision != 5 || committed.Character.Name != "Saved Hero" {
+		t.Fatalf("committed character = %#v", committed)
+	}
+	if _, err := admissions.CommitMembership(context.Background(), "game", "player", committed.Character); !errors.Is(err, ErrLease) {
+		t.Fatalf("replayed membership commit error = %v", err)
 	}
 }
 

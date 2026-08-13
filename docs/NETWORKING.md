@@ -98,11 +98,29 @@ Realm join is a transaction across the durable character repository and the
 allocated worker. It acquires an exclusive revisioned lease owned by the
 account, validates the character's pinned runtime compatibility, creates the
 trusted next-tick player-entry command with a realm-owned monotonic sequence,
-and returns the worker address, TLS fingerprint, exact runtime identity, lease,
-and short-lived ticket. The ticket additionally binds the character revision
+and returns the worker address, TLS fingerprint, exact runtime identity, public
+character revision, and short-lived ticket. The ticket additionally binds the character revision
 and runtime identity hash. Validation or submission failure releases the lease
 and revokes the unused ticket. Active memberships renew their lease through the
 realm; reconnect never accepts client-reported durable state.
+
+Character ownership is independent of topology. Single-player, listen-server,
+and self-hosted dedicated-server play use the player's local profile roster;
+those hosts may admit player-controlled save data according to their own policy,
+but that data never becomes realm-trusted. Realm play begins with account login
+or initial account creation, loads only the characters associated with that
+account, and requires character selection before browsing, creating through the
+realm, or joining a realm game. A new realm account therefore begins with no
+characters just as a new local profile does.
+
+The character lease is a realm/worker capability and never crosses the client
+assignment boundary. A trusted realm worker commit must present the active,
+unexpired lease, preserve character identity, atomically replace a defensive
+copy, increment the realm revision, and consume the lease. Empty, expired,
+foreign, and replayed leases are rejected. The d2legacy selection store is
+explicitly player-profile-owned and cannot implement or call this realm
+repository contract, so copying a self-hosted character value does not confer
+trusted realm write authority.
 
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime
