@@ -1833,7 +1833,11 @@ authority, persistence separation, and resilience acceptance remain open.
   application backpressure; clients reject stale or same-tick conflicting
   corrections. Strict operation shapes and per-membership command/correction
   token buckets bound malformed and burst traffic, and reconnect cannot reset
-  those budgets. Compact datagrams and latency/loss acceptance remain open.
+  those budgets. The production packet boundary is now injectable, and a
+  deterministic bidirectional loss/delay/jitter acceptance test covers TLS
+  handshake, join, correction streaming, commands, reconnect, and leave using
+  the real QUIC paths. Compact datagrams and broader sustained-network
+  acceptance remain open.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,

@@ -34,6 +34,11 @@ wire frame to 4 MiB, and limits command payloads to 8 KiB.
 This is a direction, not a claim that QUIC is universally fastest. Benchmarks
 must cover representative tick rates, message sizes, loss, jitter, NATs, CPU,
 and memory before tuning encodings or assigning a message class to datagrams.
+The reliable baseline is exercised through caller-provided production packet
+connections under deterministic bidirectional packet loss and cyclic delay.
+That acceptance covers handshake, join, the long-lived correction stream,
+command submission, reconnect, and leave. It proves bounded recovery behavior;
+it is not a substitute for sustained load, diverse paths, or platform testing.
 
 Primary references:
 
