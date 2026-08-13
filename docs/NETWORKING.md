@@ -22,6 +22,15 @@ streams. Replaceable movement inputs, acknowledgements, and high-frequency
 state deltas may use QUIC datagrams only after measurement proves that loss is
 preferable to late delivery. Correctness must never depend on a datagram.
 
+QUIC begins with conservative 1200-byte packets and keeps path-MTU discovery
+enabled. Application datagrams must fit the transport's negotiated maximum and
+an additional schema-specific ceiling (initially at most 1000 application
+bytes, leaving headroom inside a 1200-byte packet); they are never split at the
+application layer or sent at an assumed Ethernet MTU. Oversized semantic state uses bounded
+reliable streams, allowing QUIC to packetize it safely. The first adapter keeps
+datagrams disabled until compact delta schemas and loss tests exist, limits a
+wire frame to 4 MiB, and limits command payloads to 8 KiB.
+
 This is a direction, not a claim that QUIC is universally fastest. Benchmarks
 must cover representative tick rates, message sizes, loss, jitter, NATs, CPU,
 and memory before tuning encodings or assigning a message class to datagrams.
