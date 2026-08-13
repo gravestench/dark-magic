@@ -4,30 +4,28 @@ local fixtures = require("d2legacy.tests.support.fixtures")
 local monster = fixtures.monster_spawn()
 return test.suite({
     profile = "authority",
-    tier = "fast",
+    tier = "integration",
     covers = { "internal/game/combat", "internal/game/skill", "internal/game/missile" },
     cases = {
         test.case("cast_runs_headlessly_through_lua", {
-            test.submit_system({
+            test.submit_system(fixtures.command("system.player.enter", fixtures.fire_bolt_entry, {
                 tick = 1,
                 sequence = 1,
-                kind = "system.player.enter",
-                payload = fixtures.fire_bolt_entry,
-            }),
-            test.submit_system({
+            })),
+            test.submit_system(fixtures.command("system.monster.spawn", monster, {
                 tick = 1,
                 sequence = 2,
-                kind = "system.monster.spawn",
-                payload = monster,
-            }),
+            })),
             test.step(1),
-            test.submit({
+            test.submit(fixtures.command("player.use_skill", {
+                side = "left",
+                target_x = 8,
+                target_y = 0,
+            }, {
                 tick = 2,
                 sequence = 1,
                 player = "alice",
-                kind = "player.use_skill",
-                payload = { side = "left", target_x = 8, target_y = 0 },
-            }),
+            })),
             test.step(6),
             test.run(function()
                 local ecs = require("engine.ecs/v1")

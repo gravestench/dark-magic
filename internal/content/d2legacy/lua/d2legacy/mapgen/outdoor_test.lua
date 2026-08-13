@@ -31,12 +31,12 @@ local function verify(direction)
         },
         ["data/global/excel/LvlPrest.txt"] = prest,
     }
-    package.loaded["engine.records/v1"] = {
+    test.mock_module("engine.records/v1", {
         load = function(path)
             return rows[path] or {}
         end,
-    }
-    package.loaded["d2legacy.mapgen.outdoor"] = nil
+    }, { "load" })
+    test.unload_module("d2legacy.mapgen.outdoor")
     local outdoor = require("d2legacy.mapgen.outdoor")
     local zone = outdoor.generate(2, 42, direction, 0)
     test.assert(

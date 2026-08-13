@@ -7,7 +7,7 @@ return test.suite({
         test.case("owns_legacy_sound_record_selection", {
             test.run(function()
                 local played
-                package.loaded["engine.records/v1"] = {
+                test.mock_module("engine.records/v1", {
                     load = function()
                         return {
                             {
@@ -30,8 +30,8 @@ return test.suite({
                             },
                         }
                     end,
-                }
-                package.loaded["engine.audio/v1"] = {
+                }, { "load" })
+                test.mock_module("engine.audio/v1", {
                     exists = function(path)
                         return path == "data/global/sfx/ui/two.wav"
                     end,
@@ -39,7 +39,7 @@ return test.suite({
                         played = { path = path, options = options }
                         return played
                     end,
-                }
+                }, { "exists", "play" })
                 require("d2legacy.audio").play_record("menu", 2)
                 test.assert(
                     played.path == "data/global/sfx/ui/two.wav"

@@ -1,7 +1,21 @@
-.PHONY: test architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
 
 test:
 	go test ./...
+
+test-lua:
+	DARK_MAGIC_LUA_TEST_TIERS=fast,integration go test ./internal/mod/d2legacy -run 'TestLua(Suites|HarnessContract)'
+
+# Repetition and seeded order catch VM leakage and order dependence while
+# preserving a reproducible failure command in CI logs.
+test-lua-hardening: test-lua-format test-lua-syntax
+	DARK_MAGIC_LUA_TEST_TIERS=fast,integration DARK_MAGIC_LUA_TEST_REPEAT=3 DARK_MAGIC_LUA_TEST_ORDER_SEED=8675309 go test -count=1 ./internal/mod/d2legacy -run 'TestLua(Suites|HarnessContract)'
+
+test-lua-format:
+	find internal/content/d2legacy/lua/d2legacy \( -name '*_test.lua' -o -path '*/tests/v1.lua' -o -path '*/tests/support/*.lua' \) -print0 | xargs -0 stylua --check
+
+test-lua-syntax:
+	find internal/content/d2legacy/lua -name '*.lua' -print0 | xargs -0 -n 100 luac -p
 
 architecture:
 	go test ./internal/acceptance -run 'Test(Retired|LegacyRenderer|NoAccidental|DependencyDirection|CommandRemains|GameplayOwnership)'

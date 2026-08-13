@@ -3,7 +3,7 @@ local test = require("d2legacy.tests/v1")
 local fixtures = require("d2legacy.tests.support.fixtures")
 return test.suite({
     profile = "authority",
-    tier = "fast",
+    tier = "integration",
     initial_data = {
         ["d2legacy.world_transitions"] = {
             seams = {

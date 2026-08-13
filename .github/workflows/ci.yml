@@ -29,6 +29,10 @@ jobs:
           cache: true
       - name: Unit and integration tests
         run: make test
+      - name: Install Lua quality tools
+        run: brew install lua stylua
+      - name: D2legacy Lua harness hardening
+        run: make test-lua-hardening
       - name: Architecture boundaries
         run: make architecture
       - name: Race tests

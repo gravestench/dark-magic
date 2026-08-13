@@ -62,12 +62,12 @@ return test.suite({
                         },
                     },
                 }
-                package.loaded["engine.records/v1"] = {
+                test.mock_module("engine.records/v1", {
                     load = function(path)
                         return rows[path] or {}
                     end,
-                }
-                package.loaded["d2legacy.items.development_fixtures"] = nil
+                }, { "load" })
+                test.unload_module("d2legacy.items.development_fixtures")
                 local fixtures = require("d2legacy.items.development_fixtures").build(true)
                 test.assert(
                     fixtures.owner == "local-player"

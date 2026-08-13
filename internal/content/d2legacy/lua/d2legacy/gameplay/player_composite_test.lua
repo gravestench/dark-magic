@@ -1,9 +1,10 @@
 local test = require("d2legacy.tests/v1")
+local fixtures = require("d2legacy.tests.support.fixtures")
 
 local palette = "data/global/Palette/units/pal.dat"
 
 local function install_render_fixture()
-    package.loaded["engine.render/v1"] = {
+    test.mock_module("engine.render/v1", {
         cof_info = function(path)
             test.assert(
                 path == "data/global/chars/AM/COF/AMWLHTH.cof" or path == "data/global/chars/AM/COF/AMWL1HS.cof"
@@ -25,7 +26,7 @@ local function install_render_fixture()
             test.assert(key == "AMWLHTH" or key == "AMWL1HS", [=[key == "AMWLHTH" or key == "AMWL1HS"]=])
             return { speed = 333, frames = 8, events = {} }
         end,
-    }
+    }, { "cof_info", "asset_exists", "animdata_info" })
 end
 
 local function player_recipe(direction)
@@ -65,18 +66,14 @@ local function assert_unarmed_recipe(adapter)
 end
 
 local function assert_equipped_recipe(adapter)
-    local equipment = {
-        active_weapon_set = 0,
-        items = {
-            {
-                container = "equipment",
-                slot = "rarm",
-                weapon_set = 0,
-                weapon_class = "1hs",
-                composite = { RH = "ssd" },
-            },
-        },
-    }
+    local weapon = fixtures.item({
+        container = "equipment",
+        slot = "rarm",
+        weapon_set = 0,
+        weapon_class = "1hs",
+        composite = { RH = "ssd" },
+    })
+    local equipment = fixtures.equipment({ items = { weapon } })
     local equipped = adapter.resolve(player_recipe(3), equipment)
     test.assert(
         equipped.cof == "data/global/chars/AM/COF/AMWL1HS.cof",

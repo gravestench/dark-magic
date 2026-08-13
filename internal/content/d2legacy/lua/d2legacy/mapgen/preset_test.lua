@@ -42,12 +42,12 @@ return test.suite({
                         },
                     },
                 }
-                package.loaded["engine.records/v1"] = {
+                test.mock_module("engine.records/v1", {
                     load = function(path)
                         return rows[path] or {}
                     end,
-                }
-                package.loaded["d2legacy.mapgen.preset"] = nil
+                }, { "load" })
+                test.unload_module("d2legacy.mapgen.preset")
                 local preset = require("d2legacy.mapgen.preset")
                 local first = preset.generate(1, 11, 0)
                 local again = preset.generate(1, 11, 0)
