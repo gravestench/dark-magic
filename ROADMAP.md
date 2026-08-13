@@ -1807,7 +1807,11 @@ authority, persistence separation, and resilience acceptance remain open.
   and rotates opaque session credentials, projects per-player semantic
   snapshots with canonical correction checksums, and supports explicit leave.
   QUIC transport, discovery, delta projection, and loss/latency acceptance
-  remain before this item is complete.
+  remain before this item is complete. The first native QUIC adapter now carries
+  bounded join, command, reconnect, and leave requests over independent TLS 1.3
+  reliable streams. It starts with 1200-byte packets, retains path-MTU
+  discovery, rejects oversized/unknown/trailing frames, and leaves datagrams
+  disabled until compact delta schemas and loss acceptance exist.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,

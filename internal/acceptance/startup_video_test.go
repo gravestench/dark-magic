@@ -173,6 +173,13 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 		t.Fatal(err)
 	}
 	runtime := modruntime.New()
+	// This acceptance harness boots the complete presentation registry. The Go
+	// race detector can make that cold Lua module load exceed the runtime's
+	// one-second interactive callback budget even though no callback is stuck.
+	// Keep the test bounded while matching the production lifecycle allowance.
+	if err := runtime.SetExecutionBudget(10 * time.Second); err != nil {
+		t.Fatal(err)
+	}
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
 	backend := &startupVideoBackend{}
