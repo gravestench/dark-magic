@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
@@ -67,6 +68,20 @@ func Listen(address string, tlsConfig *tls.Config, endpoint *gameserver.Endpoint
 		return nil, errors.New("game session QUIC: TLS and endpoint are required")
 	}
 	listener, err := quic.ListenAddr(address, serverTLS(tlsConfig), quicConfig())
+	if err != nil {
+		return nil, err
+	}
+	return &Server{listener: listener, endpoint: endpoint}, nil
+}
+
+// ListenPacket serves the production protocol on a caller-provided packet
+// connection. It permits platform socket configuration and deterministic
+// network impairment tests without replacing any protocol behavior.
+func ListenPacket(packet net.PacketConn, tlsConfig *tls.Config, endpoint *gameserver.Endpoint) (*Server, error) {
+	if packet == nil || tlsConfig == nil || endpoint == nil {
+		return nil, errors.New("game session QUIC: packet connection, TLS, and endpoint are required")
+	}
+	listener, err := quic.Listen(packet, serverTLS(tlsConfig), quicConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +219,20 @@ func Dial(ctx context.Context, address string, tlsConfig *tls.Config) (*Client, 
 		return nil, errors.New("game session QUIC: TLS is required")
 	}
 	connection, err := quic.DialAddr(ctx, address, clientTLS(tlsConfig), quicConfig())
+	if err != nil {
+		return nil, err
+	}
+	return &Client{connection: connection}, nil
+}
+
+// DialPacket connects the production protocol through a caller-provided packet
+// connection. The packet connection is owned by the returned client after a
+// successful call.
+func DialPacket(ctx context.Context, packet net.PacketConn, address net.Addr, tlsConfig *tls.Config) (*Client, error) {
+	if packet == nil || address == nil || tlsConfig == nil {
+		return nil, errors.New("game session QUIC: packet connection, address, and TLS are required")
+	}
+	connection, err := quic.Dial(ctx, packet, address, clientTLS(tlsConfig), quicConfig())
 	if err != nil {
 		return nil, err
 	}
