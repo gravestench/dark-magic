@@ -440,6 +440,12 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Implement progressive loading screens driven by real dependency progress.
 - [x] Add screenshot/composition tests for every state without checking Blizzard
   imagery into the repository.
+- [ ] Apply the remaining legacy visual/interaction fidelity notes for the
+  separate Battle.net and gateway controls, staged connection modal, modal
+  cinematic selector, and HUD-anchored in-game Help overlay. Preserve the
+  modern realm/mod-negotiation architecture behind those familiar presentation
+  states. See
+  [legacy front-end and Help reference notes](docs/research/LEGACY_FRONTEND_AND_HELP_REFERENCE_NOTES.md).
 
 ### M17 execution checkpoints
 
