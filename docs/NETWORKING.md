@@ -101,10 +101,20 @@ configuration, and additionally pins the leaf certificate to the realm's
 server admission session/runtime and decodes exactly `ClientView/v1`. Reconnect
 rotates the session credential and atomically replaces the correction view;
 command submission, refresh, reconnect, and close serialize credential access.
-Authenticated refresh currently carries a complete bounded view over a reliable
-QUIC stream, from which the client derives `WorldDelta/v1`. This is the
-correctness baseline before long-lived streams or compact lossy datagrams;
-correctness and removals never depend on a datagram.
+Corrections are monotonic: the client rejects an older tick and rejects a
+different checksum for an already-installed tick.
+
+Authenticated refresh carries a complete bounded view over a reliable QUIC
+stream, from which the client derives `WorldDelta/v1`. A long-lived correction
+stream sends an immediate view and then changed views at no more than 2 Hz. Its
+one-element application channel deliberately propagates a slow consumer back
+to QUIC flow control instead of building an unbounded queue. Each membership
+has independent token buckets allowing a burst of 32 commands at a sustained
+16 commands/second and a burst of 4 correction requests at 2 requests/second.
+Reconnect preserves those budgets so credential rotation cannot reset them.
+Wire requests have one strict operation-specific shape and reject ambiguous
+fields. These reliable paths remain the correctness baseline before compact
+lossy datagrams; correctness and removals never depend on a datagram.
 
 ## Join-time mod acquisition
 

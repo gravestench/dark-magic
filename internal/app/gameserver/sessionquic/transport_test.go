@@ -89,6 +89,22 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if _, err := client.Refresh(ctx, joined.Credential); err != nil {
 		t.Fatal(err)
 	}
+	watchContext, cancelWatch := context.WithCancel(ctx)
+	snapshots, watchErrors, err := client.Watch(watchContext, joined.Credential)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case snapshot := <-snapshots:
+		if snapshot.Version != gameserver.SessionProtocolVersion {
+			t.Fatalf("watch snapshot = %#v", snapshot)
+		}
+	case err := <-watchErrors:
+		t.Fatalf("watch error = %v", err)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	cancelWatch()
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
@@ -129,6 +145,17 @@ func TestFramesRejectOversizeAndUnknownFields(t *testing.T) {
 	trailing.Write(data)
 	if err := readFrame(&trailing, &request{}); err == nil {
 		t.Fatal("trailing message was accepted")
+	}
+}
+
+func TestWireOperationsRejectAmbiguousShapes(t *testing.T) {
+	server := &Server{}
+	result := server.dispatch(context.Background(), request{Operation: operationLeave, Credential: "credential", Command: &gameserver.CommandIntent{}})
+	if result.Error != ErrWire.Error() {
+		t.Fatalf("ambiguous result = %#v", result)
+	}
+	if validShape(request{Operation: operationSubmit, Command: &gameserver.CommandIntent{}}) {
+		t.Fatal("submit without credential was accepted")
 	}
 }
 

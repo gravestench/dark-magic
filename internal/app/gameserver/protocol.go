@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -19,6 +20,14 @@ const SessionProtocolVersion uint32 = 1
 var (
 	ErrAuthentication = errors.New("game server protocol: authentication failed")
 	ErrProtocol       = errors.New("game server protocol: unsupported version")
+	ErrRateLimit      = errors.New("game server protocol: rate limit exceeded")
+)
+
+const (
+	commandBurst = 32
+	commandRate  = 16.0
+	refreshBurst = 4
+	refreshRate  = 2.0
 )
 
 // Principal is the trusted result of authentication. PlayerID is the stable
@@ -80,6 +89,13 @@ type CommandIntent struct {
 type connection struct {
 	principal Principal
 	admission gamesession.AdmissionToken
+	commands  tokenBucket
+	refreshes tokenBucket
+}
+
+type tokenBucket struct {
+	tokens, capacity, rate float64
+	updated                time.Time
 }
 
 // Endpoint is the transport-neutral authenticated boundary around one Host.
@@ -90,13 +106,14 @@ type Endpoint struct {
 	auth        Authenticator
 	project     SnapshotProjector
 	connections map[string]connection
+	now         func() time.Time
 }
 
 func NewEndpoint(host *Host, auth Authenticator, project SnapshotProjector) (*Endpoint, error) {
 	if host == nil || host.Session == nil || auth == nil || project == nil {
 		return nil, errors.New("game server protocol: host, authenticator, and projector are required")
 	}
-	return &Endpoint{host: host, auth: auth, project: project, connections: make(map[string]connection)}, nil
+	return &Endpoint{host: host, auth: auth, project: project, connections: make(map[string]connection), now: time.Now}, nil
 }
 
 func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinResponse, error) {
@@ -119,7 +136,9 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 		return JoinResponse{}, fmt.Errorf("game server protocol: create credential: %w", err)
 	}
 	endpoint.mu.Lock()
-	endpoint.connections[string(credential)] = connection{principal: principal, admission: admission}
+	now := endpoint.now()
+	endpoint.connections[string(credential)] = connection{principal: principal, admission: admission,
+		commands: newTokenBucket(commandBurst, commandRate, now), refreshes: newTokenBucket(refreshBurst, refreshRate, now)}
 	endpoint.mu.Unlock()
 	snapshot, err := endpoint.snapshot(principal.PlayerID)
 	if err != nil {
@@ -132,7 +151,7 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 }
 
 func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandIntent) error {
-	member, err := endpoint.connection(credential)
+	member, err := endpoint.consume(credential, false)
 	if err != nil {
 		return err
 	}
@@ -144,11 +163,46 @@ func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandInt
 
 // Refresh returns the latest canonical per-player correction projection.
 func (endpoint *Endpoint) Refresh(credential SessionCredential) (Snapshot, error) {
-	member, err := endpoint.connection(credential)
+	member, err := endpoint.consume(credential, true)
 	if err != nil {
 		return Snapshot{}, err
 	}
 	return endpoint.snapshot(member.principal.PlayerID)
+}
+
+func (endpoint *Endpoint) consume(credential SessionCredential, refresh bool) (connection, error) {
+	endpoint.mu.Lock()
+	defer endpoint.mu.Unlock()
+	member, found := endpoint.connections[string(credential)]
+	if !found || credential == "" {
+		return connection{}, ErrAuthentication
+	}
+	bucket := &member.commands
+	if refresh {
+		bucket = &member.refreshes
+	}
+	if !bucket.take(endpoint.now()) {
+		return connection{}, ErrRateLimit
+	}
+	endpoint.connections[string(credential)] = member
+	return member, nil
+}
+
+func newTokenBucket(capacity, rate float64, now time.Time) tokenBucket {
+	return tokenBucket{tokens: capacity, capacity: capacity, rate: rate, updated: now}
+}
+
+func (bucket *tokenBucket) take(now time.Time) bool {
+	if now.Before(bucket.updated) {
+		now = bucket.updated
+	}
+	bucket.tokens = min(bucket.capacity, bucket.tokens+now.Sub(bucket.updated).Seconds()*bucket.rate)
+	bucket.updated = now
+	if bucket.tokens < 1 {
+		return false
+	}
+	bucket.tokens--
+	return true
 }
 
 // Leave revokes a connection credential. Character lease release and durable
@@ -186,6 +240,10 @@ func (endpoint *Endpoint) Reconnect(request ReconnectRequest) (JoinResponse, err
 	if current, found := endpoint.connections[string(request.Credential)]; !found || current.principal.ID != member.principal.ID {
 		endpoint.mu.Unlock()
 		return JoinResponse{}, ErrAuthentication
+	} else {
+		// Transfer the state observed while holding the lock. A concurrent
+		// request may have consumed capacity since connection() returned.
+		member = current
 	}
 	delete(endpoint.connections, string(request.Credential))
 	endpoint.connections[string(credential)] = member

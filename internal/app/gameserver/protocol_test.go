@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
+	"time"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -159,6 +161,98 @@ func TestEndpointRejectsTicketPinnedToAnotherRuntime(t *testing.T) {
 	}
 	if _, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity}); !errors.Is(err, ErrAuthentication) {
 		t.Fatalf("runtime-bound ticket error = %v", err)
+	}
+}
+
+func TestEndpointRateLimitsPerMembershipAndRefills(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionNone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Unix(100, 0)
+	endpoint.now = func() time.Time { return now }
+	joined, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range refreshBurst {
+		if _, err := endpoint.Refresh(joined.Credential); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := endpoint.Refresh(joined.Credential); !errors.Is(err, ErrRateLimit) {
+		t.Fatalf("rate error = %v", err)
+	}
+	rotated, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := endpoint.Refresh(rotated.Credential); !errors.Is(err, ErrRateLimit) {
+		t.Fatalf("rotated credential reset rate budget: %v", err)
+	}
+	now = now.Add(time.Second)
+	for range int(refreshRate) {
+		if _, err := endpoint.Refresh(rotated.Credential); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := endpoint.Refresh(rotated.Credential); !errors.Is(err, ErrRateLimit) {
+		t.Fatalf("refill rate error = %v", err)
+	}
+}
+
+func TestEndpointRateLimitIsRaceSafeUnderBurst(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionNone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation}, testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}}, func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint.now = func() time.Time { return time.Unix(100, 0) }
+	joined, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wait sync.WaitGroup
+	results := make(chan error, 64)
+	for range 64 {
+		wait.Add(1)
+		go func() { defer wait.Done(); _, err := endpoint.Refresh(joined.Credential); results <- err }()
+	}
+	wait.Wait()
+	close(results)
+	accepted := 0
+	for err := range results {
+		if err == nil {
+			accepted++
+		} else if !errors.Is(err, ErrRateLimit) {
+			t.Fatal(err)
+		}
+	}
+	if accepted != refreshBurst {
+		t.Fatalf("accepted %d refreshes, want %d", accepted, refreshBurst)
 	}
 }
 

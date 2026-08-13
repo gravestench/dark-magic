@@ -24,6 +24,7 @@ import (
 )
 
 var ErrAssignment = errors.New("client session: invalid realm assignment")
+var ErrStaleCorrection = errors.New("client session: stale or conflicting correction")
 
 type Session struct {
 	mu         sync.Mutex
@@ -126,13 +127,82 @@ func (session *Session) Refresh(ctx context.Context) (playeradapter.WorldDelta, 
 	if err != nil {
 		return playeradapter.WorldDelta{}, err
 	}
+	return session.applyCorrection(snapshot)
+}
+
+// Watch streams reliable canonical corrections until cancellation. Only one
+// correction is buffered, so a slow consumer propagates backpressure.
+func (session *Session) Watch(ctx context.Context) (<-chan playeradapter.WorldDelta, <-chan error, error) {
+	session.mu.Lock()
+	if session.closed {
+		session.mu.Unlock()
+		return nil, nil, errors.New("client session: closed")
+	}
+	snapshots, transportErrors, err := session.transport.Watch(ctx, session.credential)
+	session.mu.Unlock()
+	if err != nil {
+		return nil, nil, err
+	}
+	deltas := make(chan playeradapter.WorldDelta, 1)
+	errorsOut := make(chan error, 1)
+	go func() {
+		defer close(deltas)
+		defer close(errorsOut)
+		for snapshots != nil || transportErrors != nil {
+			select {
+			case snapshot, open := <-snapshots:
+				if !open {
+					snapshots = nil
+					continue
+				}
+				session.mu.Lock()
+				delta, applyErr := session.applyCorrection(snapshot)
+				session.mu.Unlock()
+				if applyErr != nil {
+					errorsOut <- applyErr
+					return
+				}
+				select {
+				case deltas <- delta:
+				case <-ctx.Done():
+					return
+				}
+			case streamErr, open := <-transportErrors:
+				if !open {
+					transportErrors = nil
+					continue
+				}
+				if streamErr != nil {
+					errorsOut <- streamErr
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return deltas, errorsOut, nil
+}
+
+// applyCorrection requires session.mu.
+func (session *Session) applyCorrection(snapshot gameserver.Snapshot) (playeradapter.WorldDelta, error) {
 	view, err := decodeView(snapshot)
 	if err != nil {
+		return playeradapter.WorldDelta{}, err
+	}
+	if err := validateCorrection(session.Admission.Snapshot, snapshot); err != nil {
 		return playeradapter.WorldDelta{}, err
 	}
 	delta := playeradapter.DiffWorldView(session.World, view.World)
 	session.Admission.Snapshot, session.HUD, session.World = snapshot, view.HUD, view.World
 	return delta, nil
+}
+
+func validateCorrection(previous, next gameserver.Snapshot) error {
+	if next.Tick < previous.Tick || (next.Tick == previous.Tick && next.Checksum != previous.Checksum) {
+		return ErrStaleCorrection
+	}
+	return nil
 }
 
 func (session *Session) Close(ctx context.Context) error {
