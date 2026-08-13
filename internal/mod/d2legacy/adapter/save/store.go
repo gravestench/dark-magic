@@ -12,36 +12,46 @@ import (
 // in account ownership, revision, compatibility, and lease checks; copying this
 // value never grants authority to update an account-owned realm character.
 type Character struct {
-	ID         string
-	Name       string
-	Class      string
-	Level      int
-	Expansion  bool
-	Hardcore   bool
-	Appearance *Appearance
-	Stats      *Stats
+	ID         string      `json:"id"`
+	Name       string      `json:"name"`
+	Class      string      `json:"class"`
+	Level      int         `json:"level"`
+	Expansion  bool        `json:"expansion"`
+	Hardcore   bool        `json:"hardcore"`
+	Appearance *Appearance `json:"appearance,omitempty"`
+	Stats      *Stats      `json:"stats,omitempty"`
 }
 
 // Stats is an immutable character-sheet snapshot. Authoritative simulation and
 // save importers replace it as values change; Lua receives copies for display.
 type Stats struct {
-	Experience, NextLevelExperience       int
-	Strength, Dexterity, Vitality, Energy int
-	Defense                               int
-	Health, MaxHealth, Mana, MaxMana      int
-	Stamina, MaxStamina                   int
-	FireResistance, ColdResistance        int
-	LightningResistance, PoisonResistance int
+	Experience          int `json:"experience"`
+	NextLevelExperience int `json:"next_level_experience"`
+	Strength            int `json:"strength"`
+	Dexterity           int `json:"dexterity"`
+	Vitality            int `json:"vitality"`
+	Energy              int `json:"energy"`
+	Defense             int `json:"defense"`
+	Health              int `json:"health"`
+	MaxHealth           int `json:"max_health"`
+	Mana                int `json:"mana"`
+	MaxMana             int `json:"max_mana"`
+	Stamina             int `json:"stamina"`
+	MaxStamina          int `json:"max_stamina"`
+	FireResistance      int `json:"fire_resistance"`
+	ColdResistance      int `json:"cold_resistance"`
+	LightningResistance int `json:"lightning_resistance"`
+	PoisonResistance    int `json:"poison_resistance"`
 }
 
 // Appearance is an immutable rendering snapshot decoded from a character save.
 // Asset resolution belongs to the save importer; the store carries only the
 // authoritative COF and DCC paths needed by presentation code.
 type Appearance struct {
-	COF        string
-	Palette    string
-	Direction  int
-	Components map[string]string
+	COF        string            `json:"cof"`
+	Palette    string            `json:"palette"`
+	Direction  int               `json:"direction"`
+	Components map[string]string `json:"components,omitempty"`
 }
 
 func (s *Store) Create(character Character) error {

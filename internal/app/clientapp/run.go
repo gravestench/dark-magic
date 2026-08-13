@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
 // Run builds one client, lets it run, and then takes it apart in reverse.
@@ -85,6 +87,9 @@ func (app *application) shutdown() error {
 	app.stopOverlay()
 
 	var err error
+	if app.saves != nil && app.playerProfilePath != "" {
+		err = errors.Join(err, d2save.WriteProfileFile(app.playerProfilePath, app.saves.Profile()))
+	}
 	if app.capture != nil {
 		err = errors.Join(err, app.capture.Close())
 	}

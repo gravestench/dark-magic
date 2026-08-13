@@ -122,6 +122,14 @@ explicitly player-profile-owned and cannot implement or call this realm
 repository contract, so copying a self-hosted character value does not confer
 trusted realm write authority.
 
+Player-profile persistence uses a separate `Profile/v1` envelope. It bounds a
+profile to 4 MiB and 64 characters, rejects unknown fields, duplicate or absent
+selected identities, unsupported versions, trailing data, oversized input, and
+SHA-256 integrity mismatches. Writes use private `0600` temporary files, sync
+file contents, atomically replace the destination, and sync its directory.
+Decoded rosters, stats, appearance maps, and selection are defensively copied.
+This durability does not change their player-controlled trust classification.
+
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust

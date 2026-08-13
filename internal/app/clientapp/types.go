@@ -49,6 +49,7 @@ type Options struct {
 	StartScene            string
 	StartOverlays         string
 	FixtureCharacters     int
+	PlayerProfilePath     string
 	FixtureWorldLevel     int
 	FixtureWorldSpawn     string
 	FixturePointerMove    bool
@@ -108,6 +109,7 @@ type application struct {
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
 	saves               *d2save.Store
+	playerProfilePath   string
 	entitySimulation    *gameecs.Engine
 	offlineSession      *gamesession.Session
 	authoritativeState  *simulation.StateStore
