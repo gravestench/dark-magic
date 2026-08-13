@@ -46,7 +46,15 @@ func (app *application) loadSettings() error {
 		return wrap("load shell settings", err)
 	}
 	app.gameSettings, err = preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
-	return wrap("load game preferences", err)
+	if err != nil {
+		return wrap("load game preferences", err)
+	}
+	trustDirectory, err := networktrust.Directory(app.gameSettings.Path())
+	if err != nil {
+		return wrap("resolve network trust directory", err)
+	}
+	app.networkTrust, err = networktrust.New(trustDirectory)
+	return wrap("create network trust store", err)
 }
 
 func (app *application) buildPresentationCore() error {
@@ -120,14 +128,6 @@ func (app *application) buildOfflineSession() error {
 		return err
 	}
 	app.network = newNetworkController(app)
-	trustDirectory, err := networktrust.Directory(app.gameSettings.Path())
-	if err != nil {
-		return wrap("resolve network trust directory", err)
-	}
-	app.networkTrust, err = networktrust.New(trustDirectory)
-	if err != nil {
-		return wrap("create network trust store", err)
-	}
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)
