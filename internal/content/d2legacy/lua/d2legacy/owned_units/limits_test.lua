@@ -40,16 +40,16 @@ local function assert_restored_relationships()
         else
             inactive = inactive + 1
         end
-        assert(relation:get("owner_id") == "player:hero")
-        assert(relation:get("warp_with_owner"))
+        test.assert(relation:get("owner_id") == "player:hero", [=[relation:get("owner_id") == "player:hero"]=])
+        test.assert(relation:get("warp_with_owner"), [=[relation:get("warp_with_owner")]=])
     end
-    assert(active == 1 and inactive == 1)
+    test.assert(active == 1 and inactive == 1, [=[active == 1 and inactive == 1]=])
 
     local attribution = require("d2legacy.owned_units.attribution")
     local entities = ecs.query({ all = { "d2legacy.world.selectable" } })
     local credit = attribution.resolve(entities, "monster:skeleton-two")
-    assert(credit.immediate_owner_id == "player:hero")
-    assert(credit.ultimate_owner_id == "player:hero")
+    test.assert(credit.immediate_owner_id == "player:hero", [=[credit.immediate_owner_id == "player:hero"]=])
+    test.assert(credit.ultimate_owner_id == "player:hero", [=[credit.ultimate_owner_id == "player:hero"]=])
 end
 
 local function fake_entity(id)
@@ -85,16 +85,19 @@ local function assert_replacement_policy()
         base_max = 2,
         replacement = "replace_newest",
     })
-    assert(#victims == 2)
-    assert(victims[1].entity:id() == 7 and victims[2].entity:id() == 9)
-    assert(not pcall(function()
+    test.assert(#victims == 2, [=[#victims == 2]=])
+    test.assert(
+        victims[1].entity:id() == 7 and victims[2].entity:id() == 9,
+        [=[victims[1].entity:id() == 7 and victims[2].entity:id() == 9]=]
+    )
+    test.assert(not pcall(function()
         limits.victims(candidates, {
             id = "skeleton",
             group = 1,
             base_max = 1,
             replacement = "reject",
         })
-    end))
+    end), "reject replacement policy accepted an over-limit unit")
 end
 
 local function assert_owned_unit_policy()
@@ -103,31 +106,28 @@ local function assert_owned_unit_policy()
 end
 
 return test.suite({
-    profile = "policy",
+    profile = "authority",
     tier = "fast",
-    tests = {
-        limits_attribution_and_restore_are_authoritative = {
+    covers = { "internal/game/ownedunit" },
+    cases = {
+        test.case("limits_attribution_and_restore_are_authoritative", {
             { run = create_actors },
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.owned_unit.attach",
-                    payload = attach_payload("monster:skeleton-one"),
-                },
-            },
-            { step = 1 },
-            {
-                submit_system = {
-                    tick = 2,
-                    sequence = 2,
-                    kind = "system.owned_unit.attach",
-                    payload = attach_payload("monster:skeleton-two"),
-                },
-            },
-            { step = 1 },
-            { checkpoint_restore = true },
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.owned_unit.attach",
+                payload = attach_payload("monster:skeleton-one"),
+            }),
+            test.step(1),
+            test.submit_system({
+                tick = 2,
+                sequence = 2,
+                kind = "system.owned_unit.attach",
+                payload = attach_payload("monster:skeleton-two"),
+            }),
+            test.step(1),
+            test.restore_checkpoint(),
             { run = assert_owned_unit_policy },
-        },
+        }),
     },
 })

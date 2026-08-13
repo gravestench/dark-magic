@@ -5,7 +5,9 @@ local palette = "data/global/Palette/units/pal.dat"
 local function install_render_fixture()
     package.loaded["engine.render/v1"] = {
         cof_info = function(path)
-            assert(path == "data/global/chars/AM/COF/AMWLHTH.cof" or path == "data/global/chars/AM/COF/AMWL1HS.cof")
+            test.assert(
+                path == "data/global/chars/AM/COF/AMWLHTH.cof" or path == "data/global/chars/AM/COF/AMWL1HS.cof"
+            )
             return {
                 directions = 16,
                 layers = {
@@ -20,7 +22,7 @@ local function install_render_fixture()
                 or path == "data/global/chars/AM/RA/AMRALITWLHTH.dcc"
         end,
         animdata_info = function(key)
-            assert(key == "AMWLHTH" or key == "AMWL1HS")
+            test.assert(key == "AMWLHTH" or key == "AMWL1HS", [=[key == "AMWLHTH" or key == "AMWL1HS"]=])
             return { speed = 333, frames = 8, events = {} }
         end,
     }
@@ -38,13 +40,28 @@ end
 
 local function assert_unarmed_recipe(adapter)
     local composite = adapter.unarmed(player_recipe(3))
-    assert(string.sub(composite.key, 1, 12) == "AM:WL:HTH:14")
-    assert(composite.direction == 14 and composite.dcc_direction == 3)
-    assert(composite.components.HD == "data/global/chars/AM/HD/AMHDLITWL1HT.dcc")
-    assert(composite.components.RA == "data/global/chars/AM/RA/AMRALITWLHTH.dcc")
-    assert(composite.components.RH == nil)
-    assert(composite.rate == 333 and composite.frames == 8)
-    assert(adapter.unarmed(player_recipe(15)).direction == 15)
+    test.assert(
+        string.sub(composite.key, 1, 12) == "AM:WL:HTH:14",
+        [=[string.sub(composite.key, 1, 12) == "AM:WL:HTH:14"]=]
+    )
+    test.assert(
+        composite.direction == 14 and composite.dcc_direction == 3,
+        [=[composite.direction == 14 and composite.dcc_direction == 3]=]
+    )
+    test.assert(
+        composite.components.HD == "data/global/chars/AM/HD/AMHDLITWL1HT.dcc",
+        [=[composite.components.HD == "data/global/chars/AM/HD/AMHDLITWL1HT.dcc"]=]
+    )
+    test.assert(
+        composite.components.RA == "data/global/chars/AM/RA/AMRALITWLHTH.dcc",
+        [=[composite.components.RA == "data/global/chars/AM/RA/AMRALITWLHTH.dcc"]=]
+    )
+    test.assert(composite.components.RH == nil, [=[composite.components.RH == nil]=])
+    test.assert(composite.rate == 333 and composite.frames == 8, [=[composite.rate == 333 and composite.frames == 8]=])
+    test.assert(
+        adapter.unarmed(player_recipe(15)).direction == 15,
+        [=[adapter.unarmed(player_recipe(15)).direction == 15]=]
+    )
 end
 
 local function assert_equipped_recipe(adapter)
@@ -61,8 +78,14 @@ local function assert_equipped_recipe(adapter)
         },
     }
     local equipped = adapter.resolve(player_recipe(3), equipment)
-    assert(equipped.cof == "data/global/chars/AM/COF/AMWL1HS.cof")
-    assert(equipped.components.RH == "data/global/chars/AM/RH/AMRHSSDWLHTH.dcc")
+    test.assert(
+        equipped.cof == "data/global/chars/AM/COF/AMWL1HS.cof",
+        [=[equipped.cof == "data/global/chars/AM/COF/AMWL1HS.cof"]=]
+    )
+    test.assert(
+        equipped.components.RH == "data/global/chars/AM/RH/AMRHSSDWLHTH.dcc",
+        [=[equipped.components.RH == "data/global/chars/AM/RH/AMRHSSDWLHTH.dcc"]=]
+    )
 end
 
 local function assert_playback_events(adapter)
@@ -74,9 +97,9 @@ local function assert_playback_events(adapter)
         mode = "A",
     }
     local crossed = adapter.advance(playback, animation, 0.09)
-    assert(playback.frame == 3)
-    assert(#crossed == 2)
-    assert(crossed[1].event == 1 and crossed[2].event == 3)
+    test.assert(playback.frame == 3, [=[playback.frame == 3]=])
+    test.assert(#crossed == 2, [=[#crossed == 2]=])
+    test.assert(crossed[1].event == 1 and crossed[2].event == 3, [=[crossed[1].event == 1 and crossed[2].event == 3]=])
 end
 
 local function resolves_cof_layer_weapon_classes()
@@ -88,11 +111,11 @@ local function resolves_cof_layer_weapon_classes()
 end
 
 return test.suite({
-    profile = "presentation",
+    profile = "module",
     tier = "fast",
-    tests = {
-        resolves_cof_layer_weapon_classes = {
+    cases = {
+        test.case("resolves_cof_layer_weapon_classes", {
             { run = resolves_cof_layer_weapon_classes },
-        },
+        }),
     },
 })

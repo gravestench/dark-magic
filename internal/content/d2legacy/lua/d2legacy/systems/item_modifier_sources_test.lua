@@ -114,9 +114,7 @@ end
 local function collect_sources()
     local ecs = require("engine.ecs/v1")
     local sources = {}
-    for _, entity in
-        ipairs(test.entities_with("d2legacy.stat.source"))
-    do
+    for _, entity in ipairs(test.entities_with("d2legacy.stat.source")) do
         local source = ecs.get(entity, "d2legacy.stat.source")
         sources[source:get("source_id")] = source:get("value")
     end
@@ -138,68 +136,28 @@ end
 local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:attack:weapon", 900)
     expect_source(sources, "equipment:defense:armor", 40)
-    expect_source(
-        sources,
-        "equipment:modifier:attack_rating:weapon:affix:10:precision",
-        75
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:attack_rating:weapon:socket:20:socket-rune",
-        25
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:affix:10:sturdy",
-        7
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:socket:20:socket-jewel",
-        3
-    )
+    expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
+    expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
+    expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", 7)
+    expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", 3)
 end
 
 -- After unequipping the weapon only, the weapon's sources should vanish
 -- while the armor's sources should remain untouched.
 local function assert_unequipped_weapon_sources(sources)
     expect_source(sources, "equipment:attack:weapon", nil)
-    expect_source(
-        sources,
-        "equipment:modifier:attack_rating:weapon:affix:10:precision",
-        nil
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:attack_rating:weapon:socket:20:socket-rune",
-        nil
-    )
+    expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", nil)
+    expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", nil)
     expect_source(sources, "equipment:defense:armor", 40)
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:affix:10:sturdy",
-        7
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:socket:20:socket-jewel",
-        3
-    )
+    expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", 7)
+    expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", 3)
 end
 
 -- After unequipping the armor, its sources should vanish too.
 local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:defense:armor", nil)
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:affix:10:sturdy",
-        nil
-    )
-    expect_source(
-        sources,
-        "equipment:modifier:defense:armor:socket:20:socket-jewel",
-        nil
-    )
+    expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
+    expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", nil)
 end
 
 -- Move an item from one container to another.
@@ -223,78 +181,40 @@ return test.suite({
     initial_data = {
         ["d2legacy.items"] = initial_items(),
     },
-    tests = {
-        equipped_modifier_sources_preserve_provenance_and_remove_on_unequip = {
+    cases = {
+        test.case("equipped_modifier_sources_preserve_provenance_and_remove_on_unequip", {
             -- Create Alice as a fresh Amazon so equipment rules can project stats.
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.player.enter",
-                    payload = fixtures.player_entry(),
-                },
-            },
-            { step = 1 },
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry(),
+            }),
+            test.step(1),
             -- Pick up the weapon so it can be equipped into a hand slot.
-            {
-                submit = move_item(2, 1, "weapon", { container = "held" }),
-            },
-            { step = 1 },
+            test.submit(move_item(2, 1, "weapon", { container = "held" })),
+            test.step(1),
             -- Equip the weapon into the right-arm slot.
-            {
-                submit = move_item(
-                    3,
-                    2,
-                    "weapon",
-                    { container = "equipment", slot = "rarm", weapon_set = 0 }
-                ),
-            },
-            { step = 1 },
+            test.submit(move_item(3, 2, "weapon", { container = "equipment", slot = "rarm", weapon_set = 0 })),
+            test.step(1),
             -- Equip the armor into the head slot.
-            {
-                submit = move_item(
-                    4,
-                    3,
-                    "armor",
-                    { container = "equipment", slot = "head", weapon_set = 0 }
-                ),
-            },
-            { step = 1 },
-            {
-                run = function()
-                    assert_equipped_sources(collect_sources())
-                end,
-            },
+            test.submit(move_item(4, 3, "armor", { container = "equipment", slot = "head", weapon_set = 0 })),
+            test.step(1),
+            test.run(function()
+                assert_equipped_sources(collect_sources())
+            end),
             -- Unequip the weapon back into inventory.
-            {
-                submit = move_item(
-                    5,
-                    4,
-                    "weapon",
-                    { container = "inventory", x = 2, y = 0 }
-                ),
-            },
-            { step = 2 },
-            {
-                run = function()
-                    assert_unequipped_weapon_sources(collect_sources())
-                end,
-            },
+            test.submit(move_item(5, 4, "weapon", { container = "inventory", x = 2, y = 0 })),
+            test.step(2),
+            test.run(function()
+                assert_unequipped_weapon_sources(collect_sources())
+            end),
             -- Unequip the armor back into inventory.
-            {
-                submit = move_item(
-                    7,
-                    5,
-                    "armor",
-                    { container = "inventory", x = 4, y = 0 }
-                ),
-            },
-            { step = 2 },
-            {
-                run = function()
-                    assert_unequipped_armor_sources(collect_sources())
-                end,
-            },
-        },
+            test.submit(move_item(7, 5, "armor", { container = "inventory", x = 4, y = 0 })),
+            test.step(2),
+            test.run(function()
+                assert_unequipped_armor_sources(collect_sources())
+            end),
+        }),
     },
 })

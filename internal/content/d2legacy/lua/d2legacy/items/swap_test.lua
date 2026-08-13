@@ -24,37 +24,36 @@ return test.suite({
         },
         ["d2legacy.interactions"] = { owner = "alice" },
     },
-    tests = {
-        held_item_swaps_with_occupied_destination = {
-            {
-                submit = {
-                    tick = 1,
-                    sequence = 1,
-                    player = "alice",
-                    kind = "item.move",
-                    payload = {
-                        item_id = "held",
-                        place_held = true,
-                        destination = { container = "inventory", x = 1, y = 1 },
-                    },
+    cases = {
+        test.case("held_item_swaps_with_occupied_destination", {
+            test.submit({
+                tick = 1,
+                sequence = 1,
+                player = "alice",
+                kind = "item.move",
+                payload = {
+                    item_id = "held",
+                    place_held = true,
+                    destination = { container = "inventory", x = 1, y = 1 },
                 },
-            },
-            { step = 1 },
-            {
-                run = function()
-                    local ecs = require("engine.ecs/v1")
-                    local found = {}
-                    for _, entity in
-                        ipairs(ecs.query({
-                            all = { "d2legacy.item.identity", "d2legacy.item.placement" },
-                        }))
-                    do
-                        found[ecs.get(entity, "d2legacy.item.identity"):get("id")] =
-                            ecs.get(entity, "d2legacy.item.placement"):get("container")
-                    end
-                    assert(found.held == "inventory" and found.placed == "held")
-                end,
-            },
-        },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local found = {}
+                for _, entity in
+                    ipairs(ecs.query({
+                        all = { "d2legacy.item.identity", "d2legacy.item.placement" },
+                    }))
+                do
+                    found[ecs.get(entity, "d2legacy.item.identity"):get("id")] =
+                        ecs.get(entity, "d2legacy.item.placement"):get("container")
+                end
+                test.assert(
+                    found.held == "inventory" and found.placed == "held",
+                    [=[found.held == "inventory" and found.placed == "held"]=]
+                )
+            end),
+        }),
     },
 })

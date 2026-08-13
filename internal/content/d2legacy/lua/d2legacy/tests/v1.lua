@@ -2,10 +2,8 @@ local M = {}
 
 local valid_profiles = {
     authority = true,
-    policy = true,
-    presentation = true,
-    client = true,
-    real_assets = true,
+    module = true,
+    ecs = true,
 }
 
 local valid_tiers = {
@@ -15,6 +13,24 @@ local valid_tiers = {
     stress = true,
 }
 
+M.generators = {}
+
+function M.generators.integer(minimum, maximum)
+    assert(type(minimum) == "number" and type(maximum) == "number" and minimum <= maximum, "invalid integer range")
+    return function(seed)
+        local value = (seed * 1103515245 + 12345) % 2147483648
+        return minimum + (value % (maximum - minimum + 1))
+    end
+end
+
+function M.generators.one_of(values)
+    assert(type(values) == "table" and #values > 0, "one_of requires at least one value")
+    local index = M.generators.integer(1, #values)
+    return function(seed)
+        return values[index(seed)]
+    end
+end
+
 local array_metatable = { __d2legacy_test_array = true }
 
 function M.array(values)
@@ -23,6 +39,13 @@ end
 
 local function fail(message, level)
     error(message, (level or 1) + 1)
+end
+
+function M.assert(condition, message)
+    if not condition then
+        fail(message or "expectation failed", 2)
+    end
+    return condition
 end
 
 local function describe(value)
@@ -218,11 +241,46 @@ end
 
 function M.case(name, define)
     assert(type(name) == "string" and name ~= "", "case name must be a non-empty string")
-    assert(type(define) == "function", "case definition must be a function")
+    if type(define) == "table" then
+        assert(#define > 0, "case " .. name .. " must contain at least one action")
+        return { name = name, actions = define }
+    end
+    assert(type(define) == "function", "case definition must be a function or action array")
     local builder, actions = action_builder()
     define(builder)
     assert(#actions > 0, "case " .. name .. " must contain at least one action")
     return { name = name, actions = actions }
+end
+
+function M.run(callback)
+    assert(type(callback) == "function", "run callback must be a function")
+    return { run = callback }
+end
+
+function M.step(count)
+    return { step = count or 1 }
+end
+
+function M.update(milliseconds)
+    return { engine_update_ms = milliseconds }
+end
+
+function M.submit(command)
+    assert(type(command) == "table", "submitted command must be a table")
+    return { submit = command }
+end
+
+function M.submit_system(command)
+    assert(type(command) == "table", "submitted system command must be a table")
+    return { submit_system = command }
+end
+
+function M.restore_checkpoint()
+    return { checkpoint_restore = true }
+end
+
+function M.expect_checkpoint_parity(steps)
+    return { checkpoint_parity_steps = steps or 1 }
 end
 
 function M.property(name, options, define)
@@ -231,7 +289,8 @@ function M.property(name, options, define)
     local seeds = options.seeds or { 1, 7, 42, 99 }
     for _, seed in ipairs(seeds) do
         cases[#cases + 1] = M.case(name .. "_seed_" .. seed, function(test)
-            define(test, seed)
+            local value = options.generator and options.generator(seed) or seed
+            define(test, value, seed)
         end)
     end
     return cases
@@ -250,7 +309,8 @@ function M.suite(options)
     assert(valid_profiles[profile], "unknown test profile " .. tostring(profile))
     assert(valid_tiers[tier], "unknown test tier " .. tostring(tier))
 
-    local tests = options.tests or {}
+    assert(options.tests == nil, "tests maps are retired; declare cases with test.case")
+    local tests = {}
     for _, case in ipairs(options.cases or {}) do
         if case.name then
             add_case(tests, case)

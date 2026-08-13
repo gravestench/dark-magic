@@ -92,8 +92,27 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 		if !allowed[fields[2]] {
 			t.Errorf("coverage family %q has unknown status %q", fields[0], fields[2])
 		}
-		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields[1]))); err != nil {
-			t.Errorf("coverage evidence %q is missing: %v", fields[1], err)
+		evidence := strings.SplitN(fields[1], "#", 2)
+		if len(evidence) != 2 || evidence[1] == "" {
+			t.Errorf("coverage family %q must name evidence as path#case-or-test", fields[0])
+			continue
+		}
+		evidencePath := filepath.Join(root, filepath.FromSlash(evidence[0]))
+		data, err := os.ReadFile(evidencePath)
+		if err != nil {
+			t.Errorf("coverage evidence %q is missing: %v", evidence[0], err)
+			continue
+		}
+		text := string(data)
+		expectedDeclaration := "func " + evidence[1] + "("
+		if strings.HasSuffix(evidence[0], ".lua") {
+			expectedDeclaration = `test.case("` + evidence[1] + `"`
+		}
+		if !strings.Contains(text, expectedDeclaration) {
+			t.Errorf("coverage evidence %q does not declare case or test %q", evidence[0], evidence[1])
+		}
+		if strings.HasSuffix(evidence[0], ".lua") && !strings.Contains(text, `"`+fields[0]+`"`) {
+			t.Errorf("Lua evidence %q does not claim coverage family %q", evidence[0], fields[0])
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -163,12 +182,16 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 		if strings.HasSuffix(path, "_test.lua") {
 			for _, required := range []string{
 				`require("d2legacy.tests/v1")`, "return test.suite(", "profile = ", "tier = ",
+				"cases = ", "test.case(",
 			} {
 				if !strings.Contains(text, required) {
 					t.Errorf("%s bypasses the versioned Lua test API; missing %q", relative, required)
 				}
 			}
-			for _, forbidden := range []string{"initial_data_json", "records_json", "payload = [["} {
+			for _, forbidden := range []string{
+				"initial_data_json", "records_json", "payload = [[", "tests = ", "run = function", " assert(",
+				"\n            {\n                submit =", "\n            {\n                submit_system =",
+			} {
 				if strings.Contains(text, forbidden) {
 					t.Errorf("%s uses %q; use structured Lua tables so the harness owns serialization", relative, forbidden)
 				}
@@ -184,25 +207,30 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	goRoot := filepath.Join(root, "internal", "mod", "d2legacy")
-	err = filepath.WalkDir(goRoot, func(path string, entry os.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
-			return err
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		for _, forbidden := range []string{"DoString(", "lua.DoString", "L.DoString"} {
-			if strings.Contains(string(data), forbidden) {
-				relative, _ := filepath.Rel(root, path)
-				t.Errorf("%s embeds Lua through %q; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), forbidden)
+	for _, relativeRoot := range []string{"internal/mod/d2legacy", "internal/acceptance"} {
+		goRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+		err = filepath.WalkDir(goRoot, func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
+				return err
 			}
+			if path == filepath.Join(root, "internal", "acceptance", "gameplay_ownership_test.go") {
+				return nil
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, forbidden := range []string{"DoString(", "lua.DoString", "L.DoString"} {
+				if strings.Contains(string(data), forbidden) {
+					relative, _ := filepath.Rel(root, path)
+					t.Errorf("%s embeds Lua through %q; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), forbidden)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 }
 

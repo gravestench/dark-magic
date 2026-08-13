@@ -60,17 +60,16 @@ end
 -- Assert the three expected lifecycle events appeared for the right participants
 -- and in the correct temporal order: start, impact, completion.
 local function assert_attack_lifecycle_events(events)
-    assert(#events == 3)
+    test.assert(#events == 3, [=[#events == 3]=])
 
     -- Map each event kind to its tick so we can prove ordering.
     local kinds = {}
     local ticks = {}
     for _, entity in ipairs(events) do
-        local event = require("engine.ecs/v1")
-            .get(entity, "d2legacy.combat.attack_animation_event")
+        local event = require("engine.ecs/v1").get(entity, "d2legacy.combat.attack_animation_event")
 
         -- Every lifecycle event should name the same attacker and target.
-        assert(
+        test.assert(
             event:get("attacker_id") == "player:alice"
                 and event:get("target_id") == "monster:event-target"
                 and event:get("skill_id") == 0
@@ -81,20 +80,21 @@ local function assert_attack_lifecycle_events(events)
     end
 
     -- The animation should have started, hit, and finished.
-    assert(kinds.attack_started)
-    assert(kinds.attack_impact)
-    assert(kinds.attack_completed)
+    test.assert(kinds.attack_started, [=[kinds.attack_started]=])
+    test.assert(kinds.attack_impact, [=[kinds.attack_impact]=])
+    test.assert(kinds.attack_completed, [=[kinds.attack_completed]=])
 
     -- Impact must happen after start and before completion.
-    assert(
-        ticks.attack_started < ticks.attack_impact
-            and ticks.attack_impact < ticks.attack_completed
+    test.assert(
+        ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed,
+        [=[ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed]=]
     )
 end
 
 return test.suite({
     profile = "authority",
     tier = "fast",
+    covers = { "internal/game/action", "internal/game/skill" },
     records = {
         -- Minimal skill records so the test can issue a left-skill attack.
         -- The exact IDs match the default player entry fixture's skill slot.
@@ -131,54 +131,46 @@ return test.suite({
             { skilldesc = "firebolt", ListRow = "1", IconCel = "1" },
         },
     },
-    tests = {
+    cases = {
         -- Using the basic left-skill attack should emit a full animation lifecycle.
         -- This proves the player melee system admits the attack, schedules impact,
         -- and completes the animation without extra player input.
-        emits_animation_lifecycle_events = {
+        test.case("emits_animation_lifecycle_events", {
             -- Create the player first so equipment and combat systems can query
             -- authoritative player state during the attack.
-            {
-                submit_system = {
-                    tick = 1,
-                    sequence = 1,
-                    kind = "system.player.enter",
-                    payload = fixtures.amazon_entry,
-                },
-            },
-            { step = 1 },
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
             -- Place a hostile monster in range so the attack can target it.
             -- Without this target, the attack would have no valid opponent.
-            {
-                run = function()
-                    spawn_event_target_monster()
-                end,
-            },
+            test.run(function()
+                spawn_event_target_monster()
+            end),
             -- Issue a left-skill attack toward the monster's exact position.
             -- The payload uses target_x/target_y so the runtime can path to range
             -- before admitting the attack animation.
-            {
-                submit = {
-                    tick = 2,
-                    sequence = 1,
-                    player = "alice",
-                    kind = "player.use_skill",
-                    payload = {
-                        side = "left",
-                        target_x = 12,
-                        target_y = 12,
-                        target_id = "monster:event-target",
-                    },
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.use_skill",
+                payload = {
+                    side = "left",
+                    target_x = 12,
+                    target_y = 12,
+                    target_id = "monster:event-target",
                 },
-            },
+            }),
             -- Advance through enough ticks for approach, attack, and completion.
-            { step = 11 },
-            {
-                run = function()
-                    local events = collect_attack_events()
-                    assert_attack_lifecycle_events(events)
-                end,
-            },
-        },
+            test.step(11),
+            test.run(function()
+                local events = collect_attack_events()
+                assert_attack_lifecycle_events(events)
+            end),
+        }),
     },
 })
