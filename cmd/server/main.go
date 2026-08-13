@@ -18,6 +18,8 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/logging"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
 )
@@ -29,6 +31,14 @@ func main() {
 	tlsCertificate := flag.String("tls-cert", "", "PEM server certificate for QUIC")
 	tlsKey := flag.String("tls-key", "", "PEM private key for QUIC")
 	admissionKey := flag.String("admission-key", "", "file containing the realm-shared admission HMAC key")
+	playerProfile := flag.String("player-profile", "", "player-controlled profile for an explicitly self-hosted character")
+	profilePlayer := flag.String("profile-player", "", "stable player ID for the selected self-hosted profile character")
+	profileX := flag.Float64("profile-x", 0, "authoritative profile-character spawn X")
+	profileY := flag.Float64("profile-y", 0, "authoritative profile-character spawn Y")
+	profileWidth := flag.Float64("profile-world-width", 0, "authoritative profile-character world width")
+	profileHeight := flag.Float64("profile-world-height", 0, "authoritative profile-character world height")
+	profileAct := flag.Int64("profile-act", 0, "authoritative profile-character act")
+	profileLevel := flag.Int64("profile-level", 0, "authoritative profile-character level ID")
 	flag.Parse()
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {
@@ -51,6 +61,24 @@ func main() {
 		return
 	}
 	defer host.Close(context.Background())
+	profilePath, err := darkpaths.ExpandHost(*playerProfile)
+	if err != nil {
+		slog.Error("expanding player profile path", "error", err)
+		return
+	}
+	var profileAdmission serverapp.ProfileAdmission
+	if profilePath != "" {
+		destination, destinationErr := playeradapter.NewDestination(*profileX, *profileY, *profileWidth, *profileHeight, *profileAct, *profileLevel)
+		if destinationErr != nil {
+			slog.Error("validating player-profile destination", "error", destinationErr)
+			return
+		}
+		profileAdmission = serverapp.ProfileAdmission{Path: profilePath, PlayerID: *profilePlayer, Destination: destination}
+		if err := serverapp.AdmitSelectedProfile(host, profileAdmission); err != nil {
+			slog.Error("admitting selected player-profile character", "error", err)
+			return
+		}
+	}
 	quicServer, err := serverapp.StartQUIC(serverapp.QUICConfig{
 		Address: *quicListen, CertificatePath: *tlsCertificate, PrivateKeyPath: *tlsKey,
 		AdmissionKeyPath: *admissionKey, SessionID: *sessionID,
@@ -84,7 +112,8 @@ func main() {
 			transportErr = nil
 		}
 	}
-	if err := errors.Join(shellErr, sessionErr, transportErr); err != nil {
+	profileErr := serverapp.PersistSelectedProfile(host, profileAdmission)
+	if err := errors.Join(shellErr, sessionErr, transportErr, profileErr); err != nil {
 		slog.Error("running standalone server", "error", err)
 		os.Exit(1)
 	}

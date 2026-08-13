@@ -1854,7 +1854,11 @@ authority, persistence separation, and resilience acceptance remain open.
   loads them before local session construction and saves them on clean shutdown.
   Realm commits now project only session-owned fields from the worker's canonical
   checkpoint into its leased baseline and reject identity mismatch before the
-  atomic revisioned commit. Dedicated self-host profile admission remains open.
+  atomic revisioned commit. An explicitly configured self-hosted dedicated
+  server can now admit the selected `Profile/v1` character at a host-owned
+  destination and atomically persist canonical state on clean shutdown without
+  touching realm APIs. Client-uploaded self-host characters and full listen-server
+  network composition remain coupled to the remaining connection flow.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 
