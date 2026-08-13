@@ -1802,6 +1802,12 @@ authority, persistence separation, and resilience acceptance remain open.
   the three process roles directly. Network transports remain the next item.
 - [ ] Implement discovery/direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
+  A versioned transport-neutral endpoint now authenticates join credentials,
+  binds server-owned player identity and authority to client intents, issues
+  and rotates opaque session credentials, projects per-player semantic
+  snapshots with canonical correction checksums, and supports explicit leave.
+  QUIC transport, discovery, delta projection, and loss/latency acceptance
+  remain before this item is complete.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
@@ -1817,7 +1823,10 @@ authority, persistence separation, and resilience acceptance remain open.
   and capability compatibility, payload identities, hashes, sizes, and trust
   policy.
 - [ ] Let clients negotiate, fetch, verify, cache, and activate redistributable
-  realm mod payloads before joining; never serve Blizzard-owned game data.
+  realm mod payloads before joining. Support resumable, content-addressed P2P
+  chunk sources as untrusted mirrors behind signed manifests, bounded
+  quarantine, full hash verification, atomic cache promotion, revocation, and
+  eviction policy; never serve Blizzard-owned game data, saves, or credentials.
 - [ ] Persist realm-owned characters, items, progression, social/account records,
   and session handoff state through transactional versioned storage contracts.
 - [ ] Ensure authoritative sessions validate commands and commit character state;

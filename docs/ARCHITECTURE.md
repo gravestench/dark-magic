@@ -124,6 +124,9 @@ The Go engine owns reusable mechanisms:
 - capability enforcement, quotas, cancellation, and native resource lifetime
   management.
 
+The transport split, authenticated game-session boundary, and verified P2P mod
+cache are specified in [NETWORKING.md](NETWORKING.md).
+
 The first-party `d2legacy` Lua mod owns Diablo II policy:
 
 - combat formulas, damage policy, hit resolution, and death consequences;
