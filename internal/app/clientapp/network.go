@@ -61,11 +61,13 @@ func (controller *networkController) StartSelected() error {
 	if controller.phase != "selecting" || (controller.mode != "host" && controller.mode != "join") {
 		return controller.rejectLocked(controller.mode, errors.New("no network operation is awaiting character selection"))
 	}
-	if _, selected := controller.app.saves.Selected(); !selected {
+	character, selected := controller.app.saves.Selected()
+	if !selected {
 		return controller.rejectLocked(controller.mode, errors.New("select a character before continuing"))
 	}
 	controller.phase, controller.failure = "starting", ""
-	slog.Debug("network operation starting", "mode", controller.mode, "address", controller.address)
+	slog.Debug("network operation starting", "mode", controller.mode, "address", controller.address,
+		"character_id", character.ID, "character_name", character.Name, "character_class", character.Class)
 	if controller.mode == "host" {
 		go controller.startHost()
 	} else {

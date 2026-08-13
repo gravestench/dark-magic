@@ -564,8 +564,7 @@ return {
                         return
                     end
 
-                    -- Select newly created save by opaque ID, then transition into loading.
-                    assert(saves.select(id))
+                    -- create_named atomically persists and selects the new opaque ID.
                     if network_flow.start_selected() then
                         scenes.replace("game_loading")
                     end

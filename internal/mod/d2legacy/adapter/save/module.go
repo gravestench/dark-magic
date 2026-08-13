@@ -9,11 +9,12 @@ import (
 // persistence internals or mutable Go objects to Lua.
 func Module(store *Store) modruntime.Module {
 	return modruntime.Module{Name: "d2legacy.save_store/v1", Help: modruntime.ModuleHelp{Summary: "Persist already-validated d2legacy character records.", Commands: map[string]modruntime.CommandHelp{
-		"create":     {Usage: "d2legacy.save_store.create(record)", Summary: "Persist an already-validated character record."},
-		"characters": {Usage: "d2legacy.save.characters()", Summary: "Return all available character summaries."},
-		"select":     {Usage: "d2legacy.save.select(id)", Summary: "Select the active character by identifier."},
-		"delete":     {Usage: "d2legacy.save.delete(id)", Summary: "Delete a character by identifier."},
-		"selected":   {Usage: "d2legacy.save.selected()", Summary: "Return the currently selected character, if any."},
+		"create":          {Usage: "d2legacy.save_store.create(record)", Summary: "Persist an already-validated character record."},
+		"create_selected": {Usage: "d2legacy.save_store.create_selected(record)", Summary: "Atomically persist and select an already-validated character record."},
+		"characters":      {Usage: "d2legacy.save.characters()", Summary: "Return all available character summaries."},
+		"select":          {Usage: "d2legacy.save.select(id)", Summary: "Select the active character by identifier."},
+		"delete":          {Usage: "d2legacy.save.delete(id)", Summary: "Delete a character by identifier."},
+		"selected":        {Usage: "d2legacy.save.selected()", Summary: "Return the currently selected character, if any."},
 	}}, Loader: func(state *lua.LState) int {
 		characterTable := func(character Character) *lua.LTable {
 			entry := state.NewTable()
@@ -56,13 +57,20 @@ func Module(store *Store) modruntime.Module {
 			return entry
 		}
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"create_selected": func(state *lua.LState) int {
+				record := state.CheckTable(1)
+				character := characterFromTable(record)
+				if err := store.CreateSelected(character); err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				state.Push(lua.LString(character.ID))
+				return 1
+			},
 			"create": func(state *lua.LState) int {
 				record := state.CheckTable(1)
-				character := Character{
-					ID: string(record.RawGetString("id").(lua.LString)), Name: string(record.RawGetString("name").(lua.LString)),
-					Class: string(record.RawGetString("class").(lua.LString)), Level: int(lua.LVAsNumber(record.RawGetString("level"))),
-					Expansion: lua.LVAsBool(record.RawGetString("expansion")), Hardcore: lua.LVAsBool(record.RawGetString("hardcore")),
-				}
+				character := characterFromTable(record)
 				err := store.Create(character)
 				if err != nil {
 					state.Push(lua.LNil)
@@ -112,4 +120,12 @@ func Module(store *Store) modruntime.Module {
 		state.Push(module)
 		return 1
 	}}
+}
+
+func characterFromTable(record *lua.LTable) Character {
+	return Character{
+		ID: string(record.RawGetString("id").(lua.LString)), Name: string(record.RawGetString("name").(lua.LString)),
+		Class: string(record.RawGetString("class").(lua.LString)), Level: int(lua.LVAsNumber(record.RawGetString("level"))),
+		Expansion: lua.LVAsBool(record.RawGetString("expansion")), Hardcore: lua.LVAsBool(record.RawGetString("hardcore")),
+	}
 }
