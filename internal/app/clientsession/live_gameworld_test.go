@@ -128,7 +128,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		}
 		_, firstWorld := connected.View()
 		if peer, found := findWorldEntity(firstWorld.Entities, "player:alice-2", "player"); found {
-			if peer.Owner != "alice-2" || peer.Class != "Barbarian" || peer.Token != "BA" || peer.Position.X != 12 || peer.Position.Y != 10 {
+			if peer.Owner != "alice-2" || peer.Class != "Barbarian" || peer.Token != "BA" || peer.Position.X != 18 || peer.Position.Y != 10 {
 				t.Fatalf("second player projection = %#v", peer)
 			}
 			break

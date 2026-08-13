@@ -2,6 +2,7 @@ package serverapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -63,6 +64,16 @@ func TestRemoteProfileAdmissionAuthenticatesQueuesAndIssuesOneUseTicket(t *testi
 	replay, err := session.Replay()
 	if err != nil || len(replay.Commands) != 2 || replay.Commands[0].Player != "self-host:remote-profile" {
 		t.Fatalf("replay=%#v error=%v", replay, err)
+	}
+	var first, second playeradapter.Entry
+	if err := json.Unmarshal(replay.Commands[0].Payload, &first); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(replay.Commands[1].Payload, &second); err != nil {
+		t.Fatal(err)
+	}
+	if first.X != 10 || second.X != 18 || first.Y != second.Y {
+		t.Fatalf("direct player spawns = (%v,%v), (%v,%v)", first.X, first.Y, second.X, second.Y)
 	}
 }
 

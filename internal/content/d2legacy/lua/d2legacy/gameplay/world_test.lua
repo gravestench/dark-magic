@@ -48,14 +48,14 @@ return test.suite({
                 end
 
                 local compatibility = player("player-2", "Assassin", "AI", 10)
-                player("player-2", "Barbarian", "BA", 12)
+                player("player-2", "Barbarian", "BA", 18)
                 player("player-1", "Assassin", "AI", 10)
 
                 local snapshots = world.player_snapshots("player-2", true, compatibility)
                 test.assert(#snapshots == 2, [=[#snapshots == 2]=])
                 local by_token = {}
                 for _, snapshot in ipairs(snapshots) do by_token[snapshot.token] = snapshot end
-                test.assert(by_token.BA and by_token.BA.x == 12, [=[by_token.BA and by_token.BA.x == 12]=])
+                test.assert(by_token.BA and by_token.BA.x == 18, [=[by_token.BA and by_token.BA.x == 18]=])
                 test.assert(by_token.AI and by_token.AI.x == 10, [=[by_token.AI and by_token.AI.x == 10]=])
             end),
         }),

@@ -19,6 +19,12 @@ var ErrRemoteProfileAdmission = errors.New("server: remote player-profile admiss
 
 const maxRemoteProfileAttempts = 8
 
+// directPlayerSpawnSpacing is measured in DS1 subtiles. A two-subtile offset
+// projects to only 16 by 8 pixels and leaves full player composites visually
+// superimposed. Eight subtiles keeps a joining party nearby while separating
+// their roughly character-width retained sprites at the initial camera frame.
+const directPlayerSpawnSpacing = 8.0
+
 // RemoteProfileConfig is explicit self-host policy. PlayerID and destination
 // come from the host; neither is accepted from the remote character offer.
 type RemoteProfileConfig struct {
@@ -74,7 +80,7 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 	// Direct/listen players need distinct visible and collision-valid entry
 	// positions. Keep the host-selected anchor authoritative while spreading a
 	// small deterministic row inside world bounds.
-	destination.X = min(destination.X+float64(sequence-1)*2, destination.Width-1)
+	destination.X = min(destination.X+float64(sequence-1)*directPlayerSpawnSpacing, destination.Width-1)
 	principal := gameserver.Principal{ID: fmt.Sprintf("%s-%d", admissions.config.PrincipalID, admissions.sequence), CharacterID: character.ID,
 		PlayerID: fmt.Sprintf("%s-%d", admissions.config.PlayerID, admissions.sequence), RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
 	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
