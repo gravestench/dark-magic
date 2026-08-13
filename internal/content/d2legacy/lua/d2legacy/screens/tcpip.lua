@@ -20,6 +20,7 @@ local button = require("d2legacy.ui.button")
 local cursor = require("d2legacy.ui.cursor")
 local dialog = require("d2legacy.ui.dialog")
 local dc6 = require("d2legacy.ui.dc6")
+local text = require("d2legacy.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 
@@ -38,6 +39,17 @@ return {
         )
 
         self.controls = controls.new()
+        self.status = render.create("hud", self.root)
+        self.status_value = ""
+
+        local function show_status(value)
+            if value == self.status_value then return end
+            self.status_value = value
+            text.set(self.status, "dialog_text", value, 360, "center")
+            self.status:set_position(400, 310)
+        end
+
+        self.show_status = show_status
 
         -- Local helper removes repeated button boilerplate while allowing each
         -- call to provide a completely different semantic activation function.
@@ -51,7 +63,12 @@ return {
 
         add("host", function()
             local network = require("engine.network/v1")
-            network.host()
+            if network.host() then
+                show_status("STARTING LISTEN SERVER...")
+            else
+                local status = network.status()
+                show_status(status.error or "UNABLE TO HOST GAME")
+            end
         end)
 
         add("join", function()
@@ -70,7 +87,11 @@ return {
                     -- Empty input simply leaves intent unchanged.
                     if address ~= "" then
                         local network = require("engine.network/v1")
-                        network.join(address)
+                        if not network.join(address) then
+                            local status = network.status()
+                            show_status(status.error or "UNABLE TO JOIN GAME")
+                            return false
+                        end
                     end
                 end
             )
@@ -81,6 +102,18 @@ return {
 
     update = function(self)
         self.cursor:update()
+
+        local ok, network = pcall(require, "engine.network/v1")
+        if ok then
+            local status = network.status()
+            if status.phase == "starting" then
+                self.show_status("STARTING LISTEN SERVER...")
+            elseif status.phase == "connected" then
+                self.show_status("LISTENING ON " .. tostring(status.address))
+            elseif status.phase == "failed" then
+                self.show_status(status.error or "NETWORK OPERATION FAILED")
+            end
+        end
 
         if self.dialog and self.dialog.open then
             -- Modal owns input while open. Do NOT update underlying screen controls.

@@ -19,22 +19,21 @@ func NetworkModule(controller NetworkController) Module {
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"host": func(state *lua.LState) int {
-				if controller == nil {
-					state.RaiseError("network capability is unavailable")
+				accepted := false
+				if controller != nil {
+					accepted = controller.Host() == nil
 				}
-				if err := controller.Host(); err != nil {
-					state.RaiseError("network host: %v", err)
-				}
-				return 0
+				state.Push(lua.LBool(accepted))
+				return 1
 			},
 			"join": func(state *lua.LState) int {
-				if controller == nil {
-					state.RaiseError("network capability is unavailable")
+				address := state.OptString(1, "")
+				accepted := false
+				if controller != nil {
+					accepted = controller.Join(address) == nil
 				}
-				if err := controller.Join(state.CheckString(1)); err != nil {
-					state.RaiseError("network join: %v", err)
-				}
-				return 0
+				state.Push(lua.LBool(accepted))
+				return 1
 			},
 			"status": func(state *lua.LState) int {
 				if controller == nil {

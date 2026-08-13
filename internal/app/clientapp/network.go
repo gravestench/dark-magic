@@ -45,10 +45,10 @@ func (controller *networkController) Host() error {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 	if controller.phase != "idle" && controller.phase != "failed" {
-		return errors.New("network operation already active")
+		return controller.rejectLocked("host", errors.New("network operation already active"))
 	}
 	if _, selected := controller.app.saves.Selected(); !selected {
-		return errors.New("select a character before hosting")
+		return controller.rejectLocked("host", errors.New("select a character before hosting"))
 	}
 	controller.phase, controller.mode, controller.failure = "starting", "host", ""
 	go controller.startHost()
@@ -56,10 +56,17 @@ func (controller *networkController) Host() error {
 }
 
 func (controller *networkController) Join(address string) error {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
 	if strings.TrimSpace(address) == "" {
-		return errors.New("server address is required")
+		return controller.rejectLocked("join", errors.New("server address is required"))
 	}
-	return errors.New("direct join requires the host trust invitation; use the in-client Host flow in this slice")
+	return controller.rejectLocked("join", errors.New("direct join requires a host trust invitation"))
+}
+
+func (controller *networkController) rejectLocked(mode string, err error) error {
+	controller.phase, controller.mode, controller.failure = "failed", mode, err.Error()
+	return err
 }
 
 func (controller *networkController) Status() map[string]any {
