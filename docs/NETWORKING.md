@@ -147,6 +147,17 @@ canonical session-owned subset back into the profile and atomically persists
 it. No profile bytes are added to realm join messages, and this operation never
 creates realm ownership or a realm lease.
 
+Remote self-host admission remains a distinct pre-join operation. The client
+sends one selected `CharacterOffer/v1` (not its full roster), bounded to 128 KiB
+and protected by strict schema and SHA-256 integrity validation. The host
+authenticates a protected configured credential, supplies principal/player
+identity and destination itself, permits at most eight attempts and one
+successful admission, queues the system entry, and returns a short-lived
+one-use ordinary session ticket. QUIC exposes `profile_admit` only when this
+self-host policy is installed; realm and default servers reject it. The command
+server enables it with a protected `--remote-profile-key` file and the explicit
+profile player/destination flags. TLS still protects the credential in transit.
+
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust

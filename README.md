@@ -180,6 +180,12 @@ such a profile with `--player-profile`, `--profile-player`, and the authoritativ
 flags. The host queues the same system-authority entry command used elsewhere
 and writes canonical character state back to that profile on clean shutdown.
 This is player-controlled self-host policy, never realm character authority.
+For a remote player-controlled character, configure the dedicated server with
+the same destination flags plus `--profile-player` and a protected
+`--remote-profile-key` file (at least 32 bytes, mode `0600`). The client-side
+transport submits only the selected bounded character offer, receives a
+short-lived one-use session ticket, and then performs the normal authenticated
+join. Realm servers do not enable this operation.
 
 Renderer residency diagnostics use the same persistent preference path and can
 be controlled directly from the Lua shell:

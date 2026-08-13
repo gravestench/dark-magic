@@ -29,6 +29,7 @@ const (
 	MaxFrameBytes           = 4 << 20
 	MaxCommandPayloadBytes  = 8 << 10
 	MaxCredentialBytes      = 4 << 10
+	MaxProfileOfferBytes    = 128 << 10
 )
 
 var ErrWire = errors.New("game session QUIC: invalid wire message")
@@ -36,12 +37,13 @@ var ErrWire = errors.New("game session QUIC: invalid wire message")
 type operation string
 
 const (
-	operationJoin      operation = "join"
-	operationSubmit    operation = "submit"
-	operationRefresh   operation = "refresh"
-	operationWatch     operation = "watch"
-	operationReconnect operation = "reconnect"
-	operationLeave     operation = "leave"
+	operationJoin         operation = "join"
+	operationSubmit       operation = "submit"
+	operationRefresh      operation = "refresh"
+	operationWatch        operation = "watch"
+	operationReconnect    operation = "reconnect"
+	operationLeave        operation = "leave"
+	operationProfileAdmit operation = "profile_admit"
 )
 
 type request struct {
@@ -50,17 +52,24 @@ type request struct {
 	Credential gameserver.SessionCredential `json:"credential,omitempty"`
 	Command    *gameserver.CommandIntent    `json:"command,omitempty"`
 	Reconnect  *gameserver.ReconnectRequest `json:"reconnect,omitempty"`
+	Offer      json.RawMessage              `json:"offer,omitempty"`
 }
 
 type response struct {
 	Join     *gameserver.JoinResponse `json:"join,omitempty"`
 	Snapshot *gameserver.Snapshot     `json:"snapshot,omitempty"`
 	Error    string                   `json:"error,omitempty"`
+	Ticket   string                   `json:"ticket,omitempty"`
+}
+
+type ProfileAdmissions interface {
+	Admit(context.Context, string, []byte) (string, error)
 }
 
 type Server struct {
 	listener *quic.Listener
 	endpoint *gameserver.Endpoint
+	profiles ProfileAdmissions
 }
 
 func Listen(address string, tlsConfig *tls.Config, endpoint *gameserver.Endpoint) (*Server, error) {
@@ -91,6 +100,10 @@ func ListenPacket(packet net.PacketConn, tlsConfig *tls.Config, endpoint *gamese
 func (server *Server) Addr() string { return server.listener.Addr().String() }
 
 func (server *Server) Close() error { return server.listener.Close() }
+
+// SetProfileAdmissions enables the explicitly self-hosted character-offer
+// operation. Realm servers leave it nil and therefore reject that operation.
+func (server *Server) SetProfileAdmissions(profiles ProfileAdmissions) { server.profiles = profiles }
 
 func (server *Server) Serve(ctx context.Context) error {
 	for {
@@ -193,6 +206,15 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 			return response{Error: ErrWire.Error()}
 		}
 		return errorResponse(server.endpoint.Leave(message.Credential))
+	case operationProfileAdmit:
+		if server.profiles == nil || len(message.Credential) > MaxCredentialBytes || len(message.Offer) == 0 || len(message.Offer) > MaxProfileOfferBytes {
+			return response{Error: ErrWire.Error()}
+		}
+		ticket, err := server.profiles.Admit(ctx, message.Credential.String(), message.Offer)
+		if err != nil {
+			return response{Error: err.Error()}
+		}
+		return response{Ticket: ticket}
 	default:
 		return response{Error: ErrWire.Error()}
 	}
@@ -201,13 +223,15 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 func validShape(message request) bool {
 	switch message.Operation {
 	case operationJoin:
-		return message.Join != nil && message.Command == nil && message.Reconnect == nil && message.Credential == ""
+		return message.Join != nil && message.Command == nil && message.Reconnect == nil && message.Credential == "" && len(message.Offer) == 0
 	case operationSubmit:
-		return message.Join == nil && message.Command != nil && message.Reconnect == nil && message.Credential != ""
+		return message.Join == nil && message.Command != nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) == 0
 	case operationRefresh, operationWatch, operationLeave:
-		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != ""
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) == 0
 	case operationReconnect:
-		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Credential == ""
+		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Credential == "" && len(message.Offer) == 0
+	case operationProfileAdmit:
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) > 0
 	default:
 		return false
 	}
@@ -338,6 +362,20 @@ func (client *Client) Reconnect(ctx context.Context, reconnect gameserver.Reconn
 func (client *Client) Leave(ctx context.Context, credential gameserver.SessionCredential) error {
 	_, err := client.call(ctx, request{Operation: operationLeave, Credential: credential})
 	return err
+}
+
+func (client *Client) AdmitProfile(ctx context.Context, credential string, offer []byte) (string, error) {
+	if len(offer) == 0 || len(offer) > MaxProfileOfferBytes {
+		return "", ErrWire
+	}
+	result, err := client.call(ctx, request{Operation: operationProfileAdmit, Credential: gameserver.SessionCredential(credential), Offer: append(json.RawMessage(nil), offer...)})
+	if err != nil {
+		return "", err
+	}
+	if result.Ticket == "" {
+		return "", ErrWire
+	}
+	return result.Ticket, nil
 }
 
 func (client *Client) call(ctx context.Context, message request) (response, error) {
