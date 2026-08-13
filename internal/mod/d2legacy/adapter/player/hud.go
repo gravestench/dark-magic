@@ -11,21 +11,22 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const HUDVersion uint32 = 1
+const HUDVersion uint32 = 2
 
 var ErrHUDPlayer = errors.New("player HUD: authenticated player is absent")
 
 // HUD is the versioned owner-private view shared by local presentation and
 // remote clients. Other private domains receive separately reviewed views.
 type HUD struct {
-	Version  uint32      `json:"version"`
-	Tick     uint64      `json:"tick"`
-	Player   HUDIdentity `json:"player"`
-	Vitals   HUDVitals   `json:"vitals"`
-	Progress HUDProgress `json:"progress"`
-	Combat   HUDCombat   `json:"combat"`
-	Position HUDPosition `json:"position"`
-	Location HUDLocation `json:"location"`
+	Version   uint32       `json:"version"`
+	Tick      uint64       `json:"tick"`
+	Player    HUDIdentity  `json:"player"`
+	Vitals    HUDVitals    `json:"vitals"`
+	Progress  HUDProgress  `json:"progress"`
+	Combat    HUDCombat    `json:"combat"`
+	Position  HUDPosition  `json:"position"`
+	Location  HUDLocation  `json:"location"`
+	Animation HUDAnimation `json:"animation"`
 }
 
 type HUDIdentity struct {
@@ -60,6 +61,11 @@ type HUDPosition struct {
 type HUDLocation struct {
 	Act     int64 `json:"act"`
 	LevelID int64 `json:"level_id"`
+}
+
+type HUDAnimation struct {
+	Mode      string `json:"mode"`
+	Direction int64  `json:"direction"`
 }
 
 // ProjectHUD reads only the canonical checkpoint captured by the session. It
@@ -122,6 +128,16 @@ func fillHUD(snapshot gameecs.Snapshot, entity uint64, view *HUD) error {
 		return err
 	}
 	view.Location = HUDLocation{Act: intField(location, "act"), LevelID: intField(location, "level_id")}
+	if animation, found := findComponent(snapshot, "d2legacy.player.animation"); found {
+		if fields, present := findInstance(animation, entity); present {
+			view.Animation.Mode = stringField(fields, "mode")
+		}
+	}
+	if facing, found := findComponent(snapshot, "d2legacy.world.facing"); found {
+		if fields, present := findInstance(facing, entity); present {
+			view.Animation.Direction = intField(fields, "direction")
+		}
+	}
 	return nil
 }
 

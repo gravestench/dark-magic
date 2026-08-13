@@ -2,9 +2,11 @@ package clientapp
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/app/clientsession"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
 // installRemoteView copies the authenticated, allowlisted client projection
@@ -39,7 +41,7 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 		"d2legacy.player.vitals":       {"health": hud.Vitals.Health, "max_health": hud.Vitals.MaxHealth, "mana": hud.Vitals.Mana, "max_mana": hud.Vitals.MaxMana, "mana_raw": hud.Vitals.Mana * 256, "max_mana_raw": hud.Vitals.MaxMana * 256},
 		"d2legacy.player.progress":     {"level": hud.Progress.Level, "experience": hud.Progress.Experience, "unspent_skill_points": hud.Progress.UnspentSkillPoints},
 		"d2legacy.player.combat_stats": {"attack_rating": hud.Combat.AttackRating, "defense": hud.Combat.Defense},
-		"d2legacy.world.position":      {"x": hud.Position.X, "y": hud.Position.Y},
+		"d2legacy.player.animation":    {"direction": hud.Animation.Direction, "mode": hud.Animation.Mode},
 		"d2legacy.world.location":      {"act": hud.Location.Act, "level_id": hud.Location.LevelID},
 		"d2legacy.player.appearance":   {"cof": "", "token": classToken(hud.Player.Class), "palette": "data/global/Palette/units/pal.dat", "weapon_class": "HTH"},
 	}
@@ -50,6 +52,19 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 		}
 		if _, err := store.Set(hero, values); err != nil {
 			return fmt.Errorf("remote presentation: set %s: %w", name, err)
+		}
+	}
+	if err := moveMirrorToward(world, hero, hud.Position, 0.35); err != nil {
+		return err
+	}
+	// The offline simulation is deliberately frozen while connected, including
+	// its Lua camera-follow system. Keep the presentation camera attached to this
+	// client's authenticated hero mirror on every rendered frame.
+	if follows, found := akara.GetDynamicStore(world, "d2legacy.world.camera_follow"); found {
+		for _, camera := range follows.Entities() {
+			if err := moveMirrorToward(world, camera, currentPosition(world, hero), 1); err != nil {
+				return err
+			}
 		}
 	}
 	app.activateWorld(int(hud.Location.LevelID))
@@ -76,8 +91,10 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 			"d2legacy.player.appearance": {"cof": "", "token": remote.Token, "palette": "data/global/Palette/units/pal.dat", "weapon_class": "HTH"},
 			"d2legacy.player.animation":  {"direction": remote.Direction, "mode": remote.Mode},
 			"d2legacy.world.facing":      {"direction": remote.Direction, "directions": int64(16)},
-			"d2legacy.world.position":    {"x": remote.Position.X, "y": remote.Position.Y},
 			"d2legacy.world.location":    {"act": hud.Location.Act, "level_id": hud.Location.LevelID},
+		}
+		if err := moveMirrorToward(world, entity, remote.Position, 0.35); err != nil {
+			return err
 		}
 		for name, fields := range values {
 			store, ok := akara.GetDynamicStore(world, name)
@@ -95,6 +112,45 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 		}
 	}
 	return nil
+}
+
+func currentPosition(world *akara.World, entity akara.Entity) playeradapter.HUDPosition {
+	positions, found := akara.GetDynamicStore(world, "d2legacy.world.position")
+	if !found {
+		return playeradapter.HUDPosition{}
+	}
+	position, found := positions.Get(entity)
+	if !found {
+		return playeradapter.HUDPosition{}
+	}
+	x, _ := position.Get("x")
+	y, _ := position.Get("y")
+	return playeradapter.HUDPosition{X: x.(float64), Y: y.(float64)}
+}
+
+func moveMirrorToward(world *akara.World, entity akara.Entity, target playeradapter.HUDPosition, alpha float64) error {
+	positions, found := akara.GetDynamicStore(world, "d2legacy.world.position")
+	if !found {
+		return fmt.Errorf("remote presentation: position store is unavailable")
+	}
+	position, exists := positions.Get(entity)
+	if !exists {
+		_, err := positions.Set(entity, map[string]any{"x": target.X, "y": target.Y})
+		return err
+	}
+	xValue, _ := position.Get("x")
+	yValue, _ := position.Get("y")
+	x, y := xValue.(float64), yValue.(float64)
+	if math.Hypot(target.X-x, target.Y-y) > 4 {
+		x, y = target.X, target.Y
+	} else {
+		x += (target.X - x) * alpha
+		y += (target.Y - y) * alpha
+	}
+	if err := position.Set("x", x); err != nil {
+		return err
+	}
+	return position.Set("y", y)
 }
 
 func classToken(class string) string {
