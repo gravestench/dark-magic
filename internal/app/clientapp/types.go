@@ -127,6 +127,7 @@ type application struct {
 	activeWorldLevel    int
 	loading             *loadcore.Coordinator
 	pointerAcceptance   *pointerMovementAcceptance
+	network             *networkController
 
 	components   *host.Manager
 	engineHost   *host.Host

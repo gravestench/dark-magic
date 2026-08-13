@@ -62,6 +62,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.PlayerControlModule(app.playerControl),
 		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
+		modruntime.NetworkModule(app.network),
 	}
 }
 

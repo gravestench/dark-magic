@@ -1878,7 +1878,13 @@ authority, persistence separation, and resilience acceptance remain open.
   `WorldView/v1`, player movement command replication, and the resulting
   correction without requiring owned MPQ data. Headless authorities install
   position integration themselves; interactive worlds only supply collision
-  maps and presentation systems.
+  maps and presentation systems. The Lua TCP/IP Host action now crosses a
+  narrow `engine.network/v1` capability into the client application, which
+  asynchronously creates a real in-process listen host, ephemeral pinned-TLS
+  QUIC listener, selected-profile admission, and local network client. Safe
+  phase/address/error status returns to presentation; sockets, certificates,
+  credentials, and session handles do not. Switching game-world input and
+  rendering from the offline ECS to that connected `ClientView` remains next.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 
