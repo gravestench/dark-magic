@@ -1821,6 +1821,11 @@ authority, persistence separation, and resilience acceptance remain open.
   admission: exact runtime compatibility is checked, trusted entry is queued,
   tickets bind revision/runtime, and failed joins revoke tickets and leases.
   Membership lease renewal supports the reconnect window.
+  A transport-neutral client session consumes this assignment through QUIC:
+  endpoint syntax, runtime identity, normal X.509 trust, and the realm-pinned
+  leaf fingerprint are verified before the ticket is sent; server admission and
+  `PlayerHUD/v1` are verified afterward. Reconnect rotates credentials and
+  installs the canonical correction view atomically.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,

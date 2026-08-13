@@ -83,6 +83,15 @@ and runtime identity hash. Validation or submission failure releases the lease
 and revokes the unused ticket. Active memberships renew their lease through the
 realm; reconnect never accepts client-reported durable state.
 
+The client treats the returned assignment as untrusted discovery data. It
+accepts only a canonical host/port endpoint, validates the advertised runtime
+identity locally, performs normal X.509 verification against an explicit trust
+configuration, and additionally pins the leaf certificate to the realm's
+`sha256:` fingerprint before sending the one-use ticket. It then verifies the
+server admission session/runtime and decodes exactly `PlayerHUD/v1`. Reconnect
+rotates the session credential and atomically replaces the correction HUD;
+command submission, reconnect, and close serialize credential access.
+
 ## Join-time mod acquisition
 
 Realm admission advertises a signed, versioned mod manifest before a client is
