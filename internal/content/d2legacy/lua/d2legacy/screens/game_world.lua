@@ -34,6 +34,13 @@ local text = require("d2legacy.ui.text")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.game_world
+local network_ok, network = pcall(require, "engine.network/v1")
+
+local function controlled_player_id()
+    if not network_ok then return "local-player" end
+    local status = network.status()
+    return status.player_id or "local-player"
+end
 
 local function destroy_monsters(self)
     for _, monster in pairs(self.monsters or {}) do
@@ -221,7 +228,7 @@ end
 
 local function selectable_at(self, x, y)
     local spawned = self.targeting and self.targeting.selectable_at(x, y) or nil
-    if spawned and spawned.owner ~= "local-player" then
+    if spawned and spawned.owner ~= controlled_player_id() then
         return spawned
     end
     return self.world and self.world:selectable_at(x, y) or nil
@@ -244,7 +251,7 @@ local function update_players(self, elapsed)
     end
     self.remote_players = self.remote_players or {}
     local visible = {}
-    for _, snapshot in ipairs(self.gameplay_world.player_snapshots("local-player")) do
+    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id())) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             visible[key] = true
@@ -524,7 +531,7 @@ return {
         local world_height = self.world_dimensions and self.world_dimensions.height_subtiles or 4096
 
         -- This creates world helper state and attempts to bind the session-owned player.
-        self.gameplay = self.gameplay_world.create(world_width, world_height, self.world, "local-player")
+        self.gameplay = self.gameplay_world.create(world_width, world_height, self.world, controlled_player_id())
     end,
 
     update = function(self, elapsed, focused, input_allowed, world_view)
@@ -582,6 +589,11 @@ return {
 
         -- Authoritative session may not have admitted the player yet. Bind tries
         -- to find that entity and returns false instead of creating a fake duplicate.
+        local player_id = controlled_player_id()
+        if self.gameplay.player ~= player_id then
+            self.gameplay.player = player_id
+            self.gameplay.hero = nil
+        end
         if not self.gameplay_world.bind(self.gameplay) then
             return
         end

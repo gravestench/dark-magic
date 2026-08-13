@@ -30,6 +30,7 @@ type HUD struct {
 }
 
 type HUDIdentity struct {
+	PlayerID    string `json:"player_id"`
 	CharacterID string `json:"character_id"`
 	Name        string `json:"name"`
 	Class       string `json:"class"`
@@ -84,7 +85,7 @@ func ProjectHUD(playerID string, checkpoint simulation.Checkpoint) (json.RawMess
 		return nil, ErrHUDPlayer
 	}
 	view := HUD{Version: HUDVersion, Tick: checkpoint.Tick}
-	view.Player = HUDIdentity{CharacterID: stringField(identity, "character_id"), Name: stringField(identity, "name"), Class: stringField(identity, "class")}
+	view.Player = HUDIdentity{PlayerID: stringField(identity, "player"), CharacterID: stringField(identity, "character_id"), Name: stringField(identity, "name"), Class: stringField(identity, "class")}
 	if err := fillHUD(snapshot, entity, &view); err != nil {
 		return nil, err
 	}

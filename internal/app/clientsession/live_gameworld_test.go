@@ -95,7 +95,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if connected.HUD.Player.CharacterID != "hero" || connected.HUD.Player.Name != "Hero" || connected.World.Tick == 0 {
+	if connected.HUD.Player.PlayerID != "alice-1" || connected.HUD.Player.CharacterID != "hero" || connected.HUD.Player.Name != "Hero" || connected.World.Tick == 0 {
 		t.Fatalf("live initial view = HUD %#v world tick %d", connected.HUD.Player, connected.World.Tick)
 	}
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
@@ -114,7 +114,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
+	if second.HUD.Player.PlayerID != "alice-2" || second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
 	}
 	t.Cleanup(func() {

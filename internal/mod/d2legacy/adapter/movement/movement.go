@@ -113,6 +113,16 @@ type MovementSource struct {
 	pathTarget *MoveTarget
 }
 
+func (source *MovementSource) SetPlayer(player string) {
+	player = strings.TrimSpace(player)
+	if player == "" {
+		return
+	}
+	source.mu.Lock()
+	source.player = player
+	source.mu.Unlock()
+}
+
 type movementPathFinder interface {
 	FindPath(gameworld.PathRequest) ([]gameworld.Point, error)
 }

@@ -24,25 +24,17 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 	if !ok {
 		return fmt.Errorf("remote presentation: player control store is unavailable")
 	}
-	identities, _ := akara.GetDynamicStore(world, "d2legacy.player.identity")
-	selected, _ := app.saves.Selected()
 	var hero akara.Entity
 	var stale []akara.Entity
 	for _, entity := range controls.Entities() {
 		control, _ := controls.Get(entity)
 		owner, _ := control.Get("player")
-		if owner != "local-player" {
+		if owner != "local-player" && owner != hud.Player.PlayerID {
 			continue
 		}
-		matchesSelection := false
-		if identity, found := identities.Get(entity); found {
-			characterID, _ := identity.Get("character_id")
-			matchesSelection = characterID == selected.ID
-		}
-		if hero == 0 || matchesSelection {
-			if hero != 0 {
-				stale = append(stale, hero)
-			}
+		if hero == 0 {
+			// Preserve the entity handle already cached by Lua gameplay.world.
+			// The authenticated HUD below replaces all character-specific fields.
 			hero = entity
 			continue
 		}
@@ -54,11 +46,19 @@ func (app *application) installRemoteView(session *clientsession.Session) error 
 	for _, entity := range stale {
 		world.DestroyEntity(entity)
 	}
+	if control, found := controls.Get(hero); found {
+		if err := control.Set("player", hud.Player.PlayerID); err != nil {
+			return err
+		}
+	}
+	if app.movementSource != nil {
+		app.movementSource.SetPlayer(hud.Player.PlayerID)
+	}
 	if hero == 0 {
 		return fmt.Errorf("remote presentation: local hero mirror is unavailable")
 	}
 	updates := map[string]map[string]any{
-		"d2legacy.player.identity":     {"character_id": hud.Player.CharacterID, "player": "local-player", "name": hud.Player.Name, "class": hud.Player.Class},
+		"d2legacy.player.identity":     {"character_id": hud.Player.CharacterID, "player": hud.Player.PlayerID, "name": hud.Player.Name, "class": hud.Player.Class},
 		"d2legacy.player.vitals":       {"health": hud.Vitals.Health, "max_health": hud.Vitals.MaxHealth, "mana": hud.Vitals.Mana, "max_mana": hud.Vitals.MaxMana, "mana_raw": hud.Vitals.Mana * 256, "max_mana_raw": hud.Vitals.MaxMana * 256},
 		"d2legacy.player.progress":     {"level": hud.Progress.Level, "experience": hud.Progress.Experience, "unspent_skill_points": hud.Progress.UnspentSkillPoints},
 		"d2legacy.player.combat_stats": {"attack_rating": hud.Combat.AttackRating, "defense": hud.Combat.Defense},
