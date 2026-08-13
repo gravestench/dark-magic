@@ -2341,3 +2341,12 @@ tagged codec releases, boots through the internal host and layered d2legacy mod,
 the Lua-authored shell and world orchestration, and passes the complete package
 suite under race detection. Historical stashes remain preserved and documented
 in `STASHES.md`; do not apply or drop them without a separate comparison task.
+
+## Deferred mod examples
+
+- [ ] After the core game and supported mod-composition contract are further
+  developed, add a sibling `d2legacy` extension example that implements slow,
+  constant player health regeneration scaled by authoritative Vitality. The
+  example must use a documented extension seam, retain fractional progress in
+  checkpointed state, cap healing at maximum health, and include readable Lua
+  tests without copying d2legacy player construction or production systems.
