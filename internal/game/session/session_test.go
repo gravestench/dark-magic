@@ -55,6 +55,33 @@ func TestSessionPinsAuthoritativeRuntimeStateInReplay(t *testing.T) {
 	}
 }
 
+func TestSessionExportsDefensiveReplayContainerEvidence(t *testing.T) {
+	engine := gameecs.New()
+	session, err := New(engine, Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	manifests := map[string]simulation.ReplayManifest{
+		"session": {Schema: "dark-magic.session/v1", Data: json.RawMessage(`{"mod":"d2legacy"}`)},
+	}
+	events := []simulation.ReplayEvent{{Tick: 1, Kind: "session.started", Payload: json.RawMessage(`{}`)}}
+	container, err := session.ReplayContainer(manifests, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifests["session"] = simulation.ReplayManifest{}
+	events[0].Payload[0] = '['
+	if container.Manifests["session"].Schema != "dark-magic.session/v1" ||
+		string(container.Manifests["session"].Data) != `{"mod":"d2legacy"}` ||
+		string(container.Events[0].Payload) != `{}` || len(container.Replay.Checkpoints) != 1 {
+		t.Fatalf("container changed with caller inputs: %#v", container)
+	}
+}
+
 func TestSessionCanonicalizesArrivalOrderAndExportsVerifiableReplay(t *testing.T) {
 	build := func() (*Session, func(*gameecs.Engine, simulation.Command) error) {
 		engine := gameecs.New()
