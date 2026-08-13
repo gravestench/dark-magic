@@ -11,6 +11,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
 var ErrAdmission = errors.New("realm: game admission failed")
@@ -26,11 +27,11 @@ type JoinRequest struct {
 }
 
 type JoinAssignment struct {
-	GameID   string
-	Endpoint GameEndpoint
-	Ticket   string
-	Lease    CharacterLease
-	Runtime  simulation.RuntimeIdentity
+	GameID            string
+	Endpoint          GameEndpoint
+	Ticket            string
+	CharacterRevision uint64
+	Runtime           simulation.RuntimeIdentity
 }
 
 type admissionGame struct {
@@ -138,7 +139,8 @@ func (admissions *Admissions) Join(ctx context.Context, request JoinRequest) (Jo
 	admissions.mu.Lock()
 	admissions.memberships[membershipID] = lease
 	admissions.mu.Unlock()
-	return JoinAssignment{GameID: request.GameID, Endpoint: game.endpoint, Ticket: ticket, Lease: lease, Runtime: cloneRuntimeIdentity(host.Allocation.Identity)}, nil
+	return JoinAssignment{GameID: request.GameID, Endpoint: game.endpoint, Ticket: ticket,
+		CharacterRevision: record.Revision, Runtime: cloneRuntimeIdentity(host.Allocation.Identity)}, nil
 }
 
 func (admissions *Admissions) RenewMembership(ctx context.Context, gameID, playerID string) (CharacterLease, error) {
@@ -161,6 +163,30 @@ func (admissions *Admissions) RenewMembership(ctx context.Context, gameID, playe
 	admissions.memberships[membershipID] = renewed
 	admissions.mu.Unlock()
 	return renewed, nil
+}
+
+// CommitMembership is the trusted worker-to-realm persistence boundary. The
+// opaque lease stays inside Admissions and is never included in JoinAssignment.
+func (admissions *Admissions) CommitMembership(ctx context.Context, gameID, playerID string, character d2save.Character) (CharacterRecord, error) {
+	membershipID := strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
+	admissions.mu.RLock()
+	lease, found := admissions.memberships[membershipID]
+	admissions.mu.RUnlock()
+	if !found {
+		return CharacterRecord{}, ErrLease
+	}
+	committed, err := admissions.characters.Commit(ctx, lease, character)
+	if err != nil {
+		return CharacterRecord{}, err
+	}
+	admissions.mu.Lock()
+	if current, exists := admissions.memberships[membershipID]; !exists || current.Token != lease.Token {
+		admissions.mu.Unlock()
+		return CharacterRecord{}, ErrLease
+	}
+	delete(admissions.memberships, membershipID)
+	admissions.mu.Unlock()
+	return committed, nil
 }
 
 func cloneRuntimeIdentity(identity simulation.RuntimeIdentity) simulation.RuntimeIdentity {

@@ -98,11 +98,20 @@ Realm join is a transaction across the durable character repository and the
 allocated worker. It acquires an exclusive revisioned lease owned by the
 account, validates the character's pinned runtime compatibility, creates the
 trusted next-tick player-entry command with a realm-owned monotonic sequence,
-and returns the worker address, TLS fingerprint, exact runtime identity, lease,
-and short-lived ticket. The ticket additionally binds the character revision
+and returns the worker address, TLS fingerprint, exact runtime identity, public
+character revision, and short-lived ticket. The ticket additionally binds the character revision
 and runtime identity hash. Validation or submission failure releases the lease
 and revokes the unused ticket. Active memberships renew their lease through the
 realm; reconnect never accepts client-reported durable state.
+
+The character lease is a realm/worker capability and never crosses the client
+assignment boundary. A trusted worker commit must present the active,
+unexpired lease, preserve character identity, atomically replace a defensive
+copy, increment the realm revision, and consume the lease. Empty, expired,
+foreign, and replayed leases are rejected. The d2legacy selection store is
+explicitly local/offline and cannot implement or call this realm repository
+contract, so copying an offline character value does not confer trusted write
+authority.
 
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime

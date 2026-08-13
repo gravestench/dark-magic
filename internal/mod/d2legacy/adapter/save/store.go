@@ -6,9 +6,10 @@ import (
 	"sync"
 )
 
-// Character is d2legacy's current durable character-selection record. Future
-// importers translate legacy save bytes into this adapter value and preserve
-// unsupported bytes separately.
+// Character is d2legacy's local/offline character-selection record. It is
+// untrusted outside the process that owns this Store. Realm persistence wraps
+// the same data in its own account, revision, compatibility, and lease checks;
+// copying this value never grants authority to update a realm character.
 type Character struct {
 	ID         string
 	Name       string
@@ -60,7 +61,9 @@ func (s *Store) Create(character Character) error {
 	return nil
 }
 
-// Store owns the selectable character roster and returns defensive copies.
+// Store owns the local/offline selectable character roster and returns
+// defensive copies. It intentionally does not implement the realm character
+// repository contract.
 // Selection is application state; authoritative in-session player state is
 // materialized by the game session rather than mutated through this store.
 type Store struct {

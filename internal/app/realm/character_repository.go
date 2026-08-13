@@ -19,6 +19,7 @@ var (
 	ErrCharacterOwner    = errors.New("realm: character ownership differs")
 	ErrCharacterLeased   = errors.New("realm: character is already leased")
 	ErrLease             = errors.New("realm: invalid character lease")
+	ErrCharacterCommit   = errors.New("realm: invalid authoritative character commit")
 )
 
 type CharacterRecord struct {
@@ -40,6 +41,7 @@ type CharacterRepository interface {
 	Acquire(context.Context, string, string, string, time.Duration) (CharacterRecord, CharacterLease, error)
 	Renew(context.Context, CharacterLease, time.Duration) (CharacterLease, error)
 	Release(context.Context, CharacterLease) error
+	Commit(context.Context, CharacterLease, d2save.Character) (CharacterRecord, error)
 }
 
 type memoryCharacter struct {
@@ -119,6 +121,23 @@ func (repository *MemoryCharacters) Release(_ context.Context, lease CharacterLe
 	return nil
 }
 
+// Commit atomically replaces realm-owned character state, advances its
+// revision, and consumes the active worker lease. Offline/client stores never
+// receive this lease and therefore cannot write trusted realm state.
+func (repository *MemoryCharacters) Commit(_ context.Context, lease CharacterLease, character d2save.Character) (CharacterRecord, error) {
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	entry, found := repository.records[lease.CharacterID]
+	if !found || !sameLease(entry.lease, lease) || !entry.lease.ExpiresAt.After(repository.now()) ||
+		strings.TrimSpace(character.ID) == "" || character.ID != entry.record.Character.ID {
+		return CharacterRecord{}, ErrCharacterCommit
+	}
+	entry.record.Character = cloneCharacter(character)
+	entry.record.Revision++
+	entry.lease = nil
+	return cloneCharacterRecord(entry.record), nil
+}
+
 func newCharacterLease(characterID string, revision uint64, gameID string, expiry time.Time) (CharacterLease, error) {
 	var nonce [16]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
@@ -132,8 +151,11 @@ func sameLease(current *CharacterLease, candidate CharacterLease) bool {
 }
 
 func cloneCharacterRecord(record CharacterRecord) CharacterRecord {
-	copyStore := d2save.New(record.Character)
-	characters := copyStore.Characters()
-	record.Character = characters[0]
+	record.Character = cloneCharacter(record.Character)
 	return record
+}
+
+func cloneCharacter(character d2save.Character) d2save.Character {
+	copyStore := d2save.New(character)
+	return copyStore.Characters()[0]
 }
