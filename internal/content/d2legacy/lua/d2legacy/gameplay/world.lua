@@ -56,9 +56,13 @@ end
 -- fixed simulation tick admits the selected player. That is normal. The caller
 -- can try again next update. We NEVER manufacture a second player as a shortcut.
 function M.bind(state)
-    -- Already bound and still alive: nothing to do.
+    -- A connected client may replace the offline alias with its authenticated
+    -- session player ID. A live handle is reusable only while it still belongs
+    -- to the requested player.
     if state.hero and state.hero:exists() then
-        return true
+        local control = ecs.get(state.hero, "d2legacy.world.player_control")
+        if control and control:get("player") == state.player then return true end
+        state.hero = nil
     end
 
     -- Find entities that have the complete set needed by world presentation.
@@ -190,7 +194,7 @@ function M.monster_snapshots()
     return result
 end
 
-function M.player_snapshots(local_player)
+function M.player_snapshots(local_player, include_local)
     local result = {}
     for _, entity in
         ipairs(ecs.query({
@@ -205,7 +209,7 @@ function M.player_snapshots(local_player)
         }))
     do
         local identity = ecs.get(entity, "d2legacy.player.identity")
-        if identity:get("player") ~= local_player then
+        if include_local or identity:get("player") ~= local_player then
             local snapshot = ecs.get(entity, "d2legacy.player.appearance"):snapshot()
             local position = ecs.get(entity, "d2legacy.world.position")
             local facing = ecs.get(entity, "d2legacy.world.facing")

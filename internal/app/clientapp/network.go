@@ -132,15 +132,16 @@ func (controller *networkController) rejectLocked(mode string, err error) error 
 
 func (controller *networkController) Status() map[string]any {
 	controller.mu.Lock()
-	defer controller.mu.Unlock()
+	phase, mode, address, failure, client := controller.phase, controller.mode, controller.address, controller.failure, controller.client
+	controller.mu.Unlock()
 	playerID := "local-player"
-	if controller.client != nil {
-		hud, _ := controller.client.View()
+	if client != nil {
+		hud, _ := client.View()
 		if hud.Player.PlayerID != "" {
 			playerID = hud.Player.PlayerID
 		}
 	}
-	return map[string]any{"phase": controller.phase, "mode": controller.mode, "address": controller.address, "error": controller.failure, "player_id": playerID}
+	return map[string]any{"phase": phase, "mode": mode, "address": address, "error": failure, "player_id": playerID}
 }
 
 func (controller *networkController) startHost() {

@@ -42,6 +42,10 @@ local function controlled_player_id()
     return status.player_id or "local-player"
 end
 
+local function network_connected()
+    return network_ok and network.status().phase == "connected"
+end
+
 local function destroy_monsters(self)
     for _, monster in pairs(self.monsters or {}) do
         if monster.node and monster.node:exists() then
@@ -251,7 +255,7 @@ local function update_players(self, elapsed)
     end
     self.remote_players = self.remote_players or {}
     local visible = {}
-    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id())) do
+    for _, snapshot in ipairs(self.gameplay_world.player_snapshots(controlled_player_id(), network_connected())) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             visible[key] = true
@@ -535,6 +539,14 @@ return {
     end,
 
     update = function(self, elapsed, focused, input_allowed, world_view)
+		-- Identity binding is simulation/presentation synchronization, not user
+		-- input. Perform it even while this scene is covered or unfocused.
+		local player_id = controlled_player_id()
+		if self.gameplay.player ~= player_id then
+			self.gameplay.player = player_id
+			self.gameplay.hero = nil
+		end
+		self.gameplay_world.bind(self.gameplay)
         if render.assets_available() then
             install_current_world(self)
         end
@@ -589,11 +601,6 @@ return {
 
         -- Authoritative session may not have admitted the player yet. Bind tries
         -- to find that entity and returns false instead of creating a fake duplicate.
-        local player_id = controlled_player_id()
-        if self.gameplay.player ~= player_id then
-            self.gameplay.player = player_id
-            self.gameplay.hero = nil
-        end
         if not self.gameplay_world.bind(self.gameplay) then
             return
         end
@@ -646,6 +653,10 @@ return {
                     self.hero_pending_composite = nil
                 end
             end
+			-- Connected players all use update_players above. One roster renderer
+			-- prevents the authenticated owner and peers from diverging through
+			-- separate preload/cache behavior. This node remains the offline hero.
+			if network_connected() then self.hero:set_visible(false) end
         end
 
         if self.hud then
