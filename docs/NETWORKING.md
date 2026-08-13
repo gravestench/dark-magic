@@ -157,6 +157,13 @@ one-use ordinary session ticket. QUIC exposes `profile_admit` only when this
 self-host policy is installed; realm and default servers reject it. The command
 server enables it with a protected `--remote-profile-key` file and the explicit
 profile player/destination flags. TLS still protects the credential in transit.
+The client verifies normal X.509 trust plus the pinned leaf fingerprint before
+sending the profile credential, encodes only its selected defensive profile
+copy, validates the returned session/runtime/character identities, and then
+uses the same session object as realm connections. Because trusted entry is a
+next-tick command, join permits only the explicit “player absent” projection
+error to wait for readiness, polling for at most two seconds or the caller's
+earlier cancellation; all other projection errors fail immediately.
 
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime

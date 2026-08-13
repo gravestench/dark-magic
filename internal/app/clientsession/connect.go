@@ -21,9 +21,10 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/realm"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-var ErrAssignment = errors.New("client session: invalid realm assignment")
+var ErrAssignment = errors.New("client session: invalid server assignment")
 var ErrStaleCorrection = errors.New("client session: stale or conflicting correction")
 
 type Session struct {
@@ -37,20 +38,66 @@ type Session struct {
 	World      playeradapter.WorldView
 }
 
+type SelfHostedAssignment struct {
+	GameID            string
+	Endpoint          realm.GameEndpoint
+	Runtime           simulation.RuntimeIdentity
+	ProfileCredential string
+}
+
 func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tls.Config) (*Session, error) {
 	if tlsConfig == nil || strings.TrimSpace(assignment.Ticket) == "" || strings.TrimSpace(assignment.GameID) == "" {
 		return nil, ErrAssignment
 	}
-	if _, _, err := net.SplitHostPort(assignment.Endpoint.Address); err != nil {
-		return nil, fmt.Errorf("%w: endpoint address: %v", ErrAssignment, err)
-	}
-	digest, err := assignment.Runtime.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("%w: runtime: %v", ErrAssignment, err)
-	}
-	expected, err := parseFingerprint(assignment.Endpoint.TLSFingerprint)
+	transport, digest, err := dialVerified(ctx, assignment.GameID, assignment.Endpoint, assignment.Runtime, tlsConfig)
 	if err != nil {
 		return nil, err
+	}
+	return joinVerified(ctx, transport, assignment.GameID, assignment.Runtime, digest, assignment.Ticket, "")
+}
+
+// ConnectSelfHosted submits only the selected player-profile character to an
+// explicitly configured self-host, receives a one-use ticket, then enters the
+// ordinary authenticated session path.
+func ConnectSelfHosted(ctx context.Context, assignment SelfHostedAssignment, tlsConfig *tls.Config, profile *d2save.Store) (*Session, error) {
+	if profile == nil || strings.TrimSpace(assignment.ProfileCredential) == "" {
+		return nil, ErrAssignment
+	}
+	character, selected := profile.Selected()
+	if !selected {
+		return nil, ErrAssignment
+	}
+	transport, digest, err := dialVerified(ctx, assignment.GameID, assignment.Endpoint, assignment.Runtime, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	offer, err := d2save.EncodeCharacterOffer(character)
+	if err != nil {
+		_ = transport.Close()
+		return nil, err
+	}
+	ticket, err := transport.AdmitProfile(ctx, assignment.ProfileCredential, offer)
+	if err != nil {
+		_ = transport.Close()
+		return nil, err
+	}
+	return joinVerified(ctx, transport, assignment.GameID, assignment.Runtime, digest, ticket, character.ID)
+}
+
+func dialVerified(ctx context.Context, gameID string, endpoint realm.GameEndpoint, identity simulation.RuntimeIdentity, tlsConfig *tls.Config) (*sessionquic.Client, string, error) {
+	if tlsConfig == nil || strings.TrimSpace(gameID) == "" {
+		return nil, "", ErrAssignment
+	}
+	if _, _, err := net.SplitHostPort(endpoint.Address); err != nil {
+		return nil, "", fmt.Errorf("%w: endpoint address: %v", ErrAssignment, err)
+	}
+	digest, err := identity.Digest()
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: runtime: %v", ErrAssignment, err)
+	}
+	expected, err := parseFingerprint(endpoint.TLSFingerprint)
+	if err != nil {
+		return nil, "", err
 	}
 	verifiedTLS := tlsConfig.Clone()
 	previousVerify := verifiedTLS.VerifyPeerCertificate
@@ -67,16 +114,17 @@ func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tl
 		}
 		return nil
 	}
-	transport, err := sessionquic.Dial(ctx, assignment.Endpoint.Address, verifiedTLS)
-	if err != nil {
-		return nil, err
-	}
-	joined, err := transport.Join(ctx, gameserver.JoinRequest{Version: gameserver.SessionProtocolVersion, Credential: assignment.Ticket, Identity: assignment.Runtime})
+	transport, err := sessionquic.Dial(ctx, endpoint.Address, verifiedTLS)
+	return transport, digest, err
+}
+
+func joinVerified(ctx context.Context, transport *sessionquic.Client, gameID string, identity simulation.RuntimeIdentity, digest, ticket, characterID string) (*Session, error) {
+	joined, err := transport.Join(ctx, gameserver.JoinRequest{Version: gameserver.SessionProtocolVersion, Credential: ticket, Identity: identity})
 	if err != nil {
 		_ = transport.Close()
 		return nil, err
 	}
-	if joined.Admission.SessionID != assignment.GameID || joined.Admission.IdentityHash != digest || joined.Snapshot.Version != gameserver.SessionProtocolVersion {
+	if joined.Admission.SessionID != gameID || joined.Admission.IdentityHash != digest || joined.Snapshot.Version != gameserver.SessionProtocolVersion {
 		_ = transport.Close()
 		return nil, ErrAssignment
 	}
@@ -85,7 +133,11 @@ func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tl
 		_ = transport.Close()
 		return nil, err
 	}
-	return &Session{transport: transport, credential: joined.Credential, identity: assignment.Runtime, Admission: joined, HUD: view.HUD, World: view.World}, nil
+	if characterID != "" && (joined.Admission.CharacterID != characterID || view.HUD.Player.CharacterID != characterID) {
+		_ = transport.Close()
+		return nil, ErrAssignment
+	}
+	return &Session{transport: transport, credential: joined.Credential, identity: identity, Admission: joined, HUD: view.HUD, World: view.World}, nil
 }
 
 func (session *Session) Submit(ctx context.Context, intent gameserver.CommandIntent) error {
