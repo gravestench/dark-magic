@@ -183,7 +183,11 @@ populates a deterministic Blood Moor hostile from synthetic TXT records,
 offers a selected local-profile character over real QUIC, and observes both the
 owner-private HUD and nearby public hostile from canonical checkpoints. The
 fixture deliberately supplies redistributable synthetic record rows so normal
-CI does not depend on a developer's owned Diablo II installation.
+CI does not depend on a developer's owned Diablo II installation. It also sends
+a real `player.move` intent and waits on the production correction stream for
+the authoritative position change. The headless Lua authority owns position
+integration; interactive world composition adds collision data and camera
+behavior but is not required for movement to execute.
 
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction

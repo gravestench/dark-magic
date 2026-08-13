@@ -36,6 +36,7 @@ local derived_stats = require("d2legacy.systems.derived_stats")
 local progression_data = require("d2legacy.data.progression")
 local progression = require("d2legacy.systems.progression")
 local owned_unit_lifecycle = require("d2legacy.systems.owned_unit_lifecycle")
+local movement = require("d2legacy.gameplay.systems.movement")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -75,6 +76,7 @@ function M.start()
     quest_commands.register()
     population.register()
     move_player.register()
+    movement.register()
     owned_units.register()
     owned_unit_lifecycle.register()
     facing.register()

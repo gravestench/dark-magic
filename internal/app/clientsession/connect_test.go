@@ -162,6 +162,19 @@ func TestCorrectionRejectsStaleAndConflictingSnapshots(t *testing.T) {
 	}
 }
 
+func TestViewReturnsDefensiveWorldEntityState(t *testing.T) {
+	health, maximum := int64(3), int64(5)
+	session := &Session{HUD: playeradapter.HUD{Tick: 7}, World: playeradapter.WorldView{Tick: 7,
+		Entities: []playeradapter.WorldEntity{{ID: "hostile", Health: &health, MaxHealth: &maximum}}}}
+	_, view := session.View()
+	view.Entities[0].ID = "changed"
+	*view.Entities[0].Health = 0
+	_, unchanged := session.View()
+	if unchanged.Entities[0].ID != "hostile" || *unchanged.Entities[0].Health != 3 {
+		t.Fatalf("session view was mutated through returned copy: %#v", unchanged)
+	}
+}
+
 func connectTLS(t *testing.T) (*tls.Config, *tls.Config, string) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

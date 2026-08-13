@@ -9,7 +9,10 @@ local camera_follow = require("d2legacy.gameplay.systems.camera_follow")
 local M = {}
 
 function M.register(collision)
-    movement.register(collision)
+    -- Position integration belongs to the authoritative runtime so headless
+    -- servers execute the same movement as an interactive local game. This
+    -- composition only supplies the materialized collision map.
+    movement.set_collision(collision)
     camera_follow.register()
 end
 

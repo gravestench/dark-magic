@@ -34,6 +34,7 @@ return test.suite({
                 })
                 test.assert(#players == 1, [=[#players == 1]=])
                 local velocity = ecs.get(players[1], "d2legacy.world.velocity")
+                local position = ecs.get(players[1], "d2legacy.world.position")
                 local animation = ecs.get(players[1], "d2legacy.player.animation")
                 local facing = ecs.get(players[1], "d2legacy.world.facing")
                 local mode = ecs.get(players[1], "d2legacy.player.movement_mode")
@@ -49,6 +50,14 @@ return test.suite({
                 test.assert(animation:get("mode") == "RN", [=[animation:get("mode") == "RN"]=])
                 test.assert(facing:get("direction") == 4, [=[facing:get("direction") == 4]=])
                 test.assert(mode:get("running") == true, [=[mode:get("running") == true]=])
+                test.assert(
+                    position:get("x") > fixtures.amazon_entry.x,
+                    [=[position:get("x") > fixtures.amazon_entry.x]=]
+                )
+                test.assert(
+                    position:get("y") > fixtures.amazon_entry.y,
+                    [=[position:get("y") > fixtures.amazon_entry.y]=]
+                )
             end),
             test.submit({
                 tick = 3,
