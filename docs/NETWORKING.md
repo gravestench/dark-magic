@@ -62,6 +62,15 @@ runtime identity, and issues an unpredictable bearer credential held in the
 server membership table. Client command messages contain only tick, sequence,
 kind, and action payload. The endpoint supplies `Player` and player authority.
 
+Listen-server TCP/IP play keeps its user flow address-only. A host name or IP
+uses port `6112` unless a port is supplied. The application configuration
+directory's `network` folder stores the persistent owner-only
+`host-identity.pem`, its `host-certificate.pem`, and client
+`known-hosts.json` trust-on-first-use pins keyed by normalized `host:port`.
+First contact records the certificate fingerprint; a later identity change is
+rejected rather than silently replacing it. Realm endpoint fingerprints remain
+assignment-owned and separate from this direct-game trust store.
+
 Join and reconnect return versioned per-player semantic projections plus a
 canonical tick and checksum. They do not expose raw ECS snapshots or hidden
 server facts. Reconnect rotates the bearer credential so a successfully used

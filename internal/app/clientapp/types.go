@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
+	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
@@ -109,6 +110,7 @@ type application struct {
 	questCatalog        *recovered.Catalog
 	worldObjectResolver *worldobjects.Resolver
 	saves               *d2save.Store
+	networkTrust        *networktrust.Store
 	playerProfilePath   string
 	entitySimulation    *gameecs.Engine
 	offlineSession      *gamesession.Session

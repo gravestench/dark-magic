@@ -2,16 +2,9 @@ package clientapp
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/hex"
 	"errors"
-	"math/big"
 	"net"
 	"strings"
 	"sync"
@@ -98,9 +91,14 @@ func (controller *networkController) startJoin(address string) {
 		controller.fail(err)
 		return
 	}
+	clientTLS, err := controller.app.networkTrust.ClientTLS(address)
+	if err != nil {
+		controller.fail(err)
+		return
+	}
 	client, err := clientsession.ConnectSelfHosted(controller.app.ctx, clientsession.SelfHostedAssignment{
 		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
-	}, directTLS(), controller.app.saves)
+	}, clientTLS, controller.app.saves)
 	if err != nil {
 		controller.fail(err)
 		return
@@ -108,14 +106,6 @@ func (controller *networkController) startJoin(address string) {
 	controller.mu.Lock()
 	controller.client, controller.phase = client, "connected"
 	controller.mu.Unlock()
-}
-
-// directTLS encrypts classic address-only TCP/IP games without asking players
-// to exchange certificate metadata. Persistent host-key pinning belongs in the
-// client trust store; until that exists, runtime identity still prevents a
-// client with different production content from entering the session.
-func directTLS() *tls.Config {
-	return &tls.Config{InsecureSkipVerify: true}
 }
 
 func (controller *networkController) fail(err error) {
@@ -169,7 +159,7 @@ func (controller *networkController) startHost() {
 		return
 	}
 	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, playeradapter.ErrHUDPlayer) })
-	serverTLS, clientTLS, fingerprint, err := listenTLS()
+	serverTLS, clientTLS, fingerprint, err := controller.app.networkTrust.HostTLS()
 	if err != nil {
 		_ = host.Close(context.Background())
 		fail(err)
@@ -264,27 +254,4 @@ func randomBytes(size int) ([]byte, error) {
 		return nil, err
 	}
 	return value, nil
-}
-
-func listenTLS() (*tls.Config, *tls.Config, string, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, nil, "", err
-	}
-	template := x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "localhost"},
-		NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(24 * time.Hour), KeyUsage: x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, IPAddresses: []net.IP{net.ParseIP("127.0.0.1")}}
-	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
-	if err != nil {
-		return nil, nil, "", err
-	}
-	certificate, err := x509.ParseCertificate(der)
-	if err != nil {
-		return nil, nil, "", err
-	}
-	pool := x509.NewCertPool()
-	pool.AddCert(certificate)
-	sum := sha256.Sum256(der)
-	return &tls.Config{Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}}},
-		&tls.Config{RootCAs: pool, ServerName: "127.0.0.1"}, "sha256:" + hex.EncodeToString(sum[:]), nil
 }

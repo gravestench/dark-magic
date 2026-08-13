@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
@@ -119,6 +120,14 @@ func (app *application) buildOfflineSession() error {
 		return err
 	}
 	app.network = newNetworkController(app)
+	trustDirectory, err := networktrust.Directory(app.gameSettings.Path())
+	if err != nil {
+		return wrap("resolve network trust directory", err)
+	}
+	app.networkTrust, err = networktrust.New(trustDirectory)
+	if err != nil {
+		return wrap("create network trust store", err)
+	}
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)
