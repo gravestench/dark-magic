@@ -51,17 +51,17 @@ func TestRemoteProfileAdmissionAuthenticatesQueuesAndIssuesOneUseTicket(t *testi
 		t.Fatal(err)
 	}
 	principal, err := tickets.Authenticate(context.Background(), ticket)
-	if err != nil || principal.CharacterID != "hero" || principal.PlayerID != "player" || principal.RuntimeIdentityHash != allocation.IdentityHash {
+	if err != nil || principal.CharacterID != "hero" || principal.PlayerID != "player-1" || principal.RuntimeIdentityHash != allocation.IdentityHash {
 		t.Fatalf("principal=%#v error=%v", principal, err)
 	}
-	if _, err := admissions.Admit(context.Background(), "host-password", offer); !errors.Is(err, ErrRemoteProfileAdmission) {
-		t.Fatalf("duplicate error = %v", err)
+	if _, err := admissions.Admit(context.Background(), "host-password", offer); err != nil {
+		t.Fatalf("second player admission: %v", err)
 	}
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
 	replay, err := session.Replay()
-	if err != nil || len(replay.Commands) != 1 || replay.Commands[0].Player != "self-host:remote-profile" {
+	if err != nil || len(replay.Commands) != 2 || replay.Commands[0].Player != "self-host:remote-profile" {
 		t.Fatalf("replay=%#v error=%v", replay, err)
 	}
 }

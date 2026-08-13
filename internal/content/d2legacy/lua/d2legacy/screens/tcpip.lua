@@ -43,7 +43,9 @@ return {
         self.status_value = ""
 
         local function show_status(value)
-            if value == self.status_value then return end
+            if value == self.status_value then
+                return
+            end
             self.status_value = value
             text.set(self.status, "dialog_text", value, 360, "center")
             self.status:set_position(400, 310)
@@ -64,7 +66,7 @@ return {
         add("host", function()
             local network = require("engine.network/v1")
             if network.host() then
-                show_status("STARTING LISTEN SERVER...")
+                scenes.replace("character_select")
             else
                 local status = network.status()
                 show_status(status.error or "UNABLE TO HOST GAME")
@@ -92,6 +94,7 @@ return {
                             show_status(status.error or "UNABLE TO JOIN GAME")
                             return false
                         end
+                        scenes.replace("character_select")
                     end
                 end
             )

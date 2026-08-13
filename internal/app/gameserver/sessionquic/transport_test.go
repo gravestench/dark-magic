@@ -221,7 +221,7 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 			expected := (candidate == operationJoin && mask == 2) ||
 				(candidate == operationSubmit && mask == 5) ||
 				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1) ||
-				(candidate == operationProfileAdmit && mask == 9)
+				(candidate == operationProfileAdmit && (mask == 8 || mask == 9))
 			if valid != expected {
 				t.Fatalf("operation=%q mask=%03b valid=%t want=%t", candidate, mask, valid, expected)
 			}

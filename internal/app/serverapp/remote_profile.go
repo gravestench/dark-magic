@@ -23,6 +23,7 @@ const maxRemoteProfileAttempts = 8
 // come from the host; neither is accepted from the remote character offer.
 type RemoteProfileConfig struct {
 	Credential  string
+	AllowDirect bool
 	PrincipalID string
 	PlayerID    string
 	Destination playeradapter.Destination
@@ -35,13 +36,12 @@ type RemoteProfileAdmissions struct {
 	tickets  *gameserver.TicketAuthority
 	config   RemoteProfileConfig
 	sequence uint64
-	admitted bool
 	attempts int
 }
 
 func NewRemoteProfileAdmissions(host *gameserver.Host, tickets *gameserver.TicketAuthority, config RemoteProfileConfig) (*RemoteProfileAdmissions, error) {
 	if host == nil || host.Session == nil || host.Mode == gameserver.ModeRealm || tickets == nil ||
-		strings.TrimSpace(config.Credential) == "" || strings.TrimSpace(config.PrincipalID) == "" ||
+		(!config.AllowDirect && strings.TrimSpace(config.Credential) == "") || strings.TrimSpace(config.PrincipalID) == "" ||
 		strings.TrimSpace(config.PlayerID) == "" || config.Lifetime <= 0 {
 		return nil, ErrRemoteProfileAdmission
 	}
@@ -58,23 +58,23 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 	admissions.mu.Lock()
 	defer admissions.mu.Unlock()
 	admissions.attempts++
-	if admissions.attempts > maxRemoteProfileAttempts || admissions.admitted {
+	if admissions.attempts > maxRemoteProfileAttempts {
 		return "", ErrRemoteProfileAdmission
 	}
-	if subtle.ConstantTimeCompare([]byte(credential), []byte(admissions.config.Credential)) != 1 {
+	if !admissions.config.AllowDirect && subtle.ConstantTimeCompare([]byte(credential), []byte(admissions.config.Credential)) != 1 {
 		return "", ErrRemoteProfileAdmission
 	}
 	character, err := d2save.DecodeCharacterOffer(offer)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
 	}
-	principal := gameserver.Principal{ID: admissions.config.PrincipalID, CharacterID: character.ID,
-		PlayerID: admissions.config.PlayerID, RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
+	admissions.sequence++
+	principal := gameserver.Principal{ID: fmt.Sprintf("%s-%d", admissions.config.PrincipalID, admissions.sequence), CharacterID: character.ID,
+		PlayerID: fmt.Sprintf("%s-%d", admissions.config.PlayerID, admissions.sequence), RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
 	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
 	if err != nil {
 		return "", err
 	}
-	admissions.sequence++
 	err = admissions.host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
 		return playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
 			"self-host:remote-profile", admissions.sequence, tick, simulation.AuthoritySystem)
@@ -83,6 +83,5 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 		_ = admissions.tickets.Revoke(ticket)
 		return "", fmt.Errorf("%w: submit entry: %v", ErrRemoteProfileAdmission, err)
 	}
-	admissions.admitted = true
 	return ticket, nil
 }

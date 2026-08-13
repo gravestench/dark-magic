@@ -24,6 +24,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
@@ -47,21 +48,80 @@ func (controller *networkController) Host() error {
 	if controller.phase != "idle" && controller.phase != "failed" {
 		return controller.rejectLocked("host", errors.New("network operation already active"))
 	}
-	if _, selected := controller.app.saves.Selected(); !selected {
-		return controller.rejectLocked("host", errors.New("select a character before hosting"))
-	}
-	controller.phase, controller.mode, controller.failure = "starting", "host", ""
-	go controller.startHost()
+	controller.phase, controller.mode, controller.address, controller.failure = "selecting", "host", "", ""
 	return nil
+}
+
+func (controller *networkController) StartSelected() error {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.phase != "selecting" || (controller.mode != "host" && controller.mode != "join") {
+		return controller.rejectLocked(controller.mode, errors.New("no network operation is awaiting character selection"))
+	}
+	if _, selected := controller.app.saves.Selected(); !selected {
+		return controller.rejectLocked(controller.mode, errors.New("select a character before continuing"))
+	}
+	controller.phase, controller.failure = "starting", ""
+	if controller.mode == "host" {
+		go controller.startHost()
+	} else {
+		go controller.startJoin(controller.address)
+	}
+	return nil
+}
+
+func (controller *networkController) Cancel() {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.phase == "selecting" || controller.phase == "failed" {
+		controller.phase, controller.mode, controller.address, controller.failure = "idle", "", "", ""
+	}
 }
 
 func (controller *networkController) Join(address string) error {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
-	if strings.TrimSpace(address) == "" {
+	address = strings.TrimSpace(address)
+	if address == "" {
 		return controller.rejectLocked("join", errors.New("server address is required"))
 	}
-	return controller.rejectLocked("join", errors.New("direct join requires a host trust invitation"))
+	if _, _, err := net.SplitHostPort(address); err != nil {
+		address = net.JoinHostPort(address, "6112")
+	}
+	controller.phase, controller.mode, controller.address, controller.failure = "selecting", "join", address, ""
+	return nil
+}
+
+func (controller *networkController) startJoin(address string) {
+	identity, err := d2legacy.Identity(controller.app.options.Content)
+	if err != nil {
+		controller.fail(err)
+		return
+	}
+	client, err := clientsession.ConnectSelfHosted(controller.app.ctx, clientsession.SelfHostedAssignment{
+		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
+	}, directTLS(), controller.app.saves)
+	if err != nil {
+		controller.fail(err)
+		return
+	}
+	controller.mu.Lock()
+	controller.client, controller.phase = client, "connected"
+	controller.mu.Unlock()
+}
+
+// directTLS encrypts classic address-only TCP/IP games without asking players
+// to exchange certificate metadata. Persistent host-key pinning belongs in the
+// client trust store; until that exists, runtime identity still prevents a
+// client with different production content from entering the session.
+func directTLS() *tls.Config {
+	return &tls.Config{InsecureSkipVerify: true}
+}
+
+func (controller *networkController) fail(err error) {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	controller.phase, controller.failure = "failed", err.Error()
 }
 
 func (controller *networkController) rejectLocked(mode string, err error) error {
@@ -115,7 +175,7 @@ func (controller *networkController) startHost() {
 		fail(err)
 		return
 	}
-	server, err := sessionquic.Listen("127.0.0.1:0", serverTLS, endpoint)
+	server, err := sessionquic.Listen(":6112", serverTLS, endpoint)
 	if err != nil {
 		_ = host.Close(context.Background())
 		fail(err)
@@ -147,7 +207,7 @@ func (controller *networkController) startHost() {
 	}
 	profileCredential := hex.EncodeToString(credentialBytes)
 	profiles, err := serverapp.NewRemoteProfileAdmissions(host, tickets, serverapp.RemoteProfileConfig{
-		Credential: profileCredential, PrincipalID: "listen-local-user", PlayerID: "local-player", Destination: destination, Lifetime: time.Minute,
+		Credential: profileCredential, AllowDirect: true, PrincipalID: "listen-local-user", PlayerID: "player", Destination: destination, Lifetime: time.Minute,
 	})
 	if err != nil {
 		_ = server.Close()
@@ -159,7 +219,7 @@ func (controller *networkController) startHost() {
 	go host.Session.Run(ctx)
 	go server.Serve(ctx)
 	client, err := clientsession.ConnectSelfHosted(ctx, clientsession.SelfHostedAssignment{
-		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
+		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: "127.0.0.1:6112", TLSFingerprint: fingerprint},
 		Runtime: host.Authority.Identity, ProfileCredential: profileCredential,
 	}, clientTLS, controller.app.saves)
 	if err != nil {

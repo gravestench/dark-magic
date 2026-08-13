@@ -7,15 +7,19 @@ import lua "github.com/yuin/gopher-lua"
 // it never receives sockets, credentials, certificates, or session handles.
 type NetworkController interface {
 	Host() error
+	StartSelected() error
+	Cancel()
 	Join(address string) error
 	Status() map[string]any
 }
 
 func NetworkModule(controller NetworkController) Module {
 	return Module{Name: "engine.network/v1", Help: documentedModule("Request multiplayer hosting/joining and inspect safe connection progress.", map[string]CommandHelp{
-		"host":   commandHelp("engine.network.host()", "Start self-hosting with the selected local-profile character."),
-		"join":   commandHelp("engine.network.join(address)", "Join a self-host advertised at the supplied address."),
-		"status": commandHelp("engine.network.status()", "Return copied phase, mode, address, and safe error code."),
+		"host":           commandHelp("engine.network.host()", "Begin self-hosting by requesting character selection."),
+		"start_selected": commandHelp("engine.network.start_selected()", "Start the pending operation with the selected local-profile character."),
+		"cancel":         commandHelp("engine.network.cancel()", "Cancel a pending multiplayer operation."),
+		"join":           commandHelp("engine.network.join(address)", "Join a self-host advertised at the supplied address."),
+		"status":         commandHelp("engine.network.status()", "Return copied phase, mode, address, and safe error code."),
 	}), Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"host": func(state *lua.LState) int {
@@ -25,6 +29,17 @@ func NetworkModule(controller NetworkController) Module {
 				}
 				state.Push(lua.LBool(accepted))
 				return 1
+			},
+			"start_selected": func(state *lua.LState) int {
+				accepted := controller != nil && controller.StartSelected() == nil
+				state.Push(lua.LBool(accepted))
+				return 1
+			},
+			"cancel": func(state *lua.LState) int {
+				if controller != nil {
+					controller.Cancel()
+				}
+				return 0
 			},
 			"join": func(state *lua.LState) int {
 				address := state.OptString(1, "")

@@ -231,7 +231,7 @@ func validShape(message request) bool {
 	case operationReconnect:
 		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Credential == "" && len(message.Offer) == 0
 	case operationProfileAdmit:
-		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) > 0
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && len(message.Offer) > 0
 	default:
 		return false
 	}

@@ -26,6 +26,7 @@ internal/content/d2legacy/lua/d2legacy/items/	d2-policy	lua:d2legacy	Diablo item
 internal/content/d2legacy/lua/d2legacy/interactions/	d2-policy	lua:d2legacy	Diablo NPC interaction context and presentation adapter
 internal/content/d2legacy/lua/d2legacy/loot/	d2-policy	lua:d2legacy	Diablo treasure class quality affix and property policy
 internal/content/d2legacy/lua/d2legacy/mapgen/	d2-policy	lua:d2legacy	authoritative Diablo preset maze and outdoor generation policy
+internal/content/d2legacy/lua/d2legacy/network/	adapter	lua:presentation	multiplayer presentation flow over engine-owned transport capabilities
 internal/content/d2legacy/lua/d2legacy/owned_units/	d2-policy	lua:d2legacy	Diablo summon pet trap minion and hireling ownership limits lifetime and attribution policy
 internal/content/d2legacy/lua/d2legacy/player_intents.lua	adapter	lua:d2legacy	Diablo input vocabulary translated into generic command intents
 internal/content/d2legacy/lua/d2legacy/policy/	d2-policy	lua:d2legacy	Diablo formulas and decisions

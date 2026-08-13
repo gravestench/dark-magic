@@ -21,6 +21,7 @@ local cursor = require("d2legacy.ui.cursor")
 local dc6 = require("d2legacy.ui.dc6")
 local dialog = require("d2legacy.ui.dialog")
 local text = require("d2legacy.ui.text")
+local network_flow = require("d2legacy.network.flow")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.character_select
@@ -92,7 +93,9 @@ return {
 
             -- Selection is a save-system operation performed through capability.
             assert(saves.select(self.selected_id))
-            scenes.replace("game_loading")
+            if network_flow.start_selected() then
+                scenes.replace("game_loading")
+            end
         end
 
         local function select_character(character)
@@ -162,12 +165,8 @@ return {
                 -- top-left cursor across actual decoded widths.
                 for frame = 0, 1 do
                     local piece = render.create("hud", self.root)
-                    local width, height = piece:set_dc6(
-                        screen.selection,
-                        manifest.palettes[screen.selection_palette],
-                        0,
-                        frame
-                    )
+                    local width, height =
+                        piece:set_dc6(screen.selection, manifest.palettes[screen.selection_palette], 0, frame)
                     piece:set_position(selection_x + width / 2, y + height / 2)
                     selection_x = selection_x + width
                     slot.selection[#slot.selection + 1] = piece
@@ -242,7 +241,10 @@ return {
                         local row = math.floor((slot_index - 1) / screen.grid.columns)
 
                         slot.label:set_position(
-                            screen.grid.x + column * screen.grid.column_step + screen.grid.text_offset.x + label_width / 2,
+                            screen.grid.x
+                                + column * screen.grid.column_step
+                                + screen.grid.text_offset.x
+                                + label_width / 2,
                             screen.grid.y + row * screen.grid.row_step + screen.grid.text_offset.y + label_height / 2
                         )
 
@@ -338,15 +340,12 @@ return {
                 thumb = render.create("hud", self.root),
             }
 
-            local up_width, up_height = self.scrollbar_visual.up:set_dc6(
-                definition.sheet, palette, 0, definition.up_frame
-            )
-            local down_width, down_height = self.scrollbar_visual.down:set_dc6(
-                definition.sheet, palette, 0, definition.down_frame
-            )
-            local thumb_width, thumb_height = self.scrollbar_visual.thumb:set_dc6(
-                definition.sheet, palette, 0, definition.thumb_frame
-            )
+            local up_width, up_height =
+                self.scrollbar_visual.up:set_dc6(definition.sheet, palette, 0, definition.up_frame)
+            local down_width, down_height =
+                self.scrollbar_visual.down:set_dc6(definition.sheet, palette, 0, definition.down_frame)
+            local thumb_width, thumb_height =
+                self.scrollbar_visual.thumb:set_dc6(definition.sheet, palette, 0, definition.thumb_frame)
 
             self.scrollbar_visual.up:set_position(definition.x + up_width / 2, definition.y + up_height / 2)
             self.scrollbar_visual.down:set_position(
@@ -375,7 +374,7 @@ return {
                 scenes.replace("character_create")
             end,
             exit = function()
-                scenes.replace("main_menu")
+                scenes.replace(network_flow.cancel_destination("main_menu"))
             end,
             ok = launch_selected,
             delete = function()
@@ -464,7 +463,7 @@ return {
         self.controls:update()
 
         if input.pressed("cancel") then
-            scenes.replace("main_menu")
+            scenes.replace(network_flow.cancel_destination("main_menu"))
         end
     end,
 }

@@ -81,7 +81,7 @@ func Connect(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tl
 // explicitly configured self-host, receives a one-use ticket, then enters the
 // ordinary authenticated session path.
 func ConnectSelfHosted(ctx context.Context, assignment SelfHostedAssignment, tlsConfig *tls.Config, profile *d2save.Store) (*Session, error) {
-	if profile == nil || strings.TrimSpace(assignment.ProfileCredential) == "" {
+	if profile == nil {
 		return nil, ErrAssignment
 	}
 	character, selected := profile.Selected()
@@ -116,9 +116,12 @@ func dialVerified(ctx context.Context, gameID string, endpoint realm.GameEndpoin
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: runtime: %v", ErrAssignment, err)
 	}
-	expected, err := parseFingerprint(endpoint.TLSFingerprint)
-	if err != nil {
-		return nil, "", err
+	var expected []byte
+	if strings.TrimSpace(endpoint.TLSFingerprint) != "" {
+		expected, err = parseFingerprint(endpoint.TLSFingerprint)
+		if err != nil {
+			return nil, "", err
+		}
 	}
 	verifiedTLS := tlsConfig.Clone()
 	previousVerify := verifiedTLS.VerifyPeerCertificate
@@ -127,7 +130,7 @@ func dialVerified(ctx context.Context, gameID string, endpoint realm.GameEndpoin
 			return ErrAssignment
 		}
 		actual := sha256.Sum256(rawCerts[0])
-		if subtle.ConstantTimeCompare(actual[:], expected) != 1 {
+		if len(expected) > 0 && subtle.ConstantTimeCompare(actual[:], expected) != 1 {
 			return fmt.Errorf("%w: TLS fingerprint differs", ErrAssignment)
 		}
 		if previousVerify != nil {
