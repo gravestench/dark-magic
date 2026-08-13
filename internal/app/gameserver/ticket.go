@@ -19,13 +19,15 @@ import (
 const minimumTicketKeyBytes = 32
 
 type admissionTicket struct {
-	Version     uint32 `json:"version"`
-	SessionID   string `json:"session_id"`
-	PrincipalID string `json:"principal_id"`
-	CharacterID string `json:"character_id"`
-	PlayerID    string `json:"player_id"`
-	ExpiresUnix int64  `json:"expires_unix"`
-	Nonce       string `json:"nonce"`
+	Version             uint32 `json:"version"`
+	SessionID           string `json:"session_id"`
+	PrincipalID         string `json:"principal_id"`
+	CharacterID         string `json:"character_id"`
+	PlayerID            string `json:"player_id"`
+	CharacterRevision   uint64 `json:"character_revision"`
+	RuntimeIdentityHash string `json:"runtime_identity_hash"`
+	ExpiresUnix         int64  `json:"expires_unix"`
+	Nonce               string `json:"nonce"`
 }
 
 // TicketAuthority issues and consumes short-lived, session-bound admission
@@ -56,6 +58,7 @@ func (authority *TicketAuthority) Issue(principal Principal, lifetime time.Durat
 	ticket := admissionTicket{
 		Version: SessionProtocolVersion, SessionID: authority.sessionID,
 		PrincipalID: principal.ID, CharacterID: principal.CharacterID, PlayerID: principal.PlayerID,
+		CharacterRevision: principal.CharacterRevision, RuntimeIdentityHash: principal.RuntimeIdentityHash,
 		ExpiresUnix: authority.now().Add(lifetime).Unix(), Nonce: hex.EncodeToString(nonce[:]),
 	}
 	payload, err := json.Marshal(ticket)
@@ -67,42 +70,71 @@ func (authority *TicketAuthority) Issue(principal Principal, lifetime time.Durat
 }
 
 func (authority *TicketAuthority) Authenticate(_ context.Context, credential string) (Principal, error) {
+	ticket, err := authority.verify(credential)
+	if err != nil {
+		return Principal{}, err
+	}
+	if ticket.ExpiresUnix <= authority.now().Unix() {
+		return Principal{}, ErrAuthentication
+	}
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	authority.purgeLocked()
+	if _, used := authority.consumed[ticket.Nonce]; used {
+		return Principal{}, ErrAuthentication
+	}
+	authority.consumed[ticket.Nonce] = ticket.ExpiresUnix
+	return Principal{ID: ticket.PrincipalID, CharacterID: ticket.CharacterID, PlayerID: ticket.PlayerID,
+		CharacterRevision: ticket.CharacterRevision, RuntimeIdentityHash: ticket.RuntimeIdentityHash}, nil
+}
+
+// Revoke invalidates an issued ticket during admission rollback.
+func (authority *TicketAuthority) Revoke(credential string) error {
+	ticket, err := authority.verify(credential)
+	if err != nil {
+		return err
+	}
+	authority.mu.Lock()
+	defer authority.mu.Unlock()
+	authority.purgeLocked()
+	authority.consumed[ticket.Nonce] = ticket.ExpiresUnix
+	return nil
+}
+
+func (authority *TicketAuthority) verify(credential string) (admissionTicket, error) {
 	parts := strings.Split(credential, ".")
 	if len(parts) != 2 {
-		return Principal{}, ErrAuthentication
+		return admissionTicket{}, ErrAuthentication
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil || len(payload) > MaxTicketPayloadBytes {
-		return Principal{}, ErrAuthentication
+		return admissionTicket{}, ErrAuthentication
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil || !hmac.Equal(signature, authority.sign(payload)) {
-		return Principal{}, ErrAuthentication
+		return admissionTicket{}, ErrAuthentication
 	}
 	var ticket admissionTicket
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&ticket); err != nil {
-		return Principal{}, ErrAuthentication
+		return admissionTicket{}, ErrAuthentication
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		return Principal{}, ErrAuthentication
+		return admissionTicket{}, ErrAuthentication
 	}
-	if ticket.Version != SessionProtocolVersion || ticket.SessionID != authority.sessionID || ticket.ExpiresUnix <= authority.now().Unix() || ticket.Nonce == "" || ticket.PrincipalID == "" || ticket.CharacterID == "" || ticket.PlayerID == "" {
-		return Principal{}, ErrAuthentication
+	if ticket.Version != SessionProtocolVersion || ticket.SessionID != authority.sessionID || ticket.Nonce == "" || ticket.PrincipalID == "" || ticket.CharacterID == "" || ticket.PlayerID == "" {
+		return admissionTicket{}, ErrAuthentication
 	}
-	authority.mu.Lock()
-	defer authority.mu.Unlock()
+	return ticket, nil
+}
+
+func (authority *TicketAuthority) purgeLocked() {
 	for nonce, expiry := range authority.consumed {
 		if expiry <= authority.now().Unix() {
 			delete(authority.consumed, nonce)
 		}
 	}
-	if _, used := authority.consumed[ticket.Nonce]; used {
-		return Principal{}, ErrAuthentication
-	}
-	authority.consumed[ticket.Nonce] = ticket.ExpiresUnix
-	return Principal{ID: ticket.PrincipalID, CharacterID: ticket.CharacterID, PlayerID: ticket.PlayerID}, nil
 }
 
 func (authority *TicketAuthority) sign(payload []byte) []byte {

@@ -25,9 +25,11 @@ var (
 // command identity used inside the authoritative session; clients never choose
 // it in command messages.
 type Principal struct {
-	ID          string
-	CharacterID string
-	PlayerID    string
+	ID                  string
+	CharacterID         string
+	PlayerID            string
+	CharacterRevision   uint64
+	RuntimeIdentityHash string
 }
 
 type Authenticator interface {
@@ -103,6 +105,9 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 	}
 	principal, err := endpoint.auth.Authenticate(ctx, request.Credential)
 	if err != nil || strings.TrimSpace(principal.ID) == "" || strings.TrimSpace(principal.CharacterID) == "" || strings.TrimSpace(principal.PlayerID) == "" {
+		return JoinResponse{}, ErrAuthentication
+	}
+	if principal.RuntimeIdentityHash != "" && principal.RuntimeIdentityHash != endpoint.host.Allocation.IdentityHash {
 		return JoinResponse{}, ErrAuthentication
 	}
 	admission, err := endpoint.host.Admit(principal.CharacterID, request.Identity)

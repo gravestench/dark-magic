@@ -139,6 +139,29 @@ func TestEndpointRejectsUntrustedAndIncompatibleClients(t *testing.T) {
 	}
 }
 
+func TestEndpointRejectsTicketPinnedToAnotherRuntime(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, err := gamesession.Allocate("game-1", identity, gamesession.PredictionNone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player", RuntimeIdentityHash: "another-runtime"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity}); !errors.Is(err, ErrAuthentication) {
+		t.Fatalf("runtime-bound ticket error = %v", err)
+	}
+}
+
 func testProtocolIdentity() simulation.RuntimeIdentity {
 	return simulation.RuntimeIdentity{
 		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",

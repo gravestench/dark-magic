@@ -73,6 +73,16 @@ and hidden server facts. Realm admission must load and lease the durable
 character and submit the trusted player-entry command before join; a client
 credential never materializes authoritative character state.
 
+Realm join is a transaction across the durable character repository and the
+allocated worker. It acquires an exclusive revisioned lease owned by the
+account, validates the character's pinned runtime compatibility, creates the
+trusted next-tick player-entry command with a realm-owned monotonic sequence,
+and returns the worker address, TLS fingerprint, exact runtime identity, lease,
+and short-lived ticket. The ticket additionally binds the character revision
+and runtime identity hash. Validation or submission failure releases the lease
+and revokes the unused ticket. Active memberships renew their lease through the
+realm; reconnect never accepts client-reported durable state.
+
 ## Join-time mod acquisition
 
 Realm admission advertises a signed, versioned mod manifest before a client is

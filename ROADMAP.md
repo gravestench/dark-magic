@@ -1816,7 +1816,11 @@ authority, persistence separation, and resilience acceptance remain open.
   realm-shared key. Short-lived admission tickets are HMAC-authenticated,
   session-bound, and one-use. `PlayerHUD/v1` projects only the authenticated
   player's allowlisted fields from a canonical checkpoint, proving that raw ECS
-  and another player's private state do not cross the transport boundary.
+  and another player's private state do not cross the transport boundary. The
+  realm now coordinates account-owned revisioned character leases with worker
+  admission: exact runtime compatibility is checked, trusted entry is queued,
+  tickets bind revision/runtime, and failed joins revoke tickets and leases.
+  Membership lease renewal supports the reconnect window.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
