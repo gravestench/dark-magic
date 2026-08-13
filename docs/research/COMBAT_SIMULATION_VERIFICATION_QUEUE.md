@@ -10,8 +10,12 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
   modulo comparison, negative-rating normalization, and integer truncation
   order from `SUNITDMG_IsHitSuccessful`; executable vectors live in
   `internal/game/combat/hit_chance_test.go`.
-- [ ] Pin and project every upstream attack-rating and defense contribution
-  before replacing the production synthetic hit policy.
+- [x] Pin and project the M21.13 player attack-rating and defense inputs:
+  CharStats class factor, Dexterity bases, equipped weapon/armor, named
+  affix/socket/passive flat sources, combined percentage sources, local
+  enhanced defense, and skill-record hand selection. Broader block,
+  ignore-defense, target-AC, mastery, aura, and PvP branches remain separately
+  enumerated below instead of being hidden in Basic Attack.
 - Pin one complete physical-damage transaction including fixed-point scale, min/max roll boundaries, resistance/reduction, exact lethal threshold, and RNG before/after.
 - Enumerate the `Skills.txt` server start/do behavior IDs present in mounted LoD data and identify which shared behavior families are required for an initial playable Act I slice.
 - Build a headless state-instance experiment proving refresh/expiration semantics for at least stun, chill, poison, and one aura/curse source.

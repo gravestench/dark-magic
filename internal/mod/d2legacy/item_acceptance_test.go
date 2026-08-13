@@ -130,7 +130,7 @@ func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	assertPlayerAttackRating(t, engine, 1000, 1)
+	assertPlayerAttackRating(t, engine, 965, 1)
 	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
 		"item_id": "weapon", "destination": map[string]any{"container": "inventory", "x": 2, "y": 0},
 	})); err != nil {
@@ -141,7 +141,7 @@ func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	assertPlayerAttackRating(t, engine, 100, 0)
+	assertPlayerAttackRating(t, engine, 65, 0)
 }
 
 func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
@@ -183,7 +183,7 @@ func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	assertPlayerCombatStat(t, engine, "defense", 40, 1)
+	assertPlayerCombatStat(t, engine, "defense", 45, 1)
 	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
 		"item_id": "weapon", "destination": map[string]any{"container": "held"},
 	})); err != nil {
@@ -200,8 +200,8 @@ func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	assertPlayerCombatStat(t, engine, "defense", 40, 1)
-	assertPlayerAttackRating(t, engine, 1000, 1)
+	assertPlayerCombatStat(t, engine, "defense", 45, 1)
+	assertPlayerAttackRating(t, engine, 965, 1)
 	if err := session.Submit(itemCommand(t, 7, 6, "item.move", map[string]any{
 		"item_id": "armor", "destination": map[string]any{"container": "inventory", "x": 4, "y": 0},
 	})); err != nil {
@@ -212,8 +212,8 @@ func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	assertPlayerCombatStat(t, engine, "defense", 0, 0)
-	assertPlayerAttackRating(t, engine, 1000, 1)
+	assertPlayerCombatStat(t, engine, "defense", 5, 0)
+	assertPlayerAttackRating(t, engine, 965, 1)
 }
 
 func assertPlayerAttackRating(t *testing.T, engine *gameecs.Engine, wanted int64, sources int) {

@@ -1406,7 +1406,7 @@ data owners; they do not introduce parallel gameplay authorities.
   player owner. One concrete summon skill, expiration/despawn execution,
   owner-death/zone-transition behavior, mutable stat-derived limits, and
   durable hireling records remain subsequent behavior layers.
-- [ ] **M21.13: Player basic attack.** The first increment routes pointer-picked
+- [x] **M21.13: Player basic attack.** The first increment routes pointer-picked
   general Attack (skill ID 0) through cast start/effect/complete and translates
   its effect into the same combat-phase melee request used by monster AI.
   Players and monsters now carry a shared fixed-point melee profile, so target,
@@ -1440,25 +1440,23 @@ data owners; they do not introduce parallel gameplay authorities.
   same tick. The no-argument Combat Lab runs this transaction inside the
   production generated Blood Moor scene and overlays authoritative player,
   hostile, AI, health, attack-phase, and semantic-event facts without owning a
-  second simulation or renderer. Finish affix/socket/attribute stat sources,
-  true dual-wield attack selection, and a repeatable asset-backed
-  pointer-to-hit acceptance capture. The current
-  75-percent production hit chance remains explicitly synthetic pending the
-  verified attack-rating/defense formula.
-  The recovered 1.10f final hit resolver is now pinned separately with
-  executable integer edge vectors; production replacement waits only on the
-  upstream class/Dexterity, equipment, skill, and defense stat projection so
-  the verified resolver receives real authoritative inputs rather than new
-  placeholders.
-  Player attack rating now preserves its Dexterity-derived base separately from
-  named additive sources. The active equipped hand contributes an item-identity
+  second simulation or renderer. The MPQ-backed Combat Lab acceptance follows
+  the production admission-to-health-loss path, and `capture-combat-lab`
+  provides its repeatable visual review surface. The recovered 1.10f hit
+  resolver now consumes CharStats/Dexterity bases and named flat/percentage
+  equipment, affix, socket, and passive sources instead of a synthetic chance.
+  Player attack rating preserves its class/Dexterity-derived base separately
+  from named sources. The active equipped hand contributes an item-identity
   source that is rebuilt into the effective value before combat and disappears
   on unequip; checkpointed item acceptance proves both attachment and removal.
   Equipped armor likewise contributes independent item-identity defense sources
   on top of durable base defense, and unequipping removes only the matching
-  defense source without disturbing active-hand attack rating. Affix, socket,
-  passive-skill, and armor-roll sources plus their verified percentage ordering
-  remain before this milestone can replace its broader synthetic inputs.
+  defense source without disturbing active-hand attack rating. Local enhanced
+  defense uses the base maximum-plus-one rule, global percentages apply after
+  flat sources, and executable Lua vectors pin every integer boundary. Hand
+  selection is driven by `Skills.txt` `weapsel`; merely filling both hand slots
+  never invents alternation, and only Barbarian and Assassin expose a secondary
+  weapon to the selector.
   Player melee animation now emits distinct authoritative start, impact, and
   completion lifecycle events at fixed simulation ticks; these are separate
   from damage-resolution events so presentation cues cannot affect death credit.

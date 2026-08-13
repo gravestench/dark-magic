@@ -50,8 +50,7 @@ local function class_starting_skill(class)
 end
 
 local function is_initial_skill(skill, starting_skill)
-    return skill.general == "1"
-        or string.lower(skill.skill or "") == string.lower(starting_skill)
+    return skill.general == "1" or string.lower(skill.skill or "") == string.lower(starting_skill)
 end
 
 local function learned_skill(skill, description)
@@ -71,20 +70,12 @@ end
 
 -- load returns presentation facts for one numeric skill identifier.
 function M.load(id)
-    local skill = find(
-        records.load("data/global/excel/skills.txt"),
-        "Id",
-        tostring(id)
-    )
+    local skill = find(records.load("data/global/excel/skills.txt"), "Id", tostring(id))
     if not skill then
         return nil
     end
 
-    local description = find(
-        records.load("data/global/excel/skilldesc.txt"),
-        "skilldesc",
-        skill.skilldesc
-    )
+    local description = find(records.load("data/global/excel/skilldesc.txt"), "skilldesc", skill.skilldesc)
     if not description then
         return nil
     end
@@ -94,8 +85,7 @@ function M.load(id)
         return nil
     end
 
-    local sheet = icon_sheets[string.lower(skill.charclass or "")]
-        or "Skillicon"
+    local sheet = icon_sheets[string.lower(skill.charclass or "")] or "Skillicon"
     return {
         id = id,
         icon = math.floor(icon),
@@ -105,7 +95,13 @@ function M.load(id)
         list_row = math.floor(tonumber(description.ListRow) or 0),
         left_allowed = skill.leftskill == "1",
         passive = skill.passive == "1",
+        weapon_selection = math.floor(tonumber(skill.weapsel) or 0),
     }
+end
+
+function M.weapon_selection(id)
+    local skill = find(records.load("data/global/excel/skills.txt"), "Id", tostring(id))
+    return skill and math.floor(tonumber(skill.weapsel) or 0) or 0
 end
 
 -- starting_for_class builds the authoritative initial learned-skill set.

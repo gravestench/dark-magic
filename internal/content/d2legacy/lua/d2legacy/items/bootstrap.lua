@@ -9,9 +9,11 @@ local development_fixtures = require("d2legacy.items.development_fixtures")
 local M = {}
 
 local function layout_exists(owner)
-    for _, entity in ipairs(ecs.query({
-        all = { "d2legacy.items.layout" },
-    })) do
+    for _, entity in
+        ipairs(ecs.query({
+            all = { "d2legacy.items.layout" },
+        }))
+    do
         if ecs.get(entity, "d2legacy.items.layout"):get("owner") == owner then
             return true
         end
@@ -77,6 +79,7 @@ local function create_item(layout, item)
         },
         ["d2legacy.item.armor"] = {
             defense = item.defense or 0,
+            base_defense_max = item.base_defense_max or 0,
         },
     })
 
@@ -167,7 +170,9 @@ end
 
 function M.load()
     local available, initial = pcall(require, "engine.initial_data/v1")
-    if not available then return end
+    if not available then
+        return
+    end
 
     local fixture_config = initial.get("d2legacy.development_items") or {}
     -- Tests, save importers, and servers may supply already-decoded durable
@@ -177,30 +182,39 @@ function M.load()
     if not data and fixture_config.enabled == true then
         data = development_fixtures.build(true)
     end
-	-- A newly created character owns empty containers before any durable item
-	-- import exists. Their dimensions and gold policy are Diablo rules, so the
-	-- first-party mod supplies them instead of asking the generic host to know
-	-- what an inventory, stash, cube, belt, or vendor page looks like.
-	if not data and fixture_config.create_empty_containers == true then
-		data = {
-			owner = "local-player",
-			inventory_width = 10, inventory_height = 4,
-			stash_width = 6, stash_height = 8,
-			cube_width = 3, cube_height = 4,
-			belt_capacity = 4,
-			vendor_width = 10, vendor_height = 10,
-			active_weapon_set = 0,
-			carried_gold = 0, stashed_gold = 0,
-			items = {},
-		}
+    -- A newly created character owns empty containers before any durable item
+    -- import exists. Their dimensions and gold policy are Diablo rules, so the
+    -- first-party mod supplies them instead of asking the generic host to know
+    -- what an inventory, stash, cube, belt, or vendor page looks like.
+    if not data and fixture_config.create_empty_containers == true then
+        data = {
+            owner = "local-player",
+            inventory_width = 10,
+            inventory_height = 4,
+            stash_width = 6,
+            stash_height = 8,
+            cube_width = 3,
+            cube_height = 4,
+            belt_capacity = 4,
+            vendor_width = 10,
+            vendor_height = 10,
+            active_weapon_set = 0,
+            carried_gold = 0,
+            stashed_gold = 0,
+            items = {},
+        }
     end
-    if not data or not data.owner then return end
+    if not data or not data.owner then
+        return
+    end
 
     -- A reconstructed runtime registers schemas and runs this composition root
     -- before checkpoint participant state is attached. Its ECS snapshot already
     -- contains the durable layout, items, vendor terms, service rules, and
     -- interaction context. Never import immutable creation facts a second time.
-    if layout_exists(data.owner) then return end
+    if layout_exists(data.owner) then
+        return
+    end
 
     local layout = create_layout(data)
     for _, item in ipairs(data.items or {}) do

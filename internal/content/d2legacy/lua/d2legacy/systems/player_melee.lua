@@ -7,47 +7,73 @@
 local ecs = require("engine.ecs/v1")
 local direction = require("d2legacy.policy.direction")
 local melee = require("d2legacy.policy.melee")
+local weapon_selection = require("d2legacy.policy.weapon_selection")
 local M = {}
 
 local function controlled(entities, player)
     for _, entity in ipairs(entities) do
         local control = ecs.get(entity, "d2legacy.world.player_control")
-        if control and control:get("player") == player then return entity end
+        if control and control:get("player") == player then
+            return entity
+        end
     end
 end
 
 local function selected(entities, wanted)
     for _, entity in ipairs(entities) do
         local selectable = ecs.get(entity, "d2legacy.world.selectable")
-        if selectable and selectable:get("id") == wanted then return entity end
+        if selectable and selectable:get("id") == wanted then
+            return entity
+        end
     end
 end
 
 local function stop(entity, mode)
     local velocity, animation = ecs.get(entity, "d2legacy.world.velocity"), ecs.get(entity, "d2legacy.player.animation")
-    if velocity then velocity:set("x", 0); velocity:set("y", 0) end
-    if animation then animation:set("mode", mode or "NU") end
+    if velocity then
+        velocity:set("x", 0)
+        velocity:set("y", 0)
+    end
+    if animation then
+        animation:set("mode", mode or "NU")
+    end
 end
 
 local function identity(entity)
-    local selectable=ecs.get(entity,"d2legacy.world.selectable")
+    local selectable = ecs.get(entity, "d2legacy.world.selectable")
     return selectable and selectable:get("id") or tostring(entity:id())
 end
 
 local function animation_event(structural, attacker, attack, kind, tick)
-    local target_id,skill_id
-    if type(attack)=="table" then
-        target_id,skill_id=attack.target_id,attack.skill_id
+    local target_id, skill_id
+    if type(attack) == "table" then
+        target_id, skill_id = attack.target_id, attack.skill_id
     else
-        target_id,skill_id=attack:get("target_id"),attack:get("skill_id")
+        target_id, skill_id = attack:get("target_id"), attack:get("skill_id")
     end
-    structural:create({["d2legacy.combat.attack_animation_event"]={
-        kind=kind,tick=tick,attacker_id=identity(attacker),
-        target_id=target_id,skill_id=skill_id,
-    }})
+    structural:create({
+        ["d2legacy.combat.attack_animation_event"] = {
+            kind = kind,
+            tick = tick,
+            attacker_id = identity(attacker),
+            target_id = target_id,
+            skill_id = skill_id,
+            hand = type(attack) == "table" and attack.hand or attack:get("hand"),
+        },
+    })
 end
 
-local function start_swing(context, attacker, target_id, dx, dy, structural)
+local function attack_hand(attacker, selector, sequence_frame)
+    local profile = assert(ecs.get(attacker, "d2legacy.combat.melee_profile"), "player has no melee profile")
+    return weapon_selection.select(
+        selector,
+        profile:get("primary_hand"),
+        profile:get("dual_wield") and profile:get("secondary_hand") or "",
+        sequence_frame
+    )
+end
+
+local function start_swing(context, attacker, target_id, dx, dy, selector, structural)
     stop(attacker, "A1")
     local facing = ecs.get(attacker, "d2legacy.world.facing")
     if facing and (dx ~= 0 or dy ~= 0) then
@@ -56,20 +82,32 @@ local function start_swing(context, attacker, target_id, dx, dy, structural)
     -- These reviewed fallback ticks keep simulation independent of renderer
     -- frames. Typed AnimData timing will replace the defaults through mod data.
     local attack = {
-        skill_id=0,target_id=target_id,start_tick=context.tick,
-        impact_tick=context.tick+3,complete_tick=context.tick+8,impact_fired=false,
+        skill_id = 0,
+        target_id = target_id,
+        start_tick = context.tick,
+        impact_tick = context.tick + 3,
+        complete_tick = context.tick + 8,
+        impact_fired = false,
+        weapon_selection = selector,
+        hand = attack_hand(attacker, selector, context.tick),
     }
     structural:set(attacker, "d2legacy.combat.attack_animation", attack)
     animation_event(structural, attacker, attack, "attack_started", context.tick)
 end
 
 function M.register()
-    ecs.system({id="d2legacy.combat.accept_player_melee",phase="pre_simulation",
-        query={any={"d2legacy.skill.cast_event","d2legacy.world.player_control"}},
-        read={"d2legacy.skill.cast_event","d2legacy.world.player_control",
-            "d2legacy.combat.attack_approach","d2legacy.combat.attack_animation"},
-        write={"d2legacy.combat.attack_approach","d2legacy.combat.attack_animation"},
-        update=function(_, entities, structural)
+    ecs.system({
+        id = "d2legacy.combat.accept_player_melee",
+        phase = "pre_simulation",
+        query = { any = { "d2legacy.skill.cast_event", "d2legacy.world.player_control" } },
+        read = {
+            "d2legacy.skill.cast_event",
+            "d2legacy.world.player_control",
+            "d2legacy.combat.attack_approach",
+            "d2legacy.combat.attack_animation",
+        },
+        write = { "d2legacy.combat.attack_approach", "d2legacy.combat.attack_animation" },
+        update = function(_, entities, structural)
             for _, event_entity in ipairs(entities) do
                 local event = ecs.get(event_entity, "d2legacy.skill.cast_event")
                 if event and event:get("behavior") == "basic.melee" then
@@ -83,77 +121,138 @@ function M.register()
                         if not same then
                             structural:remove(player, "d2legacy.combat.attack_animation")
                             structural:set(player, "d2legacy.combat.attack_approach", {
-                                skill_id=0,target_id=target_id,request_tick=event:get("tick"),
-                                target_x=event:get("target_x"),target_y=event:get("target_y"),
+                                skill_id = 0,
+                                target_id = target_id,
+                                request_tick = event:get("tick"),
+                                target_x = event:get("target_x"),
+                                target_y = event:get("target_y"),
+                                weapon_selection = event:get("weapon_selection"),
                             })
                         end
                     end
                     structural:destroy(event_entity)
                 end
             end
-        end})
+        end,
+    })
 
-    ecs.system({id="d2legacy.combat.player_melee_approach",phase="pre_simulation",
-        query={any={"d2legacy.combat.attack_approach","d2legacy.world.selectable"}},
-        read={"d2legacy.combat.attack_approach","d2legacy.world.selectable","d2legacy.world.position",
-            "d2legacy.world.location","d2legacy.world.collider","d2legacy.combat.melee_profile"},
-        write={"d2legacy.combat.attack_approach","d2legacy.combat.attack_animation",
-            "d2legacy.world.velocity","d2legacy.world.facing","d2legacy.player.animation",
-            "d2legacy.combat.attack_animation_event"},
-        update=function(context, entities, structural)
+    ecs.system({
+        id = "d2legacy.combat.player_melee_approach",
+        phase = "pre_simulation",
+        query = { any = { "d2legacy.combat.attack_approach", "d2legacy.world.selectable" } },
+        read = {
+            "d2legacy.combat.attack_approach",
+            "d2legacy.world.selectable",
+            "d2legacy.world.position",
+            "d2legacy.world.location",
+            "d2legacy.world.collider",
+            "d2legacy.combat.melee_profile",
+        },
+        write = {
+            "d2legacy.combat.attack_approach",
+            "d2legacy.combat.attack_animation",
+            "d2legacy.world.velocity",
+            "d2legacy.world.facing",
+            "d2legacy.player.animation",
+            "d2legacy.combat.attack_animation_event",
+            "d2legacy.combat.melee_profile",
+        },
+        update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
-                local approach, profile = ecs.get(attacker, "d2legacy.combat.attack_approach"), ecs.get(attacker, "d2legacy.combat.melee_profile")
+                local approach, profile =
+                    ecs.get(attacker, "d2legacy.combat.attack_approach"),
+                    ecs.get(attacker, "d2legacy.combat.melee_profile")
                 if approach and profile then
                     local target_id = approach:get("target_id")
                     local target = target_id ~= "" and selected(entities, target_id) or nil
                     local position = ecs.get(attacker, "d2legacy.world.position")
                     if target_id == "" then
                         structural:remove(attacker, "d2legacy.combat.attack_approach")
-                        start_swing(context, attacker, "", approach:get("target_x")-position:get("x"), approach:get("target_y")-position:get("y"), structural)
+                        start_swing(
+                            context,
+                            attacker,
+                            "",
+                            approach:get("target_x") - position:get("x"),
+                            approach:get("target_y") - position:get("y"),
+                            approach:get("weapon_selection"),
+                            structural
+                        )
                     elseif not target then
-                        stop(attacker); structural:remove(attacker, "d2legacy.combat.attack_approach")
+                        stop(attacker)
+                        structural:remove(attacker, "d2legacy.combat.attack_approach")
                     else
                         local target_position = ecs.get(target, "d2legacy.world.position")
-                        local dx, dy = target_position:get("x")-position:get("x"), target_position:get("y")-position:get("y")
-                        local length = math.sqrt(dx*dx+dy*dy)
+                        local dx, dy =
+                            target_position:get("x") - position:get("x"), target_position:get("y") - position:get("y")
+                        local length = math.sqrt(dx * dx + dy * dy)
                         local range = melee.reach(
                             profile:get("range"),
                             ecs.get(attacker, "d2legacy.world.collider"):get("radius"),
-                            ecs.get(target, "d2legacy.world.collider"):get("radius"))
+                            ecs.get(target, "d2legacy.world.collider"):get("radius")
+                        )
                         if length <= range then
                             structural:remove(attacker, "d2legacy.combat.attack_approach")
-                            start_swing(context, attacker, target_id, dx, dy, structural)
+                            start_swing(
+                                context,
+                                attacker,
+                                target_id,
+                                dx,
+                                dy,
+                                approach:get("weapon_selection"),
+                                structural
+                            )
                         elseif length > 0 then
                             local velocity = ecs.get(attacker, "d2legacy.world.velocity")
-                            velocity:set("x", dx/length*10); velocity:set("y", dy/length*10)
+                            velocity:set("x", dx / length * 10)
+                            velocity:set("y", dy / length * 10)
                             local animation = ecs.get(attacker, "d2legacy.player.animation")
-                            if animation then animation:set("mode", "WL") end
+                            if animation then
+                                animation:set("mode", "WL")
+                            end
                         end
                     end
                 end
             end
-        end})
+        end,
+    })
 
-    ecs.system({id="d2legacy.combat.player_melee_animation",phase="pre_simulation",
-        query={all={"d2legacy.combat.attack_animation"}},
-        read={"d2legacy.combat.attack_animation","d2legacy.world.velocity",
-            "d2legacy.player.animation","d2legacy.world.selectable"},
-        write={"d2legacy.combat.attack_animation","d2legacy.combat.basic_attack_request",
-            "d2legacy.world.velocity","d2legacy.player.animation","d2legacy.combat.attack_animation_event"},
-        update=function(context, entities, structural)
+    ecs.system({
+        id = "d2legacy.combat.player_melee_animation",
+        phase = "pre_simulation",
+        query = { all = { "d2legacy.combat.attack_animation" } },
+        read = {
+            "d2legacy.combat.attack_animation",
+            "d2legacy.world.velocity",
+            "d2legacy.player.animation",
+            "d2legacy.world.selectable",
+        },
+        write = {
+            "d2legacy.combat.attack_animation",
+            "d2legacy.combat.basic_attack_request",
+            "d2legacy.world.velocity",
+            "d2legacy.player.animation",
+            "d2legacy.combat.attack_animation_event",
+        },
+        update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
                 local attack = ecs.get(attacker, "d2legacy.combat.attack_animation")
                 if not attack:get("impact_fired") and context.tick >= attack:get("impact_tick") then
                     attack:set("impact_fired", true)
                     animation_event(structural, attacker, attack, "attack_impact", context.tick)
-                    structural:set(attacker, "d2legacy.combat.basic_attack_request", {target_id=attack:get("target_id"),request_tick=context.tick})
+                    structural:set(attacker, "d2legacy.combat.basic_attack_request", {
+                        target_id = attack:get("target_id"),
+                        request_tick = context.tick,
+                        hand = attack:get("hand"),
+                    })
                 end
                 if context.tick >= attack:get("complete_tick") then
                     animation_event(structural, attacker, attack, "attack_completed", context.tick)
-                    stop(attacker); structural:remove(attacker, "d2legacy.combat.attack_animation")
+                    stop(attacker)
+                    structural:remove(attacker, "d2legacy.combat.attack_animation")
                 end
             end
-        end})
+        end,
+    })
 end
 
 return M
