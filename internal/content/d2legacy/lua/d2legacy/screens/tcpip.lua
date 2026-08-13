@@ -50,8 +50,8 @@ return {
         end
 
         add("host", function()
-            -- Plain Lua data records the player's intent. No networking starts here.
-            self.intent = { mode = "host" }
+            local network = require("engine.network/v1")
+            network.host()
         end)
 
         add("join", function()
@@ -69,7 +69,8 @@ return {
                     -- Returning nil/non-false allows dialog.text_entry to close.
                     -- Empty input simply leaves intent unchanged.
                     if address ~= "" then
-                        self.intent = { mode = "join", address = address }
+                        local network = require("engine.network/v1")
+                        network.join(address)
                     end
                 end
             )

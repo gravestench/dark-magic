@@ -87,6 +87,9 @@ func (app *application) shutdown() error {
 	app.stopOverlay()
 
 	var err error
+	if app.network != nil {
+		err = errors.Join(err, app.network.Close())
+	}
 	if app.saves != nil && app.playerProfilePath != "" {
 		err = errors.Join(err, d2save.WriteProfileFile(app.playerProfilePath, app.saves.Profile()))
 	}

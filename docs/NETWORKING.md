@@ -189,6 +189,15 @@ the authoritative position change. The headless Lua authority owns position
 integration; interactive world composition adds collision data and camera
 behavior but is not required for movement to execute.
 
+The interactive client's TCP/IP Host button uses the same topology rather than
+starting a privileged Lua listener. `engine.network/v1` carries only host/join
+intent and copied safe status. The client application owns an in-process listen
+host, ephemeral TLS material, QUIC server, selected-profile admission, and the
+hosting player's ordinary `clientsession.Session`. This makes the host a real
+network member and establishes the lifecycle seam that remote peers will share;
+the subsequent presentation slice will render and submit input through that
+connected session instead of the offline ECS.
+
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction
 stream sends an immediate view and then changed views at no more than 2 Hz. Its

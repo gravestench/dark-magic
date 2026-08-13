@@ -118,6 +118,7 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return err
 	}
+	app.network = newNetworkController(app)
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)
