@@ -59,3 +59,20 @@ func TestTicketAuthorityRejectsTamperingAndExpiry(t *testing.T) {
 		t.Fatalf("expiry error = %v", err)
 	}
 }
+
+func TestTicketAuthorityRevokesUnconsumedTicket(t *testing.T) {
+	authority, err := NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ticket, err := authority.Issue(Principal{ID: "account", CharacterID: "character", PlayerID: "player"}, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := authority.Revoke(ticket); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := authority.Authenticate(context.Background(), ticket); err != ErrAuthentication {
+		t.Fatalf("revoked ticket error = %v", err)
+	}
+}
