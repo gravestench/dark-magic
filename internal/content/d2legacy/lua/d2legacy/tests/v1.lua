@@ -15,6 +15,25 @@ local valid_tiers = {
 
 M.generators = {}
 
+function M.mock_module(name, implementation, required_functions)
+    assert(type(name) == "string" and name ~= "", "mock module name must be a non-empty string")
+    assert(type(implementation) == "table", "mock module implementation must be a table")
+    for _, field in ipairs(required_functions or {}) do
+        assert(type(implementation[field]) == "function", name .. " mock requires function " .. field)
+    end
+    setmetatable(implementation, {
+        __index = function(_, field)
+            error(name .. " mock does not implement " .. tostring(field), 2)
+        end,
+    })
+    package.loaded[name] = implementation
+    return implementation
+end
+
+function M.unload_module(name)
+    package.loaded[name] = nil
+end
+
 function M.generators.integer(minimum, maximum)
     assert(type(minimum) == "number" and type(maximum) == "number" and minimum <= maximum, "invalid integer range")
     return function(seed)
@@ -28,6 +47,26 @@ function M.generators.one_of(values)
     local index = M.generators.integer(1, #values)
     return function(seed)
         return values[index(seed)]
+    end
+end
+
+function M.generators.map(generator, transform)
+    local valid = type(generator) == "function" and type(transform) == "function"
+    assert(valid, "map requires generator and transform functions")
+    return function(seed)
+        return transform(generator(seed), seed)
+    end
+end
+
+function M.generators.tuple(...)
+    local generators = { ... }
+    assert(#generators > 0, "tuple requires at least one generator")
+    return function(seed)
+        local result = {}
+        for index, generator in ipairs(generators) do
+            result[index] = generator(seed + (index - 1) * 104729)
+        end
+        return result
     end
 end
 
@@ -286,7 +325,13 @@ end
 function M.property(name, options, define)
     options = options or {}
     local cases = {}
-    local seeds = options.seeds or { 1, 7, 42, 99 }
+    local seeds = options.seeds
+    if seeds == nil then
+        seeds = {}
+        for seed = 1, options.samples or 4 do
+            seeds[#seeds + 1] = seed
+        end
+    end
     for _, seed in ipairs(seeds) do
         cases[#cases + 1] = M.case(name .. "_seed_" .. seed, function(test)
             local value = options.generator and options.generator(seed) or seed

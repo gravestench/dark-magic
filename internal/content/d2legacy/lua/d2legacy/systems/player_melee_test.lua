@@ -93,7 +93,7 @@ end
 
 return test.suite({
     profile = "authority",
-    tier = "fast",
+    tier = "integration",
     covers = { "internal/game/action", "internal/game/skill" },
     records = {
         -- Minimal skill records so the test can issue a left-skill attack.

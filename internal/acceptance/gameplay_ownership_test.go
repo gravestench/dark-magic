@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"bufio"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -111,9 +112,9 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 		if !strings.Contains(text, expectedDeclaration) {
 			t.Errorf("coverage evidence %q does not declare case or test %q", evidence[0], evidence[1])
 		}
-		if strings.HasSuffix(evidence[0], ".lua") && !strings.Contains(text, `"`+fields[0]+`"`) {
-			t.Errorf("Lua evidence %q does not claim coverage family %q", evidence[0], fields[0])
-		}
+		// Lua claims and discovered cases are validated from the executed suite
+		// metadata by TestLuaSuites. This inventory check only handles file/status
+		// validity and Go test evidence, which cannot be loaded as Lua metadata.
 	}
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
@@ -190,6 +191,7 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 			}
 			for _, forbidden := range []string{
 				"initial_data_json", "records_json", "payload = [[", "tests = ", "run = function", " assert(",
+				"package.loaded",
 				"\n            {\n                submit =", "\n            {\n                submit_system =",
 			} {
 				if strings.Contains(text, forbidden) {
@@ -216,22 +218,47 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 			if path == filepath.Join(root, "internal", "acceptance", "gameplay_ownership_test.go") {
 				return nil
 			}
-			data, err := os.ReadFile(path)
+			// These acceptance tests intentionally build tiny non-d2legacy modules
+			// to verify generic host composition and reload behavior.
+			if path == filepath.Join(root, "internal", "acceptance", "alternate_mod_test.go") ||
+				path == filepath.Join(root, "internal", "acceptance", "runtime_management_test.go") {
+				return nil
+			}
+			fileSet := token.NewFileSet()
+			file, err := parser.ParseFile(fileSet, path, nil, 0)
 			if err != nil {
 				return err
 			}
-			for _, forbidden := range []string{"DoString(", "lua.DoString", "L.DoString"} {
-				if strings.Contains(string(data), forbidden) {
-					relative, _ := filepath.Rel(root, path)
-					t.Errorf("%s embeds Lua through %q; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), forbidden)
+			ast.Inspect(file, func(node ast.Node) bool {
+				literal, ok := node.(*ast.BasicLit)
+				if !ok || literal.Kind != token.STRING {
+					return true
 				}
-			}
+				value, err := strconv.Unquote(literal.Value)
+				if err != nil || !looksLikeEmbeddedLua(value) {
+					return true
+				}
+				relative, _ := filepath.Rel(root, path)
+				position := fileSet.Position(literal.Pos())
+				t.Errorf("%s:%d embeds Lua source; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), position.Line)
+				return true
+			})
 			return nil
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+
+func looksLikeEmbeddedLua(value string) bool {
+	signals := 0
+	for _, marker := range []string{"local ", "function", "require(", "return ", "end", "~=", " then"} {
+		if strings.Contains(value, marker) {
+			signals++
+		}
+	}
+	return signals >= 2
 }
 
 // TestLuaNamespacesDescribeOwnership prevents the retired two-letter

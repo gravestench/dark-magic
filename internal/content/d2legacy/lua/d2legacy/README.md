@@ -111,8 +111,12 @@ Tiers are `fast`, `integration`, `real_assets`, and `stress`; normal `go test` r
 every isolated case with `DARK_MAGIC_LUA_TEST_REPEAT` to expose hidden state
 dependencies. `DARK_MAGIC_LUA_TEST_ORDER_SEED` shuffles case discovery with a
 reproducible seed. Use `test.array()` when structured input needs an empty JSON
-array; an unmarked empty Lua table is an object. Use `test.property` for deterministic input matrices and
-`test.expect` for labeled, path-aware failures.
+array; an unmarked empty Lua table is an object. Use `test.property` with
+`samples`, explicit `seeds`, and the composable `integer`, `one_of`, `map`, and
+`tuple` generators for deterministic input matrices. Use `test.expect` for
+labeled, path-aware failures. Install narrow dependency doubles with
+`test.mock_module`; it validates the declared function contract and fails on
+unexpected reads instead of silently returning `nil`.
 
 The phased contract is intentional. Calling `session.Step` from a Lua callback
 would re-enter the serialized runtime while its owner goroutine was already
@@ -144,6 +148,7 @@ Run every suite with:
 
 ```text
 go test ./internal/mod/d2legacy -run TestLuaSuites
+make test-lua
 ```
 
 Select one suite or case with the normal Go test path, for example:
@@ -152,7 +157,10 @@ Select one suite or case with the normal Go test path, for example:
 go test ./internal/mod/d2legacy -run 'TestLuaSuites/d2legacy/policy/mitigation'
 ```
 
-CI can repeat each case or opt into expensive tiers:
+The same format, syntax, repeat, and seeded-order checks required by CI run with
+`make test-lua-hardening`. The `integration` tier contains multi-system
+authority scenarios; `real_assets` and `stress` are opt-in classifications and
+must not be assigned until a suite actually supplies those resources or load.
 
 ```text
 DARK_MAGIC_LUA_TEST_REPEAT=3 go test ./internal/mod/d2legacy -run TestLuaSuites

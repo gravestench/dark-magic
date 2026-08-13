@@ -89,6 +89,64 @@ function M.monster_spawn(overrides)
     return spawn
 end
 
+function M.item(overrides)
+    local item = {
+        id = "item-1",
+        code = "ssd",
+        name = "Short Sword",
+        container = "inventory",
+        x = 0,
+        y = 0,
+        width = 1,
+        height = 3,
+        quantity = 1,
+        identified = true,
+        ethereal = false,
+    }
+    for key, value in pairs(overrides or {}) do
+        item[key] = copy(value)
+    end
+    return item
+end
+
+function M.equipment(overrides)
+    local equipment = {
+        active_weapon_set = 0,
+        items = test.array(),
+    }
+    for key, value in pairs(overrides or {}) do
+        equipment[key] = copy(value)
+    end
+    return equipment
+end
+
+function M.owned_unit(overrides)
+    local unit = {
+        owner = "alice",
+        category = "summon",
+        group = "default",
+        entity = 1,
+        created_tick = 0,
+    }
+    for key, value in pairs(overrides or {}) do
+        unit[key] = copy(value)
+    end
+    return unit
+end
+
+function M.command(kind, payload, overrides)
+    local command = {
+        tick = 0,
+        sequence = 0,
+        kind = kind,
+        payload = copy(payload or {}),
+    }
+    for key, value in pairs(overrides or {}) do
+        command[key] = copy(value)
+    end
+    return command
+end
+
 M.amazon_entry = M.player_entry()
 M.amazon_level_up_entry = M.player_entry({ experience = 5 })
 M.fire_bolt_entry = M.player_entry({

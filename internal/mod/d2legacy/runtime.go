@@ -152,19 +152,19 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 	if runtime == nil || source == nil || records == nil || engine == nil || session == nil || state == nil || random == nil {
 		return fmt.Errorf("d2legacy: complete runtime dependencies are required")
 	}
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+	if err := ConfigureModuleRuntime(runtime, source, records, random, initial); err != nil {
 		return err
 	}
 	recoveredCatalog := recovered.New(source)
 	for _, module := range []modruntime.Module{
-		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
-		modruntime.RecordsModule(records), modruntime.AuthorityStateModule(state), modruntime.AuthorityRandomModule(random),
-		modruntime.AuthorityCommandModule(runtime, session), modruntime.InitialDataModule(initial),
-		modruntime.NewECSCapability(runtime, engine).Module(),
+		modruntime.AuthorityStateModule(state), modruntime.AuthorityCommandModule(runtime, session),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
 			return err
 		}
+	}
+	if err := ConfigureECSRuntime(runtime, engine); err != nil {
+		return err
 	}
 	// Interactive clients install locale-aware catalogs first; renderer-free
 	// servers receive these policy-neutral defaults instead.
@@ -176,6 +176,39 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 		}
 	}
 	return nil
+}
+
+// ConfigureModuleRuntime installs the production modules available to policy
+// modules that do not need mutable authority or ECS access. Test profiles use
+// this function so capability names and implementations cannot drift from the
+// production authority composition.
+func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records Records, random *simulation.RandomStreams, initial map[string]any) error {
+	if runtime == nil || source == nil || records == nil || random == nil {
+		return fmt.Errorf("d2legacy: complete module runtime dependencies are required")
+	}
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+		return err
+	}
+	for _, module := range []modruntime.Module{
+		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
+		modruntime.RecordsModule(records), modruntime.AuthorityRandomModule(random),
+		modruntime.InitialDataModule(initial),
+	} {
+		if err := runtime.RegisterModule(module); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ConfigureECSRuntime adds the same ECS capability used by production. It is
+// separate from ConfigureModuleRuntime so narrow tests can prove their declared
+// capability boundary without maintaining a parallel list of implementations.
+func ConfigureECSRuntime(runtime *modruntime.Runtime, engine *gameecs.Engine) error {
+	if runtime == nil || engine == nil {
+		return fmt.Errorf("d2legacy: runtime and ECS engine are required")
+	}
+	return runtime.RegisterModule(modruntime.NewECSCapability(runtime, engine).Module())
 }
 
 func (authority *Authority) Stop(ctx context.Context) error {

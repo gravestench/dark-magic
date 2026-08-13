@@ -17,11 +17,25 @@ return test.suite({
             end)
         end),
         test.property("generated_cases_are_reproducible", {
-            seeds = { 1, 42 },
-            generator = test.generators.integer(-100, 100),
+            samples = 2,
+            generator = test.generators.map(test.generators.integer(-100, 100), function(value)
+                return value * 2
+            end),
         }, function(t, value)
             t:run(function()
-                test.expect(value * 2, "seeded example"):equals(value + value)
+                test.expect(value % 2, "mapped generated value"):equals(0)
+            end)
+        end),
+        test.case("strict_mocks_reject_unexpected_dependencies", function(t)
+            t:run(function()
+                local dependency = test.mock_module("example.dependency", {
+                    expected = function() end,
+                }, { "expected" })
+                local ok, message = pcall(function()
+                    return dependency.unexpected
+                end)
+                test.expect(ok, "unexpected dependency access succeeds"):is_false()
+                test.assert(string.find(message, "does not implement unexpected", 1, true) ~= nil)
             end)
         end),
     },

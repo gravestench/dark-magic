@@ -6,7 +6,7 @@ return test.suite({
     cases = {
         test.case("uses_joined_monstats2_pieces", {
             test.run(function()
-                package.loaded["engine.render/v1"] = {
+                test.mock_module("engine.render/v1", {
                     cof_info = function(path)
                         test.assert(
                             path == "data/global/monsters/FA/COF/FAWLHTH.cof",
@@ -29,7 +29,7 @@ return test.suite({
                     animdata_info = function()
                         return nil
                     end,
-                }
+                }, { "cof_info", "asset_exists", "animdata_info" })
                 local adapter = require("d2legacy.gameplay.monster_composite")
                 local direction = require("d2legacy.policy.direction")
                 test.assert(direction.quantize(1, 0, 8) == 3, [=[direction.quantize(1, 0, 8) == 3]=])

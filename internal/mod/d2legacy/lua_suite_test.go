@@ -89,6 +89,7 @@ func runLuaSuite(t *testing.T, source fs.FS, path string) {
 	if len(names) == 0 {
 		t.Fatalf("%s: suite contains no tests", path)
 	}
+	validateLuaCoverage(t, path, names, config.covers)
 	if !luaTestTierEnabled(config.tier) {
 		t.Skipf("%s tier is not enabled", config.tier)
 	}
@@ -212,6 +213,66 @@ func TestLuaHarnessContract(t *testing.T) {
 			t.Fatalf("module step error = %v", err)
 		}
 	})
+
+	t.Run("actions reject ambiguity and unknown operations", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		fixture := &luaSuiteFixture{config: luaSuiteConfig{profile: "authority"}}
+		for name, action := range map[string]*lua.LTable{
+			"unknown": state.NewTable(),
+			"ambiguous": func() *lua.LTable {
+				value := state.NewTable()
+				value.RawSetString("step", lua.LNumber(1))
+				value.RawSetString("checkpoint_restore", lua.LTrue)
+				return value
+			}(),
+		} {
+			t.Run(name, func(t *testing.T) {
+				if err := runLuaAction(t, fixture, action); err == nil {
+					t.Fatal("invalid action was accepted")
+				}
+			})
+		}
+	})
+
+	t.Run("numeric action fields require non-negative integers", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		for _, value := range []lua.LValue{lua.LString("1"), lua.LNumber(-1), lua.LNumber(1.5), lua.LNil} {
+			if _, err := luaNonNegativeInteger(value, "value"); err == nil {
+				t.Fatalf("accepted invalid integer %s (%s)", value, value.Type())
+			}
+		}
+	})
+
+	t.Run("commands reject malformed fields before submission", func(t *testing.T) {
+		state := lua.NewState()
+		defer state.Close()
+		command := state.NewTable()
+		command.RawSetString("tick", lua.LNumber(-1))
+		command.RawSetString("sequence", lua.LNumber(0))
+		command.RawSetString("kind", lua.LString("example"))
+		action := state.NewTable()
+		action.RawSetString("submit", command)
+		err := runLuaAction(t, &luaSuiteFixture{config: luaSuiteConfig{profile: "authority"}}, action)
+		if err == nil || !strings.Contains(err.Error(), "command tick") {
+			t.Fatalf("malformed command error = %v", err)
+		}
+	})
+
+	t.Run("checkpoint restore requires a completed step", func(t *testing.T) {
+		fixture := newLuaSuiteFixture(t, content.D2Legacy(), luaSuiteConfig{
+			profile: "authority", seed: 42, records: fixtureRecords{},
+		})
+		state := lua.NewState()
+		defer state.Close()
+		action := state.NewTable()
+		action.RawSetString("checkpoint_restore", lua.LTrue)
+		err := runLuaAction(t, fixture, action)
+		if err == nil || !strings.Contains(err.Error(), "completed step") {
+			t.Fatalf("empty checkpoint error = %v", err)
+		}
+	})
 }
 
 type luaSuiteFixture struct {
@@ -230,6 +291,7 @@ type luaSuiteConfig struct {
 	initialData   map[string]any
 	records       fixtureRecords
 	disableBudget bool
+	covers        []string
 }
 
 func (config *luaSuiteConfig) read(suite *lua.LTable) error {
@@ -269,7 +331,55 @@ func (config *luaSuiteConfig) read(suite *lua.LTable) error {
 		}
 	}
 	config.disableBudget = suite.RawGetString("disable_execution_budget") == lua.LTrue
+	if value, ok := suite.RawGetString("covers").(*lua.LTable); ok {
+		value.ForEach(func(_, family lua.LValue) {
+			config.covers = append(config.covers, family.String())
+		})
+	}
 	return nil
+}
+
+func validateLuaCoverage(t *testing.T, suitePath string, cases, claims []string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "architecture", "d2legacy-test-coverage.tsv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	caseSet := make(map[string]bool, len(cases))
+	for _, name := range cases {
+		caseSet[name] = true
+	}
+	claimSet := make(map[string]bool, len(claims))
+	for _, family := range claims {
+		if claimSet[family] {
+			t.Errorf("%s declares duplicate coverage family %q", suitePath, family)
+		}
+		claimSet[family] = true
+	}
+	ledgerClaims := map[string]bool{}
+	allLedgerFamilies := map[string]bool{}
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Split(strings.TrimSpace(line), "\t")
+		if len(fields) != 4 || strings.HasPrefix(fields[0], "#") {
+			continue
+		}
+		allLedgerFamilies[fields[0]] = true
+		evidence := strings.SplitN(fields[1], "#", 2)
+		if len(evidence) == 2 && evidence[0] == "internal/content/d2legacy/"+suitePath {
+			ledgerClaims[fields[0]] = true
+			if !caseSet[evidence[1]] {
+				t.Errorf("coverage family %q names undiscovered case %q in %s", fields[0], evidence[1], suitePath)
+			}
+			if !claimSet[fields[0]] {
+				t.Errorf("coverage family %q names %s but its executed suite metadata does not claim it", fields[0], suitePath)
+			}
+		}
+	}
+	for family := range claimSet {
+		if !allLedgerFamilies[family] {
+			t.Errorf("%s claims unknown coverage family %q", suitePath, family)
+		}
+	}
 }
 
 func luaTableToStringMap(table *lua.LTable) (map[string]any, error) {
@@ -393,21 +503,11 @@ func startLuaSuiteProfile(ctx context.Context, source fs.FS, config luaSuiteConf
 			return nil, err
 		}
 	}
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+	if err := ConfigureModuleRuntime(runtime, source, config.records, streams, config.initialData); err != nil {
 		return nil, err
 	}
-	modules := []modruntime.Module{
-		modruntime.DeterministicModule(),
-		modruntime.WorldgenModule(),
-		modruntime.RecordsModule(config.records),
-		modruntime.AuthorityRandomModule(streams),
-		modruntime.InitialDataModule(config.initialData),
-	}
 	if config.profile == "ecs" {
-		modules = append(modules, modruntime.NewECSCapability(runtime, engine).Module())
-	}
-	for _, module := range modules {
-		if err := runtime.RegisterModule(module); err != nil {
+		if err := ConfigureECSRuntime(runtime, engine); err != nil {
 			return nil, err
 		}
 	}
@@ -510,6 +610,16 @@ func runLuaCase(t *testing.T, source fs.FS, path, name string, config luaSuiteCo
 
 func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) error {
 	t.Helper()
+	known := []string{"run", "step", "checkpoint_restore", "checkpoint_parity_steps", "engine_update_ms", "submit", "submit_system"}
+	present := 0
+	for _, field := range known {
+		if action.RawGetString(field) != lua.LNil {
+			present++
+		}
+	}
+	if present != 1 {
+		return fmt.Errorf("action must contain exactly one recognized operation, got %d", present)
+	}
 	if function, ok := action.RawGetString("run").(*lua.LFunction); ok {
 		return fixture.authority.Runtime.RunScoped(t.Context(), fixture.scope, func(state *lua.LState) error {
 			return state.CallByParam(lua.P{Fn: function, Protect: true})
@@ -519,7 +629,10 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		if fixture.config.profile != "authority" {
 			return fmt.Errorf("step requires the authority profile, got %q", fixture.config.profile)
 		}
-		count := int(lua.LVAsNumber(value))
+		count, err := luaNonNegativeInteger(value, "step count")
+		if err != nil {
+			return err
+		}
 		if count < 1 {
 			return fmt.Errorf("step count must be positive")
 		}
@@ -540,10 +653,18 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		if fixture.config.profile != "authority" {
 			return fmt.Errorf("checkpoint parity requires the authority profile, got %q", fixture.config.profile)
 		}
-		return compareLuaSuiteCheckpoint(t, fixture, int(lua.LVAsNumber(value)))
+		steps, err := luaNonNegativeInteger(value, "checkpoint parity steps")
+		if err != nil || steps < 1 {
+			return fmt.Errorf("checkpoint parity steps must be a positive integer")
+		}
+		return compareLuaSuiteCheckpoint(t, fixture, steps)
 	}
 	if value := action.RawGetString("engine_update_ms"); value != lua.LNil {
-		return fixture.engine.Update(time.Duration(lua.LVAsNumber(value)) * time.Millisecond)
+		milliseconds, err := luaNonNegativeInteger(value, "engine update milliseconds")
+		if err != nil {
+			return err
+		}
+		return fixture.engine.Update(time.Duration(milliseconds) * time.Millisecond)
 	}
 	for field, authority := range map[string]simulation.Authority{
 		"submit": simulation.AuthorityPlayer, "submit_system": simulation.AuthoritySystem,
@@ -563,15 +684,35 @@ func runLuaAction(t *testing.T, fixture *luaSuiteFixture, action *lua.LTable) er
 		if err != nil {
 			return err
 		}
+		tick, err := luaNonNegativeInteger(command.RawGetString("tick"), "command tick")
+		if err != nil {
+			return err
+		}
+		sequence, err := luaNonNegativeInteger(command.RawGetString("sequence"), "command sequence")
+		if err != nil {
+			return err
+		}
+		kind := command.RawGetString("kind")
+		if kind.Type() != lua.LTString || kind.String() == "" {
+			return fmt.Errorf("command kind must be a non-empty string")
+		}
 		return fixture.session.Submit(simulation.Command{
-			Tick:     uint64(lua.LVAsNumber(command.RawGetString("tick"))),
-			Sequence: uint64(lua.LVAsNumber(command.RawGetString("sequence"))),
+			Tick:     uint64(tick),
+			Sequence: uint64(sequence),
 			Player:   player, Authority: authority,
-			Kind:    command.RawGetString("kind").String(),
+			Kind:    kind.String(),
 			Payload: payload,
 		})
 	}
 	return fmt.Errorf("unknown action; want run, step, engine_update_ms, checkpoint_restore, submit, or submit_system")
+}
+
+func luaNonNegativeInteger(value lua.LValue, label string) (int, error) {
+	number, ok := value.(lua.LNumber)
+	if !ok || number < 0 || number != lua.LNumber(int(number)) {
+		return 0, fmt.Errorf("%s must be a non-negative integer", label)
+	}
+	return int(number), nil
 }
 
 func luaCommandPayload(value lua.LValue) ([]byte, error) {

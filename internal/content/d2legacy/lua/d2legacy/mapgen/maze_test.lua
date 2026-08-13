@@ -50,12 +50,12 @@ return test.suite({
                     },
                     ["data/global/excel/LvlPrest.txt"] = prest,
                 }
-                package.loaded["engine.records/v1"] = {
+                test.mock_module("engine.records/v1", {
                     load = function(path)
                         return rows[path] or {}
                     end,
-                }
-                package.loaded["d2legacy.mapgen.maze"] = nil
+                }, { "load" })
+                test.unload_module("d2legacy.mapgen.maze")
                 local maze = require("d2legacy.mapgen.maze")
                 local zone = maze.generate(9, 42, 0)
                 test.assert(

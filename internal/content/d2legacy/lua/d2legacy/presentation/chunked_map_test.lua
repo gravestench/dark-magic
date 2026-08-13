@@ -8,7 +8,7 @@ return test.suite({
             test.run(function()
                 local created, destroyed = 0, 0
                 local nodes = {}
-                package.loaded["engine.render/v1"] = {
+                test.mock_module("engine.render/v1", {
                     create = function(_, parent)
                         created = created + 1
                         local node = { visible = true, alive = true }
@@ -63,7 +63,13 @@ return test.suite({
                             buckets = { ["0:0"] = { 1 }, ["1:0"] = { 1 }, ["2:0"] = { 2 } },
                         }
                     end,
-                }
+                }, {
+                    "create",
+                    "preload",
+                    "preload_status",
+                    "preload_release",
+                    "world_tiles",
+                })
                 local chunks = require("d2legacy.presentation.chunked_map")
                 local state = chunks.create({}, { world = {}, palette = "" }, {
                     viewport_width = 100,
