@@ -173,6 +173,14 @@ shutdown. Development character fixtures are always ephemeral and cannot
 overwrite this file. Realm characters remain account-owned and never load from
 this player-controlled profile.
 
+A self-hosted dedicated server may explicitly admit the selected character from
+such a profile with `--player-profile`, `--profile-player`, and the authoritative
+`--profile-x`, `--profile-y`, `--profile-world-width`,
+`--profile-world-height`, `--profile-act`, and `--profile-level` destination
+flags. The host queues the same system-authority entry command used elsewhere
+and writes canonical character state back to that profile on clean shutdown.
+This is player-controlled self-host policy, never realm character authority.
+
 Renderer residency diagnostics use the same persistent preference path and can
 be controlled directly from the Lua shell:
 

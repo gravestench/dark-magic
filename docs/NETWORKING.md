@@ -139,6 +139,14 @@ resistances, and other fields not yet owned by that projection are preserved.
 Identity mismatch, missing canonical components, invalid numeric state, stale
 leases, and replayed commits fail without changing the durable record.
 
+Self-hosted dedicated servers have a separate explicit profile path. Host
+configuration selects a private `Profile/v1` file, stable player ID, and
+authoritative spawn destination; startup queues the selected character through
+the ordinary system-authority entry command. Clean shutdown projects the same
+canonical session-owned subset back into the profile and atomically persists
+it. No profile bytes are added to realm join messages, and this operation never
+creates realm ownership or a realm lease.
+
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
