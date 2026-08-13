@@ -50,10 +50,14 @@ return test.suite({
                 test.assert(animation:get("mode") == "RN", [=[animation:get("mode") == "RN"]=])
                 test.assert(facing:get("direction") == 4, [=[facing:get("direction") == 4]=])
                 test.assert(mode:get("running") == true, [=[mode:get("running") == true]=])
-                test.assert(position:get("x") > fixtures.amazon_entry.x,
-                    [=[position:get("x") > fixtures.amazon_entry.x]=])
-                test.assert(position:get("y") > fixtures.amazon_entry.y,
-                    [=[position:get("y") > fixtures.amazon_entry.y]=])
+                test.assert(
+                    position:get("x") > fixtures.amazon_entry.x,
+                    [=[position:get("x") > fixtures.amazon_entry.x]=]
+                )
+                test.assert(
+                    position:get("y") > fixtures.amazon_entry.y,
+                    [=[position:get("y") > fixtures.amazon_entry.y]=]
+                )
             end),
             test.submit({
                 tick = 3,
