@@ -56,6 +56,23 @@ canonical tick and checksum. They do not expose raw ECS snapshots or hidden
 server facts. Reconnect rotates the bearer credential so a successfully used
 old credential cannot be replayed.
 
+The native server enables QUIC only when `-quic-listen`, `-tls-cert`,
+`-tls-key`, and `-admission-key` are supplied together. TLS uses an explicitly
+configured certificate; clients must use an explicit trust root. The admission
+key file must contain at least 32 bytes, is bounded to 4096 bytes, and must not
+be group/world accessible. A realm and its allocated worker share this key to
+sign and consume short-lived, session-bound, one-use admission tickets. The
+standalone server does not expose a ticket-minting endpoint.
+
+The initial `d2legacy` remote projection is `PlayerHUD/v1`. It derives from the
+canonical checkpoint rather than rereading the live ECS and selects the entity
+bound to the authenticated player. Its field allowlist includes identity,
+vitals, progression, combat display values, position, and location. It excludes
+inventory/belt contents, other players' private state, raw component stores,
+and hidden server facts. Realm admission must load and lease the durable
+character and submit the trusted player-entry command before join; a client
+credential never materializes authoritative character state.
+
 ## Join-time mod acquisition
 
 Realm admission advertises a signed, versioned mod manifest before a client is

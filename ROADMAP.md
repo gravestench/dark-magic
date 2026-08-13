@@ -1811,7 +1811,12 @@ authority, persistence separation, and resilience acceptance remain open.
   bounded join, command, reconnect, and leave requests over independent TLS 1.3
   reliable streams. It starts with 1200-byte packets, retains path-MTU
   discovery, rejects oversized/unknown/trailing frames, and leaves datagrams
-  disabled until compact delta schemas and loss acceptance exist.
+  disabled until compact delta schemas and loss acceptance exist. `cmd/server`
+  can now enable that adapter with explicit TLS material and a protected
+  realm-shared key. Short-lived admission tickets are HMAC-authenticated,
+  session-bound, and one-use. `PlayerHUD/v1` projects only the authenticated
+  player's allowlisted fields from a canonical checkpoint, proving that raw ECS
+  and another player's private state do not cross the transport boundary.
 - [ ] Preserve offline characters safely and separate trusted server characters
   from client-controlled saves.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
