@@ -1,5 +1,9 @@
 # d2legacy authoritative gameplay
 
+The broader architecture—including presentation composition, ECS domain maps,
+system scheduling, UI ownership, checkpoint behavior, and feature placement—is
+documented in [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md).
+
 This tree is the first-party Diablo II rules mod. Its canonical name and Lua
 namespace are `d2legacy`. The repository embeds this canonical first-party mod;
 there is no separate gameplay package or competing first-party identity.

@@ -1,5 +1,9 @@
 # Bundled d2legacy mod: start here
 
+For the complete runtime, ECS, system, UI, and testing map, read
+[`../ARCHITECTURE.md`](../ARCHITECTURE.md). A minimal copyable sibling lives at
+[`../../mod_template`](../../mod_template/README.md).
+
 The embedded `d2legacy` mod is Dark Magic's first-party Diablo II gameplay and presentation package **and living documentation for mod authors**. Its concise runtime namespace is `d2legacy.*`; the canonical package identity is `d2legacy`. If you are new to programming, that is intentional: you should be able to read this mod from the top, follow the comments, change something small, and gradually understand how a game is put together.
 
 You do **not** need to understand all of Lua before starting. Read the comments first. Treat unfamiliar syntax like punctuation in a comic book: keep following the story, then come back to the punctuation later.
