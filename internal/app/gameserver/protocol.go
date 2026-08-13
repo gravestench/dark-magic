@@ -24,10 +24,12 @@ var (
 )
 
 const (
-	commandBurst = 32
-	commandRate  = 16.0
-	refreshBurst = 4
-	refreshRate  = 2.0
+	commandBurst     = 32
+	commandRate      = 16.0
+	refreshBurst     = 4
+	refreshRate      = 2.0
+	joinReadyTimeout = 2 * time.Second
+	joinReadyPoll    = 10 * time.Millisecond
 )
 
 // Principal is the trusted result of authentication. PlayerID is the stable
@@ -101,12 +103,19 @@ type tokenBucket struct {
 // Endpoint is the transport-neutral authenticated boundary around one Host.
 // HTTP, UDP, loopback, and legacy protocol adapters can all call this API.
 type Endpoint struct {
-	mu          sync.RWMutex
-	host        *Host
-	auth        Authenticator
-	project     SnapshotProjector
-	connections map[string]connection
-	now         func() time.Time
+	mu              sync.RWMutex
+	host            *Host
+	auth            Authenticator
+	project         SnapshotProjector
+	connections     map[string]connection
+	now             func() time.Time
+	snapshotPending func(error) bool
+}
+
+// SetSnapshotPending identifies the one expected projection error while a
+// trusted next-tick admission command is waiting to materialize its player.
+func (endpoint *Endpoint) SetSnapshotPending(classify func(error) bool) {
+	endpoint.snapshotPending = classify
 }
 
 func NewEndpoint(host *Host, auth Authenticator, project SnapshotProjector) (*Endpoint, error) {
@@ -140,7 +149,7 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 	endpoint.connections[string(credential)] = connection{principal: principal, admission: admission,
 		commands: newTokenBucket(commandBurst, commandRate, now), refreshes: newTokenBucket(refreshBurst, refreshRate, now)}
 	endpoint.mu.Unlock()
-	snapshot, err := endpoint.snapshot(principal.PlayerID)
+	snapshot, err := endpoint.joinSnapshot(ctx, principal.PlayerID)
 	if err != nil {
 		endpoint.mu.Lock()
 		delete(endpoint.connections, string(credential))
@@ -148,6 +157,27 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 		return JoinResponse{}, err
 	}
 	return JoinResponse{Credential: credential, Admission: admission, Snapshot: snapshot}, nil
+}
+
+func (endpoint *Endpoint) joinSnapshot(ctx context.Context, playerID string) (Snapshot, error) {
+	deadline := time.NewTimer(joinReadyTimeout)
+	defer deadline.Stop()
+	for {
+		snapshot, err := endpoint.snapshot(playerID)
+		if err == nil || endpoint.snapshotPending == nil || !endpoint.snapshotPending(err) {
+			return snapshot, err
+		}
+		timer := time.NewTimer(joinReadyPoll)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return Snapshot{}, ctx.Err()
+		case <-deadline.C:
+			timer.Stop()
+			return Snapshot{}, fmt.Errorf("game server protocol: player admission readiness: %w", err)
+		case <-timer.C:
+		}
+	}
 }
 
 func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandIntent) error {

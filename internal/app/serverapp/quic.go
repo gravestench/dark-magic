@@ -43,6 +43,7 @@ func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, e
 	if err != nil {
 		return nil, err
 	}
+	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, playeradapter.ErrHUDPlayer) })
 	server, err := sessionquic.Listen(config.Address, &tls.Config{Certificates: []tls.Certificate{certificate}}, endpoint)
 	if err != nil {
 		return nil, err

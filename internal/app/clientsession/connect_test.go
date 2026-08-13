@@ -20,10 +20,12 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
 	"github.com/gravestench/dark-magic/internal/app/realm"
+	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
 func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
@@ -38,6 +40,12 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{
+		Validate: func(simulation.Command) error { return nil }, Apply: func(*gameecs.Engine, simulation.Command) error { return nil },
+		Allowed: []simulation.Authority{simulation.AuthoritySystem},
+	}); err != nil {
+		t.Fatal(err)
+	}
 	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
 	if err != nil {
 		t.Fatal(err)
@@ -58,6 +66,13 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	destination, _ := playeradapter.NewDestination(10, 20, 100, 100, 1, 40)
+	profiles, err := serverapp.NewRemoteProfileAdmissions(&gameserver.Host{Mode: gameserver.ModeStandalone, Engine: engine, Session: session, Allocation: allocation}, authority,
+		serverapp.RemoteProfileConfig{Credential: "profile-secret", PrincipalID: "self-host-user", PlayerID: "player", Destination: destination, Lifetime: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.SetProfileAdmissions(profiles)
 	t.Cleanup(func() { _ = server.Close() })
 	serveContext, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -109,6 +124,21 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal("reconnect did not rotate credential")
 	}
 	if err := connected.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	profile := d2save.New(d2save.Character{ID: "character", Name: "Hero", Class: "Amazon"})
+	if err := profile.Select("character"); err != nil {
+		t.Fatal(err)
+	}
+	selfHosted, err := ConnectSelfHosted(ctx, SelfHostedAssignment{GameID: "game", Endpoint: assignment.Endpoint,
+		Runtime: identity, ProfileCredential: "profile-secret"}, clientTLS, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if selfHosted.HUD.Player.CharacterID != "character" || selfHosted.Admission.Admission.CharacterID != "character" {
+		t.Fatalf("self-hosted session = %#v", selfHosted)
+	}
+	if err := selfHosted.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
 }

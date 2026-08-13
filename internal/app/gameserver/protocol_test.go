@@ -164,6 +164,41 @@ func TestEndpointRejectsTicketPinnedToAnotherRuntime(t *testing.T) {
 	}
 }
 
+func TestEndpointWaitsForTrustedPlayerAdmissionProjection(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionNone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	pending := errors.New("player pending")
+	attempts := 0
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) {
+			attempts++
+			if attempts < 3 {
+				return nil, pending
+			}
+			return json.RawMessage(`{}`), nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, pending) })
+	if _, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity}); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 3 {
+		t.Fatalf("projection attempts = %d", attempts)
+	}
+}
+
 func TestEndpointRateLimitsPerMembershipAndRefills(t *testing.T) {
 	identity := testProtocolIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionNone)

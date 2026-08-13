@@ -1860,8 +1860,12 @@ authority, persistence separation, and resilience acceptance remain open.
   touching realm APIs. Remote self-host admission now uses a separate bounded,
   strict, integrity-checked selected-character offer behind a protected host
   credential, host-bound identity/destination, bounded attempts, and one-use
-  session ticket; realm servers cannot enable it accidentally. Full client UI
-  and listen-server network composition remain coupled to the connection flow.
+  session ticket; realm servers cannot enable it accidentally. The client now
+  verifies the pinned host, offers only its selected profile character, verifies
+  returned runtime/character identity, and enters the ordinary correction path.
+  A bounded readiness wait closes the normal next-tick admission race without
+  retrying unrelated projection failures. Full client UI and listen-server
+  network composition remain open; a live generated-world network acceptance is next.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 
