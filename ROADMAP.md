@@ -1848,8 +1848,10 @@ authority, persistence separation, and resilience acceptance remain open.
   realm/worker lease. Atomic trusted commits require that active unexpired
   lease, preserve identity, increment revision, consume the lease, and reject
   foreign or replayed writes. The d2legacy roster is explicitly player-profile-owned
-  and cannot satisfy the realm repository contract. Versioned durable offline
-  file round-trips and worker checkpoint-to-character projection remain open.
+  and cannot satisfy the realm repository contract. `Profile/v1` now provides
+  bounded, strict, integrity-checked, private, crash-safe atomic player-profile
+  round-trips with defensive restoration of roster and selection. Client/self-host
+  composition integration and worker checkpoint-to-character projection remain open.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 

@@ -23,7 +23,6 @@ import (
 	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
-	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
@@ -111,7 +110,14 @@ func (app *application) loadGameCatalogs() error {
 
 func (app *application) buildOfflineSession() error {
 	fixtures := DevelopmentCharacters(app.options.FixtureCharacters)
-	app.saves = d2save.New(fixtures...)
+	profilePath, err := darkpaths.ExpandHost(app.options.PlayerProfilePath)
+	if err != nil {
+		return wrap("expand player profile path", err)
+	}
+	app.saves, app.playerProfilePath, err = loadPlayerProfile(profilePath, fixtures)
+	if err != nil {
+		return err
+	}
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)

@@ -165,6 +165,14 @@ in-game sound and music sliders update mixer buses immediately through
 user-configuration directory when the overlay closes. Set
 `DARK_MAGIC_PREFERENCES` to use another file.
 
+Player-profile characters used by single-player, listen-server, and self-hosted
+dedicated-server play default to `player-profile.json` under the platform
+user-configuration directory. Set `DARK_MAGIC_PLAYER_PROFILE` to use another
+file. A missing file starts with an empty roster and is created on clean
+shutdown. Development character fixtures are always ephemeral and cannot
+overwrite this file. Realm characters remain account-owned and never load from
+this player-controlled profile.
+
 Renderer residency diagnostics use the same persistent preference path and can
 be controlled directly from the Lua shell:
 

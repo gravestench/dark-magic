@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -114,13 +115,22 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
 func run(contentFS *content.FS, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, logs *shell.LogBuffer) error {
+	playerProfilePath := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE"))
+	if playerProfilePath == "" {
+		configurationDirectory, err := os.UserConfigDir()
+		if err != nil {
+			return fmt.Errorf("resolve player profile directory: %w", err)
+		}
+		playerProfilePath = filepath.Join(configurationDirectory, "dark-magic", "player-profile.json")
+	}
 	options := clientapp.Options{
 		Content: contentFS, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
 		}, CaptureDirectory: captureDirectory,
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,
 		FixtureCharacters: fixtureCharacters, FixtureWorldLevel: fixtureWorldLevel, FixtureWorldSpawn: fixtureWorldSpawn, FixturePointerMove: fixturePointerMove, OutputPalette: outputPalette,
-		ViewportFit: viewportFit, BorderlessFullscreen: fullscreen, PresentationProfileID: presentationProfileID, Logs: logs,
+		PlayerProfilePath: playerProfilePath,
+		ViewportFit:       viewportFit, BorderlessFullscreen: fullscreen, PresentationProfileID: presentationProfileID, Logs: logs,
 	}
 	// A nil pointer stored inside an interface looks non-nil. Only put the
 	// profiler in the box when one was really started.
