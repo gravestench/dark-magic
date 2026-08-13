@@ -16,24 +16,39 @@ import (
 
 type impairedPacketConn struct {
 	net.PacketConn
-	mu        sync.Mutex
-	writes    int
-	dropped   int
+	mu            sync.Mutex
+	writes        int
+	dropped       int
+	delayed       int
+	injectedDelay time.Duration
+	profile       impairmentProfile
+}
+
+type impairmentProfile struct {
 	dropEvery int
 	delays    []time.Duration
+}
+
+type impairmentStats struct {
+	writes, dropped, delayed int
+	injectedDelay            time.Duration
 }
 
 func (connection *impairedPacketConn) WriteTo(payload []byte, address net.Addr) (int, error) {
 	connection.mu.Lock()
 	connection.writes++
 	sequence := connection.writes
-	drop := connection.dropEvery > 0 && sequence%connection.dropEvery == 0
+	drop := connection.profile.dropEvery > 0 && sequence%connection.profile.dropEvery == 0
 	if drop {
 		connection.dropped++
 	}
 	var delay time.Duration
-	if len(connection.delays) > 0 {
-		delay = connection.delays[(sequence-1)%len(connection.delays)]
+	if len(connection.profile.delays) > 0 {
+		delay = connection.profile.delays[(sequence-1)%len(connection.profile.delays)]
+	}
+	if delay > 0 {
+		connection.delayed++
+		connection.injectedDelay += delay
 	}
 	connection.mu.Unlock()
 
@@ -46,10 +61,13 @@ func (connection *impairedPacketConn) WriteTo(payload []byte, address net.Addr) 
 	return connection.PacketConn.WriteTo(payload, address)
 }
 
-func (connection *impairedPacketConn) counts() (writes, dropped int) {
+func (connection *impairedPacketConn) stats() impairmentStats {
 	connection.mu.Lock()
 	defer connection.mu.Unlock()
-	return connection.writes, connection.dropped
+	return impairmentStats{
+		writes: connection.writes, dropped: connection.dropped,
+		delayed: connection.delayed, injectedDelay: connection.injectedDelay,
+	}
 }
 
 func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
@@ -89,8 +107,9 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 		t.Fatal(err)
 	}
 	serverPackets := &impairedPacketConn{
-		PacketConn: serverSocket, dropEvery: 5,
-		delays: []time.Duration{0, 2 * time.Millisecond, 5 * time.Millisecond},
+		PacketConn: serverSocket,
+		profile: impairmentProfile{dropEvery: 5,
+			delays: []time.Duration{0, 2 * time.Millisecond, 5 * time.Millisecond}},
 	}
 	serverTLS, clientTLS := testTLS(t)
 	server, err := ListenPacket(serverPackets, serverTLS, endpoint)
@@ -107,8 +126,9 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 		t.Fatal(err)
 	}
 	clientPackets := &impairedPacketConn{
-		PacketConn: clientSocket, dropEvery: 7,
-		delays: []time.Duration{3 * time.Millisecond, 0, 7 * time.Millisecond},
+		PacketConn: clientSocket,
+		profile: impairmentProfile{dropEvery: 7,
+			delays: []time.Duration{3 * time.Millisecond, 0, 7 * time.Millisecond}},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -161,9 +181,23 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	clientWrites, clientDrops := clientPackets.counts()
-	serverWrites, serverDrops := serverPackets.counts()
-	if clientWrites == 0 || serverWrites == 0 || clientDrops == 0 || serverDrops == 0 {
-		t.Fatalf("impairment was not exercised: client=%d/%d server=%d/%d", clientDrops, clientWrites, serverDrops, serverWrites)
+	assertImpairmentApplied(t, "client", clientPackets.profile, clientPackets.stats())
+	assertImpairmentApplied(t, "server", serverPackets.profile, serverPackets.stats())
+}
+
+func assertImpairmentApplied(t *testing.T, name string, profile impairmentProfile, stats impairmentStats) {
+	t.Helper()
+	expectedDelayed := 0
+	var expectedDelay time.Duration
+	for sequence := 1; sequence <= stats.writes; sequence++ {
+		delay := profile.delays[(sequence-1)%len(profile.delays)]
+		if delay > 0 {
+			expectedDelayed++
+			expectedDelay += delay
+		}
+	}
+	if stats.writes == 0 || stats.dropped != stats.writes/profile.dropEvery ||
+		stats.delayed != expectedDelayed || stats.injectedDelay != expectedDelay {
+		t.Fatalf("%s synthetic impairment mismatch: profile=%#v stats=%#v", name, profile, stats)
 	}
 }
