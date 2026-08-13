@@ -41,16 +41,11 @@ func AdmitSelectedProfile(host *gameserver.Host, config ProfileAdmission) error 
 	if !selected {
 		return fmt.Errorf("%w: profile has no selected character", ErrProfileAdmission)
 	}
-	checkpoint, err := host.Session.CanonicalCheckpoint()
+	err = host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
+		return playeradapter.AdmissionCommand(character, config.PlayerID, config.Destination,
+			"self-host:profile", 1, tick, simulation.AuthoritySystem)
+	})
 	if err != nil {
-		return err
-	}
-	command, err := playeradapter.AdmissionCommand(character, config.PlayerID, config.Destination,
-		"self-host:profile", 1, checkpoint.Tick+1, simulation.AuthoritySystem)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProfileAdmission, err)
-	}
-	if err := host.Session.Submit(command); err != nil {
 		return fmt.Errorf("%w: submit entry: %v", ErrProfileAdmission, err)
 	}
 	return nil

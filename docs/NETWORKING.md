@@ -176,6 +176,15 @@ command submission, refresh, reconnect, and close serialize credential access.
 Corrections are monotonic: the client rejects an older tick and rejects a
 different checksum for an already-installed tick.
 
+The live game-world acceptance in `internal/app/clientsession` crosses this
+entire boundary without substituting a fake projection: it starts the embedded
+production d2legacy Lua authority, advances the authoritative ECS session,
+populates a deterministic Blood Moor hostile from synthetic TXT records,
+offers a selected local-profile character over real QUIC, and observes both the
+owner-private HUD and nearby public hostile from canonical checkpoints. The
+fixture deliberately supplies redistributable synthetic record rows so normal
+CI does not depend on a developer's owned Diablo II installation.
+
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction
 stream sends an immediate view and then changed views at no more than 2 Hz. Its

@@ -195,6 +195,26 @@ func (session *Session) Submit(command simulation.Command) error {
 	return session.submitLocked(command)
 }
 
+// SubmitNext builds and admits a command for the next authoritative tick while
+// holding the session lock. Trusted asynchronous producers use it when deriving
+// a command from current session time; observing Tick and calling Submit in two
+// operations would race the fixed-step runner.
+func (session *Session) SubmitNext(build func(tick uint64) (simulation.Command, error)) error {
+	if build == nil {
+		return ErrHandler
+	}
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	if session.closed {
+		return ErrClosed
+	}
+	command, err := build(session.engine.Tick() + 1)
+	if err != nil {
+		return err
+	}
+	return session.submitLocked(command)
+}
+
 func (session *Session) submitLocked(command simulation.Command) error {
 	if session.closed {
 		return ErrClosed
