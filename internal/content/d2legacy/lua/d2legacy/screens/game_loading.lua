@@ -61,7 +61,11 @@ return {
             error(status.error or "game dependencies failed to load")
         end
 		if network_status.phase == "failed" then
-			error(network_status.error or "network session failed to start")
+			-- Connection refusal/timeout is an ordinary multiplayer outcome, not
+			-- a process-fatal scene error. TCP/IP reads and displays the retained
+			-- network failure on entry.
+			scenes.replace("tcpip")
+			return
 		end
 
         -- Convert elapsed seconds into maximum visual progress this frame.
