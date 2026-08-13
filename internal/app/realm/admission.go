@@ -39,6 +39,11 @@ type admissionGame struct {
 	endpoint  GameEndpoint
 }
 
+type characterMembership struct {
+	lease    CharacterLease
+	baseline CharacterRecord
+}
+
 // Admissions coordinates realm-owned leases and trusted character entry with
 // a worker-owned ticket authority. It never executes gameplay rules itself.
 type Admissions struct {
@@ -49,7 +54,7 @@ type Admissions struct {
 	leaseLifetime  time.Duration
 	ticketLifetime time.Duration
 	games          map[string]admissionGame
-	memberships    map[string]CharacterLease
+	memberships    map[string]characterMembership
 	entrySequences map[string]uint64
 }
 
@@ -58,7 +63,7 @@ func NewAdmissions(manager *Manager, characters CharacterRepository, leaseLifeti
 		return nil, errors.New("realm: admissions require manager, characters, and bounded lifetimes")
 	}
 	return &Admissions{manager: manager, characters: characters, leaseLifetime: leaseLifetime, ticketLifetime: ticketLifetime,
-		games: make(map[string]admissionGame), memberships: make(map[string]CharacterLease), entrySequences: make(map[string]uint64)}, nil
+		games: make(map[string]admissionGame), memberships: make(map[string]characterMembership), entrySequences: make(map[string]uint64)}, nil
 }
 
 func (admissions *Admissions) RegisterGame(gameID string, authority *gameserver.TicketAuthority, endpoint GameEndpoint) error {
@@ -137,7 +142,7 @@ func (admissions *Admissions) Join(ctx context.Context, request JoinRequest) (Jo
 	}
 	admissions.entrySequences[request.GameID+"\x00"+actor] = sequence
 	admissions.mu.Lock()
-	admissions.memberships[membershipID] = lease
+	admissions.memberships[membershipID] = characterMembership{lease: lease, baseline: record}
 	admissions.mu.Unlock()
 	return JoinAssignment{GameID: request.GameID, Endpoint: game.endpoint, Ticket: ticket,
 		CharacterRevision: record.Revision, Runtime: cloneRuntimeIdentity(host.Allocation.Identity)}, nil
@@ -146,21 +151,22 @@ func (admissions *Admissions) Join(ctx context.Context, request JoinRequest) (Jo
 func (admissions *Admissions) RenewMembership(ctx context.Context, gameID, playerID string) (CharacterLease, error) {
 	membershipID := strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
 	admissions.mu.RLock()
-	lease, found := admissions.memberships[membershipID]
+	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
 	if !found {
 		return CharacterLease{}, ErrLease
 	}
-	renewed, err := admissions.characters.Renew(ctx, lease, admissions.leaseLifetime)
+	renewed, err := admissions.characters.Renew(ctx, membership.lease, admissions.leaseLifetime)
 	if err != nil {
 		return CharacterLease{}, err
 	}
 	admissions.mu.Lock()
-	if current, exists := admissions.memberships[membershipID]; !exists || current.Token != lease.Token {
+	if current, exists := admissions.memberships[membershipID]; !exists || current.lease.Token != membership.lease.Token {
 		admissions.mu.Unlock()
 		return CharacterLease{}, ErrLease
 	}
-	admissions.memberships[membershipID] = renewed
+	membership.lease = renewed
+	admissions.memberships[membershipID] = membership
 	admissions.mu.Unlock()
 	return renewed, nil
 }
@@ -170,23 +176,49 @@ func (admissions *Admissions) RenewMembership(ctx context.Context, gameID, playe
 func (admissions *Admissions) CommitMembership(ctx context.Context, gameID, playerID string, character d2save.Character) (CharacterRecord, error) {
 	membershipID := strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
 	admissions.mu.RLock()
-	lease, found := admissions.memberships[membershipID]
+	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
 	if !found {
 		return CharacterRecord{}, ErrLease
 	}
-	committed, err := admissions.characters.Commit(ctx, lease, character)
+	committed, err := admissions.characters.Commit(ctx, membership.lease, character)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
 	admissions.mu.Lock()
-	if current, exists := admissions.memberships[membershipID]; !exists || current.Token != lease.Token {
+	if current, exists := admissions.memberships[membershipID]; !exists || current.lease.Token != membership.lease.Token {
 		admissions.mu.Unlock()
 		return CharacterRecord{}, ErrLease
 	}
 	delete(admissions.memberships, membershipID)
 	admissions.mu.Unlock()
 	return committed, nil
+}
+
+// CommitCanonicalMembership projects the worker's canonical checkpoint into
+// the leased durable baseline, then commits it through the realm-only lease.
+func (admissions *Admissions) CommitCanonicalMembership(ctx context.Context, gameID, playerID string) (CharacterRecord, error) {
+	gameID, playerID = strings.TrimSpace(gameID), strings.TrimSpace(playerID)
+	membershipID := gameID + "\x00" + playerID
+	admissions.mu.RLock()
+	membership, found := admissions.memberships[membershipID]
+	admissions.mu.RUnlock()
+	if !found {
+		return CharacterRecord{}, ErrLease
+	}
+	host, found := admissions.manager.Game(gameID)
+	if !found {
+		return CharacterRecord{}, ErrGameNotFound
+	}
+	checkpoint, err := host.Session.CanonicalCheckpoint()
+	if err != nil {
+		return CharacterRecord{}, err
+	}
+	character, err := playeradapter.ProjectCharacter(playerID, membership.baseline.Character, checkpoint)
+	if err != nil {
+		return CharacterRecord{}, err
+	}
+	return admissions.CommitMembership(ctx, gameID, playerID, character)
 }
 
 func cloneRuntimeIdentity(identity simulation.RuntimeIdentity) simulation.RuntimeIdentity {

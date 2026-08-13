@@ -7,6 +7,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -64,17 +65,45 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	if len(replay.Commands) != 1 || replay.Commands[0].Kind != playeradapter.EnterCommand || replay.Commands[0].Authority != simulation.AuthoritySystem {
 		t.Fatalf("commands = %#v", replay.Commands)
 	}
-	committed, err := admissions.CommitMembership(context.Background(), "game", "player", d2save.Character{
-		ID: "character", Name: "Saved Hero", Class: "Amazon", Level: 2,
-	})
+	installCanonicalCharacter(t, host.Engine, "character", "player")
+	committed, err := admissions.CommitCanonicalMembership(context.Background(), "game", "player")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if committed.Revision != 5 || committed.Character.Name != "Saved Hero" {
+	if committed.Revision != 5 || committed.Character.Name != "Saved Hero" || committed.Character.Level != 2 || committed.Character.Stats.Health != 18 {
 		t.Fatalf("committed character = %#v", committed)
 	}
 	if _, err := admissions.CommitMembership(context.Background(), "game", "player", committed.Character); !errors.Is(err, ErrLease) {
 		t.Fatalf("replayed membership commit error = %v", err)
+	}
+}
+
+func installCanonicalCharacter(t *testing.T, engine *gameecs.Engine, characterID, playerID string) {
+	t.Helper()
+	register := func(name string, fields []akara.Field) *akara.DynamicStore {
+		store, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: name, Version: 1, Fields: fields})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return store
+	}
+	identity := register("d2legacy.player.identity", []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}})
+	vitals := register("d2legacy.player.vitals", []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "mana", Kind: akara.FieldInt64}, {Name: "max_mana", Kind: akara.FieldInt64}})
+	progress := register("d2legacy.player.progress", []akara.Field{{Name: "level", Kind: akara.FieldInt64}, {Name: "experience", Kind: akara.FieldInt64}, {Name: "unspent_skill_points", Kind: akara.FieldInt64}})
+	combat := register("d2legacy.player.combat_stats", []akara.Field{{Name: "attack_rating", Kind: akara.FieldInt64}, {Name: "defense", Kind: akara.FieldInt64}})
+	position := register("d2legacy.world.position", []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}})
+	location := register("d2legacy.world.location", []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}})
+	entity := engine.World().MustCreateEntity()
+	for store, values := range map[*akara.DynamicStore]map[string]any{
+		identity: {"character_id": characterID, "player": playerID, "name": "Saved Hero", "class": "Amazon"},
+		vitals:   {"health": int64(18), "max_health": int64(20), "mana": int64(8), "max_mana": int64(10)},
+		progress: {"level": int64(2), "experience": int64(100), "unspent_skill_points": int64(0)},
+		combat:   {"attack_rating": int64(12), "defense": int64(4)}, position: {"x": 1.0, "y": 1.0},
+		location: {"act": int64(1), "level_id": int64(1)},
+	} {
+		if _, err := store.Set(entity, values); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

@@ -130,6 +130,15 @@ file contents, atomically replace the destination, and sync its directory.
 Decoded rosters, stats, appearance maps, and selection are defensively copied.
 This durability does not change their player-controlled trust classification.
 
+Realm persistence never accepts a client-authored character replacement. At
+commit, Admissions captures the worker session's canonical checkpoint and
+projects the leased player's durable subset by the server-bound player ID and
+character ID. Session-owned identity, level, experience, health, mana, and
+defense replace the leased baseline; expansion/hardcore, appearance, attributes,
+resistances, and other fields not yet owned by that projection are preserved.
+Identity mismatch, missing canonical components, invalid numeric state, stale
+leases, and replayed commits fail without changing the durable record.
+
 The client treats the returned assignment as untrusted discovery data. It
 accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
