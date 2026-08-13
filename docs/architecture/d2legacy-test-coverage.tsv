@@ -2,7 +2,7 @@
 internal/game/combat	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	ordered damage resolution and Fire Bolt end-to-end
 internal/game/skill	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	assignment cast timing mana cost and effect emission
 internal/game/missile	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua	covered	projectile movement contact damage and removal
-internal/game/action	internal/content/d2legacy/lua/d2legacy/systems/player_melee_test.lua	covered	exclusive melee approach animation and impact lifecycle
+internal/game/action	internal/content/d2legacy/lua/d2legacy/systems/player_melee_test.lua	covered	attack_approach preserves the target until in-range admission creates attack_animation and impact/completed lifecycle events
 internal/game/stats	internal/content/d2legacy/lua/d2legacy/policy/melee_test.lua	covered	attack-rating versus defense hit chance clamps and integer order
 internal/game/item	internal/content/d2legacy/lua/d2legacy/items/bootstrap_test.lua	covered	Lua suite owns bootstrap and movement policy; Go item acceptance retains reconnect corpse recovery equipment vendor service and reconstructed-runtime parity evidence
 internal/game/interaction	internal/mod/d2legacy/authority_test.go	partial	Lua owns spatial open close policy; a focused checkpointed NPC reward vector remains fidelity work
