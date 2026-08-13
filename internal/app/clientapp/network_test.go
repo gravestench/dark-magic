@@ -60,3 +60,24 @@ func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) 
 		t.Fatal("next authoritative tick was not sampled")
 	}
 }
+
+func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
+	controller := newNetworkController(&application{})
+	if controller.movementRequired(false) {
+		t.Fatal("initial idle state emitted a command")
+	}
+	if !controller.movementRequired(true) {
+		t.Fatal("active movement was suppressed")
+	}
+	controller.markMovement(true)
+	if !controller.movementRequired(true) {
+		t.Fatal("active movement samples were suppressed")
+	}
+	if !controller.movementRequired(false) {
+		t.Fatal("first idle sample did not stop authoritative velocity")
+	}
+	controller.markMovement(false)
+	if controller.movementRequired(false) {
+		t.Fatal("settled idle state emitted repeated stop commands")
+	}
+}

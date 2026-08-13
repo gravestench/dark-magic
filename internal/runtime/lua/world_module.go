@@ -1,11 +1,38 @@
 package modruntime
 
 import (
+	"context"
+	"fmt"
 	"io/fs"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	lua "github.com/yuin/gopher-lua"
 )
+
+// SetWorldMap calls a named Lua module setter with an immutable materialized
+// map. The caller owns the module identity and policy; this package only
+// provides the generic map userdata boundary.
+func SetWorldMap(ctx context.Context, runtime *Runtime, moduleName, setterName string, world *gameworld.Map) error {
+	if runtime == nil || world == nil || moduleName == "" || setterName == "" {
+		return fmt.Errorf("world module: runtime, module, setter, and map are required")
+	}
+	return runtime.Run(ctx, func(state *lua.LState) error {
+		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString(moduleName)); err != nil {
+			return err
+		}
+		value := state.Get(-1)
+		state.Pop(1)
+		table, ok := value.(*lua.LTable)
+		if !ok {
+			return fmt.Errorf("world module: %q is invalid", moduleName)
+		}
+		setter := table.RawGetString(setterName)
+		pushWorldMap(state, world)
+		collision := state.Get(-1)
+		state.Pop(1)
+		return state.CallByParam(lua.P{Fn: setter, NRet: 0, Protect: true}, collision)
+	})
+}
 
 const worldMapType = "engine.world.map/v1"
 

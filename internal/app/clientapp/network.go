@@ -21,6 +21,7 @@ import (
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 type networkController struct {
@@ -33,6 +34,7 @@ type networkController struct {
 	cancel                        context.CancelFunc
 	sequence                      uint64
 	lastMovementTick              uint64
+	lastMovementActive            bool
 	submissions                   chan gameserver.CommandIntent
 }
 
@@ -189,6 +191,12 @@ func (controller *networkController) startHost() {
 		fail(errors.New("active world has no trusted host destination"))
 		return
 	}
+	if err := modruntime.SetWorldMap(ctx, host.Authority.Runtime, "d2legacy.gameplay.systems.init", "set_collision", world); err != nil {
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		fail(err)
+		return
+	}
 	request := zone.Request()
 	destination, err := playeradapter.NewDestination(spawn[0], spawn[1], float64(world.WidthSubtiles), float64(world.HeightSubtiles), int64(request.Act), int64(request.LevelID))
 	if err != nil {
@@ -293,8 +301,15 @@ func (controller *networkController) Advance(ctx context.Context) error {
 	if sampleMovement && controller.app.movementSource != nil {
 		for _, command := range controller.app.movementSource.Commands(targetTick) {
 			var movementPayload movement.MovePayload
-			if command.Kind == movement.MoveCommand && json.Unmarshal(command.Payload, &movementPayload) == nil &&
-				movementPayload.X == 0 && movementPayload.Y == 0 && movementPayload.Target == nil {
+			if command.Kind == movement.MoveCommand && json.Unmarshal(command.Payload, &movementPayload) == nil {
+				active := movementPayload.X != 0 || movementPayload.Y != 0 || movementPayload.Target != nil
+				if !controller.movementRequired(active) {
+					continue
+				}
+				if err := controller.submit(command.Kind, command.Payload); err != nil {
+					return err
+				}
+				controller.markMovement(active)
 				continue
 			}
 			if err := controller.submit(command.Kind, command.Payload); err != nil {
@@ -322,6 +337,18 @@ func (controller *networkController) sampleMovement(targetTick uint64) bool {
 	}
 	controller.lastMovementTick = targetTick
 	return true
+}
+
+func (controller *networkController) movementRequired(active bool) bool {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return active || controller.lastMovementActive
+}
+
+func (controller *networkController) markMovement(active bool) {
+	controller.mu.Lock()
+	controller.lastMovementActive = active
+	controller.mu.Unlock()
 }
 
 func (controller *networkController) submit(kind string, payload json.RawMessage) error {
