@@ -68,10 +68,6 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
 	}
-	checkpoint, err := admissions.host.Session.CanonicalCheckpoint()
-	if err != nil {
-		return "", err
-	}
 	principal := gameserver.Principal{ID: admissions.config.PrincipalID, CharacterID: character.ID,
 		PlayerID: admissions.config.PlayerID, RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
 	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
@@ -79,13 +75,11 @@ func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential s
 		return "", err
 	}
 	admissions.sequence++
-	command, err := playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
-		"self-host:remote-profile", admissions.sequence, checkpoint.Tick+1, simulation.AuthoritySystem)
+	err = admissions.host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
+		return playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
+			"self-host:remote-profile", admissions.sequence, tick, simulation.AuthoritySystem)
+	})
 	if err != nil {
-		_ = admissions.tickets.Revoke(ticket)
-		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
-	}
-	if err := admissions.host.Session.Submit(command); err != nil {
 		_ = admissions.tickets.Revoke(ticket)
 		return "", fmt.Errorf("%w: submit entry: %v", ErrRemoteProfileAdmission, err)
 	}

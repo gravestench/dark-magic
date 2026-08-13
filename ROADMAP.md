@@ -1865,7 +1865,11 @@ authority, persistence separation, and resilience acceptance remain open.
   returned runtime/character identity, and enters the ordinary correction path.
   A bounded readiness wait closes the normal next-tick admission race without
   retrying unrelated projection failures. Full client UI and listen-server
-  network composition remain open; a live generated-world network acceptance is next.
+  network composition remain open. A live acceptance now boots the production
+  d2legacy Lua authority and fixed-step headless host, populates a Blood Moor
+  hostile through the production ECS systems, admits a selected profile over a
+  real pinned-TLS QUIC connection, and verifies coherent `PlayerHUD/v1`,
+  `WorldView/v1`, and later correction ticks without requiring owned MPQ data.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 

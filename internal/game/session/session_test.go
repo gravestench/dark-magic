@@ -3,6 +3,7 @@ package session
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -199,5 +200,48 @@ func TestSessionRecordsOnlyExecutedPrivilegedCommandsInAudit(t *testing.T) {
 	audit[0].Payload[0] = '['
 	if string(session.Audit()[0].Payload) != `{"code":"rin"}` {
 		t.Fatal("audit payload was not defensively copied")
+	}
+}
+
+func TestSubmitNextDerivesAndQueuesTickAtomically(t *testing.T) {
+	engine := gameecs.New()
+	session, err := New(engine, Config{MaxCommandLead: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	if err := session.Register("system.enter", CommandHandler{
+		Validate: func(simulation.Command) error { return nil },
+		Apply:    func(*gameecs.Engine, simulation.Command) error { return nil },
+		Allowed:  []simulation.Authority{simulation.AuthoritySystem},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	var builtTick uint64
+	if err := session.SubmitNext(func(tick uint64) (simulation.Command, error) {
+		builtTick = tick
+		return simulation.Command{Tick: tick, Player: "system", Authority: simulation.AuthoritySystem,
+			Sequence: 1, Kind: "system.enter", Payload: json.RawMessage(`{}`)}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if builtTick != 2 {
+		t.Fatalf("next tick = %d, want 2", builtTick)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(replay.Commands) != 1 || replay.Commands[0].Tick != 2 {
+		t.Fatalf("executed commands = %#v", replay.Commands)
+	}
+	if err := session.SubmitNext(nil); !errors.Is(err, ErrHandler) {
+		t.Fatalf("nil builder error = %v, want ErrHandler", err)
 	}
 }
