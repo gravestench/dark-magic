@@ -40,7 +40,7 @@ local function create_layout(data)
 end
 
 local function create_item(layout, item)
-    ecs.create({
+    local item_entity = ecs.create({
         ["d2legacy.item.identity"] = {
             owner = layout,
             id = item.id,
@@ -79,6 +79,31 @@ local function create_item(layout, item)
             defense = item.defense or 0,
         },
     })
+
+    -- Property generation and stat activation are separate layers. Import the
+    -- already-normalized modifiers with their stable source identity intact;
+    -- equipment policy decides later whether each source is active.
+    local modifier_ids = {}
+    for index, modifier in ipairs(item.stat_modifiers or {}) do
+        local source_id = modifier.source_id or tostring(index)
+        local source_kind = modifier.source_kind or "item"
+        local order = modifier.order or index
+        local identity = source_kind .. ":" .. tostring(order) .. ":" .. source_id
+        assert(not modifier_ids[identity], "duplicate item stat modifier identity " .. identity)
+        modifier_ids[identity] = true
+        ecs.create({
+            ["d2legacy.item.stat_modifier"] = {
+                item = item_entity,
+                source_id = source_id,
+                source_kind = source_kind,
+                stat = modifier.stat or "",
+                operation = modifier.operation or "add",
+                value = modifier.value or 0,
+                order = order,
+            },
+        })
+    end
+    return item_entity
 end
 
 local function create_vendor_terms(trade_terms)

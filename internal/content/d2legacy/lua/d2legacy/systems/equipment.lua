@@ -39,7 +39,11 @@ local function sync_sources(entities,structural,player,prefix,stat,wanted)
             else structural:destroy(entity) end
         end
     end
-    for source_id,value in pairs(wanted) do
+    local source_ids={}
+    for source_id in pairs(wanted) do source_ids[#source_ids+1]=source_id end
+    table.sort(source_ids)
+    for _,source_id in ipairs(source_ids) do
+        local value=wanted[source_id]
         if value~=0 and not found[source_id] then
             structural:create({["d2legacy.stat.source"]={target=player,
                 source_id=source_id,stat=stat,value=value}})
@@ -47,15 +51,45 @@ local function sync_sources(entities,structural,player,prefix,stat,wanted)
     end
 end
 
-local function equipped_defense(entities,layout_entity)
+local function placement_is_active(placement,set)
+    if placement:get("container")~="equipment" then return false end
+    local slot=placement:get("slot")
+    if slot=="rarm" or slot=="larm" then
+        return placement:get("weapon_set")==set
+    end
+    return true
+end
+
+local function equipped_defense(entities,layout_entity,set)
     local wanted={}
     for _,entity in ipairs(entities) do
         local item=ecs.get(entity,"d2legacy.item.identity")
         local placement=ecs.get(entity,"d2legacy.item.placement")
         local armor=ecs.get(entity,"d2legacy.item.armor")
         if item and placement and armor and item:get("owner"):id()==layout_entity:id()
-            and placement:get("container")=="equipment" and armor:get("defense")~=0 then
+            and placement_is_active(placement,set) and armor:get("defense")~=0 then
             wanted["equipment:defense:"..item:get("id")]=armor:get("defense")
+        end
+    end
+    return wanted
+end
+
+local function modifier_sources(entities,layout_entity,set,stat)
+    local wanted={}
+    for _,entity in ipairs(entities) do
+        local modifier=ecs.get(entity,"d2legacy.item.stat_modifier")
+        if modifier and modifier:get("stat")==stat and modifier:get("operation")=="add"
+            and modifier:get("value")~=0 then
+            local item_entity=modifier:get("item")
+            local item=ecs.get(item_entity,"d2legacy.item.identity")
+            local placement=ecs.get(item_entity,"d2legacy.item.placement")
+            if item and placement and item:get("owner"):id()==layout_entity:id()
+                and placement_is_active(placement,set) then
+                local source_id="equipment:modifier:"..stat..":"..item:get("id")..":"
+                    ..modifier:get("source_kind")..":"..tostring(modifier:get("order"))..":"
+                    ..modifier:get("source_id")
+                wanted[source_id]=modifier:get("value")
+            end
         end
     end
     return wanted
@@ -63,9 +97,11 @@ end
 
 function M.register()
     ecs.system({id="d2legacy.player.equipment_melee_profile",phase="pre_simulation",
-        query={any={"d2legacy.world.player_control","d2legacy.items.layout","d2legacy.item.identity","d2legacy.stat.source"}},
+        query={any={"d2legacy.world.player_control","d2legacy.items.layout","d2legacy.item.identity",
+            "d2legacy.item.stat_modifier","d2legacy.stat.source"}},
         read={"d2legacy.world.player_control","d2legacy.items.layout","d2legacy.item.identity",
-            "d2legacy.item.placement","d2legacy.item.melee","d2legacy.item.armor","d2legacy.stat.source"},
+            "d2legacy.item.placement","d2legacy.item.melee","d2legacy.item.armor",
+            "d2legacy.item.stat_modifier","d2legacy.stat.source"},
         write={"d2legacy.combat.melee_profile","d2legacy.player.appearance","d2legacy.stat.source"},
         update=function(_,entities,structural)
             for _,player in ipairs(entities) do
@@ -73,7 +109,11 @@ function M.register()
                 if control then
                     local layout_entity,layout=layout_for(entities,control:get("player"))
                     local weapon_entity,item,weapon
-                    if layout then weapon_entity,item,weapon=active_weapon(entities,layout_entity,layout:get("active_weapon_set")) end
+                    local active_set=0
+                    if layout then
+                        active_set=layout:get("active_weapon_set")
+                        weapon_entity,item,weapon=active_weapon(entities,layout_entity,active_set)
+                    end
                     local profile=ecs.get(player,"d2legacy.combat.melee_profile")
                     local appearance=ecs.get(player,"d2legacy.player.appearance")
                     if profile and appearance then
@@ -86,8 +126,18 @@ function M.register()
                             attack["equipment:attack:"..item:get("id")]=weapon:get("attack_rating")
                         end
                         sync_sources(entities,structural,player,"equipment:attack:","attack_rating",attack)
-                        sync_sources(entities,structural,player,"equipment:defense:","defense",
-                            equipped_defense(entities,layout_entity))
+                        if layout_entity then
+                            sync_sources(entities,structural,player,"equipment:defense:","defense",
+                                equipped_defense(entities,layout_entity,active_set))
+                            sync_sources(entities,structural,player,"equipment:modifier:attack_rating:","attack_rating",
+                                modifier_sources(entities,layout_entity,active_set,"attack_rating"))
+                            sync_sources(entities,structural,player,"equipment:modifier:defense:","defense",
+                                modifier_sources(entities,layout_entity,active_set,"defense"))
+                        else
+                            sync_sources(entities,structural,player,"equipment:defense:","defense",{})
+                            sync_sources(entities,structural,player,"equipment:modifier:attack_rating:","attack_rating",{})
+                            sync_sources(entities,structural,player,"equipment:modifier:defense:","defense",{})
+                        end
                     end
                 end
             end
