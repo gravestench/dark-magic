@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
@@ -39,6 +40,7 @@ func main() {
 	profileHeight := flag.Float64("profile-world-height", 0, "authoritative profile-character world height")
 	profileAct := flag.Int64("profile-act", 0, "authoritative profile-character act")
 	profileLevel := flag.Int64("profile-level", 0, "authoritative profile-character level ID")
+	remoteProfileKey := flag.String("remote-profile-key", "", "protected file containing the self-host profile admission credential")
 	flag.Parse()
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {
@@ -79,9 +81,28 @@ func main() {
 			return
 		}
 	}
+	var remoteProfileConfig *serverapp.RemoteProfileConfig
+	if *remoteProfileKey != "" {
+		if profilePath != "" {
+			slog.Error("configuring player profiles", "error", "local and remote profile admission are mutually exclusive")
+			return
+		}
+		credential, credentialErr := serverapp.ReadAdmissionKey(*remoteProfileKey)
+		if credentialErr != nil {
+			slog.Error("reading remote profile key", "error", credentialErr)
+			return
+		}
+		destination, destinationErr := playeradapter.NewDestination(*profileX, *profileY, *profileWidth, *profileHeight, *profileAct, *profileLevel)
+		if destinationErr != nil {
+			slog.Error("validating remote profile destination", "error", destinationErr)
+			return
+		}
+		remoteProfileConfig = &serverapp.RemoteProfileConfig{Credential: string(credential), PrincipalID: "self-host:remote-user",
+			PlayerID: *profilePlayer, Destination: destination, Lifetime: 30 * time.Second}
+	}
 	quicServer, err := serverapp.StartQUIC(serverapp.QUICConfig{
 		Address: *quicListen, CertificatePath: *tlsCertificate, PrivateKeyPath: *tlsKey,
-		AdmissionKeyPath: *admissionKey, SessionID: *sessionID,
+		AdmissionKeyPath: *admissionKey, SessionID: *sessionID, RemoteProfile: remoteProfileConfig,
 	}, host)
 	if err != nil {
 		slog.Error("starting QUIC game-session transport", "error", err)

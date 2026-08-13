@@ -16,6 +16,7 @@ import (
 
 type QUICConfig struct {
 	Address, CertificatePath, PrivateKeyPath, AdmissionKeyPath, SessionID string
+	RemoteProfile                                                         *RemoteProfileConfig
 }
 
 func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, error) {
@@ -42,7 +43,19 @@ func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, e
 	if err != nil {
 		return nil, err
 	}
-	return sessionquic.Listen(config.Address, &tls.Config{Certificates: []tls.Certificate{certificate}}, endpoint)
+	server, err := sessionquic.Listen(config.Address, &tls.Config{Certificates: []tls.Certificate{certificate}}, endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if config.RemoteProfile != nil {
+		profiles, err := NewRemoteProfileAdmissions(host, authenticator, *config.RemoteProfile)
+		if err != nil {
+			_ = server.Close()
+			return nil, err
+		}
+		server.SetProfileAdmissions(profiles)
+	}
+	return server, nil
 }
 
 func ReadAdmissionKey(path string) ([]byte, error) {

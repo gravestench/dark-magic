@@ -1,0 +1,94 @@
+package serverapp
+
+import (
+	"context"
+	"crypto/subtle"
+	"errors"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/gravestench/dark-magic/internal/app/gameserver"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+)
+
+var ErrRemoteProfileAdmission = errors.New("server: remote player-profile admission rejected")
+
+const maxRemoteProfileAttempts = 8
+
+// RemoteProfileConfig is explicit self-host policy. PlayerID and destination
+// come from the host; neither is accepted from the remote character offer.
+type RemoteProfileConfig struct {
+	Credential  string
+	PrincipalID string
+	PlayerID    string
+	Destination playeradapter.Destination
+	Lifetime    time.Duration
+}
+
+type RemoteProfileAdmissions struct {
+	mu       sync.Mutex
+	host     *gameserver.Host
+	tickets  *gameserver.TicketAuthority
+	config   RemoteProfileConfig
+	sequence uint64
+	admitted bool
+	attempts int
+}
+
+func NewRemoteProfileAdmissions(host *gameserver.Host, tickets *gameserver.TicketAuthority, config RemoteProfileConfig) (*RemoteProfileAdmissions, error) {
+	if host == nil || host.Session == nil || host.Mode == gameserver.ModeRealm || tickets == nil ||
+		strings.TrimSpace(config.Credential) == "" || strings.TrimSpace(config.PrincipalID) == "" ||
+		strings.TrimSpace(config.PlayerID) == "" || config.Lifetime <= 0 {
+		return nil, ErrRemoteProfileAdmission
+	}
+	if _, err := playeradapter.NewDestination(config.Destination.X, config.Destination.Y, config.Destination.Width,
+		config.Destination.Height, config.Destination.Act, config.Destination.LevelID); err != nil {
+		return nil, ErrRemoteProfileAdmission
+	}
+	return &RemoteProfileAdmissions{host: host, tickets: tickets, config: config}, nil
+}
+
+// Admit authenticates one bounded selected-character offer, queues it as
+// system authority, and returns a one-use ordinary session ticket.
+func (admissions *RemoteProfileAdmissions) Admit(_ context.Context, credential string, offer []byte) (string, error) {
+	admissions.mu.Lock()
+	defer admissions.mu.Unlock()
+	admissions.attempts++
+	if admissions.attempts > maxRemoteProfileAttempts || admissions.admitted {
+		return "", ErrRemoteProfileAdmission
+	}
+	if subtle.ConstantTimeCompare([]byte(credential), []byte(admissions.config.Credential)) != 1 {
+		return "", ErrRemoteProfileAdmission
+	}
+	character, err := d2save.DecodeCharacterOffer(offer)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
+	}
+	checkpoint, err := admissions.host.Session.CanonicalCheckpoint()
+	if err != nil {
+		return "", err
+	}
+	principal := gameserver.Principal{ID: admissions.config.PrincipalID, CharacterID: character.ID,
+		PlayerID: admissions.config.PlayerID, RuntimeIdentityHash: admissions.host.Allocation.IdentityHash}
+	ticket, err := admissions.tickets.Issue(principal, admissions.config.Lifetime)
+	if err != nil {
+		return "", err
+	}
+	admissions.sequence++
+	command, err := playeradapter.AdmissionCommand(character, principal.PlayerID, admissions.config.Destination,
+		"self-host:remote-profile", admissions.sequence, checkpoint.Tick+1, simulation.AuthoritySystem)
+	if err != nil {
+		_ = admissions.tickets.Revoke(ticket)
+		return "", fmt.Errorf("%w: %v", ErrRemoteProfileAdmission, err)
+	}
+	if err := admissions.host.Session.Submit(command); err != nil {
+		_ = admissions.tickets.Revoke(ticket)
+		return "", fmt.Errorf("%w: submit entry: %v", ErrRemoteProfileAdmission, err)
+	}
+	admissions.admitted = true
+	return ticket, nil
+}

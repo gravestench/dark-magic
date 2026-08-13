@@ -24,6 +24,15 @@ import (
 
 type authenticator struct{}
 
+type profileAdmissions struct{}
+
+func (profileAdmissions) Admit(_ context.Context, credential string, offer []byte) (string, error) {
+	if credential != "profile-secret" || string(offer) != `{"version":1}` {
+		return "", ErrWire
+	}
+	return "session-ticket", nil
+}
+
 func (authenticator) Authenticate(_ context.Context, credential string) (gameserver.Principal, error) {
 	if credential != "realm-ticket" {
 		return gameserver.Principal{}, gameserver.ErrAuthentication
@@ -67,6 +76,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	server.SetProfileAdmissions(profileAdmissions{})
 	t.Cleanup(func() { _ = server.Close() })
 	serveContext, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -79,6 +89,10 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
+	ticket, err := client.AdmitProfile(ctx, "profile-secret", []byte(`{"version":1}`))
+	if err != nil || ticket != "session-ticket" {
+		t.Fatalf("profile ticket=%q error=%v", ticket, err)
+	}
 	for attempt := 0; attempt < 256; attempt++ {
 		stream, err := client.connection.OpenStreamSync(ctx)
 		if err != nil {
@@ -178,12 +192,16 @@ func TestWireOperationsRejectAmbiguousShapes(t *testing.T) {
 	if validShape(request{Operation: operationSubmit, Command: &gameserver.CommandIntent{}}) {
 		t.Fatal("submit without credential was accepted")
 	}
+	result = server.dispatch(context.Background(), request{Operation: operationProfileAdmit, Credential: "secret", Offer: json.RawMessage(`{}`)})
+	if result.Error != ErrWire.Error() {
+		t.Fatalf("realm/default server enabled profile admission: %#v", result)
+	}
 }
 
 func TestWireOperationShapesAreExhaustive(t *testing.T) {
-	operations := []operation{operationJoin, operationSubmit, operationRefresh, operationWatch, operationReconnect, operationLeave, "unknown"}
+	operations := []operation{operationJoin, operationSubmit, operationRefresh, operationWatch, operationReconnect, operationLeave, operationProfileAdmit, "unknown"}
 	for _, candidate := range operations {
-		for mask := 0; mask < 8; mask++ {
+		for mask := 0; mask < 16; mask++ {
 			message := request{Operation: candidate}
 			if mask&1 != 0 {
 				message.Credential = "credential"
@@ -194,12 +212,16 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 			if mask&4 != 0 {
 				message.Command = &gameserver.CommandIntent{}
 			}
+			if mask&8 != 0 {
+				message.Offer = json.RawMessage(`{}`)
+			}
 			// Reconnect is tested separately because it is mutually exclusive
 			// with every field represented by the mask.
 			valid := validShape(message)
 			expected := (candidate == operationJoin && mask == 2) ||
 				(candidate == operationSubmit && mask == 5) ||
-				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1)
+				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1) ||
+				(candidate == operationProfileAdmit && mask == 9)
 			if valid != expected {
 				t.Fatalf("operation=%q mask=%03b valid=%t want=%t", candidate, mask, valid, expected)
 			}

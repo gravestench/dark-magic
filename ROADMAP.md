@@ -1857,8 +1857,11 @@ authority, persistence separation, and resilience acceptance remain open.
   atomic revisioned commit. An explicitly configured self-hosted dedicated
   server can now admit the selected `Profile/v1` character at a host-owned
   destination and atomically persist canonical state on clean shutdown without
-  touching realm APIs. Client-uploaded self-host characters and full listen-server
-  network composition remain coupled to the remaining connection flow.
+  touching realm APIs. Remote self-host admission now uses a separate bounded,
+  strict, integrity-checked selected-character offer behind a protected host
+  credential, host-bound identity/destination, bounded attempts, and one-use
+  session ticket; realm servers cannot enable it accidentally. Full client UI
+  and listen-server network composition remain coupled to the connection flow.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 
