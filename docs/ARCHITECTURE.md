@@ -54,6 +54,22 @@ Lua runtime + engine APIs      first-party d2legacy mod
 The mod-to-engine arrow is one-way: `d2legacy` consumes engine capabilities.
 The engine does not import the mod or encode its rules.
 
+## Mod startup boundary
+
+The engine can start with an empty resolved mod set. Product distribution—not
+the generic content filesystem—reconciles bundled packages such as `d2legacy`
+into the content-addressed mod cache. The user profile selects installed IDs;
+the resolver verifies immutable blobs, orders dependencies, and emits the exact
+digest lock used for mounting and eventual session admission. Installed,
+enabled, resolved, mounted, and activated are deliberately separate states.
+
+Every package is privately visible at `mods/<id>/`; component discovery occurs
+inside that namespace, so one mod's `boot.lua` cannot hide another's. Only
+manifest-declared shared content roots join the resource overlay. Their lookup
+uses reverse dependency/profile order so dependents and later extensions
+override prerequisites deterministically. Details and external design evidence
+are recorded in [MODS.md](MODS.md).
+
 The deployment boundary is equally important:
 
 ```text

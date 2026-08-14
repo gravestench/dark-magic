@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/headlessshell"
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/distribution"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/logging"
@@ -41,6 +43,7 @@ func main() {
 	profileAct := flag.Int64("profile-act", 0, "authoritative profile-character act")
 	profileLevel := flag.Int64("profile-level", 0, "authoritative profile-character level ID")
 	remoteProfileKey := flag.String("remote-profile-key", "", "protected file containing the self-host profile admission credential")
+	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated mod IDs from the installed profile")
 	flag.Parse()
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {
@@ -49,13 +52,28 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	contentFS, err := content.FromEnvironment()
+	mods, err := distribution.PrepareMods(*modsFlag)
+	if err != nil {
+		slog.Error("preparing mod profile", "error", err)
+		return
+	}
+	defer mods.Close()
+	if len(mods.Lock.Packages) == 0 {
+		slog.Error("starting authoritative game server", "error", "no game mod is enabled")
+		return
+	}
+	contentFS, err := content.FromEnvironment(mods.Layers...)
 	if err != nil {
 		slog.Error("mounting authoritative content", "error", err)
 		return
 	}
 	records := recordstore.New(contentFS)
-	host, err := gameserver.Start(ctx, contentFS, records, gameserver.Config{
+	d2legacySource, err := fs.Sub(contentFS, "mods/d2legacy")
+	if err != nil {
+		slog.Error("resolving d2legacy package", "error", err)
+		return
+	}
+	host, err := gameserver.Start(ctx, d2legacySource, records, gameserver.Config{
 		Mode: gameserver.ModeStandalone, SessionID: *sessionID, Prediction: gamesession.PredictionLimited,
 	})
 	if err != nil {

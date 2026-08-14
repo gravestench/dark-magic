@@ -62,8 +62,11 @@ baseline from behavior that has actually been validated.
   and typed Diablo record boundaries. Production Diablo gameplay policy lives
   in the first-party `d2legacy` Lua mod, with narrow Go adapters under
   `internal/mod/d2legacy` where host integration is unavoidable.
-* `internal/content` owns the layered directory/MPQ/ZIP VFS and redistributable
-  first-party `d2legacy` Lua mod.
+* `internal/content` owns the mod-neutral layered directory/MPQ/ZIP VFS and the
+  source trees used to build redistributable first-party packages.
+* `internal/modcache` owns immutable package blobs, user enablement profiles,
+  dependency resolution, and exact locks; `internal/distribution` alone chooses
+  which first-party packages ship and are enabled on a new installation.
 * `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
   Lua runtimes with disposable resource scopes.
 * `internal/presentation` defines backend-neutral retained rendering and scene
@@ -89,6 +92,14 @@ The `d2legacy` mod also preserves Riiablo's recovered quest hierarchy,
 speech-to-string relationships, DS1 definitions, and act-local object mappings.
 Go validates these immutable recovered catalogs; narrow `d2legacy` adapters
 expose their facts to Lua, which alone decides their gameplay meaning.
+
+Mod installation is distinct from activation. On first run, the distribution
+places `d2legacy` in the content-addressed mod cache and creates a user profile
+that enables it. Existing profiles—including an intentionally empty one—are
+never silently re-enabled. See [mod loading and distribution](docs/MODS.md) for
+the cache layout, package manifest, deterministic load order, recovery startup,
+package namespaces, declared shared-content overlays, and signed/P2P
+acquisition direction.
 
 ### Product binaries
 

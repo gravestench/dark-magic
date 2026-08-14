@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/modcache"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -16,6 +17,7 @@ func TestModTemplateIsDiscoverableStarterContent(t *testing.T) {
 	source := content.ModTemplate()
 	for _, path := range []string{
 		"README.md",
+		"mod.json",
 		"boot.lua",
 		"components/example.lua",
 		"lua/mod_template.lua",
@@ -44,6 +46,20 @@ func TestModTemplateIsDiscoverableStarterContent(t *testing.T) {
 	}
 	if wanted := []string{"mod_template.boot", "mod_template.example"}; !reflect.DeepEqual(ids, wanted) {
 		t.Fatalf("starter definitions = %v, want %v", ids, wanted)
+	}
+}
+
+func TestBundledModsDeclareValidPackageManifests(t *testing.T) {
+	for name, source := range map[string]fs.FS{"d2legacy": content.D2Legacy(), "mod_template": content.ModTemplate()} {
+		t.Run(name, func(t *testing.T) {
+			manifest, err := modcache.ReadManifest(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if manifest.ID != name || manifest.EngineAPI != modcache.EngineAPI {
+				t.Fatalf("manifest = %#v", manifest)
+			}
+		})
 	}
 }
 

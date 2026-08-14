@@ -1931,6 +1931,22 @@ repository evidence.
 
 ## M23: Realm, mod delivery, and trusted persistence
 
+- [x] Separate mod installation, enablement, dependency resolution, mounting,
+  and activation. The engine content stack accepts an empty mod set and no
+  longer injects `d2legacy`; product distribution reconciles the deterministic
+  bundled archive into an immutable SHA-256 cache, creates a default-enabled
+  profile only on first run, respects an existing empty profile, verifies every
+  selected blob, rejects dependency and version failures, and emits an exact
+  session lock. Packages are private under `mods/<id>`; only manifest-declared
+  shared content roots participate in ordered overrides. Declared package entry
+  components replace hard-coded activation
+  defaults. The native client can start and close with no enabled mods. The next
+  slice moves its remaining compiled d2legacy save/map/presentation assembly
+  behind a distribution-registered game-adapter contract.
+- [ ] Publish a versioned Modding API Guide covering package/profile/lock
+  concepts, namespace and shared-root rules, capability APIs, ECS and lifecycle
+  contracts, deterministic authority, UI composition, tests, author mode,
+  packaging, trust, network admission, compatibility, and migration policy.
 - [ ] Add a first-class `cmd` realm providing accounts, authentication, game
   creation/discovery, session assignment, and operational administration. The
   `cmd/realm` composition root and shared administration shell now

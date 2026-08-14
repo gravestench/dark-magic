@@ -68,6 +68,28 @@ func (r *Runtime) RegisterInstaller(installer Installer) error {
 	return nil
 }
 
+// RegisterInstallerDefault installs fallback VM setup only when a product
+// composition has not already supplied the same installer. This lets a
+// standalone game adapter remain testable while the client owns multi-package
+// module resolution.
+func (r *Runtime) RegisterInstallerDefault(installer Installer) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.started {
+		return errors.New("modruntime: cannot register an installer while running")
+	}
+	if installer.Name == "" || installer.Install == nil {
+		return errors.New("modruntime: installer name and function are required")
+	}
+	for _, existing := range r.installers {
+		if existing.Name == installer.Name {
+			return nil
+		}
+	}
+	r.installers = append(r.installers, installer)
+	return nil
+}
+
 func (r *Runtime) runScoped(ctx context.Context, scope *Scope, fn func(*lua.LState) error) error {
 	return r.runScopedWithBudget(ctx, scope, r.executionBudget, fn)
 }

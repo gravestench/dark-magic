@@ -2,15 +2,14 @@ package clientapp
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"strings"
-	"time"
 
-	"github.com/gravestench/dark-magic/internal/app/filewatch"
 	"github.com/gravestench/dark-magic/internal/app/host"
-	"github.com/gravestench/dark-magic/internal/app/hotreload"
-	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -18,23 +17,52 @@ import (
 // Think of definitions as labeled toy boxes. The desired map says which boxes
 // should be open right now.
 func (app *application) loadScriptComponents() error {
-	definitions, err := modruntime.DiscoverDefinitions(context.Background(), app.scripts, app.options.Content)
+	definitions, err := app.discoverScriptDefinitions()
 	if err != nil {
 		return wrap("discover Lua components", err)
 	}
 	if err := app.registerManagedDefinitions(definitions); err != nil {
 		return err
 	}
-	modDirectory, err := app.modDirectory()
-	if err != nil {
-		return err
+	return app.activateComponents()
+}
+
+func (app *application) discoverScriptDefinitions() ([]modruntime.Definition, error) {
+	if app.options.Mods == nil {
+		return modruntime.DiscoverDefinitions(context.Background(), app.scripts, app.options.Content)
 	}
-	if modDirectory != "" {
-		if err := app.registerHotReload(modDirectory, definitions); err != nil {
-			return err
+	var definitions []modruntime.Definition
+	for _, pkg := range app.options.Mods.Packages {
+		source, err := app.modSource(pkg.Manifest.ID)
+		if err != nil {
+			return nil, err
+		}
+		discovered, err := modruntime.DiscoverDefinitions(context.Background(), app.scripts, source)
+		if err != nil {
+			return nil, err
+		}
+		definitions = append(definitions, discovered...)
+	}
+	return definitions, nil
+}
+
+func (app *application) modSource(id string) (fs.FS, error) {
+	if app.options.Content == nil {
+		return nil, errors.New("resolve mod source: content filesystem is required")
+	}
+	if app.options.Mods == nil {
+		return app.options.Content, nil
+	}
+	for _, pkg := range app.options.Mods.Packages {
+		if pkg.Manifest.ID == id {
+			source, err := fs.Sub(app.options.Content, path.Join("mods", id))
+			if err != nil {
+				return nil, fmt.Errorf("resolve mod source %q: %w", id, err)
+			}
+			return source, nil
 		}
 	}
-	return app.activateComponents(modDirectory)
+	return nil, fmt.Errorf("resolve mod source %q: package is not locked", id)
 }
 
 func (app *application) registerManagedDefinitions(definitions []modruntime.Definition) error {
@@ -46,33 +74,14 @@ func (app *application) registerManagedDefinitions(definitions []modruntime.Defi
 	return nil
 }
 
-func (app *application) modDirectory() (string, error) {
-	path := os.Getenv("DARK_MAGIC_MOD_DIRECTORY")
-	if path == "" {
-		return "", nil
+func (app *application) activateComponents() error {
+	var defaults []string
+	if app.options.Mods != nil {
+		defaults = append(app.options.Mods.AuthorityComponents(), app.options.Mods.ClientComponents()...)
 	}
-	expanded, err := darkpaths.ExpandHost(path)
-	return expanded, wrap("expand mod directory", err)
-}
-
-func (app *application) registerHotReload(directory string, definitions []modruntime.Definition) error {
-	coordinator := hotreload.New(app.options.Content, app.scripts, app.components, app.records, definitions)
-	definition := host.ManagedDefinition{
-		ID: "engine.hot-reload",
-		New: func(context.Context) (host.Component, error) {
-			return filewatch.New(directory, 250*time.Millisecond, coordinator.Reload), nil
-		},
-	}
-	return wrap("register hot reload", app.components.Register(definition))
-}
-
-func (app *application) activateComponents(modDirectory string) error {
-	desired, err := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), "d2legacy.authoritative", "d2legacy.boot")
+	desired, err := host.ParseDesired(os.Getenv("DARK_MAGIC_ENABLED_COMPONENTS"), defaults...)
 	if err != nil {
 		return wrap("parse enabled components", err)
-	}
-	if modDirectory != "" && desired != nil {
-		desired["engine.hot-reload"] = true
 	}
 	if err := app.components.ApplyDesired(context.Background(), desired); err != nil {
 		return wrap("start enabled components", err)

@@ -1,0 +1,43 @@
+name: Mod loading
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mod-loading.yml"
+      - "go.mod"
+      - "go.sum"
+      - "cmd/client/**"
+      - "cmd/server/**"
+      - "internal/content/**"
+      - "internal/distribution/**"
+      - "internal/modcache/**"
+  schedule:
+    - cron: "31 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mod-loading-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-platform:
+    name: Cache and resolution (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Verify mod cache and distribution boundaries
+        run: go test -count=1 ./internal/modcache ./internal/distribution ./internal/content

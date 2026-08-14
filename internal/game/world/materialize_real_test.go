@@ -18,7 +18,7 @@ func TestGeneratedActOneCaveMaterializesFromOwnedAssets(t *testing.T) {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
 	}
 	t.Setenv("MPQ_DIRECTORY", directory)
-	source, err := content.FromEnvironment()
+	source, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestGeneratedActOneTownMaterializesWithCampfireEntry(t *testing.T) {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
 	}
 	t.Setenv("MPQ_DIRECTORY", directory)
-	source, err := content.FromEnvironment()
+	source, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
 	}
 	t.Setenv("MPQ_DIRECTORY", directory)
-	source, err := content.FromEnvironment()
+	source, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
