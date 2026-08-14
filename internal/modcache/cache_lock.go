@@ -33,7 +33,11 @@ func (store *Store) withMutationLock(operation func() error) error {
 			removeErr := os.Remove(lockPath)
 			return errors.Join(operationErr, removeErr)
 		}
-		if !os.IsExist(err) {
+		contended, inspectErr := mutationLockContended(lockPath, err)
+		if inspectErr != nil {
+			return fmt.Errorf("modcache: acquire mutation lock: %w", inspectErr)
+		}
+		if !contended {
 			return fmt.Errorf("modcache: acquire mutation lock: %w", err)
 		}
 		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > cacheLockStale {
@@ -45,4 +49,22 @@ func (store *Store) withMutationLock(operation func() error) error {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// Windows may report ERROR_ACCESS_DENIED, rather than ERROR_FILE_EXISTS, when
+// another goroutine or process owns an O_EXCL lock file. Stat distinguishes
+// that contention from an actual permission failure without weakening the
+// cross-process lock contract on other platforms.
+func mutationLockContended(lockPath string, createErr error) (bool, error) {
+	if os.IsExist(createErr) {
+		return true, nil
+	}
+	_, statErr := os.Stat(lockPath)
+	if statErr == nil {
+		return true, nil
+	}
+	if os.IsNotExist(statErr) {
+		return false, nil
+	}
+	return false, errors.Join(createErr, statErr)
 }
