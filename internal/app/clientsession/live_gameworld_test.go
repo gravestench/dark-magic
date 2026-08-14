@@ -209,9 +209,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if currentHUD.Tick != currentWorld.Tick {
 		t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
 	}
-	if stats := connected.transport.NetworkStats(); stats.TransformsReceived == 0 {
-		t.Fatalf("movement used no compact transform datagrams: %#v", stats)
-	}
+	waitForTransformDatagram(t, ctx, connected)
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -220,6 +218,23 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	stopRun()
 	assertCanceledLoop(t, ctx, runErrors, "session")
 	assertCanceledLoop(t, ctx, serveErrors, "QUIC")
+}
+
+func waitForTransformDatagram(t *testing.T, ctx context.Context, session *Session) {
+	t.Helper()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		stats := session.transport.NetworkStats()
+		if stats.TransformsReceived > 0 {
+			return
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("movement used no compact transform datagrams: %v; stats=%#v", ctx.Err(), stats)
+		}
+	}
 }
 
 func assertCanceledLoop(t *testing.T, ctx context.Context, result <-chan error, name string) {
