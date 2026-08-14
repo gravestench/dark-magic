@@ -194,6 +194,9 @@ func (memberships *connectionMemberships) observe(message request, result respon
 	}
 	if message.Operation == operationReconnect && result.Join != nil {
 		delete(memberships.credentials, message.Reconnect.Credential)
+		if result.Join.Credential != "" {
+			memberships.credentials[result.Join.Credential] = struct{}{}
+		}
 	}
 }
 

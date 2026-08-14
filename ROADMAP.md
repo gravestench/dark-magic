@@ -1777,9 +1777,10 @@ authoritative `d2legacy` Lua owns the gameplay policy behind those commands.
 
 ## M22: Client and game-session networking
 
-M22 has a working deterministic session/replay foundation, authenticated QUIC
-transport, remote authority, separated persistence, and client-side network
-presentation. Extended soak, fuzz, and cross-platform resilience remain open.
+M22 is complete: deterministic session/replay authority, authenticated QUIC,
+separated offline/realm persistence, client prediction and interpolation, and
+cross-platform sustained network hardening are all covered by executable
+repository evidence.
 
 - [x] Define deterministic simulation snapshots, purpose-named RNG streams,
   admitted command logs, canonical per-tick execution, checksums, restoration,
@@ -1806,7 +1807,8 @@ presentation. Extended soak, fuzz, and cross-platform resilience remain open.
   authority. The realm manager owns a stable-ID registry of those hosts,
   rejects duplicate allocation, and releases workers without moving gameplay
   into the control plane. `cmd/client`, `cmd/server`, and `cmd/realm` now name
-  the three process roles directly. Network transports remain the next item.
+  the three process roles directly, and every hosting mode uses the shared
+  transport and admission boundary described below.
 - [x] Implement direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
   A versioned transport-neutral endpoint now authenticates join credentials,
@@ -1847,13 +1849,13 @@ presentation. Extended soak, fuzz, and cross-platform resilience remain open.
   deterministic bidirectional loss/delay/jitter acceptance test covers TLS
   handshake, join, correction streaming, commands, reconnect, and leave using
   the real QUIC paths. A separate deterministic 60 Hz presentation acceptance
-  covers transform loss, latency, jitter, reordering, and outage freeze; broader
-  sustained-network acceptance remains open. Unary stream halves are explicitly
+  covers transform loss, latency, jitter, reordering, and outage freeze. Unary
+  stream halves are explicitly
   released;
   an exhaustive operation-shape matrix and a 256-request malformed-stream soak
   prove rejection isolation and continued valid use on the same connection.
   Concurrent stream and receive-window ceilings are pinned by tests.
-- [ ] Preserve player-profile characters safely for single-player, listen-server,
+- [x] Preserve player-profile characters safely for single-player, listen-server,
   and self-hosted dedicated-server play; keep them separate from account-owned
   realm characters. Realm flow requires account login, account-scoped character
   selection, then realm game browse/create/join. Client assignments no longer expose the
@@ -1876,8 +1878,8 @@ presentation. Extended soak, fuzz, and cross-platform resilience remain open.
   verifies the pinned host, offers only its selected profile character, verifies
   returned runtime/character identity, and enters the ordinary correction path.
   A bounded readiness wait closes the normal next-tick admission race without
-  retrying unrelated projection failures. Full client UI and listen-server
-  network composition remain open. A live acceptance now boots the production
+  retrying unrelated projection failures. The client UI and listen-server
+  network composition now carry that flow end to end. A live acceptance boots the production
   d2legacy Lua authority and fixed-step headless host, populates a Blood Moor
   hostile through the production ECS systems, admits a selected profile over a
   real pinned-TLS QUIC connection, and verifies coherent `PlayerHUD/v5`,
@@ -1909,8 +1911,23 @@ presentation. Extended soak, fuzz, and cross-platform resilience remain open.
   ECS, 25 Hz MTU-budgeted latest-wins transform datagrams backed by 10 Hz reliable
   repair, immutable off-thread snapshot publication, and tick-synchronized
   animation. Shared production movement/collision rules prevent prediction drift.
-- [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
-  performance, and race tests across supported platforms.
+  Clean single-player shutdown projects the canonical offline checkpoint into
+  the selected profile; clean listen/direct shutdown refreshes and merges the
+  authenticated owner projection; dedicated servers project their canonical
+  checkpoint. Each preserves non-session baseline fields and refuses identity
+  replacement before atomic `Profile/v1` persistence.
+- [x] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
+  performance, and race tests across supported platforms. A parameterized real-
+  QUIC three-client soak runs production-rate commands under bidirectional loss,
+  delay, jitter, explicit reordering, credential rotation, socket loss, redial,
+  and reconnect while asserting exact command application, bounded one-slot
+  streams, convergence, and transport telemetry. PR and scheduled GitHub Actions
+  run focused network packages on macOS, Linux, and Windows; scheduled/manual
+  runs use the 1500-tick preset. Reliable frames, transform datagrams, and strict
+  `ClientView/v4` decoding have fuzz targets and seed corpora. The decoder rejects
+  unknown/unbounded/non-finite state, profile round-trips cover every offline
+  hosting mode, the transform hot path has an allocation budget and benchmark,
+  and the complete repository remains under the race gate.
 
 ## M23: Realm, mod delivery, and trusted persistence
 

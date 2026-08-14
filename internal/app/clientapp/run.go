@@ -88,6 +88,9 @@ func (app *application) shutdown() error {
 
 	var err error
 	if app.network != nil {
+		if app.network.Local() {
+			err = errors.Join(err, persistOfflineCharacter(app.saves, app.offlineSession, "local-player"))
+		}
 		err = errors.Join(err, app.network.Close())
 	}
 	if app.saves != nil && app.playerProfilePath != "" {

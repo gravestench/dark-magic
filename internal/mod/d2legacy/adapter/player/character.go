@@ -22,7 +22,15 @@ func ProjectCharacter(playerID string, baseline d2save.Character, checkpoint sim
 	if err != nil {
 		return d2save.Character{}, err
 	}
-	if baseline.ID == "" || view.Player.CharacterID != baseline.ID {
+	return MergeCharacter(baseline, view)
+}
+
+// MergeCharacter copies only session-owned durable fields from an authenticated
+// owner projection. Player-profile-only fields, including appearance and game
+// mode flags, remain sourced from the selected local baseline. Realm commits
+// apply their separate lease and revision policy before calling ProjectCharacter.
+func MergeCharacter(baseline d2save.Character, view HUD) (d2save.Character, error) {
+	if baseline.ID == "" || view.Version != HUDVersion || view.Player.CharacterID != baseline.ID {
 		return d2save.Character{}, fmt.Errorf("%w: checkpoint character differs", ErrHUDPlayer)
 	}
 	values := []int64{view.Progress.Level, view.Progress.Experience, view.Vitals.Health,
@@ -31,6 +39,9 @@ func ProjectCharacter(playerID string, baseline d2save.Character, checkpoint sim
 		if value < 0 || (strconv.IntSize == 32 && value > math.MaxInt32) {
 			return d2save.Character{}, fmt.Errorf("%w: durable numeric value is out of range", ErrHUDPlayer)
 		}
+	}
+	if view.Vitals.Health > view.Vitals.MaxHealth || view.Vitals.Mana > view.Vitals.MaxMana {
+		return d2save.Character{}, fmt.Errorf("%w: durable vitals are inconsistent", ErrHUDPlayer)
 	}
 	result := cloneDurableCharacter(baseline)
 	result.Name, result.Class, result.Level = view.Player.Name, view.Player.Class, int(view.Progress.Level)

@@ -156,6 +156,21 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	}
 }
 
+func TestConnectionMembershipsTrackRotatedReconnectCredential(t *testing.T) {
+	memberships := &connectionMemberships{credentials: map[gameserver.SessionCredential]struct{}{
+		"before": {},
+	}}
+	memberships.observe(request{
+		Operation: operationReconnect,
+		Reconnect: &gameserver.ReconnectRequest{Credential: "before"},
+	}, response{Join: &gameserver.JoinResponse{Credential: "after"}})
+
+	tracked := memberships.snapshot()
+	if len(tracked) != 1 || tracked[0] != "after" {
+		t.Fatalf("tracked reconnect memberships = %q", tracked)
+	}
+}
+
 func TestFramesRejectOversizeAndUnknownFields(t *testing.T) {
 	var oversized bytes.Buffer
 	var size [4]byte

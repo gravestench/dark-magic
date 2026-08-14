@@ -2,6 +2,7 @@ package sessionquic
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
@@ -83,4 +84,89 @@ func TestTransformAnimationAgePreservesUnknownStartAcrossLongSessions(t *testing
 	if got := startTick(tick, tickAge(tick, tick-12)); got != tick-12 {
 		t.Fatalf("recent animation start decoded as %d, want %d", got, tick-12)
 	}
+}
+
+func FuzzDecodeTransformFrame(f *testing.F) {
+	credential := gameserver.SessionCredential("credential")
+	view := playeradapter.ClientView{
+		Version: playeradapter.ClientViewVersion, Tick: 4,
+		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 4,
+			Position: playeradapter.HUDPosition{X: 1, Y: 2}},
+		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 4, Entities: []playeradapter.WorldEntity{}},
+		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 4},
+	}
+	payload, _ := json.Marshal(view)
+	valid, err := encodeTransformFrame(credential, gameserver.Snapshot{Tick: 4, Payload: payload})
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(valid)
+	f.Add([]byte{0x44, 0x4d, TransformFrameVersion})
+	f.Add(make([]byte, MaxDatagramPayloadBytes+1))
+	f.Fuzz(func(t *testing.T, payload []byte) {
+		frame, err := decodeTransformFrame(credential, payload)
+		if err != nil {
+			return
+		}
+		maximum := (MaxDatagramPayloadBytes - transformHeaderBytes) / transformEntityBytes
+		if frame.Tick == 0 || len(frame.Entities) > maximum || len(payload) > MaxDatagramPayloadBytes {
+			t.Fatalf("decoder accepted out-of-bounds frame: %#v", frame)
+		}
+	})
+}
+
+func BenchmarkTransformFrameEncodeDecode(b *testing.B) {
+	credential, snapshot := transformBenchmarkInput(b)
+	b.ReportAllocs()
+	for b.Loop() {
+		encoded, err := encodeTransformFrame(credential, snapshot)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if _, err := decodeTransformFrame(credential, encoded); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func TestTransformCodecAllocationBudget(t *testing.T) {
+	credential, snapshot := transformBenchmarkInput(t)
+	allocations := testing.AllocsPerRun(25, func() {
+		encoded, err := encodeTransformFrame(credential, snapshot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := decodeTransformFrame(credential, encoded); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if allocations > 320 {
+		t.Fatalf("transform codec allocations = %.0f, budget = 320", allocations)
+	}
+}
+
+type fataler interface {
+	Helper()
+	Fatal(...any)
+}
+
+func transformBenchmarkInput(test fataler) (gameserver.SessionCredential, gameserver.Snapshot) {
+	test.Helper()
+	entities := make([]playeradapter.WorldEntity, playeradapter.MaxWorldViewEntities)
+	for index := range entities {
+		entities[index] = playeradapter.WorldEntity{
+			ID: fmt.Sprintf("entity-%d", index), Position: playeradapter.HUDPosition{X: float64(index), Y: float64(index)},
+		}
+	}
+	view := playeradapter.ClientView{
+		Version: playeradapter.ClientViewVersion, Tick: 100,
+		HUD:     playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 100},
+		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 100, Entities: entities},
+		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 100},
+	}
+	payload, err := json.Marshal(view)
+	if err != nil {
+		test.Fatal(err)
+	}
+	return gameserver.SessionCredential("benchmark-credential"), gameserver.Snapshot{Tick: 100, Payload: payload}
 }

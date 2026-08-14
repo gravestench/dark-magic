@@ -24,6 +24,7 @@ import (
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -682,7 +683,7 @@ func (controller *networkController) resetInputLocked() {
 func (controller *networkController) Close() error {
 	slog.Debug("closing network controller")
 	controller.mu.Lock()
-	cancel, client, server, host := controller.cancel, controller.client, controller.server, controller.host
+	cancel, client, server, host, mode := controller.cancel, controller.client, controller.server, controller.host, controller.mode
 	controller.cancel, controller.client, controller.server, controller.host = nil, nil, nil, nil
 	controller.phase = "closed"
 	controller.mu.Unlock()
@@ -690,6 +691,9 @@ func (controller *networkController) Close() error {
 	defer stop()
 	var err error
 	if client != nil {
+		if mode == "host" || mode == "join" {
+			err = errors.Join(err, controller.persistSelfHostedCharacter(ctx, client))
+		}
 		err = errors.Join(err, client.Close(ctx))
 	}
 	if cancel != nil {
@@ -702,6 +706,32 @@ func (controller *networkController) Close() error {
 		err = errors.Join(err, host.Close(ctx))
 	}
 	return err
+}
+
+func (controller *networkController) persistSelfHostedCharacter(ctx context.Context, client *clientsession.Session) error {
+	if controller.app == nil || controller.app.saves == nil || client == nil {
+		return nil
+	}
+	if _, err := client.Refresh(ctx); err != nil {
+		return fmt.Errorf("refresh selected self-hosted character: %w", err)
+	}
+	hud, _ := client.View()
+	return updateSelectedCharacter(controller.app.saves, hud)
+}
+
+func updateSelectedCharacter(saves *d2save.Store, hud playeradapter.HUD) error {
+	baseline, selected := saves.Selected()
+	if !selected {
+		return errors.New("persist self-hosted character: no selected character")
+	}
+	updated, err := playeradapter.MergeCharacter(baseline, hud)
+	if err != nil {
+		return fmt.Errorf("persist self-hosted character: %w", err)
+	}
+	if err := saves.UpdateSelected(updated); err != nil {
+		return fmt.Errorf("persist self-hosted character: %w", err)
+	}
+	return nil
 }
 
 func randomBytes(size int) ([]byte, error) {

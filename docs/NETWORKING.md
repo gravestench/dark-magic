@@ -40,7 +40,8 @@ The reliable baseline is exercised through caller-provided production packet
 connections under deterministic bidirectional packet loss and cyclic delay.
 That acceptance covers handshake, join, the long-lived correction stream,
 command submission, reconnect, and leave. It proves bounded recovery behavior;
-it is not a substitute for sustained load, diverse paths, or platform testing.
+the separate sustained harness described below adds multi-client load, explicit
+reordering, active credential rotation, socket redial, and platform coverage.
 The adapter accepts at most 16 concurrent bidirectional streams per connection,
 disables peer-initiated unidirectional streams, caps a stream receive window at
 4 MiB and a connection receive window at 8 MiB, and explicitly releases both
@@ -75,8 +76,11 @@ assignment-owned and separate from this direct-game trust store.
 
 Join and reconnect return versioned per-player semantic projections plus a
 canonical tick and checksum. They do not expose raw ECS snapshots or hidden
-server facts. Reconnect rotates the bearer credential so a successfully used
-old credential cannot be replayed.
+server facts. The client treats even a pinned host as an untrusted decoder
+boundary: `ClientView/v4` rejects unknown fields, inconsistent nested ticks,
+non-finite numbers, duplicate identities, invalid private interaction shapes,
+and collections or strings beyond their schema limits. Reconnect rotates the
+bearer credential so a successfully used old credential cannot be replayed.
 
 The native server enables QUIC only when `-quic-listen`, `-tls-cert`,
 `-tls-key`, and `-admission-key` are supplied together. TLS uses an explicitly
@@ -273,6 +277,15 @@ Self-host profile throttling is per normalized remote IP
 and refills over time; one abusive address cannot exhaust a process-global join
 counter.
 
+Single-player, listen-host, direct-join, and dedicated-server characters remain
+player-profile data, never realm authority. Clean single-player shutdown
+projects session-owned fields from the canonical checkpoint. Clean listen-host
+and direct-join shutdown first requests a reliable canonical correction, then
+merges its authenticated HUD into the selected local baseline. Dedicated
+servers perform the equivalent projection from their canonical checkpoint.
+All three paths preserve profile-only fields and reject any attempt to replace
+the selected character identity before `Profile/v1` is written atomically.
+
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction
 stream sends an immediate view and then changed views at no more than 10 Hz. Its
@@ -300,14 +313,32 @@ as deterministic schedules with perceptual invariants rather than sleeps or
 wall-clock tolerances.
 
 `internal/app/gameserver/sessionquic/impairment_test.go` exercises the real QUIC
-adapter through an injected packet connection. It covers reliable recovery and
-disposable transform traffic under synthetic drop, delay, jitter, and reconnect.
+adapter through an injected packet connection. Its sustained acceptance runs
+three independently authenticated clients at the production 25 Hz command
+cadence under bidirectional drop, cyclic delay, jitter, and explicit packet
+reordering. One active member rotates credentials and later loses its socket,
+redials, reconnects, and continues its uninterrupted command sequence. The test
+requires every command to apply, correction and transform streams to converge,
+all application channels to remain one-slot bounded, and actual impairment plus
+RTT/transform telemetry to be observed.
+
+The normal suite runs 80 ticks. Set `DARK_MAGIC_NETWORK_SOAK_TICKS` from 20 to
+15000, run `make test-network-soak` for the 1500-tick preset, or run
+`make test-network-hardening NETWORK_SOAK_TICKS=<ticks>` for another bounded
+duration. `.github/workflows/network-hardening.yml` runs the production-path
+packages on macOS, Linux, and Windows for pull requests and runs the long preset
+weekly or on demand. The same workflow continuously fuzzes reliable frame,
+transform datagram, and client projection decoders. `make test-network-fuzz`
+runs those fuzz boundaries locally. The transform codec benchmark and allocation
+budget pin the MTU-bounded hot path.
+
 `internal/app/clientsession/live_gameworld_test.go` boots the production
 `d2legacy` Lua authority and verifies that the live transport reaches a generated
 game world. Package tests beside `networkclock`, the presentation buffer, local
 prediction, shared movement rules, and transform codec pin their smaller
 contracts. Run `make test` and `make test-race` for the complete gate; use focused
-package tests while iterating.
+package tests while iterating. Run `make test`, `make test-race`, and
+`make test-network-hardening` for the complete local gate.
 
 ## Join-time mod acquisition
 

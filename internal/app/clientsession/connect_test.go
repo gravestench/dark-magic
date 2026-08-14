@@ -54,7 +54,7 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{CharacterID: "character", Name: "Hero", Class: "Amazon"}}
+	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{PlayerID: "player", CharacterID: "character", Name: "Hero", Class: "Amazon"}}
 	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud,
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0}}
@@ -165,6 +165,9 @@ func TestSessionExposesDistinctNetworkTimelines(t *testing.T) {
 	if got := session.NextInputTick(now); got != 22 {
 		t.Fatalf("next input tick = %d, want 22", got)
 	}
+	if got := session.NextInputTick(now.Add(time.Second)); got != 22 {
+		t.Fatalf("next input tick after stale extrapolation = %d, want 22", got)
+	}
 }
 
 func TestConnectRejectsMalformedDiscoveryBeforeDial(t *testing.T) {
@@ -183,6 +186,26 @@ func TestCorrectionRejectsStaleAndConflictingSnapshots(t *testing.T) {
 	}
 	if err := validateCorrection(current, gameserver.Snapshot{Tick: 9, Checksum: "next"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCorrectionCannotReplaceAuthenticatedOwnerIdentity(t *testing.T) {
+	owner := playeradapter.HUDIdentity{PlayerID: "player", CharacterID: "hero"}
+	session := &Session{
+		Admission:   gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 1, Checksum: "before"}},
+		reliableHUD: playeradapter.HUD{Player: owner},
+		reliableWorld: playeradapter.WorldView{
+			Version: playeradapter.WorldViewVersion, Tick: 1, Entities: []playeradapter.WorldEntity{},
+		},
+		pending: make(map[uint64]gameserver.CommandIntent),
+	}
+	view := validNetworkView(2)
+	view.HUD.Player = playeradapter.HUDIdentity{PlayerID: "attacker", CharacterID: "hero"}
+	if _, err := session.applyDecodedCorrection(gameserver.Snapshot{Tick: 2, Checksum: "after"}, view); err != ErrAssignment {
+		t.Fatalf("owner replacement error = %v", err)
+	}
+	if session.reliableHUD.Player != owner {
+		t.Fatalf("owner changed after rejected correction: %#v", session.reliableHUD.Player)
 	}
 }
 

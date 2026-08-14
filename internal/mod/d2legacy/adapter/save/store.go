@@ -165,6 +165,28 @@ func (s *Store) Selected() (Character, bool) {
 	return Character{}, false
 }
 
+// UpdateSelected replaces the active player-owned character without allowing
+// a network projection to change roster identity or selection. The caller owns
+// the policy that produced the updated durable fields.
+func (s *Store) UpdateSelected(character Character) error {
+	if character.ID == "" {
+		return errors.New("persistence: record ID is required")
+	}
+	character = cloneCharacter(character)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.selected == "" || character.ID != s.selected {
+		return errors.New("persistence: updated character is not selected")
+	}
+	for index := range s.entries {
+		if s.entries[index].ID == s.selected {
+			s.entries[index] = character
+			return nil
+		}
+	}
+	return errors.New("persistence: selected character is absent")
+}
+
 func cloneCharacter(character Character) Character {
 	if character.Stats != nil {
 		stats := *character.Stats

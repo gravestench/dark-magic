@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
 
 test:
 	go test ./...
@@ -22,6 +22,19 @@ architecture:
 
 test-race:
 	go test -race ./...
+
+NETWORK_SOAK_TICKS ?= 80
+
+test-network-hardening:
+	DARK_MAGIC_NETWORK_SOAK_TICKS=$(NETWORK_SOAK_TICKS) go test -count=1 ./internal/app/gameserver/... ./internal/app/clientsession ./internal/app/networkclock ./internal/app/networktrust
+
+test-network-soak:
+	$(MAKE) --no-print-directory test-network-hardening NETWORK_SOAK_TICKS=1500
+
+test-network-fuzz:
+	go test ./internal/app/gameserver/sessionquic -run '^$$' -fuzz FuzzReadFrame -fuzztime 10s
+	go test ./internal/app/gameserver/sessionquic -run '^$$' -fuzz FuzzDecodeTransformFrame -fuzztime 10s
+	go test ./internal/app/clientsession -run '^$$' -fuzz FuzzDecodeClientView -fuzztime 10s
 
 fmt:
 	gofmt -w $$(find cmd internal pkg -name '*.go')

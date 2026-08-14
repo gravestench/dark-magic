@@ -24,6 +24,25 @@ func TestSelectionAndDefensiveCharacterList(t *testing.T) {
 	}
 }
 
+func TestUpdateSelectedPreservesRosterIdentityAndDefensiveOwnership(t *testing.T) {
+	store := New(Character{ID: "hero", Name: "Before"}, Character{ID: "other", Name: "Other"})
+	if err := store.Select("hero"); err != nil {
+		t.Fatal(err)
+	}
+	updated := Character{ID: "hero", Name: "After", Stats: &Stats{Health: 12}}
+	if err := store.UpdateSelected(updated); err != nil {
+		t.Fatal(err)
+	}
+	updated.Stats.Health = 0
+	selected, ok := store.Selected()
+	if !ok || selected.Name != "After" || selected.Stats.Health != 12 || len(store.Characters()) != 2 {
+		t.Fatalf("updated selected character = %#v roster=%#v", selected, store.Characters())
+	}
+	if err := store.UpdateSelected(Character{ID: "other"}); err == nil {
+		t.Fatal("non-selected identity replaced the selected character")
+	}
+}
+
 func TestCharacterAppearanceIsDefensivelyCopied(t *testing.T) {
 	t.Parallel()
 
