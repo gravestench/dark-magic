@@ -10,7 +10,10 @@ on:
       - "cmd/server/**"
       - "internal/content/**"
       - "internal/distribution/**"
+      - "internal/game/simulation/**"
+      - "internal/mod/d2legacy/**"
       - "internal/modcache/**"
+      - "internal/paths/**"
   schedule:
     - cron: "31 9 * * 1"
   workflow_dispatch:
@@ -41,3 +44,5 @@ jobs:
           cache: true
       - name: Verify mod cache and distribution boundaries
         run: go test -count=1 ./internal/modcache ./internal/distribution ./internal/content
+      - name: Verify embedded Lua and durable local files
+        run: go test -count=1 ./internal/mod/d2legacy ./internal/mod/d2legacy/adapter/save ./internal/game/simulation ./internal/paths

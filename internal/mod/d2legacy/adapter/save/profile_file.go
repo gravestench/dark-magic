@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
 func WriteProfileFile(path string, profile Profile) error {
@@ -38,12 +40,7 @@ func WriteProfileFile(path string, profile Profile) error {
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("%w: replace profile: %v", ErrProfile, err)
 	}
-	directoryHandle, err := os.Open(directory)
-	if err != nil {
-		return fmt.Errorf("%w: open profile directory: %v", ErrProfile, err)
-	}
-	defer directoryHandle.Close()
-	if err := directoryHandle.Sync(); err != nil {
+	if err := darkpaths.SyncDirectory(directory); err != nil {
 		return fmt.Errorf("%w: sync profile directory: %v", ErrProfile, err)
 	}
 	return nil
