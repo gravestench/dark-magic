@@ -593,9 +593,10 @@ window:
 MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/client
 ```
 
-Portable builds retain `ffplay` as a separate-window diagnostic fallback. If it
-is absent, startup follows the manifest's failure policy and skips video without
-preventing the client from loading.
+Portable client builds never launch a separate media-player window. Without the
+embedded FFmpeg backend, startup follows the manifest's failure policy and skips
+video without preventing the client from loading. The standalone `bik_view`
+developer tool retains `ffplay` for explicit diagnostic playback.
 
 The report records missing and disputed paths, the archive layer that supplied
 each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use

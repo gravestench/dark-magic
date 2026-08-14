@@ -16,8 +16,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
-// Identity pins the exact authoritative Lua bytes used by one session. Sorted
-// file order makes the result independent of filesystem traversal order.
+// Identity pins the canonical authoritative Lua source used by one session.
+// Sorted file order makes the result independent of filesystem traversal order.
 func Identity(source fs.FS, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
 	builtin, err := modcache.DescribeBuiltin(source)
 	if err != nil {
@@ -96,6 +96,7 @@ func hashSource(source fs.FS, root string, include func(string) bool) (string, e
 		if err != nil {
 			return "", err
 		}
+		data = modcache.CanonicalBuiltinSource(name, data)
 		_, _ = hash.Write([]byte(name))
 		_, _ = hash.Write([]byte{0})
 		_, _ = hash.Write(data)

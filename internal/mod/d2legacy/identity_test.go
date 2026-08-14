@@ -1,7 +1,11 @@
 package d2legacy
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/fs"
+	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -65,6 +69,49 @@ func TestIdentitySeparatesPackageAndAuthoritativeLuaHashes(t *testing.T) {
 	if len(scriptChanged.Recipe.CapabilityVersions) == 0 {
 		t.Fatal("identity omitted capability contract")
 	}
+}
+
+func TestIdentityCanonicalizesCheckoutLineEndings(t *testing.T) {
+	lf := content.D2Legacy()
+	crlf := checkoutWithCRLF(t, lf)
+	left, err := Identity(lf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := Identity(crlf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(left, right) {
+		t.Fatalf("equivalent text checkouts have different identities:\nLF:   %#v\nCRLF: %#v", left, right)
+	}
+}
+
+func checkoutWithCRLF(t *testing.T, source fs.FS) fstest.MapFS {
+	t.Helper()
+	checkout := fstest.MapFS{}
+	err := fs.WalkDir(source, ".", func(name string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() {
+			return walkErr
+		}
+		data, err := fs.ReadFile(source, name)
+		if err != nil {
+			return err
+		}
+		for _, suffix := range []string{".json", ".lua", ".md", ".txt"} {
+			if strings.HasSuffix(strings.ToLower(name), suffix) {
+				data = modcache.CanonicalBuiltinSource(name, data)
+				data = bytes.ReplaceAll(data, []byte("\n"), []byte("\r\n"))
+				break
+			}
+		}
+		checkout[name] = &fstest.MapFile{Data: data, Mode: entry.Type()}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return checkout
 }
 
 func TestIdentityForPackagesRejectsBuiltinMetadataDrift(t *testing.T) {

@@ -371,6 +371,57 @@ func TestConcurrentCacheUpdatesDoNotLosePackages(t *testing.T) {
 	}
 }
 
+func TestDescribeBuiltinCanonicalizesTextLineEndings(t *testing.T) {
+	manifest := testManifest("d2legacy", "game")
+	lf := testBundle(manifest, map[string]string{
+		"boot.lua":  "local value = 1\nreturn value\n",
+		"README.md": "first line\nsecond line\n",
+	})
+	crlf := testBundle(manifest, map[string]string{
+		"boot.lua":  "local value = 1\r\nreturn value\r\n",
+		"README.md": "first line\r\nsecond line\r\n",
+	})
+
+	left, err := DescribeBuiltin(lf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := DescribeBuiltin(crlf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.Descriptor != right.Descriptor {
+		t.Fatalf("equivalent text checkouts have different descriptors:\nLF:   %#v\nCRLF: %#v", left.Descriptor, right.Descriptor)
+	}
+}
+
+func TestDescribeBuiltinKeepsBinaryBytesExact(t *testing.T) {
+	manifest := testManifest("d2legacy", "game")
+	lf := testBundle(manifest, map[string]string{"asset.bin": "first\nsecond"})
+	crlf := testBundle(manifest, map[string]string{"asset.bin": "first\r\nsecond"})
+
+	left, err := DescribeBuiltin(lf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := DescribeBuiltin(crlf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.Descriptor.Digest == right.Descriptor.Digest {
+		t.Fatal("different binary bytes produced the same built-in digest")
+	}
+}
+
+func TestCachedExtensionArchiveKeepsTextBytesExact(t *testing.T) {
+	manifest := testManifest("example", "extension")
+	lf := archiveBytes(t, testBundle(manifest, map[string]string{"boot.lua": "first\nsecond"}))
+	crlf := archiveBytes(t, testBundle(manifest, map[string]string{"boot.lua": "first\r\nsecond"}))
+	if bytes.Equal(lf, crlf) {
+		t.Fatal("extension archives canonicalized distinct text bytes")
+	}
+}
+
 func archiveBytes(t *testing.T, source fs.FS) []byte {
 	t.Helper()
 	var archive bytes.Buffer
