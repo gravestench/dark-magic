@@ -29,6 +29,7 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 		Styles     map[string]struct {
 			Font      string `json:"font"`
 			Transform string `json:"transform"`
+			TextColor string `json:"text_color"`
 			Color     struct {
 				Red   int `json:"red"`
 				Green int `json:"green"`
@@ -78,7 +79,7 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
 	}
-	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "character_create_heading", "character_create_class", "character_create_description", "character_create_option", "credits", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text", "tooltip", "disabled", "font_lab_heading", "font_lab_caption", "font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10", "font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar", "font_lab_gold_act1"} {
+	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "character_create_heading", "character_create_class", "character_create_description", "character_create_option", "credits", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_button_normal", "dialog_button_hover", "dialog_text", "network_status", "network_error", "tooltip", "disabled", "font_lab_heading", "font_lab_caption", "font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10", "font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar", "font_lab_gold_act1"} {
 		style, ok := manifest.Styles[name]
 		if !ok {
 			t.Errorf("presentation manifest is missing text style %q", name)
@@ -107,6 +108,16 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 			t.Errorf("Exocet UI style %q modulation = %#v, want neutral 0x646464ff", name, got)
 		}
 	}
+	if manifest.Styles["network_error"].TextColor != "red" {
+		t.Fatalf("network error style color = %q, want red", manifest.Styles["network_error"].TextColor)
+	}
+	dialogNormal, dialogHover := manifest.Styles["dialog_button_normal"], manifest.Styles["dialog_button_hover"]
+	if dialogNormal.Font != "font16" || dialogNormal.Transform != "sky" || dialogNormal.TextColor != "grey" {
+		t.Fatalf("dialog button normal style = %#v, want standalone grey font16", dialogNormal)
+	}
+	if dialogHover.Font != "font16" || dialogHover.Transform != "sky" || dialogHover.TextColor != "blue" {
+		t.Fatalf("dialog button hover style = %#v, want standalone blue font16", dialogHover)
+	}
 	for _, screen := range []string{
 		"font_lab",
 		"title",
@@ -124,6 +135,55 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 		if len(manifest.Screens[screen]) == 0 {
 			t.Errorf("presentation manifest is missing %q", screen)
 		}
+	}
+}
+
+func TestTCPIPJoinDialogUsesAuthoredTextFieldAndVisibleStatus(t *testing.T) {
+	t.Parallel()
+
+	data, err := fs.ReadFile(D2Legacy(), "manifests/presentation.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Screens struct {
+			TCPIP struct {
+				Dialog struct {
+					X, Y, Width, Height int
+					Field               struct {
+						X, Y, Width, Height int
+						Kind, Palette       string
+						LabelAlign          string `json:"label_align"`
+						MaxLength           int    `json:"max_length"`
+					} `json:"field"`
+				} `json:"dialog"`
+				Status struct {
+					X, Y, Width int
+					Style       string `json:"style"`
+					ErrorStyle  string `json:"error_style"`
+				} `json:"status"`
+			} `json:"tcpip"`
+		} `json:"screens"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+
+	tcpip := manifest.Screens.TCPIP
+	if tcpip.Dialog.Field.Kind != "ip" || tcpip.Dialog.Field.Palette == "" || tcpip.Dialog.Field.Width <= 0 || tcpip.Dialog.Field.Height <= 0 || tcpip.Dialog.Field.MaxLength <= 0 {
+		t.Fatalf("TCP/IP dialog field = %#v", tcpip.Dialog.Field)
+	}
+	if tcpip.Dialog.Field.Palette != "units" || tcpip.Dialog.Field.LabelAlign != "center" {
+		t.Fatalf("TCP/IP dialog field presentation = %#v", tcpip.Dialog.Field)
+	}
+	if tcpip.Dialog.Field.X+tcpip.Dialog.Field.Width/2 != tcpip.Dialog.X+tcpip.Dialog.Width/2 {
+		t.Fatalf("TCP/IP dialog field center=%d, want dialog center=%d", tcpip.Dialog.Field.X+tcpip.Dialog.Field.Width/2, tcpip.Dialog.X+tcpip.Dialog.Width/2)
+	}
+	if tcpip.Status.Y <= tcpip.Dialog.Y+tcpip.Dialog.Height {
+		t.Fatalf("TCP/IP status y=%d is occluded by dialog ending at y=%d", tcpip.Status.Y, tcpip.Dialog.Y+tcpip.Dialog.Height)
+	}
+	if tcpip.Status.Width <= 0 || tcpip.Status.Style != "network_status" || tcpip.Status.ErrorStyle != "network_error" {
+		t.Fatalf("TCP/IP status = %#v", tcpip.Status)
 	}
 }
 

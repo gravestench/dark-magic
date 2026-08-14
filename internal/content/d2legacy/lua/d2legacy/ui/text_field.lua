@@ -106,7 +106,7 @@ function M.create(root, manager, id, definition, label, options)
                 options.label_style or defaults.label_style,
                 label,
                 label_width,
-                "left"
+                definition.label_align or options.label_align or "left"
             )
             label_node:set_position(
                 x + label_width / 2,

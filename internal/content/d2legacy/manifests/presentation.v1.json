@@ -172,7 +172,11 @@
     "button_hover": {"font":"exocet10","text_color":"white"},
     "label_button_normal": {"font":"exocet10","color":{"red":100,"green":100,"blue":100,"alpha":255}},
     "label_button_hover": {"font":"exocet10","text_color":"white"},
+    "dialog_button_normal": {"font":"font16","transform":"sky","text_color":"grey"},
+    "dialog_button_hover": {"font":"font16","transform":"sky","text_color":"blue"},
     "dialog_text": {"font":"exocet10","color":{"red":100,"green":100,"blue":100,"alpha":255}},
+    "network_status": {"font":"exocet10","text_color":"white"},
+    "network_error": {"font":"exocet10","text_color":"red"},
     "tooltip": {"font":"font16","transform":"act1","text_color":"white"},
     "disabled": {"font":"font16","transform":"fechar","text_color":"grey"},
     "font_lab_heading": {"font":"font30","transform":"sky","text_color":"white"},
@@ -307,8 +311,10 @@
       },
       "dialog": {
         "x": 270, "y": 175, "width": 260, "height": 180,
-        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar"
-      }
+        "sheet": "data/global/ui/FrontEnd/PopUpOkCancel.dc6", "palette": "fechar",
+        "field": {"x": 291, "y": 245, "width": 218, "height": 26, "kind": "ip", "max_length": 255, "palette": "units", "label_align": "center"}
+      },
+      "status": {"x": 400, "y": 385, "width": 520, "style": "network_status", "error_style": "network_error"}
     },
     "character_create": {
       "background": "data/global/ui/FrontEnd/charactercreationscreenEXP.dc6",
