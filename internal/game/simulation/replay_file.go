@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
 // WriteReplayContainerFile atomically replaces one replay file. Encoding and
@@ -39,12 +41,7 @@ func WriteReplayContainerFile(path string, container ReplayContainer) error {
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("%w: replace file: %v", ErrReplayContainer, err)
 	}
-	directoryHandle, err := os.Open(directory)
-	if err != nil {
-		return fmt.Errorf("%w: open destination directory: %v", ErrReplayContainer, err)
-	}
-	defer directoryHandle.Close()
-	if err := directoryHandle.Sync(); err != nil {
+	if err := darkpaths.SyncDirectory(directory); err != nil {
 		return fmt.Errorf("%w: sync destination directory: %v", ErrReplayContainer, err)
 	}
 	return nil
