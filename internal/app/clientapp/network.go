@@ -219,7 +219,12 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 	fail := func(err error) {
 		controller.fail(generation, err)
 	}
-	host, err := gameserver.Start(ctx, controller.app.options.Content, recordstore.New(controller.app.options.Content), gameserver.Config{
+	d2legacySource, err := controller.app.modSource("d2legacy")
+	if err != nil {
+		fail(err)
+		return
+	}
+	host, err := gameserver.Start(ctx, d2legacySource, recordstore.New(controller.app.options.Content), gameserver.Config{
 		Mode: gameserver.ModeListen, SessionID: "listen-local", Prediction: gamesession.PredictionLimited,
 		InitialData: controller.app.sessionInitialData(),
 	})

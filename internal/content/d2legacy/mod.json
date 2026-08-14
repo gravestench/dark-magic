@@ -1,0 +1,21 @@
+{
+  "schema": "dark-magic.mod/v1",
+  "id": "d2legacy",
+  "name": "Diablo II Legacy",
+  "version": "0.1.0",
+  "kind": "game",
+  "engine_api": "v1",
+  "redistributable": true,
+  "content_roots": ["assets", "data", "locales", "manifests"],
+  "entrypoints": {
+    "client_components": ["d2legacy.boot"],
+    "authority_components": ["d2legacy.authoritative"]
+  },
+  "dependencies": [],
+  "capabilities": [
+    "engine.authority/v1",
+    "engine.ecs/v1",
+    "engine.render/v1",
+    "engine.scene/v1"
+  ]
+}

@@ -10,6 +10,12 @@ For a smaller starting point, compare this mod with the sibling
 recommended reading order, see [`lua/README.md`](lua/README.md). For detailed
 test-harness syntax, see [`lua/d2legacy/README.md`](lua/d2legacy/README.md).
 
+The installed package is privately addressable at `mods/d2legacy/`. Its
+manifest explicitly projects `assets`, `data`, `locales`, and `manifests` into
+the shared layered VFS; `boot.lua`, `components`, `lua`, and `mod.json` remain
+namespaced and cannot collide with another mod. See the repository
+[mod loading guide](../../../docs/MODS.md) for dependency and override order.
+
 ## Runtime boundaries
 
 Dark Magic supplies mechanisms. The mod supplies meaning.

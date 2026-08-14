@@ -187,7 +187,7 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	if runtime == nil || source == nil || records == nil || random == nil {
 		return fmt.Errorf("d2legacy: complete module runtime dependencies are required")
 	}
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(source, "lua")); err != nil {
+	if err := runtime.RegisterInstallerDefault(modruntime.ContentRequire(source, "lua")); err != nil {
 		return err
 	}
 	for _, module := range []modruntime.Module{

@@ -17,7 +17,11 @@ import (
 // buildEntryWorld generates and materializes both sides of the first playable
 // zone seam. Maps publish together; a half-built wilderness is never active.
 func (app *application) buildEntryWorld() error {
-	entryWorld, err := d2mapgen.GenerateEntryWorld(app.ctx, app.options.Content, app.records, 1)
+	d2legacySource, err := app.modSource("d2legacy")
+	if err != nil {
+		return wrap("resolve d2legacy package", err)
+	}
+	entryWorld, err := d2mapgen.GenerateEntryWorld(app.ctx, d2legacySource, app.records, 1)
 	if err != nil {
 		return wrap("generate d2legacy entry world", err)
 	}
@@ -37,7 +41,7 @@ func (app *application) buildEntryWorld() error {
 	app.transitionSeam = seam
 	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
 	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, app.options.Content, app.records, townMap)
+	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, d2legacySource, app.records, townMap)
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}

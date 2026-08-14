@@ -151,7 +151,11 @@ func (app *application) buildOfflineSession() error {
 		return wrap("register d2legacy random streams", err)
 	}
 	initialData := app.sessionInitialData()
-	identity, err := d2legacymod.Identity(app.options.Content, initialData)
+	d2legacySource, err := app.modSource("d2legacy")
+	if err != nil {
+		return wrap("resolve d2legacy package", err)
+	}
+	identity, err := d2legacymod.Identity(d2legacySource, initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}
@@ -164,7 +168,16 @@ func (app *application) buildOfflineSession() error {
 		return wrap("create local command intent source", err)
 	}
 	app.ecsCapability = modruntime.NewECSCapability(app.scripts, app.entitySimulation)
-	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
+	if app.options.Mods != nil {
+		packageIDs := make([]string, len(app.options.Mods.Packages))
+		for index, pkg := range app.options.Mods.Packages {
+			packageIDs[index] = pkg.Manifest.ID
+		}
+		if err := app.scripts.RegisterInstaller(modruntime.PackageRequire(app.options.Content, packageIDs)); err != nil {
+			return wrap("register package Lua namespaces", err)
+		}
+	}
+	if err := d2legacymod.ConfigureRuntime(app.scripts, d2legacySource, app.records, app.entitySimulation, app.offlineSession,
 		app.authoritativeState, app.authoritativeRandom, initialData, app.ecsCapability); err != nil {
 		return wrap("configure canonical d2legacy runtime", err)
 	}

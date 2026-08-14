@@ -50,7 +50,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
 	}
-	assets, err := content.FromEnvironment()
+	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
 	}
-	assets, err := content.FromEnvironment()
+	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}

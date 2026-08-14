@@ -15,27 +15,13 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// FromEnvironment constructs the production content stack. User content wins,
-// followed by the bundled d2legacy mod, Diablo II patches/expansion data, and base
-// archives. Missing optional directories and archives are skipped.
-func FromEnvironment() (*FS, error) {
+// FromEnvironment constructs a content stack from the caller's resolved mod
+// layers followed by configured external game-data archives. It deliberately
+// has no built-in mod identity: the distribution/mod-cache composition decides
+// which packages are enabled, and an empty mod list is valid.
+func FromEnvironment(modLayers ...Layer) (*FS, error) {
 	layers := make([]Layer, 0, 16)
-	if mods := os.Getenv("DARK_MAGIC_MOD_DIRECTORY"); mods != "" {
-		expanded, err := darkpaths.ExpandHost(mods)
-		if err != nil {
-			return nil, fmt.Errorf("content: expand mod directory %q: %w", mods, err)
-		}
-		mods = expanded
-		info, err := os.Stat(mods)
-		if err != nil {
-			return nil, fmt.Errorf("content: inspect mod directory %q: %w", mods, err)
-		}
-		if !info.IsDir() {
-			return nil, fmt.Errorf("content: mod path %q is not a directory", mods)
-		}
-		layers = append(layers, Layer{Name: "user-mods", FS: Directory(mods)})
-	}
-	layers = append(layers, Layer{Name: "d2legacy", FS: D2Legacy()})
+	layers = append(layers, modLayers...)
 	if configured := os.Getenv("MPQ_DIRECTORY"); configured != "" {
 		for index, entry := range strings.Split(configured, ",") {
 			directory := strings.TrimSpace(entry)

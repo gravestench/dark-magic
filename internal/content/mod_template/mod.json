@@ -1,0 +1,16 @@
+{
+  "schema": "dark-magic.mod/v1",
+  "id": "mod_template",
+  "name": "Empty Dark Magic Mod",
+  "version": "0.1.0",
+  "kind": "game",
+  "engine_api": "v1",
+  "redistributable": true,
+  "content_roots": [],
+  "entrypoints": {
+    "client_components": ["mod_template.boot"],
+    "authority_components": []
+  },
+  "dependencies": [],
+  "capabilities": []
+}

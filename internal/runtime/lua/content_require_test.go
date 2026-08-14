@@ -92,3 +92,34 @@ func TestContentModulesHaveIsolatedEnvironments(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPackageRequireBindsModulesToOwningNamespace(t *testing.T) {
+	source := fstest.MapFS{
+		"mods/base/lua/base/value.lua":      &fstest.MapFile{Data: []byte(`return {value="base"}`)},
+		"mods/extension/lua/base/value.lua": &fstest.MapFile{Data: []byte(`return {value="spoofed"}`)},
+		"mods/extension/lua/extension.lua":  &fstest.MapFile{Data: []byte(`return {value="extension"}`)},
+		"test.lua": &fstest.MapFile{Data: []byte(`
+base_value = require("base.value").value
+extension_value = require("extension").value
+`)},
+	}
+	runtime := New()
+	if err := runtime.RegisterInstaller(PackageRequire(source, []string{"base", "extension"})); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Execute(t.Context(), source, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		if state.GetGlobal("base_value").String() != "base" || state.GetGlobal("extension_value").String() != "extension" {
+			t.Fatalf("package modules resolved outside their owners")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

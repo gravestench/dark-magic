@@ -9,11 +9,12 @@ import (
 
 type Config struct {
 	Window struct {
-		Title         string
-		Width, Height int
-		Fullscreen    bool
-		Borderless    bool
-		Resizable     bool
+		Title            string
+		Width, Height    int
+		Fullscreen       bool
+		Borderless       bool
+		Resizable        bool
+		ShowSystemCursor bool
 	}
 	Resolution struct {
 		Width, Height int

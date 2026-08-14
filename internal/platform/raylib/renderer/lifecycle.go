@@ -85,7 +85,11 @@ func (s *Service) Start(context.Context) error {
 	}
 	rl.InitAudioDevice()
 	rl.SetTargetFPS(60)
-	rl.HideCursor()
+	if s.config.Window.ShowSystemCursor {
+		rl.ShowCursor()
+	} else {
+		rl.HideCursor()
+	}
 	s.isInit.Store(true)
 	return nil
 }

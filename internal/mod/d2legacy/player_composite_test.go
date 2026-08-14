@@ -16,7 +16,7 @@ func TestRealArchivesComposeUnarmedPlayerModes(t *testing.T) {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the Diablo II MPQ directory")
 	}
 	t.Setenv("MPQ_DIRECTORY", directory)
-	assets, err := content.FromEnvironment()
+	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}

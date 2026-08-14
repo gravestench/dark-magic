@@ -7,9 +7,10 @@ package clientapp
 
 import (
 	"context"
-	"github.com/gravestench/akara"
 	"sync"
 	"time"
+
+	"github.com/gravestench/akara"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/networktrust"
@@ -29,6 +30,7 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
+	"github.com/gravestench/dark-magic/internal/modcache"
 	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
 	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
 	"github.com/gravestench/dark-magic/internal/preferences"
@@ -43,6 +45,7 @@ import (
 // Everything else is created here so ownership stays obvious.
 type Options struct {
 	Content               *content.FS
+	Mods                  *modcache.Lock
 	Profile               Profile
 	NewCapture            CaptureFactory
 	CaptureDirectory      string
