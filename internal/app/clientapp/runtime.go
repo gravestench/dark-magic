@@ -11,9 +11,11 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
+	"github.com/gravestench/dark-magic/internal/audio"
 	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
 	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+	"github.com/gravestench/dark-magic/internal/presentation/render"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/video"
 )
@@ -68,10 +70,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 
 func (app *application) registerVideoModule() error {
 	window := image.Pt(app.rendererConfig.Window.Width, app.rendererConfig.Window.Height)
-	backend := video.Backend(video.NewEmbeddedBackend(app.composer, app.mixer, window))
-	if !backend.Available() {
-		backend = video.FFplay{}
-	}
+	backend := newClientVideoBackend(app.composer, app.mixer, window)
 	if resizable, ok := backend.(interface{ Resize(image.Point) error }); ok {
 		app.renderer.SubscribeViewport(func(width, height int) {
 			if err := resizable.Resize(image.Pt(width, height)); err != nil {
@@ -80,6 +79,10 @@ func (app *application) registerVideoModule() error {
 		})
 	}
 	return app.scripts.RegisterModule(modruntime.VideoModule(app.scripts, backend, app.options.Content))
+}
+
+func newClientVideoBackend(composer *render.Composer, mixer *audio.Mixer, window image.Point) video.Backend {
+	return video.NewEmbeddedBackend(composer, mixer, window)
 }
 
 func (app *application) registerPresentationModules() error {

@@ -571,8 +571,9 @@ implementations. The remaining work is tracked explicitly below.
   changes and refit every active cinematic without retaining completed
   playbacks. A stalled audio-device clock now fails through the existing video
   lifecycle instead of leaving cinematic playback hung indefinitely.
-- [x] Prefer the embedded backend in native FFmpeg client builds and retain
-  FFplay as the portable developer/diagnostic fallback.
+- [x] Require the embedded backend for production client playback. Portable
+  builds skip cinematics instead of launching an independent media-player
+  window; FFplay remains available only through explicit developer tooling.
 - [x] Verify every discovered BIK variant and capture startup-to-title
   composition screenshots without committing Blizzard-owned media. A native
   integration matrix now requires successful video and audio decoding for both
