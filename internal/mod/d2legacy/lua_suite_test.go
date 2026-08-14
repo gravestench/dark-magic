@@ -27,6 +27,8 @@ import (
 // an ordered list of Lua callbacks and host actions. Callbacks execute inside
 // the production authority; host actions run between callbacks so stepping the
 // session never re-enters the Lua owner goroutine.
+const luaSuiteExecutionBudget = 10 * time.Second
+
 func TestLuaSuites(t *testing.T) {
 	source := content.D2Legacy()
 	paths, err := discoverLuaSuites(source)
@@ -487,7 +489,7 @@ func newLuaSuiteFixture(t *testing.T, source fs.FS, configs ...luaSuiteConfig) *
 func startLuaSuiteProfile(ctx context.Context, source fs.FS, config luaSuiteConfig, engine *gameecs.Engine, session *gamesession.Session) (*Authority, error) {
 	if config.profile == "" || config.profile == "authority" {
 		return StartWithConfig(ctx, source, config.records, engine, session, Config{
-			Seed: config.seed, InitialData: config.initialData, DisableExecutionBudget: config.disableBudget,
+			Seed: config.seed, InitialData: config.initialData, ExecutionBudget: luaSuiteExecutionBudget, DisableExecutionBudget: config.disableBudget,
 		})
 	}
 	if config.profile != "module" && config.profile != "ecs" {
@@ -502,6 +504,8 @@ func startLuaSuiteProfile(ctx context.Context, source fs.FS, config luaSuiteConf
 		if err := runtime.SetExecutionBudget(0); err != nil {
 			return nil, err
 		}
+	} else if err := runtime.SetExecutionBudget(luaSuiteExecutionBudget); err != nil {
+		return nil, err
 	}
 	if err := ConfigureModuleRuntime(runtime, source, config.records, streams, config.initialData); err != nil {
 		return nil, err
@@ -763,7 +767,7 @@ func restoreLuaSuiteCheckpoint(t *testing.T, fixture *luaSuiteFixture) error {
 		return err
 	}
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixture.config.records, engine, session, Config{
-		Seed: fixture.config.seed, InitialData: fixture.config.initialData, Restore: checkpoint.Participants, DisableExecutionBudget: fixture.config.disableBudget,
+		Seed: fixture.config.seed, InitialData: fixture.config.initialData, Restore: checkpoint.Participants, ExecutionBudget: luaSuiteExecutionBudget, DisableExecutionBudget: fixture.config.disableBudget,
 	})
 	if err != nil {
 		session.Close()
@@ -813,7 +817,7 @@ func compareLuaSuiteCheckpoint(t *testing.T, fixture *luaSuiteFixture, steps int
 		return err
 	}
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixture.config.records, engine, session, Config{
-		Seed: fixture.config.seed, InitialData: fixture.config.initialData, Restore: checkpoint.Participants, DisableExecutionBudget: fixture.config.disableBudget,
+		Seed: fixture.config.seed, InitialData: fixture.config.initialData, Restore: checkpoint.Participants, ExecutionBudget: luaSuiteExecutionBudget, DisableExecutionBudget: fixture.config.disableBudget,
 	})
 	if err != nil {
 		session.Close()
