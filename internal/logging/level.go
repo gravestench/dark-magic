@@ -1,16 +1,30 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
 )
+
+// LevelTrace is intentionally below slog's built-in debug level. It is for
+// high-frequency implementation diagnostics such as renderer and packet flow.
+const LevelTrace slog.Level = slog.LevelDebug - 4
+
+func Trace(logger *slog.Logger, message string, args ...any) {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	logger.Log(context.Background(), LevelTrace, message, args...)
+}
 
 // ParseLevel converts the user-facing CLI/environment spelling into slog's
 // ordered level. Empty input intentionally selects info so callers can pass an
 // unset environment value without duplicating defaulting logic.
 func ParseLevel(value string) (slog.Level, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "trace":
+		return LevelTrace, nil
 	case "debug":
 		return slog.LevelDebug, nil
 	case "info", "":
@@ -20,6 +34,6 @@ func ParseLevel(value string) (slog.Level, error) {
 	case "error":
 		return slog.LevelError, nil
 	default:
-		return slog.LevelInfo, fmt.Errorf("invalid log level %q: expected debug, info, warn, or error", value)
+		return slog.LevelInfo, fmt.Errorf("invalid log level %q: expected trace, debug, info, warn, or error", value)
 	}
 }

@@ -31,16 +31,23 @@ type WorldView struct {
 }
 
 type WorldEntity struct {
-	ID        string      `json:"id"`
-	Kind      string      `json:"kind"`
-	Label     string      `json:"label,omitempty"`
-	Owner     string      `json:"owner,omitempty"`
-	Position  HUDPosition `json:"position"`
-	Radius    float64     `json:"radius"`
-	Priority  int64       `json:"priority"`
-	Health    *int64      `json:"health,omitempty"`
-	MaxHealth *int64      `json:"max_health,omitempty"`
-	distance2 float64
+	ID                 string      `json:"id"`
+	Kind               string      `json:"kind"`
+	Label              string      `json:"label,omitempty"`
+	Owner              string      `json:"owner,omitempty"`
+	Position           HUDPosition `json:"position"`
+	Radius             float64     `json:"radius"`
+	Priority           int64       `json:"priority"`
+	Health             *int64      `json:"health,omitempty"`
+	MaxHealth          *int64      `json:"max_health,omitempty"`
+	Class              string      `json:"class,omitempty"`
+	Token              string      `json:"token,omitempty"`
+	Mode               string      `json:"mode,omitempty"`
+	Direction          int64       `json:"direction,omitempty"`
+	AnimationStartTick uint64      `json:"animation_start_tick,omitempty"`
+	Act                int64       `json:"act,omitempty"`
+	LevelID            int64       `json:"level_id,omitempty"`
+	distance2          float64
 }
 
 // ProjectWorldView exposes only nearby entities carrying the mod's explicit
@@ -68,11 +75,24 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		return nil, ErrWorldView
 	}
 	origin := HUDPosition{X: floatField(originFields, "x"), Y: floatField(originFields, "y")}
+	locations, found := findComponent(snapshot, "d2legacy.world.location")
+	if !found {
+		return nil, ErrWorldView
+	}
+	originLocation, found := findInstance(locations, playerEntity)
+	if !found {
+		return nil, ErrWorldView
+	}
+	originAct, originLevel := intField(originLocation, "act"), intField(originLocation, "level_id")
 	selectables, found := findComponent(snapshot, "d2legacy.world.selectable")
 	if !found {
 		return json.Marshal(WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}})
 	}
 	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
+	players, _ := findComponent(snapshot, "d2legacy.player.identity")
+	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
+	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
+	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
 	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}}
 	seen := make(map[string]struct{})
 	for _, instance := range selectables.Instances {
@@ -85,6 +105,14 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 			continue
 		}
 		entity := WorldEntity{ID: stringField(public, "id"), Kind: stringField(public, "kind"), Label: stringField(public, "label"), Owner: stringField(public, "owner"), Position: HUDPosition{X: floatField(position, "x"), Y: floatField(position, "y")}, Radius: floatField(public, "radius"), Priority: intField(public, "priority")}
+		location, located := findInstance(locations, instance.Entity)
+		if !located {
+			continue
+		}
+		entity.Act, entity.LevelID = intField(location, "act"), intField(location, "level_id")
+		if entity.Act != originAct || entity.LevelID != originLevel {
+			continue
+		}
 		if err := validateWorldEntity(entity); err != nil {
 			return nil, err
 		}
@@ -100,6 +128,20 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		if stats, found := findInstance(monsters, instance.Entity); found {
 			health, maximum := intField(stats, "health"), intField(stats, "max_health")
 			entity.Health, entity.MaxHealth = &health, &maximum
+		}
+		if appearance, found := findInstance(appearances, instance.Entity); found {
+			entity.Token = stringField(appearance, "token")
+			entity.Mode = stringField(appearance, "mode")
+		}
+		if identity, found := findInstance(players, instance.Entity); found {
+			entity.Class = stringField(identity, "class")
+			if animation, ok := findInstance(animations, instance.Entity); ok {
+				entity.Mode = stringField(animation, "mode")
+				entity.AnimationStartTick = uint64(max(0, intField(animation, "start_tick")))
+			}
+			if facing, ok := findInstance(facings, instance.Entity); ok {
+				entity.Direction = intField(facing, "direction")
+			}
 		}
 		view.Entities = append(view.Entities, entity)
 	}

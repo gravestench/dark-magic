@@ -22,34 +22,41 @@ local cof_directions = {
     -- These are Riiablo DC.Direction.toRealDir and the eight sampled values
     -- from OpenDiablo2 Dir64ToCof. Simulation's readable directions are
     -- SOUTH/WEST/NORTH/EAST/DOWN/LEFT/UP/RIGHT; COF priority rows are not.
-    [8] = {1, 3, 5, 7, 0, 2, 4, 6},
-    [16] = {2, 6, 10, 14, 0, 4, 8, 12, 1, 3, 5, 7, 9, 11, 13, 15},
+    [8] = { 1, 3, 5, 7, 0, 2, 4, 6 },
+    [16] = { 2, 6, 10, 14, 0, 4, 8, 12, 1, 3, 5, 7, 9, 11, 13, 15 },
 }
 
 -- COF rows are sequential angle buckets; DCC files use the legacy interleave.
 local dcc_directions = {
-    [8] = {4, 0, 5, 1, 6, 2, 7, 3},
-    [16] = {4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15},
+    [8] = { 4, 0, 5, 1, 6, 2, 7, 3 },
+    [16] = { 4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15 },
 }
 
 local function cof_direction(direction, count, space)
-    if space == "encoded" then return direction end
+    if space == "encoded" then
+        return direction
+    end
     local lookup = cof_directions[count]
-    if not lookup then return direction end
+    if not lookup then
+        return direction
+    end
     return assert(lookup[direction + 1], "semantic direction is out of range")
 end
 
 local function cof_path(token, mode, weapon_class)
-    return string.format(
-        "data/global/chars/%s/COF/%s%s%s.cof",
-        token, token, mode, weapon_class
-    )
+    return string.format("data/global/chars/%s/COF/%s%s%s.cof", token, token, mode, weapon_class)
 end
 
 local function component_path(token, component, appearance, mode, weapon_class)
     return string.format(
         "data/global/chars/%s/%s/%s%s%s%s%s.dcc",
-        token, component, token, component, appearance, mode, weapon_class
+        token,
+        component,
+        token,
+        component,
+        appearance,
+        mode,
+        weapon_class
     )
 end
 
@@ -59,7 +66,9 @@ end
 -- same as the HTH selector in the COF filename.
 local function equipped_appearance(items)
     local appearance, hand_classes = {}, {}
-    if not items then return appearance, nil end
+    if not items then
+        return appearance, nil
+    end
     for _, item in ipairs(items.items or {}) do
         local hand = item.slot == "rarm" or item.slot == "larm"
         local active = not hand or item.weapon_set == items.active_weapon_set
@@ -91,20 +100,16 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
         local component = upper(layer.type)
         local appearance = equipped[component]
         if appearance then
-            components[component] = component_path(
-                token,
-                component,
-                appearance,
-                mode,
-                upper(layer.weapon_class)
-            )
+            components[component] = component_path(token, component, appearance, mode, upper(layer.weapon_class))
         else
             -- OpenDiablo2 tries the default LIT variant for every authored COF
             -- layer. This matters for class-specific body pieces: Necromancer
             -- S1/S2 are real forearm/overlay DCCs, while his empty SH layer has
             -- no file and must simply be skipped.
             local candidate = component_path(token, component, "LIT", mode, upper(layer.weapon_class))
-            if render.asset_exists(candidate) then components[component] = candidate end
+            if render.asset_exists(candidate) then
+                components[component] = candidate
+            end
         end
     end
 
@@ -124,13 +129,17 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
         mode = mode,
         -- A value-only change key prevents rebuilding the retained animation on
         -- every presentation frame. Position updates remain independent.
-        key = table.concat({token, mode, weapon_class, tostring(direction), cof}, ":")
-            .. ":" .. table.concat((function()
+        key = table.concat({ token, mode, weapon_class, tostring(direction), cof }, ":") .. ":" .. table.concat(
+            (function()
                 local values = {}
-                for component, path in pairs(components) do values[#values + 1] = component .. "=" .. path end
+                for component, path in pairs(components) do
+                    values[#values + 1] = component .. "=" .. path
+                end
                 table.sort(values)
                 return values
-            end)(), ":"),
+            end)(),
+            ":"
+        ),
     }
 end
 
@@ -147,7 +156,9 @@ function M.recipe(authority, appearance, weapon_class)
 end
 
 -- Compatibility name for callers that deliberately want the empty-equipment recipe.
-function M.unarmed(authority) return M.resolve(authority, nil) end
+function M.unarmed(authority)
+    return M.resolve(authority, nil)
+end
 
 -- Describe the expensive, CPU-side half of a composite update. The generic
 -- preloader can execute this away from the Lua/render thread and queue complete
@@ -175,7 +186,9 @@ end
 -- command/system handling; this stream synchronizes presentation consumers.
 function M.advance(playback, composite, elapsed)
     local crossed = {}
-    if elapsed <= 0 or composite.rate <= 0 or composite.frames <= 0 then return crossed end
+    if elapsed <= 0 or composite.rate <= 0 or composite.frames <= 0 then
+        return crossed
+    end
     local frame_seconds = 256 / (composite.rate * 25)
     playback.seconds = playback.seconds + elapsed
     playback.remainder = playback.remainder + elapsed
@@ -187,6 +200,37 @@ function M.advance(playback, composite, elapsed)
             crossed[#crossed + 1] = { frame = playback.frame, event = event }
         end
     end
+    return crossed
+end
+
+-- Seek network presentation from authoritative mode start plus network time.
+-- This is absolute rather than accumulated, so a delayed/dropped frame cannot
+-- slow the animation or make two clients permanently disagree on phase.
+function M.synchronize(playback, composite, seconds)
+    local crossed = {}
+    if composite.rate <= 0 or composite.frames <= 0 then
+        return crossed
+    end
+    seconds = math.max(0, seconds or 0)
+    local frame_seconds = 256 / (composite.rate * 25)
+    local previous = playback.synchronized and math.floor(playback.seconds / frame_seconds) or nil
+    local current = math.floor(seconds / frame_seconds)
+    if previous and current >= previous then
+        -- Normal network updates cross only a few frames. Bound the initial or
+        -- post-stall event scan to one loop; old visual cues are not gameplay.
+        local first = math.max(previous + 1, current - composite.frames + 1)
+        for index = first, current do
+            local frame = (index % composite.frames) + 1
+            local event = composite.events[frame]
+            if event and event ~= 0 then
+                crossed[#crossed + 1] = { frame = frame, event = event }
+            end
+        end
+    end
+    playback.seconds = seconds
+    playback.remainder = seconds - current * frame_seconds
+    playback.frame = (current % composite.frames) + 1
+    playback.synchronized = true
     return crossed
 end
 

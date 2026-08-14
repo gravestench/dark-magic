@@ -32,6 +32,7 @@ local cursor = require("d2legacy.ui.cursor")
 local text = require("d2legacy.ui.text")
 local compat = require("d2legacy.ui.compat")
 local preload = require("d2legacy.ui.preload")
+local network_flow = require("d2legacy.network.flow")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.character_create
@@ -52,7 +53,9 @@ end
 -- Many composite widgets have optional child render nodes. This tiny helper
 -- makes `nil` safe so callers can apply visibility without four separate guards.
 local function set_node_visible(node, visible)
-    if node then node:set_visible(visible) end
+    if node then
+        node:set_visible(visible)
+    end
 end
 
 -- A text field/checkbox is partly a CONTROL and partly several render nodes.
@@ -67,10 +70,18 @@ end
 
 -- Same idea for z-order: composite controls may expose several optional nodes.
 local function set_form_control_z(control, z)
-    if control.node then control.node:set_z(z) end
-    if control.background_node then control.background_node:set_z(z) end
-    if control.value_node then control.value_node:set_z(z + 1) end
-    if control.label_node then control.label_node:set_z(z + 1) end
+    if control.node then
+        control.node:set_z(z)
+    end
+    if control.background_node then
+        control.background_node:set_z(z)
+    end
+    if control.value_node then
+        control.value_node:set_z(z + 1)
+    end
+    if control.label_node then
+        control.label_node:set_z(z + 1)
+    end
 end
 
 -- Make a shallow copy of `base`, then let `override` replace individual fields.
@@ -78,8 +89,12 @@ end
 -- WITHOUT mutating either source table shared by other modules.
 local function merged_definition(base, override)
     local result = {}
-    for key, value in pairs(base or {}) do result[key] = value end
-    for key, value in pairs(override or {}) do result[key] = value end
+    for key, value in pairs(base or {}) do
+        result[key] = value
+    end
+    for key, value in pairs(override or {}) do
+        result[key] = value
+    end
     return result
 end
 
@@ -88,7 +103,7 @@ local function leave_character_creation()
     -- creation. Sending Exit back through that screen creates a two-scene loop,
     -- so an empty roster returns to the main menu instead.
     if #saves.characters() == 0 then
-        scenes.replace("main_menu")
+        scenes.replace(network_flow.cancel_destination("main_menu"))
     else
         scenes.replace("character_select")
     end
@@ -150,7 +165,9 @@ return {
         -- Store this helper on the scene because many class callbacks below need
         -- to replace the same two text nodes with the hovered/selected class copy.
         self.show_class_copy = function(definition)
-            if not self.class_name then return end
+            if not self.class_name then
+                return
+            end
 
             local class_id = string.lower(definition.class)
             position_text_from_top(
@@ -328,13 +345,17 @@ return {
                 on_activate = function()
                     -- While one class is walking forward/back, freeze selection
                     -- input until the one-shot transition completes.
-                    if self.selection_transition then return end
+                    if self.selection_transition then
+                        return
+                    end
 
                     -- Clicking the ALREADY-selected hero deselects them: play
                     -- backward transition, hide form, and eventually return idle.
                     if self.selected == class then
                         local deselect = definition.deselect_sound
-                        if deselect and audio.exists(deselect) then audio.play(deselect, { bus = "ui" }) end
+                        if deselect and audio.exists(deselect) then
+                            audio.play(deselect, { bus = "ui" })
+                        end
 
                         self.selected = nil
                         self:set_form_visible(false)
@@ -362,7 +383,9 @@ return {
                     if self.selected then
                         local previous = self.selected
                         local deselect = previous.definition.deselect_sound
-                        if deselect and audio.exists(deselect) then audio.play(deselect, { bus = "ui" }) end
+                        if deselect and audio.exists(deselect) then
+                            audio.play(deselect, { bus = "ui" })
+                        end
 
                         local duration = previous.show("back")
                         if duration > 0 then
@@ -408,20 +431,16 @@ return {
             height = 32,
         }, recovered.form.name)
 
-        self.name_field = ui_text_field.create(
-            self.root,
-            self.controls,
-            "character_name",
-            name_definition,
-            "CHARACTER NAME",
-            {
+        self.name_field =
+            ui_text_field.create(self.root, self.controls, "character_name", name_definition, "CHARACTER NAME", {
                 layer = "hud",
                 text_style = "formal_large",
                 label_style = screen.option_style,
                 -- OK button eligibility changes whenever name changes.
-                on_change = function() self:update_ok_state() end,
-            }
-        )
+                on_change = function()
+                    self:update_ok_state()
+                end,
+            })
         set_form_control_z(self.name_field, panel_z)
         self.form_controls[#self.form_controls + 1] = self.name_field
 
@@ -441,7 +460,9 @@ return {
             assert(locale.text(screen.options.expansion.label)),
             {
                 layer = "hud",
-                on_change = function(_, checked) self.expansion = checked end,
+                on_change = function(_, checked)
+                    self.expansion = checked
+                end,
             }
         )
         -- Original pointer checkbox should not become extra arrow-key focus stop.
@@ -465,7 +486,9 @@ return {
             assert(locale.text(screen.options.hardcore.label)),
             {
                 layer = "hud",
-                on_change = function(_, checked) self.hardcore = checked end,
+                on_change = function(_, checked)
+                    self.hardcore = checked
+                end,
             }
         )
         self.hardcore_control.focusable = false
@@ -479,7 +502,9 @@ return {
                 current.controls:set_visible(control.id, visible)
                 set_form_control_visible(control, visible)
             end
-            if visible then current.controls:set_focus(current.name_field) end
+            if visible then
+                current.controls:set_focus(current.name_field)
+            end
         end
 
         -- STATIC EXIT / OK ---------------------------------------------------
@@ -508,48 +533,43 @@ return {
             label = "d2legacy.dialog.ok",
             sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6",
             palette = screen.controls.exit.palette,
-            up_frames = {0},
-            down_frames = {1},
+            up_frames = { 0 },
+            down_frames = { 1 },
         }
         local ok_definition = compat.screen_control("character_create", "ok", ok_fallback)
 
-        self.ok_button = ui_button.create(
-            self.root,
-            self.controls,
-            "ok",
-            ok_definition,
-            assert(locale.text(ok_definition.label)),
-            {
+        self.ok_button =
+            ui_button.create(self.root, self.controls, "ok", ok_definition, assert(locale.text(ok_definition.label)), {
                 layer = "hud",
                 z = panel_z,
                 enabled = false,
                 on_activate = function()
                     -- Defensive validation repeats the visible enabled-state rule.
-                    if not self.selected then return end
+                    if not self.selected then
+                        return
+                    end
 
                     local name = self.name_field.value or ""
-                    if #name < recovered.form.minimum_name_length then return end
+                    if #name < recovered.form.minimum_name_length then
+                        return
+                    end
 
                     -- ACTUAL save creation is performed by d2legacy.save/v1. Lua passes
                     -- plain requested values and gets back opaque ID or error.
-                    local id, err = saves.create_named(
-                        name,
-                        self.selected.definition.class,
-                        self.expansion,
-                        self.hardcore
-                    )
+                    local id, err =
+                        saves.create_named(name, self.selected.definition.class, self.expansion, self.hardcore)
 
                     if not id then
                         self.error = err
                         return
                     end
 
-                    -- Select newly created save by opaque ID, then transition into loading.
-                    assert(saves.select(id))
-                    scenes.replace("game_loading")
+                    -- create_named atomically persists and selects the new opaque ID.
+                    if network_flow.start_selected() then
+                        scenes.replace("game_loading")
+                    end
                 end,
-            }
-        )
+            })
 
         self.update_ok_state = function(current)
             -- OK is eligible only when class is selected AND name meets minimum.
@@ -569,7 +589,9 @@ return {
     end,
 
     update = function(self, elapsed)
-        if self.cursor then self.cursor:update() end
+        if self.cursor then
+            self.cursor:update()
+        end
 
         -- Advance every class's SHARED layer clock from scene elapsed time.
         for _, class in ipairs(self.classes) do

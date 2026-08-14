@@ -1,6 +1,7 @@
 package gameserver
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -11,11 +12,12 @@ import (
 	"sync"
 	"time"
 
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const SessionProtocolVersion uint32 = 1
+const SessionProtocolVersion uint32 = 2
 
 var (
 	ErrAuthentication = errors.New("game server protocol: authentication failed")
@@ -24,12 +26,13 @@ var (
 )
 
 const (
-	commandBurst     = 32
-	commandRate      = 16.0
+	commandBurst     = 64
+	commandRate      = 32.0
 	refreshBurst     = 4
 	refreshRate      = 2.0
 	joinReadyTimeout = 2 * time.Second
 	joinReadyPoll    = 10 * time.Millisecond
+	reconnectGrace   = 10 * time.Second
 )
 
 // Principal is the trusted result of authentication. PlayerID is the stable
@@ -62,10 +65,12 @@ type SessionCredential string
 func (credential SessionCredential) String() string { return string(credential) }
 
 type Snapshot struct {
-	Version  uint32          `json:"version"`
-	Tick     uint64          `json:"tick"`
-	Checksum string          `json:"checksum"`
-	Payload  json.RawMessage `json:"payload"`
+	Version           uint32          `json:"version"`
+	Tick              uint64          `json:"tick"`
+	StepNanos         int64           `json:"step_nanos"`
+	Checksum          string          `json:"checksum"`
+	AcknowledgedInput uint64          `json:"acknowledged_input"`
+	Payload           json.RawMessage `json:"payload"`
 }
 
 type JoinResponse struct {
@@ -77,22 +82,31 @@ type JoinResponse struct {
 type ReconnectRequest struct {
 	Credential SessionCredential
 	Identity   simulation.RuntimeIdentity
+	Nonce      string `json:"nonce"`
 }
 
 // CommandIntent contains only client-controlled gameplay input. Identity and
 // authority are supplied by Endpoint from authenticated connection state.
 type CommandIntent struct {
-	Tick     uint64
-	Sequence uint64
-	Kind     string
-	Payload  json.RawMessage
+	ObservedServerTick uint64          `json:"observed_server_tick"`
+	TargetTick         uint64          `json:"target_tick"`
+	Sequence           uint64          `json:"sequence"`
+	Kind               string          `json:"kind"`
+	Payload            json.RawMessage `json:"payload"`
 }
 
 type connection struct {
-	principal Principal
-	admission gamesession.AdmissionToken
-	commands  tokenBucket
-	refreshes tokenBucket
+	principal            Principal
+	admission            gamesession.AdmissionToken
+	commands             tokenBucket
+	refreshes            tokenBucket
+	connected            bool
+	disconnectGeneration uint64
+}
+
+type reconnectReplay struct {
+	nonce    string
+	response JoinResponse
 }
 
 type tokenBucket struct {
@@ -104,12 +118,19 @@ type tokenBucket struct {
 // HTTP, UDP, loopback, and legacy protocol adapters can all call this API.
 type Endpoint struct {
 	mu              sync.RWMutex
+	snapshotMu      sync.Mutex
 	host            *Host
 	auth            Authenticator
 	project         SnapshotProjector
 	connections     map[string]connection
 	now             func() time.Time
 	snapshotPending func(error) bool
+	checkpoint      simulation.Checkpoint
+	leave           func(Principal) error
+	watches         map[string]bool
+	reconnects      map[string]reconnectReplay
+	after           func(time.Duration, func())
+	reconnectGrace  time.Duration
 }
 
 // SetSnapshotPending identifies the one expected projection error while a
@@ -118,11 +139,20 @@ func (endpoint *Endpoint) SetSnapshotPending(classify func(error) bool) {
 	endpoint.snapshotPending = classify
 }
 
+// SetLeave installs the mod-owned membership cleanup command. Authentication
+// and credential revocation remain protocol policy; the meaning of removing a
+// live player and its owned entities belongs to the active game rules.
+func (endpoint *Endpoint) SetLeave(leave func(Principal) error) { endpoint.leave = leave }
+
 func NewEndpoint(host *Host, auth Authenticator, project SnapshotProjector) (*Endpoint, error) {
 	if host == nil || host.Session == nil || auth == nil || project == nil {
 		return nil, errors.New("game server protocol: host, authenticator, and projector are required")
 	}
-	return &Endpoint{host: host, auth: auth, project: project, connections: make(map[string]connection), now: time.Now}, nil
+	return &Endpoint{
+		host: host, auth: auth, project: project, connections: make(map[string]connection),
+		watches: make(map[string]bool), reconnects: make(map[string]reconnectReplay), now: time.Now, reconnectGrace: reconnectGrace,
+		after: func(delay time.Duration, callback func()) { time.AfterFunc(delay, callback) },
+	}, nil
 }
 
 func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinResponse, error) {
@@ -147,7 +177,7 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 	endpoint.mu.Lock()
 	now := endpoint.now()
 	endpoint.connections[string(credential)] = connection{principal: principal, admission: admission,
-		commands: newTokenBucket(commandBurst, commandRate, now), refreshes: newTokenBucket(refreshBurst, refreshRate, now)}
+		commands: newTokenBucket(commandBurst, commandRate, now), refreshes: newTokenBucket(refreshBurst, refreshRate, now), connected: true}
 	endpoint.mu.Unlock()
 	snapshot, err := endpoint.joinSnapshot(ctx, principal.PlayerID)
 	if err != nil {
@@ -185,10 +215,20 @@ func (endpoint *Endpoint) Submit(credential SessionCredential, intent CommandInt
 	if err != nil {
 		return err
 	}
-	return endpoint.host.Session.Submit(simulation.Command{
-		Tick: intent.Tick, Player: member.principal.PlayerID, Authority: simulation.AuthorityPlayer,
-		Sequence: intent.Sequence, Kind: intent.Kind, Payload: intent.Payload,
-	})
+	target := intent.TargetTick
+	if target == 0 {
+		target = intent.ObservedServerTick + 2
+	}
+	command := simulation.Command{Tick: target, Player: member.principal.PlayerID,
+		Authority: simulation.AuthorityPlayer, Sequence: intent.Sequence, Kind: intent.Kind, Payload: intent.Payload}
+	_, err = endpoint.host.Session.SubmitNetwork(command)
+	if errors.Is(err, gamesession.ErrCommandSequence) {
+		if accepted, found := endpoint.host.Session.AcceptedNetworkCommand(command.Player, command.Sequence); found &&
+			accepted.Tick == command.Tick && accepted.Kind == command.Kind && bytes.Equal(accepted.Payload, command.Payload) {
+			return nil
+		}
+	}
+	return err
 }
 
 // Refresh returns the latest canonical per-player correction projection.
@@ -200,11 +240,46 @@ func (endpoint *Endpoint) Refresh(credential SessionCredential) (Snapshot, error
 	return endpoint.snapshot(member.principal.PlayerID)
 }
 
+// Observe returns a correction for an authenticated long-lived server-paced
+// watch stream. Unlike client-paced Refresh, it does not consume the unary
+// refresh token bucket: the server's correction ticker is already the rate
+// limiter, and charging both would terminate every healthy watch stream.
+func (endpoint *Endpoint) Observe(credential SessionCredential) (Snapshot, error) {
+	member, err := endpoint.connection(credential)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return endpoint.snapshot(member.principal.PlayerID)
+}
+
+// BeginWatch permits one server-paced correction stream per membership. A
+// client can still issue bounded unary Refresh calls, but cannot multiply
+// projection work by opening arbitrary concurrent long-lived streams.
+func (endpoint *Endpoint) BeginWatch(credential SessionCredential) error {
+	endpoint.mu.Lock()
+	defer endpoint.mu.Unlock()
+	key := string(credential)
+	if member, found := endpoint.connections[key]; !found || credential == "" || !member.connected {
+		return ErrAuthentication
+	}
+	if endpoint.watches[key] {
+		return ErrRateLimit
+	}
+	endpoint.watches[key] = true
+	return nil
+}
+
+func (endpoint *Endpoint) EndWatch(credential SessionCredential) {
+	endpoint.mu.Lock()
+	delete(endpoint.watches, string(credential))
+	endpoint.mu.Unlock()
+}
+
 func (endpoint *Endpoint) consume(credential SessionCredential, refresh bool) (connection, error) {
 	endpoint.mu.Lock()
 	defer endpoint.mu.Unlock()
 	member, found := endpoint.connections[string(credential)]
-	if !found || credential == "" {
+	if !found || credential == "" || !member.connected {
 		return connection{}, ErrAuthentication
 	}
 	bucket := &member.commands
@@ -238,12 +313,62 @@ func (bucket *tokenBucket) take(now time.Time) bool {
 // Leave revokes a connection credential. Character lease release and durable
 // save commit remain realm responsibilities layered above this endpoint.
 func (endpoint *Endpoint) Leave(credential SessionCredential) error {
+	return endpoint.leaveCredential(credential, true)
+}
+
+// Disconnect suspends a membership for a short reconnect lease. A QUIC
+// connection may disappear without sending its final unary request, and
+// deleting the player immediately would make the reconnect protocol useless
+// precisely when it is needed. Explicit Leave remains immediate.
+func (endpoint *Endpoint) Disconnect(credential SessionCredential) {
+	key := string(credential)
 	endpoint.mu.Lock()
-	defer endpoint.mu.Unlock()
-	if _, found := endpoint.connections[string(credential)]; !found || credential == "" {
-		return ErrAuthentication
+	member, found := endpoint.connections[key]
+	if !found || credential == "" || !member.connected {
+		endpoint.mu.Unlock()
+		return
+	}
+	member.connected = false
+	member.disconnectGeneration++
+	generation := member.disconnectGeneration
+	endpoint.connections[key] = member
+	delete(endpoint.watches, key)
+	endpoint.mu.Unlock()
+	endpoint.after(endpoint.reconnectGrace, func() { endpoint.expireDisconnect(credential, generation) })
+}
+
+func (endpoint *Endpoint) expireDisconnect(credential SessionCredential, generation uint64) {
+	key := string(credential)
+	endpoint.mu.Lock()
+	member, found := endpoint.connections[key]
+	if !found || member.connected || member.disconnectGeneration != generation {
+		endpoint.mu.Unlock()
+		return
+	}
+	delete(endpoint.connections, key)
+	delete(endpoint.watches, key)
+	endpoint.mu.Unlock()
+	if endpoint.leave != nil {
+		_ = endpoint.leave(member.principal)
+	}
+}
+
+func (endpoint *Endpoint) leaveCredential(credential SessionCredential, strict bool) error {
+	endpoint.mu.Lock()
+	member, found := endpoint.connections[string(credential)]
+	if !found || credential == "" {
+		endpoint.mu.Unlock()
+		if strict {
+			return ErrAuthentication
+		}
+		return nil
 	}
 	delete(endpoint.connections, string(credential))
+	delete(endpoint.watches, string(credential))
+	endpoint.mu.Unlock()
+	if endpoint.leave != nil {
+		return endpoint.leave(member.principal)
+	}
 	return nil
 }
 
@@ -251,7 +376,13 @@ func (endpoint *Endpoint) Leave(credential SessionCredential) error {
 // still valid, rotates the bearer credential, and returns a canonical
 // correction snapshot. The old credential cannot be replayed after success.
 func (endpoint *Endpoint) Reconnect(request ReconnectRequest) (JoinResponse, error) {
-	member, err := endpoint.connection(request.Credential)
+	if len(request.Nonce) < 32 || len(request.Nonce) > 128 {
+		return JoinResponse{}, ErrAuthentication
+	}
+	if replay, found := endpoint.replayedReconnect(request); found {
+		return replay, nil
+	}
+	member, err := endpoint.membership(request.Credential, true)
 	if err != nil {
 		return JoinResponse{}, err
 	}
@@ -268,6 +399,10 @@ func (endpoint *Endpoint) Reconnect(request ReconnectRequest) (JoinResponse, err
 	}
 	endpoint.mu.Lock()
 	if current, found := endpoint.connections[string(request.Credential)]; !found || current.principal.ID != member.principal.ID {
+		if replay, replayed := endpoint.reconnects[string(request.Credential)]; replayed && replay.nonce == request.Nonce {
+			endpoint.mu.Unlock()
+			return replay.response, nil
+		}
 		endpoint.mu.Unlock()
 		return JoinResponse{}, ErrAuthentication
 	} else {
@@ -275,24 +410,49 @@ func (endpoint *Endpoint) Reconnect(request ReconnectRequest) (JoinResponse, err
 		// request may have consumed capacity since connection() returned.
 		member = current
 	}
+	member.connected = true
 	delete(endpoint.connections, string(request.Credential))
+	delete(endpoint.watches, string(request.Credential))
 	endpoint.connections[string(credential)] = member
+	response := JoinResponse{Credential: credential, Admission: member.admission, Snapshot: snapshot}
+	endpoint.reconnects[string(request.Credential)] = reconnectReplay{nonce: request.Nonce, response: response}
 	endpoint.mu.Unlock()
-	return JoinResponse{Credential: credential, Admission: member.admission, Snapshot: snapshot}, nil
+	endpoint.after(endpoint.reconnectGrace, func() {
+		endpoint.mu.Lock()
+		if replay, found := endpoint.reconnects[string(request.Credential)]; found && replay.nonce == request.Nonce {
+			delete(endpoint.reconnects, string(request.Credential))
+		}
+		endpoint.mu.Unlock()
+	})
+	return response, nil
+}
+
+func (endpoint *Endpoint) replayedReconnect(request ReconnectRequest) (JoinResponse, bool) {
+	endpoint.mu.RLock()
+	replay, found := endpoint.reconnects[string(request.Credential)]
+	endpoint.mu.RUnlock()
+	if !found || replay.nonce != request.Nonce {
+		return JoinResponse{}, false
+	}
+	return replay.response, true
 }
 
 func (endpoint *Endpoint) connection(credential SessionCredential) (connection, error) {
+	return endpoint.membership(credential, false)
+}
+
+func (endpoint *Endpoint) membership(credential SessionCredential, allowDisconnected bool) (connection, error) {
 	endpoint.mu.RLock()
 	member, found := endpoint.connections[string(credential)]
 	endpoint.mu.RUnlock()
-	if !found || credential == "" {
+	if !found || credential == "" || (!allowDisconnected && !member.connected) {
 		return connection{}, ErrAuthentication
 	}
 	return member, nil
 }
 
 func (endpoint *Endpoint) snapshot(playerID string) (Snapshot, error) {
-	checkpoint, err := endpoint.host.Session.CanonicalCheckpoint()
+	checkpoint, err := endpoint.canonicalCheckpoint()
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -303,7 +463,38 @@ func (endpoint *Endpoint) snapshot(playerID string) (Snapshot, error) {
 	if !json.Valid(payload) {
 		return Snapshot{}, errors.New("game server protocol: projector returned invalid JSON")
 	}
-	return Snapshot{Version: SessionProtocolVersion, Tick: checkpoint.Tick, Checksum: checkpoint.Checksum, Payload: append(json.RawMessage(nil), payload...)}, nil
+	return Snapshot{Version: SessionProtocolVersion, Tick: checkpoint.Tick, Checksum: checkpoint.Checksum,
+		StepNanos: int64(endpoint.host.Session.StepDuration()), AcknowledgedInput: endpoint.host.Session.ProcessedSequence(playerID), Payload: append(json.RawMessage(nil), payload...)}, nil
+}
+
+// canonicalCheckpoint captures at most once per completed authoritative tick.
+// Every watcher then projects from the same immutable checkpoint instead of
+// independently snapshotting a live ECS at slightly different instants.
+func (endpoint *Endpoint) canonicalCheckpoint() (simulation.Checkpoint, error) {
+	endpoint.snapshotMu.Lock()
+	defer endpoint.snapshotMu.Unlock()
+	current := endpoint.host.Session.Status().Tick
+	if endpoint.checkpoint.Snapshot != nil && endpoint.checkpoint.Tick == current {
+		return cloneCheckpoint(endpoint.checkpoint), nil
+	}
+	checkpoint, err := endpoint.host.Session.CanonicalCheckpoint()
+	if err != nil {
+		return simulation.Checkpoint{}, err
+	}
+	endpoint.checkpoint = cloneCheckpoint(checkpoint)
+	return cloneCheckpoint(checkpoint), nil
+}
+
+func cloneCheckpoint(checkpoint simulation.Checkpoint) simulation.Checkpoint {
+	copy := checkpoint
+	if checkpoint.Snapshot != nil {
+		snapshot := *checkpoint.Snapshot
+		snapshot.Entities = append([]uint64(nil), checkpoint.Snapshot.Entities...)
+		snapshot.Components = append([]gameecs.ComponentSnapshot(nil), checkpoint.Snapshot.Components...)
+		copy.Snapshot = &snapshot
+	}
+	copy.Participants = append([]simulation.ParticipantState(nil), checkpoint.Participants...)
+	return copy
 }
 
 func newSessionCredential() (SessionCredential, error) {

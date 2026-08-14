@@ -95,15 +95,88 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if connected.HUD.Player.CharacterID != "hero" || connected.HUD.Player.Name != "Hero" || connected.World.Tick == 0 {
+	if connected.HUD.Player.PlayerID != "alice-1" || connected.HUD.Player.CharacterID != "hero" || connected.HUD.Player.Name != "Hero" || connected.World.Tick == 0 {
 		t.Fatalf("live initial view = HUD %#v world tick %d", connected.HUD.Player, connected.World.Tick)
 	}
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
+	barbarian := d2save.Character{ID: "barbarian", Name: "Conan", Class: "Barbarian", Level: 1, Expansion: true,
+		Stats: &d2save.Stats{Dexterity: 20, Health: 60, MaxHealth: 60, Mana: 10, MaxMana: 10}}
+	barbarianProfile := d2save.New(barbarian)
+	if err := barbarianProfile.Select(barbarian.ID); err != nil {
+		t.Fatal(err)
+	}
+	second, err := ConnectSelfHosted(ctx, SelfHostedAssignment{
+		GameID: "live-gameworld", Endpoint: realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
+		Runtime: host.Authority.Identity, ProfileCredential: "profile-secret",
+	}, clientTLS, barbarianProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.HUD.Player.PlayerID != "alice-2" || second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
+		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
+	}
+	if hostPeer, found := findWorldEntity(second.World.Entities, "player:alice-1", "player"); !found {
+		t.Fatalf("host player absent from second client's initial projection: %#v", second.World.Entities)
+	} else if hostPeer.Owner != "alice-1" || hostPeer.Class != "Amazon" || hostPeer.Token != "AM" || hostPeer.Position.X != 10 || hostPeer.Position.Y != 10 {
+		t.Fatalf("host player projection = %#v", hostPeer)
+	}
+	t.Cleanup(func() {
+		closeContext, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = second.Close(closeContext)
+	})
+	for attempt := 0; attempt < 4; attempt++ {
+		if _, err := connected.Refresh(ctx); err != nil {
+			t.Fatal(err)
+		}
+		_, firstWorld := connected.View()
+		if peer, found := findWorldEntity(firstWorld.Entities, "player:alice-2", "player"); found {
+			if peer.Owner != "alice-2" || peer.Class != "Barbarian" || peer.Token != "BA" || peer.Position.X != 18 || peer.Position.Y != 10 {
+				t.Fatalf("second player projection = %#v", peer)
+			}
+			break
+		}
+		if attempt == 3 {
+			t.Fatalf("second player absent from first client's projection: %#v", firstWorld.Entities)
+		}
+		time.Sleep(550 * time.Millisecond)
+	}
 	movePayload, err := json.Marshal(movement.MovePayload{X: 1})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// The joining membership must advance under its own input while the first
+	// (hosting) membership stays idle. This guards against accidentally using a
+	// process-global command clock, acknowledgement, or wakeup path.
+	secondWatchContext, stopSecondWatch := context.WithCancel(ctx)
+	secondDeltas, secondWatchErrors, err := second.Watch(secondWatchContext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopSecondWatch()
+	secondHUD, secondWorld := second.View()
+	secondInitialTick, secondInitialX := secondWorld.Tick, secondWorld.Origin.X
+	secondCommandTick := second.NextInputTick(time.Now())
+	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: secondCommandTick, Sequence: 1,
+		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
+		t.Fatal(err)
+	}
+	for secondWorld.Tick <= secondInitialTick || secondWorld.Origin.X <= secondInitialX {
+		select {
+		case _, open := <-secondDeltas:
+			if !open {
+				t.Fatal("second correction stream closed before independent movement")
+			}
+			secondHUD, secondWorld = second.View()
+		case err := <-secondWatchErrors:
+			t.Fatalf("second correction stream error = %v", err)
+		case <-ctx.Done():
+			replay, _ := host.Session.Replay()
+			t.Fatalf("second-client movement timed out: %v; HUD=%#v world=%#v commands=%#v",
+				ctx.Err(), secondHUD, secondWorld, replay.Commands)
+		}
 	}
 	commandTick := connected.World.Tick + 2
 	watchContext, stopWatch := context.WithCancel(ctx)
@@ -112,7 +185,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stopWatch()
-	if err := connected.Submit(ctx, gameserver.CommandIntent{Tick: commandTick, Sequence: 1,
+	if err := connected.Submit(ctx, gameserver.CommandIntent{ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 1,
 		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
 		t.Fatal(err)
 	}
@@ -136,6 +209,9 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if currentHUD.Tick != currentWorld.Tick {
 		t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
 	}
+	if stats := connected.transport.NetworkStats(); stats.TransformsReceived == 0 {
+		t.Fatalf("movement used no compact transform datagrams: %#v", stats)
+	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -158,13 +234,18 @@ func assertCanceledLoop(t *testing.T, ctx context.Context, result <-chan error, 
 	}
 }
 
-func containsWorldEntity(entities []playeradapter.WorldEntity, id, kind string) bool {
+func findWorldEntity(entities []playeradapter.WorldEntity, id, kind string) (playeradapter.WorldEntity, bool) {
 	for _, entity := range entities {
 		if entity.ID == id && entity.Kind == kind {
-			return true
+			return entity, true
 		}
 	}
-	return false
+	return playeradapter.WorldEntity{}, false
+}
+
+func containsWorldEntity(entities []playeradapter.WorldEntity, id, kind string) bool {
+	_, found := findWorldEntity(entities, id, kind)
+	return found
 }
 
 // liveGameworldRecords are synthetic authored facts, not alternate gameplay
@@ -177,7 +258,7 @@ func (liveGameworldRecords) Loaded(string) bool { return true }
 func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
 	case "data/global/excel/charstats.txt":
-		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}}, nil
+		return []map[string]string{{"class": "Amazon", "StartSkill": "Fire Bolt"}, {"class": "Barbarian", "StartSkill": "Fire Bolt"}}, nil
 	case "data/global/excel/levels.txt":
 		return []map[string]string{{"Id": "2", "MonDen": "100000", "NumMon": "1", "mon1": "fallen"}}, nil
 	case "data/global/excel/monstats.txt":

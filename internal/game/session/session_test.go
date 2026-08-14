@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -166,6 +167,88 @@ func TestSessionCanonicalizesArrivalOrderAndExportsVerifiableReplay(t *testing.T
 	rightChecksum, _ := right.Checksum()
 	if leftChecksum != rightChecksum {
 		t.Fatalf("arrival order changed state: %s != %s", leftChecksum, rightChecksum)
+	}
+}
+
+func TestNetworkInputRollsBackAndReplaysToCanonicalOutcome(t *testing.T) {
+	build := func() *Session {
+		engine := gameecs.New()
+		store, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "test.rollback", Version: 1,
+			Fields: []akara.Field{{Name: "value", Kind: akara.FieldInt64}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		entity := engine.World().MustCreateEntity()
+		if _, err := store.Set(entity, nil); err != nil {
+			t.Fatal(err)
+		}
+		result, err := New(engine, Config{CheckpointInterval: 1, RollbackWindow: 8})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := result.Register("add", CommandHandler{Validate: func(simulation.Command) error { return nil }, Apply: func(target *gameecs.Engine, command simulation.Command) error {
+			components, _ := akara.GetDynamicStore(target.World(), "test.rollback")
+			component, _ := components.Get(entity)
+			value, _ := component.Get("value")
+			var payload struct {
+				Add int64 `json:"add"`
+			}
+			if err := json.Unmarshal(command.Payload, &payload); err != nil {
+				return err
+			}
+			return component.Set("value", value.(int64)*10+payload.Add)
+		}}); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	command := func(tick, sequence uint64, add int) simulation.Command {
+		return simulation.Command{Tick: tick, Player: "player", Sequence: sequence, Kind: "add", Payload: json.RawMessage(fmt.Sprintf(`{"add":%d}`, add))}
+	}
+	canonical := build()
+	defer canonical.Close()
+	if err := canonical.Submit(command(1, 1, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := canonical.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := canonical.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := canonical.Submit(command(3, 2, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := canonical.Step(); err != nil {
+		t.Fatal(err)
+	}
+
+	late := build()
+	defer late.Close()
+	if err := late.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := late.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := late.SubmitNetwork(command(1, 1, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := late.SubmitNetwork(command(3, 2, 2)); err != nil {
+		t.Fatal(err)
+	}
+	if err := late.Step(); err != nil {
+		t.Fatal(err)
+	}
+	left, _ := canonical.engine.Snapshot()
+	right, _ := late.engine.Snapshot()
+	leftChecksum, _ := left.Checksum()
+	rightChecksum, _ := right.Checksum()
+	if leftChecksum != rightChecksum || late.ProcessedSequence("player") != 2 {
+		t.Fatalf("rollback outcome checksum=%s want=%s ack=%d", rightChecksum, leftChecksum, late.ProcessedSequence("player"))
+	}
+	if _, err := late.SubmitNetwork(command(3, 2, 9)); !errors.Is(err, ErrCommandSequence) {
+		t.Fatalf("duplicate sequence error = %v", err)
 	}
 }
 

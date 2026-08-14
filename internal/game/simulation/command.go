@@ -84,6 +84,17 @@ func (admitter *Admitter) RegisterAuthorities(kind string, validator CommandVali
 }
 
 func (admitter *Admitter) Admit(command Command, currentTick uint64) error {
+	return admitter.admit(command, currentTick, true)
+}
+
+// ValidateNetwork applies the same identity, authority, kind, payload, and lead
+// policy without assuming packet arrival order. The session owns duplicate
+// detection and canonical tick/sequence execution for this path.
+func (admitter *Admitter) ValidateNetwork(command Command, currentTick uint64) error {
+	return admitter.admit(command, currentTick, false)
+}
+
+func (admitter *Admitter) admit(command Command, currentTick uint64, ordered bool) error {
 	command.Player = strings.TrimSpace(command.Player)
 	command.Kind = strings.TrimSpace(command.Kind)
 	if command.Authority == "" {
@@ -92,7 +103,7 @@ func (admitter *Admitter) Admit(command Command, currentTick uint64) error {
 	if command.Player == "" {
 		return ErrCommandIdentity
 	}
-	if command.Tick < currentTick || command.Tick-currentTick > admitter.maxLead {
+	if command.Tick > currentTick && command.Tick-currentTick > admitter.maxLead {
 		return fmt.Errorf("%w: current=%d command=%d", ErrCommandTick, currentTick, command.Tick)
 	}
 	if !json.Valid(command.Payload) {
@@ -107,17 +118,21 @@ func (admitter *Admitter) Admit(command Command, currentTick uint64) error {
 	if _, allowed := policy.authorities[command.Authority]; !allowed {
 		return fmt.Errorf("%w: %q cannot submit %q", ErrCommandAuthority, command.Authority, command.Kind)
 	}
-	want := admitter.sequences[command.Player] + 1
-	if command.Sequence != want {
-		return fmt.Errorf("%w: player=%q got=%d want=%d", ErrCommandSequence, command.Player, command.Sequence, want)
-	}
-	if previous, found := admitter.ticks[command.Player]; found && command.Tick < previous {
-		return fmt.Errorf("%w: player=%q previous=%d command=%d", ErrCommandTick, command.Player, previous, command.Tick)
+	if ordered {
+		want := admitter.sequences[command.Player] + 1
+		if command.Sequence != want {
+			return fmt.Errorf("%w: player=%q got=%d want=%d", ErrCommandSequence, command.Player, command.Sequence, want)
+		}
+		if previous, found := admitter.ticks[command.Player]; found && command.Tick < previous {
+			return fmt.Errorf("%w: player=%q previous=%d command=%d", ErrCommandTick, command.Player, previous, command.Tick)
+		}
 	}
 	if err := policy.validator(command); err != nil {
 		return fmt.Errorf("%w: %v", ErrCommandPayload, err)
 	}
-	admitter.sequences[command.Player] = command.Sequence
-	admitter.ticks[command.Player] = command.Tick
+	if ordered {
+		admitter.sequences[command.Player] = command.Sequence
+		admitter.ticks[command.Player] = command.Tick
+	}
 	return nil
 }

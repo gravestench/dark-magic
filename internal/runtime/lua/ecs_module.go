@@ -50,6 +50,23 @@ func NewECSCapability(runtime *Runtime, engine *gameecs.Engine) *ECSCapability {
 	return &ECSCapability{runtime: runtime, engine: engine}
 }
 
+// SetEngine rebinds the Lua ECS module to another owned engine on the runtime
+// goroutine. Interactive clients use this once, before opening the game-world
+// scene, to separate a connected projection world from the frozen local
+// authority prepared by the frontend.
+func (capability *ECSCapability) SetEngine(ctx context.Context, engine *gameecs.Engine) error {
+	if capability == nil || capability.runtime == nil || engine == nil {
+		return errors.New("engine.ecs/v1: runtime and engine are required")
+	}
+	return capability.runtime.Run(ctx, func(*lua.LState) error {
+		if capability.active != nil {
+			return errors.New("engine.ecs/v1: cannot replace engine during a system update")
+		}
+		capability.engine = engine
+		return nil
+	})
+}
+
 // Module returns the versioned engine.ecs/v1 registration. Resource-producing
 // operations attach their cleanup to the active Lua scope.
 func (capability *ECSCapability) Module() Module {

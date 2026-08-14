@@ -119,6 +119,10 @@ local function register_interactions()
         { name = "owner", type = "string" },
         { name = "target", type = "entity" },
     })
+    -- Each context owns one explicit null-object while no interaction is open.
+    -- Marking it makes lifecycle cleanup exact; untyped empty entities are
+    -- otherwise indistinguishable and leak across close/disconnect cycles.
+    register("d2legacy.interaction.null_target", {})
 end
 
 function M.register()

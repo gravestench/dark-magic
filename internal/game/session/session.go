@@ -21,7 +21,8 @@ var (
 	// ErrHandler reports an incomplete command contract.
 	ErrHandler = errors.New("game session: command handler is invalid")
 	// ErrCommandApply wraps a command that was admitted but could not be applied.
-	ErrCommandApply = errors.New("game session: admitted command failed to apply")
+	ErrCommandApply    = errors.New("game session: admitted command failed to apply")
+	ErrCommandSequence = errors.New("game session: duplicate command sequence")
 )
 
 // Config bounds deterministic fixed stepping and command lead time. Zero values
@@ -31,6 +32,7 @@ type Config struct {
 	MaxCatchUp         int
 	MaxCommandLead     uint64
 	CheckpointInterval uint64
+	RollbackWindow     uint64
 }
 
 // CommandHandler separates untrusted payload validation from trusted mutation.
@@ -61,6 +63,19 @@ type Session struct {
 	checkpoints         []simulation.Checkpoint
 	lag                 time.Duration
 	closed              bool
+	history             []rollbackFrame
+	processed           map[string]sequenceProgress
+}
+
+type sequenceProgress struct {
+	ack    uint64
+	beyond map[uint64]struct{}
+}
+
+type rollbackFrame struct {
+	tick         uint64
+	ecs          gameecs.Snapshot
+	participants []simulation.ParticipantState
 }
 
 // RegisterAuthoritativeRuntime pins one rule implementation and its engine-owned
@@ -125,6 +140,9 @@ func (session *Session) registerStateParticipants(participants ...simulation.Sta
 	}
 	sort.Slice(session.participants, func(i, j int) bool { return session.participants[i].StateID() < session.participants[j].StateID() })
 	sort.Slice(session.initialParticipants, func(i, j int) bool { return session.initialParticipants[i].ID < session.initialParticipants[j].ID })
+	if len(session.history) == 1 && session.history[0].tick == session.initial.Tick {
+		session.history[0].participants = cloneParticipantStates(session.initialParticipants)
+	}
 	return nil
 }
 
@@ -155,6 +173,9 @@ func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	if config.CheckpointInterval == 0 {
 		config.CheckpointInterval = 25
 	}
+	if config.RollbackWindow == 0 {
+		config.RollbackWindow = 8
+	}
 	initial, err := engine.Snapshot()
 	if err != nil {
 		return nil, err
@@ -162,6 +183,7 @@ func New(engine *gameecs.Engine, config Config) (*Session, error) {
 	return &Session{
 		engine: engine, admitter: simulation.NewAdmitter(config.MaxCommandLead), config: config,
 		handlers: make(map[string]CommandHandler), pending: make(map[uint64][]simulation.Command), initial: initial,
+		processed: make(map[string]sequenceProgress), history: []rollbackFrame{{tick: initial.Tick, ecs: initial}},
 	}, nil
 }
 
@@ -215,6 +237,70 @@ func (session *Session) SubmitNext(build func(tick uint64) (simulation.Command, 
 	return session.submitLocked(command)
 }
 
+// SubmitNetwork admits a sequenced client input for its intended tick. Inputs
+// inside the bounded history window trigger deterministic restore and replay;
+// future inputs use ordinary admission. The server never trusts player or
+// authority fields supplied by the client-facing protocol.
+func (session *Session) SubmitNetwork(command simulation.Command) (uint64, error) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	current := session.engine.Tick()
+	if command.Tick == 0 {
+		return 0, fmt.Errorf("%w: command tick must be positive", simulation.ErrCommandTick)
+	}
+	if command.Sequence == 0 || session.hasSequenceLocked(command.Player, command.Sequence) {
+		return 0, fmt.Errorf("%w: player=%q sequence=%d", ErrCommandSequence, command.Player, command.Sequence)
+	}
+	command.Player = strings.TrimSpace(command.Player)
+	command.Kind = strings.TrimSpace(command.Kind)
+	if command.Authority == "" {
+		command.Authority = simulation.AuthorityPlayer
+	}
+	if err := session.admitter.ValidateNetwork(command, current); err != nil {
+		return 0, err
+	}
+	if command.Tick > current {
+		session.pending[command.Tick] = append(session.pending[command.Tick], command)
+		return command.Tick, nil
+	}
+	if current-command.Tick >= session.config.RollbackWindow {
+		return 0, fmt.Errorf("%w: rollback window current=%d command=%d", simulation.ErrCommandTick, current, command.Tick)
+	}
+	if err := session.rollbackInsertLocked(command, current); err != nil {
+		return 0, err
+	}
+	return command.Tick, nil
+}
+
+func (session *Session) ProcessedSequence(player string) uint64 {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	return session.processed[player].ack
+}
+
+// AcceptedNetworkCommand returns the exact already-admitted input for an
+// idempotency check at the transport boundary. A client may retransmit after
+// the authority accepted a request but its response was lost; only the same
+// command is safe to acknowledge as success.
+func (session *Session) AcceptedNetworkCommand(player string, sequence uint64) (simulation.Command, bool) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	for _, commands := range session.pending {
+		for _, command := range commands {
+			if command.Player == player && command.Sequence == sequence {
+				return command, true
+			}
+		}
+	}
+	for index := len(session.commands) - 1; index >= 0; index-- {
+		command := session.commands[index]
+		if command.Player == player && command.Sequence == sequence {
+			return command, true
+		}
+	}
+	return simulation.Command{}, false
+}
+
 func (session *Session) submitLocked(command simulation.Command) error {
 	if session.closed {
 		return ErrClosed
@@ -259,6 +345,12 @@ func (session *Session) stepLocked() error {
 		return err
 	}
 	beforeCommands := len(session.commands)
+	beforeHistory := len(session.history)
+	beforeProcessed := cloneProcessed(session.processed)
+	session.history = append(session.history, rollbackFrame{tick: beforeECS.Tick, ecs: beforeECS, participants: cloneParticipantStates(beforeParticipants)})
+	if limit := int(session.config.RollbackWindow) + 1; len(session.history) > limit {
+		session.history = append([]rollbackFrame(nil), session.history[len(session.history)-limit:]...)
+	}
 	rollback := func(cause error) error {
 		if restoreErr := session.engine.Restore(beforeECS); restoreErr != nil {
 			return errors.Join(cause, fmt.Errorf("game session: roll back ECS: %w", restoreErr))
@@ -267,6 +359,8 @@ func (session *Session) stepLocked() error {
 			return errors.Join(cause, fmt.Errorf("game session: roll back participants: %w", restoreErr))
 		}
 		session.commands = session.commands[:beforeCommands]
+		session.history = session.history[:beforeHistory]
+		session.processed = beforeProcessed
 		return cause
 	}
 	tick := session.engine.Tick() + 1
@@ -289,6 +383,7 @@ func (session *Session) stepLocked() error {
 			return rollback(fmt.Errorf("%w: %s player=%q sequence=%d: %v", ErrCommandApply, command.Kind, command.Player, command.Sequence, err))
 		}
 		session.commands = append(session.commands, command)
+		session.markProcessedLocked(command.Player, command.Sequence)
 	}
 	delete(session.pending, tick)
 	if err := session.engine.Update(session.config.Step); err != nil {
@@ -301,6 +396,163 @@ func (session *Session) stepLocked() error {
 		return session.checkpointLocked()
 	}
 	return nil
+}
+
+func (session *Session) rollbackInsertLocked(command simulation.Command, current uint64) error {
+	baseTick := command.Tick - 1
+	var base *rollbackFrame
+	for index := range session.history {
+		if session.history[index].tick == baseTick {
+			base = &session.history[index]
+			break
+		}
+	}
+	if base == nil {
+		return fmt.Errorf("%w: rollback history missing tick %d", simulation.ErrCommandTick, baseTick)
+	}
+	transaction, err := session.captureRollbackTransactionLocked()
+	if err != nil {
+		return err
+	}
+	replay := make([]simulation.Command, 0)
+	kept := make([]simulation.Command, 0, len(session.commands))
+	for _, existing := range session.commands {
+		if existing.Tick >= command.Tick {
+			replay = append(replay, existing)
+		} else {
+			kept = append(kept, existing)
+		}
+	}
+	replay = append(replay, command)
+	session.commands = kept
+	for tick := command.Tick; tick <= current; tick++ {
+		delete(session.pending, tick)
+	}
+	for len(session.history) > 0 && session.history[len(session.history)-1].tick > baseTick {
+		session.history = session.history[:len(session.history)-1]
+	}
+	for len(session.checkpoints) > 0 && session.checkpoints[len(session.checkpoints)-1].Tick > baseTick {
+		session.checkpoints = session.checkpoints[:len(session.checkpoints)-1]
+	}
+	session.processed = make(map[string]sequenceProgress)
+	for _, existing := range kept {
+		session.markProcessedLocked(existing.Player, existing.Sequence)
+	}
+	if err := session.engine.Restore(base.ecs); err != nil {
+		return session.restoreRollbackTransactionLocked(transaction, err)
+	}
+	if err := session.restoreParticipantsLocked(base.participants); err != nil {
+		return session.restoreRollbackTransactionLocked(transaction, err)
+	}
+	for tick := command.Tick; tick <= current; tick++ {
+		for _, item := range replay {
+			if item.Tick == tick {
+				session.pending[tick] = append(session.pending[tick], item)
+			}
+		}
+		if err := session.stepLocked(); err != nil {
+			return session.restoreRollbackTransactionLocked(transaction, err)
+		}
+	}
+	return nil
+}
+
+type rollbackTransaction struct {
+	ecs          gameecs.Snapshot
+	participants []simulation.ParticipantState
+	pending      map[uint64][]simulation.Command
+	commands     []simulation.Command
+	checkpoints  []simulation.Checkpoint
+	history      []rollbackFrame
+	processed    map[string]sequenceProgress
+}
+
+func (session *Session) captureRollbackTransactionLocked() (rollbackTransaction, error) {
+	ecs, err := session.engine.Snapshot()
+	if err != nil {
+		return rollbackTransaction{}, err
+	}
+	participants, err := session.snapshotParticipantsLocked()
+	if err != nil {
+		return rollbackTransaction{}, err
+	}
+	return rollbackTransaction{ecs: ecs, participants: participants, pending: clonePending(session.pending),
+		commands: append([]simulation.Command(nil), session.commands...), checkpoints: append([]simulation.Checkpoint(nil), session.checkpoints...),
+		history: append([]rollbackFrame(nil), session.history...), processed: cloneProcessed(session.processed)}, nil
+}
+
+func (session *Session) restoreRollbackTransactionLocked(transaction rollbackTransaction, cause error) error {
+	var restoreErrors []error
+	if err := session.engine.Restore(transaction.ecs); err != nil {
+		restoreErrors = append(restoreErrors, fmt.Errorf("restore ECS: %w", err))
+	}
+	if err := session.restoreParticipantsLocked(transaction.participants); err != nil {
+		restoreErrors = append(restoreErrors, fmt.Errorf("restore participants: %w", err))
+	}
+	session.pending, session.commands, session.checkpoints = transaction.pending, transaction.commands, transaction.checkpoints
+	session.history, session.processed = transaction.history, transaction.processed
+	return errors.Join(append([]error{cause}, restoreErrors...)...)
+}
+
+func clonePending(source map[uint64][]simulation.Command) map[uint64][]simulation.Command {
+	result := make(map[uint64][]simulation.Command, len(source))
+	for tick, commands := range source {
+		result[tick] = append([]simulation.Command(nil), commands...)
+	}
+	return result
+}
+
+func cloneProcessed(source map[string]sequenceProgress) map[string]sequenceProgress {
+	result := make(map[string]sequenceProgress, len(source))
+	for player, progress := range source {
+		copy := sequenceProgress{ack: progress.ack, beyond: make(map[uint64]struct{}, len(progress.beyond))}
+		for sequence := range progress.beyond {
+			copy.beyond[sequence] = struct{}{}
+		}
+		result[player] = copy
+	}
+	return result
+}
+
+func (session *Session) hasSequenceLocked(player string, sequence uint64) bool {
+	progress := session.processed[player]
+	if sequence <= progress.ack {
+		return true
+	}
+	if _, found := progress.beyond[sequence]; found {
+		return true
+	}
+	for _, commands := range session.pending {
+		for _, command := range commands {
+			if command.Player == player && command.Sequence == sequence {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (session *Session) markProcessedLocked(player string, sequence uint64) {
+	progress := session.processed[player]
+	if progress.beyond == nil {
+		progress.beyond = make(map[uint64]struct{})
+	}
+	progress.beyond[sequence] = struct{}{}
+	for {
+		if _, found := progress.beyond[progress.ack+1]; !found {
+			break
+		}
+		progress.ack++
+		delete(progress.beyond, progress.ack)
+	}
+	session.processed[player] = progress
+}
+
+// StepDuration is the authoritative simulation cadence advertised to clients.
+func (session *Session) StepDuration() time.Duration {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	return session.config.Step
 }
 
 // Advance converts elapsed host time into bounded fixed simulation steps.
@@ -339,16 +591,24 @@ func (session *Session) AdvanceWithSource(elapsed time.Duration, source CommandS
 	return steps, nil
 }
 
-// Run advances the session from a wall-clock ticker until cancellation.
+// Run advances the session from elapsed monotonic time until cancellation.
+// Ticker notifications are only wakeups: Go may coalesce them while the host is
+// busy, so advancing exactly one step per notification would silently slow the
+// game clock under load. Advance retains bounded residual lag and applies the
+// same maximum catch-up policy used by local sessions.
 func (session *Session) Run(ctx context.Context) error {
 	ticker := time.NewTicker(session.config.Step)
 	defer ticker.Stop()
+	last := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			if err := session.Step(); err != nil {
+			now := time.Now()
+			_, err := session.Advance(now.Sub(last))
+			last = now
+			if err != nil {
 				return err
 			}
 		}

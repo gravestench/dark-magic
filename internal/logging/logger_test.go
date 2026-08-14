@@ -15,3 +15,13 @@ func TestHandlerObserverReceivesResolvedAttributes(t *testing.T) {
 		t.Fatalf("observed = %#v", observed)
 	}
 }
+
+func TestParseLevelSupportsTraceBelowDebug(t *testing.T) {
+	level, err := ParseLevel("trace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if level != LevelTrace || level >= slog.LevelDebug {
+		t.Fatalf("trace level = %v", level)
+	}
+}

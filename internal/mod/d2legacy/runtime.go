@@ -11,6 +11,7 @@ import (
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	adaptercatalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
+	adaptermovement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
@@ -148,7 +149,7 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 // set into a stopped Lua runtime. The interactive client adds presentation
 // capabilities to this same runtime; headless servers add nothing. Keeping the
 // authority wiring here prevents the two hosts from quietly drifting apart.
-func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, state *simulation.StateStore, random *simulation.RandomStreams, initial map[string]any) error {
+func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records, engine *gameecs.Engine, session *gamesession.Session, state *simulation.StateStore, random *simulation.RandomStreams, initial map[string]any, supplied ...*modruntime.ECSCapability) error {
 	if runtime == nil || source == nil || records == nil || engine == nil || session == nil || state == nil || random == nil {
 		return fmt.Errorf("d2legacy: complete runtime dependencies are required")
 	}
@@ -163,7 +164,7 @@ func ConfigureRuntime(runtime *modruntime.Runtime, source fs.FS, records Records
 			return err
 		}
 	}
-	if err := ConfigureECSRuntime(runtime, engine); err != nil {
+	if err := ConfigureECSRuntime(runtime, engine, supplied...); err != nil {
 		return err
 	}
 	// Interactive clients install locale-aware catalogs first; renderer-free
@@ -192,7 +193,7 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
 		modruntime.RecordsModule(records), modruntime.AuthorityRandomModule(random),
-		modruntime.InitialDataModule(initial),
+		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
 			return err
@@ -204,11 +205,15 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 // ConfigureECSRuntime adds the same ECS capability used by production. It is
 // separate from ConfigureModuleRuntime so narrow tests can prove their declared
 // capability boundary without maintaining a parallel list of implementations.
-func ConfigureECSRuntime(runtime *modruntime.Runtime, engine *gameecs.Engine) error {
+func ConfigureECSRuntime(runtime *modruntime.Runtime, engine *gameecs.Engine, supplied ...*modruntime.ECSCapability) error {
 	if runtime == nil || engine == nil {
 		return fmt.Errorf("d2legacy: runtime and ECS engine are required")
 	}
-	return runtime.RegisterModule(modruntime.NewECSCapability(runtime, engine).Module())
+	capability := modruntime.NewECSCapability(runtime, engine)
+	if len(supplied) > 0 && supplied[0] != nil {
+		capability = supplied[0]
+	}
+	return runtime.RegisterModule(capability.Module())
 }
 
 func (authority *Authority) Stop(ctx context.Context) error {

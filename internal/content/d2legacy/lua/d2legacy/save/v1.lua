@@ -64,7 +64,7 @@ function save.create_named(name, class, expansion, hardcore)
     if not class then return nil, "unsupported character class" end
     if not name_is_available(name) then return nil, "character name already exists" end
 
-    return store.create({
+    return store.create_selected({
         id = storage_id(class, name),
         name = name,
         class = class,

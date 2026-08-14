@@ -8,8 +8,10 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/data/store"
@@ -45,7 +47,15 @@ func (app *application) loadSettings() error {
 		return wrap("load shell settings", err)
 	}
 	app.gameSettings, err = preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
-	return wrap("load game preferences", err)
+	if err != nil {
+		return wrap("load game preferences", err)
+	}
+	trustDirectory, err := networktrust.Directory(app.gameSettings.Path())
+	if err != nil {
+		return wrap("resolve network trust directory", err)
+	}
+	app.networkTrust, err = networktrust.New(trustDirectory)
+	return wrap("create network trust store", err)
 }
 
 func (app *application) buildPresentationCore() error {
@@ -140,14 +150,7 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("register d2legacy random streams", err)
 	}
-	initialData := map[string]any{
-		"d2legacy.development_items": map[string]any{
-			"enabled":                 app.options.FixtureCharacters > 0,
-			"create_empty_containers": app.options.FixtureCharacters == 0,
-		},
-		"d2legacy.interactions":      app.interactionBootstrapData(),
-		"d2legacy.world_transitions": app.transitionBootstrapData(),
-	}
+	initialData := app.sessionInitialData()
 	identity, err := d2legacymod.Identity(app.options.Content, initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
@@ -160,14 +163,26 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("create local command intent source", err)
 	}
+	app.ecsCapability = modruntime.NewECSCapability(app.scripts, app.entitySimulation)
 	if err := d2legacymod.ConfigureRuntime(app.scripts, app.options.Content, app.records, app.entitySimulation, app.offlineSession,
-		app.authoritativeState, app.authoritativeRandom, initialData); err != nil {
+		app.authoritativeState, app.authoritativeRandom, initialData, app.ecsCapability); err != nil {
 		return wrap("configure canonical d2legacy runtime", err)
 	}
 	if err := app.registerOfflineCommands(); err != nil {
 		return err
 	}
 	return app.buildLoadingCoordinator()
+}
+
+func (app *application) sessionInitialData() map[string]any {
+	return map[string]any{
+		"d2legacy.development_items": map[string]any{
+			"enabled":                 app.options.FixtureCharacters > 0,
+			"create_empty_containers": app.options.FixtureCharacters == 0,
+		},
+		"d2legacy.interactions":      app.interactionBootstrapData(),
+		"d2legacy.world_transitions": app.transitionBootstrapData(),
+	}
 }
 
 func (app *application) registerOfflineCommands() error {
@@ -218,14 +233,22 @@ func (app *application) registerOfflineCommands() error {
 }
 
 func (app *application) queueEntryPopulation() error {
+	command, err := app.populationBootstrapCommand()
+	if err != nil {
+		return err
+	}
+	return wrap("queue d2legacy entry population", app.offlineSession.Submit(command))
+}
+
+func (app *application) populationBootstrapCommand() (simulation.Command, error) {
 	payload, err := json.Marshal(app.populationBootstrapData())
 	if err != nil {
-		return wrap("encode entry population geometry", err)
+		return simulation.Command{}, wrap("encode entry population geometry", err)
 	}
-	return wrap("queue d2legacy entry population", app.offlineSession.Submit(simulation.Command{
+	return simulation.Command{
 		Tick: 1, Player: "d2legacy.population", Authority: simulation.AuthoritySystem,
 		Sequence: 1, Kind: "system.population.bootstrap", Payload: payload,
-	}))
+	}, nil
 }
 
 func (app *application) populationBootstrapData() map[string]any {
@@ -266,7 +289,13 @@ func (app *application) interactionBootstrapData() map[string]any {
 		initial = "act1-akara"
 	}
 	targets := []any{map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)}}
-	for _, worldMap := range app.gameWorlds {
+	levels := make([]int, 0, len(app.gameWorlds))
+	for levelID := range app.gameWorlds {
+		levels = append(levels, levelID)
+	}
+	sort.Ints(levels)
+	for _, levelID := range levels {
+		worldMap := app.gameWorlds[levelID]
 		objects := make(map[string]gameworld.Object, len(worldMap.Objects))
 		for index, object := range worldMap.Objects {
 			objects[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object

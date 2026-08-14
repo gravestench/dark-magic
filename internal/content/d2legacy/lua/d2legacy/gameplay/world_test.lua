@@ -21,5 +21,40 @@ return test.suite({
                 )
             end),
         }),
+        test.case("connected_roster_keeps_peers_and_excludes_the_authenticated_owner", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local world = require("d2legacy.gameplay.world")
+
+                local function player(owner, class, token, x)
+                    return ecs.create({
+                        ["d2legacy.player.identity"] = {
+                            character_id = owner .. "-character",
+                            player = owner,
+                            name = class,
+                            class = class,
+                        },
+                        ["d2legacy.player.appearance"] = {
+                            cof = "",
+                            token = token,
+                            palette = "data/global/Palette/units/pal.dat",
+                            weapon_class = "HTH",
+                        },
+                        ["d2legacy.player.animation"] = { direction = 0, mode = "NU" },
+                        ["d2legacy.world.position"] = { x = x, y = 10 },
+                        ["d2legacy.world.facing"] = { direction = 0, directions = 16 },
+                        ["d2legacy.world.location"] = { act = 1, level_id = 2 },
+                    })
+                end
+
+                player("player-2", "Barbarian", "BA", 18)
+                player("player-1", "Assassin", "AI", 10)
+
+                local snapshots = world.player_snapshots("player-2", false)
+                test.assert(#snapshots == 1, [=[#snapshots == 1]=])
+                test.assert(snapshots[1].token == "AI", [=[snapshots[1].token == "AI"]=])
+                test.assert(snapshots[1].x == 10, [=[snapshots[1].x == 10]=])
+            end),
+        }),
     },
 })

@@ -77,6 +77,21 @@ func TestCreateRequiresOpaqueIdentityAndRejectsDuplicateID(t *testing.T) {
 	}
 }
 
+func TestCreateSelectedReplacesExistingSelectionAtomically(t *testing.T) {
+	store := New(Character{ID: "existing", Name: "Existing", Class: "Assassin"})
+	if err := store.Select("existing"); err != nil {
+		t.Fatal(err)
+	}
+	created := Character{ID: "new", Name: "New", Class: "Barbarian"}
+	if err := store.CreateSelected(created); err != nil {
+		t.Fatal(err)
+	}
+	selected, ok := store.Selected()
+	if !ok || selected.ID != created.ID || selected.Class != created.Class {
+		t.Fatalf("selected after create = %#v, %v", selected, ok)
+	}
+}
+
 func TestDeleteClearsSelectedCharacter(t *testing.T) {
 	store := New(
 		Character{ID: "amazon-hero", Name: "Hero", Class: "Amazon", Level: 1},

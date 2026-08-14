@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	logLevel := flag.String("log-level", "info", "log verbosity: debug, info, warn, or error")
+	logLevel := flag.String("log-level", "info", "log verbosity: trace, debug, info, warn, or error")
 	sessionID := flag.String("session-id", "standalone", "stable allocated game-session ID")
 	quicListen := flag.String("quic-listen", "", "serve authenticated game sessions on this UDP address")
 	tlsCertificate := flag.String("tls-cert", "", "PEM server certificate for QUIC")

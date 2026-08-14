@@ -72,6 +72,26 @@ func (s *Store) Create(character Character) error {
 	return nil
 }
 
+// CreateSelected atomically adds a character and makes it the active profile
+// choice. Frontend creation uses this operation so an older selection cannot
+// survive between persistence and launching a game session.
+func (s *Store) CreateSelected(character Character) error {
+	if character.ID == "" {
+		return errors.New("persistence: record ID is required")
+	}
+	character = cloneCharacter(character)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, existing := range s.entries {
+		if existing.ID == character.ID {
+			return fmt.Errorf("persistence: character %q already exists", character.ID)
+		}
+	}
+	s.entries = append(s.entries, character)
+	s.selected = character.ID
+	return nil
+}
+
 // Store owns the player-controlled selectable character roster and returns
 // defensive copies. It intentionally does not implement the account-owned
 // realm character repository contract.

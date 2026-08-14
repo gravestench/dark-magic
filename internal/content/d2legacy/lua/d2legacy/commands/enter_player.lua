@@ -8,6 +8,7 @@ local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
 local skills = require("d2legacy.data.skill")
 local player_stats = require("d2legacy.data.player_stats")
+local item_bootstrap = require("d2legacy.items.bootstrap")
 local M = {}
 
 local function finite(value)
@@ -18,9 +19,9 @@ local function present(value)
     return type(value) == "string" and value:match("%S") ~= nil
 end
 
-local function already_entered(character_id)
+local function already_entered(player_id)
     for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
-        if ecs.get(entity, "d2legacy.player.identity"):get("character_id") == character_id then
+        if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
             return true
         end
     end
@@ -51,8 +52,15 @@ function M.validate(command)
     assert(p.act >= 1 and p.act <= 5 and p.level_id > 0, "player entry location is invalid")
 end
 
-local class_tokens =
-    { amazon = "AM", sorceress = "SO", necromancer = "NE", paladin = "PA", barbarian = "BA", assassin = "AI", druid = "DZ" }
+local class_tokens = {
+    amazon = "AM",
+    sorceress = "SO",
+    necromancer = "NE",
+    paladin = "PA",
+    barbarian = "BA",
+    assassin = "AI",
+    druid = "DZ",
+}
 
 local function initial_skills(skills)
     local left, right, left_chosen, right_chosen = 0, 0, false, false
@@ -99,11 +107,16 @@ end
 
 function M.apply(command)
     local p = command.payload
-    assert(not already_entered(p.character_id), "character already entered")
+    assert(not already_entered(p.player), "player already entered")
     local learned = skills.starting_for_class(p.class)
     local left, right = initial_skills(learned)
     local player = ecs.create({
-        ["d2legacy.player.identity"] = { character_id = p.character_id, player = p.player, name = p.name, class = p.class },
+        ["d2legacy.player.identity"] = {
+            character_id = p.character_id,
+            player = p.player,
+            name = p.name,
+            class = p.class,
+        },
         ["d2legacy.player.progress"] = {
             level = p.level,
             experience = p.experience,
@@ -150,7 +163,7 @@ function M.apply(command)
             palette = present(p.palette) and p.palette or "data/global/Palette/units/pal.dat",
             weapon_class = "HTH",
         },
-        ["d2legacy.player.animation"] = { direction = p.direction or 0, mode = "NU" },
+        ["d2legacy.player.animation"] = { direction = p.direction or 0, mode = "NU", start_tick = command.tick },
         ["d2legacy.world.position"] = { x = p.x, y = p.y },
         ["d2legacy.world.velocity"] = { x = 0, y = 0 },
         ["d2legacy.world.facing"] = { direction = p.direction or 0, directions = 16 },
@@ -172,6 +185,7 @@ function M.apply(command)
             priority = 10,
         },
     })
+    item_bootstrap.ensure_player(p.player)
     create_passive_sources(player, p.passive_stat_sources)
     for _, skill in ipairs(learned) do
         ecs.create({

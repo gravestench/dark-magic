@@ -3,6 +3,7 @@ package player
 import (
 	"encoding/json"
 	"math"
+	"sort"
 	"strings"
 	"testing"
 
@@ -34,7 +35,10 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 	if view.Player.CharacterID != "character:a" || view.Player.Name != "Alice" || view.Vitals.Health != 25 || view.Position.Y != 20.25 {
 		t.Fatalf("HUD = %#v", view)
 	}
-	if strings.Contains(string(payload), "secret-item") || strings.Contains(string(payload), "Bob") {
+	if view.Belt.Slots[0] != "secret-item" {
+		t.Fatalf("owner-private belt was not projected: %#v", view.Belt)
+	}
+	if strings.Contains(string(payload), "Bob") {
 		t.Fatalf("HUD leaked another/private field: %s", payload)
 	}
 }
@@ -46,6 +50,41 @@ func TestProjectHUDRejectsUnknownPlayer(t *testing.T) {
 	if _, err := ProjectHUD("mallory", simulation.Checkpoint{Snapshot: &snapshot}); err != ErrHUDPlayer {
 		t.Fatalf("error = %v", err)
 	}
+}
+
+func TestProjectPrivateViewSelectsOnlyAuthenticatedOwner(t *testing.T) {
+	aliceItems := entityAndStringsComponent("d2legacy.item.identity", 11, 10, map[string]string{"id": "alice-item", "code": "ssd"})
+	bobItems := entityAndStringsComponent("d2legacy.item.identity", 21, 20, map[string]string{"id": "bob-secret", "code": "rin"})
+	aliceItems.Instances = append(aliceItems.Instances, bobItems.Instances...)
+	snapshot := gameecs.Snapshot{Version: gameecs.SnapshotVersion, Tick: 4, Components: []gameecs.ComponentSnapshot{
+		stringsComponent("d2legacy.items.layout", []string{"owner"}, []any{uint64(10), "alice"}, []any{uint64(20), "bob"}),
+		aliceItems,
+	}}
+	view, err := ProjectPrivateView("alice", simulation.Checkpoint{Tick: 4, Snapshot: &snapshot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, _ := json.Marshal(view)
+	if len(view.Items.Items) != 1 || view.Items.Items[0].ID != "alice-item" || strings.Contains(string(encoded), "bob-secret") {
+		t.Fatalf("private projection = %s", encoded)
+	}
+}
+
+func entityAndStringsComponent(name string, entity, owner uint64, strings map[string]string) gameecs.ComponentSnapshot {
+	component := gameecs.ComponentSnapshot{Name: name, Version: 1, Fields: []gameecs.FieldSnapshot{{Name: "owner", Kind: akara.FieldEntity}}}
+	instance := gameecs.InstanceSnapshot{Entity: entity, Values: []gameecs.ValueSnapshot{{Entity: &owner}}}
+	keys := make([]string, 0, len(strings))
+	for key := range strings {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		value := strings[key]
+		component.Fields = append(component.Fields, gameecs.FieldSnapshot{Name: key, Kind: akara.FieldString})
+		instance.Values = append(instance.Values, gameecs.ValueSnapshot{String: &value})
+	}
+	component.Instances = []gameecs.InstanceSnapshot{instance}
+	return component
 }
 
 func stringsComponent(name string, names []string, rows ...[]any) gameecs.ComponentSnapshot {

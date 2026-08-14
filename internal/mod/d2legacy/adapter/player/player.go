@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
@@ -15,6 +17,7 @@ import (
 // EnterCommand materializes a selected durable character into session-owned ECS
 // state. It is system/admin authority only; clients cannot self-admit players.
 const EnterCommand = "system.player.enter"
+const LeaveCommand = "system.player.leave"
 
 const localEntryActor = "system:local-player-entry"
 
@@ -76,6 +79,39 @@ func AdmissionCommand(character d2save.Character, player string, destination Des
 	entry := EntryFromCharacter(character, player, validated.X, validated.Y, validated.Width, validated.Height)
 	entry.Act, entry.LevelID = validated.Act, validated.LevelID
 	return Command(entry, actor, sequence, tick, authority)
+}
+
+func DepartureCommand(player string, sequence, tick uint64) (simulation.Command, error) {
+	player = strings.TrimSpace(player)
+	if player == "" || sequence == 0 || tick == 0 {
+		return simulation.Command{}, fmt.Errorf("player: departure requires player, sequence, and tick")
+	}
+	payload, err := json.Marshal(map[string]string{"player": player})
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	return simulation.Command{Tick: tick, Player: "system:membership", Authority: simulation.AuthoritySystem,
+		Sequence: sequence, Kind: LeaveCommand, Payload: payload}, nil
+}
+
+// DepartureQueue serializes host-trusted membership removals onto the ordinary
+// deterministic session command stream. It is shared by listen and dedicated
+// server composition so transport topology cannot change cleanup behavior.
+type DepartureQueue struct {
+	mu       sync.Mutex
+	sequence uint64
+}
+
+func (queue *DepartureQueue) Submit(session *gamesession.Session, player string) error {
+	if queue == nil || session == nil {
+		return fmt.Errorf("player: departure queue requires a session")
+	}
+	queue.mu.Lock()
+	defer queue.mu.Unlock()
+	queue.sequence++
+	return session.SubmitNext(func(tick uint64) (simulation.Command, error) {
+		return DepartureCommand(player, queue.sequence, tick)
+	})
 }
 
 // EntrySource admits the currently selected save into the authoritative world.

@@ -113,14 +113,16 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 
 	level := r.Level.String() + ":"
 
-	switch r.Level {
-	case slog.LevelDebug:
+	switch {
+	case r.Level < slog.LevelDebug:
 		level = colorize(darkGray, level)
-	case slog.LevelInfo:
+	case r.Level == slog.LevelDebug:
+		level = colorize(darkGray, level)
+	case r.Level == slog.LevelInfo:
 		level = colorize(cyan, level)
-	case slog.LevelWarn:
+	case r.Level == slog.LevelWarn:
 		level = colorize(lightYellow, level)
-	case slog.LevelError:
+	case r.Level >= slog.LevelError:
 		level = colorize(lightRed, level)
 	}
 

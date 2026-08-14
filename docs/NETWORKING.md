@@ -16,20 +16,22 @@ Use different transports for traffic with different requirements:
 | Browser client, if added | WebTransport over HTTP/3 | It exposes reliable streams and unreliable datagrams with the browser security model, but remains a developing standard and is not the native-client baseline. |
 | Original Diablo II client | Dedicated legacy adapters | Historical packet formats translate into the same semantic endpoint and never define core APIs. |
 
-The first native game adapter should use `quic-go`. Join, reconnect, critical
+The native game adapter uses `quic-go`. Join, reconnect, critical
 commands, inventory changes, chat, and full/correction snapshots use reliable
-streams. Replaceable movement inputs, acknowledgements, and high-frequency
-state deltas may use QUIC datagrams only after measurement proves that loss is
-preferable to late delivery. Correctness must never depend on a datagram.
+streams. Compact, replaceable transform samples use QUIC datagrams because a
+new sample is more useful than a late one. Correctness, entity membership,
+private state, and removals never depend on a datagram.
 
 QUIC begins with conservative 1200-byte packets and keeps path-MTU discovery
 enabled. Application datagrams must fit the transport's negotiated maximum and
 an additional schema-specific ceiling (initially at most 1000 application
 bytes, leaving headroom inside a 1200-byte packet); they are never split at the
-application layer or sent at an assumed Ethernet MTU. Oversized semantic state uses bounded
-reliable streams, allowing QUIC to packetize it safely. The first adapter keeps
-datagrams disabled until compact delta schemas and loss tests exist, limits a
-wire frame to 4 MiB, and limits command payloads to 8 KiB.
+application layer or sent at an assumed Ethernet MTU. Oversized semantic state
+uses bounded reliable streams, allowing QUIC to packetize it safely. Transform
+frames have a 1000-byte application ceiling, prioritize the projection's
+nearest entities, and are truncated rather than fragmented when the bounded
+world view does not fit. Reliable wire frames remain limited to 4 MiB and
+command payloads to 8 KiB.
 
 This is a direction, not a claim that QUIC is universally fastest. Benchmarks
 must cover representative tick rates, message sizes, loss, jitter, NATs, CPU,
@@ -62,6 +64,15 @@ runtime identity, and issues an unpredictable bearer credential held in the
 server membership table. Client command messages contain only tick, sequence,
 kind, and action payload. The endpoint supplies `Player` and player authority.
 
+Listen-server TCP/IP play keeps its user flow address-only. A host name or IP
+uses port `6112` unless a port is supplied. The application configuration
+directory's `network` folder stores the persistent owner-only
+`host-identity.pem`, its `host-certificate.pem`, and client
+`known-hosts.json` trust-on-first-use pins keyed by normalized `host:port`.
+First contact records the certificate fingerprint; a later identity change is
+rejected rather than silently replacing it. Realm endpoint fingerprints remain
+assignment-owned and separate from this direct-game trust store.
+
 Join and reconnect return versioned per-player semantic projections plus a
 canonical tick and checksum. They do not expose raw ECS snapshots or hidden
 server facts. Reconnect rotates the bearer credential so a successfully used
@@ -75,17 +86,19 @@ be group/world accessible. A realm and its allocated worker share this key to
 sign and consume short-lived, session-bound, one-use admission tickets. The
 standalone server does not expose a ticket-minting endpoint.
 
-The initial `d2legacy` remote projection is `PlayerHUD/v1`. It derives from the
+The current `d2legacy` remote projection is `PlayerHUD/v5`. It derives from the
 canonical checkpoint rather than rereading the live ECS and selects the entity
 bound to the authenticated player. Its field allowlist includes identity,
-vitals, progression, combat display values, position, and location. It excludes
-inventory/belt contents, other players' private state, raw component stores,
-and hidden server facts. Realm admission must load and lease the durable
+vitals, progression, combat display values, position, location, movement mode,
+skill assignments, learned skills, and belt contents. `PrivateView/v1` separately
+projects only that authenticated player's layout, items, and active interaction.
+Both exclude other players' private state, raw component stores, and hidden
+server facts. Realm admission must load and lease the durable
 character and submit the trusted player-entry command before join; a client
 credential never materializes authoritative character state.
 
-`ClientView/v1` envelopes `PlayerHUD/v1` and `WorldView/v1` at one canonical
-tick. The world projection includes only explicitly public selectable fields
+`ClientView/v4` envelopes `PlayerHUD/v5`, `PrivateView/v1`, and `WorldView/v1`
+at one canonical tick. The world projection includes only explicitly public selectable fields
 within 80 subtiles, excludes the authenticated player's own entity, sorts by
 distance then stable public ID, rejects malformed or duplicate IDs, and caps
 the result at 256 entities. Monster health is exposed only through this reviewed
@@ -170,11 +183,34 @@ accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
 configuration, and additionally pins the leaf certificate to the realm's
 `sha256:` fingerprint before sending the one-use ticket. It then verifies the
-server admission session/runtime and decodes exactly `ClientView/v1`. Reconnect
-rotates the session credential and atomically replaces the correction view;
-command submission, refresh, reconnect, and close serialize credential access.
+server admission session/runtime and decodes exactly `ClientView/v4`. Reconnect
+rotates the session credential and atomically replaces the correction view. An
+unexpected transport loss suspends the membership for a ten-second lease,
+rejects commands on the disconnected credential, and permits a fresh pinned
+QUIC connection to rotate that credential before deterministic player removal;
+the client retries with bounded exponential backoff. A reconnect nonce makes
+credential rotation idempotent when the server response itself is lost. Exact command retransmits
+are idempotently acknowledged while a conflicting payload for an accepted
+sequence remains rejected. Command submission, refresh, reconnect, and close
+serialize credential access.
 Corrections are monotonic: the client rejects an older tick and rejects a
 different checksum for an already-installed tick.
+
+Protocol v2 also publishes the authoritative fixed-step duration and highest
+contiguous input sequence applied for that player. The client schedules inputs
+two ticks ahead of a bounded extrapolation of the latest authoritative clock,
+retains unacknowledged inputs in sequence order, and discards them only when
+that contiguous acknowledgement advances.
+
+Normal network reordering is not a simulation error. Network admission
+validates identity, authority, schema, payload, and maximum lead independently
+of arrival order, rejects duplicate player sequences, and sorts admitted input
+canonically at execution. Input arriving after its intended tick restores a
+complete ECS plus registered-runtime frame and deterministically replays at
+most eight ticks. Restore/replay is transactional: failure restores the live
+world, participant state, pending commands, replay log, checkpoints, history,
+and acknowledgement state together. Older input is rejected and corrected by
+the next canonical projection.
 
 The live game-world acceptance in `internal/app/clientsession` crosses this
 entire boundary without substituting a fake projection: it starts the embedded
@@ -194,21 +230,84 @@ starting a privileged Lua listener. `engine.network/v1` carries only host/join
 intent and copied safe status. The client application owns an in-process listen
 host, ephemeral TLS material, QUIC server, selected-profile admission, and the
 hosting player's ordinary `clientsession.Session`. This makes the host a real
-network member and establishes the lifecycle seam that remote peers will share;
-the subsequent presentation slice will render and submit input through that
-connected session instead of the offline ECS.
+network member. Transport starts only after character selection. Connected
+presentation uses an entity-empty, schema-compatible client ECS rather than the
+frozen offline authority: authenticated HUD state creates the local entity,
+`WorldView/v1` creates nearby public entities, owner-private projections rebuild
+the local inventory/interaction graph, and Lua binds to the authenticated
+session player ID. Input is sampled on the 25 Hz simulation clock, scheduled
+against an extrapolated server tick, retained until contiguous acknowledgement,
+and replayed as limited local movement prediction. The same production movement
+rules and collision integrator serve authoritative Lua and prediction, so policy
+does not drift into a second client implementation. Canonical corrections reset
+the prediction baseline. A separate render transform decays only reconciliation
+error, keeping new local input immediate instead of filtering all owner motion.
+
+The client maintains two server-derived timelines. The prediction timeline
+estimates current authority using the latest tick and half the smoothed RTT. The
+remote interpolation timeline stays behind by a bounded, jitter-adaptive delay
+and slews between 0.75x and 1.25x to absorb timing error without pausing or
+jumping. A 32-snapshot immutable ring interpolates peers and extrapolates them
+for at most the configured outage window; it then freezes instead of allowing a
+runaway projection. Lifecycle and non-transform metadata change only at
+canonical snapshot boundaries.
+
+The network goroutine decodes and merges corrections into immutable presentation
+snapshots published through an atomic pointer. The render thread never clones a
+live authoritative world or waits for JSON decoding. Disposable 25 Hz transform
+datagrams use a one-element latest-wins channel, while complete 10 Hz reliable
+views repair loss and carry structural/private state. Player animation carries
+an authoritative `start_tick`; clients derive playback phase from the matching
+prediction or interpolation timeline instead of accumulating render-frame time.
+
+Listen and dedicated authorities install every generated level's collision map
+and route movement collision by each entity's authoritative level. Public
+interest filtering requires the same act and level before applying distance.
+One canonical checkpoint is captured per server tick and shared by all per-player
+projections. Each membership owns at most one long-lived correction stream.
+Explicit leave revokes membership immediately. QUIC connection loss starts the
+reconnect lease; expiration revokes membership and submits the same deterministic
+`system.player.leave` command, which removes the player, admission-owned state,
+and its marked null interaction target without leaking shared target definitions.
+Self-host profile throttling is per normalized remote IP
+and refills over time; one abusive address cannot exhaust a process-global join
+counter.
 
 Authenticated refresh carries a complete bounded view over a reliable QUIC
 stream, from which the client derives `WorldDelta/v1`. A long-lived correction
-stream sends an immediate view and then changed views at no more than 2 Hz. Its
+stream sends an immediate view and then changed views at no more than 10 Hz. Its
 one-element application channel deliberately propagates a slow consumer back
 to QUIC flow control instead of building an unbounded queue. Each membership
-has independent token buckets allowing a burst of 32 commands at a sustained
-16 commands/second and a burst of 4 correction requests at 2 requests/second.
+has independent token buckets allowing a burst of 64 commands at a sustained
+32 commands/second and a burst of 4 correction requests at 2 requests/second.
 Reconnect preserves those budgets so credential rotation cannot reset them.
+The client permits at most eight independent reliable command streams in flight,
+so input cadence is not serialized behind one network round trip; credential
+rotation takes an exclusive gate and waits for those old-credential requests.
 Wire requests have one strict operation-specific shape and reject ambiguous
-fields. These reliable paths remain the correctness baseline before compact
+fields. These reliable paths remain the correctness baseline beneath compact
 lossy datagrams; correctness and removals never depend on a datagram.
+
+## Network test strategy
+
+The renderer-free acceptance in
+`internal/app/clientapp/network_motion_acceptance_test.go` drives the production
+clock and snapshot buffer at 60 Hz while applying deterministic latency, jitter,
+20 percent loss, and reordering. It asserts monotonic peer motion, a bounded
+per-frame displacement, few stationary frames during continuous motion, and a
+bounded freeze after an outage. Add new presentation policies to this harness
+as deterministic schedules with perceptual invariants rather than sleeps or
+wall-clock tolerances.
+
+`internal/app/gameserver/sessionquic/impairment_test.go` exercises the real QUIC
+adapter through an injected packet connection. It covers reliable recovery and
+disposable transform traffic under synthetic drop, delay, jitter, and reconnect.
+`internal/app/clientsession/live_gameworld_test.go` boots the production
+`d2legacy` Lua authority and verifies that the live transport reaches a generated
+game world. Package tests beside `networkclock`, the presentation buffer, local
+prediction, shared movement rules, and transform codec pin their smaller
+contracts. Run `make test` and `make test-race` for the complete gate; use focused
+package tests while iterating.
 
 ## Join-time mod acquisition
 

@@ -69,7 +69,7 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 		t.Fatalf("unexpected join response: %#v", joined)
 	}
 	if err := endpoint.Submit(joined.Credential, CommandIntent{
-		Tick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":4}`),
+		TargetTick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":4}`),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -83,12 +83,19 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	if len(replay.Commands) != 1 || replay.Commands[0].Player != "player:3" || replay.Commands[0].Authority != simulation.AuthorityPlayer {
 		t.Fatalf("command identity was not server-bound: %#v", replay.Commands)
 	}
-	corrected, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity})
+	corrected, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: testReconnectNonce})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if corrected.Credential == joined.Credential || corrected.Snapshot.Tick != 1 || corrected.Snapshot.Checksum == "" {
 		t.Fatalf("reconnect snapshot = %#v", corrected)
+	}
+	replayed, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: testReconnectNonce})
+	if err != nil || replayed.Credential != corrected.Credential || replayed.Snapshot.Checksum != corrected.Snapshot.Checksum {
+		t.Fatalf("replayed reconnect = %#v, %v", replayed, err)
+	}
+	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: "fedcba9876543210fedcba9876543210"}); !errors.Is(err, ErrAuthentication) {
+		t.Fatalf("stale reconnect with another nonce error = %v", err)
 	}
 	if err := endpoint.Submit(joined.Credential, CommandIntent{}); !errors.Is(err, ErrAuthentication) {
 		t.Fatalf("stale credential error = %v", err)
@@ -96,8 +103,47 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	if err := endpoint.Leave(corrected.Credential); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: corrected.Credential, Identity: identity}); !errors.Is(err, ErrAuthentication) {
+	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: corrected.Credential, Identity: identity, Nonce: testReconnectNonce}); !errors.Is(err, ErrAuthentication) {
 		t.Fatalf("revoked credential error = %v", err)
+	}
+}
+
+func TestEndpointAcknowledgesExactRetransmitAndRejectsSequenceConflict(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, _ := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	if err := session.Register("player.move", gamesession.CommandHandler{
+		Validate: func(simulation.Command) error { return nil },
+		Apply:    func(*gameecs.Engine, simulation.Command) error { return nil },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intent := CommandIntent{TargetTick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":1}`)}
+	if err := endpoint.Submit(joined.Credential, intent); err != nil {
+		t.Fatal(err)
+	}
+	if err := endpoint.Submit(joined.Credential, intent); err != nil {
+		t.Fatalf("exact retransmit = %v", err)
+	}
+	conflict := intent
+	conflict.Payload = json.RawMessage(`{"x":2}`)
+	if err := endpoint.Submit(joined.Credential, conflict); !errors.Is(err, gamesession.ErrCommandSequence) {
+		t.Fatalf("conflicting retransmit error = %v", err)
 	}
 }
 
@@ -136,7 +182,7 @@ func TestEndpointRejectsUntrustedAndIncompatibleClients(t *testing.T) {
 	}
 	mismatch := identity
 	mismatch.PackageHash = "different"
-	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: mismatch}); !errors.Is(err, gamesession.ErrCompatibility) {
+	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: mismatch, Nonce: testReconnectNonce}); !errors.Is(err, gamesession.ErrCompatibility) {
 		t.Fatalf("incompatible reconnect error = %v", err)
 	}
 }
@@ -228,10 +274,17 @@ func TestEndpointRateLimitsPerMembershipAndRefills(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// Server-paced observation has its own correction ticker and must remain
+	// available after the client-paced unary refresh budget is exhausted.
+	for range refreshBurst * 3 {
+		if _, err := endpoint.Observe(joined.Credential); err != nil {
+			t.Fatalf("server-paced observation consumed refresh budget: %v", err)
+		}
+	}
 	if _, err := endpoint.Refresh(joined.Credential); !errors.Is(err, ErrRateLimit) {
 		t.Fatalf("rate error = %v", err)
 	}
-	rotated, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity})
+	rotated, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: testReconnectNonce})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,9 +344,97 @@ func TestEndpointRateLimitIsRaceSafeUnderBurst(t *testing.T) {
 	}
 }
 
+func TestEndpointAllowsOneCorrectionWatchPerMembership(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, _ := gamesession.Allocate("game", identity, gamesession.PredictionNone)
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := endpoint.BeginWatch(joined.Credential); err != nil {
+		t.Fatal(err)
+	}
+	if err := endpoint.BeginWatch(joined.Credential); !errors.Is(err, ErrRateLimit) {
+		t.Fatalf("second watch error = %v", err)
+	}
+	endpoint.EndWatch(joined.Credential)
+	if err := endpoint.BeginWatch(joined.Credential); err != nil {
+		t.Fatalf("replacement watch error = %v", err)
+	}
+}
+
+func TestEndpointKeepsDisconnectedMembershipReconnectableUntilLeaseExpires(t *testing.T) {
+	identity := testProtocolIdentity()
+	allocation, _ := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	endpoint, err := NewEndpoint(&Host{Engine: engine, Session: session, Allocation: allocation},
+		testAuthenticator{credential: "valid", principal: Principal{ID: "account", CharacterID: "character", PlayerID: "player"}},
+		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.RawMessage(`{}`), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	var expirations []func()
+	endpoint.after = func(_ time.Duration, expire func()) { expirations = append(expirations, expire) }
+	leaves := 0
+	endpoint.SetLeave(func(Principal) error { leaves++; return nil })
+
+	joined, err := endpoint.Join(context.Background(), JoinRequest{Version: SessionProtocolVersion, Credential: "valid", Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint.Disconnect(joined.Credential)
+	if err := endpoint.Submit(joined.Credential, CommandIntent{}); !errors.Is(err, ErrAuthentication) {
+		t.Fatalf("suspended submit error = %v", err)
+	}
+	if leaves != 0 || len(expirations) != 1 {
+		t.Fatalf("disconnect leaves=%d expirations=%d", leaves, len(expirations))
+	}
+	reconnected, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: testReconnectNonce})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expirations[0]()
+	if leaves != 0 {
+		t.Fatalf("stale lease expiration removed reconnected player")
+	}
+
+	endpoint.Disconnect(reconnected.Credential)
+	if len(expirations) != 3 {
+		t.Fatalf("expirations = %d", len(expirations))
+	}
+	// Reconnect replay expiry is independent of membership lease expiry.
+	expirations[1]()
+	expirations[2]()
+	if leaves != 1 {
+		t.Fatalf("expired disconnect leaves = %d", leaves)
+	}
+	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: reconnected.Credential, Identity: identity, Nonce: testReconnectNonce}); !errors.Is(err, ErrAuthentication) {
+		t.Fatalf("expired reconnect error = %v", err)
+	}
+}
+
 func testProtocolIdentity() simulation.RuntimeIdentity {
 	return simulation.RuntimeIdentity{
 		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}
 }
+
+const testReconnectNonce = "0123456789abcdef0123456789abcdef"

@@ -3,12 +3,15 @@ package main
 import (
 	"log/slog"
 	"testing"
+
+	"github.com/gravestench/dark-magic/internal/logging"
 )
 
 func TestParseLogLevel(t *testing.T) {
 	t.Parallel()
 
 	for input, want := range map[string]slog.Level{
+		"trace":   logging.LevelTrace,
 		"debug":   slog.LevelDebug,
 		"INFO":    slog.LevelInfo,
 		" warn ":  slog.LevelWarn,

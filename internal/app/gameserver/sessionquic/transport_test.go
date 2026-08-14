@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"net"
 	"testing"
@@ -118,7 +119,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{Tick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`)}); err != nil {
+	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{TargetTick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := client.Refresh(ctx, joined.Credential); err != nil {
@@ -143,7 +144,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	reconnected, err := client.Reconnect(ctx, gameserver.ReconnectRequest{Credential: joined.Credential, Identity: identity})
+	reconnected, err := client.Reconnect(ctx, gameserver.ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: "0123456789abcdef0123456789abcdef"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +181,14 @@ func TestFramesRejectOversizeAndUnknownFields(t *testing.T) {
 	trailing.Write(data)
 	if err := readFrame(&trailing, &request{}); err == nil {
 		t.Fatal("trailing message was accepted")
+	}
+}
+
+func TestRemoteErrorDistinguishesSemanticRejectionFromTransportFailure(t *testing.T) {
+	err := remoteError(gameserver.ErrRateLimit.Error())
+	var remote *RemoteError
+	if !errors.As(err, &remote) || remote.Message != gameserver.ErrRateLimit.Error() {
+		t.Fatalf("remote error = %#v", err)
 	}
 }
 
@@ -221,7 +230,7 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 			expected := (candidate == operationJoin && mask == 2) ||
 				(candidate == operationSubmit && mask == 5) ||
 				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1) ||
-				(candidate == operationProfileAdmit && mask == 9)
+				(candidate == operationProfileAdmit && (mask == 8 || mask == 9))
 			if valid != expected {
 				t.Fatalf("operation=%q mask=%03b valid=%t want=%t", candidate, mask, valid, expected)
 			}
@@ -235,7 +244,7 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 
 func TestQUICConfigurationUsesConservativeInitialPacketSize(t *testing.T) {
 	config := quicConfig()
-	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || config.EnableDatagrams ||
+	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || !config.EnableDatagrams ||
 		config.MaxIncomingStreams != 16 || config.MaxIncomingUniStreams != -1 ||
 		config.MaxStreamReceiveWindow != MaxFrameBytes || config.MaxConnectionReceiveWindow != 2*MaxFrameBytes {
 		t.Fatalf("unsafe QUIC configuration: %#v", config)
@@ -247,7 +256,7 @@ func TestTypicalCommandEncodingFitsReservedDatagramBudget(t *testing.T) {
 		Operation:  operationSubmit,
 		Credential: gameserver.SessionCredential("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
 		Command: &gameserver.CommandIntent{
-			Tick: 120, Sequence: 41, Kind: "player.move",
+			ObservedServerTick: 118, TargetTick: 120, Sequence: 41, Kind: "player.move",
 			Payload: json.RawMessage(`{"destination":{"x":123.25,"y":94.5}}`),
 		},
 	}

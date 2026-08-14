@@ -64,7 +64,12 @@ function M.register()
     -- Empty opt-in marker consumed by the engine's generic velocity integrator.
     component("engine.world.velocity_mover", {})
     component("d2legacy.world.player_control", { { name = "player", type = "string" } })
-    component("d2legacy.player.animation", { { name = "direction", type = "i64" }, { name = "mode", type = "string" } })
+    component("d2legacy.player.animation", {
+        { name = "direction", type = "i64" },
+        { name = "mode", type = "string" },
+        { name = "start_tick", type = "i64" },
+    })
+    component("d2legacy.presentation.animation_clock", { { name = "seconds", type = "f64" } })
     component("d2legacy.world.bounds", { { name = "width", type = "f64" }, { name = "height", type = "f64" } })
     component("d2legacy.world.location", { { name = "act", type = "i64" }, { name = "level_id", type = "i64" } })
     component("d2legacy.world.collider", { { name = "radius", type = "f64" } })

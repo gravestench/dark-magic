@@ -48,6 +48,7 @@ return test.suite({
                     [=[math.abs(velocity:get("y") - expected) < 0.000000001]=]
                 )
                 test.assert(animation:get("mode") == "RN", [=[animation:get("mode") == "RN"]=])
+                test.assert(animation:get("start_tick") == 2, [=[animation:get("start_tick") == 2]=])
                 test.assert(facing:get("direction") == 4, [=[facing:get("direction") == 4]=])
                 test.assert(mode:get("running") == true, [=[mode:get("running") == true]=])
                 test.assert(
@@ -73,6 +74,7 @@ return test.suite({
                 local animation = ecs.get(player, "d2legacy.player.animation")
                 local facing = ecs.get(player, "d2legacy.world.facing")
                 test.assert(animation:get("mode") == "WL", [=[animation:get("mode") == "WL"]=])
+                test.assert(animation:get("start_tick") == 3, [=[animation:get("start_tick") == 3]=])
                 test.assert(facing:get("direction") == 15, [=[facing:get("direction") == 15]=])
             end),
         }),

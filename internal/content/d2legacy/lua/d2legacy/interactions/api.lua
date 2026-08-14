@@ -9,6 +9,17 @@ local ecs = require("engine.ecs/v1")
 
 local M = { api = 1 }
 
+local function local_owner()
+    local available, network = pcall(require, "engine.network/v1")
+    if available then
+        local status = network.status()
+        if status.player_id and status.player_id ~= "" then
+            return status.player_id
+        end
+    end
+    return "local-player"
+end
+
 local function split(value)
     local result = {}
     for token in string.gmatch(value or "", "[^,]+") do
@@ -30,15 +41,15 @@ function M.close()
 end
 
 function M.snapshot()
-    for _, entity in ipairs(ecs.query({
-        all = { "d2legacy.interaction.context" },
-    })) do
+    for _, entity in
+        ipairs(ecs.query({
+            all = { "d2legacy.interaction.context" },
+        }))
+    do
         local context = ecs.get(entity, "d2legacy.interaction.context")
-        if context:get("owner") == "local-player" then
+        if context:get("owner") == local_owner() then
             local target = context:get("target")
-            local value = target
-                and ecs.get(target, "d2legacy.interaction.target")
-                or nil
+            local value = target and ecs.get(target, "d2legacy.interaction.target") or nil
             if not value then
                 return { active = false, categories = {}, services = {} }
             end

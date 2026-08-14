@@ -28,14 +28,18 @@ local function selected(entities, wanted)
     end
 end
 
-local function stop(entity, mode)
+local function stop(entity, mode, tick)
     local velocity, animation = ecs.get(entity, "d2legacy.world.velocity"), ecs.get(entity, "d2legacy.player.animation")
     if velocity then
         velocity:set("x", 0)
         velocity:set("y", 0)
     end
     if animation then
-        animation:set("mode", mode or "NU")
+        local next_mode = mode or "NU"
+        if animation:get("mode") ~= next_mode then
+            animation:set("mode", next_mode)
+            animation:set("start_tick", tick)
+        end
     end
 end
 
@@ -74,7 +78,7 @@ local function attack_hand(attacker, selector, sequence_frame)
 end
 
 local function start_swing(context, attacker, target_id, dx, dy, selector, structural)
-    stop(attacker, "A1")
+    stop(attacker, "A1", context.tick)
     local facing = ecs.get(attacker, "d2legacy.world.facing")
     if facing and (dx ~= 0 or dy ~= 0) then
         facing:set("direction", direction.quantize(dx, dy, facing:get("directions")))
@@ -178,7 +182,7 @@ function M.register()
                             structural
                         )
                     elseif not target then
-                        stop(attacker)
+                        stop(attacker, nil, context.tick)
                         structural:remove(attacker, "d2legacy.combat.attack_approach")
                     else
                         local target_position = ecs.get(target, "d2legacy.world.position")
@@ -207,7 +211,10 @@ function M.register()
                             velocity:set("y", dy / length * 10)
                             local animation = ecs.get(attacker, "d2legacy.player.animation")
                             if animation then
-                                animation:set("mode", "WL")
+                                if animation:get("mode") ~= "WL" then
+                                    animation:set("mode", "WL")
+                                    animation:set("start_tick", context.tick)
+                                end
                             end
                         end
                     end
@@ -247,7 +254,7 @@ function M.register()
                 end
                 if context.tick >= attack:get("complete_tick") then
                     animation_event(structural, attacker, attack, "attack_completed", context.tick)
-                    stop(attacker)
+                    stop(attacker, nil, context.tick)
                     structural:remove(attacker, "d2legacy.combat.attack_animation")
                 end
             end
