@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -51,6 +52,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	var input inputstate.Store
 	scenes.SetInputStore(&input)
 	var mixer audio.Mixer
+	network := &shellNetworkController{}
 	saves := d2save.New(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	entitySimulation := gameecs.New()
 	authority, err := gamesession.New(entitySimulation, gamesession.Config{Step: time.Second})
@@ -105,6 +107,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.PlayerControlModule(movementController),
 		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),
+		modruntime.NetworkModule(network),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -183,6 +186,33 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStack(t, navigator, "tcpip")
+	input.Publish(inputstate.Frame{Text: "127.0.0.1"})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputstate.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "down")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	input.Publish(inputstate.Frame{})
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	publishAction(&input, "confirm")
+	if err := scenes.Update(ctx, time.Second/60); err != nil {
+		t.Fatal(err)
+	}
+	if network.joined != "127.0.0.1" {
+		t.Fatalf("join address = %q, want 127.0.0.1", network.joined)
+	}
+	assertStack(t, navigator, "tcpip")
+	// The rest of this broad navigation acceptance continues through the
+	// ordinary offline flow; clear the fixture-only rejected join state first.
+	network.joined, network.phase = "", "frontend"
 	publishAction(&input, "cancel")
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
@@ -504,6 +534,36 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if diagnostics := mixer.Diagnostics(); diagnostics.Active != 0 {
 		t.Fatalf("mixer leaked sounds: %#v", diagnostics)
 	}
+}
+
+type shellNetworkController struct {
+	joined string
+	phase  string
+}
+
+func (*shellNetworkController) Host() error { return nil }
+func (controller *shellNetworkController) StartSelected() error {
+	controller.phase = "local"
+	return nil
+}
+func (*shellNetworkController) Cancel() {}
+
+func (controller *shellNetworkController) Join(address string) error {
+	controller.joined = address
+	controller.phase = "failed"
+	return errors.New("TEST CONNECTION FAILED")
+}
+
+func (controller *shellNetworkController) Status() map[string]any {
+	phase := controller.phase
+	if phase == "" {
+		phase = "frontend"
+	}
+	status := map[string]any{"phase": phase}
+	if phase == "failed" {
+		status["error"] = "TEST CONNECTION FAILED"
+	}
+	return status
 }
 
 type shellD2Records struct{}

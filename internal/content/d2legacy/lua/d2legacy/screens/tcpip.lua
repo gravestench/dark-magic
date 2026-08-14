@@ -41,14 +41,27 @@ return {
         self.controls = controls.new()
         self.status = render.create("hud", self.root)
         self.status_value = ""
+        self.status_is_error = false
 
-        local function show_status(value)
-            if value == self.status_value then
+        local function show_status(value, is_error)
+            is_error = is_error == true
+            if value == self.status_value and is_error == self.status_is_error then
                 return
             end
             self.status_value = value
-            text.set(self.status, "dialog_text", value, 360, "center")
-            self.status:set_position(400, 310)
+            self.status_is_error = is_error
+            if render.assets_available() then
+                text.set(
+                    self.status,
+                    is_error and screen.status.error_style or screen.status.style,
+                    value,
+                    screen.status.width,
+                    "center"
+                )
+            end
+            -- Status belongs below the popup bounds so validation and
+            -- asynchronous connection failures remain visible while it is open.
+            self.status:set_position(screen.status.x, screen.status.y)
         end
 
         self.show_status = show_status
@@ -64,16 +77,18 @@ return {
         end
 
         add("host", function()
+            show_status("", false)
             local network = require("engine.network/v1")
             if network.host() then
                 scenes.replace("character_select")
             else
                 local status = network.status()
-                show_status(status.error or "UNABLE TO HOST GAME")
+                show_status(status.error or "UNABLE TO HOST GAME", true)
             end
         end)
 
         add("join", function()
+            show_status("", false)
             -- Joining needs one extra piece of data, so open the reusable modal
             -- text-entry dialog instead of putting networking logic in the button.
             self.dialog = dialog.text_entry(
@@ -91,7 +106,7 @@ return {
                         local network = require("engine.network/v1")
                         if not network.join(address) then
                             local status = network.status()
-                            show_status(status.error or "UNABLE TO JOIN GAME")
+                            show_status(status.error or "UNABLE TO JOIN GAME", true)
                             return false
                         end
                         scenes.replace("character_select")
@@ -110,11 +125,11 @@ return {
         if ok then
             local status = network.status()
             if status.phase == "starting" then
-                self.show_status("STARTING LISTEN SERVER...")
+                self.show_status("STARTING LISTEN SERVER...", false)
             elseif status.phase == "connected" then
-                self.show_status("LISTENING ON " .. tostring(status.address))
+                self.show_status("LISTENING ON " .. tostring(status.address), false)
             elseif status.phase == "failed" then
-                self.show_status(status.error or "NETWORK OPERATION FAILED")
+                self.show_status(status.error or "NETWORK OPERATION FAILED", true)
             end
         end
 

@@ -12,6 +12,7 @@ local render = require("engine.render/v1")
 local controls = require("d2legacy.ui.controls")
 local label_button = require("d2legacy.ui.label_button")
 local text = require("d2legacy.ui.text")
+local text_field = require("d2legacy.ui.text_field")
 
 local M = {}
 
@@ -43,20 +44,37 @@ function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, 
         dialog.root:fill_rect(definition.width, definition.height, 20, 15, 10, 245)
     end
 
-    -- Register the editable field directly with the dialog's isolated manager.
-    -- controls.lua owns text input/cursor behavior; this dialog only chooses its
-    -- rectangle and initial value.
-    local field = dialog.manager:add_text_field({
+    -- Use the same authored textbox composition demonstrated by UI Lab and used
+    -- by character creation. The dialog still owns focus isolation, while the
+    -- widget owns its DC6 backing, readable label/value styles, and cursor.
+    local configured_field = definition.field or {}
+    local field = text_field.create(parent, dialog.manager, "value", {
         id = "value",
         scope = "dialog",
-        label = prompt,
         value = initial or "",
-        max_length = definition.max_length or 255,
-        x = definition.x + 20,
-        y = definition.y + 70,
-        width = definition.width - 40,
-        height = 30,
+        max_length = configured_field.max_length or definition.max_length or 255,
+        x = configured_field.x or definition.x + 20,
+        y = configured_field.y or definition.y + 70,
+        width = configured_field.width or definition.width - 40,
+        height = configured_field.height or 30,
+        kind = configured_field.kind,
+        palette = configured_field.palette,
+        sheet = configured_field.sheet,
+        frame = configured_field.frame,
+        label_align = configured_field.label_align,
+    }, prompt, {
+        layer = "modal",
+        scope = "dialog",
+        label_style = configured_field.label_style,
+        text_style = configured_field.text_style,
     })
+    dialog.field = field
+
+    -- text_field.create returns each retained child so the composite dialog can
+    -- hide the entire widget atomically when cancelled or accepted.
+    for _, node in ipairs({ field.background_node, field.value_node, field.label_node }) do
+        if node then dialog.nodes[#dialog.nodes + 1] = node end
+    end
 
     local ok_control = label_button.create(parent, dialog.manager, {
         id = "ok",
@@ -67,6 +85,8 @@ function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, 
     }, "OK", {
         layer = "modal",
         scope = "dialog",
+        normal_style = "dialog_button_normal",
+        hover_style = "dialog_button_hover",
         on_activate = function()
             -- The caller may return literal false to say validation failed and
             -- keep the dialog open. Any other return value accepts/closes it.
@@ -85,6 +105,8 @@ function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, 
     }, "Cancel", {
         layer = "modal",
         scope = "dialog",
+        normal_style = "dialog_button_normal",
+        hover_style = "dialog_button_hover",
         on_activate = function()
             dialog:close()
         end,
@@ -96,28 +118,6 @@ function M.text_entry(parent, definition, _, popup_palette, _, prompt, initial, 
 
     -- Only controls in the `dialog` scope are eligible for focus/activation now.
     dialog.manager:set_scope("dialog")
-
-    -- Text is redrawn only when field content changes, not every frame.
-    if render.assets_available() then
-        dialog.text = render.create("modal", parent)
-        dialog.nodes[#dialog.nodes + 1] = dialog.text
-
-        local function redraw()
-            text.set(
-                dialog.text,
-                "dialog_text",
-                prompt .. "\n" .. field.value,
-                definition.width - 40,
-                "center"
-            )
-            dialog.text:set_position(definition.x + definition.width / 2, definition.y + 70)
-        end
-
-        -- controls.add_text_field created `field`; replacing its on_change here
-        -- is safe because this direct field has no separate visual helper callback.
-        field.on_change = redraw
-        redraw()
-    end
 
     function dialog:update()
         if self.open then
