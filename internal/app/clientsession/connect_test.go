@@ -55,7 +55,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{CharacterID: "character", Name: "Hero", Class: "Amazon"}}
-	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud, World: playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}}}
+	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud,
+		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}},
+		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0}}
 	endpoint, err := gameserver.NewEndpoint(&gameserver.Host{Engine: engine, Session: session, Allocation: allocation}, authority,
 		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(view) })
 	if err != nil {
@@ -123,6 +125,16 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.credential == firstCredential {
 		t.Fatal("reconnect did not rotate credential")
 	}
+	firstCredential = connected.credential
+	if err := connected.transport.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := connected.Reconnect(ctx); err != nil {
+		t.Fatalf("redial reconnect: %v", err)
+	}
+	if connected.credential == firstCredential {
+		t.Fatal("redial reconnect did not rotate credential")
+	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +152,18 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	}
 	if err := selfHosted.Close(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSessionExposesDistinctNetworkTimelines(t *testing.T) {
+	now := time.Unix(600, 0)
+	session := &Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 20, StepNanos: int64(40 * time.Millisecond)}}}
+	timeline := session.NetworkTimeline(now)
+	if !timeline.Ready || timeline.Prediction.Tick != 20 || timeline.Interpolation.Tick != 18 {
+		t.Fatalf("network timeline = %#v", timeline)
+	}
+	if got := session.NextInputTick(now); got != 22 {
+		t.Fatalf("next input tick = %d, want 22", got)
 	}
 }
 
@@ -189,6 +213,99 @@ func TestCorrectionAcknowledgesOnlyContiguousInputHistory(t *testing.T) {
 	pending[0].Payload[0] = '['
 	if string(session.pending[3].Payload) != `{"x":3}` {
 		t.Fatal("pending input payload was not defensively copied")
+	}
+}
+
+func TestStagedInputIsImmediatelyPredictableAndDefensive(t *testing.T) {
+	session := &Session{pending: make(map[uint64]gameserver.CommandIntent)}
+	payload := json.RawMessage(`{"x":1}`)
+	intent := gameserver.CommandIntent{TargetTick: 12, Sequence: 1, Kind: "player.move", Payload: payload}
+	if err := session.StageInput(intent); err != nil {
+		t.Fatal(err)
+	}
+	payload[5] = '9'
+	pending := session.PendingInputs()
+	if len(pending) != 1 || string(pending[0].Payload) != `{"x":1}` {
+		t.Fatalf("pending inputs = %#v", pending)
+	}
+	conflict := intent
+	conflict.TargetTick++
+	if err := session.StageInput(conflict); err == nil {
+		t.Fatal("conflicting staged sequence was accepted")
+	}
+	session.DiscardInput(intent.Sequence)
+	if pending = session.PendingInputs(); len(pending) != 0 {
+		t.Fatalf("discarded input remains pending: %#v", pending)
+	}
+}
+
+func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.T) {
+	session := &Session{
+		HUD:       playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
+		World:     playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1, Y: 2}}}},
+		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
+	}
+	delta, err := session.applyTransform(sessionquic.TransformFrame{
+		Tick: 11, OwnerX: 4, OwnerY: 5, VelocityX: 6, VelocityY: 7,
+		Entities: []sessionquic.TransformEntity{
+			{IDHash: sessionquic.PublicIDHash("known"), X: 8, Y: 9, Direction: 3, Mode: [2]byte{'W', 'L'}},
+			{IDHash: sessionquic.PublicIDHash("unknown"), X: 99, Y: 99},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.World.Tick != 11 || len(session.World.Entities) != 1 || session.World.Entities[0].Position != (playeradapter.HUDPosition{X: 8, Y: 9}) {
+		t.Fatalf("transformed world = %#v", session.World)
+	}
+	if session.HUD.Position != (playeradapter.HUDPosition{X: 4, Y: 5}) || session.HUD.Movement.Velocity != (playeradapter.HUDPosition{X: 6, Y: 7}) {
+		t.Fatalf("transformed HUD = %#v", session.HUD)
+	}
+	if len(delta.Upserts) != 1 || delta.Upserts[0].ID != "known" {
+		t.Fatalf("transform delta = %#v", delta)
+	}
+}
+
+func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
+	session := &Session{
+		HUD:       playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
+		World:     playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}}},
+		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
+	}
+	before := session.PresentationSnapshot()
+	if again := session.PresentationSnapshot(); again != before {
+		t.Fatal("unchanged presentation allocated a new snapshot")
+	}
+	if _, err := session.applyTransform(sessionquic.TransformFrame{Tick: 11, Entities: []sessionquic.TransformEntity{{IDHash: sessionquic.PublicIDHash("known"), X: 2}}}); err != nil {
+		t.Fatal(err)
+	}
+	after := session.PresentationSnapshot()
+	if after == before || after.Revision <= before.Revision {
+		t.Fatalf("presentation revisions before=%p/%d after=%p/%d", before, before.Revision, after, after.Revision)
+	}
+	if before.World.Tick != 10 || before.World.Entities[0].Position.X != 1 || after.World.Tick != 11 || after.World.Entities[0].Position.X != 2 {
+		t.Fatalf("immutable snapshots before=%#v after=%#v", before.World, after.World)
+	}
+}
+
+func TestReliableMergePreservesCanonicalInputAndNewerTransforms(t *testing.T) {
+	reliable := playeradapter.WorldView{Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}}}
+	current := playeradapter.WorldView{Tick: 11, Origin: playeradapter.HUDPosition{X: 3}, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 2}}}}
+	_, merged := mergeReliablePresentation(playeradapter.HUD{Tick: 10}, reliable, playeradapter.HUD{Tick: 11}, current)
+	if reliable.Entities[0].Position.X != 1 {
+		t.Fatalf("canonical reliable projection was mutated: %#v", reliable)
+	}
+	if merged.Tick != 11 || merged.Entities[0].Position.X != 2 {
+		t.Fatalf("merged presentation = %#v", merged)
+	}
+}
+
+func TestLatestDeltaPublicationDropsObsoleteNotification(t *testing.T) {
+	deltas := make(chan playeradapter.WorldDelta, 1)
+	publishLatestDelta(context.Background(), deltas, playeradapter.WorldDelta{Tick: 1})
+	publishLatestDelta(context.Background(), deltas, playeradapter.WorldDelta{Tick: 2})
+	if got := <-deltas; got.Tick != 2 {
+		t.Fatalf("published delta tick = %d, want 2", got.Tick)
 	}
 }
 

@@ -35,8 +35,14 @@ return {
 
         self.root = render.create("transition")
         self.root:set_position(screen.x, screen.y)
-        self.root:fill_rect(screen.width, screen.height,
-            screen.fill.red, screen.fill.green, screen.fill.blue, screen.fill.alpha)
+        self.root:fill_rect(
+            screen.width,
+            screen.height,
+            screen.fill.red,
+            screen.fill.green,
+            screen.fill.blue,
+            screen.fill.alpha
+        )
 
         if render.assets_available() then
             self.animation = render.create("transition", self.root)
@@ -55,18 +61,18 @@ return {
 
     update = function(self, elapsed)
         local status = loading.status()
-		local network_status = network_ok and network.status() or { phase = "idle" }
+        local network_status = network_ok and network.status() or { phase = "local" }
 
         if status.state == "failed" then
             error(status.error or "game dependencies failed to load")
         end
-		if network_status.phase == "failed" then
-			-- Connection refusal/timeout is an ordinary multiplayer outcome, not
-			-- a process-fatal scene error. TCP/IP reads and displays the retained
-			-- network failure on entry.
-			scenes.replace("tcpip")
-			return
-		end
+        if network_status.phase == "failed" then
+            -- Connection refusal/timeout is an ordinary multiplayer outcome, not
+            -- a process-fatal scene error. TCP/IP reads and displays the retained
+            -- network failure on entry.
+            scenes.replace("tcpip")
+            return
+        end
 
         -- Convert elapsed seconds into maximum visual progress this frame.
         local step = elapsed / screen.sweep_seconds
@@ -81,7 +87,7 @@ return {
 
         -- Do not enter gameplay merely because real work finished; let the
         -- smoothed display finish its sweep too so the transition remains legible.
-		local network_ready = network_status.phase == "idle" or network_status.phase == "connected"
+        local network_ready = network_status.phase == "local" or network_status.phase == "connected"
         if status.state == "complete" and self.displayed_progress >= 1 and network_ready then
             scenes.replace("game_world")
         end

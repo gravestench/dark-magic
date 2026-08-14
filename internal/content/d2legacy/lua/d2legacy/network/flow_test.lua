@@ -29,11 +29,11 @@ return test.suite({
                 test.expect(calls.started):equals(1)
             end)
         end),
-        test.case("offline_selection_does_not_touch_transport", function(t)
+        test.case("offline_selection_activates_local_session", function(t)
             t:run(function()
-                local flow, calls = load_flow({ phase = "idle", mode = "" })
+                local flow, calls = load_flow({ phase = "frontend", mode = "" })
                 test.expect(flow.start_selected()):is_true()
-                test.expect(calls.started):equals(0)
+                test.expect(calls.started):equals(1)
             end)
         end),
         test.case("pending_join_starts_after_character_selection", function(t)

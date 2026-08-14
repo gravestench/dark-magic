@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"net"
 	"testing"
@@ -143,7 +144,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	reconnected, err := client.Reconnect(ctx, gameserver.ReconnectRequest{Credential: joined.Credential, Identity: identity})
+	reconnected, err := client.Reconnect(ctx, gameserver.ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: "0123456789abcdef0123456789abcdef"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +181,14 @@ func TestFramesRejectOversizeAndUnknownFields(t *testing.T) {
 	trailing.Write(data)
 	if err := readFrame(&trailing, &request{}); err == nil {
 		t.Fatal("trailing message was accepted")
+	}
+}
+
+func TestRemoteErrorDistinguishesSemanticRejectionFromTransportFailure(t *testing.T) {
+	err := remoteError(gameserver.ErrRateLimit.Error())
+	var remote *RemoteError
+	if !errors.As(err, &remote) || remote.Message != gameserver.ErrRateLimit.Error() {
+		t.Fatalf("remote error = %#v", err)
 	}
 }
 
@@ -235,7 +244,7 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 
 func TestQUICConfigurationUsesConservativeInitialPacketSize(t *testing.T) {
 	config := quicConfig()
-	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || config.EnableDatagrams ||
+	if config.InitialPacketSize != 1200 || config.DisablePathMTUDiscovery || !config.EnableDatagrams ||
 		config.MaxIncomingStreams != 16 || config.MaxIncomingUniStreams != -1 ||
 		config.MaxStreamReceiveWindow != MaxFrameBytes || config.MaxConnectionReceiveWindow != 2*MaxFrameBytes {
 		t.Fatalf("unsafe QUIC configuration: %#v", config)

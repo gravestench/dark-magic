@@ -1,6 +1,6 @@
 // Package sessionquic carries the authenticated game-session protocol over
-// QUIC. Every operation uses a bounded reliable stream; replaceable datagram
-// traffic will be added only with an explicit compact schema and loss tests.
+// QUIC. Durable operations use bounded reliable streams; replaceable transform
+// samples use compact, MTU-budgeted QUIC datagrams.
 package sessionquic
 
 import (
@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
@@ -22,9 +24,17 @@ import (
 const (
 	ALPN              = "dark-magic-session/1"
 	InitialPacketSize = 1200
+	// CorrectionInterval is the current authoritative snapshot cadence. Client
+	// clocks use it to choose a jitter-resistant interpolation delay; compact
+	// transform replication may negotiate a different cadence in the future.
+	CorrectionInterval = 100 * time.Millisecond
+	// TransformInterval matches the 25 Hz authoritative simulation cadence.
+	// Frames are disposable and latest-wins, so delay never creates backlog.
+	TransformInterval = 40 * time.Millisecond
 	// MaxDatagramPayloadBytes leaves conservative room within a 1200-byte QUIC
 	// packet for QUIC, packet-number, AEAD, and future message framing overhead.
-	// Datagram transport remains disabled until its schemas are implemented.
+	// Transform frames are truncated to this ceiling and are never fragmented by
+	// the application.
 	MaxDatagramPayloadBytes = 1000
 	MaxFrameBytes           = 4 << 20
 	MaxCommandPayloadBytes  = 8 << 10
@@ -33,6 +43,16 @@ const (
 )
 
 var ErrWire = errors.New("game session QUIC: invalid wire message")
+
+// RemoteError is a semantic rejection returned by a live server. Callers must
+// not treat it as evidence that the QUIC transport failed.
+type RemoteError struct{ Message string }
+
+func (err *RemoteError) Error() string { return err.Message }
+
+func remoteError(message string) error {
+	return &RemoteError{Message: message}
+}
 
 type operation string
 
@@ -64,6 +84,10 @@ type response struct {
 
 type ProfileAdmissions interface {
 	Admit(context.Context, string, []byte) (string, error)
+}
+
+type profileClientContext interface {
+	WithClient(context.Context, string) context.Context
 }
 
 type Server struct {
@@ -116,6 +140,12 @@ func (server *Server) Serve(ctx context.Context) error {
 }
 
 func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn) {
+	memberships := &connectionMemberships{credentials: make(map[gameserver.SessionCredential]struct{})}
+	defer func() {
+		for _, credential := range memberships.snapshot() {
+			server.endpoint.Disconnect(credential)
+		}
+	}()
 	for {
 		stream, err := connection.AcceptStream(ctx)
 		if err != nil {
@@ -134,20 +164,59 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 					_ = writeFrame(stream, response{Error: ErrWire.Error()})
 					return
 				}
-				server.watch(ctx, stream, message.Credential)
+				server.watch(ctx, connection, stream, message.Credential)
 				return
 			}
-			_ = writeFrame(stream, server.dispatch(ctx, message))
+			requestContext := ctx
+			if contextSource, ok := server.profiles.(profileClientContext); ok {
+				requestContext = contextSource.WithClient(ctx, connection.RemoteAddr().String())
+			}
+			result := server.dispatch(requestContext, message)
+			memberships.observe(message, result)
+			_ = writeFrame(stream, result)
 		}()
 	}
 }
 
+type connectionMemberships struct {
+	mu          sync.Mutex
+	credentials map[gameserver.SessionCredential]struct{}
+}
+
+func (memberships *connectionMemberships) observe(message request, result response) {
+	memberships.mu.Lock()
+	defer memberships.mu.Unlock()
+	if result.Join != nil && result.Join.Credential != "" {
+		memberships.credentials[result.Join.Credential] = struct{}{}
+	}
+	if message.Operation == operationLeave && result.Error == "" {
+		delete(memberships.credentials, message.Credential)
+	}
+	if message.Operation == operationReconnect && result.Join != nil {
+		delete(memberships.credentials, message.Reconnect.Credential)
+	}
+}
+
+func (memberships *connectionMemberships) snapshot() []gameserver.SessionCredential {
+	memberships.mu.Lock()
+	defer memberships.mu.Unlock()
+	result := make([]gameserver.SessionCredential, 0, len(memberships.credentials))
+	for credential := range memberships.credentials {
+		result = append(result, credential)
+	}
+	return result
+}
+
 // A 10 Hz authoritative stream leaves two to three 25 Hz simulation samples
 // between corrections for interpolation without flooding full projections.
-const correctionInterval = 100 * time.Millisecond
-
-func (server *Server) watch(ctx context.Context, stream *quic.Stream, credential gameserver.SessionCredential) {
-	ticker := time.NewTicker(correctionInterval)
+func (server *Server) watch(ctx context.Context, connection *quic.Conn, stream *quic.Stream, credential gameserver.SessionCredential) {
+	if err := server.endpoint.BeginWatch(credential); err != nil {
+		_ = writeFrame(stream, response{Error: err.Error()})
+		return
+	}
+	defer server.endpoint.EndWatch(credential)
+	go server.sendTransforms(stream.Context(), connection, credential)
+	ticker := time.NewTicker(CorrectionInterval)
 	defer ticker.Stop()
 	lastTick, lastChecksum := ^uint64(0), ""
 	for {
@@ -166,6 +235,30 @@ func (server *Server) watch(ctx context.Context, stream *quic.Stream, credential
 		case <-ctx.Done():
 			return
 		case <-stream.Context().Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (server *Server) sendTransforms(ctx context.Context, connection *quic.Conn, credential gameserver.SessionCredential) {
+	ticker := time.NewTicker(TransformInterval)
+	defer ticker.Stop()
+	lastTick := uint64(0)
+	for {
+		snapshot, err := server.endpoint.Observe(credential)
+		if err != nil {
+			return
+		}
+		if snapshot.Tick > lastTick {
+			payload, encodeErr := encodeTransformFrame(credential, snapshot)
+			if encodeErr != nil || connection.SendDatagram(payload) != nil {
+				return
+			}
+			lastTick = snapshot.Tick
+		}
+		select {
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
@@ -239,7 +332,20 @@ func validShape(message request) bool {
 	}
 }
 
-type Client struct{ connection *quic.Conn }
+type Client struct {
+	connection           *quic.Conn
+	datagramMu           sync.Mutex
+	datagramActive       bool
+	transformsReceived   atomic.Uint64
+	transformsSuperseded atomic.Uint64
+}
+
+type NetworkStats struct {
+	SmoothedRTT          time.Duration
+	RTTVariation         time.Duration
+	TransformsReceived   uint64
+	TransformsSuperseded uint64
+}
 
 func Dial(ctx context.Context, address string, tlsConfig *tls.Config) (*Client, error) {
 	if tlsConfig == nil {
@@ -267,6 +373,17 @@ func DialPacket(ctx context.Context, packet net.PacketConn, address net.Addr, tl
 }
 
 func (client *Client) Close() error { return client.connection.CloseWithError(0, "closed") }
+
+func (client *Client) NetworkStats() NetworkStats {
+	if client == nil || client.connection == nil {
+		return NetworkStats{}
+	}
+	stats := client.connection.ConnectionStats()
+	return NetworkStats{
+		SmoothedRTT: stats.SmoothedRTT, RTTVariation: stats.MeanDeviation,
+		TransformsReceived: client.transformsReceived.Load(), TransformsSuperseded: client.transformsSuperseded.Load(),
+	}
+}
 
 func (client *Client) Join(ctx context.Context, join gameserver.JoinRequest) (gameserver.JoinResponse, error) {
 	result, err := client.call(ctx, request{Operation: operationJoin, Join: &join})
@@ -333,7 +450,7 @@ func (client *Client) Watch(ctx context.Context, credential gameserver.SessionCr
 				return
 			}
 			if result.Error != "" {
-				errorsOut <- errors.New(result.Error)
+				errorsOut <- remoteError(result.Error)
 				return
 			}
 			if result.Snapshot == nil {
@@ -348,6 +465,59 @@ func (client *Client) Watch(ctx context.Context, credential gameserver.SessionCr
 		}
 	}()
 	return snapshots, errorsOut, nil
+}
+
+// WatchTransforms receives disposable transform frames. Its one-slot channel
+// is explicitly latest-wins: presentation never queues obsolete motion behind
+// a slow render frame.
+func (client *Client) WatchTransforms(ctx context.Context, credential gameserver.SessionCredential) (<-chan TransformFrame, <-chan error, error) {
+	client.datagramMu.Lock()
+	if client.datagramActive {
+		client.datagramMu.Unlock()
+		return nil, nil, errors.New("game session QUIC: transform watch already active")
+	}
+	client.datagramActive = true
+	client.datagramMu.Unlock()
+	frames := make(chan TransformFrame, 1)
+	errorsOut := make(chan error, 1)
+	go func() {
+		defer close(frames)
+		defer close(errorsOut)
+		defer func() {
+			client.datagramMu.Lock()
+			client.datagramActive = false
+			client.datagramMu.Unlock()
+		}()
+		for {
+			payload, err := client.connection.ReceiveDatagram(ctx)
+			if err != nil {
+				if ctx.Err() == nil {
+					errorsOut <- err
+				}
+				return
+			}
+			frame, err := decodeTransformFrame(credential, payload)
+			if err != nil {
+				continue
+			}
+			client.transformsReceived.Add(1)
+			select {
+			case frames <- frame:
+			default:
+				client.transformsSuperseded.Add(1)
+				select {
+				case <-frames:
+				default:
+				}
+				select {
+				case frames <- frame:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return frames, errorsOut, nil
 }
 
 func (client *Client) Reconnect(ctx context.Context, reconnect gameserver.ReconnectRequest) (gameserver.JoinResponse, error) {
@@ -400,7 +570,7 @@ func (client *Client) call(ctx context.Context, message request) (response, erro
 		return response{}, err
 	}
 	if result.Error != "" {
-		return result, errors.New(result.Error)
+		return result, remoteError(result.Error)
 	}
 	return result, nil
 }
@@ -410,7 +580,7 @@ func quicConfig() *quic.Config {
 		HandshakeIdleTimeout: 5 * time.Second, MaxIdleTimeout: 30 * time.Second,
 		InitialPacketSize: InitialPacketSize, MaxIncomingStreams: 16,
 		MaxIncomingUniStreams: -1, MaxStreamReceiveWindow: MaxFrameBytes,
-		MaxConnectionReceiveWindow: 2 * MaxFrameBytes,
+		MaxConnectionReceiveWindow: 2 * MaxFrameBytes, EnableDatagrams: true,
 	}
 }
 

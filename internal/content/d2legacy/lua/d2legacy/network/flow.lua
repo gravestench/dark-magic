@@ -13,7 +13,7 @@ local function pending_operation()
 end
 
 function M.start_selected()
-    if not pending_operation() then
+    if not available then
         return true
     end
     return network.start_selected()

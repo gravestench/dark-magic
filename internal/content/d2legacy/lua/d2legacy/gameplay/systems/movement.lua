@@ -7,14 +7,17 @@
 local ecs = require("engine.ecs/v1")
 
 local M = {}
-local active_collision = nil
+local collisions = {}
+local default_collision = nil
 
 local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
 end
 
 local function footprint_blocked(collision, x, y, radius)
-    if not collision then return false end
+    if not collision then
+        return false
+    end
     local reach = math.ceil(radius)
     for offset_y = -reach, reach do
         for offset_x = -reach, reach do
@@ -23,8 +26,7 @@ local function footprint_blocked(collision, x, y, radius)
             -- a medium (radius 1) player therefore reserves the surrounding
             -- 3x3 neighborhood used by Riiablo's size-2 path clearance.
             local distance = math.sqrt(offset_x * offset_x + offset_y * offset_y)
-            if distance <= radius + 0.5
-                and collision:blocked_position(x + offset_x, y + offset_y) then
+            if distance <= radius + 0.5 and collision:blocked_position(x + offset_x, y + offset_y) then
                 return true
             end
         end
@@ -56,31 +58,76 @@ local function move_y(position, velocity, bounds, collider, collision, elapsed)
     end
 end
 
-local function update_entity(entity, collision, elapsed)
+local function collision_for(entity)
+    local location = ecs.get(entity, "d2legacy.world.location")
+    if location then
+        return collisions[location:get("level_id")] or default_collision
+    end
+    return default_collision
+end
+
+local function update_entity(entity, elapsed)
     local position = ecs.get(entity, "d2legacy.world.position")
     local velocity = ecs.get(entity, "d2legacy.world.velocity")
     local bounds = ecs.get(entity, "d2legacy.world.bounds")
     local collider = ecs.get(entity, "d2legacy.world.collider")
+    local collision = collision_for(entity)
+
+    if collision then
+        local x, y = collision:integrate_velocity(
+            position:get("x"),
+            position:get("y"),
+            velocity:get("x"),
+            velocity:get("y"),
+            collider:get("radius"),
+            bounds:get("width"),
+            bounds:get("height"),
+            elapsed
+        )
+        position:set("x", x)
+        position:set("y", y)
+        return
+    end
+
     move_x(position, velocity, bounds, collider, collision, elapsed)
     move_y(position, velocity, bounds, collider, collision, elapsed)
 end
 
 function M.register(collision)
-	active_collision = collision
+    default_collision = collision
     ecs.system({
         id = "d2legacy.world.integrate",
         phase = "movement",
-        query = { all = { "d2legacy.world.position", "d2legacy.world.velocity", "d2legacy.world.bounds", "d2legacy.world.collider" } },
-        read = { "d2legacy.world.velocity", "d2legacy.world.bounds", "d2legacy.world.collider" },
+        query = {
+            all = {
+                "d2legacy.world.position",
+                "d2legacy.world.velocity",
+                "d2legacy.world.bounds",
+                "d2legacy.world.collider",
+            },
+        },
+        read = {
+            "d2legacy.world.velocity",
+            "d2legacy.world.bounds",
+            "d2legacy.world.collider",
+            "d2legacy.world.location",
+        },
         write = { "d2legacy.world.position" },
         update = function(context, entities)
             for _, entity in ipairs(entities) do
-				update_entity(entity, active_collision, context.delta_seconds)
+                update_entity(entity, context.delta_seconds)
             end
         end,
     })
 end
 
-function M.set_collision(collision) active_collision = collision end
+function M.set_collision(level_id, collision)
+    if collision == nil then
+        default_collision = level_id
+        return
+    end
+    assert(type(level_id) == "number" and level_id > 0, "collision level ID is required")
+    collisions[level_id] = collision
+end
 
 return M

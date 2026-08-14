@@ -65,18 +65,28 @@ func (app *application) buildEntryWorld() error {
 // committed the authoritative level change; this only swaps client-side map
 // caches and navigation inputs to match that fact.
 func (app *application) syncActiveWorldFromPlayer() {
-	controls, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.player_control")
+	engine := app.presentationSimulation()
+	if engine == nil {
+		return
+	}
+	controls, ok := akara.GetDynamicStore(engine.World(), "d2legacy.world.player_control")
 	if !ok {
 		return
 	}
-	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
+	locations, ok := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
 	if !ok {
 		return
+	}
+	wanted := "local-player"
+	if app.network != nil {
+		if player, ok := app.network.Status()["player_id"].(string); ok && player != "" {
+			wanted = player
+		}
 	}
 	for _, entity := range controls.Entities() {
 		control, _ := controls.Get(entity)
 		owner, _ := control.Get("player")
-		if owner != "local-player" {
+		if owner != wanted {
 			continue
 		}
 		location, found := locations.Get(entity)

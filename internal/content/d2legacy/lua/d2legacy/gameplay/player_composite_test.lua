@@ -99,12 +99,31 @@ local function assert_playback_events(adapter)
     test.assert(crossed[1].event == 1 and crossed[2].event == 3, [=[crossed[1].event == 1 and crossed[2].event == 3]=])
 end
 
+local function assert_network_synchronization(adapter)
+    local playback = adapter.new_playback({ mode = "WL" })
+    local animation = {
+        rate = 256,
+        frames = 4,
+        events = { [2] = 1, [3] = 3 },
+        mode = "WL",
+    }
+    local initial = adapter.synchronize(playback, animation, 0.09)
+    test.assert(playback.frame == 3 and #initial == 0, [=[playback.frame == 3 and #initial == 0]=])
+    local crossed = adapter.synchronize(playback, animation, 0.13)
+    test.assert(playback.frame == 4 and #crossed == 0, [=[playback.frame == 4 and #crossed == 0]=])
+    adapter.synchronize(playback, animation, 0.17)
+    test.assert(playback.frame == 1, [=[playback.frame == 1]=])
+    adapter.synchronize(playback, animation, 0.01)
+    test.assert(playback.frame == 1, [=[playback.frame == 1]=])
+end
+
 local function resolves_cof_layer_weapon_classes()
     install_render_fixture()
     local adapter = require("d2legacy.gameplay.player_composite")
     assert_unarmed_recipe(adapter)
     assert_equipped_recipe(adapter)
     assert_playback_events(adapter)
+    assert_network_synchronization(adapter)
 end
 
 return test.suite({

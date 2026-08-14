@@ -121,6 +121,9 @@ func (app *application) shutdown() error {
 	if app.offlineSession != nil {
 		err = errors.Join(err, app.offlineSession.Close())
 	}
+	if app.clientSimulation != nil {
+		err = errors.Join(err, app.clientSimulation.Close())
+	}
 	return err
 }
 

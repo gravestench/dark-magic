@@ -1777,8 +1777,9 @@ authoritative `d2legacy` Lua owns the gameplay policy behind those commands.
 
 ## M22: Client and game-session networking
 
-M22 has a working deterministic session/replay foundation; transport, remote
-authority, persistence separation, and resilience acceptance remain open.
+M22 has a working deterministic session/replay foundation, authenticated QUIC
+transport, remote authority, separated persistence, and client-side network
+presentation. Extended soak, fuzz, and cross-platform resilience remain open.
 
 - [x] Define deterministic simulation snapshots, purpose-named RNG streams,
   admitted command logs, canonical per-tick execution, checksums, restoration,
@@ -1806,22 +1807,21 @@ authority, persistence separation, and resilience acceptance remain open.
   rejects duplicate allocation, and releases workers without moving gameplay
   into the control plane. `cmd/client`, `cmd/server`, and `cmd/realm` now name
   the three process roles directly. Network transports remain the next item.
-- [ ] Implement discovery/direct connect, authentication boundaries, snapshot
+- [x] Implement direct connect, authentication boundaries, snapshot
   transfer, command replication, rollback or correction, and reconnect.
   A versioned transport-neutral endpoint now authenticates join credentials,
   binds server-owned player identity and authority to client intents, issues
   and rotates opaque session credentials, projects per-player semantic
   snapshots with canonical correction checksums, and supports explicit leave.
-  QUIC transport, discovery, delta projection, and loss/latency acceptance
-  remain before this item is complete. The first native QUIC adapter now carries
+  The native QUIC adapter carries
   bounded join, command, reconnect, and leave requests over independent TLS 1.3
   reliable streams. It starts with 1200-byte packets, retains path-MTU
-  discovery, rejects oversized/unknown/trailing frames, and leaves datagrams
-  disabled until compact delta schemas and loss acceptance exist. `cmd/server`
+  discovery, rejects oversized/unknown/trailing frames, and sends compact
+  transform samples as bounded latest-wins datagrams. `cmd/server`
   can now enable that adapter with explicit TLS material and a protected
   realm-shared key. Short-lived admission tickets are HMAC-authenticated,
-  session-bound, and one-use. `PlayerHUD/v1` projects only the authenticated
-  player's allowlisted fields from a canonical checkpoint, proving that raw ECS
+  session-bound, and one-use. `PlayerHUD/v5` plus `PrivateView/v1` project only
+  the authenticated player's allowlisted fields from a canonical checkpoint, proving that raw ECS
   and another player's private state do not cross the transport boundary. The
   realm now coordinates account-owned revisioned character leases with worker
   admission: exact runtime compatibility is checked, trusted entry is queued,
@@ -1830,8 +1830,8 @@ authority, persistence separation, and resilience acceptance remain open.
   A transport-neutral client session consumes this assignment through QUIC:
   endpoint syntax, runtime identity, normal X.509 trust, and the realm-pinned
   leaf fingerprint are verified before the ticket is sent; server admission and
-  `ClientView/v1` are verified afterward. Reconnect rotates credentials and
-  installs the canonical correction view atomically. `ClientView/v1` now adds a
+  `ClientView/v4` are verified afterward. Reconnect rotates credentials and
+  installs the canonical correction view atomically. `ClientView/v4` adds a
   bounded, nearby, explicitly public `WorldView/v1`; authenticated reliable
   refreshes derive deterministic `WorldDelta/v1` upserts/removals and force a
   full reset whenever truncation makes removal inference unsafe. A bounded
@@ -1839,11 +1839,17 @@ authority, persistence separation, and resilience acceptance remain open.
   application backpressure; clients reject stale or same-tick conflicting
   corrections. Strict operation shapes and per-membership command/correction
   token buckets bound malformed and burst traffic, and reconnect cannot reset
-  those budgets. The production packet boundary is now injectable, and a
+  those budgets. Unexpected transport loss retains a ten-second reconnect
+  lease, redials pinned QUIC with bounded backoff, makes credential rotation
+  retry-safe with a reconnect nonce, and treats exact command retransmits
+  idempotently while rejecting conflicting reuse. The production packet
+  boundary is injectable, and a
   deterministic bidirectional loss/delay/jitter acceptance test covers TLS
   handshake, join, correction streaming, commands, reconnect, and leave using
-  the real QUIC paths. Compact datagrams and broader sustained-network
-  acceptance remain open. Unary stream halves are now explicitly released;
+  the real QUIC paths. A separate deterministic 60 Hz presentation acceptance
+  covers transform loss, latency, jitter, reordering, and outage freeze; broader
+  sustained-network acceptance remains open. Unary stream halves are explicitly
+  released;
   an exhaustive operation-shape matrix and a 256-request malformed-stream soak
   prove rejection isolation and continued valid use on the same connection.
   Concurrent stream and receive-window ceilings are pinned by tests.
@@ -1874,7 +1880,7 @@ authority, persistence separation, and resilience acceptance remain open.
   network composition remain open. A live acceptance now boots the production
   d2legacy Lua authority and fixed-step headless host, populates a Blood Moor
   hostile through the production ECS systems, admits a selected profile over a
-  real pinned-TLS QUIC connection, and verifies coherent `PlayerHUD/v1`,
+  real pinned-TLS QUIC connection, and verifies coherent `PlayerHUD/v5`,
   `WorldView/v1`, player movement command replication, and the resulting
   correction without requiring owned MPQ data. Headless authorities install
   position integration themselves; interactive worlds only supply collision
@@ -1883,8 +1889,26 @@ authority, persistence separation, and resilience acceptance remain open.
   asynchronously creates a real in-process listen host, ephemeral pinned-TLS
   QUIC listener, selected-profile admission, and local network client. Safe
   phase/address/error status returns to presentation; sockets, certificates,
-  credentials, and session handles do not. Switching game-world input and
-  rendering from the offline ECS to that connected `ClientView` remains next.
+  credentials, and session handles do not. Host/join startup is cancellable and
+  begins only after character selection; frontend UI no longer advances a
+  hidden offline world. Connected presentation uses a dedicated, empty client
+  ECS and binds Lua, camera, and input to authenticated `ClientView/v4` entities
+  instead of mutating the frozen local authority. The exact two-client,
+  different-class roster is covered at the production application bridge.
+  Movement input now samples at 25 Hz rather than correction cadence, carries
+  explicit target ticks, and replays pending inputs as limited local prediction
+  from canonical corrections with time-based interpolation. Authorities use
+  level-indexed collision; interest projection filters act/level; watchers share
+  one checkpoint per tick and one stream per membership; explicit leave and an
+  expired disconnect lease queue deterministic Lua-owned player cleanup; the
+  connected owner-private projection supplies inventory, belt/skills, and
+  interaction state without cloning authority; and self-host admission throttles per
+  remote IP with refill. Client presentation now uses separate prediction and
+  jitter-adaptive interpolation clocks, a 32-snapshot remote buffer, canonical
+  rollback/replay for staged owner input, correction-error smoothing outside the
+  ECS, 25 Hz MTU-budgeted latest-wins transform datagrams backed by 10 Hz reliable
+  repair, immutable off-thread snapshot publication, and tick-synchronized
+  animation. Shared production movement/collision rules prevent prediction drift.
 - [ ] Add long-running soak, malformed-data, fuzz, latency/loss, save round-trip,
   performance, and race tests across supported platforms.
 

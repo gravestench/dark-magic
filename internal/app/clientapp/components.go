@@ -81,6 +81,12 @@ func (app *application) activateComponents(modDirectory string) error {
 	// component starts. Queue bootstrap work only after that registration has
 	// completed; session admission correctly rejects unknown command kinds.
 	if desired == nil || desired["d2legacy.authoritative"] {
+		for levelID, worldMap := range app.gameWorlds {
+			if err := modruntime.SetWorldMapForLevel(context.Background(), app.scripts,
+				"d2legacy.gameplay.systems.init", "set_collision", levelID, worldMap); err != nil {
+				return wrap("install authoritative collision map", err)
+			}
+		}
 		if err := app.queueEntryPopulation(); err != nil {
 			return err
 		}

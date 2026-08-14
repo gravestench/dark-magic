@@ -36,8 +36,17 @@ function M.register()
         version = 1,
         fields = {
             { name = "direction", type = "i64" }, -- Deprecated; d2legacy.world.facing owns this fact.
-            { name = "mode", type = "string" },   -- NU, WL, RN, and future modes.
+            { name = "mode", type = "string" }, -- NU, WL, RN, and future modes.
+            { name = "start_tick", type = "i64" }, -- Tick when the current mode began.
         },
+    })
+
+    -- Attached only to disposable client mirrors. Authority owns start_tick;
+    -- presentation derives smooth seconds from the appropriate network clock.
+    ecs.component({
+        name = "d2legacy.presentation.animation_clock",
+        version = 1,
+        fields = { { name = "seconds", type = "f64" } },
     })
 end
 

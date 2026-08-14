@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"strings"
@@ -28,8 +29,10 @@ import (
 
 type networkController struct {
 	mu                            sync.Mutex
+	reconnectMu                   sync.Mutex
 	app                           *application
 	phase, mode, address, failure string
+	generation                    uint64
 	host                          *gameserver.Host
 	server                        *sessionquic.Server
 	client                        *clientsession.Session
@@ -37,17 +40,19 @@ type networkController struct {
 	sequence                      uint64
 	lastMovementTick              uint64
 	lastMovementActive            bool
+	inputLag                      time.Duration
+	connectionEpoch               uint64
 	submissions                   chan gameserver.CommandIntent
 }
 
 func newNetworkController(app *application) *networkController {
-	return &networkController{app: app, phase: "idle", submissions: make(chan gameserver.CommandIntent, 64)}
+	return &networkController{app: app, phase: "frontend", submissions: make(chan gameserver.CommandIntent, 64)}
 }
 
 func (controller *networkController) Host() error {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
-	if controller.phase != "idle" && controller.phase != "failed" {
+	if controller.phase != "frontend" && controller.phase != "failed" {
 		return controller.rejectLocked("host", errors.New("network operation already active"))
 	}
 	controller.phase, controller.mode, controller.address, controller.failure = "selecting", "host", "", ""
@@ -57,31 +62,53 @@ func (controller *networkController) Host() error {
 
 func (controller *networkController) StartSelected() error {
 	controller.mu.Lock()
-	defer controller.mu.Unlock()
-	if controller.phase != "selecting" || (controller.mode != "host" && controller.mode != "join") {
+	if controller.phase != "frontend" && (controller.phase != "selecting" || (controller.mode != "host" && controller.mode != "join")) {
+		defer controller.mu.Unlock()
 		return controller.rejectLocked(controller.mode, errors.New("no network operation is awaiting character selection"))
 	}
 	character, selected := controller.app.saves.Selected()
 	if !selected {
+		defer controller.mu.Unlock()
 		return controller.rejectLocked(controller.mode, errors.New("select a character before continuing"))
 	}
+	if controller.phase == "frontend" {
+		controller.phase, controller.mode, controller.failure = "local", "local", ""
+		controller.mu.Unlock()
+		slog.Debug("local game session activated", "character_id", character.ID,
+			"character_name", character.Name, "character_class", character.Class)
+		return nil
+	}
+	controller.generation++
+	generation := controller.generation
+	ctx, cancel := context.WithCancel(controller.app.ctx)
+	controller.cancel = cancel
 	controller.phase, controller.failure = "starting", ""
+	mode, address := controller.mode, controller.address
 	slog.Debug("network operation starting", "mode", controller.mode, "address", controller.address,
 		"character_id", character.ID, "character_name", character.Name, "character_class", character.Class)
-	if controller.mode == "host" {
-		go controller.startHost()
+	controller.mu.Unlock()
+	if mode == "host" {
+		go controller.startHost(ctx, generation)
 	} else {
-		go controller.startJoin(controller.address)
+		go controller.startJoin(ctx, generation, address)
 	}
 	return nil
 }
 
 func (controller *networkController) Cancel() {
 	controller.mu.Lock()
-	defer controller.mu.Unlock()
-	if controller.phase == "selecting" || controller.phase == "failed" {
-		controller.phase, controller.mode, controller.address, controller.failure = "idle", "", "", ""
+	if controller.phase == "selecting" || controller.phase == "starting" || controller.phase == "failed" {
+		controller.generation++
+		cancel := controller.cancel
+		controller.cancel = nil
+		controller.phase, controller.mode, controller.address, controller.failure = "frontend", "", "", ""
+		controller.mu.Unlock()
+		if cancel != nil {
+			cancel()
+		}
+		return
 	}
+	controller.mu.Unlock()
 }
 
 func (controller *networkController) Join(address string) error {
@@ -99,41 +126,72 @@ func (controller *networkController) Join(address string) error {
 	return nil
 }
 
-func (controller *networkController) startJoin(address string) {
+func (controller *networkController) startJoin(ctx context.Context, generation uint64, address string) {
 	slog.Debug("dialing self-hosted game", "address", address)
-	ctx, cancel := context.WithCancel(controller.app.ctx)
-	identity, err := d2legacy.Identity(controller.app.options.Content)
+	identity, err := d2legacy.Identity(controller.app.options.Content, controller.app.sessionInitialData())
 	if err != nil {
-		controller.fail(err)
+		controller.fail(generation, err)
 		return
 	}
 	clientTLS, err := controller.app.networkTrust.ClientTLS(address)
 	if err != nil {
-		controller.fail(err)
+		controller.fail(generation, err)
 		return
 	}
 	client, err := clientsession.ConnectSelfHosted(ctx, clientsession.SelfHostedAssignment{
 		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
 	}, clientTLS, controller.app.saves)
 	if err != nil {
-		cancel()
-		controller.fail(err)
+		controller.fail(generation, err)
+		return
+	}
+	if err := controller.app.prepareConnectedWorld(ctx); err != nil {
+		_ = client.Close(context.Background())
+		controller.fail(generation, err)
 		return
 	}
 	controller.mu.Lock()
-	controller.client, controller.cancel, controller.phase = client, cancel, "connected"
+	if controller.generation != generation || controller.phase != "starting" {
+		controller.mu.Unlock()
+		_ = client.Close(context.Background())
+		return
+	}
+	controller.client, controller.phase = client, "connected"
+	controller.connectionEpoch++
+	controller.resetInputLocked()
 	controller.mu.Unlock()
 	hud, _ := client.View()
 	slog.Debug("joined self-hosted game", "address", address, "player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
 	go controller.send(ctx, client)
-	controller.watch(ctx, client)
+	go controller.watch(ctx, client)
 }
 
-func (controller *networkController) fail(err error) {
+func (controller *networkController) fail(generation uint64, err error) {
 	controller.mu.Lock()
-	defer controller.mu.Unlock()
+	if generation != controller.generation || controller.phase == "closed" || controller.phase == "failed" {
+		controller.mu.Unlock()
+		return
+	}
+	cancel, client, server, host := controller.cancel, controller.client, controller.server, controller.host
+	mode, address := controller.mode, controller.address
+	controller.cancel, controller.client, controller.server, controller.host = nil, nil, nil, nil
 	controller.phase, controller.failure = "failed", err.Error()
-	slog.Debug("network operation failed", "mode", controller.mode, "address", controller.address, "error", err)
+	controller.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	cleanupContext, stop := context.WithTimeout(context.Background(), time.Second)
+	defer stop()
+	if client != nil {
+		_ = client.Close(cleanupContext)
+	}
+	if server != nil {
+		_ = server.Close()
+	}
+	if host != nil {
+		_ = host.Close(cleanupContext)
+	}
+	slog.Debug("network operation failed", "mode", mode, "address", address, "error", err)
 }
 
 func (controller *networkController) rejectLocked(mode string, err error) error {
@@ -155,17 +213,14 @@ func (controller *networkController) Status() map[string]any {
 	return map[string]any{"phase": phase, "mode": mode, "address": address, "error": failure, "player_id": playerID}
 }
 
-func (controller *networkController) startHost() {
+func (controller *networkController) startHost(ctx context.Context, generation uint64) {
 	slog.Debug("starting listen server", "address", ":6112")
-	ctx, cancel := context.WithCancel(controller.app.ctx)
 	fail := func(err error) {
-		cancel()
-		controller.mu.Lock()
-		controller.phase, controller.failure = "failed", err.Error()
-		controller.mu.Unlock()
+		controller.fail(generation, err)
 	}
 	host, err := gameserver.Start(ctx, controller.app.options.Content, recordstore.New(controller.app.options.Content), gameserver.Config{
 		Mode: gameserver.ModeListen, SessionID: "listen-local", Prediction: gamesession.PredictionLimited,
+		InitialData: controller.app.sessionInitialData(),
 	})
 	if err != nil {
 		fail(err)
@@ -191,6 +246,10 @@ func (controller *networkController) startHost() {
 		return
 	}
 	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, playeradapter.ErrHUDPlayer) })
+	departures := &playeradapter.DepartureQueue{}
+	endpoint.SetLeave(func(principal gameserver.Principal) error {
+		return departures.Submit(host.Session, principal.PlayerID)
+	})
 	serverTLS, clientTLS, fingerprint, err := controller.app.networkTrust.HostTLS()
 	if err != nil {
 		_ = host.Close(context.Background())
@@ -204,6 +263,25 @@ func (controller *networkController) startHost() {
 		return
 	}
 	slog.Debug("listen transport bound", "address", server.Addr())
+	for levelID, collision := range controller.app.gameWorlds {
+		if err := modruntime.SetWorldMapForLevel(ctx, host.Authority.Runtime,
+			"d2legacy.gameplay.systems.init", "set_collision", levelID, collision); err != nil {
+			_ = server.Close()
+			_ = host.Close(context.Background())
+			fail(err)
+			return
+		}
+	}
+	population, err := controller.app.populationBootstrapCommand()
+	if err == nil {
+		err = host.Session.Submit(population)
+	}
+	if err != nil {
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		fail(err)
+		return
+	}
 	level := controller.app.activeWorldLevel
 	world, zone := controller.app.gameWorlds[level], controller.app.gameWorldZones[level]
 	spawn, found := controller.app.gameWorldSpawns[level]
@@ -213,13 +291,7 @@ func (controller *networkController) startHost() {
 		fail(errors.New("active world has no trusted host destination"))
 		return
 	}
-	if err := modruntime.SetWorldMap(ctx, host.Authority.Runtime, "d2legacy.gameplay.systems.init", "set_collision", world); err != nil {
-		_ = server.Close()
-		_ = host.Close(context.Background())
-		fail(err)
-		return
-	}
-	slog.Debug("listen authority collision installed", "level_id", level)
+	slog.Debug("listen authority worlds installed", "levels", len(controller.app.gameWorlds))
 	request := zone.Request()
 	destination, err := playeradapter.NewDestination(spawn[0], spawn[1], float64(world.WidthSubtiles), float64(world.HeightSubtiles), int64(request.Act), int64(request.LevelID))
 	if err != nil {
@@ -249,12 +321,12 @@ func (controller *networkController) startHost() {
 	slog.Debug("listen profile admission configured")
 	go func() {
 		if runErr := host.Session.Run(ctx); runErr != nil && ctx.Err() == nil {
-			controller.fail(runErr)
+			controller.fail(generation, runErr)
 		}
 	}()
 	go func() {
 		if serveErr := server.Serve(ctx); serveErr != nil && ctx.Err() == nil {
-			controller.fail(serveErr)
+			controller.fail(generation, serveErr)
 		}
 	}()
 	slog.Debug("connecting host player to listen authority")
@@ -268,40 +340,91 @@ func (controller *networkController) startHost() {
 		fail(err)
 		return
 	}
+	if err := controller.app.prepareConnectedWorld(ctx); err != nil {
+		_ = client.Close(context.Background())
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		fail(err)
+		return
+	}
 	controller.mu.Lock()
-	controller.host, controller.server, controller.client, controller.cancel = host, server, client, cancel
+	if controller.generation != generation || controller.phase != "starting" {
+		controller.mu.Unlock()
+		_ = client.Close(context.Background())
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		return
+	}
+	controller.host, controller.server, controller.client = host, server, client
 	controller.phase, controller.address = "connected", server.Addr()
+	controller.connectionEpoch++
+	controller.resetInputLocked()
 	controller.mu.Unlock()
 	hud, _ := client.View()
 	slog.Debug("listen server connected local player", "address", server.Addr(), "player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
 	go controller.send(ctx, client)
-	controller.watch(ctx, client)
+	go controller.watch(ctx, client)
 }
 
 func (controller *networkController) send(ctx context.Context, client *clientsession.Session) {
+	const maximumInFlight = 8
+	inFlight := make(chan struct{}, maximumInFlight)
+	var submissions sync.WaitGroup
+	defer submissions.Wait()
 	for {
 		select {
 		case intent := <-controller.submissions:
-			logging.Trace(slog.Default(), "sending network command", "sequence", intent.Sequence, "kind", intent.Kind)
-			if err := client.Submit(ctx, intent); err != nil {
-				if ctx.Err() == nil {
-					controller.fail(err)
-				}
+			select {
+			case inFlight <- struct{}{}:
+			case <-ctx.Done():
 				return
 			}
+			submissions.Add(1)
+			go func(intent gameserver.CommandIntent) {
+				defer submissions.Done()
+				defer func() { <-inFlight }()
+				controller.sendIntent(ctx, client, intent)
+			}(intent)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (controller *networkController) watch(ctx context.Context, client *clientsession.Session) {
-	deltas, failures, err := client.Watch(ctx)
-	if err != nil {
-		controller.fail(err)
-		return
+func (controller *networkController) sendIntent(ctx context.Context, client *clientsession.Session, intent gameserver.CommandIntent) {
+	logging.Trace(slog.Default(), "sending network command", "sequence", intent.Sequence, "kind", intent.Kind)
+	for {
+		epoch := controller.currentConnectionEpoch()
+		if err := client.Submit(ctx, intent); err == nil {
+			return
+		} else if ctx.Err() != nil {
+			return
+		} else if isRemoteProtocolError(err) {
+			client.DiscardInput(intent.Sequence)
+			slog.Debug("network command rejected", "sequence", intent.Sequence, "kind", intent.Kind, "error", err)
+			return
+		} else if recoverErr := controller.recover(ctx, client, epoch, err); recoverErr != nil {
+			controller.fail(controller.currentGeneration(), recoverErr)
+			return
+		}
 	}
-	go func() {
+}
+
+func (controller *networkController) watch(ctx context.Context, client *clientsession.Session) {
+	for ctx.Err() == nil {
+		epoch := controller.currentConnectionEpoch()
+		deltas, failures, err := client.Watch(ctx)
+		if err != nil {
+			if isRemoteProtocolError(err) {
+				controller.fail(controller.currentGeneration(), err)
+				return
+			}
+			if recoverErr := controller.recover(ctx, client, epoch, err); recoverErr != nil && ctx.Err() == nil {
+				controller.fail(controller.currentGeneration(), recoverErr)
+			}
+			continue
+		}
+		var streamErr error
 		for deltas != nil || failures != nil {
 			select {
 			case delta, open := <-deltas:
@@ -315,27 +438,106 @@ func (controller *networkController) watch(ctx context.Context, client *clientse
 					continue
 				}
 				if err != nil && ctx.Err() == nil {
-					controller.fail(err)
-					return
+					streamErr = err
+					deltas, failures = nil, nil
 				}
 			case <-ctx.Done():
 				return
 			}
 		}
-	}()
+		if ctx.Err() != nil {
+			return
+		}
+		if streamErr == nil {
+			streamErr = errors.New("network correction stream ended")
+		}
+		if isRemoteProtocolError(streamErr) {
+			controller.fail(controller.currentGeneration(), streamErr)
+			return
+		}
+		if err := controller.recover(ctx, client, epoch, streamErr); err != nil {
+			if ctx.Err() == nil {
+				controller.fail(controller.currentGeneration(), err)
+			}
+			return
+		}
+	}
 }
 
-func (controller *networkController) Advance(ctx context.Context) error {
+func isRemoteProtocolError(err error) bool {
+	var remote *sessionquic.RemoteError
+	return errors.As(err, &remote)
+}
+
+func (controller *networkController) recover(ctx context.Context, client *clientsession.Session, observedEpoch uint64, cause error) error {
+	controller.reconnectMu.Lock()
+	defer controller.reconnectMu.Unlock()
+	controller.mu.Lock()
+	if controller.phase == "closed" || controller.client != client {
+		controller.mu.Unlock()
+		return context.Canceled
+	}
+	if controller.connectionEpoch != observedEpoch && controller.phase == "connected" {
+		controller.mu.Unlock()
+		return nil
+	}
+	controller.phase = "reconnecting"
+	mode, address := controller.mode, controller.address
+	controller.mu.Unlock()
+	slog.Debug("network connection interrupted; reconnecting", "mode", mode, "address", address, "error", cause)
+
+	recoveryContext, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	delay := time.Duration(0)
+	var lastErr error = cause
+	for attempt := 1; recoveryContext.Err() == nil; attempt++ {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-recoveryContext.Done():
+				timer.Stop()
+				break
+			case <-timer.C:
+			}
+		}
+		attemptContext, stop := context.WithTimeout(recoveryContext, 2*time.Second)
+		lastErr = client.Reconnect(attemptContext)
+		stop()
+		if lastErr == nil {
+			controller.mu.Lock()
+			if controller.client != client || controller.phase == "closed" {
+				controller.mu.Unlock()
+				return context.Canceled
+			}
+			controller.connectionEpoch++
+			controller.phase, controller.failure = "connected", ""
+			controller.mu.Unlock()
+			slog.Debug("network session reconnected", "attempt", attempt, "mode", mode, "address", address)
+			return nil
+		}
+		delay = min(1600*time.Millisecond, max(200*time.Millisecond, delay*2))
+	}
+	return fmt.Errorf("network reconnect lease expired: %w", lastErr)
+}
+
+func (controller *networkController) Advance(ctx context.Context, elapsed time.Duration) error {
 	controller.mu.Lock()
 	client := controller.client
 	controller.mu.Unlock()
 	if client == nil {
 		return nil
 	}
-	_, world := client.View()
-	targetTick := world.Tick + 2
-	sampleMovement := controller.sampleMovement(targetTick)
-	if sampleMovement && controller.app.movementSource != nil {
+	// Install the newest correction before sampling input. Point-and-click path
+	// selection and camera-relative pointer projection then start from the latest
+	// authenticated local position instead of the frozen frontend authority.
+	if err := controller.app.clientWorld.reconcile(controller.app, client, elapsed); err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, targetTick := range controller.inputTicks(client, elapsed, now) {
+		if controller.app.movementSource == nil {
+			continue
+		}
 		for _, command := range controller.app.movementSource.Commands(targetTick) {
 			var movementPayload movement.MovePayload
 			if command.Kind == movement.MoveCommand && json.Unmarshal(command.Payload, &movementPayload) == nil {
@@ -343,27 +545,60 @@ func (controller *networkController) Advance(ctx context.Context) error {
 				if !controller.movementRequired(active) {
 					continue
 				}
-				if err := controller.submit(command.Kind, command.Payload); err != nil {
+				if err := controller.submit(targetTick, command.Kind, command.Payload); err != nil {
 					return err
 				}
 				controller.markMovement(active)
 				continue
 			}
-			if err := controller.submit(command.Kind, command.Payload); err != nil {
+			if err := controller.submit(targetTick, command.Kind, command.Payload); err != nil {
 				return err
 			}
 		}
 	}
-	for _, intent := range controller.app.commandIntents.Drain() {
+	return controller.submitPendingIntents(client, now)
+}
+
+func (controller *networkController) submitPendingIntents(client *clientsession.Session, now time.Time) error {
+	intents := controller.app.commandIntents.Drain()
+	if len(intents) == 0 {
+		return nil
+	}
+	targetTick := client.NextInputTick(now)
+	for _, intent := range intents {
 		payload, err := json.Marshal(intent.Payload)
 		if err != nil {
 			return err
 		}
-		if err := controller.submit(intent.Kind, payload); err != nil {
+		if err := controller.submit(targetTick, intent.Kind, payload); err != nil {
 			return err
 		}
 	}
-	return controller.app.installRemoteView(client)
+	return nil
+}
+
+const networkInputStep = 40 * time.Millisecond
+
+func (controller *networkController) inputTicks(client *clientsession.Session, elapsed time.Duration, now time.Time) []uint64 {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	// The authority uses the same bounded catch-up policy. A renderer hitch may
+	// produce several fixed input samples, but never an unbounded burst that can
+	// overflow home-network queues or the server's admission window.
+	controller.inputLag = min(controller.inputLag+elapsed, 5*networkInputStep)
+	result := make([]uint64, 0, 5)
+	for controller.inputLag >= networkInputStep {
+		target := client.NextInputTick(now)
+		if target > controller.lastMovementTick {
+			controller.lastMovementTick = target
+			result = append(result, target)
+		}
+		controller.inputLag -= networkInputStep
+	}
+	return result
 }
 
 func (controller *networkController) sampleMovement(targetTick uint64) bool {
@@ -388,15 +623,25 @@ func (controller *networkController) markMovement(active bool) {
 	controller.mu.Unlock()
 }
 
-func (controller *networkController) submit(kind string, payload json.RawMessage) error {
+func (controller *networkController) submit(targetTick uint64, kind string, payload json.RawMessage) error {
 	controller.mu.Lock()
-	intent := gameserver.CommandIntent{Sequence: controller.sequence + 1, Kind: kind, Payload: append(json.RawMessage(nil), payload...)}
+	intent := gameserver.CommandIntent{TargetTick: targetTick, Sequence: controller.sequence + 1, Kind: kind, Payload: append(json.RawMessage(nil), payload...)}
+	client := controller.client
+	if client == nil {
+		controller.mu.Unlock()
+		return errors.New("network client is unavailable")
+	}
+	if err := client.StageInput(intent); err != nil {
+		controller.mu.Unlock()
+		return err
+	}
 	select {
 	case controller.submissions <- intent:
 		controller.sequence++
 		controller.mu.Unlock()
 		return nil
 	default:
+		client.DiscardInput(intent.Sequence)
 		controller.mu.Unlock()
 		return errors.New("network input queue is full")
 	}
@@ -406,6 +651,32 @@ func (controller *networkController) Connected() bool {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
 	return controller.phase == "connected" && controller.client != nil
+}
+
+func (controller *networkController) Local() bool {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return controller.phase == "local"
+}
+
+func (controller *networkController) currentGeneration() uint64 {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return controller.generation
+}
+
+func (controller *networkController) currentConnectionEpoch() uint64 {
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	return controller.connectionEpoch
+}
+
+func (controller *networkController) resetInputLocked() {
+	controller.sequence = 0
+	controller.lastMovementTick = 0
+	controller.lastMovementActive = false
+	controller.inputLag = 0
+	controller.submissions = make(chan gameserver.CommandIntent, 64)
 }
 
 func (controller *networkController) Close() error {

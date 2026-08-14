@@ -13,6 +13,21 @@ import (
 // map. The caller owns the module identity and policy; this package only
 // provides the generic map userdata boundary.
 func SetWorldMap(ctx context.Context, runtime *Runtime, moduleName, setterName string, world *gameworld.Map) error {
+	return setWorldMap(ctx, runtime, moduleName, setterName, world)
+}
+
+// SetWorldMapForLevel installs one immutable collision map into a level-indexed
+// authoritative registry. Multiple players may occupy different levels at the
+// same tick, so a network authority cannot rely on one process-global current
+// collision map selected by a presentation scene.
+func SetWorldMapForLevel(ctx context.Context, runtime *Runtime, moduleName, setterName string, levelID int, world *gameworld.Map) error {
+	if levelID <= 0 {
+		return fmt.Errorf("world module: positive level ID is required")
+	}
+	return setWorldMap(ctx, runtime, moduleName, setterName, world, lua.LNumber(levelID))
+}
+
+func setWorldMap(ctx context.Context, runtime *Runtime, moduleName, setterName string, world *gameworld.Map, leading ...lua.LValue) error {
 	if runtime == nil || world == nil || moduleName == "" || setterName == "" {
 		return fmt.Errorf("world module: runtime, module, setter, and map are required")
 	}
@@ -34,7 +49,8 @@ func SetWorldMap(ctx context.Context, runtime *Runtime, moduleName, setterName s
 		pushWorldMap(state, world)
 		collision := state.Get(-1)
 		state.Pop(1)
-		return state.CallByParam(lua.P{Fn: setter, NRet: 0, Protect: true}, collision)
+		arguments := append(append([]lua.LValue(nil), leading...), collision)
+		return state.CallByParam(lua.P{Fn: setter, NRet: 0, Protect: true}, arguments...)
 	})
 }
 
@@ -70,20 +86,21 @@ func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gamewo
 		"current":       commandHelp("engine.world.current()", "Return the current session-owned map and its copied presentation recipe."),
 		"current_level": commandHelp("engine.world.current_level()", "Return the active authoritative level ID without allocating a map handle."),
 	}, map[string]TypeHelp{worldMapType: {Summary: "An immutable decoded DS1 world map.", Methods: map[string]CommandHelp{
-		"dimensions":        commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
-		"canvas":            commandHelp("map:canvas()", "Return isometric world-pixel canvas dimensions."),
-		"entity_depth":      commandHelp("map:entity_depth(x, y)", "Return shared presentation depth for a world entity baseline."),
-		"flags":             commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
-		"blocked":           commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
-		"blocked_position":  commandHelp("map:blocked_position(x, y)", "Sample collision at a continuous subtile-center position."),
-		"objects":           commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
-		"subtile_to_pixel":  commandHelp("map:subtile_to_pixel(x, y)", "Project continuous DS1 subtile coordinates into rendered map pixels."),
-		"pixel_to_subtile":  commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
-		"subtile_to_screen": commandHelp("map:subtile_to_screen(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Project a world subtile through a camera to screen space."),
-		"screen_to_subtile": commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
-		"selectable_at":     commandHelp("map:selectable_at(x, y)", "Return the best resolved authored object under a world-subtile point."),
-		"line_clear":        commandHelp("map:line_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 line-of-sight collision."),
-		"find_path":         commandHelp("map:find_path(from_x, from_y, to_x, to_y [, radius, stop_radius])", "Find a deterministic collision-aware subtile route, or return nil and an explanation."),
+		"dimensions":         commandHelp("map:dimensions()", "Return tile and subtile dimensions plus act and object count."),
+		"canvas":             commandHelp("map:canvas()", "Return isometric world-pixel canvas dimensions."),
+		"entity_depth":       commandHelp("map:entity_depth(x, y)", "Return shared presentation depth for a world entity baseline."),
+		"flags":              commandHelp("map:flags(x, y)", "Return collision flags at zero-based subtile coordinates, or nil outside the map."),
+		"blocked":            commandHelp("map:blocked(x, y)", "Report whether a player cannot walk through a zero-based subtile coordinate."),
+		"blocked_position":   commandHelp("map:blocked_position(x, y)", "Sample collision at a continuous subtile-center position."),
+		"integrate_velocity": commandHelp("map:integrate_velocity(x, y, velocity_x, velocity_y, radius, width, height, elapsed)", "Apply one shared bounded collision-aware velocity step."),
+		"objects":            commandHelp("map:objects()", "Return a copy of the DS1 authored object records."),
+		"subtile_to_pixel":   commandHelp("map:subtile_to_pixel(x, y)", "Project continuous DS1 subtile coordinates into rendered map pixels."),
+		"pixel_to_subtile":   commandHelp("map:pixel_to_subtile(x, y)", "Convert rendered map pixels into continuous DS1 subtile coordinates."),
+		"subtile_to_screen":  commandHelp("map:subtile_to_screen(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Project a world subtile through a camera to screen space."),
+		"screen_to_subtile":  commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
+		"selectable_at":      commandHelp("map:selectable_at(x, y)", "Return the best resolved authored object under a world-subtile point."),
+		"line_clear":         commandHelp("map:line_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 line-of-sight collision."),
+		"find_path":          commandHelp("map:find_path(from_x, from_y, to_x, to_y [, radius, stop_radius])", "Find a deterministic collision-aware subtile route, or return nil and an explanation."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -198,6 +215,17 @@ func registerWorldMapType(state *lua.LState) {
 			flags, ok := checkWorldMap(state, 1).FlagsAtPosition(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))
 			state.Push(lua.LBool(ok && flags.Blocked()))
 			return 1
+		},
+		"integrate_velocity": func(state *lua.LState) int {
+			position := gameworld.Point{X: float64(state.CheckNumber(2)), Y: float64(state.CheckNumber(3))}
+			velocity := gameworld.Point{X: float64(state.CheckNumber(4)), Y: float64(state.CheckNumber(5))}
+			radius := float64(state.CheckNumber(6))
+			bounds := gameworld.Point{X: float64(state.CheckNumber(7)), Y: float64(state.CheckNumber(8))}
+			elapsed := float64(state.CheckNumber(9))
+			result := gameworld.IntegrateVelocity(checkWorldMap(state, 1), position, velocity, bounds, radius, elapsed)
+			state.Push(lua.LNumber(result.X))
+			state.Push(lua.LNumber(result.Y))
+			return 2
 		},
 		"subtile_to_pixel": func(state *lua.LState) int {
 			x, y := checkWorldMap(state, 1).SubtileToPixel(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)))

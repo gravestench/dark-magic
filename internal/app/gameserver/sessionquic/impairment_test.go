@@ -12,6 +12,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
 type impairedPacketConn struct {
@@ -94,8 +95,15 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 	endpoint, err := gameserver.NewEndpoint(
 		&gameserver.Host{Engine: engine, Session: session, Allocation: allocation},
 		authenticator{},
-		func(player string, _ simulation.Checkpoint) (json.RawMessage, error) {
-			return json.Marshal(map[string]string{"player": player})
+		func(player string, checkpoint simulation.Checkpoint) (json.RawMessage, error) {
+			view := playeradapter.ClientView{
+				Version: playeradapter.ClientViewVersion, Tick: checkpoint.Tick,
+				HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: checkpoint.Tick,
+					Player: playeradapter.HUDIdentity{PlayerID: player}, Position: playeradapter.HUDPosition{X: float64(checkpoint.Tick)}},
+				World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: checkpoint.Tick, Entities: []playeradapter.WorldEntity{}},
+				Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: checkpoint.Tick},
+			}
+			return json.Marshal(view)
 		},
 	)
 	if err != nil {
@@ -149,6 +157,10 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	transforms, transformErrors, err := client.WatchTransforms(watchContext, joined.Credential)
+	if err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case snapshot := <-snapshots:
 		if snapshot.Tick != 0 {
@@ -159,22 +171,42 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
-	stopWatch()
 	if err := client.Submit(ctx, joined.Credential, gameserver.CommandIntent{
 		TargetTick: 1, Sequence: 1, Kind: "move", Payload: json.RawMessage(`{}`),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := session.Step(); err != nil {
-		t.Fatal(err)
+	for range 8 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(45 * time.Millisecond)
 	}
+	var transformed TransformFrame
+	waiting := true
+	for waiting {
+		select {
+		case transformed = <-transforms:
+			if transformed.Tick > 0 {
+				waiting = false
+			}
+		case streamErr := <-transformErrors:
+			t.Fatalf("impaired transform stream: %v", streamErr)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	if transformed.OwnerX != float64(transformed.Tick) {
+		t.Fatalf("impaired transform frame = %#v", transformed)
+	}
+	stopWatch()
 	corrected, err := client.Reconnect(ctx, gameserver.ReconnectRequest{
-		Credential: joined.Credential, Identity: identity,
+		Credential: joined.Credential, Identity: identity, Nonce: "0123456789abcdef0123456789abcdef",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if corrected.Snapshot.Tick != 1 || corrected.Credential == joined.Credential {
+	if corrected.Snapshot.Tick != 8 || corrected.Credential == joined.Credential {
 		t.Fatalf("reconnect after impairment = %#v", corrected)
 	}
 	if err := client.Leave(ctx, corrected.Credential); err != nil {

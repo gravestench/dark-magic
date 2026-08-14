@@ -147,6 +147,37 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The joining membership must advance under its own input while the first
+	// (hosting) membership stays idle. This guards against accidentally using a
+	// process-global command clock, acknowledgement, or wakeup path.
+	secondWatchContext, stopSecondWatch := context.WithCancel(ctx)
+	secondDeltas, secondWatchErrors, err := second.Watch(secondWatchContext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopSecondWatch()
+	secondHUD, secondWorld := second.View()
+	secondInitialTick, secondInitialX := secondWorld.Tick, secondWorld.Origin.X
+	secondCommandTick := second.NextInputTick(time.Now())
+	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: secondCommandTick, Sequence: 1,
+		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
+		t.Fatal(err)
+	}
+	for secondWorld.Tick <= secondInitialTick || secondWorld.Origin.X <= secondInitialX {
+		select {
+		case _, open := <-secondDeltas:
+			if !open {
+				t.Fatal("second correction stream closed before independent movement")
+			}
+			secondHUD, secondWorld = second.View()
+		case err := <-secondWatchErrors:
+			t.Fatalf("second correction stream error = %v", err)
+		case <-ctx.Done():
+			replay, _ := host.Session.Replay()
+			t.Fatalf("second-client movement timed out: %v; HUD=%#v world=%#v commands=%#v",
+				ctx.Err(), secondHUD, secondWorld, replay.Commands)
+		}
+	}
 	commandTick := connected.World.Tick + 2
 	watchContext, stopWatch := context.WithCancel(ctx)
 	deltas, watchErrors, err := connected.Watch(watchContext)
@@ -177,6 +208,9 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	currentHUD, currentWorld := connected.View()
 	if currentHUD.Tick != currentWorld.Tick {
 		t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
+	}
+	if stats := connected.transport.NetworkStats(); stats.TransformsReceived == 0 {
+		t.Fatalf("movement used no compact transform datagrams: %#v", stats)
 	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)

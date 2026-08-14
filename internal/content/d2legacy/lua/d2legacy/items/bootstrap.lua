@@ -7,6 +7,7 @@
 local ecs = require("engine.ecs/v1")
 local development_fixtures = require("d2legacy.items.development_fixtures")
 local M = {}
+local interaction_data = {}
 
 local function layout_exists(owner)
     for _, entity in
@@ -136,9 +137,15 @@ local function create_service_rules(service_rules)
 end
 
 local function create_target(target)
+    local wanted = string.lower(target.id)
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.interaction.target" } })) do
+        if ecs.get(entity, "d2legacy.interaction.target"):get("id") == wanted then
+            return entity
+        end
+    end
     return ecs.create({
         ["d2legacy.interaction.target"] = {
-            id = target.id,
+            id = wanted,
             npc = target.npc,
             vendor = target.vendor or "",
             categories = target.categories or "",
@@ -158,14 +165,55 @@ local function create_interactions(data, default_owner)
 
     -- An empty entity is a stable, serializable null-object reference. It lets
     -- the context component keep a required entity field while no panel is up.
-    local no_target = ecs.create()
+    local no_target = ecs.create({ ["d2legacy.interaction.null_target"] = {} })
     local initial = targets[data.initial_target or ""] or no_target
     ecs.create({
         ["d2legacy.interaction.context"] = {
-            owner = data.owner or default_owner,
+            owner = default_owner or data.owner,
             target = initial,
         },
     })
+end
+
+local function interaction_context_exists(owner)
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.interaction.context" } })) do
+        if ecs.get(entity, "d2legacy.interaction.context"):get("owner") == owner then
+            return true
+        end
+    end
+    return false
+end
+
+local function empty_layout(owner)
+    return {
+        owner = owner,
+        inventory_width = 10,
+        inventory_height = 4,
+        stash_width = 6,
+        stash_height = 8,
+        cube_width = 3,
+        cube_height = 4,
+        belt_capacity = 4,
+        vendor_width = 10,
+        vendor_height = 10,
+        active_weapon_set = 0,
+        carried_gold = 0,
+        stashed_gold = 0,
+        items = {},
+    }
+end
+
+-- Player-owned containers are admission state, not process startup state.
+-- This keeps listen/realm authorities from inventing one "local-player"
+-- inventory before they know which authenticated members will enter.
+function M.ensure_player(owner)
+    assert(type(owner) == "string" and owner:match("%S"), "player owner is required")
+    if not layout_exists(owner) then
+        create_layout(empty_layout(owner))
+    end
+    if not interaction_context_exists(owner) then
+        create_interactions(interaction_data, owner)
+    end
 end
 
 function M.load()
@@ -175,6 +223,7 @@ function M.load()
     end
 
     local fixture_config = initial.get("d2legacy.development_items") or {}
+    interaction_data = initial.get("d2legacy.interactions") or {}
     -- Tests, save importers, and servers may supply already-decoded durable
     -- item facts. The development catalog is only a fallback explicitly
     -- requested by the interactive client.
@@ -186,24 +235,8 @@ function M.load()
     -- import exists. Their dimensions and gold policy are Diablo rules, so the
     -- first-party mod supplies them instead of asking the generic host to know
     -- what an inventory, stash, cube, belt, or vendor page looks like.
-    if not data and fixture_config.create_empty_containers == true then
-        data = {
-            owner = "local-player",
-            inventory_width = 10,
-            inventory_height = 4,
-            stash_width = 6,
-            stash_height = 8,
-            cube_width = 3,
-            cube_height = 4,
-            belt_capacity = 4,
-            vendor_width = 10,
-            vendor_height = 10,
-            active_weapon_set = 0,
-            carried_gold = 0,
-            stashed_gold = 0,
-            items = {},
-        }
-    end
+    -- create_empty_containers is consumed by player admission through
+    -- ensure_player. Startup cannot assign per-player ownership safely.
     if not data or not data.owner then
         return
     end
@@ -223,8 +256,7 @@ function M.load()
     create_vendor_terms(data.trade_terms)
     create_service_rules(data.service_rules)
 
-    local interactions = initial.get("d2legacy.interactions") or {}
-    create_interactions(interactions, data.owner)
+    create_interactions(interaction_data, data.owner)
 end
 
 return M

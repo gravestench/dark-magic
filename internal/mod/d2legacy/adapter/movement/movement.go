@@ -123,6 +123,20 @@ func (source *MovementSource) SetPlayer(player string) {
 	source.mu.Unlock()
 }
 
+// SetEngine changes only the read-only presentation source used for local
+// position/path sampling. Connected clients bind this to their replica ECS;
+// commands are still admitted and simulated exclusively by the server.
+func (source *MovementSource) SetEngine(engine *gameecs.Engine) {
+	if engine == nil {
+		return
+	}
+	source.mu.Lock()
+	source.engine = engine
+	source.path = nil
+	source.pathTarget = nil
+	source.mu.Unlock()
+}
+
 type movementPathFinder interface {
 	FindPath(gameworld.PathRequest) ([]gameworld.Point, error)
 }

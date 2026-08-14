@@ -84,3 +84,44 @@ func TestRemoteProfileAdmissionIsUnavailableToRealmHosts(t *testing.T) {
 		t.Fatalf("realm error = %v", err)
 	}
 }
+
+func TestRemoteProfileAdmissionThrottleIsPerClientAndRefills(t *testing.T) {
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
+	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{Validate: func(simulation.Command) error { return nil }, Apply: func(*gameecs.Engine, simulation.Command) error { return nil }, Allowed: []simulation.Authority{simulation.AuthoritySystem}}); err != nil {
+		t.Fatal(err)
+	}
+	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config"}
+	allocation, _ := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
+	host := &gameserver.Host{Mode: gameserver.ModeStandalone, Engine: engine, Session: session, Allocation: allocation}
+	tickets, _ := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	destination, _ := playeradapter.NewDestination(10, 20, 1000, 100, 1, 40)
+	admissions, err := NewRemoteProfileAdmissions(host, tickets, RemoteProfileConfig{Credential: "secret", PrincipalID: "principal", PlayerID: "player", Destination: destination, Lifetime: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Unix(100, 0)
+	admissions.now = func() time.Time { return now }
+	offer, _ := d2save.EncodeCharacterOffer(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon"})
+	clientA := WithProfileAdmissionClient(context.Background(), "192.0.2.1:6112")
+	for range int(remoteProfileBurst) {
+		if _, err := admissions.Admit(clientA, "wrong", offer); !errors.Is(err, ErrRemoteProfileAdmission) {
+			t.Fatalf("wrong credential error = %v", err)
+		}
+	}
+	if _, err := admissions.Admit(clientA, "secret", offer); !errors.Is(err, ErrRemoteProfileAdmission) {
+		t.Fatalf("exhausted client error = %v", err)
+	}
+	clientB := WithProfileAdmissionClient(context.Background(), "192.0.2.2:6112")
+	if _, err := admissions.Admit(clientB, "secret", offer); err != nil {
+		t.Fatalf("independent client was throttled: %v", err)
+	}
+	now = now.Add(time.Second)
+	if _, err := admissions.Admit(clientA, "secret", offer); err != nil {
+		t.Fatalf("refilled client error = %v", err)
+	}
+}

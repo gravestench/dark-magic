@@ -278,6 +278,29 @@ func (session *Session) ProcessedSequence(player string) uint64 {
 	return session.processed[player].ack
 }
 
+// AcceptedNetworkCommand returns the exact already-admitted input for an
+// idempotency check at the transport boundary. A client may retransmit after
+// the authority accepted a request but its response was lost; only the same
+// command is safe to acknowledge as success.
+func (session *Session) AcceptedNetworkCommand(player string, sequence uint64) (simulation.Command, bool) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	for _, commands := range session.pending {
+		for _, command := range commands {
+			if command.Player == player && command.Sequence == sequence {
+				return command, true
+			}
+		}
+	}
+	for index := len(session.commands) - 1; index >= 0; index-- {
+		command := session.commands[index]
+		if command.Player == player && command.Sequence == sequence {
+			return command, true
+		}
+	}
+	return simulation.Command{}, false
+}
+
 func (session *Session) submitLocked(command simulation.Command) error {
 	if session.closed {
 		return ErrClosed
@@ -568,16 +591,24 @@ func (session *Session) AdvanceWithSource(elapsed time.Duration, source CommandS
 	return steps, nil
 }
 
-// Run advances the session from a wall-clock ticker until cancellation.
+// Run advances the session from elapsed monotonic time until cancellation.
+// Ticker notifications are only wakeups: Go may coalesce them while the host is
+// busy, so advancing exactly one step per notification would silently slow the
+// game clock under load. Advance retains bounded residual lag and applies the
+// same maximum catch-up policy used by local sessions.
 func (session *Session) Run(ctx context.Context) error {
 	ticker := time.NewTicker(session.config.Step)
 	defer ticker.Stop()
+	last := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			if err := session.Step(); err != nil {
+			now := time.Now()
+			_, err := session.Advance(now.Sub(last))
+			last = now
+			if err != nil {
 				return err
 			}
 		}

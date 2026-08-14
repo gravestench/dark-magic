@@ -61,7 +61,9 @@ function M.bind(state)
     -- to the requested player.
     if state.hero and state.hero:exists() then
         local control = ecs.get(state.hero, "d2legacy.world.player_control")
-        if control and control:get("player") == state.player then return true end
+        if control and control:get("player") == state.player then
+            return true
+        end
         state.hero = nil
     end
 
@@ -129,9 +131,9 @@ function M.refresh_camera_settings(entity)
     follow:set("param_3", settings.get("camera_follow_param_3"))
 end
 
-function M.set_collision(state, collision)
+function M.set_collision(state, collision, level_id)
     state.collision = collision
-    systems.set_collision(collision)
+    systems.set_collision(level_id or collision, level_id and collision or nil)
 end
 
 function M.composite_snapshot(entity)
@@ -141,6 +143,9 @@ function M.composite_snapshot(entity)
     local snapshot = appearance:snapshot()
     snapshot.direction = facing:get("direction")
     snapshot.mode = animation:get("mode")
+    snapshot.animation_start_tick = animation:get("start_tick")
+    local clock = ecs.get(entity, "d2legacy.presentation.animation_clock")
+    snapshot.animation_seconds = clock and clock:get("seconds") or nil
     return snapshot
 end
 
@@ -220,6 +225,9 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
             snapshot.name = identity:get("name")
             snapshot.direction = facing:get("direction")
             snapshot.mode = animation:get("mode")
+            snapshot.animation_start_tick = animation:get("start_tick")
+            local clock = ecs.get(entity, "d2legacy.presentation.animation_clock")
+            snapshot.animation_seconds = clock and clock:get("seconds") or nil
             snapshot.x, snapshot.y = position:get("x"), position:get("y")
             snapshot.level_id = location:get("level_id")
             result[#result + 1] = snapshot
@@ -299,11 +307,13 @@ function M.missile_snapshots()
     for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile" }) do
         local ok, entities = pcall(
             ecs.query,
-            { all = {
-                component,
-                "d2legacy.world.position",
-                "d2legacy.world.location",
-            } }
+            {
+                all = {
+                    component,
+                    "d2legacy.world.position",
+                    "d2legacy.world.location",
+                },
+            }
         )
         if ok then
             for _, entity in ipairs(entities) do

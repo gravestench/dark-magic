@@ -107,32 +107,37 @@ type application struct {
 	scenes           *modruntime.Scenes
 	renderCapability *modruntime.RenderCapability
 
-	records             *recordstore.Store
-	questCatalog        *recovered.Catalog
-	worldObjectResolver *worldobjects.Resolver
-	remoteMirrors       map[string]akara.Entity
-	networkRosterLogKey string
-	saves               *d2save.Store
-	networkTrust        *networktrust.Store
-	playerProfilePath   string
-	entitySimulation    *gameecs.Engine
-	offlineSession      *gamesession.Session
-	authoritativeState  *simulation.StateStore
-	authoritativeRandom *simulation.RandomStreams
-	playerControl       *d2movement.MovementController
-	movementSource      *d2movement.MovementSource
-	transitionSeam      gametransition.Seam
-	commandIntents      *gamesession.IntentController
-	commandIntentSource *gamesession.IntentSource
-	commandSource       func(uint64) []simulation.Command
-	worldMu             sync.RWMutex
-	gameWorlds          map[int]*gameworld.Map
-	gameWorldZones      map[int]*worldgen.Zone
-	gameWorldSpawns     map[int][2]float64
-	activeWorldLevel    int
-	loading             *loadcore.Coordinator
-	pointerAcceptance   *pointerMovementAcceptance
-	network             *networkController
+	records              *recordstore.Store
+	questCatalog         *recovered.Catalog
+	worldObjectResolver  *worldobjects.Resolver
+	remoteMirrors        map[string]akara.Entity
+	remoteMirrorKeys     map[string]string
+	networkRosterLogKey  string
+	privateProjectionKey string
+	clientWorld          *clientWorld
+	saves                *d2save.Store
+	networkTrust         *networktrust.Store
+	playerProfilePath    string
+	entitySimulation     *gameecs.Engine
+	clientSimulation     *gameecs.Engine
+	ecsCapability        *modruntime.ECSCapability
+	offlineSession       *gamesession.Session
+	authoritativeState   *simulation.StateStore
+	authoritativeRandom  *simulation.RandomStreams
+	playerControl        *d2movement.MovementController
+	movementSource       *d2movement.MovementSource
+	transitionSeam       gametransition.Seam
+	commandIntents       *gamesession.IntentController
+	commandIntentSource  *gamesession.IntentSource
+	commandSource        func(uint64) []simulation.Command
+	worldMu              sync.RWMutex
+	gameWorlds           map[int]*gameworld.Map
+	gameWorldZones       map[int]*worldgen.Zone
+	gameWorldSpawns      map[int][2]float64
+	activeWorldLevel     int
+	loading              *loadcore.Coordinator
+	pointerAcceptance    *pointerMovementAcceptance
+	network              *networkController
 
 	components   *host.Manager
 	engineHost   *host.Host

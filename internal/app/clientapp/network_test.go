@@ -2,9 +2,16 @@ package clientapp
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gravestench/dark-magic/internal/app/clientsession"
+	"github.com/gravestench/dark-magic/internal/app/gameserver"
+	"github.com/gravestench/dark-magic/internal/app/networkclock"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
@@ -19,8 +26,70 @@ func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 		t.Fatalf("pending host status = %#v", status)
 	}
 	controller.Cancel()
-	if status = controller.Status(); status["phase"] != "idle" || status["mode"] != "" {
+	if status = controller.Status(); status["phase"] != "frontend" || status["mode"] != "" {
 		t.Fatalf("cancelled host status = %#v", status)
+	}
+}
+
+func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *testing.T) {
+	controller := newNetworkController(&application{})
+	client := &clientsession.Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(networkInputStep)}}}
+	if ticks := controller.inputTicks(client, 39*time.Millisecond, time.Now()); len(ticks) != 0 {
+		t.Fatalf("premature input ticks = %v", ticks)
+	}
+	ticks := controller.inputTicks(client, 81*time.Millisecond, time.Now())
+	if len(ticks) != 1 || ticks[0] != 12 {
+		t.Fatalf("fixed input ticks = %v", ticks)
+	}
+}
+
+func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *testing.T) {
+	now := time.Unix(700, 0)
+	app := &application{commandIntents: &gamesession.IntentController{}}
+	controller := newNetworkController(app)
+	client := &clientsession.Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(networkInputStep)}}}
+	if err := controller.submitPendingIntents(client, now); err != nil {
+		t.Fatal(err)
+	}
+	if controller.lastMovementTick != 0 {
+		t.Fatalf("empty intent mailbox consumed movement tick %d", controller.lastMovementTick)
+	}
+	ticks := controller.inputTicks(client, networkInputStep, now)
+	if len(ticks) != 1 || ticks[0] != 12 {
+		t.Fatalf("joining-client movement ticks = %v, want [12]", ticks)
+	}
+}
+
+func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
+	payload, _ := json.Marshal(map[string]any{"x": 1, "y": 0, "running": true})
+	hud := playeradapter.HUD{
+		Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
+		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1},
+	}
+	got := predictPosition(hud, []gameserver.CommandIntent{
+		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
+		{TargetTick: 12, Sequence: 2, Kind: "player.move", Payload: payload},
+	}, networkclock.Moment{Tick: 12}, nil, networkInputStep)
+	if got.X != 11.2 || got.Y != 20 {
+		t.Fatalf("predicted position = %#v, want x=11.2 y=20", got)
+	}
+}
+
+func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {
+	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon"}
+	saves := d2save.New(character)
+	if err := saves.Select(character.ID); err != nil {
+		t.Fatal(err)
+	}
+	controller := newNetworkController(&application{ctx: context.Background(), saves: saves})
+	if controller.Local() {
+		t.Fatal("frontend was treated as an active local session")
+	}
+	if err := controller.StartSelected(); err != nil {
+		t.Fatal(err)
+	}
+	if !controller.Local() || controller.Status()["phase"] != "local" {
+		t.Fatalf("local session status = %#v", controller.Status())
 	}
 }
 

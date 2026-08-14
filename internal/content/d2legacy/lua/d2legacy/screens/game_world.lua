@@ -37,7 +37,9 @@ local screen = manifest.screens.game_world
 local network_ok, network = pcall(require, "engine.network/v1")
 
 local function controlled_player_id()
-    if not network_ok then return "local-player" end
+    if not network_ok then
+        return "local-player"
+    end
     local status = network.status()
     return status.player_id or "local-player"
 end
@@ -116,7 +118,7 @@ local function install_current_world(self)
     -- playback clock, so crossing a seam does not rewind the animation.
     self.hero_composite_key = nil
     if self.gameplay then
-        self.gameplay_world.set_collision(self.gameplay, next_world)
+        self.gameplay_world.set_collision(self.gameplay, next_world, level_id)
     end
     return true
 end
@@ -269,7 +271,11 @@ local function update_players(self, elapsed)
             if not player.playback or player.playback.mode ~= composite.mode then
                 player.playback = player_composite.new_playback(composite)
             end
-            player_composite.advance(player.playback, composite, elapsed)
+            if snapshot.animation_seconds ~= nil then
+                player_composite.synchronize(player.playback, composite, snapshot.animation_seconds)
+            else
+                player_composite.advance(player.playback, composite, elapsed)
+            end
             if player.key ~= composite.key then
                 player.node:set_cof_animation(
                     composite.cof,
@@ -283,6 +289,9 @@ local function update_players(self, elapsed)
                 player.node:set_scale(screen.hero.scale, screen.hero.scale)
                 player.node:set_visible(true)
                 player.key = composite.key
+            end
+            if snapshot.animation_seconds ~= nil and player.key == composite.key then
+                player.node:animation_seek(player.playback.seconds)
             end
             local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
             player.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
@@ -539,14 +548,14 @@ return {
     end,
 
     update = function(self, elapsed, focused, input_allowed, world_view)
-		-- Identity binding is simulation/presentation synchronization, not user
-		-- input. Perform it even while this scene is covered or unfocused.
-		local player_id = controlled_player_id()
-		if self.gameplay.player ~= player_id then
-			self.gameplay.player = player_id
-			self.gameplay.hero = nil
-		end
-		self.gameplay_world.bind(self.gameplay)
+        -- Identity binding is simulation/presentation synchronization, not user
+        -- input. Perform it even while this scene is covered or unfocused.
+        local player_id = controlled_player_id()
+        if self.gameplay.player ~= player_id then
+            self.gameplay.player = player_id
+            self.gameplay.hero = nil
+        end
+        self.gameplay_world.bind(self.gameplay)
         if render.assets_available() then
             install_current_world(self)
         end
@@ -612,7 +621,12 @@ return {
             if not self.hero_playback or self.hero_playback.mode ~= composite.mode then
                 self.hero_playback = player_composite.new_playback(composite)
             end
-            self.hero_animation_events = player_composite.advance(self.hero_playback, composite, elapsed)
+            if authority.animation_seconds ~= nil then
+                self.hero_animation_events =
+                    player_composite.synchronize(self.hero_playback, composite, authority.animation_seconds)
+            else
+                self.hero_animation_events = player_composite.advance(self.hero_playback, composite, elapsed)
+            end
             if
                 composite.key ~= self.hero_composite_key
                 and composite.key ~= self.hero_failed_composite_key
@@ -653,9 +667,12 @@ return {
                     self.hero_pending_composite = nil
                 end
             end
-			-- The authenticated character stays on the established hero renderer,
-			-- including its asynchronous asset preload and retry behavior. The
-			-- retained roster above renders only other player owners.
+            if authority.animation_seconds ~= nil and self.hero_composite_key == composite.key then
+                self.hero:animation_seek(self.hero_playback.seconds)
+            end
+            -- The authenticated character stays on the established hero renderer,
+            -- including its asynchronous asset preload and retry behavior. The
+            -- retained roster above renders only other player owners.
         end
 
         if self.hud then
