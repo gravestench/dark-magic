@@ -535,7 +535,7 @@ return {
 
         -- These are capability QUERIES: Lua gets provenance/availability facts,
         -- not a host filesystem object or native audio device.
-        self.content_source = assert(vfs.source("boot.lua"))
+        self.content_source = assert(vfs.source("mods/d2legacy/boot.lua"))
         self.town_music_available = audio.exists("data/global/music/Act1/town1.wav")
 
         -- Use semantic map dimensions when loaded; otherwise generous fallback

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
+	"github.com/gravestench/dark-magic/internal/distribution"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
@@ -23,7 +24,11 @@ func startTestD2LegacyAuthority(t *testing.T, app *application) {
 	if err := app.scripts.Start(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	definition, err := modruntime.LoadDefinition(t.Context(), app.scripts, app.options.Content, "components/d2legacy.lua")
+	source, err := app.modSource("d2legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition, err := modruntime.LoadDefinition(t.Context(), app.scripts, source, "components/d2legacy.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,6 +48,20 @@ func startTestD2LegacyAuthority(t *testing.T, app *application) {
 	})
 }
 
+func realD2LegacyOptions(t *testing.T) Options {
+	t.Helper()
+	mods, err := distribution.PrepareMods("none")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = mods.Close() })
+	assets, err := content.FromEnvironment(mods.Layers...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return Options{Content: assets, Mods: &mods.Resolved, Packages: mods.Packages}
+}
+
 // This is the complete offline admission seam exercised with production data:
 // the frontend creates/selects a durable character, while the fixed-tick
 // session—not Lua—creates its live ECS entity at the generated town anchor.
@@ -50,12 +69,10 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
 	}
-	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	options := realD2LegacyOptions(t)
+	assets := options.Content
 	app := &application{
-		options:    Options{Content: assets},
+		options:    options,
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
 		scripts:    modruntime.New(),
@@ -137,7 +154,11 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		}
 	}
 
-	wantX, wantY, found := d2mapgen.ResolveTownEntry(t.Context(), app.options.Content, app.records, app.gameWorlds[1])
+	d2legacySource, err := app.modSource("d2legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantX, wantY, found := d2mapgen.ResolveTownEntry(t.Context(), d2legacySource, app.records, app.gameWorlds[1])
 	if !found {
 		t.Fatal("generated town has no campfire entry anchor")
 	}
@@ -173,17 +194,13 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
 	}
-	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
-	if err != nil {
-		t.Fatal(err)
-	}
+	options := realD2LegacyOptions(t)
+	assets := options.Content
+	options.StartScene = "combat_lab"
+	options.FixtureCharacters = 1
+	options.FixtureWorldLevel = 2
 	app := &application{
-		options: Options{
-			Content:           assets,
-			StartScene:        "combat_lab",
-			FixtureCharacters: 1,
-			FixtureWorldLevel: 2,
-		},
+		options:    options,
 		inputState: &inputstate.Store{},
 		locale:     localization.New(assets, "English"),
 		scripts:    modruntime.New(),

@@ -19,6 +19,7 @@ import (
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
+	"github.com/gravestench/dark-magic/internal/modcache"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -30,7 +31,16 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	contentFS, err := content.New(content.Layer{Name: "darkmagic", FS: content.D2Legacy()})
+	d2legacySource := content.D2Legacy()
+	builtin, err := modcache.DescribeBuiltin(d2legacySource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packageFS, err := modcache.NewPackageFS(builtin.Manifest, d2legacySource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentFS, err := content.New(content.Layer{Name: "builtin:d2legacy", FS: packageFS})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +58,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer authority.Close()
-	mod, err := d2legacy.Start(ctx, content.D2Legacy(), shellD2Records{}, entitySimulation, authority, 7)
+	mod, err := d2legacy.Start(ctx, d2legacySource, shellD2Records{}, entitySimulation, authority, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +86,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	worldReady := make(chan struct{})
 	loading := acceptanceLoadingCoordinatorWithWorld(worldReady)
 	defer loading.Close()
-	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
+	if err := runtime.RegisterInstaller(modruntime.PackageRequire(contentFS, []string{"d2legacy"})); err != nil {
 		t.Fatal(err)
 	}
 	for _, module := range []modruntime.Module{
@@ -106,7 +116,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	}
 	defer runtime.Stop(ctx)
 	components := host.NewManager()
-	boot, err := modruntime.LoadDefinition(ctx, runtime, contentFS, "boot.lua")
+	boot, err := modruntime.LoadDefinition(ctx, runtime, d2legacySource, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
