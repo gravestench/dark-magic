@@ -58,10 +58,6 @@ func main() {
 		return
 	}
 	defer mods.Close()
-	if len(mods.Lock.Packages) == 0 {
-		slog.Error("starting authoritative game server", "error", "no game mod is enabled")
-		return
-	}
 	contentFS, err := content.FromEnvironment(mods.Layers...)
 	if err != nil {
 		slog.Error("mounting authoritative content", "error", err)
@@ -74,7 +70,8 @@ func main() {
 		return
 	}
 	host, err := gameserver.Start(ctx, d2legacySource, records, gameserver.Config{
-		Mode: gameserver.ModeStandalone, SessionID: *sessionID, Prediction: gamesession.PredictionLimited,
+		Mode: gameserver.ModeStandalone, SessionID: *sessionID, Prediction: gamesession.PredictionLimited, Packages: mods.Packages,
+		Content: contentFS, Mods: &mods.Resolved,
 	})
 	if err != nil {
 		slog.Error("starting authoritative game server", "error", err)
@@ -121,6 +118,7 @@ func main() {
 	quicServer, err := serverapp.StartQUIC(serverapp.QUICConfig{
 		Address: *quicListen, CertificatePath: *tlsCertificate, PrivateKeyPath: *tlsKey,
 		AdmissionKeyPath: *admissionKey, SessionID: *sessionID, RemoteProfile: remoteProfileConfig,
+		ModCache: mods.Cache,
 	}, host)
 	if err != nil {
 		slog.Error("starting QUIC game-session transport", "error", err)

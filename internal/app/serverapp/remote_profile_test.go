@@ -25,7 +25,7 @@ func TestRemoteProfileAdmissionAuthenticatesQueuesAndIssuesOneUseTicket(t *testi
 	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{Validate: func(simulation.Command) error { return nil }, Apply: func(*gameecs.Engine, simulation.Command) error { return nil }, Allowed: []simulation.Authority{simulation.AuthoritySystem}}); err != nil {
 		t.Fatal(err)
 	}
-	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config"}
+	identity := remoteProfileIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestRemoteProfileAdmissionThrottleIsPerClientAndRefills(t *testing.T) {
 	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{Validate: func(simulation.Command) error { return nil }, Apply: func(*gameecs.Engine, simulation.Command) error { return nil }, Allowed: []simulation.Authority{simulation.AuthoritySystem}}); err != nil {
 		t.Fatal(err)
 	}
-	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config"}
+	identity := remoteProfileIdentity()
 	allocation, _ := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	host := &gameserver.Host{Mode: gameserver.ModeStandalone, Engine: engine, Session: session, Allocation: allocation}
 	tickets, _ := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
@@ -124,4 +124,13 @@ func TestRemoteProfileAdmissionThrottleIsPerClientAndRefills(t *testing.T) {
 	if _, err := admissions.Admit(clientA, "secret", offer); err != nil {
 		t.Fatalf("refilled client error = %v", err)
 	}
+}
+
+func remoteProfileIdentity() simulation.RuntimeIdentity {
+	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
+	}}
 }

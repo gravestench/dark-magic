@@ -25,8 +25,9 @@ func TestComponentDiscoveryKeepsEachResolvedPackageRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer runtime.Stop(t.Context())
-	lock := &modcache.Lock{Packages: []modcache.LockedPackage{{Manifest: firstManifest}, {Manifest: secondManifest}}}
-	app := &application{options: Options{Content: contentFS, Mods: lock}, scripts: runtime}
+	resolved := &modcache.ResolvedSet{Base: modcache.LockedPackage{Manifest: firstManifest},
+		Extensions: modcache.Lock{Packages: []modcache.LockedPackage{{Manifest: secondManifest}}}}
+	app := &application{options: Options{Content: contentFS, Mods: resolved}, scripts: runtime}
 	definitions, err := app.discoverScriptDefinitions()
 	if err != nil {
 		t.Fatal(err)

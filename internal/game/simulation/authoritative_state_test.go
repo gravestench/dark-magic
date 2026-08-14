@@ -2,6 +2,8 @@ package simulation
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 )
 
@@ -30,7 +32,7 @@ func TestAuthoritativeStateStoreSnapshotsRestoresAndRejectsSchemaDrift(t *testin
 }
 
 func TestRuntimeIdentityRejectsDifferentAuthoritativeCode(t *testing.T) {
-	identity := RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package-a", AuthoritativeHash: "rules-a", ConfigurationHash: "config-a", Dependencies: map[string]string{"base": "one"}, CapabilityVersions: map[string]string{"d2legacy.ecs": "v1"}}
+	identity := runtimeIdentityFixture("package-a")
 	participant, err := NewIdentityParticipant(identity)
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +42,7 @@ func TestRuntimeIdentityRejectsDifferentAuthoritativeCode(t *testing.T) {
 		t.Fatal(err)
 	}
 	other := identity
-	other.AuthoritativeHash = "rules-b"
+	other.Recipe.AuthoritativeHash = "rules-b"
 	different, err := NewIdentityParticipant(other)
 	if err != nil {
 		t.Fatal(err)
@@ -48,4 +50,15 @@ func TestRuntimeIdentityRejectsDifferentAuthoritativeCode(t *testing.T) {
 	if err := different.RestoreState(snapshot); err == nil {
 		t.Fatal("different authoritative code identity was accepted")
 	}
+}
+
+func runtimeIdentityFixture(packageDigest string) RuntimeIdentity {
+	digest := sha256.Sum256([]byte(packageDigest))
+	packageDigest = "sha256:" + hex.EncodeToString(digest[:])
+	return RuntimeIdentity{Recipe: RuntimeRecipe{
+		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
+		AuthoritativeHash: packageDigest, ConfigurationHash: "config",
+		CapabilityVersions: map[string]string{"engine.ecs": "v1"},
+	}}
 }

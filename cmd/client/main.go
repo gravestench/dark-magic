@@ -1,4 +1,4 @@
-// Command darkmagic is the native client composition root. It parses process
+// Command client is the native client composition root. It parses process
 // policy, constructs owned capabilities, and translates final errors to exit
 // status; game rules and reusable behavior belong under internal packages.
 package main
@@ -18,6 +18,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/dev/capture"
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
 	"github.com/gravestench/dark-magic/internal/distribution"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/logging"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/modcache"
@@ -52,7 +53,7 @@ func main() {
 	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
 	fullscreen := flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless window")
 	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
-	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated mod IDs, or 'none' for mod-neutral startup")
+	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated extension IDs, or 'none' for vanilla d2legacy")
 	flag.Parse()
 
 	logLevel, err := parseLogLevel(*logLevelFlag)
@@ -95,7 +96,7 @@ func main() {
 		}
 	}()
 	contentFS, err := content.FromEnvironment(mods.Layers...)
-	if err == nil && len(mods.Lock.Packages) > 0 {
+	if err == nil {
 		err = content.ValidateClientAssets(contentFS)
 	}
 	if err != nil {
@@ -111,7 +112,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	if err := run(contentFS, &mods.Lock, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, logs); err != nil {
+	if err := run(contentFS, &mods.Resolved, mods.Packages, mods.Cache, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -128,7 +129,7 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, mods *modcache.Lock, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, logs *shell.LogBuffer) error {
+func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.RuntimePackageSet, modStore *modcache.Store, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, logs *shell.LogBuffer) error {
 	playerProfilePath := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE"))
 	if playerProfilePath == "" {
 		configurationDirectory, err := os.UserConfigDir()
@@ -138,7 +139,7 @@ func run(contentFS *content.FS, mods *modcache.Lock, profile *profiling.Session,
 		playerProfilePath = filepath.Join(configurationDirectory, "dark-magic", "player-profile.json")
 	}
 	options := clientapp.Options{
-		Content: contentFS, Mods: mods, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
+		Content: contentFS, Mods: mods, Packages: packages, ModCache: modStore, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
 		}, CaptureDirectory: captureDirectory,
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,

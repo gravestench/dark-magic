@@ -4,11 +4,11 @@ This sibling of `d2legacy` is a deliberately small, copyable starting point. It
 contains a valid boot component, one optional managed component, a namespace for
 ordinary Lua modules, and the directories where larger mods normally grow.
 
-It is reference content, not another first-party game. Installed packages are
-kept in the content-addressed mod cache and enabled by the user's mod profile;
-merely placing a package in the cache does not execute it. Copy this directory
-into a new mod package and replace every `mod_template` identity before adding
-it to a profile.
+It is an extension of the always-enabled embedded `d2legacy` game, not another
+game package. Installed extensions are kept in the content-addressed cache and
+enabled by the user's extension profile; merely possessing a blob does not
+execute it. Copy this directory and replace every `mod_template` identity before
+installing it.
 
 ## Rename checklist
 
@@ -18,8 +18,11 @@ it to a profile.
 4. Keep capability imports versioned, such as `engine.scene/v1`.
 5. Declare only the shared `content_roots` the mod actually owns. Never export
    the reserved `components`, `lua`, or `mods` roots.
-6. Add host composition for the new package; do not edit d2legacy to smuggle a
-   second mod into its runtime.
+6. Declare client and authority entrypoints accurately. Distribution composition
+   activates them in their respective runtime domains; do not edit d2legacy to
+   smuggle the extension into its bootstrap.
+7. Keep every component ID under the package namespace. A component may depend
+   only on its own package or a dependency declared by `mod.json`.
 
 ## Layout
 
@@ -57,6 +60,18 @@ and use shared roots only for intentional assets, data, locales, or manifests.
 The empty boot component intentionally has no engine capability dependencies.
 Add scene registration only when the mod has a scene to show. This makes the
 fresh template discoverable and lifecycle-valid in headless tooling.
+
+The manifest intentionally has no `capabilities` permission field. Engine
+module imports remain versioned API contracts, but Dark Magic does not claim
+per-package permission isolation until grants can be enforced by isolated
+runtime domains. Treat installed extension Lua as executable code.
+
+Tests belong beside production modules as `*_test.lua`. Use the smallest
+production Lua test profile (`module`, `ecs`, or `authority`), require actual
+package modules instead of copying their constructors, and keep arrange/act/
+assert helpers short and purpose-named. Authority behavior must be covered by an
+authority-profile test because it runs on offline, listen, dedicated, and
+realm-managed game authorities—not in a connected client.
 
 For the full production pattern, read
 [`../d2legacy/ARCHITECTURE.md`](../d2legacy/ARCHITECTURE.md) and the repository

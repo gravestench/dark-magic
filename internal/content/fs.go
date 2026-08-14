@@ -15,10 +15,9 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// FromEnvironment constructs a content stack from the caller's resolved mod
-// layers followed by configured external game-data archives. It deliberately
-// has no built-in mod identity: the distribution/mod-cache composition decides
-// which packages are enabled, and an empty mod list is valid.
+// FromEnvironment constructs a content stack from distribution-composed package
+// layers followed by configured external game-data archives. Product policy
+// always supplies built-in d2legacy; this generic VFS does not inject it itself.
 func FromEnvironment(modLayers ...Layer) (*FS, error) {
 	layers := make([]Layer, 0, 16)
 	layers = append(layers, modLayers...)

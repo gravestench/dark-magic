@@ -56,12 +56,12 @@ The engine does not import the mod or encode its rules.
 
 ## Mod startup boundary
 
-The engine can start with an empty resolved mod set. Product distribution—not
-the generic content filesystem—reconciles bundled packages such as `d2legacy`
-into the content-addressed mod cache. The user profile selects installed IDs;
-the resolver verifies immutable blobs, orders dependencies, and emits the exact
-digest lock used for mounting and eventual session admission. Installed,
-enabled, resolved, mounted, and activated are deliberately separate states.
+Dark Magic always starts with its immutable embedded `d2legacy` base package.
+The generic content filesystem does not choose that policy; product distribution
+mounts the base and resolves the user's extension-only profile above it. The
+resolver verifies immutable extension blobs, orders dependencies, and emits the
+exact extension lock used by the complete session recipe. Installed, enabled,
+resolved, mounted, and activated are deliberately separate states.
 
 Every package is privately visible at `mods/<id>/`; component discovery occurs
 inside that namespace, so one mod's `boot.lua` cannot hide another's. Only
@@ -91,7 +91,10 @@ Realm services
   Lua: optional realm/season policy only where deliberately moddable
 ```
 
-Authoritative Lua runs inside the trusted, headless game-server/session process.
+Authoritative Lua runs inside the trusted game authority: the offline session,
+listen host, dedicated server, or realm-managed game worker. Extension
+`authority_components` use the same composition path in every mode; a connected
+graphical client activates client components only.
 Moving D2 policy from Go to Lua does not move authority to the client, weaken
 the server boundary, or require realm services to load the gameplay mod. A game
 server may host multiple isolated sessions, each pinned to its own compatible
@@ -130,8 +133,8 @@ The Go engine owns reusable mechanisms:
 - deterministic RNG primitives and named stream management;
 - serialization, checkpoint, restore, checksum, and persistence primitives;
 - networking, replication, interest-management, and protocol primitives;
-- mod discovery, dependency resolution, package hashing, capability-version
-  negotiation, and session identity pinning;
+- built-in/extension discovery, dependency resolution, package hashing,
+  capability-contract versioning, and complete session-recipe pinning;
 - VFS and file access, codecs, typed record decoding, validation, and immutable
   data generations;
 - rendering, audio, input, localization, and platform adapters;

@@ -96,7 +96,7 @@ func TestHeadlessHostPinsRunningAuthorityToAdmissionAndReconnect(t *testing.T) {
 	}
 
 	mismatch := host.Authority.Identity
-	mismatch.PackageHash = "different-package"
+	mismatch.Recipe.Packages.Base.Digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	if _, err := host.Admit("character:bob", mismatch); !errors.Is(err, gamesession.ErrCompatibility) {
 		t.Fatalf("mismatched admission error = %v", err)
 	}

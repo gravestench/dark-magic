@@ -17,13 +17,7 @@ var ErrAuthoritativeState = errors.New("simulation: invalid authoritative state"
 // session. It is state even though it does not change during a tick: replay and
 // restore must reject a different rule implementation before executing it.
 type RuntimeIdentity struct {
-	ModID              string            `json:"mod_id"`
-	ContractVersion    string            `json:"contract_version"`
-	PackageHash        string            `json:"package_hash"`
-	AuthoritativeHash  string            `json:"authoritative_hash"`
-	Dependencies       map[string]string `json:"dependencies,omitempty"`
-	ConfigurationHash  string            `json:"configuration_hash"`
-	CapabilityVersions map[string]string `json:"capability_versions,omitempty"`
+	Recipe RuntimeRecipe `json:"recipe"`
 }
 
 func (identity RuntimeIdentity) Digest() (string, error) {
@@ -56,8 +50,8 @@ func RuntimeIdentityFromParticipants(states []ParticipantState) (RuntimeIdentity
 }
 
 func (identity RuntimeIdentity) Validate() error {
-	if strings.TrimSpace(identity.ModID) == "" || strings.TrimSpace(identity.ContractVersion) == "" || strings.TrimSpace(identity.PackageHash) == "" || strings.TrimSpace(identity.AuthoritativeHash) == "" || strings.TrimSpace(identity.ConfigurationHash) == "" {
-		return fmt.Errorf("%w: runtime identity requires mod, contract, package, authoritative source, and configuration identities", ErrAuthoritativeState)
+	if err := identity.Recipe.Validate(); err != nil {
+		return fmt.Errorf("%w: %v", ErrAuthoritativeState, err)
 	}
 	return nil
 }
@@ -218,13 +212,10 @@ func cloneRegisteredStates(source map[string]RegisteredState) map[string]Registe
 
 func cloneRuntimeIdentity(identity RuntimeIdentity) RuntimeIdentity {
 	result := identity
-	result.Dependencies = make(map[string]string, len(identity.Dependencies))
-	for key, value := range identity.Dependencies {
-		result.Dependencies[key] = value
-	}
-	result.CapabilityVersions = make(map[string]string, len(identity.CapabilityVersions))
-	for key, value := range identity.CapabilityVersions {
-		result.CapabilityVersions[key] = value
+	result.Recipe.Packages.Extensions = append([]RuntimePackage(nil), identity.Recipe.Packages.Extensions...)
+	result.Recipe.CapabilityVersions = make(map[string]string, len(identity.Recipe.CapabilityVersions))
+	for key, value := range identity.Recipe.CapabilityVersions {
+		result.Recipe.CapabilityVersions[key] = value
 	}
 	return result
 }

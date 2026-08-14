@@ -20,6 +20,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/logging"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
@@ -129,32 +130,97 @@ func (controller *networkController) Join(address string) error {
 
 func (controller *networkController) startJoin(ctx context.Context, generation uint64, address string) {
 	slog.Debug("dialing self-hosted game", "address", address)
-	identity, err := d2legacy.Identity(controller.app.options.Content, controller.app.sessionInitialData())
-	if err != nil {
+	recomposed := false
+	fail := func(err error) {
+		if recomposed {
+			restoreContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			restoreErr := controller.app.restoreConfiguredPackages(restoreContext)
+			cancel()
+			err = errors.Join(err, restoreErr)
+		}
 		controller.fail(generation, err)
+	}
+	d2legacySource, err := controller.app.modSource("d2legacy")
+	if err != nil {
+		fail(err)
+		return
+	}
+	identity, err := d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.sessionInitialData())
+	if err != nil {
+		fail(err)
 		return
 	}
 	clientTLS, err := controller.app.networkTrust.ClientTLS(address)
 	if err != nil {
-		controller.fail(generation, err)
+		fail(err)
+		return
+	}
+	store, err := controller.app.ensureModCache()
+	if err != nil {
+		fail(err)
+		return
+	}
+	assignment := clientsession.SelfHostedAssignment{
+		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
+	}
+	recipe, err := clientsession.PrepareSelfHostedExtensions(ctx, assignment, clientTLS, store, controller.app.options.Packages.Base)
+	if err != nil {
+		fail(err)
+		return
+	}
+	// Package acquisition verifies exact extension archives without mutating the
+	// live VFS. Reconstruct the deterministic recipe from the local built-in and
+	// verified descriptors before any selected character is offered to the host.
+	identity, err = d2legacy.IdentityForPackages(d2legacySource, recipe.Packages, controller.app.sessionInitialData())
+	if err != nil {
+		fail(err)
+		return
+	}
+	if err := sameRuntimeRecipe(identity, recipe); err != nil {
+		fail(err)
+		return
+	}
+	// Recomposition can fail after stopping an old component or swapping a VFS
+	// layer. Mark the attempt first so the failure path always restores the
+	// configured startup recipe with a fresh cleanup context.
+	recomposed = true
+	if err := controller.app.recomposeForNetworkRecipe(ctx, recipe); err != nil {
+		fail(err)
+		return
+	}
+	d2legacySource, err = controller.app.modSource("d2legacy")
+	if err != nil {
+		fail(err)
+		return
+	}
+	identity, err = d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.sessionInitialData())
+	if err != nil {
+		fail(err)
+		return
+	}
+	if err := sameRuntimeRecipe(identity, recipe); err != nil {
+		fail(err)
 		return
 	}
 	client, err := clientsession.ConnectSelfHosted(ctx, clientsession.SelfHostedAssignment{
 		GameID: "listen-local", Endpoint: realm.GameEndpoint{Address: address}, Runtime: identity,
 	}, clientTLS, controller.app.saves)
 	if err != nil {
-		controller.fail(generation, err)
+		fail(err)
 		return
 	}
 	if err := controller.app.prepareConnectedWorld(ctx); err != nil {
 		_ = client.Close(context.Background())
-		controller.fail(generation, err)
+		fail(err)
 		return
 	}
 	controller.mu.Lock()
 	if controller.generation != generation || controller.phase != "starting" {
 		controller.mu.Unlock()
 		_ = client.Close(context.Background())
+		restoreContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_ = controller.app.restoreConfiguredPackages(restoreContext)
+		cancel()
 		return
 	}
 	controller.client, controller.phase = client, "connected"
@@ -165,6 +231,21 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 	slog.Debug("joined self-hosted game", "address", address, "player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
 	go controller.send(ctx, client)
 	go controller.watch(ctx, client)
+}
+
+func sameRuntimeRecipe(identity simulation.RuntimeIdentity, recipe simulation.RuntimeRecipe) error {
+	localDigest, err := identity.Digest()
+	if err != nil {
+		return err
+	}
+	serverDigest, err := (simulation.RuntimeIdentity{Recipe: recipe}).Digest()
+	if err != nil {
+		return err
+	}
+	if localDigest != serverDigest {
+		return errors.New("network recipe differs from the locally composed deterministic runtime")
+	}
+	return nil
 }
 
 func (controller *networkController) fail(generation uint64, err error) {
@@ -226,7 +307,8 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 	}
 	host, err := gameserver.Start(ctx, d2legacySource, recordstore.New(controller.app.options.Content), gameserver.Config{
 		Mode: gameserver.ModeListen, SessionID: "listen-local", Prediction: gamesession.PredictionLimited,
-		InitialData: controller.app.sessionInitialData(),
+		InitialData: controller.app.sessionInitialData(), Packages: controller.app.options.Packages,
+		Content: controller.app.options.Content, Mods: controller.app.options.Mods,
 	})
 	if err != nil {
 		fail(err)
@@ -268,6 +350,14 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 		fail(err)
 		return
 	}
+	packages, err := serverapp.NewPackageProvider(host.Allocation.Identity.Recipe, controller.app.options.ModCache)
+	if err != nil {
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		fail(err)
+		return
+	}
+	server.SetPackageProvider(packages)
 	slog.Debug("listen transport bound", "address", server.Addr())
 	for levelID, collision := range controller.app.gameWorlds {
 		if err := modruntime.SetWorldMapForLevel(ctx, host.Authority.Runtime,
@@ -341,6 +431,13 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 		Runtime: host.Authority.Identity, ProfileCredential: profileCredential,
 	}, clientTLS, controller.app.saves)
 	if err != nil {
+		_ = server.Close()
+		_ = host.Close(context.Background())
+		fail(err)
+		return
+	}
+	if err := controller.app.activateNetworkClientComponents(ctx); err != nil {
+		_ = client.Close(context.Background())
 		_ = server.Close()
 		_ = host.Close(context.Background())
 		fail(err)

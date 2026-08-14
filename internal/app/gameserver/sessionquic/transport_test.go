@@ -27,6 +27,13 @@ type authenticator struct{}
 
 type profileAdmissions struct{}
 
+type packageProvider struct{ recipe simulation.RuntimeRecipe }
+
+func (provider packageProvider) Recipe() simulation.RuntimeRecipe { return provider.recipe }
+func (packageProvider) ReadChunk(_ context.Context, request PackageRequest) (PackageChunk, error) {
+	return PackageChunk{ID: request.ID, Digest: request.Digest, Offset: request.Offset, Total: 3, Data: []byte("abc")}, nil
+}
+
 func (profileAdmissions) Admit(_ context.Context, credential string, offer []byte) (string, error) {
 	if credential != "profile-secret" || string(offer) != `{"version":1}` {
 		return "", ErrWire
@@ -42,10 +49,7 @@ func (authenticator) Authenticate(_ context.Context, credential string) (gameser
 }
 
 func TestQUICJoinCommandAndReconnect(t *testing.T) {
-	identity := simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",
-		AuthoritativeHash: "rules", ConfigurationHash: "config",
-	}
+	identity := testRuntimeIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)
@@ -156,6 +160,15 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 	}
 }
 
+func testRuntimeIdentity() simulation.RuntimeIdentity {
+	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
+	}}
+}
+
 func TestConnectionMembershipsTrackRotatedReconnectCredential(t *testing.T) {
 	memberships := &connectionMemberships{credentials: map[gameserver.SessionCredential]struct{}{
 		"before": {},
@@ -222,8 +235,27 @@ func TestWireOperationsRejectAmbiguousShapes(t *testing.T) {
 	}
 }
 
+func TestRecipeAndPackageChunkDispatchAreExactAndBounded(t *testing.T) {
+	recipe := testRuntimeIdentity().Recipe
+	server := &Server{packages: packageProvider{recipe: recipe}}
+	recipeResult := server.dispatch(t.Context(), request{Operation: operationRecipe})
+	if recipeResult.Error != "" || recipeResult.Recipe == nil || recipeResult.Recipe.Packages.Base != recipe.Packages.Base {
+		t.Fatalf("recipe result = %#v", recipeResult)
+	}
+	chunkResult := server.dispatch(t.Context(), request{Operation: operationPackageChunk,
+		Package: &PackageRequest{ID: "extension", Digest: "digest", Limit: 3}})
+	if chunkResult.Error != "" || chunkResult.Package == nil || string(chunkResult.Package.Data) != "abc" {
+		t.Fatalf("chunk result = %#v", chunkResult)
+	}
+	oversized := server.dispatch(t.Context(), request{Operation: operationPackageChunk,
+		Package: &PackageRequest{ID: "extension", Digest: "digest", Limit: MaxPackageChunkBytes + 1}})
+	if oversized.Error != ErrWire.Error() {
+		t.Fatalf("oversized chunk result = %#v", oversized)
+	}
+}
+
 func TestWireOperationShapesAreExhaustive(t *testing.T) {
-	operations := []operation{operationJoin, operationSubmit, operationRefresh, operationWatch, operationReconnect, operationLeave, operationProfileAdmit, "unknown"}
+	operations := []operation{operationJoin, operationSubmit, operationRefresh, operationWatch, operationReconnect, operationLeave, operationProfileAdmit, operationRecipe, operationPackageChunk, "unknown"}
 	for _, candidate := range operations {
 		for mask := 0; mask < 16; mask++ {
 			message := request{Operation: candidate}
@@ -245,7 +277,8 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 			expected := (candidate == operationJoin && mask == 2) ||
 				(candidate == operationSubmit && mask == 5) ||
 				((candidate == operationRefresh || candidate == operationWatch || candidate == operationLeave) && mask == 1) ||
-				(candidate == operationProfileAdmit && (mask == 8 || mask == 9))
+				(candidate == operationProfileAdmit && (mask == 8 || mask == 9)) ||
+				(candidate == operationRecipe && mask == 0)
 			if valid != expected {
 				t.Fatalf("operation=%q mask=%03b valid=%t want=%t", candidate, mask, valid, expected)
 			}
@@ -254,6 +287,53 @@ func TestWireOperationShapesAreExhaustive(t *testing.T) {
 				t.Fatalf("reconnect operation=%q mask=%03b valid=%t", candidate, mask, got)
 			}
 		}
+	}
+	packageMessage := request{Operation: operationPackageChunk, Package: &PackageRequest{ID: "extension", Digest: "digest", Limit: MaxPackageChunkBytes}}
+	if !validShape(packageMessage) {
+		t.Fatal("bounded package request was rejected")
+	}
+	packageMessage.Credential = "mixed"
+	if validShape(packageMessage) {
+		t.Fatal("ambiguous package request was accepted")
+	}
+}
+
+func TestPackageRateLimiterBoundsBurstAndRefills(t *testing.T) {
+	limiter := newPackageRateLimiter()
+	now := time.Unix(100, 0)
+	for consumed := 0; consumed < packageBurstBytes; consumed += MaxPackageChunkBytes {
+		if !limiter.Allow(MaxPackageChunkBytes, now) {
+			t.Fatalf("initial burst rejected at %d bytes", consumed)
+		}
+	}
+	if limiter.Allow(1, now) {
+		t.Fatal("package burst limit was not enforced")
+	}
+	if !limiter.Allow(packageBytesPerSecond, now.Add(time.Second)) {
+		t.Fatal("package rate limiter did not refill")
+	}
+}
+
+func TestPackageAndRecipeResponsesRejectMixedOrOutOfBoundsShapes(t *testing.T) {
+	recipe := testRuntimeIdentity().Recipe
+	if !validRecipeResponse(response{Recipe: &recipe}) {
+		t.Fatal("canonical recipe response was rejected")
+	}
+	if validRecipeResponse(response{Recipe: &recipe, Ticket: "smuggled"}) {
+		t.Fatal("mixed recipe response was accepted")
+	}
+	request := PackageRequest{ID: "extension", Digest: recipe.Packages.Base.Digest, Offset: 4, Limit: 8}
+	chunk := PackageChunk{ID: request.ID, Digest: request.Digest, Offset: request.Offset, Total: 12, Data: []byte("payload")}
+	if !validPackageResponse(response{Package: &chunk}, request) {
+		t.Fatal("canonical package response was rejected")
+	}
+	chunk.Data = []byte("too-large")
+	if validPackageResponse(response{Package: &chunk}, request) {
+		t.Fatal("package response crossing total size was accepted")
+	}
+	chunk.Data = []byte("payload")
+	if validPackageResponse(response{Package: &chunk, Snapshot: &gameserver.Snapshot{}}, request) {
+		t.Fatal("mixed package response was accepted")
 	}
 }
 

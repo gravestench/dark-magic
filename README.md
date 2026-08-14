@@ -62,11 +62,11 @@ baseline from behavior that has actually been validated.
   and typed Diablo record boundaries. Production Diablo gameplay policy lives
   in the first-party `d2legacy` Lua mod, with narrow Go adapters under
   `internal/mod/d2legacy` where host integration is unavoidable.
-* `internal/content` owns the mod-neutral layered directory/MPQ/ZIP VFS and the
-  source trees used to build redistributable first-party packages.
-* `internal/modcache` owns immutable package blobs, user enablement profiles,
-  dependency resolution, and exact locks; `internal/distribution` alone chooses
-  which first-party packages ship and are enabled on a new installation.
+* `internal/content` owns the layered directory/MPQ/ZIP VFS and the embedded,
+  immutable `d2legacy` base package.
+* `internal/modcache` owns immutable extension blobs, extension enablement
+  profiles, dependency resolution, quarantine, and exact locks;
+  `internal/distribution` composes those extensions above built-in `d2legacy`.
 * `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
   Lua runtimes with disposable resource scopes.
 * `internal/presentation` defines backend-neutral retained rendering and scene
@@ -93,13 +93,15 @@ speech-to-string relationships, DS1 definitions, and act-local object mappings.
 Go validates these immutable recovered catalogs; narrow `d2legacy` adapters
 expose their facts to Lua, which alone decides their gameplay meaning.
 
-Mod installation is distinct from activation. On first run, the distribution
-places `d2legacy` in the content-addressed mod cache and creates a user profile
-that enables it. Existing profiles—including an intentionally empty one—are
-never silently re-enabled. See [mod loading and distribution](docs/MODS.md) for
-the cache layout, package manifest, deterministic load order, recovery startup,
-package namespaces, declared shared-content overlays, and signed/P2P
-acquisition direction.
+Dark Magic always runs its embedded `d2legacy` game package. Mod installation is
+distinct from activation: the content-addressed cache and user profile contain
+extensions only, and an empty profile means vanilla Diablo II. Network sessions
+pin the built-in base plus their complete ordered extension recipe; direct hosts
+can stream missing redistributable extensions into bounded, verified quarantine
+before character admission. See [mod loading and distribution](docs/MODS.md).
+Extension authors should begin with the
+[Modding API Guide](docs/MODDING_API.md) and copyable
+[`mod_template`](internal/content/mod_template/README.md).
 
 ### Product binaries
 

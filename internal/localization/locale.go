@@ -16,6 +16,7 @@ import (
 type Locale struct {
 	source   fs.FS
 	language string
+	mu       sync.Mutex
 	once     sync.Once
 	strings  map[string]string
 	err      error
@@ -28,6 +29,8 @@ func New(source fs.FS, language string) *Locale {
 
 // Text resolves key, returning the key alongside an error when absent.
 func (l *Locale) Text(key string) (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.once.Do(l.load)
 	if l.err != nil {
 		return key, l.err
@@ -37,6 +40,15 @@ func (l *Locale) Text(key string) (string, error) {
 		return key, fmt.Errorf("localization: key %q is not present", key)
 	}
 	return value, nil
+}
+
+// Invalidate discards the composed locale after VFS package layers change.
+func (l *Locale) Invalidate() {
+	l.mu.Lock()
+	l.once = sync.Once{}
+	l.strings = nil
+	l.err = nil
+	l.mu.Unlock()
 }
 
 // GetSupportedLanguages satisfies compatibility UI localization seams.

@@ -38,9 +38,6 @@ func Run(options Options) error {
 // assemble follows the order shown on a simple stack of blocks: foundations
 // first, things that use the foundations second.
 func (app *application) assemble() error {
-	if app.modless() {
-		return app.assembleModless()
-	}
 	steps := []func() error{
 		app.loadSettings,
 		app.buildPresentationCore,
@@ -59,10 +56,6 @@ func (app *application) assemble() error {
 		}
 	}
 	return nil
-}
-
-func (app *application) modless() bool {
-	return app.options.Mods != nil && len(app.options.Mods.Packages) == 0
 }
 
 func (app *application) runWindow() error {
@@ -120,6 +113,10 @@ func (app *application) shutdown() error {
 	}
 	if app.components != nil {
 		err = errors.Join(err, app.components.ApplyDesired(ctx, map[string]bool{}))
+	}
+	if app.networkMounted != nil {
+		err = errors.Join(err, app.networkMounted.Close())
+		app.networkMounted = nil
 	}
 	if app.engineHost != nil && !app.hostStopped {
 		err = errors.Join(err, app.engineHost.Stop(ctx))

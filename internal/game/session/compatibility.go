@@ -90,12 +90,12 @@ func (allocation Allocation) ValidateReconnect(token AdmissionToken, client simu
 }
 
 func (allocation Allocation) Durable(characterID string) DurableCompatibility {
-	return DurableCompatibility{CharacterID: characterID, ModID: allocation.Identity.ModID,
-		ContractVersion: allocation.Identity.ContractVersion, IdentityHash: allocation.IdentityHash}
+	return DurableCompatibility{CharacterID: characterID, ModID: allocation.Identity.Recipe.Packages.Base.ID,
+		ContractVersion: allocation.Identity.Recipe.EngineAPI, IdentityHash: allocation.IdentityHash}
 }
 
 func (allocation Allocation) ValidateDurable(value DurableCompatibility) error {
-	if value.ModID != allocation.Identity.ModID || value.ContractVersion != allocation.Identity.ContractVersion || value.IdentityHash != allocation.IdentityHash {
+	if value.ModID != allocation.Identity.Recipe.Packages.Base.ID || value.ContractVersion != allocation.Identity.Recipe.EngineAPI || value.IdentityHash != allocation.IdentityHash {
 		return fmt.Errorf("%w: durable character identity differs", ErrCompatibility)
 	}
 	return nil

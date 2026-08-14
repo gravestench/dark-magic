@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,8 +26,12 @@ func LoadOrCreateProfile(fileName string, defaults []string) (Profile, bool, err
 		if err := ValidateProfile(profile); err != nil {
 			return Profile{}, false, err
 		}
-		if err := writeJSONAtomic(fileName, profile); err != nil {
+		created, err := writeJSONExclusive(fileName, profile)
+		if err != nil {
 			return Profile{}, false, fmt.Errorf("modcache: create profile: %w", err)
+		}
+		if !created {
+			return LoadOrCreateProfile(fileName, defaults)
 		}
 		return profile, true, nil
 	}
@@ -47,6 +52,47 @@ func LoadOrCreateProfile(fileName string, defaults []string) (Profile, bool, err
 		return Profile{}, false, err
 	}
 	return profile, false, nil
+}
+
+// SaveProfile validates and atomically replaces a user-owned extension
+// selection. Product composition uses this for explicit schema-preserving
+// migrations, never for temporary command-line overrides.
+func SaveProfile(fileName string, profile Profile) error {
+	if strings.TrimSpace(fileName) == "" {
+		return errors.New("modcache: profile path is required")
+	}
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+	if err := writeJSONAtomic(fileName, profile); err != nil {
+		return fmt.Errorf("modcache: save profile: %w", err)
+	}
+	return nil
+}
+
+func writeJSONExclusive(fileName string, value any) (bool, error) {
+	if err := os.MkdirAll(filepath.Dir(fileName), 0o700); err != nil {
+		return false, err
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if os.IsExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	_, writeErr := file.Write(append(data, '\n'))
+	syncErr := file.Sync()
+	closeErr := file.Close()
+	if err := errors.Join(writeErr, syncErr, closeErr); err != nil {
+		_ = os.Remove(fileName)
+		return false, err
+	}
+	return true, nil
 }
 
 func ValidateProfile(profile Profile) error {

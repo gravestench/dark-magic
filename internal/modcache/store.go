@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -61,28 +62,32 @@ func New(root string) (*Store, error) {
 }
 
 func (store *Store) ReconcileBundled(bundles []Bundle) ([]string, error) {
-	catalog, err := store.readIndex()
-	if err != nil {
-		return nil, err
-	}
-	defaults := make([]string, 0, len(bundles))
-	for _, bundle := range bundles {
-		if bundle.Source == nil {
-			return nil, errors.New("modcache: bundled source is required")
-		}
-		descriptor, err := store.installBundled(bundle.Source)
+	var defaults []string
+	err := store.withMutationLock(func() error {
+		catalog, err := store.readIndex()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		catalog.Packages[descriptor.ID] = descriptor
-		if bundle.DefaultEnabled {
-			defaults = append(defaults, descriptor.ID)
+		defaults = make([]string, 0, len(bundles))
+		for _, bundle := range bundles {
+			if bundle.Source == nil {
+				return errors.New("modcache: bundled source is required")
+			}
+			descriptor, err := store.installBundled(bundle.Source)
+			if err != nil {
+				return err
+			}
+			catalog.Packages[descriptor.ID] = descriptor
+			if bundle.DefaultEnabled {
+				defaults = append(defaults, descriptor.ID)
+			}
 		}
-	}
-	if err := writeJSONAtomic(store.indexPath(), catalog); err != nil {
-		return nil, fmt.Errorf("modcache: write index: %w", err)
-	}
-	return defaults, nil
+		if err := writeJSONAtomic(store.indexPath(), catalog); err != nil {
+			return fmt.Errorf("modcache: write index: %w", err)
+		}
+		return nil
+	})
+	return defaults, err
 }
 
 func (store *Store) installBundled(source fs.FS) (Descriptor, error) {
@@ -115,7 +120,21 @@ func (store *Store) installBundled(source fs.FS) (Descriptor, error) {
 	destination := store.blobPath(descriptor.Digest)
 	if info, statErr := os.Stat(destination); statErr == nil {
 		if info.Size() != descriptor.Size {
-			return Descriptor{}, fmt.Errorf("modcache: immutable blob %s has unexpected size", descriptor.Digest)
+			corrupt := filepath.Join(store.root, "quarantine", ".corrupt-"+digestHex+"-"+strconv.FormatInt(time.Now().UnixNano(), 10)+".zip")
+			if err := os.Rename(destination, corrupt); err != nil {
+				return Descriptor{}, fmt.Errorf("modcache: quarantine corrupt bundled blob: %w", err)
+			}
+			if err := os.Rename(temporaryPath, destination); err != nil {
+				return Descriptor{}, fmt.Errorf("modcache: restore bundled package: %w", err)
+			}
+		} else if _, verifyErr := verifyPackageFile(destination, descriptor); verifyErr != nil {
+			corrupt := filepath.Join(store.root, "quarantine", ".corrupt-"+digestHex+"-"+strconv.FormatInt(time.Now().UnixNano(), 10)+".zip")
+			if err := os.Rename(destination, corrupt); err != nil {
+				return Descriptor{}, fmt.Errorf("modcache: quarantine corrupt bundled blob: %w", err)
+			}
+			if err := os.Rename(temporaryPath, destination); err != nil {
+				return Descriptor{}, fmt.Errorf("modcache: restore bundled package: %w", err)
+			}
 		}
 	} else if !os.IsNotExist(statErr) {
 		return Descriptor{}, fmt.Errorf("modcache: inspect immutable blob: %w", statErr)
@@ -176,6 +195,11 @@ func (store *Store) readIndex() (index, error) {
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) || result.Schema != IndexSchema || result.Packages == nil {
 		return index{}, errors.New("modcache: invalid index")
 	}
+	for id, descriptor := range result.Packages {
+		if id != descriptor.ID || !validID(id) || descriptor.Size <= 0 || !validDigest(descriptor.Digest) {
+			return index{}, errors.New("modcache: invalid index descriptor")
+		}
+	}
 	return result, nil
 }
 
@@ -183,7 +207,10 @@ func (store *Store) verifyDescriptor(descriptor Descriptor) (Manifest, error) {
 	if !validID(descriptor.ID) || descriptor.Size <= 0 || descriptor.Size > maxBundledPackageBytes || !validDigest(descriptor.Digest) {
 		return Manifest{}, errors.New("modcache: invalid package descriptor")
 	}
-	fileName := store.blobPath(descriptor.Digest)
+	return verifyPackageFile(store.blobPath(descriptor.Digest), descriptor)
+}
+
+func verifyPackageFile(fileName string, descriptor Descriptor) (Manifest, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("modcache: open %s: %w", descriptor.ID, err)

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/quic-go/quic-go"
 )
 
@@ -40,9 +41,12 @@ const (
 	MaxCommandPayloadBytes  = 8 << 10
 	MaxCredentialBytes      = 4 << 10
 	MaxProfileOfferBytes    = 128 << 10
+	MaxPackageChunkBytes    = 32 << 10
 )
 
 var ErrWire = errors.New("game session QUIC: invalid wire message")
+
+const PackageRateLimitMessage = "game session QUIC: package distribution rate limit exceeded"
 
 // RemoteError is a semantic rejection returned by a live server. Callers must
 // not treat it as evidence that the QUIC transport failed.
@@ -64,7 +68,24 @@ const (
 	operationReconnect    operation = "reconnect"
 	operationLeave        operation = "leave"
 	operationProfileAdmit operation = "profile_admit"
+	operationRecipe       operation = "recipe"
+	operationPackageChunk operation = "package_chunk"
 )
+
+type PackageRequest struct {
+	ID     string `json:"id"`
+	Digest string `json:"digest"`
+	Offset int64  `json:"offset"`
+	Limit  int    `json:"limit"`
+}
+
+type PackageChunk struct {
+	ID     string `json:"id"`
+	Digest string `json:"digest"`
+	Offset int64  `json:"offset"`
+	Total  int64  `json:"total"`
+	Data   []byte `json:"data"`
+}
 
 type request struct {
 	Operation  operation                    `json:"operation"`
@@ -73,17 +94,25 @@ type request struct {
 	Command    *gameserver.CommandIntent    `json:"command,omitempty"`
 	Reconnect  *gameserver.ReconnectRequest `json:"reconnect,omitempty"`
 	Offer      json.RawMessage              `json:"offer,omitempty"`
+	Package    *PackageRequest              `json:"package,omitempty"`
 }
 
 type response struct {
-	Join     *gameserver.JoinResponse `json:"join,omitempty"`
-	Snapshot *gameserver.Snapshot     `json:"snapshot,omitempty"`
-	Error    string                   `json:"error,omitempty"`
-	Ticket   string                   `json:"ticket,omitempty"`
+	Join     *gameserver.JoinResponse  `json:"join,omitempty"`
+	Snapshot *gameserver.Snapshot      `json:"snapshot,omitempty"`
+	Error    string                    `json:"error,omitempty"`
+	Ticket   string                    `json:"ticket,omitempty"`
+	Recipe   *simulation.RuntimeRecipe `json:"recipe,omitempty"`
+	Package  *PackageChunk             `json:"package,omitempty"`
 }
 
 type ProfileAdmissions interface {
 	Admit(context.Context, string, []byte) (string, error)
+}
+
+type PackageProvider interface {
+	Recipe() simulation.RuntimeRecipe
+	ReadChunk(context.Context, PackageRequest) (PackageChunk, error)
 }
 
 type profileClientContext interface {
@@ -94,6 +123,7 @@ type Server struct {
 	listener *quic.Listener
 	endpoint *gameserver.Endpoint
 	profiles ProfileAdmissions
+	packages PackageProvider
 }
 
 func Listen(address string, tlsConfig *tls.Config, endpoint *gameserver.Endpoint) (*Server, error) {
@@ -129,6 +159,8 @@ func (server *Server) Close() error { return server.listener.Close() }
 // operation. Realm servers leave it nil and therefore reject that operation.
 func (server *Server) SetProfileAdmissions(profiles ProfileAdmissions) { server.profiles = profiles }
 
+func (server *Server) SetPackageProvider(packages PackageProvider) { server.packages = packages }
+
 func (server *Server) Serve(ctx context.Context) error {
 	for {
 		connection, err := server.listener.Accept(ctx)
@@ -140,7 +172,7 @@ func (server *Server) Serve(ctx context.Context) error {
 }
 
 func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn) {
-	memberships := &connectionMemberships{credentials: make(map[gameserver.SessionCredential]struct{})}
+	memberships := &connectionMemberships{credentials: make(map[gameserver.SessionCredential]struct{}), packages: newPackageRateLimiter()}
 	defer func() {
 		for _, credential := range memberships.snapshot() {
 			server.endpoint.Disconnect(credential)
@@ -171,7 +203,12 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 			if contextSource, ok := server.profiles.(profileClientContext); ok {
 				requestContext = contextSource.WithClient(ctx, connection.RemoteAddr().String())
 			}
-			result := server.dispatch(requestContext, message)
+			var result response
+			if message.Operation == operationPackageChunk && message.Package != nil && !memberships.packages.Allow(message.Package.Limit, time.Now()) {
+				result = response{Error: PackageRateLimitMessage}
+			} else {
+				result = server.dispatch(requestContext, message)
+			}
 			memberships.observe(message, result)
 			_ = writeFrame(stream, result)
 		}()
@@ -181,6 +218,41 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 type connectionMemberships struct {
 	mu          sync.Mutex
 	credentials map[gameserver.SessionCredential]struct{}
+	packages    *packageRateLimiter
+}
+
+const (
+	packageBytesPerSecond = 2 << 20
+	packageBurstBytes     = 4 << 20
+)
+
+type packageRateLimiter struct {
+	mu     sync.Mutex
+	tokens float64
+	last   time.Time
+}
+
+func newPackageRateLimiter() *packageRateLimiter {
+	return &packageRateLimiter{tokens: packageBurstBytes}
+}
+
+func (limiter *packageRateLimiter) Allow(size int, now time.Time) bool {
+	if limiter == nil || size <= 0 {
+		return false
+	}
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	if limiter.last.IsZero() {
+		limiter.last = now
+	} else if elapsed := now.Sub(limiter.last); elapsed > 0 {
+		limiter.tokens = min(float64(packageBurstBytes), limiter.tokens+elapsed.Seconds()*packageBytesPerSecond)
+		limiter.last = now
+	}
+	if float64(size) > limiter.tokens {
+		return false
+	}
+	limiter.tokens -= float64(size)
+	return true
 }
 
 func (memberships *connectionMemberships) observe(message request, result response) {
@@ -313,6 +385,24 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 			return response{Error: err.Error()}
 		}
 		return response{Ticket: ticket}
+	case operationRecipe:
+		if server.packages == nil {
+			return response{Error: "game session QUIC: package distribution is unavailable"}
+		}
+		recipe := server.packages.Recipe()
+		if err := recipe.Validate(); err != nil {
+			return response{Error: err.Error()}
+		}
+		return response{Recipe: &recipe}
+	case operationPackageChunk:
+		if server.packages == nil || message.Package == nil || message.Package.Limit > MaxPackageChunkBytes {
+			return response{Error: ErrWire.Error()}
+		}
+		chunk, err := server.packages.ReadChunk(ctx, *message.Package)
+		if err != nil {
+			return response{Error: err.Error()}
+		}
+		return response{Package: &chunk}
 	default:
 		return response{Error: ErrWire.Error()}
 	}
@@ -321,15 +411,21 @@ func (server *Server) dispatch(ctx context.Context, message request) response {
 func validShape(message request) bool {
 	switch message.Operation {
 	case operationJoin:
-		return message.Join != nil && message.Command == nil && message.Reconnect == nil && message.Credential == "" && len(message.Offer) == 0
+		return message.Join != nil && message.Command == nil && message.Reconnect == nil && message.Package == nil && message.Credential == "" && len(message.Offer) == 0
 	case operationSubmit:
-		return message.Join == nil && message.Command != nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) == 0
+		return message.Join == nil && message.Command != nil && message.Reconnect == nil && message.Package == nil && message.Credential != "" && len(message.Offer) == 0
 	case operationRefresh, operationWatch, operationLeave:
-		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Credential != "" && len(message.Offer) == 0
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Package == nil && message.Credential != "" && len(message.Offer) == 0
 	case operationReconnect:
-		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Credential == "" && len(message.Offer) == 0
+		return message.Join == nil && message.Command == nil && message.Reconnect != nil && message.Package == nil && message.Credential == "" && len(message.Offer) == 0
 	case operationProfileAdmit:
-		return message.Join == nil && message.Command == nil && message.Reconnect == nil && len(message.Offer) > 0
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Package == nil && len(message.Offer) > 0
+	case operationRecipe:
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Package == nil && message.Credential == "" && len(message.Offer) == 0
+	case operationPackageChunk:
+		return message.Join == nil && message.Command == nil && message.Reconnect == nil && message.Package != nil &&
+			message.Credential == "" && len(message.Offer) == 0 && message.Package.Offset >= 0 &&
+			message.Package.Limit > 0 && message.Package.Limit <= MaxPackageChunkBytes
 	default:
 		return false
 	}
@@ -551,6 +647,52 @@ func (client *Client) AdmitProfile(ctx context.Context, credential string, offer
 		return "", ErrWire
 	}
 	return result.Ticket, nil
+}
+
+func (client *Client) Recipe(ctx context.Context) (simulation.RuntimeRecipe, error) {
+	result, err := client.call(ctx, request{Operation: operationRecipe})
+	if err != nil {
+		return simulation.RuntimeRecipe{}, err
+	}
+	if !validRecipeResponse(result) {
+		return simulation.RuntimeRecipe{}, ErrWire
+	}
+	return *result.Recipe, nil
+}
+
+func (client *Client) PackageChunk(ctx context.Context, request PackageRequest) (PackageChunk, error) {
+	if request.Offset < 0 || request.Limit <= 0 || request.Limit > MaxPackageChunkBytes {
+		return PackageChunk{}, ErrWire
+	}
+	result, err := client.call(ctx, requestMessagePackage(request))
+	if err != nil {
+		return PackageChunk{}, err
+	}
+	if !validPackageResponse(result, request) {
+		return PackageChunk{}, ErrWire
+	}
+	return *result.Package, nil
+}
+
+func validRecipeResponse(result response) bool {
+	return result.Recipe != nil && result.Recipe.Validate() == nil && result.Join == nil && result.Snapshot == nil &&
+		result.Package == nil && result.Ticket == "" && result.Error == ""
+}
+
+func validPackageResponse(result response, request PackageRequest) bool {
+	if result.Package == nil || result.Join != nil || result.Snapshot != nil || result.Recipe != nil || result.Ticket != "" || result.Error != "" {
+		return false
+	}
+	chunk := result.Package
+	if chunk.ID != request.ID || chunk.Digest != request.Digest || chunk.Offset != request.Offset ||
+		chunk.Total <= 0 || len(chunk.Data) == 0 || len(chunk.Data) > request.Limit || chunk.Offset >= chunk.Total {
+		return false
+	}
+	return int64(len(chunk.Data)) <= chunk.Total-chunk.Offset
+}
+
+func requestMessagePackage(packageRequest PackageRequest) request {
+	return request{Operation: operationPackageChunk, Package: &packageRequest}
 }
 
 func (client *Client) call(ctx context.Context, message request) (response, error) {

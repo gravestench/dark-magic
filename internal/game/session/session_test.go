@@ -25,7 +25,7 @@ func TestSessionPinsAuthoritativeRuntimeStateInReplay(t *testing.T) {
 	if err := stores.Register("d2legacy.test", "test/v1", []byte(`{"value":1}`)); err != nil {
 		t.Fatal(err)
 	}
-	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config", CapabilityVersions: map[string]string{"d2legacy.ecs": "v1"}}
+	identity := compatibilityIdentity("package")
 	if err := session.RegisterAuthoritativeRuntime(identity, stores); err != nil {
 		t.Fatal(err)
 	}

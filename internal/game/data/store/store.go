@@ -113,6 +113,14 @@ func (s *Store) Invalidate(path string) {
 	s.mu.Unlock()
 }
 
+// InvalidateAll clears every derived table after the mounted package recipe
+// changes. The immutable bytes stay in the VFS and reload lazily on demand.
+func (s *Store) InvalidateAll() {
+	s.mu.Lock()
+	s.cache = make(map[string][]map[string]string)
+	s.mu.Unlock()
+}
+
 // Loaded reports whether path is cached.
 func (s *Store) Loaded(path string) bool {
 	s.mu.RLock()

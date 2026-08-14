@@ -1695,9 +1695,10 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
   Population choices are likewise Lua-owned while generic recipe/geometry
   contracts remain in Go. The joined Act I town-to-wilderness restore vector remains.
 
-- [x] **M21.14.13 — isolation enforcement and completion.** Boot a minimal
-  alternate mod without loading `d2legacy`; prove generic engine packages have
-  no dependency on D2 rule packages or D2 identifiers; require migrated-system
+- [x] **M21.14.13 — isolation enforcement and completion.** Boot minimal
+  extension fixtures above the product's always-enabled `d2legacy` base; prove
+  generic engine mechanism packages have no dependency on D2 rule packages or
+  D2 identifiers; require migrated-system
   replay/checkpoint parity in CI; remove transitional capabilities that expose
   whole Go-implemented D2 subsystems; and update architecture diagrams, package
   inventories, research handoffs, and developer guidance. Acceptance: the
@@ -1707,7 +1708,9 @@ capabilities, durable state, execution order, data-policy boundary, and tests.
 
 M21.14 is complete only when all of the following are true:
 
-- [x] The application can run its generic host without `d2legacy`.
+- [x] Generic host mechanisms remain independently testable without importing
+  `d2legacy`; the Dark Magic product composition always enables its embedded
+  `d2legacy` base and treats user packages as extensions.
 - [x] Loading `d2legacy` supplies all Diablo II gameplay systems and policies;
   current implemented policy is isolated there, while the open domain vectors
   above identify fidelity that has not been implemented yet.
@@ -1931,19 +1934,15 @@ repository evidence.
 
 ## M23: Realm, mod delivery, and trusted persistence
 
-- [x] Separate mod installation, enablement, dependency resolution, mounting,
-  and activation. The engine content stack accepts an empty mod set and no
-  longer injects `d2legacy`; product distribution reconciles the deterministic
-  bundled archive into an immutable SHA-256 cache, creates a default-enabled
-  profile only on first run, respects an existing empty profile, verifies every
-  selected blob, rejects dependency and version failures, and emits an exact
-  session lock. Packages are private under `mods/<id>`; only manifest-declared
-  shared content roots participate in ordered overrides. Declared package entry
-  components replace hard-coded activation
-  defaults. The native client can start and close with no enabled mods. The next
-  slice moves its remaining compiled d2legacy save/map/presentation assembly
-  behind a distribution-registered game-adapter contract.
-- [ ] Publish a versioned Modding API Guide covering package/profile/lock
+- [x] Separate extension installation, enablement, dependency resolution,
+  mounting, and activation while making the product boundary explicit:
+  immutable embedded `d2legacy` is always enabled and is never copied into the
+  user cache; profiles and cache blobs contain extensions only. Packages are
+  private under `mods/<id>`; manifest-declared shared roots use deterministic
+  reverse activation precedence. Component IDs/entrypoints are package-owned,
+  undeclared cross-package dependencies are rejected, and client versus
+  authority entrypoints activate in the correct runtime domains.
+- [x] Publish a versioned Modding API Guide covering package/profile/lock
   concepts, namespace and shared-root rules, capability APIs, ECS and lifecycle
   contracts, deterministic authority, UI composition, tests, author mode,
   packaging, trust, network admission, compatibility, and migration policy.
@@ -1954,8 +1953,16 @@ repository evidence.
 - [ ] Define signed/versioned mod manifests containing dependency order, engine
   and capability compatibility, payload identities, hashes, sizes, and trust
   policy.
-- [ ] Let clients negotiate, fetch, verify, cache, and activate redistributable
-  realm mod payloads before joining. Support resumable, content-addressed P2P
+- [x] Let direct self-hosted clients negotiate, fetch, verify, cache, and
+  activate redistributable extension payloads before character admission. The
+  pinned-TLS host advertises the complete runtime recipe and serves only its
+  bounded exact extension chunks; clients stream into quarantine, verify full
+  digest/size/archive/manifest/dependency identity, promote atomically, and
+  recompose client-only components. Cache mutation is cross-process serialized,
+  corrupt bundled blobs self-quarantine, and exact versions can coexist across
+  concurrent sessions. Blizzard data and private state are never served.
+- [ ] Extend acquisition to realm-signed publication and revocation. Support
+  resumable, content-addressed multi-source P2P
   chunk sources as untrusted mirrors behind signed manifests, bounded
   quarantine, full hash verification, atomic cache promotion, revocation, and
   eviction policy; never serve Blizzard-owned game data, saves, or credentials.

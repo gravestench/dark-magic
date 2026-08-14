@@ -7,19 +7,43 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"sort"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
 // Identity pins the exact authoritative Lua bytes used by one session. Sorted
 // file order makes the result independent of filesystem traversal order.
 func Identity(source fs.FS, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
-	packageDigest, err := hashSource(source, ".", func(string) bool { return true })
+	builtin, err := modcache.DescribeBuiltin(source)
 	if err != nil {
 		return simulation.RuntimeIdentity{}, err
+	}
+	packages := simulation.RuntimePackageSet{Base: simulation.RuntimePackage{
+		ID: builtin.Manifest.ID, Version: builtin.Manifest.Version, Digest: builtin.Descriptor.Digest,
+		Size: builtin.Descriptor.Size, Redistributable: builtin.Descriptor.Redistributable,
+	}}
+	return IdentityForPackages(source, packages, configuration...)
+}
+
+// IdentityForPackages builds the one canonical recipe used by every
+// production host and client. It also proves that the supplied package set
+// names the exact built-in d2legacy bytes used to construct the runtime.
+func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
+	builtin, err := modcache.DescribeBuiltin(source)
+	if err != nil {
+		return simulation.RuntimeIdentity{}, err
+	}
+	expectedBase := simulation.RuntimePackage{
+		ID: builtin.Manifest.ID, Version: builtin.Manifest.Version, Digest: builtin.Descriptor.Digest,
+		Size: builtin.Descriptor.Size, Redistributable: builtin.Descriptor.Redistributable,
+	}
+	if packages.Base != expectedBase {
+		return simulation.RuntimeIdentity{}, fmt.Errorf("d2legacy: runtime package set does not identify the built-in base")
 	}
 	authoritativeDigest, err := hashSource(source, "lua/d2legacy", func(name string) bool {
 		return strings.HasSuffix(name, ".lua")
@@ -37,16 +61,16 @@ func Identity(source fs.FS, configuration ...map[string]any) (simulation.Runtime
 		return simulation.RuntimeIdentity{}, err
 	}
 	configurationDigest := sha256.Sum256(encodedConfiguration)
-	dependency := func(value string) string { sum := sha256.Sum256([]byte(value)); return hex.EncodeToString(sum[:]) }
 	return simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1", PackageHash: packageDigest,
-		AuthoritativeHash: authoritativeDigest,
-		Dependencies: map[string]string{"engine/deterministic": "sha256:" + dependency("v1"),
-			"engine/worldgen": "sha256:" + dependency("v1")},
-		ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
-		CapabilityVersions: map[string]string{
-			"engine.authority_command": "v1", "engine.authority_random": "v1",
-			"engine.authority_state": "v1", "engine.ecs": "v1", "engine.records": "v1",
+		Recipe: simulation.RuntimeRecipe{
+			Schema: simulation.RuntimeRecipeSchema, EngineAPI: modcache.EngineAPI,
+			NetworkProtocol: simulation.RuntimeNetworkProtocol, Packages: packages,
+			AuthoritativeHash: authoritativeDigest, ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
+			CapabilityVersions: map[string]string{
+				"engine.authority_command": "v1", "engine.authority_random": "v1",
+				"engine.authority_state": "v1", "engine.deterministic": "v1", "engine.ecs": "v1",
+				"engine.records": "v1", "engine.worldgen": "v1",
+			},
 		},
 	}, nil
 }
