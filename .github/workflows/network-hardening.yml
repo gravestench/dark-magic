@@ -1,0 +1,68 @@
+name: Network hardening
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/network-hardening.yml"
+      - "go.mod"
+      - "go.sum"
+      - "internal/app/clientapp/**"
+      - "internal/app/clientsession/**"
+      - "internal/app/gameserver/**"
+      - "internal/app/networkclock/**"
+      - "internal/app/networktrust/**"
+      - "internal/game/**"
+      - "internal/mod/d2legacy/adapter/player/**"
+      - "internal/mod/d2legacy/adapter/save/**"
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: network-hardening-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-platform:
+    name: Network acceptance (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Production-path network acceptance
+        shell: bash
+        env:
+          DARK_MAGIC_NETWORK_SOAK_TICKS: ${{ github.event_name == 'pull_request' && '80' || '1500' }}
+        run: go test -count=1 ./internal/app/gameserver/... ./internal/app/clientsession ./internal/app/networkclock ./internal/app/networktrust
+
+  fuzz:
+    name: Network fuzz boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Reliable frame decoder
+        run: go test ./internal/app/gameserver/sessionquic -run '^$' -fuzz FuzzReadFrame -fuzztime 10s
+      - name: Transform datagram decoder
+        run: go test ./internal/app/gameserver/sessionquic -run '^$' -fuzz FuzzDecodeTransformFrame -fuzztime 10s
+      - name: Client projection decoder
+        run: go test ./internal/app/clientsession -run '^$' -fuzz FuzzDecodeClientView -fuzztime 10s

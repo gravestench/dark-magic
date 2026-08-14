@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,9 @@ func TestHostIdentityPersistsWithPrivatePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	// Windows preserves private access through ACLs but does not expose Unix
+	// permission bits through FileMode, so the mode assertion is Unix-specific.
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("private key mode = %o", info.Mode().Perm())
 	}
 }

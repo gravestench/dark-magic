@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sort"
 	"strings"
@@ -143,13 +144,15 @@ func (session *Session) PrivateView() playeradapter.PrivateView {
 	return view
 }
 
-// NextInputTick returns the server-time estimate used to schedule the next
-// fixed input sample. It is guidance only: the authority still validates the
-// bounded admission window and performs rollback for late-but-valid commands.
+// NextInputTick schedules the next fixed input sample inside the authority's
+// advertised two-tick admission lead. Presentation may extrapolate farther
+// during a host stall, but input must remain admissible; stale samples arrive
+// late and use the authority's rollback window instead.
 func (session *Session) NextInputTick(now time.Time) uint64 {
 	session.mu.Lock()
 	defer session.mu.Unlock()
-	return session.timelineLocked(now).Prediction.Tick + 2
+	timeline := session.timelineLocked(now)
+	return timeline.LatestServerTick + 2
 }
 
 // NetworkTimeline exposes the two client times without exposing mutable clock
@@ -410,6 +413,7 @@ func (session *Session) Reconnect(ctx context.Context) error {
 	transport, credential, identity, nonce := session.transport, session.credential, session.identity, session.reconnectNonce
 	originalTransport := transport
 	identityHash := session.Admission.Admission.IdentityHash
+	characterID, owner := session.Admission.Admission.CharacterID, session.reliableHUD.Player
 	gameID, endpoint, tlsConfig := session.gameID, session.endpoint, session.tlsConfig
 	session.mu.Unlock()
 	request := gameserver.ReconnectRequest{Credential: credential, Identity: identity, Nonce: nonce}
@@ -440,7 +444,8 @@ func (session *Session) Reconnect(ctx context.Context) error {
 		}
 		return err
 	}
-	if joined.Admission.SessionID != gameID || joined.Admission.IdentityHash != identityHash {
+	if joined.Admission.SessionID != gameID || joined.Admission.IdentityHash != identityHash ||
+		joined.Admission.CharacterID != characterID || validateOwnerIdentity(owner, view.HUD.Player) != nil {
 		if transport != originalTransport {
 			_ = transport.Close()
 		}
@@ -597,6 +602,9 @@ func (session *Session) applyDecodedCorrection(snapshot gameserver.Snapshot, vie
 	if err := validateCorrection(session.Admission.Snapshot, snapshot); err != nil {
 		return playeradapter.WorldDelta{}, err
 	}
+	if err := validateOwnerIdentity(session.reliableHUD.Player, view.HUD.Player); err != nil {
+		return playeradapter.WorldDelta{}, err
+	}
 	previousReliable := session.reliableWorld
 	if previousReliable.Version == 0 {
 		previousReliable = session.World
@@ -610,6 +618,14 @@ func (session *Session) applyDecodedCorrection(snapshot gameserver.Snapshot, vie
 	session.discardAcknowledgedLocked(snapshot.AcknowledgedInput)
 	session.publishPresentationLocked()
 	return delta, nil
+}
+
+func validateOwnerIdentity(expected, actual playeradapter.HUDIdentity) error {
+	if expected.PlayerID == "" || expected.CharacterID == "" ||
+		actual.PlayerID != expected.PlayerID || actual.CharacterID != expected.CharacterID {
+		return ErrAssignment
+	}
+	return nil
 }
 
 // applyTransform requires session.mu. Unknown hashes wait for reliable
@@ -746,7 +762,13 @@ func (session *Session) Close(ctx context.Context) error {
 
 func decodeView(snapshot gameserver.Snapshot) (playeradapter.ClientView, error) {
 	var view playeradapter.ClientView
-	if err := json.Unmarshal(snapshot.Payload, &view); err != nil || view.Version != playeradapter.ClientViewVersion || view.Tick != snapshot.Tick || view.HUD.Version != playeradapter.HUDVersion || view.HUD.Tick != snapshot.Tick || view.World.Version != playeradapter.WorldViewVersion || view.World.Tick != snapshot.Tick || view.Private.Version != playeradapter.PrivateViewVersion || view.Private.Tick != snapshot.Tick {
+	decoder := json.NewDecoder(bytes.NewReader(snapshot.Payload))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&view); err != nil {
+		return playeradapter.ClientView{}, fmt.Errorf("%w: invalid ClientView/v%d", ErrAssignment, playeradapter.ClientViewVersion)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) || playeradapter.ValidateClientView(view, snapshot.Tick) != nil {
 		return playeradapter.ClientView{}, fmt.Errorf("%w: invalid ClientView/v%d", ErrAssignment, playeradapter.ClientViewVersion)
 	}
 	return view, nil

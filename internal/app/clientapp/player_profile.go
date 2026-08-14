@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
@@ -29,4 +31,26 @@ func loadPlayerProfile(path string, fixtures []d2save.Character) (*d2save.Store,
 		return nil, "", fmt.Errorf("restore player profile: %w", err)
 	}
 	return store, path, nil
+}
+
+func persistOfflineCharacter(saves *d2save.Store, session *gamesession.Session, playerID string) error {
+	if saves == nil || session == nil {
+		return nil
+	}
+	baseline, selected := saves.Selected()
+	if !selected {
+		return nil
+	}
+	checkpoint, err := session.CanonicalCheckpoint()
+	if err != nil {
+		return fmt.Errorf("persist single-player character: %w", err)
+	}
+	updated, err := playeradapter.ProjectCharacter(playerID, baseline, checkpoint)
+	if err != nil {
+		return fmt.Errorf("persist single-player character: %w", err)
+	}
+	if err := saves.UpdateSelected(updated); err != nil {
+		return fmt.Errorf("persist single-player character: %w", err)
+	}
+	return nil
 }
