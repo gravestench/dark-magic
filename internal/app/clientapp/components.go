@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
+	"github.com/gravestench/dark-magic/internal/modcache"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -31,19 +32,44 @@ func (app *application) discoverScriptDefinitions() ([]modruntime.Definition, er
 	if app.options.Mods == nil {
 		return modruntime.DiscoverDefinitions(context.Background(), app.scripts, app.options.Content)
 	}
+	_, definitions, err := app.discoverPackageDefinitions(context.Background())
+	return definitions, err
+}
+
+func (app *application) discoverPackageDefinitions(ctx context.Context) (map[string][]modruntime.Definition, []modruntime.Definition, error) {
+	byPackage := make(map[string][]modruntime.Definition)
 	var definitions []modruntime.Definition
-	for _, pkg := range app.options.Mods.Packages {
+	for _, pkg := range app.options.Mods.Packages() {
 		source, err := app.modSource(pkg.Manifest.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		discovered, err := modruntime.DiscoverDefinitions(context.Background(), app.scripts, source)
+		discovered, err := modruntime.DiscoverOwnedDefinitions(ctx, app.scripts, source, pkg.Manifest.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		if err := modruntime.ValidateDefinitionDependencies(discovered, pkg.Manifest.ID, dependencyIDs(pkg.Manifest)); err != nil {
+			return nil, nil, err
+		}
+		if err := modruntime.ValidateDefinitionEntrypoints(discovered,
+			pkg.Manifest.Entrypoints.ClientComponents, pkg.Manifest.Entrypoints.AuthorityComponents); err != nil {
+			return nil, nil, err
+		}
+		byPackage[pkg.Manifest.ID] = discovered
 		definitions = append(definitions, discovered...)
 	}
-	return definitions, nil
+	if err := modruntime.ValidateDefinitionDomains(definitions, app.options.Mods.ClientComponents(), app.options.Mods.AuthorityComponents()); err != nil {
+		return nil, nil, err
+	}
+	return byPackage, definitions, nil
+}
+
+func dependencyIDs(manifest modcache.Manifest) []string {
+	result := make([]string, len(manifest.Dependencies))
+	for index, dependency := range manifest.Dependencies {
+		result[index] = dependency.ID
+	}
+	return result
 }
 
 func (app *application) modSource(id string) (fs.FS, error) {
@@ -53,7 +79,7 @@ func (app *application) modSource(id string) (fs.FS, error) {
 	if app.options.Mods == nil {
 		return app.options.Content, nil
 	}
-	for _, pkg := range app.options.Mods.Packages {
+	for _, pkg := range app.options.Mods.Packages() {
 		if pkg.Manifest.ID == id {
 			source, err := fs.Sub(app.options.Content, path.Join("mods", id))
 			if err != nil {
@@ -66,12 +92,45 @@ func (app *application) modSource(id string) (fs.FS, error) {
 }
 
 func (app *application) registerManagedDefinitions(definitions []modruntime.Definition) error {
+	if app.componentIDs == nil {
+		app.componentIDs = make(map[string]bool)
+	}
 	for _, definition := range definitions {
 		if err := app.components.Register(definition.Managed()); err != nil {
 			return wrap("register Lua component "+definition.ID, err)
 		}
+		app.componentIDs[definition.ID] = true
 	}
 	return nil
+}
+
+func (app *application) reconcileManagedDefinitions(ctx context.Context, definitions []modruntime.Definition) error {
+	if app.componentIDs == nil {
+		app.componentIDs = make(map[string]bool)
+	}
+	for _, definition := range definitions {
+		if app.componentIDs[definition.ID] {
+			if err := app.components.Replace(ctx, definition.Managed()); err != nil {
+				return wrap("replace Lua component "+definition.ID, err)
+			}
+			continue
+		}
+		if err := app.components.Register(definition.Managed()); err != nil {
+			return wrap("register Lua component "+definition.ID, err)
+		}
+		app.componentIDs[definition.ID] = true
+	}
+	return nil
+}
+
+func (app *application) activateNetworkClientComponents(ctx context.Context) error {
+	desired := make(map[string]bool)
+	if app.options.Mods != nil {
+		for _, id := range app.options.Mods.ClientComponents() {
+			desired[id] = true
+		}
+	}
+	return wrap("activate network client components", app.components.ApplyDesired(ctx, desired))
 }
 
 func (app *application) activateComponents() error {

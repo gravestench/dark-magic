@@ -12,11 +12,13 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
 type QUICConfig struct {
 	Address, CertificatePath, PrivateKeyPath, AdmissionKeyPath, SessionID string
 	RemoteProfile                                                         *RemoteProfileConfig
+	ModCache                                                              *modcache.Store
 }
 
 func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, error) {
@@ -52,6 +54,12 @@ func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, e
 	if err != nil {
 		return nil, err
 	}
+	packages, err := NewPackageProvider(host.Allocation.Identity.Recipe, config.ModCache)
+	if err != nil {
+		_ = server.Close()
+		return nil, err
+	}
+	server.SetPackageProvider(packages)
 	if config.RemoteProfile != nil {
 		profiles, err := NewRemoteProfileAdmissions(host, authenticator, *config.RemoteProfile)
 		if err != nil {

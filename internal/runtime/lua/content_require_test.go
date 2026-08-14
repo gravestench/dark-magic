@@ -2,6 +2,7 @@ package modruntime
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -121,5 +122,80 @@ extension_value = require("extension").value
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPackageRegistryChangeCannotReuseRemovedCachedModule(t *testing.T) {
+	source := fstest.MapFS{
+		"mods/extension/lua/extension/value.lua": &fstest.MapFile{Data: []byte(`return {value="old"}`)},
+		"test.lua":                               &fstest.MapFile{Data: []byte(`value = require("extension.value").value`)},
+	}
+	registry := NewPackageRegistry([]string{"extension"})
+	runtime := New()
+	if err := runtime.RegisterInstaller(PackageRequireRegistry(source, registry)); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Stop(t.Context())
+	if err := runtime.Execute(t.Context(), source, "test.lua"); err != nil {
+		t.Fatal(err)
+	}
+	registry.Replace(nil)
+	if err := InvalidatePackageModules(t.Context(), runtime, "extension"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Execute(t.Context(), source, "test.lua"); err == nil {
+		t.Fatal("removed package module remained available through package.loaded")
+	}
+}
+
+func TestDefinitionDependenciesRequireDeclaredPackageOwnership(t *testing.T) {
+	definitions := []Definition{{ID: "extension.boot", DependsOn: []string{"dependency.service", "extension.internal"}}}
+	if err := ValidateDefinitionDependencies(definitions, "extension", []string{"dependency"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDefinitionDependencies(definitions, "extension", nil); err == nil {
+		t.Fatal("undeclared component dependency was accepted")
+	}
+}
+
+func TestDefinitionEntrypointsMustExist(t *testing.T) {
+	definitions := []Definition{{ID: "extension.client"}}
+	if err := ValidateDefinitionEntrypoints(definitions, []string{"extension.client"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDefinitionEntrypoints(definitions, []string{"extension.missing"}); err == nil {
+		t.Fatal("missing manifest entrypoint was accepted")
+	}
+}
+
+func TestDefinitionDomainsRejectOppositeEntrypointDependency(t *testing.T) {
+	definitions := []Definition{
+		{ID: "example.client", DependsOn: []string{"example.shared"}},
+		{ID: "example.shared", DependsOn: []string{"example.authority"}},
+		{ID: "example.authority"},
+	}
+	if err := ValidateDefinitionDomains(definitions, []string{"example.client"}, []string{"example.authority"}); err == nil {
+		t.Fatal("client dependency closure enabled an authority entrypoint")
+	}
+	definitions[1].DependsOn = nil
+	if err := ValidateDefinitionDomains(definitions, []string{"example.client"}, []string{"example.authority"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidatePackageSyntaxCompilesAllLuaWithoutExecutingIt(t *testing.T) {
+	source := fstest.MapFS{
+		"boot.lua":             &fstest.MapFile{Data: []byte(`error("must not execute")`)},
+		"lua/example/good.lua": &fstest.MapFile{Data: []byte(`return function(value) return value + 1 end`)},
+	}
+	if err := ValidatePackageSyntax(source); err != nil {
+		t.Fatal(err)
+	}
+	source["lua/example/bad.lua"] = &fstest.MapFile{Data: []byte(`return function(`)}
+	if err := ValidatePackageSyntax(source); err == nil || !strings.Contains(err.Error(), "lua/example/bad.lua") {
+		t.Fatalf("invalid package syntax error = %v", err)
 	}
 }

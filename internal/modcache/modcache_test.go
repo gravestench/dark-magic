@@ -3,22 +3,28 @@ package modcache
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 )
 
-func TestBundledPackageIsCachedByDigestAndEnabledOnlyForNewProfile(t *testing.T) {
+func TestExtensionIsCachedByDigestAndResolvedAgainstBuiltinBase(t *testing.T) {
 	store, err := New(filepath.Join(t.TempDir(), "cache"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	bundle := testBundle(testManifest("base", "game"), map[string]string{"boot.lua": "return {}"})
+	base := testBuiltin(t)
+	bundle := testBundle(testManifest("example", "extension"), map[string]string{"boot.lua": "return {}"})
 	defaults, err := store.ReconcileBundled([]Bundle{{Source: bundle, DefaultEnabled: true}})
 	if err != nil {
 		t.Fatal(err)
@@ -28,21 +34,22 @@ func TestBundledPackageIsCachedByDigestAndEnabledOnlyForNewProfile(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !created || !reflect.DeepEqual(profile.Enabled, []string{"base"}) {
+	if !created || !reflect.DeepEqual(profile.Enabled, []string{"example"}) {
 		t.Fatalf("new profile = %#v created=%t", profile, created)
 	}
-	lock, err := store.Resolve(profile)
+	resolved, err := store.Resolve(profile, base)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(lock.Packages) != 1 || lock.Packages[0].Manifest.ID != "base" || !validDigest(lock.Digest) {
-		t.Fatalf("resolved lock = %#v", lock)
+	lock := resolved.Extensions
+	if resolved.Base.Manifest.ID != "d2legacy" || len(lock.Packages) != 1 || lock.Packages[0].Manifest.ID != "example" || !validDigest(lock.Digest) {
+		t.Fatalf("resolved set = %#v", resolved)
 	}
 	descriptor := lock.Packages[0].Descriptor
 	if _, err := os.Stat(store.blobPath(descriptor.Digest)); err != nil {
 		t.Fatalf("content-addressed blob: %v", err)
 	}
-	mounted, err := store.Mount(lock)
+	mounted, err := store.Mount(lock, base)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,9 +73,9 @@ func TestBundledPackageIsCachedByDigestAndEnabledOnlyForNewProfile(t *testing.T)
 	if created || len(profile.Enabled) != 0 {
 		t.Fatalf("existing empty profile = %#v created=%t", profile, created)
 	}
-	lock, err = store.Resolve(profile)
-	if err != nil || len(lock.Packages) != 0 {
-		t.Fatalf("empty lock = %#v, %v", lock, err)
+	resolved, err = store.Resolve(profile, base)
+	if err != nil || len(resolved.Extensions.Packages) != 0 {
+		t.Fatalf("empty extension set = %#v, %v", resolved, err)
 	}
 }
 
@@ -77,38 +84,42 @@ func TestResolverOrdersDependenciesBeforeDependentsAndLookupInReverse(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	base := testManifest("base", "game")
+	base := testBuiltin(t)
+	foundation := testManifest("foundation", "extension")
+	foundation.Dependencies = []Dependency{{ID: base.Manifest.ID, Version: base.Manifest.Version}}
 	extension := testManifest("extension", "extension")
-	extension.Dependencies = []Dependency{{ID: "base", Version: base.Version}}
+	extension.Dependencies = []Dependency{{ID: "foundation", Version: foundation.Version}}
 	if _, err := store.ReconcileBundled([]Bundle{
-		{Source: testBundle(base, map[string]string{"shared.txt": "base"})},
+		{Source: testBundle(foundation, map[string]string{"shared.txt": "foundation"})},
 		{Source: testBundle(extension, map[string]string{"shared.txt": "extension"})},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"extension"}})
+	resolved, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"extension"}}, base)
 	if err != nil {
 		t.Fatal(err)
 	}
+	lock := resolved.Extensions
 	ids := []string{lock.Packages[0].Manifest.ID, lock.Packages[1].Manifest.ID}
-	if !reflect.DeepEqual(ids, []string{"base", "extension"}) {
+	if !reflect.DeepEqual(ids, []string{"foundation", "extension"}) {
 		t.Fatalf("activation order = %v", ids)
 	}
-	mounted, err := store.Mount(lock)
+	mounted, err := store.Mount(lock, base)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer mounted.Close()
 	lookup := mounted.LookupOrder()
-	if lookup[0].ID != "extension" || lookup[1].ID != "base" {
+	if lookup[0].ID != "extension" || lookup[1].ID != "foundation" {
 		t.Fatalf("lookup order = %#v", lookup)
 	}
 }
 
 func TestResolverRejectsMissingCyclesAndTamperedBlobs(t *testing.T) {
+	base := testBuiltin(t)
 	t.Run("missing", func(t *testing.T) {
 		store, _ := New(t.TempDir())
-		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"missing"}}); err == nil {
+		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"missing"}}, base); err == nil {
 			t.Fatal("missing enabled package was accepted")
 		}
 	})
@@ -120,24 +131,24 @@ func TestResolverRejectsMissingCyclesAndTamperedBlobs(t *testing.T) {
 		if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(first, nil)}, {Source: testBundle(second, nil)}}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"first"}}); err == nil || !strings.Contains(err.Error(), "cycle") {
+		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"first"}}, base); err == nil || !strings.Contains(err.Error(), "cycle") {
 			t.Fatalf("cycle error = %v", err)
 		}
 	})
 	t.Run("tamper", func(t *testing.T) {
 		store, _ := New(t.TempDir())
-		if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("base", "game"), nil)}}); err != nil {
+		if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("enabled", "extension"), nil)}}); err != nil {
 			t.Fatal(err)
 		}
 		catalog, err := store.readIndex()
 		if err != nil {
 			t.Fatal(err)
 		}
-		descriptor := catalog.Packages["base"]
+		descriptor := catalog.Packages["enabled"]
 		if err := os.WriteFile(store.blobPath(descriptor.Digest), []byte("tampered"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"base"}}); err == nil {
+		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"enabled"}}, base); err == nil {
 			t.Fatal("tampered package was accepted")
 		}
 	})
@@ -146,7 +157,7 @@ func TestResolverRejectsMissingCyclesAndTamperedBlobs(t *testing.T) {
 func TestDisabledBrokenPackageCannotPreventStartup(t *testing.T) {
 	store, _ := New(t.TempDir())
 	if _, err := store.ReconcileBundled([]Bundle{
-		{Source: testBundle(testManifest("enabled", "game"), nil)},
+		{Source: testBundle(testManifest("enabled", "extension"), nil)},
 		{Source: testBundle(testManifest("disabled", "extension"), nil)},
 	}); err != nil {
 		t.Fatal(err)
@@ -156,34 +167,39 @@ func TestDisabledBrokenPackageCannotPreventStartup(t *testing.T) {
 	if err := os.WriteFile(store.blobPath(disabled.Digest), []byte("broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"enabled"}})
-	if err != nil || len(lock.Packages) != 1 || lock.Packages[0].Manifest.ID != "enabled" {
-		t.Fatalf("enabled lock = %#v, %v", lock, err)
+	resolved, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"enabled"}}, testBuiltin(t))
+	if err != nil || len(resolved.Extensions.Packages) != 1 || resolved.Extensions.Packages[0].Manifest.ID != "enabled" {
+		t.Fatalf("enabled set = %#v, %v", resolved, err)
 	}
 }
 
-func TestResolvedSetRequiresOneGamePackage(t *testing.T) {
-	t.Run("extension only", func(t *testing.T) {
-		store, _ := New(t.TempDir())
-		if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("extension", "extension"), nil)}}); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"extension"}}); err == nil {
-			t.Fatal("extension-only set was accepted")
-		}
-	})
-	t.Run("multiple games", func(t *testing.T) {
-		store, _ := New(t.TempDir())
-		if _, err := store.ReconcileBundled([]Bundle{
-			{Source: testBundle(testManifest("first", "game"), nil)},
-			{Source: testBundle(testManifest("second", "game"), nil)},
-		}); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"first", "second"}}); err == nil {
-			t.Fatal("multiple game packages were accepted")
-		}
-	})
+func TestResolvedSetRejectsCachedGameAndExplicitBuiltinProfileEntry(t *testing.T) {
+	store, _ := New(t.TempDir())
+	if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("other_game", "game"), nil)}}); err != nil {
+		t.Fatal(err)
+	}
+	base := testBuiltin(t)
+	if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"other_game"}}, base); err == nil || !strings.Contains(err.Error(), "not an extension") {
+		t.Fatalf("cached game error = %v", err)
+	}
+	if _, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"d2legacy"}}, base); err == nil || !strings.Contains(err.Error(), "always enabled") {
+		t.Fatalf("built-in profile error = %v", err)
+	}
+}
+
+func TestResolvedSetRejectsOverlappingPackageNamespaces(t *testing.T) {
+	store, _ := New(t.TempDir())
+	parent := testManifest("example", "extension")
+	child := testManifest("example.feature", "extension")
+	if _, err := store.ReconcileBundled([]Bundle{
+		{Source: testBundle(parent, nil)}, {Source: testBundle(child, nil)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	profile := Profile{Schema: ProfileSchema, Enabled: []string{parent.ID, child.ID}}
+	if _, err := store.Resolve(profile, testBuiltin(t)); err == nil || !strings.Contains(err.Error(), "overlap") {
+		t.Fatalf("overlapping namespace error = %v", err)
+	}
 }
 
 func TestBundledArchiveDigestIsDeterministic(t *testing.T) {
@@ -204,15 +220,17 @@ func TestBundledArchiveDigestIsDeterministic(t *testing.T) {
 
 func TestMountRejectsLockMetadataChangedAfterResolution(t *testing.T) {
 	store, _ := New(t.TempDir())
-	if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("base", "game"), nil)}}); err != nil {
+	if _, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest("example", "extension"), nil)}}); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"base"}})
+	base := testBuiltin(t)
+	resolved, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"example"}}, base)
 	if err != nil {
 		t.Fatal(err)
 	}
+	lock := resolved.Extensions
 	lock.Packages[0].Manifest.Entrypoints.ClientComponents = []string{"attacker.boot"}
-	if _, err := store.Mount(lock); err == nil || !strings.Contains(err.Error(), "digest") {
+	if _, err := store.Mount(lock, base); err == nil || !strings.Contains(err.Error(), "digest") {
 		t.Fatalf("tampered lock error = %v", err)
 	}
 }
@@ -246,6 +264,122 @@ func TestArchiveValidationRejectsTraversalAndDuplicateEntries(t *testing.T) {
 	}
 }
 
+func TestInstallVerifiedPromotesOnlyExactExtensionBytes(t *testing.T) {
+	store, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := testManifest("downloaded", "extension")
+	archive := archiveBytes(t, testBundle(manifest, map[string]string{"boot.lua": "return {}"}))
+	digest := sha256.Sum256(archive)
+	descriptor := Descriptor{ID: manifest.ID, Version: manifest.Version,
+		Digest: "sha256:" + hex.EncodeToString(digest[:]), Size: int64(len(archive)), Redistributable: true}
+	installed, err := store.InstallVerified(context.Background(), bytes.NewReader(archive), descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if installed.ID != manifest.ID {
+		t.Fatalf("installed manifest = %#v", installed)
+	}
+	base := testBuiltin(t)
+	resolved, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{manifest.ID}}, base)
+	if err != nil || len(resolved.Extensions.Packages) != 1 {
+		t.Fatalf("resolved installed extension = %#v, %v", resolved, err)
+	}
+	tampered := append([]byte(nil), archive...)
+	tampered[len(tampered)-1] ^= 0xff
+	if _, err := store.InstallVerified(context.Background(), bytes.NewReader(tampered), descriptor); err == nil {
+		t.Fatal("tampered download was installed")
+	}
+}
+
+func TestInstallVerifiedRejectsManifestThatDiffersFromDescriptor(t *testing.T) {
+	store, _ := New(t.TempDir())
+	manifest := testManifest("actual", "extension")
+	archive := archiveBytes(t, testBundle(manifest, nil))
+	digest := sha256.Sum256(archive)
+	descriptor := Descriptor{ID: "advertised", Version: manifest.Version,
+		Digest: "sha256:" + hex.EncodeToString(digest[:]), Size: int64(len(archive)), Redistributable: true}
+	if _, err := store.InstallVerified(t.Context(), bytes.NewReader(archive), descriptor); err == nil {
+		t.Fatal("archive with a different manifest identity was accepted")
+	}
+}
+
+func TestExactSessionVersionsCoexistWithoutChangingProfileSelection(t *testing.T) {
+	store, _ := New(t.TempDir())
+	first := testManifest("shared", "extension")
+	first.Version = "1.0.0"
+	second := first
+	second.Version = "2.0.0"
+	install := func(manifest Manifest, marker string) Descriptor {
+		archive := archiveBytes(t, testBundle(manifest, map[string]string{"marker.txt": marker}))
+		digest := sha256.Sum256(archive)
+		descriptor := Descriptor{ID: manifest.ID, Version: manifest.Version,
+			Digest: "sha256:" + hex.EncodeToString(digest[:]), Size: int64(len(archive)), Redistributable: true}
+		if _, err := store.InstallVerified(t.Context(), bytes.NewReader(archive), descriptor); err != nil {
+			t.Fatal(err)
+		}
+		return descriptor
+	}
+	firstDescriptor := install(first, "first")
+	secondDescriptor := install(second, "second")
+	base := testBuiltin(t)
+	profile, err := store.Resolve(Profile{Schema: ProfileSchema, Enabled: []string{"shared"}}, base)
+	if err != nil || profile.Extensions.Packages[0].Descriptor != firstDescriptor {
+		t.Fatalf("profile selection changed = %#v, %v", profile, err)
+	}
+	exact, err := store.ResolveExact([]Descriptor{secondDescriptor}, base)
+	if err != nil || exact.Extensions.Packages[0].Descriptor != secondDescriptor {
+		t.Fatalf("exact session version = %#v, %v", exact, err)
+	}
+	if present, err := store.Has(firstDescriptor); err != nil || !present {
+		t.Fatalf("first version present=%t error=%v", present, err)
+	}
+}
+
+func TestConcurrentCacheUpdatesDoNotLosePackages(t *testing.T) {
+	store, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const count = 12
+	var wait sync.WaitGroup
+	errorsFound := make(chan error, count)
+	for index := 0; index < count; index++ {
+		index := index
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			id := fmt.Sprintf("extension_%02d", index)
+			_, err := store.ReconcileBundled([]Bundle{{Source: testBundle(testManifest(id, "extension"), nil)}})
+			errorsFound <- err
+		}()
+	}
+	wait.Wait()
+	close(errorsFound)
+	for err := range errorsFound {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	catalog, err := store.readIndex()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Packages) != count {
+		t.Fatalf("concurrent index contains %d packages, want %d", len(catalog.Packages), count)
+	}
+}
+
+func archiveBytes(t *testing.T, source fs.FS) []byte {
+	t.Helper()
+	var archive bytes.Buffer
+	if err := writeArchive(&archive, source); err != nil {
+		t.Fatal(err)
+	}
+	return archive.Bytes()
+}
+
 func testManifest(id, kind string) Manifest {
 	return Manifest{Schema: ManifestSchema, ID: id, Name: id, Version: "1.0.0", Kind: kind,
 		EngineAPI: EngineAPI, Redistributable: true, Entrypoints: Entrypoints{ClientComponents: []string{id + ".boot"}}}
@@ -258,4 +392,13 @@ func testBundle(manifest Manifest, files map[string]string) fstest.MapFS {
 		result[name] = &fstest.MapFile{Data: []byte(value), Mode: 0o600}
 	}
 	return result
+}
+
+func testBuiltin(t *testing.T) LockedPackage {
+	t.Helper()
+	base, err := DescribeBuiltin(testBundle(testManifest("d2legacy", "game"), map[string]string{"boot.lua": "return {}"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return base
 }

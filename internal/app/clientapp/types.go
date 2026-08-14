@@ -45,7 +45,9 @@ import (
 // Everything else is created here so ownership stays obvious.
 type Options struct {
 	Content               *content.FS
-	Mods                  *modcache.Lock
+	Mods                  *modcache.ResolvedSet
+	Packages              simulation.RuntimePackageSet
+	ModCache              *modcache.Store
 	Profile               Profile
 	NewCapture            CaptureFactory
 	CaptureDirectory      string
@@ -142,10 +144,16 @@ type application struct {
 	pointerAcceptance    *pointerMovementAcceptance
 	network              *networkController
 
-	components   *host.Manager
-	engineHost   *host.Host
-	shellSession *shell.Session
-	console      *raylibshell.Overlay
+	components      *host.Manager
+	packageRegistry *modruntime.PackageRegistry
+	packageDigests  map[string]string
+	configuredMods  simulation.RuntimePackageSet
+	componentIDs    map[string]bool
+	networkMounted  *modcache.MountedSet
+	recomposeMu     sync.Mutex
+	engineHost      *host.Host
+	shellSession    *shell.Session
+	console         *raylibshell.Overlay
 
 	sceneErrors  chan error
 	capture      Capture

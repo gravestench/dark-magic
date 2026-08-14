@@ -38,29 +38,40 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("join Act I town to Blood Moor", err)
 	}
-	app.transitionSeam = seam
-	app.gameWorldZones = map[int]*worldgen.Zone{1: townZone, 2: moorZone}
-	app.gameWorlds = map[int]*gameworld.Map{1: townMap, 2: moorMap}
 	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, d2legacySource, app.records, townMap)
 	if !found {
 		return errors.New("Act I town has no campfire entry")
 	}
-	app.gameWorldSpawns, err = entryWorldSpawns(app.options.FixtureWorldSpawn, seam, townSpawnX, townSpawnY)
+	spawns, err := entryWorldSpawns(app.options.FixtureWorldSpawn, seam, townSpawnX, townSpawnY)
 	if err != nil {
 		return err
 	}
-	app.activeWorldLevel = app.options.FixtureWorldLevel
-	if app.activeWorldLevel == 0 {
-		app.activeWorldLevel = 1
+	activeLevel := app.options.FixtureWorldLevel
+	if activeLevel == 0 {
+		activeLevel = 1
 	}
-	if app.gameWorlds[app.activeWorldLevel] == nil {
-		return fmt.Errorf("development fixture world level %d is unavailable", app.activeWorldLevel)
+	worlds := map[int]*gameworld.Map{1: townMap, 2: moorMap}
+	zones := map[int]*worldgen.Zone{1: townZone, 2: moorZone}
+	if worlds[activeLevel] == nil {
+		return fmt.Errorf("development fixture world level %d is unavailable", activeLevel)
 	}
+	var pointerAcceptance *pointerMovementAcceptance
 	if app.options.FixturePointerMove {
-		spawn := app.gameWorldSpawns[app.activeWorldLevel]
-		app.pointerAcceptance = newPointerMovementAcceptance(
-			app.gameWorlds[app.activeWorldLevel], spawn[0], spawn[1], app.profile.Width, app.profile.Height,
+		spawn := spawns[activeLevel]
+		pointerAcceptance = newPointerMovementAcceptance(
+			worlds[activeLevel], spawn[0], spawn[1], app.profile.Width, app.profile.Height,
 		)
+	}
+	app.worldMu.Lock()
+	app.transitionSeam = seam
+	app.gameWorldZones = zones
+	app.gameWorlds = worlds
+	app.gameWorldSpawns = spawns
+	app.activeWorldLevel = activeLevel
+	app.pointerAcceptance = pointerAcceptance
+	app.worldMu.Unlock()
+	if app.movementSource != nil {
+		app.movementSource.SetNavigation(worlds[activeLevel])
 	}
 	return nil
 }
@@ -123,6 +134,9 @@ func entryWorldSpawns(fixtureSpawn string, seam gametransition.Seam, townX, town
 // deciding what it means. The d2legacy mod owns level identities, trigger
 // distance, arrival behavior, and the authoritative transition system.
 func (app *application) transitionBootstrapData() map[string]any {
+	app.worldMu.RLock()
+	seam := app.transitionSeam
+	app.worldMu.RUnlock()
 	endpoint := func(source, destination gametransition.SeamEndpoint) map[string]any {
 		return map[string]any{
 			"source_level": float64(source.LevelID), "destination_level": float64(destination.LevelID),
@@ -132,8 +146,8 @@ func (app *application) transitionBootstrapData() map[string]any {
 		}
 	}
 	return map[string]any{"seams": []any{
-		endpoint(app.transitionSeam.Town, app.transitionSeam.Wilderness),
-		endpoint(app.transitionSeam.Wilderness, app.transitionSeam.Town),
+		endpoint(seam.Town, seam.Wilderness),
+		endpoint(seam.Wilderness, seam.Town),
 	}}
 }
 

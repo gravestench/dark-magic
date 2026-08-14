@@ -13,6 +13,7 @@ import (
 	adaptercatalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
 	adaptermovement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
+	"github.com/gravestench/dark-magic/internal/modcache"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -33,7 +34,12 @@ type Authority struct {
 	Random   *simulation.RandomStreams
 	Identity simulation.RuntimeIdentity
 
-	component host.Component
+	components *host.Manager
+}
+
+type Extension struct {
+	Manifest modcache.Manifest
+	Source   fs.FS
 }
 
 // Config describes the deterministic inputs needed to start d2legacy. Restore
@@ -46,6 +52,15 @@ type Config struct {
 	// InitialData contains immutable import/bootstrap values. It is deliberately
 	// absent from mutable runtime APIs after d2legacy materializes its own state.
 	InitialData map[string]any
+	// Packages is the storage-neutral built-in-plus-extension recipe supplied by
+	// product composition. Tests and bounded tools may omit it to derive the
+	// vanilla built-in package identity directly from source.
+	Packages simulation.RuntimePackageSet
+	// PackageContent and Extensions are supplied together by production
+	// composition so private Lua namespaces and authoritative entrypoints from
+	// every locked extension run on the actual authority.
+	PackageContent fs.FS
+	Extensions     []Extension
 	// ExecutionBudget overrides the Lua runtime invocation budget when positive.
 	// DisableExecutionBudget is reserved for bounded offline tools and large
 	// deterministic test vectors; interactive and network hosts should keep a
@@ -64,7 +79,13 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if source == nil || records == nil || engine == nil || session == nil {
 		return nil, fmt.Errorf("d2legacy: content, records, engine, and session are required")
 	}
-	identity, err := Identity(source, config.InitialData)
+	var identity simulation.RuntimeIdentity
+	var err error
+	if config.Packages.Base.ID == "" {
+		identity, err = Identity(source, config.InitialData)
+	} else {
+		identity, err = IdentityForPackages(source, config.Packages, config.InitialData)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +129,15 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if len(config.Restore) > 0 && (len(participants) > 0 || restoredState == nil) {
 		return nil, fmt.Errorf("d2legacy: restored state is missing %d participants", len(participants))
 	}
+	if config.PackageContent != nil {
+		ids := []string{"d2legacy"}
+		for _, extension := range config.Extensions {
+			ids = append(ids, extension.Manifest.ID)
+		}
+		if err := result.Runtime.RegisterInstaller(modruntime.PackageRequire(config.PackageContent, ids)); err != nil {
+			return nil, err
+		}
+	}
 	if err := ConfigureRuntime(result.Runtime, source, records, engine, session, result.State, streams, config.InitialData); err != nil {
 		return nil, err
 	}
@@ -119,11 +149,48 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 		_ = result.Runtime.Stop(context.Background())
 		return nil, err
 	}
-	component, err := definition.Managed().New(ctx)
-	if err == nil {
-		err = component.Start(ctx)
+	allDefinitions := []modruntime.Definition{definition}
+	clientEntrypoints := []string{"d2legacy.boot"}
+	authorityEntrypoints := []string{definition.ID}
+	desired := map[string]bool{definition.ID: true}
+	for _, extension := range config.Extensions {
+		definitions, discoverErr := modruntime.DiscoverOwnedDefinitions(ctx, result.Runtime, extension.Source, extension.Manifest.ID)
+		if discoverErr != nil {
+			_ = result.Runtime.Stop(context.Background())
+			return nil, fmt.Errorf("d2legacy: discover authority extension %q: %w", extension.Manifest.ID, discoverErr)
+		}
+		dependencies := make([]string, len(extension.Manifest.Dependencies))
+		for index, dependency := range extension.Manifest.Dependencies {
+			dependencies[index] = dependency.ID
+		}
+		if dependencyErr := modruntime.ValidateDefinitionDependencies(definitions, extension.Manifest.ID, dependencies); dependencyErr != nil {
+			_ = result.Runtime.Stop(context.Background())
+			return nil, dependencyErr
+		}
+		if entrypointErr := modruntime.ValidateDefinitionEntrypoints(definitions,
+			extension.Manifest.Entrypoints.ClientComponents, extension.Manifest.Entrypoints.AuthorityComponents); entrypointErr != nil {
+			_ = result.Runtime.Stop(context.Background())
+			return nil, entrypointErr
+		}
+		for _, id := range extension.Manifest.Entrypoints.AuthorityComponents {
+			desired[id] = true
+		}
+		allDefinitions = append(allDefinitions, definitions...)
+		clientEntrypoints = append(clientEntrypoints, extension.Manifest.Entrypoints.ClientComponents...)
+		authorityEntrypoints = append(authorityEntrypoints, extension.Manifest.Entrypoints.AuthorityComponents...)
 	}
-	if err != nil {
+	if err := modruntime.ValidateDefinitionDomains(allDefinitions, clientEntrypoints, authorityEntrypoints); err != nil {
+		_ = result.Runtime.Stop(context.Background())
+		return nil, err
+	}
+	manager := host.NewManager()
+	for _, candidate := range allDefinitions {
+		if err := manager.Register(candidate.Managed()); err != nil {
+			_ = result.Runtime.Stop(context.Background())
+			return nil, err
+		}
+	}
+	if err := manager.ApplyDesired(ctx, desired); err != nil {
 		_ = result.Runtime.Stop(context.Background())
 		return nil, err
 	}
@@ -131,17 +198,17 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	// this point would compare the checkpoint against an empty registry.
 	if restoredState != nil {
 		if err := result.State.RestoreState(restoredState); err != nil {
-			_ = component.Stop(context.Background())
+			_ = manager.ApplyDesired(context.Background(), map[string]bool{})
 			_ = result.Runtime.Stop(context.Background())
 			return nil, fmt.Errorf("d2legacy: restore participant %q: %w", result.State.StateID(), err)
 		}
 	}
 	if err := session.RegisterAuthoritativeRuntime(identity, result.State, streams); err != nil {
-		_ = component.Stop(context.Background())
+		_ = manager.ApplyDesired(context.Background(), map[string]bool{})
 		_ = result.Runtime.Stop(context.Background())
 		return nil, err
 	}
-	result.component = component
+	result.components = manager
 	return result, nil
 }
 
@@ -221,8 +288,8 @@ func (authority *Authority) Stop(ctx context.Context) error {
 		return nil
 	}
 	var componentErr error
-	if authority.component != nil {
-		componentErr = authority.component.Stop(ctx)
+	if authority.components != nil {
+		componentErr = authority.components.ApplyDesired(ctx, map[string]bool{})
 	}
 	runtimeErr := authority.Runtime.Stop(ctx)
 	if componentErr != nil {

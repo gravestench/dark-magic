@@ -29,7 +29,7 @@ import (
 )
 
 func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
-	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config"}
+	identity := clientSessionIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)
@@ -153,6 +153,15 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if err := selfHosted.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func clientSessionIdentity() simulation.RuntimeIdentity {
+	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
+	}}
 }
 
 func TestSessionExposesDistinctNetworkTimelines(t *testing.T) {

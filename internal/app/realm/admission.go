@@ -222,8 +222,8 @@ func (admissions *Admissions) CommitCanonicalMembership(ctx context.Context, gam
 }
 
 func cloneRuntimeIdentity(identity simulation.RuntimeIdentity) simulation.RuntimeIdentity {
-	identity.Dependencies = cloneStrings(identity.Dependencies)
-	identity.CapabilityVersions = cloneStrings(identity.CapabilityVersions)
+	identity.Recipe.Packages.Extensions = append([]simulation.RuntimePackage(nil), identity.Recipe.Packages.Extensions...)
+	identity.Recipe.CapabilityVersions = cloneStrings(identity.Recipe.CapabilityVersions)
 	return identity
 }
 

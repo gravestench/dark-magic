@@ -42,7 +42,8 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if assignment.Endpoint.Address != "game.example:4433" || assignment.Runtime.ModID != identity.ModID || assignment.CharacterRevision != 4 {
+	if assignment.Endpoint.Address != "game.example:4433" || assignment.Runtime.Recipe.Packages.Base.ID != identity.Recipe.Packages.Base.ID ||
+		len(assignment.Runtime.Recipe.Packages.Extensions) != 1 || assignment.Runtime.Recipe.Packages.Extensions[0].ID != "realm_extension" || assignment.CharacterRevision != 4 {
 		t.Fatalf("assignment = %#v", assignment)
 	}
 	principal, err := authority.Authenticate(context.Background(), assignment.Ticket)
@@ -148,7 +149,12 @@ func admissionFixture(t *testing.T, validate simulation.CommandValidator) (*Mana
 	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{Validate: validate, Apply: func(*gameecs.Engine, simulation.Command) error { return nil }, Allowed: []simulation.Authority{simulation.AuthoritySystem}}); err != nil {
 		t.Fatal(err)
 	}
-	identity := simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package", AuthoritativeHash: "rules", ConfigurationHash: "config"}
+	identity := simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1, Redistributable: true}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
+	}}
+	identity.Recipe.Packages.Extensions = []simulation.RuntimePackage{{ID: "realm_extension", Version: "1.0.0", Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Size: 2, Redistributable: true}}
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)

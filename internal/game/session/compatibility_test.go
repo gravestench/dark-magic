@@ -1,6 +1,8 @@
 package session
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -8,9 +10,14 @@ import (
 )
 
 func compatibilityIdentity(packageHash string) simulation.RuntimeIdentity {
-	return simulation.RuntimeIdentity{ModID: "d2legacy", ContractVersion: "v1",
-		PackageHash: packageHash, AuthoritativeHash: packageHash, ConfigurationHash: "config",
-		Dependencies: map[string]string{"engine": "hash"}, CapabilityVersions: map[string]string{"engine.ecs": "v1"}}
+	digestBytes := sha256.Sum256([]byte(packageHash))
+	packageHash = "sha256:" + hex.EncodeToString(digestBytes[:])
+	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageHash, Size: 1, Redistributable: true}},
+		AuthoritativeHash: packageHash, ConfigurationHash: "config",
+		CapabilityVersions: map[string]string{"engine.ecs": "v1"},
+	}}
 }
 
 func identityState(t *testing.T, identity simulation.RuntimeIdentity) []simulation.ParticipantState {
@@ -97,4 +104,47 @@ func TestChangedPackageAppliesOnlyToNewAllocationWithoutExplicitMigration(t *tes
 	if err := oldAllocation.ValidateCheckpoint(oldCheckpoint, nil); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestOrderedExtensionRecipeIsPinnedAcrossEveryCompatibilitySurface(t *testing.T) {
+	server := compatibilityIdentity("base")
+	server.Recipe.Packages.Extensions = []simulation.RuntimePackage{
+		{ID: "foundation", Version: "1", Digest: runtimePackageDigest("foundation"), Size: 10, Redistributable: true},
+		{ID: "feature", Version: "1", Digest: runtimePackageDigest("feature"), Size: 20, Redistributable: true},
+	}
+	allocation, err := Allocate("extensions", server, PredictionLimited)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := allocation.Admit("character", server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mismatch := server
+	mismatch.Recipe.Packages.Extensions = append([]simulation.RuntimePackage(nil), server.Recipe.Packages.Extensions...)
+	mismatch.Recipe.Packages.Extensions[0], mismatch.Recipe.Packages.Extensions[1] = mismatch.Recipe.Packages.Extensions[1], mismatch.Recipe.Packages.Extensions[0]
+	if _, err := allocation.Admit("character", mismatch); !errors.Is(err, ErrCompatibility) {
+		t.Fatalf("extension-order admission error = %v", err)
+	}
+	if err := allocation.ValidateReconnect(token, mismatch); !errors.Is(err, ErrCompatibility) {
+		t.Fatalf("extension-order reconnect error = %v", err)
+	}
+	checkpoint := simulation.Checkpoint{Participants: identityState(t, mismatch)}
+	if err := allocation.ValidateCheckpoint(checkpoint, nil); !errors.Is(err, ErrCompatibility) {
+		t.Fatalf("extension-order checkpoint error = %v", err)
+	}
+	replay := simulation.Replay{Version: simulation.ReplayVersion, InitialParticipants: identityState(t, mismatch)}
+	if err := allocation.ValidateReplay(replay, nil); !errors.Is(err, ErrCompatibility) {
+		t.Fatalf("extension-order replay error = %v", err)
+	}
+	durable := allocation.Durable("character")
+	differentAllocation, _ := Allocate("different", mismatch, PredictionLimited)
+	if err := differentAllocation.ValidateDurable(durable); !errors.Is(err, ErrCompatibility) {
+		t.Fatalf("extension-order durable error = %v", err)
+	}
+}
+
+func runtimePackageDigest(value string) string {
+	digest := sha256.Sum256([]byte(value))
+	return "sha256:" + hex.EncodeToString(digest[:])
 }

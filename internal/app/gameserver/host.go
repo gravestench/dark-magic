@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
 	"strings"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
 // Config contains the deterministic and compatibility inputs fixed when a
@@ -23,6 +25,9 @@ type Config struct {
 	Prediction  gamesession.PredictionTier
 	Session     gamesession.Config
 	InitialData map[string]any
+	Packages    simulation.RuntimePackageSet
+	Content     fs.FS
+	Mods        *modcache.ResolvedSet
 }
 
 type Mode string
@@ -67,9 +72,25 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 		_ = engine.Close()
 		return nil, err
 	}
-	authority, err := d2legacy.StartWithConfig(ctx, source, records, engine, session, d2legacy.Config{
-		Seed: config.Seed, InitialData: config.InitialData,
-	})
+	d2config := d2legacy.Config{Seed: config.Seed, InitialData: config.InitialData, Packages: config.Packages}
+	if config.Mods != nil {
+		if config.Content == nil {
+			_ = session.Close()
+			_ = engine.Close()
+			return nil, errors.New("game server: resolved mods require package content")
+		}
+		d2config.PackageContent = config.Content
+		for _, pkg := range config.Mods.Extensions.Packages {
+			extensionSource, subErr := fs.Sub(config.Content, path.Join("mods", pkg.Manifest.ID))
+			if subErr != nil {
+				_ = session.Close()
+				_ = engine.Close()
+				return nil, fmt.Errorf("game server: resolve extension %q: %w", pkg.Manifest.ID, subErr)
+			}
+			d2config.Extensions = append(d2config.Extensions, d2legacy.Extension{Manifest: pkg.Manifest, Source: extensionSource})
+		}
+	}
+	authority, err := d2legacy.StartWithConfig(ctx, source, records, engine, session, d2config)
 	if err != nil {
 		_ = session.Close()
 		_ = engine.Close()

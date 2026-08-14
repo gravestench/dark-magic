@@ -119,6 +119,7 @@ func (app *application) loadGameCatalogs() error {
 }
 
 func (app *application) buildOfflineSession() error {
+	app.configuredMods = cloneRuntimePackages(app.options.Packages)
 	fixtures := DevelopmentCharacters(app.options.FixtureCharacters)
 	profilePath, err := darkpaths.ExpandHost(app.options.PlayerProfilePath)
 	if err != nil {
@@ -155,7 +156,7 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("resolve d2legacy package", err)
 	}
-	identity, err := d2legacymod.Identity(d2legacySource, initialData)
+	identity, err := d2legacymod.IdentityForPackages(d2legacySource, app.options.Packages, initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}
@@ -169,12 +170,18 @@ func (app *application) buildOfflineSession() error {
 	}
 	app.ecsCapability = modruntime.NewECSCapability(app.scripts, app.entitySimulation)
 	if app.options.Mods != nil {
-		packageIDs := make([]string, len(app.options.Mods.Packages))
-		for index, pkg := range app.options.Mods.Packages {
+		packages := app.options.Mods.Packages()
+		packageIDs := make([]string, len(packages))
+		for index, pkg := range packages {
 			packageIDs[index] = pkg.Manifest.ID
 		}
-		if err := app.scripts.RegisterInstaller(modruntime.PackageRequire(app.options.Content, packageIDs)); err != nil {
+		app.packageRegistry = modruntime.NewPackageRegistry(packageIDs)
+		if err := app.scripts.RegisterInstaller(modruntime.PackageRequireRegistry(app.options.Content, app.packageRegistry)); err != nil {
 			return wrap("register package Lua namespaces", err)
+		}
+		app.packageDigests = make(map[string]string, len(packages))
+		for _, pkg := range packages {
+			app.packageDigests[pkg.Manifest.ID] = pkg.Descriptor.Digest
 		}
 	}
 	if err := d2legacymod.ConfigureRuntime(app.scripts, d2legacySource, app.records, app.entitySimulation, app.offlineSession,

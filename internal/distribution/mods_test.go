@@ -13,7 +13,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
-func TestPrepareModsInstallsAndEnablesD2LegacyOnlyForANewProfile(t *testing.T) {
+func TestPrepareModsAlwaysMountsBuiltinD2LegacyAndStartsWithNoExtensions(t *testing.T) {
 	cacheDirectory, profilePath := filepath.Join(t.TempDir(), "cache"), filepath.Join(t.TempDir(), "mods.json")
 	t.Setenv("DARK_MAGIC_MOD_CACHE", cacheDirectory)
 	t.Setenv("DARK_MAGIC_MOD_PROFILE", profilePath)
@@ -22,10 +22,10 @@ func TestPrepareModsInstallsAndEnablesD2LegacyOnlyForANewProfile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !first.ProfileCreated || !reflect.DeepEqual(first.Profile.Enabled, []string{"d2legacy"}) ||
-		len(first.Lock.Packages) != 1 || first.Lock.Packages[0].Manifest.ID != "d2legacy" ||
-		len(first.Layers) != 1 || first.Layers[0].Name != "mod:d2legacy" {
-		t.Fatalf("default bundled set = %#v", first)
+	if !first.ProfileCreated || len(first.Profile.Enabled) != 0 ||
+		first.Resolved.Base.Manifest.ID != "d2legacy" || len(first.Resolved.Extensions.Packages) != 0 ||
+		len(first.Layers) != 1 || first.Layers[0].Name != "builtin:d2legacy" {
+		t.Fatalf("default built-in set = %#v", first)
 	}
 	contentFS, err := content.New(first.Layers...)
 	if err != nil {
@@ -54,32 +54,72 @@ func TestPrepareModsInstallsAndEnablesD2LegacyOnlyForANewProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer second.Close()
-	if second.ProfileCreated || len(second.Lock.Packages) != 0 || len(second.Layers) != 0 {
-		t.Fatalf("explicit empty bundled set = %#v", second)
+	if second.ProfileCreated || len(second.Resolved.Extensions.Packages) != 0 || len(second.Layers) != 1 || second.Resolved.Base.Manifest.ID != "d2legacy" {
+		t.Fatalf("explicit vanilla set = %#v", second)
 	}
 }
 
-func TestModOverrideDoesNotRewritePersistentProfile(t *testing.T) {
+func TestNoneOverrideBypassesBrokenPersistentExtensionState(t *testing.T) {
 	cacheDirectory, profilePath := filepath.Join(t.TempDir(), "cache"), filepath.Join(t.TempDir(), "mods.json")
 	t.Setenv("DARK_MAGIC_MOD_CACHE", cacheDirectory)
 	t.Setenv("DARK_MAGIC_MOD_PROFILE", profilePath)
+	if err := os.WriteFile(profilePath, []byte("broken"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	set, err := PrepareMods("none")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(set.Lock.Packages) != 0 {
-		t.Fatalf("override lock = %#v", set.Lock)
+	if len(set.Resolved.Extensions.Packages) != 0 || set.Resolved.Base.Manifest.ID != "d2legacy" || len(set.Layers) != 1 {
+		t.Fatalf("override set = %#v", set)
 	}
 	_ = set.Close()
 	data, err := os.ReadFile(profilePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var persisted modcache.Profile
-	if err := json.Unmarshal(data, &persisted); err != nil {
+	if string(data) != "broken" {
+		t.Fatalf("none override rewrote profile: %q", data)
+	}
+	if _, err := os.Stat(cacheDirectory); !os.IsNotExist(err) {
+		t.Fatalf("none override touched extension cache: %v", err)
+	}
+}
+
+func TestLegacyBuiltinProfileEntryMigratesToExtensionsOnly(t *testing.T) {
+	profile := modcache.Profile{Schema: modcache.ProfileSchema, Enabled: []string{"d2legacy", "example"}}
+	migrated, changed := removeBuiltinFromProfile(profile, "d2legacy")
+	if !changed || !reflect.DeepEqual(migrated.Enabled, []string{"example"}) {
+		t.Fatalf("migrated profile = %#v, changed=%t", migrated, changed)
+	}
+	unchanged, changed := removeBuiltinFromProfile(migrated, "d2legacy")
+	if changed || !reflect.DeepEqual(unchanged, migrated) {
+		t.Fatalf("idempotent migration = %#v, changed=%t", unchanged, changed)
+	}
+}
+
+func TestPrepareModsPersistsLegacyBuiltinProfileMigration(t *testing.T) {
+	profilePath := filepath.Join(t.TempDir(), "mods.json")
+	t.Setenv("DARK_MAGIC_MOD_CACHE", filepath.Join(t.TempDir(), "cache"))
+	t.Setenv("DARK_MAGIC_MOD_PROFILE", profilePath)
+	legacy := modcache.Profile{Schema: modcache.ProfileSchema, Enabled: []string{"d2legacy"}}
+	data, _ := json.Marshal(legacy)
+	if err := os.WriteFile(profilePath, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(persisted.Enabled, []string{"d2legacy"}) {
-		t.Fatalf("persisted profile = %#v", persisted)
+	set, err := PrepareMods()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer set.Close()
+	if len(set.Profile.Enabled) != 0 || len(set.Resolved.Extensions.Packages) != 0 {
+		t.Fatalf("migrated runtime set = %#v", set)
+	}
+	persisted, _, err := modcache.LoadOrCreateProfile(profilePath, []string{"unexpected"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Enabled) != 0 {
+		t.Fatalf("persisted migrated profile = %#v", persisted)
 	}
 }

@@ -21,8 +21,8 @@ type MountedSet struct {
 // Mount opens packages in activation order: dependencies first, followed by
 // dependents and then later profile entries. LookupOrder reverses that sequence
 // so the most specific package wins resource conflicts.
-func (store *Store) Mount(lock Lock) (*MountedSet, error) {
-	if err := ValidateLock(lock); err != nil {
+func (store *Store) Mount(lock Lock, base LockedPackage) (*MountedSet, error) {
+	if err := ValidateLock(lock, base); err != nil {
 		return nil, err
 	}
 	set := &MountedSet{}

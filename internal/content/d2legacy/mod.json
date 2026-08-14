@@ -11,11 +11,5 @@
     "client_components": ["d2legacy.boot"],
     "authority_components": ["d2legacy.authoritative"]
   },
-  "dependencies": [],
-  "capabilities": [
-    "engine.authority/v1",
-    "engine.ecs/v1",
-    "engine.render/v1",
-    "engine.scene/v1"
-  ]
+  "dependencies": []
 }

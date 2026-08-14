@@ -342,27 +342,31 @@ package tests while iterating. Run `make test`, `make test-race`, and
 
 ## Join-time mod acquisition
 
-Realm admission advertises a signed, versioned mod manifest before a client is
-allowed into a game session. Missing redistributable packages can be fetched
-from the realm, game server, or peers into a content-addressed cache. Peers are
-untrusted blob sources; the authoritative manifest decides acceptable hashes,
-sizes, dependency order, engine compatibility, and capabilities.
+The production direct-host path now advertises the complete canonical runtime
+recipe over pinned TLS before profile admission. It includes embedded
+`d2legacy`, the ordered extension descriptors, engine/protocol contracts, and
+authoritative/configuration hashes. A joiner downloads missing redistributable
+extensions from the host, recomposes its VFS and client components, recomputes
+the same recipe locally, and only then offers the selected character and starts
+the ordinary authenticated join.
 
-The acquisition pipeline must:
+Package bytes travel on bounded reliable QUIC streams in 32 KiB application
+chunks. The connection uses a per-peer byte burst/refill limit. Client recipes
+are bounded by extension count, per-package size, and total bytes. A download
+streams into quarantine and is promoted atomically only after full SHA-256,
+size, ZIP-safety, manifest identity/version, kind, dependency/order, and
+redistributability checks. Exact content-addressed versions may coexist across
+concurrent sessions without rewriting the user's enabled profile.
 
-1. reserve bounded temporary/quarantine storage;
-2. request independently hash-addressed chunks from one or more sources;
-3. enforce per-file, package, decompression, concurrency, and time limits;
-4. verify every chunk and the complete package against the signed manifest;
-5. validate dependency and capability policy in a sandbox;
-6. atomically promote the package into the cache only after verification; and
-7. pin the verified package identity for admission and replay.
+Only a package in the host's recipe and explicitly marked redistributable can
+be served. Blizzard game data/MPQs, saves, credentials, and private keys never
+enter the protocol. Lua package caches are invalidated when a recipe removes or
+changes an extension, so previously loaded code cannot survive a lock change.
+If admission or later join startup fails after recomposition, the client
+restores the extension recipe selected at process startup; downloaded blobs
+remain installed but are not silently enabled in `mods.json`.
 
-Partial downloads are resumable and cannot be loaded as mods. Cache entries are
-immutable by digest, reference-counted while sessions use them, and evicted by
-a bounded least-recently-used policy. Revocation metadata prevents newly
-joining a known-bad digest without mutating historical replay identity.
-
-Only packages explicitly marked redistributable may enter this flow. Dark Magic
-must never serve or peer-distribute Blizzard game data, MPQs, user saves,
-credentials, or other private/proprietary content.
+M23 still owns realm-signed publication and revocation, resumable/multi-source
+downloads, cache reference counting/eviction, and interrupted-download resume.
+Those future sources remain untrusted mirrors; no source may replace the exact
+realm/session recipe.

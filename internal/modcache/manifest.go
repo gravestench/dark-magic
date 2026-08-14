@@ -36,7 +36,6 @@ type Manifest struct {
 	ContentRoots    []string     `json:"content_roots"`
 	Entrypoints     Entrypoints  `json:"entrypoints"`
 	Dependencies    []Dependency `json:"dependencies"`
-	Capabilities    []string     `json:"capabilities"`
 }
 
 type Entrypoints struct {
@@ -96,7 +95,7 @@ func ValidateManifest(manifest Manifest) error {
 	}
 	seenEntrypoints := make(map[string]struct{})
 	for _, component := range append(append([]string(nil), manifest.Entrypoints.ClientComponents...), manifest.Entrypoints.AuthorityComponents...) {
-		if !validID(component) {
+		if !validID(component) || !strings.HasPrefix(component, manifest.ID+".") {
 			return fmt.Errorf("%w: invalid component %q", ErrInvalidManifest, component)
 		}
 		if _, duplicate := seenEntrypoints[component]; duplicate {
@@ -113,11 +112,6 @@ func ValidateManifest(manifest Manifest) error {
 			return fmt.Errorf("%w: duplicate content root %q", ErrInvalidManifest, root)
 		}
 		seenRoots[root] = struct{}{}
-	}
-	for _, capability := range manifest.Capabilities {
-		if strings.TrimSpace(capability) == "" || len(capability) > 128 {
-			return fmt.Errorf("%w: invalid capability", ErrInvalidManifest)
-		}
 	}
 	return nil
 }

@@ -129,6 +129,7 @@ func ValidateReferences(snapshot Snapshot, soundNames map[string]struct{}, text 
 // copies. Unlike user-authored TSV data, these relationships ship with d2legacy.
 type Catalog struct {
 	source fs.FS
+	mu     sync.Mutex
 	once   sync.Once
 	data   Snapshot
 	err    error
@@ -143,11 +144,25 @@ func (catalog *Catalog) Snapshot() (Snapshot, error) {
 	if catalog == nil || catalog.source == nil {
 		return Snapshot{}, fmt.Errorf("recovered data: no content source")
 	}
+	catalog.mu.Lock()
+	defer catalog.mu.Unlock()
 	catalog.once.Do(func() { catalog.data, catalog.err = load(catalog.source) })
 	if catalog.err != nil {
 		return Snapshot{}, catalog.err
 	}
 	return clone(catalog.data), nil
+}
+
+// Invalidate discards the immutable generation after package-layer changes.
+func (catalog *Catalog) Invalidate() {
+	if catalog == nil {
+		return
+	}
+	catalog.mu.Lock()
+	catalog.once = sync.Once{}
+	catalog.data = Snapshot{}
+	catalog.err = nil
+	catalog.mu.Unlock()
 }
 
 func load(source fs.FS) (Snapshot, error) {

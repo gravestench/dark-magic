@@ -121,10 +121,7 @@ func (connection *impairedPacketConn) stats() impairmentStats {
 func (connection *impairedPacketConn) wait() { connection.pending.Wait() }
 
 func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
-	identity := simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",
-		AuthoritativeHash: "rules", ConfigurationHash: "config",
-	}
+	identity := testRuntimeIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)
@@ -269,10 +266,7 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 func TestSustainedMultiClientSessionSurvivesImpairmentAndActiveReconnect(t *testing.T) {
 	const memberCount = 3
 	activeTicks := networkSoakTicks(t)
-	identity := simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",
-		AuthoritativeHash: "rules", ConfigurationHash: "config",
-	}
+	identity := testRuntimeIdentity()
 	allocation, err := gamesession.Allocate("soak", identity, gamesession.PredictionLimited)
 	if err != nil {
 		t.Fatal(err)

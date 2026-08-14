@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -181,9 +182,16 @@ func TestEndpointRejectsUntrustedAndIncompatibleClients(t *testing.T) {
 		t.Fatalf("forged session credential error = %v", err)
 	}
 	mismatch := identity
-	mismatch.PackageHash = "different"
+	mismatch.Recipe.Packages.Base.Digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: mismatch, Nonce: testReconnectNonce}); !errors.Is(err, gamesession.ErrCompatibility) {
 		t.Fatalf("incompatible reconnect error = %v", err)
+	}
+}
+
+func TestSessionProtocolVersionMatchesCanonicalRuntimeRecipe(t *testing.T) {
+	want := fmt.Sprintf("dark-magic.game-session/v%d", SessionProtocolVersion)
+	if simulation.RuntimeNetworkProtocol != want {
+		t.Fatalf("runtime network protocol = %q, want %q", simulation.RuntimeNetworkProtocol, want)
 	}
 }
 
@@ -431,10 +439,12 @@ func TestEndpointKeepsDisconnectedMembershipReconnectableUntilLeaseExpires(t *te
 }
 
 func testProtocolIdentity() simulation.RuntimeIdentity {
-	return simulation.RuntimeIdentity{
-		ModID: "d2legacy", ContractVersion: "v1", PackageHash: "package",
+	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
-	}
+	}}
 }
 
 const testReconnectNonce = "0123456789abcdef0123456789abcdef"
