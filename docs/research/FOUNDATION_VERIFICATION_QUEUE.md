@@ -9,6 +9,9 @@ These are the highest-value empirical probes extracted from the six foundation r
   invalidation reparses the pinned generation, while source or mount changes
   produce a new generation only for a future authority. Parser schema and all
   compatibility surfaces are pinned.
+- [x] Add a normalized cross-table linkage diagnostic fixture that distinguishes
+  symbolic and numeric identity, preserves authored row/source/provenance
+  context, and reports missing or ambiguous targets without repair.
 - Add exact D2 seed recurrence vectors and state serialization tests.
 - Enumerate ItemStatCost op dependencies used by the mounted LoD data and identify unsupported forms.
 - Extract all seven `CharStats` class rows into local/non-distributed golden vectors and determine fixed-point scaling for resource gains.

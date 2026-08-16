@@ -77,6 +77,10 @@ func Pin(source generationSource) (*Store, Generation, error) {
 	generation.ID = "sha256:" + hex.EncodeToString(digest[:])
 	pinned := New(files)
 	pinned.generationID = generation.ID
+	pinned.provenance = make(map[string]Provenance, len(generation.Files))
+	for _, file := range generation.Files {
+		pinned.provenance[file.Path] = Provenance{Layer: file.Source, Path: file.SourcePath}
+	}
 	return pinned, generation, nil
 }
 

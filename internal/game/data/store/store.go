@@ -19,6 +19,23 @@ type Store struct {
 	mu           sync.RWMutex
 	cache        map[string][]map[string]string
 	generationID string
+	provenance   map[string]Provenance
+}
+
+type Provenance struct {
+	Layer string
+	Path  string
+}
+
+// Source reports the winning immutable source for a pinned table.
+func (s *Store) Source(path string) (Provenance, bool) {
+	if s == nil {
+		return Provenance{}, false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	value, found := s.provenance[path]
+	return value, found
 }
 
 // GenerationID identifies an immutable pinned authoritative view. Ordinary

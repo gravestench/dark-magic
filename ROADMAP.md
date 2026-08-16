@@ -97,7 +97,7 @@ spoofing, privacy, lease, CAS, and process-worker tests.
 
 ### G2 — Pinned authoritative game-data generation
 
-Status: **partial; next active foundation**.
+Status: **foundation complete; per-consumer linkage audit ongoing**.
 
 Already true:
 
@@ -122,9 +122,12 @@ Still required:
 - [ ] Preserve and expose row ordinal, symbolic ID, explicit numeric ID, act-local index, source provenance, and derived index as distinct concepts where consumed.
 - [x] Add deterministic byte/provenance/change/presentation-exclusion and
   no-live-swap generation tests.
-- [ ] Add one cross-table linkage diagnostic fixture and complete the audit of
-  row ordinal, symbolic ID, explicit numeric ID, act-local index, provenance,
-  and derived lookup identities as consumers migrate.
+- [x] Add a policy-neutral cross-table linkage diagnostic fixture reporting row
+  ordinal/source line, authored key, column/raw value, target, identity kind,
+  severity, and pinned provenance without repairing authored data.
+- [ ] Complete the per-consumer audit of symbolic ID, explicit numeric ID,
+  row ordinal, act-local index, provenance, and derived lookup identities as
+  each `d2legacy` table relationship is admitted.
 
 Known behavior: current Dark Magic identity and pinning are verified. Exact
 legacy TXT-to-BIN compilation/link behavior remains unresolved and must not be

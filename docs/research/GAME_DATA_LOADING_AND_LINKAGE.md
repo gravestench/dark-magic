@@ -216,8 +216,12 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
    - pinned through runtime-recipe v2 and every session identity surface.
 2. **Raw ordered table document**
    - preserve ordered headers/cells/trailing values when diagnostics require them.
-3. **Link registry/report**
-   - document and validate per-table foreign-key semantics without making a runtime service locator.
+3. **Link registry/report — mechanism implemented, policy audit ongoing**
+   - the generic store accepts explicit link specifications and reports
+     source-located missing/ambiguous targets with identity kind and pinned
+     provenance;
+   - `d2legacy` must document and admit each actual foreign-key semantic as its
+     consumer migrates rather than relying on loader guesses.
 4. **Session pinning — implemented for generic records**
    - copied table bytes back an immutable per-authority store, so invalidation
      cannot swap generations during a live replayable session.
