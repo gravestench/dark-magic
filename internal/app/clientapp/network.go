@@ -426,10 +426,11 @@ func (controller *networkController) Status() map[string]any {
 	return map[string]any{"phase": phase, "mode": mode, "address": address, "error": failure, "player_id": playerID}
 }
 
-// hasSelectedCharacter reports whether the active network authority has
-// admitted the character that this client selected. Realm characters never
-// enter the offline save store, so loading must use the authenticated private
-// HUD identity instead of manufacturing a duplicate local selection.
+// hasSelectedCharacter reports whether the active network authority admitted
+// a Realm character for this connection. Realm characters never enter the
+// offline save store, and the projected HUD may be between snapshots while a
+// scene begins loading. The immutable, authenticated admission token is the
+// connection-level source of truth for this dependency.
 func (controller *networkController) hasSelectedCharacter() bool {
 	if controller == nil {
 		return false
@@ -440,8 +441,7 @@ func (controller *networkController) hasSelectedCharacter() bool {
 	if phase != "connected" || mode != "realm" || client == nil {
 		return false
 	}
-	hud, _ := client.View()
-	return hud.Player.PlayerID != "" && hud.Player.CharacterID != ""
+	return strings.TrimSpace(client.Admission.Admission.CharacterID) != ""
 }
 
 func (controller *networkController) startHost(ctx context.Context, generation uint64) {

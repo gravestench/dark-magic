@@ -98,15 +98,43 @@ func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testin
 	controller := newNetworkController(&application{})
 	controller.phase = "connected"
 	controller.mode = "realm"
-	controller.client = &clientsession.Session{HUD: playeradapter.HUD{Player: playeradapter.HUDIdentity{
-		PlayerID: "player-1", CharacterID: "realm-hero",
-	}}}
+	controller.client = &clientsession.Session{Admission: gameserver.JoinResponse{
+		Admission: gamesession.AdmissionToken{CharacterID: "realm-hero"},
+	}}
 	if !controller.hasSelectedCharacter() {
 		t.Fatal("authenticated Realm character was not available to loading")
 	}
-	controller.client.HUD.Player.CharacterID = ""
+	controller.client.Admission.Admission.CharacterID = ""
 	if controller.hasSelectedCharacter() {
 		t.Fatal("Realm connection without an admitted character passed loading")
+	}
+}
+
+func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *testing.T) {
+	app := &application{saves: d2save.New()}
+	controller := newNetworkController(app)
+	app.network = controller
+	controller.phase = "connected"
+	controller.mode = "realm"
+	controller.client = &clientsession.Session{Admission: gameserver.JoinResponse{
+		Admission: gamesession.AdmissionToken{CharacterID: "realm-hero"},
+	}}
+	if !controller.hasSelectedCharacter() {
+		t.Fatal("authenticated admission was hidden by an empty projected HUD")
+	}
+	if err := app.buildLoadingCoordinator(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.loading.Close)
+	if err := app.loading.Begin(t.Context(), []string{"selected_character"}); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for app.loading.Snapshot().State == "running" && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if status := app.loading.Snapshot(); status.State != "complete" {
+		t.Fatalf("Realm loading selection = %#v", status)
 	}
 }
 
