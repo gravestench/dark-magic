@@ -16,10 +16,22 @@ return test.suite({
                     end,
                 }, { "get", "effective_player_count" })
 
-                local context = require("d2legacy.policy.player_count").no_drop(2, 1)
+                local policy = require("d2legacy.policy.player_count")
+                local context = policy.no_drop(2, 1, 2)
                 test.expect(context.game_player_count):equals(2)
                 test.expect(context.effective_player_count):equals(3)
                 test.expect(context.nearby_party_member_count):equals(1)
+                test.expect(context.monster_player_count):equals(2)
+                test.expect(context.no_drop_player_count):equals(2)
+
+                local scaled = policy.monster_spawn(2, true)
+                test.expect(scaled.effective_player_count):equals(3)
+                test.expect(scaled.life_bonus_percent):equals(100)
+                test.expect(scaled.experience_bonus_percent):equals(100)
+
+                local friendly = policy.monster_spawn(2, false)
+                test.expect(friendly.effective_player_count):equals(1)
+                test.expect(friendly.life_bonus_percent):equals(0)
             end)
         end),
     },

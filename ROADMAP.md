@@ -171,12 +171,13 @@ Status: **partial; NoDrop count contexts established, party authority pending**.
   quest credit, gold sharing, and NoDrop party consumers as verified.
 - [ ] Project party state to UI; do not make the UI roster authoritative.
 
-NoDrop now distinguishes actual game population, the effective configured
-player count, and additional nearby party members. The 1.14d probability
-adjustment is implemented; until party authority exists, monster death passes
-zero additional nearby party members explicitly. Monster life/XP scaling and
-party-derived proximity remain open, so the combined consumer gate is not yet
-complete.
+Monster spawn now pins the effective player count and applies the expansion
+1.14d 50%-per-additional-player life and base-XP bonuses. NoDrop distinguishes
+actual game population, effective configured count, additional nearby party
+members, and the monster's spawn count; the latter caps later drop benefits.
+Until party authority exists, monster death passes zero additional nearby party
+members explicitly. Active-room spawn timing and party-derived proximity remain
+open, so the combined consumer gate is not yet complete.
 
 ### G5 — Locomotion and motion-state foundation
 

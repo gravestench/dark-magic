@@ -174,6 +174,7 @@ local function runtime_definition(stats, graphics, values, difficulty)
         graphics_id = graphics_id(stats),
         name_key = stats.NameStr or stats.Id,
         ai = stats.AI or "",
+        evil = integer(stats, "Align") == 0,
         token = string.upper(stats.Code or ""),
         weapon_class = string.upper(graphics.BaseW or "HTH"),
         components = graphics_components(graphics),

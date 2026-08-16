@@ -22,7 +22,7 @@ local records = {
 
 local function nested_classes_keep_strongest_quality_modifiers()
     local treasure = require("d2legacy.loot.treasure_class")
-    local drops = treasure.roll("root", { effective_player_count = 1, nearby_party_member_count = 0 })
+    local drops = treasure.roll("root", { no_drop_player_count = 1 })
 
     test.assert(#drops == 1, [=[#drops == 1]=])
     test.assert(drops[1].code == "rin", [=[drops[1].code == "rin"]=])
@@ -36,18 +36,16 @@ end
 
 local function nodrop_uses_distinct_effective_and_nearby_counts()
     local treasure = require("d2legacy.loot.treasure_class")
-    local function adjusted(effective, nearby)
+    local function adjusted(count)
         return treasure.adjusted_no_drop(100, 100, {
-            effective_player_count = effective,
-            nearby_party_member_count = nearby,
+            no_drop_player_count = count,
         })
     end
 
-    test.assert(adjusted(1, 0) == 100, [=[adjusted(1, 0) == 100]=])
-    test.assert(adjusted(2, 0) == 100, [=[adjusted(2, 0) == 100]=])
-    test.assert(adjusted(3, 0) == 33, [=[adjusted(3, 0) == 33]=])
-    test.assert(adjusted(2, 1) == 33, [=[adjusted(2, 1) == 33]=])
-    test.assert(adjusted(8, 0) == 6, [=[adjusted(8, 0) == 6]=])
+    test.assert(adjusted(1) == 100, [=[adjusted(1) == 100]=])
+    test.assert(adjusted(2) == 33, [=[adjusted(2) == 33]=])
+    test.assert(adjusted(3) == 14, [=[adjusted(3) == 14]=])
+    test.assert(adjusted(4) == 6, [=[adjusted(4) == 6]=])
 end
 
 return test.suite({
