@@ -17,7 +17,7 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("resolve d2legacy package", err)
 	}
-	prepared, err := entryworld.Build(app.ctx, app.options.Content, d2legacySource, app.records, app.worldObjectResolver, 1)
+	prepared, err := entryworld.Build(app.ctx, app.options.Content, d2legacySource, app.records, app.worldObjectResolver, 1, 0)
 	if err != nil {
 		return wrap("prepare d2legacy entry world", err)
 	}

@@ -16,8 +16,8 @@ func (entryRecords) Loaded(string) bool                                    { ret
 func TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum(t *testing.T) {
 	records := entryRecords{
 		"data/global/excel/Levels.txt": {
-			{"Id": "1", "Act": "0", "DrlgType": "2", "LevelType": "1", "SizeX": "40", "SizeY": "30"},
-			{"Id": "2", "Act": "0", "DrlgType": "3", "LevelType": "2", "SizeX": "80", "SizeY": "80"},
+			{"Id": "1", "Act": "0", "DrlgType": "2", "LevelType": "1", "SizeX": "40", "SizeY": "30", "SizeX(H)": "48", "SizeY(H)": "38"},
+			{"Id": "2", "Act": "0", "DrlgType": "3", "LevelType": "2", "SizeX": "80", "SizeY": "80", "SizeX(H)": "96", "SizeY(H)": "96"},
 		},
 		"data/global/excel/LvlTypes.txt": {
 			{}, {"File 1": `Act1\Town\floor.dt1`}, {"File 1": `Act1\Outdoors\Outdoor1.dt1`},
@@ -39,13 +39,16 @@ func TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum(t *testing.T) {
 		}
 		records["data/global/excel/LvlPrest.txt"] = append(records["data/global/excel/LvlPrest.txt"], row)
 	}
-	generated, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), records, 42)
+	generated, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), records, 42, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if generated.Seam.FirstLevel != 1 || generated.Seam.SecondLevel != 2 ||
 		generated.Seam.FirstDirection != "east" || generated.Seam.SecondDirection != "west" {
 		t.Fatalf("Lua-selected entry seam = %#v", generated.Seam)
+	}
+	if generated.Town.Request().Difficulty != 2 || generated.Wilderness.Request().Difficulty != 2 {
+		t.Fatalf("entry-world difficulty = town %d, wilderness %d", generated.Town.Request().Difficulty, generated.Wilderness.Request().Difficulty)
 	}
 	want, err := generated.Checksum()
 	if err != nil {
@@ -65,5 +68,11 @@ func TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum(t *testing.T) {
 	}
 	if got != want {
 		t.Fatalf("restored entry topology checksum = %s, want %s", got, want)
+	}
+}
+
+func TestGenerateEntryWorldRejectsInvalidDifficulty(t *testing.T) {
+	if _, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryRecords{}, 42, 3); err == nil {
+		t.Fatal("expected invalid difficulty to be rejected")
 	}
 }

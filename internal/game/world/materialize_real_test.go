@@ -107,7 +107,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	records := recordstore.New(source)
-	entryWorld, err := d2mapgen.GenerateEntryWorld(t.Context(), source, records, 17)
+	entryWorld, err := d2mapgen.GenerateEntryWorld(t.Context(), source, records, 17, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
