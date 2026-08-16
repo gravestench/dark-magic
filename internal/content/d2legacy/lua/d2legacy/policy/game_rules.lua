@@ -7,9 +7,13 @@ local M = {}
 local rules
 
 local function copy(value)
-    if type(value) ~= "table" then return value end
+    if type(value) ~= "table" then
+        return value
+    end
     local result = {}
-    for key, item in pairs(value) do result[key] = copy(item) end
+    for key, item in pairs(value) do
+        result[key] = copy(item)
+    end
     return result
 end
 
@@ -39,8 +43,10 @@ local function build()
     integer(result.player_count, "player count", 1, 8)
     integer(result.maximum_players, "maximum players", 1, 8)
     assert(result.player_count <= result.maximum_players, "player count exceeds game capacity")
-    assert(type(result.game_data_generation_id) == "string" and result.game_data_generation_id ~= "",
-        "game-data generation is required")
+    assert(
+        type(result.game_data_generation_id) == "string" and result.game_data_generation_id ~= "",
+        "game-data generation is required"
+    )
     return result
 end
 
@@ -58,6 +64,12 @@ end
 function M.difficulty()
     assert(rules, "game rules are not initialized")
     return rules.difficulty
+end
+
+function M.effective_player_count(game_player_count)
+    assert(rules, "game rules are not initialized")
+    integer(game_player_count, "game player count", 1, rules.maximum_players)
+    return math.max(game_player_count, rules.player_count)
 end
 
 return M

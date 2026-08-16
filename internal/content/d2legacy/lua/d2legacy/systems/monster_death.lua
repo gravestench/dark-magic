@@ -7,12 +7,15 @@
 local ecs = require("engine.ecs/v1")
 local loot = require("d2legacy.loot.generate")
 local attribution = require("d2legacy.owned_units.attribution")
+local player_count = require("d2legacy.policy.player_count")
 local M = {}
 
 local function selectable_by_id(entities, wanted)
     for _, entity in ipairs(entities) do
         local selected = ecs.get(entity, "d2legacy.world.selectable")
-        if selected and selected:get("id") == wanted then return entity end
+        if selected and selected:get("id") == wanted then
+            return entity
+        end
     end
     return nil
 end
@@ -20,8 +23,7 @@ end
 local function collect_killers(entities)
     local killers = {}
     for _, entity in ipairs(entities) do
-        local event = ecs.get(entity, "d2legacy.combat.melee_event")
-            or ecs.get(entity, "d2legacy.combat.event")
+        local event = ecs.get(entity, "d2legacy.combat.melee_event") or ecs.get(entity, "d2legacy.combat.event")
         if event and event:get("remaining_health_raw") == 0 then
             killers[event:get("target_id")] = event:get("attacker_id")
         end
@@ -31,22 +33,37 @@ end
 
 local function monster_selectable_id(monster, identity)
     local selected = ecs.get(monster, "d2legacy.world.selectable")
-    if selected then return selected:get("id") end
+    if selected then
+        return selected:get("id")
+    end
     return "monster:" .. identity:get("spawn_id")
 end
 
 local function credit_experience(entities, killer_id, amount)
     local killer = selectable_by_id(entities, killer_id)
     local progress = killer and ecs.get(killer, "d2legacy.player.progress")
-    if not progress or amount <= 0 then return end
+    if not progress or amount <= 0 then
+        return
+    end
     progress:set("experience", progress:get("experience") + amount)
 end
 
-local function roll_loot(identity, stats)
+local function count_game_players(entities)
+    local count = 0
+    for _, entity in ipairs(entities) do
+        if ecs.get(entity, "d2legacy.player.identity") then
+            count = count + 1
+        end
+    end
+    return math.max(count, 1)
+end
+
+local function roll_loot(entities, identity, stats)
     local drops = loot.roll(identity:get("treasure_class"), {
         version = 100,
         monster_level = stats:get("level"),
         magic_find = 0,
+        player_count = player_count.no_drop(count_game_players(entities), 0),
     })
     return loot.encode(drops)
 end
@@ -91,7 +108,9 @@ end
 
 local function stop_monster(monster, structural)
     local appearance = ecs.get(monster, "d2legacy.monster.appearance")
-    if appearance then appearance:set("mode", "DT") end
+    if appearance then
+        appearance:set("mode", "DT")
+    end
 
     local velocity = ecs.get(monster, "d2legacy.world.velocity")
     if velocity then
@@ -118,15 +137,8 @@ local function commit_death(context, entities, structural, monster, killers)
     local experience = stats:get("experience")
     credit_experience(entities, credited, experience)
 
-    local drops = roll_loot(identity, stats)
-    local values = death_values(
-        context,
-        identity,
-        killer,
-        credited,
-        experience,
-        drops
-    )
+    local drops = roll_loot(entities, identity, stats)
+    local values = death_values(context, identity, killer, credited, experience, drops)
     structural:set(monster, "d2legacy.monster.death", values)
     stop_monster(monster, structural)
     emit_events(structural, context, identity, values)
@@ -152,6 +164,7 @@ function M.register()
                 -- credit, but no monster/event component. Include them in the
                 -- system snapshot so credited XP can reach player.progress.
                 "d2legacy.world.selectable",
+                "d2legacy.player.identity",
             },
         },
         read = {
@@ -161,6 +174,7 @@ function M.register()
             "d2legacy.combat.melee_event",
             "d2legacy.combat.event",
             "d2legacy.world.selectable",
+            "d2legacy.player.identity",
             "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
