@@ -181,7 +181,10 @@ type SeamSpec struct {
 // and for the policy-owned description of how their materialized edges meet.
 // The short-lived runtime is intentionally headless: world policy must not
 // depend on a renderer, window, audio device, or native client startup.
-func GenerateEntryWorld(ctx context.Context, source fs.FS, records recordsGateway, seed uint64) (EntryWorld, error) {
+func GenerateEntryWorld(ctx context.Context, source fs.FS, records recordsGateway, seed uint64, difficulty int) (EntryWorld, error) {
+	if difficulty < 0 || difficulty > 2 {
+		return EntryWorld{}, fmt.Errorf("generate d2legacy entry world: difficulty must be 0, 1, or 2")
+	}
 	ctx = nonNilContext(ctx)
 	runtime, err := NewRuntime(ctx, source, records)
 	if err != nil {
@@ -189,7 +192,7 @@ func GenerateEntryWorld(ctx context.Context, source fs.FS, records recordsGatewa
 	}
 	defer runtime.Close(context.Background())
 
-	town, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "town", float64(seed), float64(0))
+	town, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "town", float64(seed), float64(difficulty))
 	if err != nil {
 		return EntryWorld{}, fmt.Errorf("generate d2legacy entry town: %w", err)
 	}
@@ -201,7 +204,7 @@ func GenerateEntryWorld(ctx context.Context, source fs.FS, records recordsGatewa
 	if err := json.Unmarshal(encodedTown, &townFacts); err != nil {
 		return EntryWorld{}, fmt.Errorf("decode d2legacy entry town facts: %w", err)
 	}
-	moor, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "wilderness", float64(seed), float64(0), townFacts)
+	moor, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "wilderness", float64(seed), float64(difficulty), townFacts)
 	if err != nil {
 		return EntryWorld{}, fmt.Errorf("generate d2legacy entry wilderness: %w", err)
 	}

@@ -44,7 +44,7 @@ func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 }
 
 func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
-	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Seam: gametransition.Seam{
+	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seam: gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{LevelID: 1, X: 4, Y: 5, Width: 20, Height: 30},
 		Wilderness: gametransition.SeamEndpoint{LevelID: 2, X: 6, Y: 7, Width: 40, Height: 50},
 	}}
@@ -60,5 +60,9 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	development := initial["d2legacy.development_items"].(map[string]any)
 	if development["enabled"] != false || development["create_empty_containers"] != true {
 		t.Fatalf("development = %#v", development)
+	}
+	rules := initial["d2legacy.game_rules"].(map[string]any)
+	if rules["difficulty"] != 2 {
+		t.Fatalf("game rules = %#v", rules)
 	}
 }

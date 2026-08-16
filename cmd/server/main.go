@@ -126,7 +126,7 @@ func main() {
 		slog.Error("building d2legacy world-object resolver", "error", err)
 		return
 	}
-	preparedWorld, err := entryworld.Build(ctx, contentFS, d2legacySource, records, objectResolver, 1)
+	preparedWorld, err := entryworld.Build(ctx, contentFS, d2legacySource, records, objectResolver, 1, difficultyValue)
 	if err != nil {
 		slog.Error("preparing authoritative d2legacy entry world", "error", err)
 		return

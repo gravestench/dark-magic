@@ -29,20 +29,21 @@ type Records interface {
 }
 
 type Prepared struct {
-	Worlds map[int]*gameworld.Map
-	Zones  map[int]*worldgen.Zone
-	Spawns map[int][2]float64
-	Seam   gametransition.Seam
+	Worlds     map[int]*gameworld.Map
+	Zones      map[int]*worldgen.Zone
+	Spawns     map[int][2]float64
+	Seam       gametransition.Seam
+	Difficulty int
 }
 
-func Build(ctx context.Context, content, d2legacySource fs.FS, records Records, resolver gameworld.ObjectResolver, seed uint64) (*Prepared, error) {
+func Build(ctx context.Context, content, d2legacySource fs.FS, records Records, resolver gameworld.ObjectResolver, seed uint64, difficulty int) (*Prepared, error) {
 	if content == nil || d2legacySource == nil || records == nil || resolver == nil {
 		return nil, errors.New("d2legacy entry world: content, source, records, and object resolver are required")
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	generated, err := d2mapgen.GenerateEntryWorld(ctx, d2legacySource, records, seed)
+	generated, err := d2mapgen.GenerateEntryWorld(ctx, d2legacySource, records, seed, difficulty)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,8 @@ func Build(ctx context.Context, content, d2legacySource fs.FS, records Records, 
 			generated.Seam.FirstLevel:  {townX, townY},
 			generated.Seam.SecondLevel: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
 		},
-		Seam: seam,
+		Seam:       seam,
+		Difficulty: difficulty,
 	}, nil
 }
 
@@ -111,7 +113,7 @@ func (world *Prepared) Destination(levelID int) (playeradapter.Destination, erro
 func (world *Prepared) InitialData(owner string, developmentItems bool) map[string]any {
 	return map[string]any{
 		"d2legacy.game_rules": map[string]any{
-			"target": "lod-1.14d", "expansion": true, "difficulty": 0,
+			"target": "lod-1.14d", "expansion": true, "difficulty": world.Difficulty,
 			"hardcore": false, "ladder": false, "player_count": 1, "maximum_players": 8,
 		},
 		"d2legacy.development_items": map[string]any{

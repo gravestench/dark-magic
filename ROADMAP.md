@@ -149,9 +149,11 @@ Status: **partial; immutable authority and first consumers implemented**.
 - [x] Prove copied Lua reads, checkpoint restoration, runtime identity, and
   changed-rule rejection; admission/reconnect inherit the pinned identity.
 
-Implemented consumers: authoritative player entry and Blood Moor population
-must agree with the immutable game difficulty. Remaining domains migrate in
-their own evidence-backed slices.
+Implemented consumers: authoritative player entry, entry-world generation,
+and Blood Moor population must agree with the immutable game difficulty.
+Dedicated and Realm workers now generate their initial town and wilderness
+from the same pinned difficulty later installed as `GameRules`. Remaining
+domains migrate in their own evidence-backed slices.
 
 Per-player durable difficulty/quest facts and initial-data fields already exist;
 they are not a substitute for one immutable game-wide semantic context.
