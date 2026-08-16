@@ -157,8 +157,12 @@ type WorkerRegistry interface {
 // and asset policy are pinned by the allocator configuration and revalidated
 // through WorkerDescription before the game becomes joinable.
 type GameSpec struct {
-	GameID       string
-	AllocationID string
+	GameID         string
+	AllocationID   string
+	Difficulty     GameDifficulty
+	Hardcore       bool
+	Ladder         bool
+	MaximumPlayers int
 }
 
 // WorkerAllocation is the complete private result of preparing one game. It is

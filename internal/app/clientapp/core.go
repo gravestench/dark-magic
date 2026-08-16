@@ -212,6 +212,11 @@ func (app *application) buildOfflineSession() error {
 
 func (app *application) sessionInitialData() map[string]any {
 	return map[string]any{
+		"engine.game_data_generation_id": app.gameDataGenerationID(),
+		"d2legacy.game_rules": map[string]any{
+			"target": "lod-1.14d", "expansion": true, "difficulty": 0,
+			"hardcore": false, "ladder": false, "player_count": 1, "maximum_players": 8,
+		},
 		"d2legacy.development_items": map[string]any{
 			"enabled":                 app.options.FixtureCharacters > 0,
 			"create_empty_containers": app.options.FixtureCharacters == 0,

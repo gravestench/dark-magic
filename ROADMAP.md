@@ -135,17 +135,23 @@ claimed by this gate.
 
 ### G3 — Immutable session `GameRules`
 
-Status: **not started as a unified authority**.
+Status: **partial; immutable authority and first consumers implemented**.
 
-- [ ] Add one immutable `d2legacy`-owned session rules value covering difficulty,
+- [x] Add one immutable `d2legacy`-owned session rules value covering difficulty,
   the fixed expansion/1.14d ruleset, Hardcore, Ladder eligibility where 1.14d
   behavior distinguishes it, player-count context, content generation, and
   explicit gameplay configuration.
-- [ ] Validate rules at game creation and bind them into runtime identity.
+- [x] Validate expansion-only rules at game/worker creation and bind them into
+  runtime identity plus checkpointed authoritative state.
 - [ ] Feed combat, monsters, loot/NoDrop, XP, quests, vendors, hirelings, states,
   death, portals, and endgame eligibility through purpose-specific rule queries.
 - [ ] Remove scattered session-wide mode decisions as each consumer migrates.
-- [ ] Prove checkpoint/replay/reconnect retain identical rules and reject drift.
+- [x] Prove copied Lua reads, checkpoint restoration, runtime identity, and
+  changed-rule rejection; admission/reconnect inherit the pinned identity.
+
+Implemented consumers: authoritative player entry and Blood Moor population
+must agree with the immutable game difficulty. Remaining domains migrate in
+their own evidence-backed slices.
 
 Per-player durable difficulty/quest facts and initial-data fields already exist;
 they are not a substitute for one immutable game-wide semantic context.

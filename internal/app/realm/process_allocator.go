@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -139,6 +140,12 @@ func (allocator *ProcessAllocator) allocate(ctx context.Context, spec GameSpec, 
 	}
 	gameID := strings.TrimSpace(spec.GameID)
 	allocationID := strings.TrimSpace(spec.AllocationID)
+	if spec.Difficulty == "" {
+		spec.Difficulty = DifficultyNormal
+	}
+	if spec.MaximumPlayers == 0 {
+		spec.MaximumPlayers = maximumGamePlayers
+	}
 	if gameID == "" || len(gameID) > 255 || allocationID == "" || len(allocationID) > 255 {
 		return WorkerAllocation{}, fmt.Errorf("%w: invalid game ID", ErrWorker)
 	}
@@ -165,7 +172,7 @@ func (allocator *ProcessAllocator) allocate(ctx context.Context, spec GameSpec, 
 		allocator.mu.Unlock()
 	}()
 
-	worker, err := allocator.start(ctx, gameID, allocationID, recovery)
+	worker, err := allocator.start(ctx, spec, recovery)
 	if err != nil {
 		return WorkerAllocation{}, err
 	}
@@ -246,7 +253,8 @@ func (allocator *ProcessAllocator) Close(ctx context.Context) error {
 	return result
 }
 
-func (allocator *ProcessAllocator) start(ctx context.Context, gameID, allocationID string, recovery *GameRecovery) (*processWorker, error) {
+func (allocator *ProcessAllocator) start(ctx context.Context, spec GameSpec, recovery *GameRecovery) (*processWorker, error) {
+	gameID, allocationID := strings.TrimSpace(spec.GameID), strings.TrimSpace(spec.AllocationID)
 	directory, err := os.MkdirTemp(allocator.config.StateDirectory, ".worker-")
 	if err != nil {
 		return nil, fmt.Errorf("%w: create worker directory: %v", ErrWorker, err)
@@ -286,6 +294,8 @@ func (allocator *ProcessAllocator) start(ctx context.Context, gameID, allocation
 		"--realm-worker",
 		"--session-id", gameID,
 		"--allocation-id", allocationID,
+		"--game-difficulty", string(spec.Difficulty),
+		"--game-maximum-players", strconv.Itoa(spec.MaximumPlayers),
 		"--quic-listen", allocator.config.GameListenAddress,
 		"--tls-cert", filepath.Join(directory, "host-certificate.pem"),
 		"--tls-key", filepath.Join(directory, "host-identity.pem"),
@@ -294,6 +304,12 @@ func (allocator *ProcessAllocator) start(ctx context.Context, gameID, allocation
 		"--worker-control-token", controlTokenPath,
 		"--worker-ready-file", readyPath,
 	)
+	if spec.Hardcore {
+		arguments = append(arguments, "--game-hardcore")
+	}
+	if spec.Ladder {
+		arguments = append(arguments, "--game-ladder")
+	}
 	command := exec.Command(allocator.executable, arguments...)
 	command.Dir = allocator.config.WorkingDirectory
 	command.Env = append(os.Environ(), allocator.config.Environment...)

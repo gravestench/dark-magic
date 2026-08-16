@@ -22,7 +22,7 @@ func TestControlPlaneReauthorizesEveryLobbyOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := control.characters.Create(t.Context(), CharacterRecord{AccountID: account.ID, Revision: 1,
-		Character: d2save.Character{ID: "character:alice", Name: "Alyssa", Class: "Assassin", Level: 1}}); err != nil {
+		Character: d2save.Character{ID: "character:alice", Name: "Alyssa", Class: "Assassin", Level: 1, Expansion: true}}); err != nil {
 		t.Fatal(err)
 	}
 	session, err := control.Authenticate(t.Context(), "Alice", "long enough password")

@@ -265,6 +265,10 @@ func TestProcessAllocatorHelper(t *testing.T) {
 	controlTokenPath := flags.String("worker-control-token", "", "")
 	readyPath := flags.String("worker-ready-file", "", "")
 	restorePath := flags.String("restore-checkpoint", "", "")
+	_ = flags.String("game-difficulty", "normal", "")
+	_ = flags.Int("game-maximum-players", 8, "")
+	_ = flags.Bool("game-hardcore", false, "")
+	_ = flags.Bool("game-ladder", false, "")
 	if err := flags.Parse(arguments[separator+1:]); err != nil {
 		t.Fatal(err)
 	}

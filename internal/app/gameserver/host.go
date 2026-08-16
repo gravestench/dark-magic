@@ -90,7 +90,14 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 		_ = engine.Close()
 		return nil, err
 	}
-	d2config := d2legacy.Config{Seed: config.Seed, InitialData: config.InitialData, Packages: config.Packages, AssetSetID: config.AssetSetID}
+	initialData := cloneInitialData(config.InitialData)
+	gameDataGenerationID := simulation.GameDataGenerationIDForAssetSet(config.AssetSetID)
+	if pinned, ok := records.(interface{ GenerationID() string }); ok && pinned.GenerationID() != "" {
+		gameDataGenerationID = pinned.GenerationID()
+	}
+	initialData["engine.game_data_generation_id"] = gameDataGenerationID
+	d2config := d2legacy.Config{Seed: config.Seed, InitialData: initialData, Packages: config.Packages, AssetSetID: config.AssetSetID,
+		GameDataGenerationID: gameDataGenerationID}
 	if config.Mods != nil {
 		if config.Content == nil {
 			_ = session.Close()
@@ -122,6 +129,14 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 		return nil, fmt.Errorf("game server: allocate session: %w", err)
 	}
 	return &Host{Mode: config.Mode, Engine: engine, Session: session, Authority: authority, Allocation: allocation}, nil
+}
+
+func cloneInitialData(source map[string]any) map[string]any {
+	result := make(map[string]any, len(source)+1)
+	for key, value := range source {
+		result[key] = value
+	}
+	return result
 }
 
 // Admit validates a client against the exact runtime already running here.

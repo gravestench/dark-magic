@@ -62,7 +62,16 @@ func main() {
 	workerReadyFile := flag.String("worker-ready-file", "", "owner-only readiness rendezvous written after worker transports start")
 	restoreCheckpoint := flag.String("restore-checkpoint", "", "owner-only Realm recovery checkpoint used before worker startup")
 	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated mod IDs from the installed profile")
+	gameDifficulty := flag.String("game-difficulty", "normal", "immutable game difficulty: normal, nightmare, or hell")
+	gameHardcore := flag.Bool("game-hardcore", false, "use immutable Hardcore game rules")
+	gameLadder := flag.Bool("game-ladder", false, "use immutable 1.14d Ladder eligibility rules")
+	gameMaximumPlayers := flag.Int("game-maximum-players", 8, "immutable game capacity from 1 through 8")
 	flag.Parse()
+	difficultyValue := map[string]int{"normal": 0, "nightmare": 1, "hell": 2}[strings.ToLower(strings.TrimSpace(*gameDifficulty))]
+	if _, valid := map[string]int{"normal": 0, "nightmare": 1, "hell": 2}[strings.ToLower(strings.TrimSpace(*gameDifficulty))]; !valid || *gameMaximumPlayers < 1 || *gameMaximumPlayers > 8 {
+		slog.Error("configuring immutable game rules", "error", "difficulty or maximum players is invalid")
+		return
+	}
 	level, err := logging.ParseLevel(*logLevel)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -131,9 +140,14 @@ func main() {
 	if *realmWorker {
 		mode = gameserver.ModeRealm
 	}
+	initialData := preparedWorld.InitialData("", false)
+	initialData["d2legacy.game_rules"] = map[string]any{
+		"target": "lod-1.14d", "expansion": true, "difficulty": difficultyValue,
+		"hardcore": *gameHardcore, "ladder": *gameLadder, "player_count": 1, "maximum_players": *gameMaximumPlayers,
+	}
 	host, err := gameserver.Start(ctx, d2legacySource, records, gameserver.Config{
 		Mode: mode, SessionID: *sessionID, Prediction: gamesession.PredictionLimited, Packages: mods.Packages,
-		Content: contentFS, Mods: &mods.Resolved, InitialData: preparedWorld.InitialData("", false), AssetSetID: assetSetID,
+		Content: contentFS, Mods: &mods.Resolved, InitialData: initialData, AssetSetID: assetSetID,
 	})
 	if err != nil {
 		slog.Error("starting authoritative game server", "error", err)

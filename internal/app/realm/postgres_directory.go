@@ -36,6 +36,7 @@ type postgresGame struct {
 }
 
 func (directory *PostgresGameDirectory) Create(ctx context.Context, principal AuthenticatedPrincipal, request CreateGameRequest) (GameDetail, error) {
+	request.Expansion = true
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}

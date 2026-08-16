@@ -131,6 +131,7 @@ func NewGameDirectory() *GameDirectory {
 }
 
 func (directory *GameDirectory) Create(ctx context.Context, principal AuthenticatedPrincipal, request CreateGameRequest) (GameDetail, error) {
+	request.Expansion = true
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}

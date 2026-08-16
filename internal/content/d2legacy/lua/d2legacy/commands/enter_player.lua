@@ -9,6 +9,7 @@ local ecs = require("engine.ecs/v1")
 local skills = require("d2legacy.data.skill")
 local player_stats = require("d2legacy.data.player_stats")
 local item_bootstrap = require("d2legacy.items.bootstrap")
+local game_rules = require("d2legacy.policy.game_rules")
 local M = {}
 
 local function finite(value)
@@ -108,6 +109,9 @@ end
 function M.apply(command)
     local p = command.payload
     assert(not already_entered(p.player), "player already entered")
+    local difficulty = game_rules.difficulty()
+    assert(p.difficulty == nil or p.difficulty == difficulty,
+        "player entry difficulty differs from immutable game rules")
     local learned = skills.starting_for_class(p.class)
     local left, right = initial_skills(learned)
     local player = ecs.create({
@@ -123,7 +127,7 @@ function M.apply(command)
             unspent_skill_points = p.unspent_skill_points or 0,
         },
         ["d2legacy.player.difficulty"] = {
-            current = p.difficulty or 0,
+            current = difficulty,
             highest_completed = p.highest_completed_difficulty or -1,
         },
         ["d2legacy.player.combat_stats"] = {

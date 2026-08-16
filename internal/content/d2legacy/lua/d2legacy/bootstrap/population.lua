@@ -9,6 +9,7 @@ local random = require("engine.authority_random/v1")
 local commands = require("engine.authority_command/v1")
 local monster = require("d2legacy.data.monster")
 local spawn = require("d2legacy.commands.spawn_monster")
+local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -123,13 +124,17 @@ function M.apply(command)
     local zone = command.payload
     if zone.level_id ~= 2 then return end
 
+    local difficulty = game_rules.difficulty()
+    assert(zone.difficulty == nil or zone.difficulty == difficulty,
+        "population difficulty differs from immutable game rules")
+
     local level = assert(find(
         records.load("data/global/excel/levels.txt"),
         "Id",
         tostring(zone.level_id)
     ), "population level is missing")
-    local density = integer(level, density_column(zone.difficulty))
-    local candidates = candidate_monsters(level, zone.difficulty)
+    local density = integer(level, density_column(difficulty))
+    local candidates = candidate_monsters(level, difficulty)
     if #candidates == 0 then return end
 
     local rarity = total_rarity(candidates)

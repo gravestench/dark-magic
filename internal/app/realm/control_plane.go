@@ -262,6 +262,7 @@ func (control *ControlPlane) ListCharacters(ctx context.Context, token string) (
 // CreateCharacter accepts only player choices. Identity, level, stats,
 // appearance, revision, ownership, and compatibility are realm/d2legacy owned.
 func (control *ControlPlane) CreateCharacter(ctx context.Context, token string, request CreateCharacterRequest) (record CharacterRecord, err error) {
+	request.Expansion = true
 	event := AuditEvent{Operation: AuditCharacterCreate, CharacterName: strings.TrimSpace(request.Name)}
 	defer func() {
 		event.AccountID = firstNonEmpty(event.AccountID, record.AccountID)
@@ -430,7 +431,8 @@ func (control *ControlPlane) CreateGame(ctx context.Context, token string, reque
 		defer cancel()
 		return GameHandoff{}, errors.Join(err, control.games.Remove(cleanupCtx, detail.Entry.GameID))
 	}
-	allocation, err := control.allocator.Allocate(ctx, GameSpec{GameID: detail.Entry.GameID, AllocationID: allocationID})
+	allocation, err := control.allocator.Allocate(ctx, GameSpec{GameID: detail.Entry.GameID, AllocationID: allocationID,
+		Difficulty: detail.Entry.Difficulty, Hardcore: detail.Entry.Hardcore, MaximumPlayers: detail.Entry.MaximumPlayers})
 	if err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()

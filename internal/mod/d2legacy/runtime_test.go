@@ -134,6 +134,71 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	}
 }
 
+func TestGameRulesCheckpointRestoreAndIdentityDrift(t *testing.T) {
+	start := func(initial map[string]any, restore []simulation.ParticipantState) (*Authority, *gameecs.Engine, *gamesession.Session, error) {
+		engine := gameecs.New()
+		session, err := gamesession.New(engine, gamesession.Config{})
+		if err != nil {
+			_ = engine.Close()
+			return nil, nil, nil, err
+		}
+		authority, err := StartWithConfig(t.Context(), content.D2Legacy(), runtimeFixtureRecords{}, engine, session,
+			Config{Seed: 7, InitialData: initial, Restore: restore})
+		if err != nil {
+			_ = session.Close()
+			_ = engine.Close()
+			return nil, nil, nil, err
+		}
+		return authority, engine, session, nil
+	}
+	initial := map[string]any{
+		"engine.game_data_generation_id": "sha256:test-generation",
+		"d2legacy.game_rules": map[string]any{"target": "lod-1.14d", "expansion": true,
+			"difficulty": 1, "hardcore": true, "player_count": 2, "maximum_players": 8},
+	}
+	authority, engine, session, err := start(initial, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint, err := session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = authority.Stop(t.Context())
+	_ = session.Close()
+	_ = engine.Close()
+
+	restored, restoredEngine, restoredSession, err := start(initial, checkpoint.Participants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Stop(t.Context())
+	defer restoredSession.Close()
+	defer restoredEngine.Close()
+	value, found := restored.State.Read("d2legacy.game_rules")
+	if !found {
+		t.Fatal("restored game rules are missing")
+	}
+	var rules map[string]any
+	if err := json.Unmarshal(value.Data, &rules); err != nil {
+		t.Fatal(err)
+	}
+	if rules["difficulty"] != float64(1) || rules["hardcore"] != true || rules["player_count"] != float64(2) {
+		t.Fatalf("restored rules = %#v", rules)
+	}
+
+	drifted := map[string]any{
+		"engine.game_data_generation_id": "sha256:test-generation",
+		"d2legacy.game_rules": map[string]any{"target": "lod-1.14d", "expansion": true,
+			"difficulty": 2, "hardcore": true, "player_count": 2, "maximum_players": 8},
+	}
+	if _, driftEngine, driftSession, driftErr := start(drifted, checkpoint.Participants); driftErr == nil {
+		_ = driftSession.Close()
+		_ = driftEngine.Close()
+		t.Fatal("checkpoint accepted different immutable game rules")
+	}
+}
+
 func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
 	ctx := context.Background()
 	engine := gameecs.New()
