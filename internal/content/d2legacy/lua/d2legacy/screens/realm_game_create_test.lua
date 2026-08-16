@@ -218,6 +218,21 @@ return test.suite({
                 test.expect(calls.created[1].name):equals("Delayed Game")
             end)
         end),
+        test.case("waits_for_authenticated_game_connection_before_loading", function(t)
+            t:run(function()
+                local state = { phase = "game_connecting", selected = { character = {} } }
+                local screen, calls = load_screen(state)
+                local scene = {}
+                screen.create(scene)
+                screen.update(scene, 0)
+                test.expect(calls.scenes):has_length(0)
+                test.expect(scene.status.text):equals("CONNECTING TO GAME")
+
+                state.phase = "game_connected"
+                screen.update(scene, 0)
+                test.expect(calls.scenes):deep_equals({ "game_loading" })
+            end)
+        end),
         test.case("shows_mapped_failures_and_cancels_back_to_the_lobby", function(t)
             t:run(function()
                 local state = { phase = "error", error = "game service unavailable" }

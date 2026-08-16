@@ -240,6 +240,21 @@ return test.suite({
                 test.expect(calls.joined_games[2]):deep_equals({ "Hidden Friends Game", "secret" })
             end)
         end),
+        test.case("waits_for_authenticated_game_connection_before_loading", function(t)
+            t:run(function()
+                local state = { phase = "game_connecting", channel = { members = {} }, games = {}, events = {} }
+                local screen, calls = load_screen(state)
+                local scene = {}
+                screen.create(scene)
+                screen.update(scene, 0)
+                test.expect(calls.scenes):has_length(0)
+                test.expect(scene.status.text):equals("CONNECTING TO GAME")
+
+                state.phase = "game_connected"
+                screen.update(scene, 0)
+                test.expect(calls.scenes):deep_equals({ "game_loading" })
+            end)
+        end),
         test.case("recovers_live_lobby_state_after_a_failed_game_pane", function(t)
             t:run(function()
                 local state = {

@@ -188,9 +188,11 @@ return {
         common.set_label(self.chat, lobby_ui.chat_lines(state.events or {}), 340, "realm_lobby_text", "left")
         lobby_roster.update(self.members, (state.channel or {}).members or {})
 
-        if state.phase == "game_connecting" or state.phase == "game_connected" then
+        if state.phase == "game_connected" then
             scenes.replace("game_loading")
             return
+        elseif state.phase == "game_connecting" then
+            common.set_label(self.status, "CONNECTING TO GAME", 330, "network_status", "center")
         elseif state.phase == "error" then
             common.set_label(self.status, common.error(state), 330, "realm_lobby_error", "center")
         elseif state.phase == "creating_game" then
