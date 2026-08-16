@@ -7,6 +7,30 @@ import (
 	"testing"
 )
 
+func TestMutationLockUsesDirectoryTokenAndReleasesIt(t *testing.T) {
+	root := t.TempDir()
+	store, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lockPath := filepath.Join(root, ".mutation.lock")
+	if err := store.withMutationLock(func() error {
+		info, err := os.Stat(lockPath)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			t.Fatalf("mutation lock token is not a directory")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+		t.Fatalf("released mutation lock remains: %v", err)
+	}
+}
+
 func TestMutationLockRecognizesWindowsPermissionShapedContention(t *testing.T) {
 	lockPath := filepath.Join(t.TempDir(), ".mutation.lock")
 	if err := os.WriteFile(lockPath, []byte("owner"), 0o600); err != nil {

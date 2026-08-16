@@ -94,6 +94,22 @@ func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) 
 	}
 }
 
+func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testing.T) {
+	controller := newNetworkController(&application{})
+	controller.phase = "connected"
+	controller.mode = "realm"
+	controller.client = &clientsession.Session{HUD: playeradapter.HUD{Player: playeradapter.HUDIdentity{
+		PlayerID: "player-1", CharacterID: "realm-hero",
+	}}}
+	if !controller.hasSelectedCharacter() {
+		t.Fatal("authenticated Realm character was not available to loading")
+	}
+	controller.client.HUD.Player.CharacterID = ""
+	if controller.hasSelectedCharacter() {
+		t.Fatal("Realm connection without an admitted character passed loading")
+	}
+}
+
 func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
 	controller := newNetworkController(app)

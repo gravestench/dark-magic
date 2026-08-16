@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -15,20 +14,15 @@ const (
 )
 
 // withMutationLock serializes the short read-modify-write sections shared by
-// multiple Dark Magic processes. O_EXCL is portable; stale ownership is
+// multiple Dark Magic processes. Atomically creating a directory is portable,
+// avoids Windows lock-file open/delete races, and leaves stale ownership
 // recoverable after a crashed process without relying on platform-only flock.
 func (store *Store) withMutationLock(operation func() error) error {
 	deadline := time.Now().Add(cacheLockTimeout)
 	lockPath := filepath.Join(store.root, ".mutation.lock")
 	for {
-		file, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		err := os.Mkdir(lockPath, 0o700)
 		if err == nil {
-			_, writeErr := file.WriteString(strconv.Itoa(os.Getpid()))
-			closeErr := file.Close()
-			if writeErr != nil || closeErr != nil {
-				_ = os.Remove(lockPath)
-				return errors.Join(writeErr, closeErr)
-			}
 			operationErr := operation()
 			removeErr := os.Remove(lockPath)
 			return errors.Join(operationErr, removeErr)

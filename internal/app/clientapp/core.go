@@ -284,10 +284,13 @@ func (app *application) preparedEntryWorld() *entryworld.Prepared {
 func (app *application) buildLoadingCoordinator() error {
 	app.loading = loadcore.New(map[string]loadcore.Task{
 		"selected_character": func(context.Context) error {
-			if _, ok := app.saves.Selected(); !ok {
-				return errors.New("no character is selected")
+			if _, ok := app.saves.Selected(); ok {
+				return nil
 			}
-			return nil
+			if app.network != nil && app.network.hasSelectedCharacter() {
+				return nil
+			}
+			return errors.New("no character is selected")
 		},
 		"loading_assets": func(context.Context) error {
 			for _, name := range app.presentation.LoadingAssets {

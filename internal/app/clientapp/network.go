@@ -426,6 +426,24 @@ func (controller *networkController) Status() map[string]any {
 	return map[string]any{"phase": phase, "mode": mode, "address": address, "error": failure, "player_id": playerID}
 }
 
+// hasSelectedCharacter reports whether the active network authority has
+// admitted the character that this client selected. Realm characters never
+// enter the offline save store, so loading must use the authenticated private
+// HUD identity instead of manufacturing a duplicate local selection.
+func (controller *networkController) hasSelectedCharacter() bool {
+	if controller == nil {
+		return false
+	}
+	controller.mu.Lock()
+	phase, mode, client := controller.phase, controller.mode, controller.client
+	controller.mu.Unlock()
+	if phase != "connected" || mode != "realm" || client == nil {
+		return false
+	}
+	hud, _ := client.View()
+	return hud.Player.PlayerID != "" && hud.Player.CharacterID != ""
+}
+
 func (controller *networkController) startHost(ctx context.Context, generation uint64) {
 	slog.Debug("starting listen server", "address", ":6112")
 	fail := func(err error) {
