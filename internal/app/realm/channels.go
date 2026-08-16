@@ -87,13 +87,15 @@ type Channels struct {
 	historyLimit int
 	channels     map[string]*channelState
 	bySession    map[string]string
+	byCharacter  map[string]string
 }
 
 func NewChannels(historyLimit int) *Channels {
 	if historyLimit <= 0 {
 		historyLimit = defaultChannelHistory
 	}
-	return &Channels{now: time.Now, historyLimit: historyLimit, channels: make(map[string]*channelState), bySession: make(map[string]string)}
+	return &Channels{now: time.Now, historyLimit: historyLimit, channels: make(map[string]*channelState),
+		bySession: make(map[string]string), byCharacter: make(map[string]string)}
 }
 
 func (channels *Channels) Join(ctx context.Context, principal AuthenticatedPrincipal, name string, character CharacterPresence) (ChannelView, error) {
@@ -109,6 +111,9 @@ func (channels *Channels) Join(ctx context.Context, principal AuthenticatedPrinc
 	}
 	channels.mu.Lock()
 	defer channels.mu.Unlock()
+	if sessionID := channels.byCharacter[character.CharacterID]; sessionID != "" && sessionID != principal.sessionID {
+		return ChannelView{}, ErrCharacterOnline
+	}
 	if previousID := channels.bySession[principal.sessionID]; previousID != "" && previousID != id {
 		channels.leaveLocked(previousID, principal.sessionID)
 	}
@@ -118,6 +123,9 @@ func (channels *Channels) Join(ctx context.Context, principal AuthenticatedPrinc
 		channels.channels[id] = channel
 	}
 	member, exists := channel.members[principal.sessionID]
+	if exists && member.Character.CharacterID != character.CharacterID {
+		delete(channels.byCharacter, member.Character.CharacterID)
+	}
 	if !exists {
 		now := channels.now().UTC()
 		member = ChannelMember{MemberID: uuid.New().String(), Account: principal.name, JoinedAt: now, ActiveAt: now}
@@ -127,6 +135,7 @@ func (channels *Channels) Join(ctx context.Context, principal AuthenticatedPrinc
 	member.Character = clonePresence(character)
 	channel.members[principal.sessionID] = member
 	channels.bySession[principal.sessionID] = id
+	channels.byCharacter[character.CharacterID] = principal.sessionID
 	channel.revision++
 	if !exists {
 		channels.appendEventLocked(channel, ChatEvent{Kind: ChatEventJoined, Sender: cloneMemberPointer(member)})
@@ -274,6 +283,9 @@ func (channels *Channels) leaveLocked(channelID, sessionID string) bool {
 	}
 	delete(channel.members, sessionID)
 	delete(channels.bySession, sessionID)
+	if channels.byCharacter[member.Character.CharacterID] == sessionID {
+		delete(channels.byCharacter, member.Character.CharacterID)
+	}
 	channel.revision++
 	channels.appendEventLocked(channel, ChatEvent{Kind: ChatEventLeft, Sender: cloneMemberPointer(member)})
 	return true

@@ -87,6 +87,21 @@ func TestPostgresRepositoriesPreserveAccountCharacterAndLeaseContracts(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
+	muleSession, err := store.Accounts.Authenticate(t.Context(), accountName, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Accounts.SelectCharacter(t.Context(), muleSession.Token, created.Character.ID); !errors.Is(err, ErrCharacterOnline) {
+		t.Fatalf("duplicate PostgreSQL character claim error = %v", err)
+	}
+	mule, err := control.CreateCharacter(t.Context(), muleSession.Token,
+		CreateCharacterRequest{Name: "MuleHero", Class: "Barbarian"})
+	if err != nil || mule.Character.ID == created.Character.ID {
+		t.Fatalf("same-account mule character = %#v, %v", mule, err)
+	}
+	if err := store.Accounts.Logout(t.Context(), muleSession.Token); err != nil {
+		t.Fatal(err)
+	}
 	selected, err := control.SelectedCharacter(t.Context(), session.Token)
 	if err != nil || selected.Character.ID != created.Character.ID {
 		t.Fatalf("selected = %#v, %v", selected, err)

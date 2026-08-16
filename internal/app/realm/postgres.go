@@ -240,6 +240,9 @@ func (accounts *PostgresAccounts) SelectCharacter(ctx context.Context, token, ch
 	digest := sha256.Sum256([]byte(token))
 	result, err := accounts.pool.Exec(ctx, `UPDATE realm_sessions SET selected_character_id = $1
         WHERE token_digest = $2 AND expires_at > CURRENT_TIMESTAMP`, characterID, digest[:])
+	if postgresUniqueViolation(err) {
+		return ErrCharacterOnline
+	}
 	if err != nil {
 		return fmt.Errorf("realm: select PostgreSQL character: %w", err)
 	}

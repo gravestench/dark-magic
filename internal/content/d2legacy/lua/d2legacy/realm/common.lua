@@ -80,6 +80,9 @@ function M.error(status)
     if detail:find("already_exists", 1, true) then
         return "THAT NAME IS ALREADY IN USE"
     end
+    if detail:find("character_online", 1, true) or detail:find("already online", 1, true) then
+        return "THAT CHARACTER IS ALREADY ONLINE"
+    end
     if detail:find("already exists", 1, true) then
         return "THAT ACCOUNT NAME OR EMAIL IS ALREADY IN USE"
     end

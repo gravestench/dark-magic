@@ -360,6 +360,8 @@ func realmHTTPStatus(err error) (int, string) {
 		return http.StatusBadRequest, "invalid_challenge"
 	case errors.Is(err, ErrAccountExists), errors.Is(err, ErrCharacterExists), errors.Is(err, ErrGameExists):
 		return http.StatusConflict, "already_exists"
+	case errors.Is(err, ErrCharacterOnline):
+		return http.StatusConflict, "character_online"
 	case errors.Is(err, ErrCharacterNotFound), errors.Is(err, ErrGameNotFound):
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, ErrLease):
@@ -586,6 +588,8 @@ func realmHTTPCodeError(code string) error {
 		cause = ErrAccountChallenge
 	case "already_exists":
 		cause = errors.Join(ErrAccountExists, ErrCharacterExists, ErrGameExists)
+	case "character_online":
+		cause = ErrCharacterOnline
 	case "not_found":
 		cause = errors.Join(ErrCharacterNotFound, ErrGameNotFound)
 	case "capacity":

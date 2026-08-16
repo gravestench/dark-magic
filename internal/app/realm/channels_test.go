@@ -97,6 +97,47 @@ func TestChannelsMoveSessionsAndBoundHistory(t *testing.T) {
 	}
 }
 
+func TestChannelsDefendAgainstDuplicateCharacterPresence(t *testing.T) {
+	accounts, err := NewAccounts(time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accounts.Create(t.Context(), "MuleAccount", "fixture password"); err != nil {
+		t.Fatal(err)
+	}
+	principal := func() AuthenticatedPrincipal {
+		session, err := accounts.Authenticate(t.Context(), "MuleAccount", "fixture password")
+		if err != nil {
+			t.Fatal(err)
+		}
+		principal, err := accounts.Authorize(t.Context(), session.Token)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return principal
+	}
+	first, second := principal(), principal()
+	channels := NewChannels(8)
+	presence := CharacterPresence{CharacterID: "shared-character", Name: "Shared", Class: "Amazon", Level: 1}
+	if _, err := channels.Join(t.Context(), first, "Diablo II", presence); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := channels.Join(t.Context(), second, "Diablo II", presence); !errors.Is(err, ErrCharacterOnline) {
+		t.Fatalf("duplicate channel presence error = %v", err)
+	}
+	mule := CharacterPresence{CharacterID: "mule-character", Name: "Mule", Class: "Barbarian", Level: 1}
+	view, err := channels.Join(t.Context(), second, "Diablo II", mule)
+	if err != nil || len(view.Members) != 2 {
+		t.Fatalf("same-account mule presence = %#v, %v", view, err)
+	}
+	if err := channels.Leave(t.Context(), first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := channels.Join(t.Context(), second, "Diablo II", presence); err != nil {
+		t.Fatalf("released character remained claimed: %v", err)
+	}
+}
+
 func TestChannelsPruneOnlyPresenceThatStoppedRenewing(t *testing.T) {
 	accounts, err := NewAccounts(time.Hour)
 	if err != nil {

@@ -93,6 +93,39 @@ func TestAccountsExpireSessionsAndValidateInputs(t *testing.T) {
 	}
 }
 
+func TestAccountsAllowMulingButClaimEachCharacterOnce(t *testing.T) {
+	accounts, err := NewAccounts(time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := accounts.Create(t.Context(), "MuleAccount", "long enough password"); err != nil {
+		t.Fatal(err)
+	}
+	first, err := accounts.Authenticate(t.Context(), "MuleAccount", "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := accounts.Authenticate(t.Context(), "MuleAccount", "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := accounts.SelectCharacter(t.Context(), first.Token, "character-main"); err != nil {
+		t.Fatal(err)
+	}
+	if err := accounts.SelectCharacter(t.Context(), second.Token, "character-main"); !errors.Is(err, ErrCharacterOnline) {
+		t.Fatalf("duplicate character claim error = %v", err)
+	}
+	if err := accounts.SelectCharacter(t.Context(), second.Token, "character-mule"); err != nil {
+		t.Fatalf("different character on same account was rejected: %v", err)
+	}
+	if err := accounts.Logout(t.Context(), first.Token); err != nil {
+		t.Fatal(err)
+	}
+	if err := accounts.SelectCharacter(t.Context(), second.Token, "character-main"); err != nil {
+		t.Fatalf("released character could not be selected: %v", err)
+	}
+}
+
 func TestAccountsPruneExpiredReturnsFormerPrincipal(t *testing.T) {
 	accounts, err := NewAccounts(time.Minute)
 	if err != nil {

@@ -19,6 +19,7 @@ var (
 	ErrCharacterNotFound = errors.New("realm: character not found")
 	ErrCharacterOwner    = errors.New("realm: character ownership differs")
 	ErrCharacterLeased   = errors.New("realm: character is already leased")
+	ErrCharacterOnline   = errors.New("realm: character is already online")
 	ErrLease             = errors.New("realm: invalid character lease")
 	ErrCharacterCommit   = errors.New("realm: invalid authoritative character commit")
 	ErrCharacterExists   = errors.New("realm: character name already exists")

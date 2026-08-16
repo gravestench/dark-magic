@@ -104,6 +104,14 @@ func (accounts *Accounts) SelectCharacter(ctx context.Context, token, characterI
 		delete(accounts.sessions, digest)
 		return ErrRealmSession
 	}
+	for otherDigest, other := range accounts.sessions {
+		if otherDigest == digest || !other.expiresAt.After(accounts.now()) {
+			continue
+		}
+		if other.selectedCharacterID == characterID {
+			return ErrCharacterOnline
+		}
+	}
 	session.selectedCharacterID = characterID
 	accounts.sessions[digest] = session
 	return nil

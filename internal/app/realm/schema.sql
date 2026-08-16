@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS realm_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS realm_sessions_expiry_idx ON realm_sessions (expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS realm_sessions_selected_character_idx
+    ON realm_sessions (selected_character_id) WHERE selected_character_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS realm_characters (
     id TEXT PRIMARY KEY,
