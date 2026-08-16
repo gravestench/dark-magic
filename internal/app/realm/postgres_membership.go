@@ -31,7 +31,8 @@ func (store *PostgresMemberships) Admit(ctx context.Context, record MembershipRe
 			return ErrMembership
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM realm_memberships
-			WHERE game_id = $1 AND account_id = $2 AND state <> $3`, record.GameID, record.AccountID, MembershipActive); err != nil {
+			WHERE game_id = $1 AND character_id = $2 AND state <> $3`, record.GameID,
+			record.Baseline.Character.ID, MembershipActive); err != nil {
 			return fmt.Errorf("realm: clear PostgreSQL departure receipt for rejoin: %w", err)
 		}
 		baseline, err := json.Marshal(canonical)
@@ -155,6 +156,10 @@ func (store *PostgresMemberships) MarkWorkerRemoved(ctx context.Context, gameID,
 
 func (store *PostgresMemberships) ByAccount(ctx context.Context, gameID, accountID string) (MembershipRecord, error) {
 	return store.get(ctx, `game_id = $1 AND account_id = $2`, strings.TrimSpace(gameID), strings.TrimSpace(accountID))
+}
+
+func (store *PostgresMemberships) ByCharacter(ctx context.Context, gameID, characterID string) (MembershipRecord, error) {
+	return store.get(ctx, `game_id = $1 AND character_id = $2`, strings.TrimSpace(gameID), strings.TrimSpace(characterID))
 }
 
 func (store *PostgresMemberships) ByPlayer(ctx context.Context, gameID, playerID string) (MembershipRecord, error) {

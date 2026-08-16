@@ -96,11 +96,15 @@ func (control *ControlPlane) ReconnectGame(ctx context.Context, token, gameID st
 	if err != nil {
 		return GameHandoff{}, err
 	}
-	assignment, err := control.admissions.ReconnectAssignment(ctx, detail.Entry.GameID, principal.accountID)
+	characterID, err := control.accounts.SelectedCharacter(ctx, token)
 	if err != nil {
 		return GameHandoff{}, err
 	}
-	event.CharacterID = ""
+	assignment, err := control.admissions.ReconnectAssignment(ctx, detail.Entry.GameID, principal.accountID, characterID)
+	if err != nil {
+		return GameHandoff{}, err
+	}
+	event.CharacterID = characterID
 	return GameHandoff{Game: detail, Assignment: assignment}, nil
 }
 
@@ -604,7 +608,11 @@ func (control *ControlPlane) LeaveGame(ctx context.Context, token, gameID string
 	// retries cannot both pass the pre-commit lookup.
 	control.departureFlowMu.Lock()
 	defer control.departureFlowMu.Unlock()
-	if completed, found, lookupErr := control.departure(ctx, gameID, principal.accountID); lookupErr != nil {
+	characterID, err := control.accounts.SelectedCharacter(ctx, token)
+	if err != nil {
+		return CharacterRecord{}, err
+	}
+	if completed, found, lookupErr := control.departure(ctx, gameID, characterID); lookupErr != nil {
 		return CharacterRecord{}, lookupErr
 	} else if found {
 		return completed.Record, control.completeDeparture(ctx, gameID, principal.accountID, completed)
@@ -612,7 +620,7 @@ func (control *ControlPlane) LeaveGame(ctx context.Context, token, gameID string
 	if control.allocator == nil || control.admissions == nil {
 		return CharacterRecord{}, ErrGameUnavailable
 	}
-	playerID, baseline, err := control.admissions.AccountMembership(gameID, principal.accountID)
+	playerID, baseline, err := control.admissions.CharacterMembership(gameID, principal.accountID, characterID)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
@@ -621,7 +629,7 @@ func (control *ControlPlane) LeaveGame(ctx context.Context, token, gameID string
 	if record.Character.ID == "" {
 		return CharacterRecord{}, commitErr
 	}
-	membership, receiptErr := control.membershipStore.ByAccount(ctx, gameID, principal.accountID)
+	membership, receiptErr := control.membershipStore.ByCharacter(ctx, gameID, characterID)
 	if receiptErr != nil || membership.Departure == nil {
 		return record, errors.Join(commitErr, receiptErr, ErrMembership)
 	}
@@ -1020,8 +1028,8 @@ func (control *ControlPlane) reconcileExpiredPlayer(ctx context.Context, gameID,
 	return control.completeDeparture(ctx, gameID, accountID, receipt)
 }
 
-func (control *ControlPlane) departure(ctx context.Context, gameID, accountID string) (departureReceipt, bool, error) {
-	record, err := control.membershipStore.ByAccount(ctx, gameID, accountID)
+func (control *ControlPlane) departure(ctx context.Context, gameID, characterID string) (departureReceipt, bool, error) {
+	record, err := control.membershipStore.ByCharacter(ctx, gameID, characterID)
 	if errors.Is(err, ErrMembership) {
 		return departureReceipt{}, false, nil
 	}

@@ -2,6 +2,7 @@ package realm
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -31,7 +32,7 @@ func TestMemoryMembershipDepartureCommitsOnceAndRetainsReceipt(t *testing.T) {
 	}
 	if err := store.Admit(t.Context(), MembershipRecord{GameID: "game", PlayerID: "other", AccountID: "account",
 		Baseline: baseline, Lease: lease, State: MembershipActive}); !errors.Is(err, ErrCharacterLeased) {
-		t.Fatalf("duplicate account membership = %v", err)
+		t.Fatalf("duplicate character membership = %v", err)
 	}
 	canonical := cloneCharacter(baseline.Character)
 	canonical.Level = 2
@@ -81,6 +82,37 @@ func TestMemoryMembershipDepartureCommitsOnceAndRetainsReceipt(t *testing.T) {
 	committed, err := characters.Get(t.Context(), "account", "character")
 	if err != nil || committed.Revision != 2 {
 		t.Fatalf("committed character = %#v, %v", committed, err)
+	}
+}
+
+func TestMemoryMembershipsAllowDifferentCharactersFromSameAccount(t *testing.T) {
+	first := CharacterRecord{AccountID: "account", Revision: 1,
+		Character: d2save.Character{ID: "first-character", Name: "First", Class: "Amazon", Level: 1}}
+	second := CharacterRecord{AccountID: "account", Revision: 1,
+		Character: d2save.Character{ID: "second-character", Name: "Second", Class: "Barbarian", Level: 1}}
+	characters, err := NewMemoryCharacters(first, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := NewMemoryMemberships(characters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, source := range []CharacterRecord{first, second} {
+		baseline, lease, err := characters.Acquire(t.Context(), source.AccountID, source.Character.ID, "game", time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Admit(t.Context(), MembershipRecord{
+			GameID: "game", PlayerID: fmt.Sprintf("player-%d", index+1), AccountID: source.AccountID,
+			Baseline: baseline, Lease: lease, State: MembershipActive,
+		}); err != nil {
+			t.Fatalf("admit character %q: %v", source.Character.ID, err)
+		}
+	}
+	players, err := store.ActivePlayerIDs(t.Context(), "game")
+	if err != nil || len(players) != 2 {
+		t.Fatalf("same-account players = %#v, %v", players, err)
 	}
 }
 

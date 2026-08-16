@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -142,7 +143,12 @@ func (server *workerHTTPServer) admit(writer http.ResponseWriter, request *http.
 	if !decodeWorkerRequest(writer, request, &input) {
 		return
 	}
-	writeWorkerResponse(writer, struct{}{}, server.worker.AdmitCharacter(request.Context(), input.Admission))
+	err := server.worker.AdmitCharacter(request.Context(), input.Admission)
+	if err != nil {
+		slog.Debug("worker character admission failed", "character_id", input.Admission.Character.ID,
+			"player_id", input.Admission.PlayerID, "error", err)
+	}
+	writeWorkerResponse(writer, struct{}{}, err)
 }
 
 func (server *workerHTTPServer) remove(writer http.ResponseWriter, request *http.Request) {
@@ -229,6 +235,8 @@ func writeWorkerResponse(writer http.ResponseWriter, value any, err error) {
 			envelope.Error, status = "unauthorized", http.StatusUnauthorized
 		} else if errors.Is(err, ErrWorkerProtocol) {
 			envelope.Error, status = "invalid_protocol", http.StatusBadRequest
+		} else if errors.Is(err, gamesession.ErrCompatibility) {
+			envelope.Error = "incompatible_runtime"
 		}
 	} else {
 		envelope.Data, err = json.Marshal(value)
@@ -369,6 +377,9 @@ func (client *WorkerHTTPClient) call(ctx context.Context, path string, input, ou
 		}
 		if envelope.Error == "invalid_protocol" {
 			return ErrWorkerProtocol
+		}
+		if envelope.Error == "incompatible_runtime" {
+			return gamesession.ErrCompatibility
 		}
 		return fmt.Errorf("%w: %s", ErrWorker, envelope.Error)
 	}

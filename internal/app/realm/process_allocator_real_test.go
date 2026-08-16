@@ -65,6 +65,64 @@ func TestProcessAllocatorStartsRealPreparedRealmWorker(t *testing.T) {
 	}
 }
 
+func TestProcessAllocatorRealWorkerAdmitsTwoCharactersFromSameAccount(t *testing.T) {
+	executable := os.Getenv("DARK_MAGIC_REALM_WORKER_ACCEPTANCE")
+	if executable == "" || os.Getenv("MPQ_DIRECTORY") == "" {
+		t.Skip("DARK_MAGIC_REALM_WORKER_ACCEPTANCE and MPQ_DIRECTORY are required")
+	}
+	allocator, err := realm.NewProcessAllocator(realm.ProcessAllocatorConfig{
+		Executable: executable, Arguments: []string{"--log-level", "debug"}, StateDirectory: t.TempDir(),
+		ControlListenAddress: "127.0.0.1:0", GameListenAddress: "127.0.0.1:0",
+		StartupTimeout: 30 * time.Second, ShutdownTimeout: 5 * time.Second, LogWriter: os.Stderr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = allocator.Close(ctx)
+	})
+	control, err := realm.NewControlPlane(realm.ControlPlaneConfig{Allocator: allocator})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := control.CreateAccount(t.Context(), "MuleAccount", "long enough password"); err != nil {
+		t.Fatal(err)
+	}
+	creator, err := control.Authenticate(t.Context(), "MuleAccount", "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joiner, err := control.Authenticate(t.Context(), "MuleAccount", "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := control.CreateCharacter(t.Context(), creator.Token, realm.CreateCharacterRequest{
+		Name: "Mulehost", Class: "Necromancer", Expansion: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := control.CreateCharacter(t.Context(), joiner.Token, realm.CreateCharacterRequest{
+		Name: "Mulejoin", Class: "Amazon", Expansion: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	created, err := control.CreateGame(t.Context(), creator.Token, realm.CreateGameRequest{
+		Name: "Mule Game", Difficulty: realm.DifficultyNormal, Maximum: 8, Expansion: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined, err := control.JoinGame(t.Context(), joiner.Token, created.Game.Entry.GameID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if joined.Game.Entry.Players != 2 || len(joined.Game.Players) != 2 {
+		t.Fatalf("joined game = %#v", joined.Game)
+	}
+}
+
 func TestProcessAllocatorRealWorkerRestoresLiveClientSession(t *testing.T) {
 	executable := os.Getenv("DARK_MAGIC_REALM_WORKER_ACCEPTANCE")
 	if executable == "" || os.Getenv("MPQ_DIRECTORY") == "" {

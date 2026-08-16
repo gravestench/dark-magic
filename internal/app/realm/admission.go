@@ -173,9 +173,9 @@ func (admissions *Admissions) ResumeGame(ctx context.Context, gameID string, tic
 // admitted durable membership. This is used when a replacement worker has the
 // canonical player entity but the old transport credential and endpoint are no
 // longer valid.
-func (admissions *Admissions) ReconnectAssignment(ctx context.Context, gameID, accountID string) (JoinAssignment, error) {
-	gameID, accountID = strings.TrimSpace(gameID), strings.TrimSpace(accountID)
-	if admissions == nil || ctx == nil || gameID == "" || accountID == "" {
+func (admissions *Admissions) ReconnectAssignment(ctx context.Context, gameID, accountID, characterID string) (JoinAssignment, error) {
+	gameID, accountID, characterID = strings.TrimSpace(gameID), strings.TrimSpace(accountID), strings.TrimSpace(characterID)
+	if admissions == nil || ctx == nil || gameID == "" || accountID == "" || characterID == "" {
 		return JoinAssignment{}, ErrAdmission
 	}
 	admissions.mu.RLock()
@@ -183,7 +183,8 @@ func (admissions *Admissions) ReconnectAssignment(ctx context.Context, gameID, a
 	var playerID string
 	var membership characterMembership
 	for membershipID, candidate := range admissions.memberships {
-		if candidate.lease.GameID == gameID && candidate.baseline.AccountID == accountID {
+		if candidate.lease.GameID == gameID && candidate.baseline.AccountID == accountID &&
+			candidate.baseline.Character.ID == characterID {
 			playerID = strings.TrimPrefix(membershipID, gameID+"\x00")
 			membership = candidate
 			break
@@ -472,18 +473,19 @@ func (admissions *Admissions) CommitCanonicalMembership(ctx context.Context, gam
 	return admissions.CommitMembership(ctx, gameID, playerID, character)
 }
 
-// AccountMembership resolves only Realm-owned membership state. The account
-// identity comes from an authenticated Realm session, never a client-supplied
-// player ID.
-func (admissions *Admissions) AccountMembership(gameID, accountID string) (string, CharacterRecord, error) {
+// CharacterMembership resolves only Realm-owned membership state. Both the
+// account and selected character come from an authenticated Realm session;
+// clients never supply a player ID.
+func (admissions *Admissions) CharacterMembership(gameID, accountID, characterID string) (string, CharacterRecord, error) {
 	if admissions == nil {
 		return "", CharacterRecord{}, ErrLease
 	}
-	gameID, accountID = strings.TrimSpace(gameID), strings.TrimSpace(accountID)
+	gameID, accountID, characterID = strings.TrimSpace(gameID), strings.TrimSpace(accountID), strings.TrimSpace(characterID)
 	admissions.mu.RLock()
 	defer admissions.mu.RUnlock()
 	for membershipID, membership := range admissions.memberships {
-		if membership.lease.GameID != gameID || membership.baseline.AccountID != accountID {
+		if membership.lease.GameID != gameID || membership.baseline.AccountID != accountID ||
+			membership.baseline.Character.ID != characterID {
 			continue
 		}
 		_, playerID, found := strings.Cut(membershipID, "\x00")

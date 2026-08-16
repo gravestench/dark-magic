@@ -41,6 +41,7 @@ type MembershipRepository interface {
 	Depart(context.Context, MembershipRecord, d2save.Character) (departureReceipt, error)
 	MarkWorkerRemoved(context.Context, string, string) (departureReceipt, error)
 	ByAccount(context.Context, string, string) (MembershipRecord, error)
+	ByCharacter(context.Context, string, string) (MembershipRecord, error)
 	ByPlayer(context.Context, string, string) (MembershipRecord, error)
 	ActivePlayerIDs(context.Context, string) ([]string, error)
 	// DrainPlayerIDs includes both active memberships and durable departure
@@ -105,7 +106,8 @@ func (store *MemoryMemberships) Admit(ctx context.Context, record MembershipReco
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	for key, existing := range store.records {
-		if existing.GameID == record.GameID && existing.AccountID == record.AccountID {
+		if existing.GameID == record.GameID &&
+			existing.Baseline.Character.ID == record.Baseline.Character.ID {
 			if existing.State == MembershipActive {
 				return ErrCharacterLeased
 			}
@@ -190,6 +192,21 @@ func (store *MemoryMemberships) ByAccount(ctx context.Context, gameID, accountID
 	defer store.mu.Unlock()
 	for _, record := range store.records {
 		if record.GameID == strings.TrimSpace(gameID) && record.AccountID == strings.TrimSpace(accountID) {
+			return cloneMembershipRecord(record), nil
+		}
+	}
+	return MembershipRecord{}, ErrMembership
+}
+
+func (store *MemoryMemberships) ByCharacter(ctx context.Context, gameID, characterID string) (MembershipRecord, error) {
+	if err := contextErr(ctx); err != nil {
+		return MembershipRecord{}, err
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	for _, record := range store.records {
+		if record.GameID == strings.TrimSpace(gameID) &&
+			record.Baseline.Character.ID == strings.TrimSpace(characterID) {
 			return cloneMembershipRecord(record), nil
 		}
 	}

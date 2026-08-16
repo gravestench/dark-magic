@@ -558,6 +558,78 @@ func TestPostgresMembershipDepartureIsAtomicRetryableAndDurable(t *testing.T) {
 	}
 }
 
+func TestPostgresMembershipsAllowDifferentCharactersFromSameAccount(t *testing.T) {
+	connectionString := os.Getenv("DARK_MAGIC_TEST_POSTGRES")
+	if connectionString == "" {
+		t.Skip("DARK_MAGIC_TEST_POSTGRES is required")
+	}
+	store, err := OpenPostgres(t.Context(), connectionString, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Close)
+	suffix := uuid.New().String()[:8]
+	nameSuffix := make([]byte, 8)
+	randomName := uuid.New()
+	for index := range nameSuffix {
+		nameSuffix[index] = 'a' + randomName[index]%26
+	}
+	account, err := store.Accounts.Create(t.Context(), "Muling_"+suffix, "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstSession, err := store.Accounts.Authenticate(t.Context(), account.Name, "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondSession, err := store.Accounts.Authenticate(t.Context(), account.Name, "long enough password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	control, err := NewControlPlane(ControlPlaneConfig{Accounts: store.Accounts, Characters: store.Characters,
+		Games: store.Games, Memberships: store.Memberships})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := control.CreateCharacter(t.Context(), firstSession.Token,
+		CreateCharacterRequest{Name: "First" + string(nameSuffix), Class: "Amazon", Expansion: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := control.CreateCharacter(t.Context(), secondSession.Token,
+		CreateCharacterRequest{Name: "Second" + string(nameSuffix), Class: "Barbarian", Expansion: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal, err := store.Accounts.Authorize(t.Context(), firstSession.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	game, err := store.Games.Create(t.Context(), principal, CreateGameRequest{
+		Name: "Muling Game " + suffix, Difficulty: DifficultyNormal, Maximum: 8, Expansion: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, character := range []CharacterRecord{first, second} {
+		baseline, lease, err := store.Characters.Acquire(t.Context(), account.ID, character.Character.ID,
+			game.Entry.GameID, time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Memberships.Admit(t.Context(), MembershipRecord{
+			GameID: game.Entry.GameID, PlayerID: fmt.Sprintf("player-%d-%s", index+1, suffix),
+			AccountID: account.ID, Baseline: baseline, Lease: lease, State: MembershipActive,
+		}); err != nil {
+			t.Fatalf("admit character %q: %v", character.Character.ID, err)
+		}
+	}
+	players, err := store.Memberships.ActivePlayerIDs(t.Context(), game.Entry.GameID)
+	if err != nil || len(players) != 2 {
+		t.Fatalf("same-account PostgreSQL memberships = %#v, %v", players, err)
+	}
+}
+
 func TestPostgresMembershipResumeRotatesLostLeaseTokenAtomically(t *testing.T) {
 	connectionString := os.Getenv("DARK_MAGIC_TEST_POSTGRES")
 	if connectionString == "" {

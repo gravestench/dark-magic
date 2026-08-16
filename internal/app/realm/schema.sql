@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS realm_memberships (
     departure_receipt JSONB,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (game_id, player_id),
-    UNIQUE (game_id, account_id)
+    UNIQUE (game_id, character_id)
 );
 
 CREATE TABLE IF NOT EXISTS realm_game_reservations (

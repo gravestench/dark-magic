@@ -3,6 +3,7 @@ package realm
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -137,7 +138,7 @@ func TestAdmissionsResumeGameRehydratesDurableMemberships(t *testing.T) {
 	if len(resumed) != 1 || resumed[0].Lease.Token == "" || !resumed[0].Lease.ExpiresAt.After(lease.ExpiresAt) {
 		t.Fatalf("resumed memberships = %#v", resumed)
 	}
-	playerID, recovered, err := admissions.AccountMembership("game", "account")
+	playerID, recovered, err := admissions.CharacterMembership("game", "account", "character")
 	if err != nil || playerID != "player" || recovered.Character.ID != "character" {
 		t.Fatalf("recovered membership player=%q record=%#v error=%v", playerID, recovered, err)
 	}
@@ -145,7 +146,7 @@ func TestAdmissionsResumeGameRehydratesDurableMemberships(t *testing.T) {
 		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); !errors.Is(err, ErrGameExists) {
 		t.Fatalf("duplicate resumed game error = %v", err)
 	}
-	assignment, err := admissions.ReconnectAssignment(t.Context(), "game", "account")
+	assignment, err := admissions.ReconnectAssignment(t.Context(), "game", "account", "character")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,6 +154,62 @@ func TestAdmissionsResumeGameRehydratesDurableMemberships(t *testing.T) {
 	if err != nil || assignment.Endpoint.Address != "game.example:4433" || principal.PlayerID != "player" ||
 		principal.CharacterID != "character" || principal.CharacterRevision != 4 {
 		t.Fatalf("reconnect assignment=%#v principal=%#v error=%v", assignment, principal, err)
+	}
+}
+
+func TestAdmissionsReconnectSameAccountCharactersIndependently(t *testing.T) {
+	manager, host, _ := admissionFixture(t, func(simulation.Command) error { return nil })
+	records := []CharacterRecord{
+		{AccountID: "account", Revision: 2, Character: d2save.Character{ID: "first-character", Name: "First", Class: "Amazon", Level: 1}, Compatibility: host.Allocation.Durable("first-character")},
+		{AccountID: "account", Revision: 3, Character: d2save.Character{ID: "second-character", Name: "Second", Class: "Barbarian", Level: 1}, Compatibility: host.Allocation.Durable("second-character")},
+	}
+	characters, err := NewMemoryCharacters(records...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memberships, err := NewMemoryMemberships(characters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, record := range records {
+		baseline, lease, err := characters.Acquire(t.Context(), record.AccountID, record.Character.ID, "game", time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := memberships.Admit(t.Context(), MembershipRecord{
+			GameID: "game", PlayerID: fmt.Sprintf("player-%d", index+1), AccountID: record.AccountID,
+			Baseline: baseline, Lease: lease, State: MembershipActive,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissionsWithMemberships(manager, characters, memberships, 2*time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admissions.ResumeGame(t.Context(), "game", tickets,
+		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); err != nil {
+		t.Fatal(err)
+	}
+	for index, record := range records {
+		assignment, err := admissions.ReconnectAssignment(t.Context(), "game", record.AccountID, record.Character.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		principal, err := authority.Authenticate(t.Context(), assignment.Ticket)
+		if err != nil || principal.PlayerID != fmt.Sprintf("player-%d", index+1) ||
+			principal.CharacterID != record.Character.ID || principal.CharacterRevision != record.Revision {
+			t.Fatalf("character %q reconnect assignment=%#v principal=%#v error=%v",
+				record.Character.ID, assignment, principal, err)
+		}
 	}
 }
 

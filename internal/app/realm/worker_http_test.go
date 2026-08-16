@@ -21,6 +21,7 @@ type workerHTTPFixture struct {
 	description WorkerDescription
 	checkpoint  gamesession.RecoveryCheckpoint
 	admitted    WorkerAdmission
+	admitErr    error
 	removed     string
 	projected   bool
 }
@@ -41,7 +42,7 @@ func (worker *workerHTTPFixture) Checkpoint(context.Context) (gamesession.Recove
 }
 func (worker *workerHTTPFixture) AdmitCharacter(_ context.Context, admission WorkerAdmission) error {
 	worker.admitted = admission
-	return nil
+	return worker.admitErr
 }
 func (worker *workerHTTPFixture) ProjectCharacter(_ context.Context, _ string, baseline d2save.Character) (d2save.Character, error) {
 	worker.projected = true
@@ -212,6 +213,25 @@ func TestWorkerHTTPBoundsTicketLifetime(t *testing.T) {
 	}
 	if _, err := client.Issue(t.Context(), AdmissionPrincipal{AccountID: "a"}, maximumWorkerTicketLifetime+time.Millisecond); !errors.Is(err, ErrWorkerProtocol) {
 		t.Fatalf("ticket lifetime error = %v", err)
+	}
+}
+
+func TestWorkerHTTPPreservesRuntimeCompatibilityFailure(t *testing.T) {
+	worker := &workerHTTPFixture{admitErr: gamesession.ErrCompatibility}
+	handler, err := NewWorkerHTTPHandler(worker, &ticketHTTPFixture{}, workerTestToken, func() {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewTLSServer(handler)
+	defer server.Close()
+	client, err := NewWorkerHTTPClient(server.URL, workerTestToken, server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.AdmitCharacter(t.Context(), WorkerAdmission{
+		Character: d2save.Character{ID: "character"}, PlayerID: "player", Actor: "realm:entry:player", Sequence: 1,
+	}); !errors.Is(err, gamesession.ErrCompatibility) {
+		t.Fatalf("compatibility error = %v", err)
 	}
 }
 
