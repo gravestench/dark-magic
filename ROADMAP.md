@@ -161,7 +161,8 @@ they are not a substitute for one immutable game-wide semantic context.
 
 ### G4 — Multiplayer player-count and party context
 
-Status: **partial; NoDrop count contexts established, party authority pending**.
+Status: **partial; active-room spawn counts and NoDrop contexts established,
+party authority pending**.
 
 - [ ] Represent game player count, effective `/players X` count, nearby eligible
   count, and party reward eligibility as distinct contexts.
@@ -175,9 +176,13 @@ Monster spawn now pins the effective player count and applies the expansion
 1.14d 50%-per-additional-player life and base-XP bonuses. NoDrop distinguishes
 actual game population, effective configured count, additional nearby party
 members, and the monster's spawn count; the latter caps later drop benefits.
-Until party authority exists, monster death passes zero additional nearby party
-members explicitly. Active-room spawn timing and party-derived proximity remain
-open, so the combined consumer gate is not yet complete.
+Blood Moor population is no longer created eagerly at startup: the authority
+checkpoints the generated room plan, activates the room containing a player plus
+its immediate graph neighbors, and pins the current all-player count when each
+monster is materialized. Until party authority exists, monster death passes zero
+additional nearby party members explicitly. Broader level population and
+party-derived proximity remain open, so the combined consumer gate is not yet
+complete.
 
 ### G5 — Locomotion and motion-state foundation
 
@@ -203,12 +208,18 @@ Status: **not started**.
 
 ### G7 — Active-room/inactive-unit vertical slice
 
-Status: **not started**.
+Status: **partial; deterministic room-graph activation foundation implemented**.
 
 - [ ] Separate world existence, active simulation, inactive archive, and presentation residency.
 - [ ] Archive and restore one ordinary monster with stable identity and all behaviorally relevant state.
-- [ ] Drive activation from a deterministic all-player room graph.
-- [ ] Reproduce activation transitions through replay/checkpoint.
+- [x] Drive initial Blood Moor population activation from a deterministic
+  all-player room graph.
+- [x] Reproduce first-activation transitions through replay/checkpoint.
+
+The current slice stores a checkpointed room plan and materializes each room at
+most once when any player occupies it or an adjacent room. Full inactive-unit
+archival/reactivation, broader generated-level coverage, and presentation
+residency remain open.
 
 ## P1: strengthen and complete the first multiplayer gameplay loop
 

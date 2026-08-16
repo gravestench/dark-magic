@@ -43,6 +43,41 @@ func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 	}
 }
 
+func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
+	zone, err := worldgen.NewZone(worldgen.Definition{
+		Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: 2},
+		Kind:    "test", Bounds: worldgen.Bounds{Width: 20, Height: 10},
+		Stamps: []worldgen.Stamp{{ID: 1, Width: 20, Height: 10, DS1Path: "blood-moor.ds1", Populate: true}},
+		Rooms: []worldgen.Room{
+			{ID: 1, X: 2, Y: 3, Width: 4, Height: 5, StampID: 1},
+			{ID: 2, X: 6, Y: 3, Width: 4, Height: 5, StampID: 1},
+		},
+		Links: []worldgen.Link{{From: 1, To: 2}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gameMap, err := gameworld.NewOpenMap(100, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared := &Prepared{
+		Worlds: map[int]*gameworld.Map{2: gameMap}, Zones: map[int]*worldgen.Zone{2: zone},
+		Seam: gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 2}},
+	}
+	population := prepared.PopulationData(0)
+	rooms := population["rooms"].([]any)
+	first := rooms[0].(map[string]any)
+	if first["x"] != float64(10) || first["y"] != float64(15) ||
+		first["width"] != float64(20) || first["height"] != float64(25) || first["populate"] != true {
+		t.Fatalf("first population room = %#v", first)
+	}
+	links := population["links"].([]any)
+	if len(links) != 1 || links[0].(map[string]any)["from"] != float64(1) || links[0].(map[string]any)["to"] != float64(2) {
+		t.Fatalf("population links = %#v", links)
+	}
+}
+
 func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seam: gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{LevelID: 1, X: 4, Y: 5, Width: 20, Height: 30},

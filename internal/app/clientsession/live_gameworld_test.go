@@ -37,7 +37,9 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 
 	population, err := json.Marshal(map[string]any{
 		"act": 1, "level_id": 2, "difficulty": 0,
+		"links": []map[string]any{},
 		"rooms": []map[string]any{{"id": "blood-moor-network", "populate": true,
+			"x": 0, "y": 0, "width": 20, "height": 20,
 			"points": []map[string]any{{"x": 14, "y": 10}}}},
 	})
 	if err != nil {

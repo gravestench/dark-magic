@@ -196,9 +196,17 @@ func (world *Prepared) PopulationData(nearby int) map[string]any {
 				points = append(points, map[string]any{"x": x, "y": y})
 			}
 		}
-		rooms = append(rooms, map[string]any{"id": float64(room.ID), "populate": populated[room.StampID], "points": points})
+		rooms = append(rooms, map[string]any{
+			"id": float64(room.ID), "populate": populated[room.StampID], "points": points,
+			"x": float64(room.X * 5), "y": float64(room.Y * 5),
+			"width": float64(room.Width * 5), "height": float64(room.Height * 5),
+		})
 	}
-	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
+	links := make([]any, 0, len(zone.Links()))
+	for _, link := range zone.Links() {
+		links = append(links, map[string]any{"from": float64(link.From), "to": float64(link.To)})
+	}
+	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms, "links": links}
 }
 
 func (world *Prepared) PopulationCommand(nearby int) (simulation.Command, error) {

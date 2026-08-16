@@ -46,9 +46,8 @@ function M.validate(command)
     assert(type(definition.id) == "string" and definition.id ~= "", "monster definition ID is required")
 end
 
-function M.apply(command)
+function M.components(command, game_player_count)
     local spawn, definition = command.payload, command.payload.definition
-    assert(not existing(spawn.spawn_id), "monster spawn already exists")
     -- Monster life endpoints are authored as whole values encoded in Diablo's
     -- 8.8 fixed-point unit. Draw a whole point, then restore the raw scale.
     -- The named engine stream is checkpointed, replayed, and unavailable to
@@ -59,10 +58,10 @@ function M.apply(command)
     )
     local minimum, maximum = definition.life_min / 256, definition.life_max / 256
     local base_health = minimum + random.integer("d2legacy.monster.spawn.life", maximum - minimum + 1)
-    local scaling = player_count.monster_spawn(count_game_players(), definition.evil ~= false)
+    local scaling = player_count.monster_spawn(game_player_count, definition.evil ~= false)
     local health = (base_health + percentage(base_health, scaling.life_bonus_percent)) * 256
     local experience = definition.experience + percentage(definition.experience, scaling.experience_bonus_percent)
-    ecs.create({
+    return {
         ["d2legacy.monster.identity"] = {
             spawn_id = spawn.spawn_id,
             definition_id = definition.id,
@@ -119,7 +118,13 @@ function M.apply(command)
             radius = definition.select_radius,
             priority = 20,
         },
-    })
+    }
+end
+
+function M.apply(command)
+    local spawn = command.payload
+    assert(not existing(spawn.spawn_id), "monster spawn already exists")
+    ecs.create(M.components(command, count_game_players()))
 end
 
 -- Startup population is already trusted mod policy and does not need to forge
