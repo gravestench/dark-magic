@@ -6,8 +6,8 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 
 - Bind two synthetic remote principals to one authoritative Dark Magic `Session` and prove local and remote movement commands produce identical replay/checkpoint results.
 - Define a canonical `SessionPlayerID`/CharacterID/AccountID separation and spoofing rejection vectors.
-- Capture one original 1.10f party invite/accept/leave sequence including relationship/roster events.
-- Capture one original 1.10f hostility declaration including level/town restrictions, cooldown timing, target party propagation and declarer party removal.
+- Capture one expansion 1.14d party invite/accept/leave sequence including relationship/roster events.
+- Capture one expansion 1.14d hostility declaration including level/town restrictions, cooldown timing, target party propagation and declarer party removal.
 - Capture one complete two-player trade from initiation through offer changes, dual acceptance, item/gold exchange and cancellation-on-change behavior.
 - Build a character lease/CAS simulation proving two game workers cannot commit the same durable revision concurrently.
 - Define the first versioned per-client world/player snapshot and prove private inventory/hidden server facts are filtered.
@@ -32,7 +32,7 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 
 ## P1: hostility and PvP
 
-- minimum level/town restrictions across target patches;
+- expansion 1.14d minimum level/town restrictions;
 - 60-second hostility delay semantics and reset;
 - unhostile/remove-hostility rules;
 - hostility propagation to target party;
@@ -80,7 +80,7 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 ## P1: realm/persistence control plane
 
 - character create/delete/rename/convert rules;
-- Classic/Expansion/Hardcore/Ladder mode compatibility;
+- expansion 1.14d Hardcore/Ladder eligibility compatibility;
 - per-account character count/list order;
 - game create/list/join metadata and password/private behavior;
 - game-worker registration/capacity/allocation;
@@ -123,7 +123,7 @@ These are implementation blockers only if original-client compatibility becomes 
 - fragmentation/compression if present;
 - original interest/unit update behavior;
 - disconnect/error codes;
-- compatibility with expansion/classic client versions.
+- compatibility with the expansion 1.14d client only.
 
 ## P1: UI-visible gameplay state
 
@@ -175,7 +175,7 @@ raw packet/log/save capture when lawful/needed
 normalized state transitions
 server tick/time relationships
 security/privacy expectations
-known patch differences
+conflicts with older secondary sources, if relevant
 confidence upgrade
 primary research doc updated
 ```

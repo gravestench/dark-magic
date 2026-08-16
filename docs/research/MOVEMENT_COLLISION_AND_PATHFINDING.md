@@ -1,6 +1,6 @@
 # Movement, collision, pathfinding, and room-streaming research
 
-Status: implementation-oriented research baseline. This document deliberately distinguishes **Dark Magic's current deterministic movement policy** from **Diablo II 1.10f compatibility behavior** recovered through D2MOO. The current implementation is already useful and should be extended rather than replaced wholesale.
+Status: implementation-oriented research baseline for expansion 1.14d. This document deliberately distinguishes **Dark Magic's current deterministic movement policy** from older behavior recovered through D2MOO. That 1.10f code is secondary evidence only and must be revalidated where the 1.14d target may differ. The current implementation is already useful and should be extended rather than replaced wholesale.
 
 ## Executive conclusion
 
@@ -77,7 +77,7 @@ These should be made data/policy driven as verified rules arrive, not silently t
 
 ## Original path system: multiple behavior families
 
-D2MOO's 1.10f `Path.h` reconstructs **18 path types**:
+D2MOO's older `Path.h` reconstructs **18 path types** that provide a candidate taxonomy for 1.14d verification:
 
 | Type | Recovered meaning |
 | --- | --- |
@@ -355,7 +355,7 @@ The inactive-monster record/restoration path preserves or reconstructs facts inc
 - selected unit flags;
 - timing context such as the frame at inactivation.
 
-The restore path may heal a monster to max HP when it has been inactive for a sufficiently long game-frame interval in the observed 1.10f code. This is exactly the kind of behavior that would be lost if room streaming simply serialized `{class,x,y,hp}`.
+The older recovered restore path may heal a monster to max HP after a sufficiently long inactive interval. This is unresolved for expansion 1.14d, but demonstrates the kind of behavior that would be lost if room streaming simply serialized `{class,x,y,hp}`.
 
 ### Streaming architecture implication
 
@@ -491,7 +491,7 @@ Activate/inactivate rooms around players through a deterministic graph policy an
 
 ## Primary sources inspected
 
-- D2MOO pinned 1.10f `source/D2Common/include/Path/Path.h` and path algorithm files (`AStar`, `IDAStar`, `PathWF`, `Path`, `PathMisc`, `Step`).
+- D2MOO pinned 1.10f `source/D2Common/include/Path/Path.h` and path algorithm files (`AStar`, `IDAStar`, `PathWF`, `Path`, `PathMisc`, `Step`) as secondary recovered evidence, not the 1.14d target authority.
 - D2MOO missile creation/path configuration.
 - D2MOO `source/D2Game/src/UNIT/SUnitInactive.cpp` for room/inactive monster restoration.
 - Current Dark Magic `internal/game/world/navigation.go`, `internal/game/session/movement.go`, generated map/collision/transition architecture and recent world diagnostics.

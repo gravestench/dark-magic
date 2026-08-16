@@ -4,7 +4,7 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 
 ## P0: architecture-shaping probes
 
-- Map representative `Objects.txt` operate/event IDs to pinned 1.10f behavior families and produce a normalized behavior coverage report.
+- Map representative `Objects.txt` operate/event IDs to expansion 1.14d behavior families and produce a normalized behavior coverage report.
 - Capture one door from click through mode/collision change and exact authoritative timing.
 - Capture one chest from object seed/operation through trap/loot state and ground item creation.
 - Pin one shrine definition from `Shrines.txt` through selected behavior, duration and reset timing.
@@ -92,7 +92,7 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 
 ## P1: difficulty and modes
 
-- difficulty unlock quest requirements Classic vs Expansion;
+- expansion 1.14d difficulty unlock quest requirements;
 - resistance penalties and non-expansion differences;
 - death XP penalty/recovery;
 - monster stat/player-count scaling;
@@ -107,7 +107,7 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 - difficulty-specific quest items/vendors/hirelings/monster lists;
 - `/players X` semantics;
 - Hardcore creation/join/death persistence;
-- Classic/Expansion content/formula differences;
+- expansion 1.14d content/formulas; Classic branching is out of scope;
 - ladder/season feature eligibility.
 
 ## P1: campaign/endgame encounters
@@ -132,7 +132,7 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 
 ## P2: later-version special content
 
-These require a pinned later-patch corpus rather than 1.10f assumptions:
+Implement only entries present in expansion 1.14d, using a pinned 1.14d corpus:
 
 - Uber Dungeon/Uber Tristram Cube operations and introduction version;
 - key/organ drops and recipes;
@@ -156,7 +156,7 @@ reproduction steps
 raw observed values/events/bits
 normalized vector/state transition
 RNG/tick state where relevant
-patch differences
+conflicts with older secondary sources, if relevant
 confidence upgrade
 primary doc section updated
 ```

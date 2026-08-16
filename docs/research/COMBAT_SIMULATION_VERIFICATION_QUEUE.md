@@ -6,10 +6,11 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 
 ## P0: architecture-shaping probes
 
-- [x] Pin final 1.10f chance-to-hit rating/level arithmetic, 5/95 clamps,
+- [ ] Revalidate the recovered chance-to-hit rating/level arithmetic, 5/95 clamps,
   modulo comparison, negative-rating normalization, and integer truncation
   order from `SUNITDMG_IsHitSuccessful`; executable vectors live in
-  `internal/game/combat/hit_chance_test.go`.
+  `internal/game/combat/hit_chance_test.go`. Those 1.10f-derived vectors are
+  secondary evidence until confirmed against expansion 1.14d.
 - [x] Pin and project the M21.13 player attack-rating and defense inputs:
   CharStats class factor, Dexterity bases, equipped weapon/armor, named
   affix/socket/passive flat sources, combined percentage sources, local
@@ -132,13 +133,13 @@ A completed probe should preferably produce:
 
 ```text
 probe ID / title
-target version/source
+target version/source (expansion 1.14d)
 owned input requirements
 reproduction steps
 raw captured values
 normalized vector(s)
 expected deterministic result
-known patch differences
+conflicts with older secondary sources, if relevant
 confidence upgrade
 which research document/section changed
 ```

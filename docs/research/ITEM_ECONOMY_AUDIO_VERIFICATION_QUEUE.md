@@ -6,7 +6,7 @@ This queue consolidates empirical probes for item generation/qualities, sockets/
 
 - Build one end-to-end owned-data monster drop trace from TC entry through quality/concrete special/affixes/properties/item seed into ground item state.
 - Pin TreasureClass NoDrop scaling for representative player/party counts and minion/hireling credited kills.
-- Compare current Dark Magic M6 TC quality denominators/roll order against pinned 1.10f TreasureClass drop behavior across Unique/Set/Rare/Magic boundary vectors.
+- Compare current Dark Magic M6 TC quality denominators/roll order against expansion 1.14d TreasureClass drop behavior across Unique/Set/Rare/Magic boundary vectors.
 - Pin one direct/non-TC item creation path showing its distinct Unique->Rare->Set ordering and forced quality flags.
 - Capture one socketed item save/runtime specimen proving socket capacity, child ordering, filler identities and runeword identity.
 - Verify one known runeword recognition vector plus wrong-order/wrong-host/extra-filler holdouts.
@@ -61,7 +61,7 @@ This queue consolidates empirical probes for item generation/qualities, sockets/
 - Item aura activation/deactivation timing.
 - Item event proc registration/unregistration.
 - Set/socket/runeword dependent source activation.
-- Unique charm possession/pickup restrictions by target version.
+- Unique charm possession/pickup restrictions in expansion 1.14d.
 
 ## P1: Cube
 
@@ -168,7 +168,7 @@ exact reproduction steps
 raw capture/log/byte differences
 normalized input/output vector
 RNG/timing state where relevant
-known patch differences
+conflicts with older secondary sources, if relevant
 confidence upgrade
 primary research document updated
 ```

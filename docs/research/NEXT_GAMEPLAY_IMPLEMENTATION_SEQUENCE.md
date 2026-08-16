@@ -1,6 +1,12 @@
 # Next gameplay implementation sequence
 
-Status: implementation-planning handoff derived from the merged gameplay research and current `ROADMAP.md`.
+Status: superseded implementation-planning history. The post-networking G1-G20
+queue in `ROADMAP.md` is current. This document remains useful for the evidence
+and rationale behind the completed M21 spine, but its old assumption that M22
+networking follows gameplay is obsolete.
+
+Target: expansion-only Diablo II: Lord of Destruction 1.14d. Classic and
+earlier-patch behavior are not implementation targets.
 
 This document is deliberately more volatile than the individual research baselines. Reassess it whenever a dependent M21 checkpoint merges. `ROADMAP.md` remains the implementation-status authority; the system research documents remain the fidelity/evidence authority.
 

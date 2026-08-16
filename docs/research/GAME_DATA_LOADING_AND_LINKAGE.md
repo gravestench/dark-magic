@@ -1,6 +1,6 @@
 # Game data loading, linkage, localization, and modability
 
-Status: implementation-oriented research baseline. Current Dark Magic ownership is established; exact legacy TXT-to-BIN behavior and several patch-specific linkage rules still require probes.
+Status: implementation-oriented research baseline for expansion 1.14d. Current Dark Magic ownership is established; exact 1.14d TXT-to-BIN behavior and several linkage rules still require probes. Classic and earlier-patch compatibility are out of scope.
 
 ## Executive result
 
@@ -24,8 +24,8 @@ The current `internal/game/data/store` already reads original layered bytes, exp
 - **verified (Dark Magic)**: raw bytes and generic TSV share the layered VFS; typed snapshots rebuild atomically; source provenance is available.
 - **verified (Dark Magic)**: current generic parsing keeps the first duplicate header at its authored name and suffixes later duplicates; unnamed headers receive synthetic names.
 - **high**: Diablo II game rules are extensively data-driven by TXT/BIN tables and cross-table IDs; the bundled Data File Guide and D2MOO are the primary semantic references for each admitted table.
-- **uncertain**: exact legacy compiler rules for every TXT -> BIN table, especially which string references become indexes/ordinals, which columns are discarded, and patch-specific compiler behavior.
-- **uncertain**: exact `-direct -txt` precedence and cache/recompile behavior across target patches.
+- **uncertain**: exact 1.14d compiler rules for every TXT -> BIN table, especially which string references become indexes/ordinals and which columns are discarded.
+- **uncertain**: exact expansion 1.14d `-direct -txt` precedence and cache/recompile behavior.
 - **uncertain**: which tables must be byte/semantic-identical across legacy client and server processes for all multiplayer modes.
 
 ## Current Dark Magic baseline
@@ -118,7 +118,7 @@ Do not delete rows merely because the current run is expansion-only or a row app
 
 A domain view may filter by:
 
-- Classic/Expansion;
+- the fixed expansion ruleset where an authored expansion flag remains observable;
 - difficulty;
 - Ladder/non-Ladder;
 - patch/content version;
@@ -243,13 +243,13 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 
 ## Verification backlog
 
-1. Trace `-direct -txt` behavior on 1.10f, 1.13d, and 1.14d owned installs.
+1. Trace `-direct -txt` behavior on an owned expansion 1.14d install.
 2. Diff representative TXT and generated BIN records to determine row-order/index compilation.
 3. Identify tables where references are row ordinals rather than explicit IDs/codes.
 4. Verify extra-cell behavior in shipped/modded TXT files and preserve it in raw tooling.
 5. Establish exact localization TBL precedence and duplicate-key behavior.
 6. Build client/server content-fingerprint experiments for a simulation-affecting one-row mod.
-7. Verify Classic/Expansion table selection and expansion-flag treatment.
+7. Verify expansion 1.14d table selection and treatment of authored expansion flags.
 8. Document which mod-added identifiers cannot round-trip through legacy save/network formats.
 
 ## Sources
@@ -257,5 +257,5 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 - Dark Magic [GAME_DATA_RECORDS.md](../GAME_DATA_RECORDS.md).
 - Dark Magic `internal/game/data/store/store.go` and `internal/game/data/catalog/catalog.go`.
 - Bundled `docs/diabloiidatafileguide.html.gz` for table semantics, subordinate to mounted bytes.
-- [D2MOO 1.10f](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c) for original-runtime table consumption.
+- [D2MOO 1.10f](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c) as secondary recovered implementation evidence only; it does not define the 1.14d target when behavior differs.
 - [libd2 verification methodology](https://github.com/jaenster/libd2/blob/e6cdc4927c6180be8dd309b0423b470f64f1fc6c/docs/VERIFICATION.md) for retail-engine golden/holdout testing.
