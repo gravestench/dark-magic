@@ -150,7 +150,8 @@ Status: **partial; immutable authority and first consumers implemented**.
   changed-rule rejection; admission/reconnect inherit the pinned identity.
 
 Implemented consumers: authoritative player entry, entry-world generation,
-and Blood Moor population must agree with the immutable game difficulty.
+Blood Moor population, and monster stat/XP/treasure-class interpretation must
+agree with the immutable game difficulty.
 Dedicated and Realm workers now generate their initial town and wilderness
 from the same pinned difficulty later installed as `GameRules`. Remaining
 domains migrate in their own evidence-backed slices.

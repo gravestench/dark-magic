@@ -22,19 +22,27 @@ end
 
 local function find(rows, key, wanted)
     for _, row in ipairs(rows) do
-        if row[key] == wanted then return row end
+        if row[key] == wanted then
+            return row
+        end
     end
     return nil
 end
 
 local function density_column(difficulty)
-    if difficulty == 2 then return "MonDen(H)" end
-    if difficulty == 1 then return "MonDen(N)" end
+    if difficulty == 2 then
+        return "MonDen(H)"
+    end
+    if difficulty == 1 then
+        return "MonDen(N)"
+    end
     return "MonDen"
 end
 
 local function monster_prefix(difficulty)
-    if difficulty == 0 then return "mon" end
+    if difficulty == 0 then
+        return "mon"
+    end
     return "nmon"
 end
 
@@ -48,8 +56,10 @@ local function candidate_monsters(level, difficulty)
         if id and id ~= "" then
             -- Levels may reference special rows which are not ordinary spawns.
             -- The monster interpreter rejects them; this list simply skips them.
-            local valid, definition = pcall(monster.load, id, difficulty)
-            if valid then result[#result + 1] = definition end
+            local valid, definition = pcall(monster.load, id)
+            if valid then
+                result[#result + 1] = definition
+            end
         end
     end
     return result
@@ -57,32 +67,30 @@ end
 
 local function total_rarity(values)
     local total = 0
-    for _, value in ipairs(values) do total = total + value.rarity end
+    for _, value in ipairs(values) do
+        total = total + value.rarity
+    end
     return total
 end
 
 local function weighted_monster(values, total)
     local roll = random.integer("d2legacy.population.family", total)
     for _, value in ipairs(values) do
-        if roll < value.rarity then return value end
+        if roll < value.rarity then
+            return value
+        end
         roll = roll - value.rarity
     end
     return values[#values]
 end
 
 local function group_size(definition)
-    local span = math.max(
-        definition.max_group - definition.min_group + 1,
-        1
-    )
-    return definition.min_group
-        + random.integer("d2legacy.population.group", span)
+    local span = math.max(definition.max_group - definition.min_group + 1, 1)
+    return definition.min_group + random.integer("d2legacy.population.group", span)
 end
 
 local function spawn_id(zone, room, member)
-    return "level:" .. zone.level_id
-        .. ":room:" .. room.id
-        .. ":monster:" .. member
+    return "level:" .. zone.level_id .. ":room:" .. room.id .. ":monster:" .. member
 end
 
 local function materialize_group(command, zone, room, definition)
@@ -106,7 +114,9 @@ local function materialize_group(command, zone, room, definition)
 end
 
 local function room_is_selected(room, density, created)
-    if not room.populate then return false end
+    if not room.populate then
+        return false
+    end
     local roll = random.integer("d2legacy.population.density", DENSITY_SCALE)
     -- Keep the first populated room useful even when a tiny test fixture rolls
     -- above density. Production zones normally contain many candidate rooms.
@@ -122,32 +132,32 @@ end
 
 function M.apply(command)
     local zone = command.payload
-    if zone.level_id ~= 2 then return end
+    if zone.level_id ~= 2 then
+        return
+    end
 
     local difficulty = game_rules.difficulty()
-    assert(zone.difficulty == nil or zone.difficulty == difficulty,
-        "population difficulty differs from immutable game rules")
+    assert(
+        zone.difficulty == nil or zone.difficulty == difficulty,
+        "population difficulty differs from immutable game rules"
+    )
 
-    local level = assert(find(
-        records.load("data/global/excel/levels.txt"),
-        "Id",
-        tostring(zone.level_id)
-    ), "population level is missing")
+    local level = assert(
+        find(records.load("data/global/excel/levels.txt"), "Id", tostring(zone.level_id)),
+        "population level is missing"
+    )
     local density = integer(level, density_column(difficulty))
     local candidates = candidate_monsters(level, difficulty)
-    if #candidates == 0 then return end
+    if #candidates == 0 then
+        return
+    end
 
     local rarity = total_rarity(candidates)
     local created = 0
     for _, room in ipairs(zone.rooms) do
         if room_is_selected(room, density, created) then
             local definition = weighted_monster(candidates, rarity)
-            created = created + materialize_group(
-                command,
-                zone,
-                room,
-                definition
-            )
+            created = created + materialize_group(command, zone, room, definition)
         end
     end
 end

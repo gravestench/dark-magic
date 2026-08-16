@@ -5,6 +5,7 @@
 -- this mod owns their Diablo-specific relationship and difficulty formulas.
 
 local records = require("engine.records/v1")
+local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -197,7 +198,9 @@ local function runtime_definition(stats, graphics, values, difficulty)
     }
 end
 
-function M.load(id, difficulty)
+function M.load(id, ...)
+    assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
+    local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
     local stats = assert(indexed.stats[id], "missing MonStats row")
     assert(
@@ -219,10 +222,11 @@ local function encoded_components(values)
     return table.concat(result, ",")
 end
 
-function M.all(difficulty)
+function M.all(...)
+    assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     local result = {}
     for _, row in ipairs(records.load("data/global/excel/monstats.txt")) do
-        local valid, value = pcall(M.load, row.Id, difficulty or 0)
+        local valid, value = pcall(M.load, row.Id)
         if valid and next(value.components) then
             value.components = encoded_components(value.components)
             result[#result + 1] = value
