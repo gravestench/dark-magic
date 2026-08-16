@@ -110,6 +110,11 @@ function M.error(status)
     if detail:find("level_restricted", 1, true) then
         return "YOUR CHARACTER LEVEL IS OUTSIDE THIS GAME'S RANGE"
     end
+    if detail:find("recipe differs", 1, true)
+        or (detail:find("package", 1, true) and detail:find("differs", 1, true))
+        or (detail:find("package", 1, true) and detail:find("digest", 1, true)) then
+        return "GAME CONTENT DOES NOT MATCH THE SERVER"
+    end
     if detail:find("unavailable", 1, true) then
         return "THE GAME SERVER IS UNAVAILABLE"
     end

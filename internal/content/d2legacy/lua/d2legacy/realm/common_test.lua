@@ -22,5 +22,13 @@ return test.suite({
                     :equals("THAT CHARACTER IS ALREADY ONLINE")
             end)
         end),
+        test.case("explains_game_content_mismatch", function(t)
+            t:run(function()
+                test.expect(common.error({
+                    phase = "error",
+                    error = "network recipe differs from the locally composed deterministic runtime",
+                })):equals("GAME CONTENT DOES NOT MATCH THE SERVER")
+            end)
+        end),
     },
 })
