@@ -7,8 +7,8 @@ The legacy binary-format source inventory remains in [../formats/SOURCE_MATRIX.m
 ## Evidence grades
 
 - **A / verified**: lawfully owned original-game bytes or repeatable retail-engine trace.
-- **B / high**: pinned reverse-engineered original-runtime behavior, preferably D2MOO, with clear routine/data relationship.
-- **C / medium**: credible independent implementation, historical format documentation, or community research.
+- **B / high**: pinned reverse-engineered original-runtime behavior, preferably D2MOO, with clear routine/data relationship, or applicable contemporary first-party behavioral documentation.
+- **C / medium**: credible independent implementation, historical format documentation, or corroborated community research.
 - **D / lead only**: current guide/wiki/forum/player report.
 
 ## Inspected sources
@@ -20,6 +20,8 @@ The legacy binary-format source inventory remains in [../formats/SOURCE_MATRIX.m
 | jaenster/libd2 | `e6cdc4927c6180be8dd309b0423b470f64f1fc6c` | MIT for clean-room source; exclude embedded Blizzard-derived data | C corroboration with unusually strong verification methodology | retail-capture/holdout methodology; save byte-exact round trip; item rolls traced against binary; pathfinding checked against generated maps/server movement gates |
 | nokka/d2s | `master` inspected 2026-08-10 | MIT | C; independent save parser/document | `.d2s` header/section layout, bit-packed stats/skills/items, quest/waypoint/NPC blocks, corpse/merc/golem sections |
 | PvPGN server | `9cd173f4e02ba3d9f8f15a67ca308b5eb78723e4` | GPL-2.0 | C; independent legacy Battle.net/Diablo-II server corroboration only | realm/control-server/game-server/database responsibility split, realm character/game ownership, server selection, character directories, ladder storage, queue/lifetime policy; not evidence of Blizzard's private implementation topology |
+| Blizzard classic Battle.net documentation | live archive inspected 2026-08-14; target-patch applicability must still be checked | first-party public documentation | B for documented user-visible Battle.net behavior; below owned-client traces for exact patch behavior | chat commands and aliases, friends/privacy controls, channel types/restrictions/operator behavior, Diablo II realm-scoped channels |
+| Diablo Wiki / Fandom | live pages inspected 2026-08-14; individual article revisions vary | CC BY-SA community reference; do not copy content into runtime | D by default; C only after independent corroboration | broad Diablo II research discovery, patch and terminology leads, realm/game chat command catalog; follow citations and corroborate before making compatibility claims |
 | bundled Diablo II Data File Guide | repository `docs/diabloiidatafileguide.html.gz` | historical community documentation | C semantic guide | TXT field meanings, formula/linkage leads; mounted game bytes remain stronger |
 | Dark Magic recovered Riiablo data | pinned provenance recorded in `riiablo-recovered-data.md` | Apache-2.0 upstream | C declarative corroboration | quest/speech/DS1 object declarative mappings |
 
@@ -261,16 +263,24 @@ Do not copy its parser as the Dark Magic save codec. Build independent binary fi
 When system sources disagree:
 
 1. owned-game trace or bytes;
-2. D2MOO behavior for the explicitly labeled 1.10f target;
-3. contemporary Data File Guide / Phrozen Keep research;
-4. independent implementation with documented retail verification;
-5. agreement among several independent sources;
-6. one independent parser/engine;
-7. inference.
+2. applicable contemporary Blizzard documentation for user-visible behavior;
+3. D2MOO behavior for the explicitly labeled 1.10f target;
+4. contemporary Data File Guide / Phrozen Keep research;
+5. independent implementation with documented retail verification;
+6. agreement among several independent sources;
+7. one independent parser/engine or corroborated community reference;
+8. an uncorroborated wiki/guide/forum lead;
+9. inference.
 
 Patch differences can make two sources simultaneously correct. Record the target version before declaring a conflict.
 
 For service architecture, independent server implementations such as PvPGN can corroborate useful responsibility boundaries but rank below direct original-game/client/server observations for compatibility behavior.
+
+Diablo Wiki/Fandom is an approved discovery resource, not a blanket authority.
+Record the exact article and inspection date, follow its citations where possible,
+and promote a claim only after target-version traces or stronger independent
+evidence corroborate it. See [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md)
+for the first command-specific application of this policy.
 
 ## High-value evidence still to add
 

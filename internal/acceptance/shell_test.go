@@ -108,6 +108,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		modruntime.NewECSCapability(runtime, entitySimulation).Module(),
 		modruntime.LoadingModule(loading),
 		modruntime.NetworkModule(network),
+		modruntime.RealmModule(nil),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
@@ -156,13 +157,17 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
-	publishAction(&input, "down")
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
-	}
-	input.Publish(inputstate.Frame{})
-	if err := scenes.Update(ctx, time.Second/60); err != nil {
-		t.Fatal(err)
+	// Realm and its compact Gateway selector now sit between Single Player and
+	// Other Multiplayer, so traverse all three rows before exercising TCP/IP.
+	for range 3 {
+		publishAction(&input, "down")
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
+		input.Publish(inputstate.Frame{})
+		if err := scenes.Update(ctx, time.Second/60); err != nil {
+			t.Fatal(err)
+		}
 	}
 	publishAction(&input, "confirm")
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
@@ -235,7 +240,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
-	for range 2 {
+	for range 4 {
 		publishAction(&input, "down")
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)
@@ -268,7 +273,7 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
-	for range 3 {
+	for range 5 {
 		publishAction(&input, "down")
 		if err := scenes.Update(ctx, time.Second/60); err != nil {
 			t.Fatal(err)

@@ -12,6 +12,7 @@ Status: implementation handoff for the final major gameplay research cluster.
 6. [DIFFICULTY_AND_GAME_MODES.md](DIFFICULTY_AND_GAME_MODES.md)
 7. [ITEM_SYSTEM.md](ITEM_SYSTEM.md)
 8. [LEGACY_FRONTEND_AND_HELP_REFERENCE_NOTES.md](LEGACY_FRONTEND_AND_HELP_REFERENCE_NOTES.md)
+9. [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md)
 
 ## Current architecture to preserve
 

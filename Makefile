@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet d2legacy bik-view presentation-coverage profile profile-acceptance profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
 
 test:
 	go test ./...
@@ -41,6 +41,28 @@ fmt:
 
 vet:
 	go vet ./...
+
+realm-up:
+	./scripts/realm/up.sh
+
+realm-down:
+	./scripts/realm/down.sh
+
+realm-fresh-install:
+	./scripts/realm/fresh-install.sh
+
+realm-drain-game:
+	@test -n "$(GAME_ID)" || (echo 'GAME_ID is required' >&2; exit 2)
+	./scripts/realm/drain-game.sh "$(GAME_ID)"
+
+realm-mailpit-up:
+	./scripts/realm/mailpit-up.sh
+
+realm-mailpit-down:
+	./scripts/realm/mailpit-down.sh
+
+realm-test-production:
+	./scripts/realm/test-production.sh
 
 d2legacy:
 	go run ./internal/dev/tools/d2legacy_pack -output ./dist/d2legacy.zip
@@ -139,7 +161,7 @@ capture-warp-lab:
 
 CAPTURE_ALL_DIR ?= ./captures/all-scenes
 CAPTURE_ALL_FIXTURE_CHARACTERS ?= 10
-CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab combat_lab dt1_lab ds1_lab mapgen_lab warp_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
+CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip realm_connecting realm_gateway realm_login realm_signup realm_recovery realm_characters realm_create realm_lobby realm_game_create credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab combat_lab dt1_lab ds1_lab mapgen_lab warp_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
 
 # Launch each scene in isolation because the capture session records visited
 # scenes; it does not manufacture navigation through unrelated UI flows.

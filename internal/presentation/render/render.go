@@ -81,18 +81,22 @@ type RenderTargetData struct{ Width, Height int }
 
 // Node is the backend-neutral retained state of one renderable.
 type Node struct {
-	ID                    NodeID
-	Parent                NodeID
-	Layer                 Layer
-	Z                     int
-	X                     float64
-	Y                     float64
-	ScaleX                float64
-	ScaleY                float64
-	Rotation              float64
-	OriginX               float64
-	OriginY               float64
-	Visible               bool
+	ID       NodeID
+	Parent   NodeID
+	Layer    Layer
+	Z        int
+	X        float64
+	Y        float64
+	ScaleX   float64
+	ScaleY   float64
+	Rotation float64
+	OriginX  float64
+	OriginY  float64
+	Visible  bool
+	// Tint multiplies RGB without changing opacity. It exists for semantic
+	// states such as disabled controls, which must remain opaque while their
+	// authored art is darkened.
+	Tint                  color.RGBA
 	Clip                  *Rect
 	Blend                 string
 	Resource              ResourceID
@@ -446,7 +450,11 @@ func (c *Composer) Create(parent NodeID, layer Layer) (NodeID, error) {
 		c.slots = append(c.slots, slot{generation: 1})
 	}
 	id := NodeID{Slot: index, Generation: c.slots[index].generation}
-	node := &Node{ID: id, Parent: parent, Layer: layer, ScaleX: 1, ScaleY: 1, OriginX: 0.5, OriginY: 0.5, Visible: true, Blend: "alpha"}
+	node := &Node{
+		ID: id, Parent: parent, Layer: layer,
+		ScaleX: 1, ScaleY: 1, OriginX: 0.5, OriginY: 0.5,
+		Visible: true, Tint: color.RGBA{R: 255, G: 255, B: 255, A: 255}, Blend: "alpha",
+	}
 	c.slots[index].node = node
 	c.pending = append(c.pending, Change{Kind: "create", Node: *node, ID: id})
 	c.structuralRevision++

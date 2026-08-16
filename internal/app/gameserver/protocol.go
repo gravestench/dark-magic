@@ -127,6 +127,7 @@ type Endpoint struct {
 	snapshotPending func(error) bool
 	checkpoint      simulation.Checkpoint
 	leave           func(Principal) error
+	connected       func(Principal)
 	watches         map[string]bool
 	reconnects      map[string]reconnectReplay
 	after           func(time.Duration, func())
@@ -143,6 +144,10 @@ func (endpoint *Endpoint) SetSnapshotPending(classify func(error) bool) {
 // and credential revocation remain protocol policy; the meaning of removing a
 // live player and its owned entities belongs to the active game rules.
 func (endpoint *Endpoint) SetLeave(leave func(Principal) error) { endpoint.leave = leave }
+
+// SetConnected observes successful initial joins and reconnects. It is used by
+// Realm worker lifecycle accounting; authentication remains owned here.
+func (endpoint *Endpoint) SetConnected(connected func(Principal)) { endpoint.connected = connected }
 
 func NewEndpoint(host *Host, auth Authenticator, project SnapshotProjector) (*Endpoint, error) {
 	if host == nil || host.Session == nil || auth == nil || project == nil {
@@ -185,6 +190,9 @@ func (endpoint *Endpoint) Join(ctx context.Context, request JoinRequest) (JoinRe
 		delete(endpoint.connections, string(credential))
 		endpoint.mu.Unlock()
 		return JoinResponse{}, err
+	}
+	if endpoint.connected != nil {
+		endpoint.connected(principal)
 	}
 	return JoinResponse{Credential: credential, Admission: admission, Snapshot: snapshot}, nil
 }
@@ -417,6 +425,9 @@ func (endpoint *Endpoint) Reconnect(request ReconnectRequest) (JoinResponse, err
 	response := JoinResponse{Credential: credential, Admission: member.admission, Snapshot: snapshot}
 	endpoint.reconnects[string(request.Credential)] = reconnectReplay{nonce: request.Nonce, response: response}
 	endpoint.mu.Unlock()
+	if endpoint.connected != nil {
+		endpoint.connected(member.principal)
+	}
 	endpoint.after(endpoint.reconnectGrace, func() {
 		endpoint.mu.Lock()
 		if replay, found := endpoint.reconnects[string(request.Credential)]; found && replay.nonce == request.Nonce {

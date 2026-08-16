@@ -9,3 +9,4 @@ asset-catalog/
 /profiles/
 /captures/
 /dist/*.zip
+/.local/

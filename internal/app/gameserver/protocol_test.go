@@ -59,6 +59,8 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var connected []string
+	endpoint.SetConnected(func(principal Principal) { connected = append(connected, principal.PlayerID) })
 
 	joined, err := endpoint.Join(context.Background(), JoinRequest{
 		Version: SessionProtocolVersion, Credential: "realm-ticket", Identity: identity,
@@ -68,6 +70,9 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	}
 	if joined.Credential == "" || joined.Admission.CharacterID != "character:11" || string(joined.Snapshot.Payload) != `{"player_id":"player:3"}` {
 		t.Fatalf("unexpected join response: %#v", joined)
+	}
+	if len(connected) != 1 || connected[0] != "player:3" {
+		t.Fatalf("connected observations = %#v", connected)
 	}
 	if err := endpoint.Submit(joined.Credential, CommandIntent{
 		TargetTick: 1, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":4}`),
@@ -91,9 +96,15 @@ func TestEndpointAuthenticatesBindsCommandsAndReconnects(t *testing.T) {
 	if corrected.Credential == joined.Credential || corrected.Snapshot.Tick != 1 || corrected.Snapshot.Checksum == "" {
 		t.Fatalf("reconnect snapshot = %#v", corrected)
 	}
+	if len(connected) != 2 || connected[1] != "player:3" {
+		t.Fatalf("reconnect observations = %#v", connected)
+	}
 	replayed, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: testReconnectNonce})
 	if err != nil || replayed.Credential != corrected.Credential || replayed.Snapshot.Checksum != corrected.Snapshot.Checksum {
 		t.Fatalf("replayed reconnect = %#v, %v", replayed, err)
+	}
+	if len(connected) != 2 {
+		t.Fatalf("replayed reconnect emitted another observation: %#v", connected)
 	}
 	if _, err := endpoint.Reconnect(ReconnectRequest{Credential: joined.Credential, Identity: identity, Nonce: "fedcba9876543210fedcba9876543210"}); !errors.Is(err, ErrAuthentication) {
 		t.Fatalf("stale reconnect with another nonce error = %v", err)
@@ -441,7 +452,7 @@ func TestEndpointKeepsDisconnectedMembershipReconnectableUntilLeaseExpires(t *te
 func testProtocolIdentity() simulation.RuntimeIdentity {
 	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
 		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}

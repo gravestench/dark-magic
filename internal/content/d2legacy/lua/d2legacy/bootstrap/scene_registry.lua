@@ -42,11 +42,22 @@ local function register_screens(manifest)
         loading={module="d2legacy.screens.loading", cursor={hidden=true}},
         title={module="d2legacy.screens.title"},
         main_menu={module="d2legacy.screens.main_menu"},
-        character_select={module="d2legacy.screens.character_select"},
-        character_create={module="d2legacy.screens.character_create"},
+        character_select={module="d2legacy.screens.character_select", character_mode="local"},
+        character_create={module="d2legacy.screens.character_create", character_mode="local"},
         game_world={module="d2legacy.screens.game_world"},
         game_loading={module="d2legacy.screens.game_loading", cursor={hidden=true}},
         tcpip={module="d2legacy.screens.tcpip"},
+        realm_connecting={module="d2legacy.screens.realm_connecting"},
+        realm_gateway={module="d2legacy.screens.realm_gateway"},
+        realm_login={module="d2legacy.screens.realm_login"},
+        realm_signup={module="d2legacy.screens.realm_signup"},
+        realm_recovery={module="d2legacy.screens.realm_recovery"},
+        -- Realm and local play instantiate the same character presentation.
+        -- Only the roster authority adapter differs.
+        realm_characters={module="d2legacy.screens.character_select", character_mode="realm"},
+        realm_create={module="d2legacy.screens.character_create", character_mode="realm"},
+        realm_lobby={module="d2legacy.screens.realm_lobby"},
+        realm_game_create={module="d2legacy.screens.realm_game_create"},
         credits={module="d2legacy.screens.credits"},
         -- Development labs are real scenes too. That is useful: they exercise
         -- the exact same modding APIs as shipping presentation.
@@ -68,7 +79,11 @@ local function register_screens(manifest)
     --   2. wrap it with cursor behavior
     --   3. publish it under its friendly scene name
     for name, item in pairs(screens) do
-        scenes.register(name, with_cursor(require(item.module), manifest, item.cursor))
+        local definition = require(item.module)
+        if item.character_mode then
+            definition = definition.for_mode(item.character_mode)
+        end
+        scenes.register(name, with_cursor(definition, manifest, item.cursor))
     end
 
     -- The movie browser needs one extra rule. While choosing a movie the cursor

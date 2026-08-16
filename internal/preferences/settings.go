@@ -24,6 +24,7 @@ type Values struct {
 	CameraFollowParam1    float64 `json:"camera_follow_param_1"`
 	CameraFollowParam2    float64 `json:"camera_follow_param_2"`
 	CameraFollowParam3    float64 `json:"camera_follow_param_3"`
+	RealmGateway          string  `json:"realm_gateway"`
 }
 
 // Settings owns validated live values and their optional host-file lifetime.
@@ -39,7 +40,7 @@ type Settings struct {
 // Defaults returns a fresh copy of the built-in preference baseline.
 func Defaults() Values {
 	return Values{Version: 1, SoundVolume: .5, MusicVolume: .5, TextureUploadBudgetMB: 16, TextureCacheBudgetMB: 512,
-		CameraFollowStrategy: "instant"}
+		CameraFollowStrategy: "instant", RealmGateway: "127.0.0.1"}
 }
 
 // NewTransient creates in-memory preferences for tests and headless tools.
@@ -85,6 +86,9 @@ func New(path string) (*Settings, error) {
 	if settings.values.CameraFollowStrategy == "" {
 		settings.values.CameraFollowStrategy = Defaults().CameraFollowStrategy
 	}
+	if settings.values.RealmGateway == "" {
+		settings.values.RealmGateway = Defaults().RealmGateway
+	}
 	if err := validate(settings.values); err != nil {
 		return nil, fmt.Errorf("preferences: %q: %w", path, err)
 	}
@@ -112,6 +116,9 @@ func validate(values Values) error {
 	}
 	if values.CameraFollowDuration < 0 || values.CameraFollowDuration > 5 {
 		return fmt.Errorf("camera_follow_duration must be between 0 and 5 seconds (got %g)", values.CameraFollowDuration)
+	}
+	if values.RealmGateway == "" || len(values.RealmGateway) > 255 {
+		return errors.New("realm_gateway must contain between 1 and 255 bytes")
 	}
 	for name, value := range map[string]float64{"camera_follow_param_1": values.CameraFollowParam1,
 		"camera_follow_param_2": values.CameraFollowParam2, "camera_follow_param_3": values.CameraFollowParam3} {

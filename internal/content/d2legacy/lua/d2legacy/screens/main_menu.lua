@@ -20,11 +20,11 @@ local compat = require("d2legacy.ui.compat")
 local app = require("engine.app/v1")
 local cursor = require("d2legacy.ui.cursor")
 local preload = require("d2legacy.ui.preload")
+local frontend_logo = require("d2legacy.ui.frontend_logo")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.main_menu
 local logo = screen.logo
-local units_palette = manifest.palettes[logo.palette]
 
 return {
     enter = function(self)
@@ -38,22 +38,7 @@ return {
             manifest.layouts.frontend_tiles
         )
 
-        if render.assets_available() then
-            self.logo = {
-                black_left = render.create("hud", self.root),
-                black_right = render.create("hud", self.root),
-                fire_left = render.create("hud", self.root),
-                fire_right = render.create("hud", self.root),
-            }
-
-            -- Only flame layers use recovered D2 draw mode 3 (screen blend).
-            self.logo.fire_left:set_blend(compat.draw_mode(3))
-            self.logo.fire_right:set_blend(compat.draw_mode(3))
-
-            -- Method syntax calls the function stored in this same scene table and
-            -- automatically passes `self` as its first argument.
-            self:configure_logo()
-        end
+        self.logo = frontend_logo.create(self.root, logo, manifest.palettes, "hud")
 
         self:configure_controls()
         self:configure_labels()
@@ -106,33 +91,6 @@ return {
         end
     end,
 
-    configure_logo = function(self)
-        -- Same four-layer/shared-clock idea as title.lua.
-        dc6.anchored_composite(
-            { self.logo.black_left, self.logo.fire_left },
-            { logo.black_left, logo.fire_left },
-            units_palette,
-            logo.anchor.x,
-            logo.anchor.y,
-            logo.frames_per_second,
-            "loop"
-        )
-
-        dc6.anchored_composite(
-            { self.logo.black_right, self.logo.fire_right },
-            { logo.black_right, logo.fire_right },
-            units_palette,
-            logo.anchor.x,
-            logo.anchor.y,
-            logo.frames_per_second,
-            "loop"
-        )
-
-        self.logo_elapsed = 0
-        dc6.pause_animations(self.logo)
-        dc6.synchronize_animations(self.logo, 0)
-    end,
-
     configure_controls = function(self)
         self.controls = controls.new()
 
@@ -160,16 +118,13 @@ return {
 
         -- Array order is meaningful because controls.Manager focus traversal uses
         -- insertion order when no custom navigation graph is supplied.
-        for _, id in ipairs({ "single_player", "multiplayer", "credits", "cinematics", "exit" }) do
+        for _, id in ipairs({ "single_player", "realm", "gateway", "multiplayer", "credits", "cinematics", "exit" }) do
             add_control(id)
         end
     end,
 
     update = function(self, elapsed)
-        if self.logo then
-            self.logo_elapsed = self.logo_elapsed + elapsed
-            dc6.synchronize_animations(self.logo, self.logo_elapsed)
-        end
+        frontend_logo.update(self.logo, elapsed)
 
         if self.controls then
             self.controls:update()

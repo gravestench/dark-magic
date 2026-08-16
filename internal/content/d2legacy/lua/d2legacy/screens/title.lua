@@ -18,8 +18,8 @@ local scenes = require("engine.scene/v1")
 local data = require("engine.data/v1")
 local dc6 = require("d2legacy.ui.dc6")
 local cursor = require("d2legacy.ui.cursor")
-local compat = require("d2legacy.ui.compat")
 local audio = require("engine.audio/v1")
+local frontend_logo = require("d2legacy.ui.frontend_logo")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.title
@@ -39,52 +39,7 @@ return {
             manifest.layouts.frontend_tiles
         )
 
-        if render.assets_available() then
-            -- The logo is FOUR independent retained animations: black + flame for
-            -- left half, black + flame for right half.
-            self.logo = {
-                black_left = render.create("hud", self.root),
-                black_right = render.create("hud", self.root),
-                fire_left = render.create("hud", self.root),
-                fire_right = render.create("hud", self.root),
-            }
-
-            local logo = screen.logo
-            local palette = manifest.palettes[logo.palette]
-
-            -- Old D2 draw mode 3 maps to Dark Magic's screen-style blend. Only
-            -- the flame layers use it; black/logo body remains ordinary opaque art.
-            self.logo.fire_left:set_blend(compat.draw_mode(3))
-            self.logo.fire_right:set_blend(compat.draw_mode(3))
-
-            -- Each pair is normalized into ONE common anchor-space union. That is
-            -- why independently cropped DC6 frames do not jump relative to each other.
-            dc6.anchored_composite(
-                { self.logo.black_left, self.logo.fire_left },
-                { logo.black_left, logo.fire_left },
-                palette,
-                logo.anchor.x,
-                logo.anchor.y,
-                logo.frames_per_second,
-                "loop"
-            )
-
-            dc6.anchored_composite(
-                { self.logo.black_right, self.logo.fire_right },
-                { logo.black_right, logo.fire_right },
-                palette,
-                logo.anchor.x,
-                logo.anchor.y,
-                logo.frames_per_second,
-                "loop"
-            )
-
-            -- Instead of allowing four managed animations to tick independently,
-            -- pause them and let this scene drive ONE elapsed-time clock.
-            self.logo_elapsed = 0
-            dc6.pause_animations(self.logo)
-            dc6.synchronize_animations(self.logo, 0)
-        end
+        self.logo = frontend_logo.create(self.root, screen.logo, manifest.palettes, "hud")
 
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
 
@@ -101,10 +56,7 @@ return {
     end,
 
     update = function(self, elapsed)
-        if self.logo then
-            self.logo_elapsed = self.logo_elapsed + elapsed
-            dc6.synchronize_animations(self.logo, self.logo_elapsed)
-        end
+        frontend_logo.update(self.logo, elapsed)
 
         self.cursor:update()
 

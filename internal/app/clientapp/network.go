@@ -3,6 +3,7 @@ package clientapp
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/clientsession"
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
+	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/app/realm"
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
@@ -128,6 +130,129 @@ func (controller *networkController) Join(address string) error {
 	return nil
 }
 
+// ConnectRealm consumes a private Realm handoff without exposing its ticket or
+// worker endpoint to Lua. The caller already runs off the render thread; this
+// method returns only after package composition and authenticated QUIC join.
+func (controller *networkController) ConnectRealm(ctx context.Context, assignment realm.JoinAssignment) error {
+	if ctx == nil || strings.TrimSpace(assignment.GameID) == "" || strings.TrimSpace(assignment.Ticket) == "" {
+		return errors.New("network: invalid Realm assignment")
+	}
+	controller.mu.Lock()
+	if controller.phase != "frontend" && controller.phase != "failed" {
+		controller.mu.Unlock()
+		return errors.New("network operation already active")
+	}
+	controller.generation++
+	generation := controller.generation
+	runCtx, cancel := context.WithCancel(ctx)
+	controller.cancel = cancel
+	controller.phase, controller.mode, controller.address, controller.failure = "starting", "realm", assignment.Endpoint.Address, ""
+	controller.mu.Unlock()
+	if err := controller.connectRealm(runCtx, generation, assignment); err != nil {
+		controller.fail(generation, err)
+		return err
+	}
+	return nil
+}
+
+// ReconnectRealm atomically retargets the existing client session to a Realm
+// replacement worker. Input and render loops retain the same Session pointer;
+// its transport, ticket-derived credential, and canonical projection are
+// replaced only after all authenticated identities match.
+func (controller *networkController) ReconnectRealm(ctx context.Context, assignment realm.JoinAssignment) error {
+	if ctx == nil || strings.TrimSpace(assignment.GameID) == "" || strings.TrimSpace(assignment.Ticket) == "" {
+		return errors.New("network: invalid Realm reconnect assignment")
+	}
+	controller.reconnectMu.Lock()
+	defer controller.reconnectMu.Unlock()
+	controller.mu.Lock()
+	client := controller.client
+	if controller.phase != "connected" || controller.mode != "realm" || client == nil {
+		controller.mu.Unlock()
+		return errors.New("network: no connected Realm session")
+	}
+	controller.phase = "reconnecting"
+	controller.mu.Unlock()
+	tlsConfig, err := networktrust.PinnedTLSFingerprint(assignment.Endpoint.TLSFingerprint)
+	if err == nil {
+		err = client.Reassign(ctx, assignment, tlsConfig)
+	}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if err != nil {
+		if controller.client == client && controller.phase == "reconnecting" {
+			controller.phase = "connected"
+		}
+		return err
+	}
+	if controller.client != client || controller.phase == "closed" {
+		return context.Canceled
+	}
+	controller.address, controller.phase, controller.failure = assignment.Endpoint.Address, "connected", ""
+	controller.connectionEpoch++
+	slog.Debug("Realm session moved to replacement worker", "game_id", assignment.GameID,
+		"address", assignment.Endpoint.Address)
+	return nil
+}
+
+func (controller *networkController) connectRealm(ctx context.Context, generation uint64, assignment realm.JoinAssignment) error {
+	recomposed := false
+	fail := func(cause error) error {
+		if recomposed {
+			restoreContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			cause = errors.Join(cause, controller.app.restoreConfiguredPackages(restoreContext))
+			cancel()
+		}
+		return cause
+	}
+	tlsConfig, err := networktrust.PinnedTLSFingerprint(assignment.Endpoint.TLSFingerprint)
+	if err != nil {
+		return err
+	}
+	store, err := controller.app.ensureModCache()
+	if err != nil {
+		return err
+	}
+	recipe, err := clientsession.PrepareExtensions(ctx, assignment, tlsConfig, store, controller.app.options.Packages.Base)
+	if err != nil {
+		return err
+	}
+	recomposed = true
+	if err := controller.app.recomposeForNetworkRecipe(ctx, recipe); err != nil {
+		return fail(err)
+	}
+	// Realm owns the authority's complete configuration identity. The client
+	// verifies and composes its package recipe, but must not replace the
+	// trusted worker identity with one derived from client-side UI state.
+	if err := sameRuntimeRecipe(assignment.Runtime, recipe); err != nil {
+		return fail(err)
+	}
+	client, err := clientsession.Connect(ctx, assignment, tlsConfig)
+	if err != nil {
+		return fail(err)
+	}
+	if err := controller.app.prepareConnectedWorld(ctx); err != nil {
+		_ = client.Close(context.Background())
+		return fail(err)
+	}
+	controller.mu.Lock()
+	if controller.generation != generation || controller.phase != "starting" {
+		controller.mu.Unlock()
+		_ = client.Close(context.Background())
+		return fail(context.Canceled)
+	}
+	controller.client, controller.phase = client, "connected"
+	controller.connectionEpoch++
+	controller.resetInputLocked()
+	controller.mu.Unlock()
+	hud, _ := client.View()
+	slog.Debug("joined Realm game", "game_id", assignment.GameID, "address", assignment.Endpoint.Address,
+		"player_id", hud.Player.PlayerID, "character_id", hud.Player.CharacterID)
+	go controller.send(ctx, client)
+	go controller.watch(ctx, client)
+	return nil
+}
+
 func (controller *networkController) startJoin(ctx context.Context, generation uint64, address string) {
 	slog.Debug("dialing self-hosted game", "address", address)
 	recomposed := false
@@ -145,7 +270,7 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 		fail(err)
 		return
 	}
-	identity, err := d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.sessionInitialData())
+	identity, err := d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return
@@ -171,7 +296,7 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 	// Package acquisition verifies exact extension archives without mutating the
 	// live VFS. Reconstruct the deterministic recipe from the local built-in and
 	// verified descriptors before any selected character is offered to the host.
-	identity, err = d2legacy.IdentityForPackages(d2legacySource, recipe.Packages, controller.app.sessionInitialData())
+	identity, err = d2legacy.IdentityForPackages(d2legacySource, recipe.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return
@@ -193,7 +318,7 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 		fail(err)
 		return
 	}
-	identity, err = d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.sessionInitialData())
+	identity, err = d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return
@@ -262,8 +387,14 @@ func (controller *networkController) fail(generation uint64, err error) {
 	if cancel != nil {
 		cancel()
 	}
-	cleanupContext, stop := context.WithTimeout(context.Background(), time.Second)
+	// Realm departure projects and commits canonical state across the private
+	// worker boundary before transport teardown. Give it the same bounded window
+	// as an orderly close so a transient local or WAN delay cannot strand a lease.
+	cleanupContext, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
+	if mode == "realm" && controller.app != nil && controller.app.realm != nil {
+		err = errors.Join(err, controller.app.realm.LeaveConnectedGame(cleanupContext))
+	}
 	if client != nil {
 		_ = client.Close(cleanupContext)
 	}
@@ -308,7 +439,7 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 	host, err := gameserver.Start(ctx, d2legacySource, recordstore.New(controller.app.options.Content), gameserver.Config{
 		Mode: gameserver.ModeListen, SessionID: "listen-local", Prediction: gamesession.PredictionLimited,
 		InitialData: controller.app.sessionInitialData(), Packages: controller.app.options.Packages,
-		Content: controller.app.options.Content, Mods: controller.app.options.Mods,
+		Content: controller.app.options.Content, Mods: controller.app.options.Mods, AssetSetID: controller.app.options.AssetSetID,
 	})
 	if err != nil {
 		fail(err)
@@ -620,7 +751,59 @@ func (controller *networkController) recover(ctx context.Context, client *client
 		}
 		delay = min(1600*time.Millisecond, max(200*time.Millisecond, delay*2))
 	}
+	if mode == "realm" && controller.app != nil && controller.app.realm != nil && ctx.Err() == nil {
+		replacementContext, stop := context.WithTimeout(ctx, 50*time.Second)
+		assignment, assignmentErr := controller.reassignThroughRealm(replacementContext, client)
+		stop()
+		if assignmentErr == nil {
+			controller.mu.Lock()
+			if controller.client != client || controller.phase == "closed" {
+				controller.mu.Unlock()
+				return context.Canceled
+			}
+			controller.address, controller.phase, controller.failure = assignment.Endpoint.Address, "connected", ""
+			controller.connectionEpoch++
+			controller.mu.Unlock()
+			slog.Debug("Realm session reconnected through replacement assignment", "game_id", assignment.GameID,
+				"address", assignment.Endpoint.Address)
+			return nil
+		}
+		lastErr = errors.Join(lastErr, assignmentErr)
+	}
 	return fmt.Errorf("network reconnect lease expired: %w", lastErr)
+}
+
+func (controller *networkController) reassignThroughRealm(ctx context.Context, client *clientsession.Session) (realm.JoinAssignment, error) {
+	delay := time.Duration(0)
+	var lastErr error
+	for attempt := 1; ctx.Err() == nil; attempt++ {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return realm.JoinAssignment{}, errors.Join(lastErr, ctx.Err())
+			case <-timer.C:
+			}
+		}
+		attemptContext, stop := context.WithTimeout(ctx, 4*time.Second)
+		assignment, err := controller.app.realm.reconnectAssignment(attemptContext)
+		if err == nil {
+			var tlsConfig *tls.Config
+			tlsConfig, err = networktrust.PinnedTLSFingerprint(assignment.Endpoint.TLSFingerprint)
+			if err == nil {
+				err = client.Reassign(attemptContext, assignment, tlsConfig)
+			}
+		}
+		stop()
+		if err == nil {
+			return assignment, nil
+		}
+		lastErr = err
+		delay = min(4*time.Second, max(500*time.Millisecond, delay*2))
+		slog.Debug("Realm replacement assignment not ready", "attempt", attempt, "error", err)
+	}
+	return realm.JoinAssignment{}, errors.Join(lastErr, ctx.Err())
 }
 
 func (controller *networkController) Advance(ctx context.Context, elapsed time.Duration) error {
@@ -793,6 +976,9 @@ func (controller *networkController) Close() error {
 	defer stop()
 	var err error
 	if client != nil {
+		if mode == "realm" && controller.app != nil && controller.app.realm != nil {
+			err = errors.Join(err, controller.app.realm.LeaveConnectedGame(ctx))
+		}
 		if mode == "host" || mode == "join" {
 			err = errors.Join(err, controller.persistSelfHostedCharacter(ctx, client))
 		}

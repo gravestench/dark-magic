@@ -59,7 +59,12 @@ func Module(store *Store) modruntime.Module {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 			"create_selected": func(state *lua.LState) int {
 				record := state.CheckTable(1)
-				character := characterFromTable(record)
+				character, err := characterFromTable(record)
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
 				if err := store.CreateSelected(character); err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))
@@ -70,8 +75,13 @@ func Module(store *Store) modruntime.Module {
 			},
 			"create": func(state *lua.LState) int {
 				record := state.CheckTable(1)
-				character := characterFromTable(record)
-				err := store.Create(character)
+				character, err := characterFromTable(record)
+				if err != nil {
+					state.Push(lua.LNil)
+					state.Push(lua.LString(err.Error()))
+					return 2
+				}
+				err = store.Create(character)
 				if err != nil {
 					state.Push(lua.LNil)
 					state.Push(lua.LString(err.Error()))
@@ -122,10 +132,10 @@ func Module(store *Store) modruntime.Module {
 	}}
 }
 
-func characterFromTable(record *lua.LTable) Character {
-	return Character{
-		ID: string(record.RawGetString("id").(lua.LString)), Name: string(record.RawGetString("name").(lua.LString)),
-		Class: string(record.RawGetString("class").(lua.LString)), Level: int(lua.LVAsNumber(record.RawGetString("level"))),
-		Expansion: lua.LVAsBool(record.RawGetString("expansion")), Hardcore: lua.LVAsBool(record.RawGetString("hardcore")),
-	}
+func characterFromTable(record *lua.LTable) (Character, error) {
+	return NewCharacter(CharacterRequest{
+		ID: string(lua.LVAsString(record.RawGetString("id"))), Name: string(lua.LVAsString(record.RawGetString("name"))),
+		Class: string(lua.LVAsString(record.RawGetString("class"))), Expansion: lua.LVAsBool(record.RawGetString("expansion")),
+		Hardcore: lua.LVAsBool(record.RawGetString("hardcore")),
+	})
 }

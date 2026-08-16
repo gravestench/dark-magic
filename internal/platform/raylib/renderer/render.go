@@ -139,7 +139,8 @@ func (s *Service) renderNode(node *node) {
 	originX, originY := dstWidth*origin.X, dstHeight*origin.Y
 	dstOrigin := rl.Vector2{X: originX, Y: originY}
 
-	tint := rl.NewColor(255, 255, 255, uint8(node.Opacity()*255))
+	tint := node.Tint()
+	tint.A = uint8(node.Opacity() * 255)
 	if shader := node.Shader(); shader != nil {
 		rl.BeginShaderMode(*shader)
 		if texture := node.ShaderTexture(); texture != nil {

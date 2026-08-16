@@ -164,8 +164,9 @@ return {
     id = "screen.loading",
     start = function(self)
         self.root = render.create("transition")
-        self.root:set_position(320, 240)
+		self.root:set_position(320, 240)
 			self.root:set_z(7)
+			self.root:set_tint(96, 112, 128)
 			self.root:set_clip(10, 20, 300, 200)
 		self.root:fill_rect(16, 8, 1, 2, 3, 4)
     end,
@@ -188,6 +189,9 @@ return {
 	}
 	if nodes[0].Clip == nil || *nodes[0].Clip != (render.Rect{X: 10, Y: 20, Width: 300, Height: 200}) {
 		t.Fatalf("clip = %#v", nodes[0].Clip)
+	}
+	if nodes[0].Tint != (color.RGBA{R: 96, G: 112, B: 128, A: 255}) {
+		t.Fatalf("tint = %#v", nodes[0].Tint)
 	}
 	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
 	if err != nil {

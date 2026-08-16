@@ -25,7 +25,9 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 - party quest-credit representative cases;
 - player location/health visibility to party UI;
 - Hardcore corpse-loot permission directionality/persistence;
-- ignore/squelch/chat behavior;
+- shared realm/in-game whisper, ignore/squelch, presence, friends, alias, and
+  command-history behavior described in
+  [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md);
 - disconnect/reconnect party state.
 
 ## P1: hostility and PvP
@@ -91,6 +93,21 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 - ladder update from committed revision;
 - realm-wide special-event delivery;
 - audit/admin/moderation surfaces.
+
+## P1: realm chat and channels
+
+- authenticated realm-wide public channel message routing;
+- channel member joins/leaves and full character-composite presence projection;
+- realm-scoped public/private/operator channel naming and membership;
+- typed whisper, reply, ignore/squelch, away, DND, and friends operations;
+- channel operator designate/resign/kick/ban/unban authority and audit;
+- privacy-filtered who/whois/users/presence projections;
+- command alias normalization and target-patch feature gating;
+- independent flood limits for public chat, whispers, presence, and channel churn;
+- structured red error/system responses and legacy color mapping;
+- continuity across lobby panels and teardown/reconnect behavior;
+- separation of realm social, game chat, local diagnostic, and authoritative
+  gameplay command dispatch.
 
 ## P1: legacy protocol adapters
 

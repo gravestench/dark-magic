@@ -119,13 +119,18 @@ Network compatibility is not a profile name and not merely a package lock. One
 - every extension's ordered ID, version, digest, size, and redistributability;
 - engine API and game-session protocol versions;
 - authoritative Lua and gameplay-configuration hashes; and
-- versions of deterministic host capability contracts.
+- the path-independent external game-asset-set digest; and
+- the exact versions of every authoritative capability contract actually
+  registered by the production runtime.
 
 The complete recipe is stored inside the runtime identity used by allocation,
 admission tickets, joins, reconnects, checkpoints, restored sessions, replay
 headers, and realm character compatibility. Reordering extensions or changing
 any pinned metadata changes identity. A joiner recomputes the recipe from its
 mounted bytes before it submits a character or begins a session lease.
+The client may download redistributable extension packages, but it never
+downloads protected external game assets; its locally computed asset-set digest
+must already match.
 
 ## Direct-host package transfer
 

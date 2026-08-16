@@ -1,7 +1,9 @@
 local render = require("engine.render/v1")
 local adapter = require("d2legacy.gameplay.player_composite")
 for _, token in ipairs({ "AM", "SO", "NE", "PA", "BA", "AI", "DZ" }) do
-    for _, mode in ipairs({ "NU", "WL", "RN" }) do
+    -- TN is the compact frontend/Realm-roster idle used by character lists;
+    -- the remaining modes are live world presentation.
+    for _, mode in ipairs({ "TN", "NU", "WL", "RN" }) do
         local ok, err = pcall(function()
             local composite = adapter.unarmed({
                 token = token,

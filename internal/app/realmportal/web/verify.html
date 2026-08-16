@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify Realm Account</title>
+  <link rel="stylesheet" href="/account/portal.css?revision=3">
+  <script src="/account/portal.js?revision=3" defer></script>
+</head>
+<body>
+  <main class="dialog action-dialog" aria-labelledby="page-title">
+    <h1 id="page-title" data-d2-text data-font="font16-gold">Realm Account</h1>
+    {{if .Success}}
+      <p data-d2-text data-font="font16-grey">Your email is verified.</p>
+      <p data-d2-text data-font="font16-grey">Return to Dark Magic and log in.</p>
+    {{else if .Token}}
+      <form method="post" action="/verify">
+        <input type="hidden" name="token" value="{{.Token}}">
+        <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+        <p data-d2-text data-font="font16-grey">Confirm this Realm account email address.</p>
+        <button type="submit"><span data-d2-text data-font="font16-grey">Verify Email</span></button>
+      </form>
+    {{else}}
+      <p class="error" role="alert" data-d2-text data-font="font16-red">{{.Error}}</p>
+    {{end}}
+  </main>
+</body>
+</html>

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
+	"github.com/gravestench/dark-magic/internal/app/realm"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
@@ -19,6 +20,8 @@ type QUICConfig struct {
 	Address, CertificatePath, PrivateKeyPath, AdmissionKeyPath, SessionID string
 	RemoteProfile                                                         *RemoteProfileConfig
 	ModCache                                                              *modcache.Store
+	Tickets                                                               *gameserver.TicketAuthority
+	RealmMemberships                                                      *realm.WorkerMemberships
 }
 
 func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, error) {
@@ -33,23 +36,42 @@ func StartQUIC(config QUICConfig, host *gameserver.Host) (*sessionquic.Server, e
 	if err != nil {
 		return nil, fmt.Errorf("server: load QUIC certificate: %w", err)
 	}
-	secret, err := ReadAdmissionKey(config.AdmissionKeyPath)
-	if err != nil {
-		return nil, err
-	}
-	authenticator, err := gameserver.NewTicketAuthority(secret, config.SessionID)
-	if err != nil {
-		return nil, err
+	authenticator := config.Tickets
+	if authenticator == nil {
+		secret, err := ReadAdmissionKey(config.AdmissionKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		authenticator, err = gameserver.NewTicketAuthority(secret, config.SessionID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	endpoint, err := gameserver.NewEndpoint(host, authenticator, playeradapter.ProjectClientView)
 	if err != nil {
 		return nil, err
 	}
 	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, playeradapter.ErrHUDPlayer) })
-	departures := &playeradapter.DepartureQueue{}
-	endpoint.SetLeave(func(principal gameserver.Principal) error {
-		return departures.Submit(host.Session, principal.PlayerID)
-	})
+	// Realm characters remain live until the Realm projects and commits their
+	// canonical state through its lease. Direct/listen servers have no trusted
+	// persistence coordinator and therefore remove players at transport leave.
+	if host.Mode == gameserver.ModeRealm {
+		if config.RealmMemberships == nil {
+			return nil, errors.New("server: Realm QUIC requires shared worker memberships")
+		}
+		endpoint.SetLeave(func(principal gameserver.Principal) error {
+			config.RealmMemberships.Expire(principal.PlayerID)
+			return nil
+		})
+		endpoint.SetConnected(func(principal gameserver.Principal) {
+			config.RealmMemberships.Connect(principal.PlayerID)
+		})
+	} else {
+		departures := &playeradapter.DepartureQueue{}
+		endpoint.SetLeave(func(principal gameserver.Principal) error {
+			return departures.Submit(host.Session, principal.PlayerID)
+		})
+	}
 	server, err := sessionquic.Listen(config.Address, &tls.Config{Certificates: []tls.Certificate{certificate}}, endpoint)
 	if err != nil {
 		return nil, err

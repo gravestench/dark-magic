@@ -441,7 +441,7 @@ implementations. The remaining work is tracked explicitly below.
 - [x] Add screenshot/composition tests for every state without checking Blizzard
   imagery into the repository.
 - [ ] Apply the remaining legacy visual/interaction fidelity notes for the
-  separate Battle.net and gateway controls, staged connection modal, modal
+  separate realm and gateway controls, staged connection modal, modal
   cinematic selector, and HUD-anchored in-game Help overlay. Preserve the
   modern realm/mod-negotiation architecture behind those familiar presentation
   states. See
@@ -1861,8 +1861,12 @@ repository evidence.
   Concurrent stream and receive-window ceilings are pinned by tests.
 - [x] Preserve player-profile characters safely for single-player, listen-server,
   and self-hosted dedicated-server play; keep them separate from account-owned
-  realm characters. Realm flow requires account login, account-scoped character
-  selection, then realm game browse/create/join. Client assignments no longer expose the
+  realm characters. The current transitional Realm flow automatically
+  associates a private per-installation identity, loads its account-scoped
+  characters, and routes to creation when the roster is empty or selection when
+  it is not; M23 replaces that automatic account creation with explicit verified
+  account authorization and recovery. Character selection then enters Realm
+  chat and game browse/create/join. Client assignments no longer expose the
   realm/worker lease. Atomic trusted commits require that active unexpired
   lease, preserve identity, increment revision, consume the lease, and reject
   foreign or replayed writes. The d2legacy roster is explicitly player-profile-owned
@@ -1935,6 +1939,20 @@ repository evidence.
 
 ## M23: Realm, mod delivery, and trusted persistence
 
+M23 completes a topology-independent Realm on one machine before cloud
+orchestration begins. Its production acceptance runs the Realm, PostgreSQL,
+mail integration, and ordinary `cmd/server` worker processes without requiring
+Kubernetes or a cloud provider. Realm account, character, admission, worker,
+checkpoint, and commit semantics must cross a versioned process boundary; an
+in-process adapter remains only for focused tests. The normative design and
+implementation-status map are indexed in
+[the Realm documentation](docs/realm/README.md).
+
+Cloud concerns are explicitly excluded from this milestone. M23 may establish
+portable container, configuration, asset-set, and allocator seams, but Agones,
+cluster manifests, managed-service integration, autoscaling, and Cloudflare
+edge deployment belong to M44 after gameplay acceptance.
+
 - [x] Separate extension installation, enablement, dependency resolution,
   mounting, and activation while making the product boundary explicit:
   immutable embedded `d2legacy` is always enabled and is never copied into the
@@ -1949,8 +1967,86 @@ repository evidence.
   packaging, trust, network admission, compatibility, and migration policy.
 - [ ] Add a first-class `cmd` realm providing accounts, authentication, game
   creation/discovery, session assignment, and operational administration. The
-  `cmd/realm` composition root and shared administration shell now
-  exist; realm services and capability modules remain.
+  `cmd/realm` composition root and shared administration shell now exist. A
+  control plane now supplies bcrypt-authenticated accounts,
+  digest-only expiring sessions, account-owned character projections,
+  realm-scoped public channel presence/chat, and a case-insensitive unique named
+  game directory with hidden opaque GameIDs and protected-game lookup.
+  PostgreSQL owns production accounts, sessions, characters, leases, named-game
+  directory entries, allocations, mail, and audit records; in-memory
+  repositories are focused test adapters only. New
+  characters share d2legacy's canonical creation policy, and a bounded TLS HTTP
+  API drives the asynchronous `engine.realm/v1` account, character, channel,
+  and named-game frontend. A typed structured audit stream records account,
+  character, channel, and game lifecycle outcomes with socket peer identity
+  while excluding credentials, bearer tokens, chat contents, and save payloads.
+  Public create/join now atomically reserves directory capacity, allocates and
+  registers a worker, leases/admit the selected character, returns a private
+  native-only gameplay assignment, and rolls back partial state. The native
+  client verifies worker TLS/runtime/package identity and connects over QUIC;
+  tickets and endpoints never enter Lua state. Chat commands/moderation,
+  verified account authorization, and operational administration APIs remain.
+- [x] Replace transitional automatic installation-identity account creation
+  with explicit email-verified signup, login, recovery, and session revocation.
+  Use a transactional provider-neutral
+  mail outbox, Mailpit for local acceptance, trusted local HTTPS, digest-only
+  challenges. PostgreSQL signup now enforces
+  normalized account/email uniqueness, creates inactive accounts with
+  digest-only single-use verification challenges, and commits bounded mail jobs
+  atomically. Verification activates login; non-enumerating recovery rotates
+  the password and revokes bearer sessions. A leased,
+  retryable provider-neutral SMTP worker supports local Mailpit and optional
+  mandatory STARTTLS. Verification and recovery use the browser, but every
+  native Realm connection requires explicit account-name/password entry and
+  keeps its short-lived access token in memory only. Browser verification and
+  recovery require explicit POST actions protected by secure, HttpOnly,
+  SameSite cookies and CSRF tokens. The packaged local acceptance delivers both
+  messages through pinned Mailpit and consumes those real browser forms.
+- [x] Replace Realm business logic's direct `gameserver.Host`, Session, and
+  ticket-authority pointers with a bounded, authenticated, versioned worker
+  contract. Preserve an in-process adapter for fast tests and add a supported
+  process allocator that supervises ordinary `cmd/server` workers on one
+  machine. Kubernetes resource types must not enter this contract. Admissions
+  now depends on `WorkerRegistry`, `WorkerClient`, and `TicketIssuer`; the local
+  adapter owns direct host access, validates the defensively copied runtime
+  description, and preserves lease/ticket cleanup after caller cancellation.
+  `RealmWorkerControl/v1` now supplies strict bounded HTTPS requests over pinned
+  per-worker TLS and a separate bearer secret. `ProcessAllocator` supervises
+  ordinary `cmd/server --realm-worker` children with owner-only readiness and
+  credentials, bounded logs/startup/drain, early-exit cleanup, and a ticket
+  authority shared by worker control and QUIC. `cmd/server` now prepares the
+  same entry-world contract as the interactive client, installs authoritative
+  collision/population state, and publishes its own trusted spawn before
+  readiness; Realm has no duplicate spawn configuration. Public create/join
+  drives the process-independent allocator and performs bounded compensating
+  cleanup. Private status reports readiness, canonical tick, active capacity,
+  and reconnect-expired players. Realm maintenance tolerates transient probe
+  loss, reconciles dead workers without accepting client state, and supervises
+  graceful or crash-only player departure through canonical commits. Allocation
+  intent, readiness, runtime identity, endpoint, health, failure, and completion
+  are now durable. Startup performs fail-closed reconciliation: it stops any
+  surviving interrupted worker, removes its game, releases only that game's
+  leases without accepting client state, and records the failure. Healthy
+  workers now expose bounded canonical checkpoints over the private protocol;
+  Realm periodically persists the latest checkpoint with its allocation
+  generation and complete runtime-identity digest. The recovery payload also
+  preserves pending acknowledged commands, recently applied exact commands, and
+  per-player sequence state. The process allocator can start a replacement
+  worker through a bounded owner-only recovery handoff; the worker recomposes
+  and validates the exact runtime before transactional restore. Automatic
+  replacement is now enabled when the same Realm process can terminate and
+  fence the failed worker: recovered player IDs seed the new tracker, the
+  durable allocation generation stays pinned, and authenticated clients obtain
+  a fresh endpoint/ticket and atomically retarget their existing session while
+  resubmitting exact pending input. PostgreSQL can also atomically rotate the
+  lost digest-only leases for every active game membership, and Admissions can
+  rebuild its process-local index. The single-machine allocator now fences an
+  exact surviving generation through its owner-only readiness record, bearer
+  token, pinned TLS identity, and worker-reported game identity before startup
+  restoration. Unprovable recovery remains fail-closed. A separate loopback
+  operator API now durably marks games draining, closes discovery/admission,
+  canonically commits each character, and retires the worker with retry-safe
+  audit behavior. Cluster fencing or reattachment remains unfinished.
 - [ ] Define signed/versioned mod manifests containing dependency order, engine
   and capability compatibility, payload identities, hashes, sizes, and trust
   policy.
@@ -1968,13 +2064,91 @@ repository evidence.
   quarantine, full hash verification, atomic cache promotion, revocation, and
   eviction policy; never serve Blizzard-owned game data, saves, or credentials.
 - [ ] Persist realm-owned characters, items, progression, social/account records,
-  and session handoff state through transactional versioned storage contracts.
+  mail jobs, allocation state, audit events, and session handoff state through
+  transactional PostgreSQL storage contracts. Keep in-memory
+  repositories for focused tests; private JSON files are not the completed
+  production store. During pre-production, one mutable baseline schema defines
+  accounts, digest-only sessions, characters, exclusive leases, games,
+  allocations, memberships/departure receipts, latest game checkpoints, mail
+  outbox, and audit tables;
+  startup serializes idempotent initialization with an advisory lock, and
+  incompatible changes use the guarded local fresh-install workflow. Immutable
+  forward migrations begin only after the storage contract is declared stable.
+  `cmd/realm --postgres-url` uses real PostgreSQL account/session and
+  character/lease repositories plus durable structured audit events. Real
+  PostgreSQL 18 tests prove normalized uniqueness, token-digest storage,
+  concurrent lease exclusion, canonical commit, schema initialization, and
+  account/session/character restart persistence. Real tests also cover verified
+  account challenges, normalized email uniqueness,
+  verification replay rejection, recovery non-enumeration, password rotation,
+  session revocation, leased transactional mail, durable named games,
+  concurrent capacity reservation, allocation lifecycle, and fail-closed Realm
+  restart reconciliation. Real PostgreSQL tests additionally prove concurrent
+  idempotent checkpoint writes, monotonic tick enforcement, restart survival,
+  and stored-payload tamper detection. Active memberships and departure
+  receipts are also durable: PostgreSQL atomically advances the canonical character revision,
+  consumes its lease, and stores the retry receipt, so concurrent or
+  post-restart leave retries cannot double-commit. Social state, checkpoint
+  restoration/reattachment, and item-specific adapters remain.
 - [ ] Ensure authoritative sessions validate commands and commit character state;
   connected clients must never write trusted realm characters directly.
 - [ ] Support realm-managed game lifecycle, capacity/health reporting, graceful
   draining, crash recovery, reconnect tokens, and auditable persistence events.
-- [ ] Add compatibility, tampering, interrupted-download, duplicate-session,
-  migration, failover, and recovery acceptance tests.
+  Graceful native leave is retry-safe in-process: Realm projects only the
+  worker's canonical character, atomically consumes the lease, updates the
+  roster, and releases an empty allocation. QUIC disconnect retains the entity
+  during reconnect grace; expiry is reported privately to Realm and follows the
+  same trusted commit path. Health uses three consecutive failures before
+  abandoning a worker, preserving the last committed revision and releasing
+  leases. Healthy maintenance renews leases after half their lifetime, and
+  unclaimed admissions expire at the one-use ticket deadline. PostgreSQL-backed
+  allocation state, conservative startup cleanup, memberships, and departure
+  receipts and periodic identity-pinned canonical checkpoints are implemented;
+  live failed-worker checkpoint restoration, authenticated reconnect handoff,
+  safely fenced single-machine Realm restart, and independently authenticated
+  operator drain are implemented. Cluster fencing/reattachment remains.
+- [x] Validate one complete session identity containing embedded `d2legacy`, the
+  ordered extension lock, authoritative configuration, engine/capability
+  versions, and an operator-supplied read-only asset-set identity. Protected game
+  assets never enter images, mod distribution, caches, backups, or public object
+  storage.
+  `dark-magic.runtime-recipe/v1` now pins the path-independent SHA-256 identity
+  of the ordered external asset roots alongside the exact package lock,
+  authoritative Lua/configuration, engine/network contracts, and the complete
+  production authoritative-capability set. An owner-local digest cache contains
+  metadata and hashes but no protected bytes. Realm independently rejects a
+  child reporting another asset set; clients reject it before recomposition;
+  admission, reconnect, checkpoints, replay, restoration, and durable character
+  compatibility inherit the resulting complete identity digest. The real-MPQ
+  production restart/recovery journey passes with this identity.
+- [x] Pass the single-machine Realm acceptance: create and verify an account over
+  HTTPS; create/select a Realm character; enter channel and named-game flows;
+  allocate a separate worker process; play over real QUIC; checkpoint, reconnect,
+  and commit canonical state; restart the Realm without losing durable records;
+  and exit without orphaned workers or character leases.
+  The native production harness now covers this journey against disposable
+  PostgreSQL and an ordinary `cmd/server` process when supplied an
+  operator-owned MPQ directory: HTTPS signup/login/recovery, character
+  create/select, channel chat, named-game allocation, pinned QUIC input,
+  reconnect, durable checkpoint, canonical departure commit, worker retirement,
+  abrupt active-game Realm restart, exact surviving-worker fencing, checkpoint
+  restoration, client retargeting, zero residual leases/allocations, a clean
+  Realm restart, revision persistence, SMTP delivery through pinned Mailpit,
+  and secure-cookie/CSRF browser verification and recovery all pass.
+- [x] Add compatibility, tampering, interrupted-download, duplicate-session,
+  schema-evolution, failover, and recovery acceptance tests.
+  Complete runtime identity is rejected consistently at admission, reconnect,
+  durable character, checkpoint, replay, client recomposition, and worker
+  readiness boundaries. Package and replay evidence is digest checked;
+  interrupted extension delivery leaves no trusted or quarantined partial and
+  a clean retry succeeds. A second live session cannot lease the same Realm
+  character and does not disturb its original reconnect. Replay containers
+  require explicit sequential version migrations. Worker loss and abrupt Realm
+  restart restore only a valid compatible checkpoint after fencing the prior
+  generation; tampered startup state fails closed, releases the character, and
+  removes the game. Focused boundary tests run in the ordinary suite, while the
+  disposable PostgreSQL/process/QUIC harness proves the successful failover and
+  recovery journey end to end.
 
 ## M24: Packaging and release acceptance
 
@@ -2443,6 +2617,51 @@ restarting, and emits aligned eight-direction sprites carrying the same event.
 - [ ] Complete all acceptance flows without placeholder rectangles,
   compatibility services, leaked handles, data races, or bundled Blizzard data.
 
+## M44: Realm cloud deployment, orchestration, and operations
+
+M44 begins only after the M23 single-machine acceptance and the current gameplay
+acceptance are complete. It deploys the already-proven Realm/worker contracts;
+it may not create cloud-only account, character, admission, checkpoint, or
+gameplay behavior. The deferred design is recorded in
+[the Realm cloud deployment guide](docs/realm/CLOUD_DEPLOYMENT.md).
+
+- [ ] Build minimal, non-root, read-only-root container images for Realm,
+  worker, mailer, and migrations without protected game assets. Pin inputs,
+  publish SBOMs, scan/sign release images, and verify graceful termination.
+- [ ] Provide a separate local Kind integration environment with trusted HTTPS,
+  Mailpit, disposable PostgreSQL, fixed UDP mappings, operator-supplied assets,
+  and repeatable bootstrap/status/smoke/teardown workflows. It complements and
+  never replaces the native single-machine development loop.
+- [ ] Implement an Agones allocator behind the M23 worker contract. Maintain a
+  measured warm Fleet, atomically allocate Ready workers, replenish capacity,
+  report health, drain games, survive pod/node loss, and benchmark warm
+  allocation, cold readiness, image pull, asset validation, and node scale-up.
+- [ ] Accept an existing multi-node read-only game-assets claim. Mount it only in
+  the asset validator and game workers, validate `AssetSetID` before readiness,
+  exclude it from images/artifacts/backups/distribution, and add node-local
+  caching only after shared-storage measurements justify it.
+- [ ] Integrate managed PostgreSQL over private networking with narrowly scoped
+  roles, encrypted connections, migrations, high availability, point-in-time
+  recovery, isolated restore validation, and documented recovery objectives.
+- [ ] Deploy public account and Realm HTTPS behind provider-neutral ingress;
+  configure Cloudflare DNS, strict origin TLS, WAF/rate limits, and narrowly
+  scoped certificate automation without coupling Realm packages to Cloudflare.
+  Keep gameplay QUIC on direct UDP load balancing first; evaluate an optional
+  stable QUIC gateway or UDP edge only from measured need.
+- [ ] Integrate cloud secret management, workload identity, least-privilege
+  service accounts, namespace isolation, NetworkPolicies, restricted pod
+  security, key/certificate rotation, and auditable administration.
+- [ ] Integrate a production transactional-mail provider behind the M23 mailer
+  interface and prove verification/reset retry, idempotency, suppression, and
+  failure operations without changing account semantics.
+- [ ] Add metrics, traces, structured logs, central audit export, actionable
+  alerts, capacity dashboards, allocation/lease/commit SLOs, and bounded
+  diagnostics that exclude credentials, save payloads, and protected assets.
+- [ ] Pass cloud failure and recovery acceptance covering rollout/rollback,
+  empty warm pool, worker crash, node drain, database failover/restore, mail
+  outage, certificate/key rotation, reconnect, durable commit, and continued
+  equivalence with the native single-machine topology.
+
 ## Performance priorities
 
 - [x] Stop rebuilding and uploading the diagnostic HUD texture every moving frame.
@@ -2495,7 +2714,9 @@ portion of M29 are implemented. M15 and M16 retain bounded catalog/composition
 gaps; M18–M24, M26–M27, the typed-data tail of M28, and M29's gameplay-command
 integration remain open as described above. M31–M43 now define the independent
 creature-authoring and generated-representation program; none of that program is
-claimed implemented. The repository builds against
+claimed implemented. M44 is the final deferred Realm cloud-deployment and
+operations milestone; it begins only after the topology-neutral M23 Realm and
+gameplay acceptance are complete. The repository builds against
 tagged codec releases, boots through the internal host and layered d2legacy mod, runs
 the Lua-authored shell and world orchestration, and passes the complete package
 suite under race detection. Historical stashes remain preserved and documented

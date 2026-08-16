@@ -17,6 +17,10 @@ func (session *Session) CanonicalCheckpoint() (simulation.Checkpoint, error) {
 	if session.closed {
 		return simulation.Checkpoint{}, ErrClosed
 	}
+	return session.canonicalCheckpointLocked()
+}
+
+func (session *Session) canonicalCheckpointLocked() (simulation.Checkpoint, error) {
 	snapshot, err := session.engine.Snapshot()
 	if err != nil {
 		return simulation.Checkpoint{}, err

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset Realm Password</title>
+  <link rel="stylesheet" href="/account/portal.css?revision=3">
+  <script src="/account/portal.js?revision=3" defer></script>
+</head>
+<body>
+  <main class="dialog" aria-labelledby="page-title">
+    <h1 id="page-title" data-d2-text data-font="font16-gold">Reset Realm Password</h1>
+    {{if .Success}}
+      <p data-d2-text data-font="font16-grey">Your password has been changed.</p>
+      <p data-d2-text data-font="font16-grey">Return to Dark Magic and log in.</p>
+    {{else if .Token}}
+      <form method="post" action="/recover">
+        <input type="hidden" name="token" value="{{.Token}}">
+        <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+        <label for="account-password" data-d2-text data-font="font16-gold">New password</label>
+        <div class="bitmap-field">
+          <input id="account-password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required autofocus>
+          <canvas aria-hidden="true"></canvas>
+        </div>
+        <label for="confirm-password" data-d2-text data-font="font16-gold">Confirm password</label>
+        <div class="bitmap-field">
+          <input id="confirm-password" type="password" name="confirm_password" autocomplete="new-password" minlength="8" maxlength="72" required>
+          <canvas aria-hidden="true"></canvas>
+        </div>
+        <div class="message-slot">
+          {{if .Error}}<p class="error" role="alert" data-d2-text data-font="font16-red">{{.Error}}</p>{{end}}
+        </div>
+        <button type="submit"><span data-d2-text data-font="font16-grey">Change Password</span></button>
+      </form>
+    {{else}}
+      <p class="error" role="alert" data-d2-text data-font="font16-red">{{.Error}}</p>
+    {{end}}
+  </main>
+</body>
+</html>

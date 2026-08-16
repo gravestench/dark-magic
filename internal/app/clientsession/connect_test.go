@@ -135,6 +135,20 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.credential == firstCredential {
 		t.Fatal("redial reconnect did not rotate credential")
 	}
+	replacementTicket, err := authority.Issue(gameserver.Principal{ID: "account", CharacterID: "character",
+		PlayerID: "player", CharacterRevision: 2, RuntimeIdentityHash: allocation.IdentityHash}, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeReassignment := connected.credential
+	if err := connected.Reassign(ctx, realm.JoinAssignment{GameID: "game", Endpoint: assignment.Endpoint,
+		Ticket: replacementTicket, Runtime: identity}, clientTLS); err != nil {
+		t.Fatal(err)
+	}
+	if connected.credential == beforeReassignment || connected.HUD.Player.PlayerID != "player" ||
+		connected.Admission.Admission.CharacterID != "character" {
+		t.Fatalf("reassigned session = %#v", connected)
+	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +172,7 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 func clientSessionIdentity() simulation.RuntimeIdentity {
 	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
 		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}

@@ -419,79 +419,19 @@ func rgbaDCCFrame(frame *dcc.Frame, palette *color.Palette) *image.RGBA {
 // distinct Dir64ToCof and Dir64ToDcc tables; using one index for both pairs a
 // correctly facing sprite with another facing's arm/head priority.
 func dccDirectionForCOF(direction, count int) (int, error) {
-	lookups := map[int][]int{
-		8:  {4, 0, 5, 1, 6, 2, 7, 3},
-		16: {4, 8, 0, 9, 5, 10, 1, 11, 6, 12, 2, 13, 7, 14, 3, 15},
-	}
-	lookup, ok := lookups[count]
-	if !ok {
-		if direction < 0 || direction >= count {
-			return 0, fmt.Errorf("COF direction %d is out of range for %d directions", direction, count)
-		}
-		return direction, nil
-	}
-	if direction < 0 || direction >= len(lookup) {
-		return 0, fmt.Errorf("COF direction %d is out of range for %d directions", direction, count)
-	}
-	return lookup[direction], nil
+	return assetdecode.DCCDirectionForCOF(direction, count)
 }
 
 func composeCOFFrame(asset *cof.COF, direction, frame int, components map[cof.CompositeType]compositeFrame, animationBounds ...image.Rectangle) (image.Image, error) {
-	if direction < 0 || direction >= len(asset.Priority) {
-		return nil, fmt.Errorf("COF direction %d is out of range", direction)
-	}
-	if frame < 0 || frame >= len(asset.Priority[direction]) {
-		return nil, fmt.Errorf("COF frame %d is out of range", frame)
-	}
-	var bounds image.Rectangle
-	if len(animationBounds) > 0 {
-		bounds = animationBounds[0]
-	} else {
-		for _, component := range components {
-			if bounds.Empty() {
-				bounds = component.bounds
-			} else {
-				bounds = bounds.Union(component.bounds)
-			}
+	shared := make(map[cof.CompositeType]assetdecode.CompositeFrame, len(components))
+	for componentType, component := range components {
+		shared[componentType] = assetdecode.CompositeFrame{
+			Image: component.image, Indices: component.indices, Palette: component.palette,
+			Bounds: component.bounds, Layer: component.layer,
 		}
 	}
-	if bounds.Empty() {
-		return nil, errors.New("COF composition has no component frames")
-	}
-	canvas := shadowCanvasBounds(bounds, components)
-	output := image.NewRGBA(image.Rect(0, 0, canvas.Dx(), canvas.Dy()))
-	// Diablo's composite renderer makes two complete passes over the COF order:
-	// every projected shadow first, then every visible body/equipment layer.
-	// Drawing a layer's shadow immediately before that layer lets later shadows
-	// darken earlier limbs and looks like broken arm priority on thin characters.
-	priority := asset.Priority[direction][frame]
-	shadow := compositeShadowMask(bounds, priority, components)
-	drawCompositeShadow(output, shadow, bounds, canvas, 96)
-	for _, componentType := range priority {
-		component, ok := components[componentType]
-		if !ok {
-			continue
-		}
-		destination := component.bounds.Min.Sub(canvas.Min)
-		alpha := uint8(255)
-		// DrawEffect is meaningful only when COF marks the layer transparent.
-		// Most body layers contain zero in this byte, which otherwise looks like
-		// the 25-percent effect despite being explicitly opaque.
-		if component.layer.Transparent {
-			switch component.layer.DrawEffect {
-			case cof.DrawEffect(0):
-				alpha = 191
-			case cof.DrawEffect(1):
-				alpha = 128
-			case cof.DrawEffect(2):
-				alpha = 64
-			default:
-				alpha = 128
-			}
-		}
-		drawCompositeComponent(output, component, destination, alpha)
-	}
-	return output, nil
+	composed, _, err := assetdecode.ComposeCOFFrame(asset, direction, frame, shared, animationBounds...)
+	return composed, err
 }
 
 func (c *renderAssetCache) refresh(assets fs.FS) {
@@ -1494,57 +1434,7 @@ func normalizedDC6Frames(asset *dc6.DC6, direction int, anchorMode string, share
 // DC6 page convention. This matches Riiablo's DC6Parameters.COMBINE behavior:
 // a short frame terminates the column/row scan and repeated grids are pages.
 func combinedDC6Pages(asset *dc6.DC6, direction int) ([]image.Image, error) {
-	if asset == nil || direction < 0 || direction >= len(asset.Directions) {
-		return nil, fmt.Errorf("DC6 combined direction %d is out of range", direction)
-	}
-	frames := asset.Directions[direction].Frames
-	if len(frames) == 0 {
-		return nil, errors.New("DC6 combined direction has no frames")
-	}
-	const pageSize = 256
-	columns, width := 0, 0
-	for _, frame := range frames {
-		columns++
-		width += int(frame.Width)
-		if frame.Width < pageSize {
-			break
-		}
-	}
-	rows, height := 0, 0
-	for index := 0; index < len(frames); index += columns {
-		rows++
-		height += int(frames[index].Height)
-		if frames[index].Height < pageSize {
-			break
-		}
-	}
-	framesPerPage := rows * columns
-	if framesPerPage <= 0 || len(frames)%framesPerPage != 0 {
-		return nil, fmt.Errorf("DC6 combined grid %dx%d does not divide %d frames", columns, rows, len(frames))
-	}
-	pages := make([]image.Image, 0, len(frames)/framesPerPage)
-	frameIndex := 0
-	for page := 0; page < len(frames)/framesPerPage; page++ {
-		canvas := image.NewRGBA(image.Rect(0, 0, width, height))
-		y := 0
-		for row := 0; row < rows; row++ {
-			x := 0
-			for column := 0; column < columns; column++ {
-				frame := frames[frameIndex]
-				frameIndex++
-				decoded, err := assetdecode.FrameImage(asset, frame)
-				if err != nil {
-					return nil, err
-				}
-				position := image.Pt(x, y)
-				draw.Draw(canvas, decoded.Bounds().Add(position), decoded, decoded.Bounds().Min, draw.Over)
-				x += int(frame.Width)
-			}
-			y += pageSize
-		}
-		pages = append(pages, canvas)
-	}
-	return pages, nil
+	return assetdecode.CombinedDC6Pages(asset, direction)
 }
 
 func horizontalDC6Strip(asset *dc6.DC6, direction int) (image.Image, error) {
@@ -1611,6 +1501,7 @@ func (r *RenderCapability) Module() Module {
 		"set_scale":                  commandHelp("node:set_scale(x, y)", "Set the node scale."),
 		"set_z":                      commandHelp("node:set_z(z)", "Set the node draw priority."),
 		"set_rotation":               commandHelp("node:set_rotation(degrees)", "Set the node rotation."),
+		"set_tint":                   commandHelp("node:set_tint(red, green, blue)", "Multiply node RGB while preserving full opacity."),
 		"set_blend":                  commandHelp("node:set_blend(mode)", "Set the node blend mode."),
 		"set_palette_quantization":   commandHelp("node:set_palette_quantization(path)", "Quantize the node through a display palette."),
 		"clear_palette_quantization": commandHelp("node:clear_palette_quantization()", "Disable node palette quantization."),
@@ -1634,7 +1525,7 @@ func (r *RenderCapability) Module() Module {
 		"set_dcc":                    commandHelp("node:set_dcc(path [, options])", "Render a DCC asset."),
 		"set_dcc_animation":          commandHelp("node:set_dcc_animation(path [, options])", "Render a DCC animation."),
 		"set_cof":                    commandHelp("node:set_cof(path [, options])", "Render a COF composite."),
-		"set_cof_animation":          commandHelp("node:set_cof_animation(path, palette, direction, components [, loop, rate, seek_seconds])", "Render a cached COF composite with resolved rate and optional preserved playback position."),
+		"set_cof_animation":          commandHelp("frames, events, width, height, origin_x, origin_y = node:set_cof_animation(path, palette, direction, components [, loop, rate, seek_seconds])", "Render a cached COF composite and return its shared canvas geometry."),
 		"set_text":                   commandHelp("node:set_text(text [, options])", "Render bitmap-font text."),
 		"animation_pause":            commandHelp("node:animation_pause()", "Pause the node animation."),
 		"animation_resume":           commandHelp("node:animation_resume()", "Resume the node animation."),
@@ -2016,6 +1907,22 @@ func registerRenderNodeType(state *lua.LState) {
 			rotation := float64(state.CheckNumber(2))
 			if err := node.composer.Update(node.id, func(current *render.Node) { current.Rotation = rotation }); err != nil {
 				state.RaiseError("updating render node: %v", err)
+			}
+			return 0
+		},
+		"set_tint": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			red, green, blue := state.CheckInt(2), state.CheckInt(3), state.CheckInt(4)
+			for index, value := range []int{red, green, blue} {
+				if value < 0 || value > 255 {
+					state.ArgError(index+2, "tint channel must be between 0 and 255")
+					return 0
+				}
+			}
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.Tint = color.RGBA{R: uint8(red), G: uint8(green), B: uint8(blue), A: 255}
+			}); err != nil {
+				state.RaiseError("updating render node tint: %v", err)
 			}
 			return 0
 		},
@@ -2644,7 +2551,14 @@ func registerRenderNodeType(state *lua.LState) {
 			}
 			state.Push(lua.LNumber(len(prepared.frames)))
 			state.Push(events)
-			return 2
+			// Every animation frame shares this canvas. Returning both its size and
+			// logical ground origin lets Lua presentation fit a composite into an
+			// authored viewport without hard-coding a class-specific scale.
+			state.Push(lua.LNumber(width))
+			state.Push(lua.LNumber(height))
+			state.Push(lua.LNumber(prepared.origin.X))
+			state.Push(lua.LNumber(prepared.origin.Y))
+			return 6
 		},
 		"set_text": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

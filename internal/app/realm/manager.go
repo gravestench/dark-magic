@@ -19,27 +19,35 @@ var (
 	ErrGameNotFound = errors.New("realm: game not found")
 )
 
-type gameFactory func(context.Context, fs.FS, d2legacy.Records, gameserver.Config) (*gameserver.Host, error)
+type workerFactory func(context.Context, gameserver.Config) (WorkerClient, error)
 
-// Manager owns a stable-ID registry of realm-hosted game workers. Each worker
-// is the same gameserver.Host used by standalone and future listen modes.
+// Manager is the in-process allocator and stable-ID worker registry. Admissions
+// sees only WorkerClient; child-process and cluster allocators can implement the
+// same registry without exposing gameserver.Host.
 type Manager struct {
 	mu      sync.RWMutex
-	source  fs.FS
-	records d2legacy.Records
-	start   gameFactory
-	hosts   map[string]*gameserver.Host
+	start   workerFactory
+	workers map[string]WorkerClient
 }
 
 func NewManager(source fs.FS, records d2legacy.Records) (*Manager, error) {
 	if source == nil || records == nil {
 		return nil, errors.New("realm: content and records are required")
 	}
-	return &Manager{source: source, records: records, start: gameserver.Start,
-		hosts: make(map[string]*gameserver.Host)}, nil
+	return &Manager{start: func(ctx context.Context, config gameserver.Config) (WorkerClient, error) {
+		host, err := gameserver.Start(ctx, source, records, config)
+		if err != nil {
+			return nil, err
+		}
+		worker, err := newInProcessWorker(host)
+		if err != nil {
+			return nil, errors.Join(err, host.Close(context.Background()))
+		}
+		return worker, nil
+	}, workers: make(map[string]WorkerClient)}, nil
 }
 
-func (manager *Manager) Allocate(ctx context.Context, config gameserver.Config) (*gameserver.Host, error) {
+func (manager *Manager) Allocate(ctx context.Context, config gameserver.Config) (WorkerClient, error) {
 	if manager == nil {
 		return nil, errors.New("realm: nil manager")
 	}
@@ -49,26 +57,29 @@ func (manager *Manager) Allocate(ctx context.Context, config gameserver.Config) 
 	}
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
-	if _, exists := manager.hosts[sessionID]; exists {
+	if _, exists := manager.workers[sessionID]; exists {
 		return nil, fmt.Errorf("%w: %s", ErrGameExists, sessionID)
 	}
 	config.Mode = gameserver.ModeRealm
-	host, err := manager.start(ctx, manager.source, manager.records, config)
+	worker, err := manager.start(ctx, config)
 	if err != nil {
 		return nil, err
 	}
-	manager.hosts[sessionID] = host
-	return host, nil
+	if worker == nil {
+		return nil, ErrWorker
+	}
+	manager.workers[sessionID] = worker
+	return worker, nil
 }
 
-func (manager *Manager) Game(sessionID string) (*gameserver.Host, bool) {
+func (manager *Manager) Game(sessionID string) (WorkerClient, bool) {
 	if manager == nil {
 		return nil, false
 	}
 	manager.mu.RLock()
 	defer manager.mu.RUnlock()
-	host, found := manager.hosts[strings.TrimSpace(sessionID)]
-	return host, found
+	worker, found := manager.workers[strings.TrimSpace(sessionID)]
+	return worker, found
 }
 
 func (manager *Manager) Release(ctx context.Context, sessionID string) error {
@@ -76,15 +87,15 @@ func (manager *Manager) Release(ctx context.Context, sessionID string) error {
 		return errors.New("realm: nil manager")
 	}
 	manager.mu.Lock()
-	host, found := manager.hosts[strings.TrimSpace(sessionID)]
+	worker, found := manager.workers[strings.TrimSpace(sessionID)]
 	if found {
-		delete(manager.hosts, strings.TrimSpace(sessionID))
+		delete(manager.workers, strings.TrimSpace(sessionID))
 	}
 	manager.mu.Unlock()
 	if !found {
 		return fmt.Errorf("%w: %s", ErrGameNotFound, sessionID)
 	}
-	return host.Close(ctx)
+	return worker.Close(ctx)
 }
 
 func (manager *Manager) Close(ctx context.Context) error {
@@ -92,20 +103,20 @@ func (manager *Manager) Close(ctx context.Context) error {
 		return nil
 	}
 	manager.mu.Lock()
-	ids := make([]string, 0, len(manager.hosts))
-	for id := range manager.hosts {
+	ids := make([]string, 0, len(manager.workers))
+	for id := range manager.workers {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
-	hosts := make([]*gameserver.Host, 0, len(ids))
+	workers := make([]WorkerClient, 0, len(ids))
 	for _, id := range ids {
-		hosts = append(hosts, manager.hosts[id])
-		delete(manager.hosts, id)
+		workers = append(workers, manager.workers[id])
+		delete(manager.workers, id)
 	}
 	manager.mu.Unlock()
 	var result error
-	for _, host := range hosts {
-		result = errors.Join(result, host.Close(ctx))
+	for _, worker := range workers {
+		result = errors.Join(result, worker.Close(ctx))
 	}
 	return result
 }

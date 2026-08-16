@@ -11,6 +11,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/networkclock"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
@@ -148,5 +149,15 @@ func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	controller.markMovement(false)
 	if controller.movementRequired(false) {
 		t.Fatal("settled idle state emitted repeated stop commands")
+	}
+}
+
+func TestNetworkRecipeRejectsDifferentLocalAssetSet(t *testing.T) {
+	recipe := simulation.RuntimeRecipe{AssetSetID: simulation.EmptyAssetSetID}
+	if err := validateLocalAssetSet(recipe, simulation.EmptyAssetSetID); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLocalAssetSet(recipe, "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"); err == nil {
+		t.Fatal("client accepted a server recipe for a different external asset set")
 	}
 }

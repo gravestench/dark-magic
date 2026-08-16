@@ -10,7 +10,7 @@ func TestDefaultManifestComesFromEmbeddedD2Legacy(t *testing.T) {
 	if err := manifest.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if manifest.Version != 1 || len(manifest.Assets) != 100 {
+	if manifest.Version != 1 || len(manifest.Assets) != 113 {
 		t.Fatalf("default manifest = version %d with %d assets", manifest.Version, len(manifest.Assets))
 	}
 }
