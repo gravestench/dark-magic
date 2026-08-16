@@ -18,8 +18,16 @@ const (
 // avoids Windows lock-file open/delete races, and leaves stale ownership
 // recoverable after a crashed process without relying on platform-only flock.
 func (store *Store) withMutationLock(operation func() error) error {
+	// Avoid making the filesystem arbitrate goroutines sharing one Store. The
+	// directory token remains necessary for independent Store instances and
+	// processes, but Windows has a brief remove/create interval in which it may
+	// report ACCESS_DENIED instead of either EXISTS or success.
+	store.mutation.Lock()
+	defer store.mutation.Unlock()
+
 	deadline := time.Now().Add(cacheLockTimeout)
 	lockPath := filepath.Join(store.root, ".mutation.lock")
+	permissionRaces := 0
 	for {
 		err := os.Mkdir(lockPath, 0o700)
 		if err == nil {
@@ -32,8 +40,18 @@ func (store *Store) withMutationLock(operation func() error) error {
 			return fmt.Errorf("modcache: acquire mutation lock: %w", inspectErr)
 		}
 		if !contended {
+			// If another Windows owner removed the directory between our failed
+			// Mkdir and Stat, the path is already gone but Mkdir's error remains
+			// ACCESS_DENIED. Retry that narrow race briefly. A persistent parent
+			// permission failure still returns its original error promptly.
+			if os.IsPermission(err) && permissionRaces < 10 {
+				permissionRaces++
+				time.Sleep(time.Millisecond)
+				continue
+			}
 			return fmt.Errorf("modcache: acquire mutation lock: %w", err)
 		}
+		permissionRaces = 0
 		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > cacheLockStale {
 			_ = os.Remove(lockPath)
 			continue

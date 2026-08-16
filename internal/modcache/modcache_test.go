@@ -371,6 +371,47 @@ func TestConcurrentCacheUpdatesDoNotLosePackages(t *testing.T) {
 	}
 }
 
+func TestIndependentStoresSerializeConcurrentCacheUpdates(t *testing.T) {
+	root := t.TempDir()
+	first, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stores := []*Store{first, second}
+	const count = 12
+	var wait sync.WaitGroup
+	errorsSeen := make(chan error, count)
+	for index := range count {
+		wait.Add(1)
+		go func(index int) {
+			defer wait.Done()
+			id := fmt.Sprintf("independent_%02d", index)
+			_, err := stores[index%len(stores)].ReconcileBundled([]Bundle{{
+				Source: testBundle(testManifest(id, "extension"), nil),
+			}})
+			if err != nil {
+				errorsSeen <- err
+			}
+		}(index)
+	}
+	wait.Wait()
+	close(errorsSeen)
+	for err := range errorsSeen {
+		t.Fatal(err)
+	}
+	catalog, err := first.readIndex()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Packages) != count {
+		t.Fatalf("independent-store index contains %d packages, want %d", len(catalog.Packages), count)
+	}
+}
+
 func TestDescribeBuiltinCanonicalizesTextLineEndings(t *testing.T) {
 	manifest := testManifest("d2legacy", "game")
 	lf := testBundle(manifest, map[string]string{
