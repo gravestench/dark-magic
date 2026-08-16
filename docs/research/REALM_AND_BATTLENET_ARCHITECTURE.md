@@ -67,9 +67,38 @@ The server should gain transport/client membership/snapshot adapters around the 
 
 ### `realm`
 
-Current `cmd/realm` is intentionally a realm control-plane composition root, but today it only runs a mutable headless admin shell.
+Current `cmd/realm` owns a versioned, transport-neutral control-plane reference
+implementation alongside its mutable headless admin shell. It provides
+normalized unique accounts, bcrypt password verification, opaque expiring
+session credentials stored only by digest, account-owned character create/read/
+select operations, realm-scoped public channel presence/messages, and a named
+game directory. PostgreSQL is the only supported Realm deployment store and owns
+accounts, sessions, verified-email challenges, mail jobs, revisioned characters,
+leases, named games, allocation lifecycle, and audit records. In-memory
+repositories are deterministic focused-test adapters only. Before production
+stability, one mutable baseline schema replaces incremental migrations and the
+guarded local fresh-install workflow handles incompatible schema changes.
+Channel composites are projected from realm-owned character records rather than
+client assertions; public member views use per-join member IDs instead of
+authentication-session IDs. Game names resolve to opaque GameIDs, protected
+games remain absent from public listings, and directory views never reveal
+worker endpoints or password material.
 
-That is a good placeholder. Grow it into account/character/game-directory/allocation/persistence coordination, not gameplay simulation.
+The player-facing transport is a bounded JSON API over persistent TLS
+identity. The client exposes it to presentation through an asynchronous
+`engine.realm/v1` intent/status capability, including a real compatibility probe
+before an explicit credential-login screen. Every new connection requires the
+credentials again; verification and recovery use the browser but the native
+client stores no persistent Realm credential. Successful login then routes to
+character creation or character selection. Named-game create/join now durably
+records the allocation intent, supervises an ordinary worker process, leases and
+admits the canonical character, and returns a private native-only assignment.
+Startup reconciles interrupted allocations fail-closed without accepting client
+state. Membership admission and departure receipts are durable; PostgreSQL
+commits canonical character state, consumes its lease, and records the retry
+receipt atomically. Chat commands/moderation, checkpoints, safe worker
+reattachment, and operational administration APIs remain. Grow those around the
+semantic control plane rather than adding gameplay simulation to `cmd/realm`.
 
 ### Runtime API
 
@@ -453,6 +482,16 @@ Chat/social presence may live in gateway/realm services rather than the game sim
 
 Chat timing/content generally does not affect deterministic gameplay and need not enter replay checksum unless a gameplay command explicitly derives from it.
 
+The realm lobby and in-game chat share parts of Diablo II's slash-command
+vocabulary, but they do not share one authority. Realm channel membership,
+friends, whispers, presence, ignore policy, and moderation belong to the realm
+social service. In-game public/party messages belong to the active game routing
+context. Local diagnostics remain client presentation state, while a command
+such as an allowed single-player `/players` change becomes a typed authoritative
+game-rules request. See
+[REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md) for the
+command matrix, alias policy, and verification queue.
+
 ## Legacy protocol adapters
 
 If Dark Magic later supports original clients, create adapter services/modules for historical protocol families:
@@ -558,5 +597,7 @@ Only after semantic APIs are stable, research/implement BNCS/MCP/D2GS packet com
 - Current Dark Magic `cmd/server`, `cmd/realm`, `internal/game/session`, persistence/player/item/game-rules research and local runtime admin API.
 - PvPGN pinned repository commit `9cd173f4e02ba3d9f8f15a67ca308b5eb78723e4`, especially `d2cs` and `d2dbs` configuration/source split as independent historical implementation evidence.
 - D2MOO gameplay server/client/session code for game-side authority behavior.
+- Blizzard classic Battle.net chat-command, friends, and channel documentation for user-visible realm social behavior.
+- Diablo Wiki/Fandom Diablo II, Battle.net, patch, and game-command pages as community discovery/corroboration leads only.
 
 PvPGN is corroborating implementation evidence, not proof of Blizzard's private server topology. The modern Dark Magic service decomposition is intentionally semantic and protocol-independent.

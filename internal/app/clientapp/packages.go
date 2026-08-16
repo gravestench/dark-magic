@@ -41,7 +41,7 @@ func (app *application) restoreConfiguredPackages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	identity, err := d2legacy.IdentityForPackages(source, app.configuredMods, app.sessionInitialData())
+	identity, err := d2legacy.IdentityForPackages(source, app.configuredMods, app.options.AssetSetID, app.sessionInitialData())
 	if err != nil {
 		return err
 	}
@@ -59,6 +59,9 @@ func (app *application) recomposeForNetworkRecipe(ctx context.Context, recipe si
 	app.recomposeMu.Lock()
 	defer app.recomposeMu.Unlock()
 	if err := recipe.Validate(); err != nil {
+		return err
+	}
+	if err := validateLocalAssetSet(recipe, app.options.AssetSetID); err != nil {
 		return err
 	}
 	if app.options.Mods == nil || app.packageRegistry == nil {
@@ -180,6 +183,13 @@ func (app *application) recomposeForNetworkRecipe(ctx context.Context, recipe si
 		return err
 	}
 	app.packageDigests = packageDigestMap(resolved)
+	return nil
+}
+
+func validateLocalAssetSet(recipe simulation.RuntimeRecipe, localAssetSetID string) error {
+	if recipe.AssetSetID != localAssetSetID {
+		return errors.New("network recipe requires a different external game-asset set")
+	}
 	return nil
 }
 

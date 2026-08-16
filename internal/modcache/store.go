@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,10 @@ const (
 
 var archiveTimestamp = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
-type Store struct{ root string }
+type Store struct {
+	root     string
+	mutation sync.Mutex
+}
 
 type Bundle struct {
 	Source         fs.FS

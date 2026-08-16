@@ -1,15 +1,11 @@
 package clientapp
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
 	"github.com/gravestench/akara"
 
-	gameworld "github.com/gravestench/dark-magic/internal/game/world"
-	"github.com/gravestench/dark-magic/internal/game/worldgen"
-	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
@@ -21,28 +17,12 @@ func (app *application) buildEntryWorld() error {
 	if err != nil {
 		return wrap("resolve d2legacy package", err)
 	}
-	entryWorld, err := d2mapgen.GenerateEntryWorld(app.ctx, d2legacySource, app.records, 1)
+	prepared, err := entryworld.Build(app.ctx, app.options.Content, d2legacySource, app.records, app.worldObjectResolver, 1)
 	if err != nil {
-		return wrap("generate d2legacy entry world", err)
+		return wrap("prepare d2legacy entry world", err)
 	}
-	townZone, moorZone := entryWorld.Town, entryWorld.Wilderness
-	townMap, err := app.materializeZone(townZone)
-	if err != nil {
-		return wrap("materialize Act I town", err)
-	}
-	moorMap, err := app.materializeZone(moorZone)
-	if err != nil {
-		return wrap("materialize Blood Moor", err)
-	}
-	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, moorMap)
-	if err != nil {
-		return wrap("join Act I town to Blood Moor", err)
-	}
-	townSpawnX, townSpawnY, found := d2mapgen.ResolveTownEntry(app.ctx, d2legacySource, app.records, townMap)
-	if !found {
-		return errors.New("Act I town has no campfire entry")
-	}
-	spawns, err := entryWorldSpawns(app.options.FixtureWorldSpawn, seam, townSpawnX, townSpawnY)
+	townSpawn := prepared.Spawns[prepared.Seam.Town.LevelID]
+	spawns, err := entryWorldSpawns(app.options.FixtureWorldSpawn, prepared.Seam, townSpawn[0], townSpawn[1])
 	if err != nil {
 		return err
 	}
@@ -50,8 +30,7 @@ func (app *application) buildEntryWorld() error {
 	if activeLevel == 0 {
 		activeLevel = 1
 	}
-	worlds := map[int]*gameworld.Map{1: townMap, 2: moorMap}
-	zones := map[int]*worldgen.Zone{1: townZone, 2: moorZone}
+	worlds, zones := prepared.Worlds, prepared.Zones
 	if worlds[activeLevel] == nil {
 		return fmt.Errorf("development fixture world level %d is unavailable", activeLevel)
 	}
@@ -63,7 +42,7 @@ func (app *application) buildEntryWorld() error {
 		)
 	}
 	app.worldMu.Lock()
-	app.transitionSeam = seam
+	app.transitionSeam = prepared.Seam
 	app.gameWorldZones = zones
 	app.gameWorlds = worlds
 	app.gameWorldSpawns = spawns
@@ -137,38 +116,7 @@ func (app *application) transitionBootstrapData() map[string]any {
 	app.worldMu.RLock()
 	seam := app.transitionSeam
 	app.worldMu.RUnlock()
-	endpoint := func(source, destination gametransition.SeamEndpoint) map[string]any {
-		return map[string]any{
-			"source_level": float64(source.LevelID), "destination_level": float64(destination.LevelID),
-			"source_x": source.X, "source_y": source.Y,
-			"arrival_x": destination.ArrivalX, "arrival_y": destination.ArrivalY,
-			"world_width": destination.Width, "world_height": destination.Height,
-		}
-	}
-	return map[string]any{"seams": []any{
-		endpoint(seam.Town, seam.Wilderness),
-		endpoint(seam.Wilderness, seam.Town),
-	}}
-}
-
-func (app *application) materializeZone(zone *worldgen.Zone) (*gameworld.Map, error) {
-	materializer, err := gameworld.NewMaterializer(app.options.Content, zone, app.worldObjectResolver)
-	if err != nil {
-		return nil, err
-	}
-	for {
-		err = materializer.Step(context.Background())
-		if errors.Is(err, gameworld.ErrMaterializationComplete) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if materializer.Progress().Completed == materializer.Progress().Total {
-			break
-		}
-	}
-	return materializer.Result()
+	return entryworld.TransitionData(seam)
 }
 
 func (app *application) currentWorld() modruntime.CurrentWorld {

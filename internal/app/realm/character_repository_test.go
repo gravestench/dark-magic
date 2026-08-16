@@ -117,3 +117,83 @@ func TestMemoryCharactersCommitsOnlyThroughActiveLease(t *testing.T) {
 		t.Fatalf("reloaded = %#v lease=%#v", reloaded, current)
 	}
 }
+
+func TestMemoryCharactersListsOnlyOwnedDefensiveRecords(t *testing.T) {
+	repository, err := NewMemoryCharacters(
+		CharacterRecord{AccountID: "account:a", Revision: 1, Character: d2save.Character{ID: "character:b", Name: "B", Stats: &d2save.Stats{Health: 20}}},
+		CharacterRecord{AccountID: "account:a", Revision: 1, Character: d2save.Character{ID: "character:a", Name: "A"}},
+		CharacterRecord{AccountID: "account:b", Revision: 1, Character: d2save.Character{ID: "character:c", Name: "C"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed, err := repository.List(t.Context(), "account:a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 2 || listed[0].Character.ID != "character:a" || listed[1].Character.ID != "character:b" {
+		t.Fatalf("listed = %#v", listed)
+	}
+	listed[1].Character.Stats.Health = 0
+	loaded, err := repository.Get(t.Context(), "account:a", "character:b")
+	if err != nil || loaded.Character.Stats.Health != 20 {
+		t.Fatalf("loaded=%#v error=%v", loaded, err)
+	}
+	if _, err := repository.Get(t.Context(), "account:b", "character:b"); !errors.Is(err, ErrCharacterOwner) {
+		t.Fatalf("foreign owner error = %v", err)
+	}
+}
+
+func TestMemoryCharactersDeletesOnlyOwnedIdleCharacter(t *testing.T) {
+	repository, err := NewMemoryCharacters(CharacterRecord{
+		AccountID: "account:a", Revision: 1, Character: d2save.Character{ID: "character:a", Name: "A"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.Delete(t.Context(), "account:b", "character:a"); !errors.Is(err, ErrCharacterOwner) {
+		t.Fatalf("foreign delete error = %v", err)
+	}
+	_, lease, err := repository.Acquire(t.Context(), "account:a", "character:a", "game", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.Delete(t.Context(), "account:a", "character:a"); !errors.Is(err, ErrCharacterLeased) {
+		t.Fatalf("leased delete error = %v", err)
+	}
+	if err := repository.Release(t.Context(), lease); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.Delete(t.Context(), "account:a", "character:a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.Get(t.Context(), "account:a", "character:a"); !errors.Is(err, ErrCharacterNotFound) {
+		t.Fatalf("deleted get error = %v", err)
+	}
+}
+
+func TestMemoryCharactersReleaseGameFailsClosedWithoutCommitting(t *testing.T) {
+	repository, err := NewMemoryCharacters(
+		CharacterRecord{AccountID: "account", Revision: 3, Character: d2save.Character{ID: "one", Name: "One"}},
+		CharacterRecord{AccountID: "account", Revision: 5, Character: d2save.Character{ID: "two", Name: "Two"}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repository.Acquire(t.Context(), "account", "one", "interrupted", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if _, other, err := repository.Acquire(t.Context(), "account", "two", "healthy", time.Minute); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Cleanup(func() { _ = repository.Release(context.Background(), other) })
+	}
+	released, err := repository.ReleaseGame(t.Context(), "interrupted")
+	if err != nil || released != 1 {
+		t.Fatalf("released = %d, %v", released, err)
+	}
+	record, lease, err := repository.Acquire(t.Context(), "account", "one", "replacement", time.Minute)
+	if err != nil || record.Revision != 3 {
+		t.Fatalf("replacement record = %#v lease=%#v error=%v", record, lease, err)
+	}
+}

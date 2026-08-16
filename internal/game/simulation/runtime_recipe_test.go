@@ -9,7 +9,7 @@ func TestRuntimeRecipeDigestPinsExtensionOrderAndCompleteMetadata(t *testing.T) 
 		secondDigest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 	)
 	recipe := RuntimeRecipe{
-		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
 		Packages: RuntimePackageSet{
 			Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: baseDigest, Size: 1, Redistributable: true},
 			Extensions: []RuntimePackage{
@@ -39,11 +39,30 @@ func TestRuntimeRecipeDigestPinsExtensionOrderAndCompleteMetadata(t *testing.T) 
 	if second == third {
 		t.Fatal("package metadata did not change runtime identity")
 	}
+	recipe.AssetSetID = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	fourth, err := (RuntimeIdentity{Recipe: recipe}).Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if third == fourth {
+		t.Fatal("external asset set did not change runtime identity")
+	}
+}
+
+func TestRuntimeRecipeRequiresCanonicalAssetSetIdentity(t *testing.T) {
+	recipe := RuntimeRecipe{
+		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Packages:          RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
+	}
+	if err := recipe.Validate(); err == nil {
+		t.Fatal("runtime recipe without an asset-set identity was accepted")
+	}
 }
 
 func TestRuntimeRecipeRejectsNonCanonicalPackageDigest(t *testing.T) {
 	recipe := RuntimeRecipe{
-		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
 		Packages:          RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: "not-a-digest", Size: 1}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}
@@ -58,7 +77,7 @@ func TestRuntimeRecipeRejectsOverlappingPackageNamespaces(t *testing.T) {
 		extensionDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	)
 	recipe := RuntimeRecipe{
-		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
 		Packages: RuntimePackageSet{
 			Base:       RuntimePackage{ID: "d2legacy", Version: "1", Digest: baseDigest, Size: 1},
 			Extensions: []RuntimePackage{{ID: "d2legacy.feature", Version: "1", Digest: extensionDigest, Size: 1}},

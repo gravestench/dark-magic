@@ -126,6 +126,22 @@ func pinnedTLS(expected []byte) *tls.Config {
 	}}
 }
 
+// PinnedTLSFingerprint creates a client configuration for a short-lived
+// Realm-assigned worker. Unlike direct-host TOFU, it persists nothing: the
+// trusted Realm assignment already carries the exact certificate identity.
+func PinnedTLSFingerprint(fingerprint string) (*tls.Config, error) {
+	const prefix = "sha256:"
+	value := strings.ToLower(strings.TrimSpace(fingerprint))
+	if !strings.HasPrefix(value, prefix) {
+		return nil, errors.New("network trust: invalid TLS fingerprint")
+	}
+	expected, err := hex.DecodeString(strings.TrimPrefix(value, prefix))
+	if err != nil || len(expected) != sha256.Size {
+		return nil, errors.New("network trust: invalid TLS fingerprint")
+	}
+	return pinnedTLS(expected), nil
+}
+
 func generateIdentity(certPath, keyPath string) (tls.Certificate, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver/sessionquic"
+	"github.com/gravestench/dark-magic/internal/app/realm"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
@@ -23,6 +24,14 @@ const (
 // for its recipe and redistributable packages. It deliberately performs no
 // profile admission; character/session timers begin only after recomposition.
 func PrepareSelfHostedExtensions(ctx context.Context, assignment SelfHostedAssignment, tlsConfig *tls.Config, store *modcache.Store, localBase simulation.RuntimePackage) (simulation.RuntimeRecipe, error) {
+	return PrepareExtensions(ctx, realm.JoinAssignment{GameID: assignment.GameID, Endpoint: assignment.Endpoint,
+		Runtime: assignment.Runtime}, tlsConfig, store, localBase)
+}
+
+// PrepareExtensions authenticates a Realm-issued worker assignment before
+// acquiring its exact redistributable extension recipe. The one-use gameplay
+// ticket is deliberately not consumed during package preparation.
+func PrepareExtensions(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tls.Config, store *modcache.Store, localBase simulation.RuntimePackage) (simulation.RuntimeRecipe, error) {
 	transport, _, err := dialVerified(ctx, assignment.GameID, assignment.Endpoint, assignment.Runtime, tlsConfig)
 	if err != nil {
 		return simulation.RuntimeRecipe{}, err
@@ -31,10 +40,19 @@ func PrepareSelfHostedExtensions(ctx context.Context, assignment SelfHostedAssig
 	return AcquireExtensions(ctx, transport, store, localBase)
 }
 
+// ExtensionTransport is the authenticated, bounded package-delivery surface
+// needed during runtime recomposition. Keeping this boundary smaller than the
+// complete gameplay client also lets acceptance tests terminate a transfer at
+// an exact byte offset and prove that a later connection can retry safely.
+type ExtensionTransport interface {
+	Recipe(context.Context) (simulation.RuntimeRecipe, error)
+	PackageChunk(context.Context, sessionquic.PackageRequest) (sessionquic.PackageChunk, error)
+}
+
 // AcquireExtensions asks the authenticated game transport for its exact recipe
 // and installs missing redistributable extension blobs through quarantine.
 // Callers must recompose client runtimes from the returned recipe before join.
-func AcquireExtensions(ctx context.Context, transport *sessionquic.Client, store *modcache.Store, localBase simulation.RuntimePackage) (simulation.RuntimeRecipe, error) {
+func AcquireExtensions(ctx context.Context, transport ExtensionTransport, store *modcache.Store, localBase simulation.RuntimePackage) (simulation.RuntimeRecipe, error) {
 	if ctx == nil || transport == nil {
 		return simulation.RuntimeRecipe{}, errors.New("client session: package acquisition requires context and transport")
 	}
@@ -84,7 +102,7 @@ func AcquireExtensions(ctx context.Context, transport *sessionquic.Client, store
 	return recipe, nil
 }
 
-func downloadExtension(ctx context.Context, transport *sessionquic.Client, destination *io.PipeWriter, pkg simulation.RuntimePackage) error {
+func downloadExtension(ctx context.Context, transport ExtensionTransport, destination *io.PipeWriter, pkg simulation.RuntimePackage) error {
 	defer destination.Close()
 	retryDelay := 10 * time.Millisecond
 	for offset := int64(0); offset < pkg.Size; {

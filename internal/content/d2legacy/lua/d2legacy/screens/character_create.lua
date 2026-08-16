@@ -19,7 +19,6 @@
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")
 local scenes = require("engine.scene/v1")
-local saves = require("d2legacy.save/v1")
 local data = require("engine.data/v1")
 local audio = require("engine.audio/v1")
 local locale = require("engine.locale/v1")
@@ -32,7 +31,7 @@ local cursor = require("d2legacy.ui.cursor")
 local text = require("d2legacy.ui.text")
 local compat = require("d2legacy.ui.compat")
 local preload = require("d2legacy.ui.preload")
-local network_flow = require("d2legacy.network.flow")
+local rosters = require("d2legacy.characters.roster")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.character_create
@@ -98,548 +97,564 @@ local function merged_definition(base, override)
     return result
 end
 
-local function leave_character_creation()
-    -- Character select intentionally forwards an empty roster into character
-    -- creation. Sending Exit back through that screen creates a two-scene loop,
-    -- so an empty roster returns to the main menu instead.
-    if #saves.characters() == 0 then
-        scenes.replace(network_flow.cancel_destination("main_menu"))
-    else
-        scenes.replace("character_select")
-    end
-end
+local function for_mode(mode)
+    local roster = rosters.for_mode(mode)
 
-return {
-    create = function(self)
-        self.root = render.create("hud")
-        self.background = dc6.frontend_background(
-            self.root,
-            "hud",
-            screen.background,
-            manifest.palettes[screen.palette],
-            manifest.layouts.frontend_tiles
-        )
-
-        -- Scene-local mutable presentation/input state begins here.
-        self.controls = controls.new()
-        self.expansion = true
-        self.hardcore = false
-        self.form_controls = {}
-        self.classes = {}
-        self.transitions = {}
-        self.selection_transition = nil
-
-        if render.assets_available() then
-            -- The campfire is independent looping artwork behind/in front of the
-            -- class actors depending on z. Legacy draw mode 3 maps through compat
-            -- rather than hard-coding renderer blend equations here.
-            self.campfire = render.create("hud", self.root)
-            self.campfire:set_z(200)
-            self.campfire:set_blend(compat.draw_mode(recovered.campfire.draw_mode))
-            dc6.anchored_animation(
-                self.campfire,
-                screen.campfire.sheet,
-                manifest.palettes[screen.campfire.palette],
-                recovered.campfire.anchor.x,
-                recovered.campfire.anchor.y,
-                screen.campfire.frames_per_second,
-                "loop"
+    return {
+        create = function(self)
+            self.root = render.create("hud")
+            self.background = dc6.frontend_background(
+                self.root,
+                "hud",
+                screen.background,
+                manifest.palettes[screen.palette],
+                manifest.layouts.frontend_tiles
             )
 
-            -- These three retained text nodes are reused as hover/selection changes.
-            self.heading = render.create("hud", self.root)
-            self.class_name = render.create("hud", self.root)
-            self.class_description = render.create("hud", self.root)
-            self.heading:set_z(100)
-            self.class_name:set_z(100)
-            self.class_description:set_z(100)
-
-            position_text_from_top(
-                self.heading,
-                screen.labels.heading.style,
-                assert(locale.text(screen.labels.heading.key)),
-                recovered.heading
-            )
-        end
-
-        -- Store this helper on the scene because many class callbacks below need
-        -- to replace the same two text nodes with the hovered/selected class copy.
-        self.show_class_copy = function(definition)
-            if not self.class_name then
-                return
-            end
-
-            local class_id = string.lower(definition.class)
-            position_text_from_top(
-                self.class_name,
-                screen.labels.class.style,
-                assert(locale.text("d2legacy.character_class." .. class_id .. ".name")),
-                recovered.class_name
-            )
-            position_text_from_top(
-                self.class_description,
-                screen.labels.description.style,
-                assert(locale.text("d2legacy.character_class." .. class_id .. ".description")),
-                recovered.description
-            )
-        end
-
-        -- CLASS ACTORS -------------------------------------------------------
-        --
-        -- The original screen uses seven overlapping animated actors. One loop
-        -- constructs seven small Lua `class` objects from manifest data.
-        for _, definition in ipairs(screen.classes) do
-            local fallback = assert(screen.stage[definition.class])
-            local stage = assert(recovered.stage[definition.class])
-
-            local placement = {
-                -- Prefer cross-checked recovered anchor/z facts, retain manifest
-                -- fallback hit rectangles for headless/no-asset execution.
-                anchor = stage.anchor or fallback.anchor,
-                z = recovered.draw_order[definition.class] or fallback.z,
-                hit = fallback.hit,
-                overlay_draw_mode = stage.overlay_draw_mode,
-            }
-
-            -- This table represents ONE class actor's presentation state.
-            local class = { definition = definition, placement = placement }
+            -- Scene-local mutable presentation/input state begins here.
+            self.controls = controls.new()
+            self.expansion = true
+            self.hardcore = false
+            self.form_controls = {}
+            self.classes = {}
+            self.transitions = {}
+            self.selection_transition = nil
 
             if render.assets_available() then
-                class.node = render.create("hud", self.root)
-                class.overlay = render.create("hud", self.root)
-                class.node:set_z(placement.z)
-                class.overlay:set_z(placement.z + 1)
-
-                if placement.overlay_draw_mode then
-                    class.overlay:set_blend(compat.draw_mode(placement.overlay_draw_mode))
-                end
-
-                -- Real decoded idle bounds are better hit geometry than guessed
-                -- manifest rectangles. Convert animation-local bounds into this
-                -- actor's shared screen anchor coordinate space.
-                local x1, y1, x2, y2 = render.dc6_animation_bounds(
-                    definition.unselected,
-                    manifest.palettes[screen.class_palette],
-                    0,
-                    "offsets"
+                -- The campfire is independent looping artwork behind/in front of the
+                -- class actors depending on z. Legacy draw mode 3 maps through compat
+                -- rather than hard-coding renderer blend equations here.
+                self.campfire = render.create("hud", self.root)
+                self.campfire:set_z(200)
+                self.campfire:set_blend(compat.draw_mode(recovered.campfire.draw_mode))
+                dc6.anchored_animation(
+                    self.campfire,
+                    screen.campfire.sheet,
+                    manifest.palettes[screen.campfire.palette],
+                    recovered.campfire.anchor.x,
+                    recovered.campfire.anchor.y,
+                    screen.campfire.frames_per_second,
+                    "loop"
                 )
 
-                if x2 > x1 and y2 > y1 then
-                    placement.hit = {
-                        x = placement.anchor.x + x1,
-                        y = placement.anchor.y + y1,
-                        width = x2 - x1,
-                        height = y2 - y1,
-                    }
-                end
+                -- These three retained text nodes are reused as hover/selection changes.
+                self.heading = render.create("hud", self.root)
+                self.class_name = render.create("hud", self.root)
+                self.class_description = render.create("hud", self.root)
+                self.heading:set_z(100)
+                self.class_name:set_z(100)
+                self.class_description:set_z(100)
+                self.error_node = render.create("hud", self.root)
+                self.error_node:set_z(panel_z + 2)
+
+                position_text_from_top(
+                    self.heading,
+                    screen.labels.heading.style,
+                    assert(locale.text(screen.labels.heading.key)),
+                    recovered.heading
+                )
             end
 
-            -- Switch this actor to one logical animation state:
-            -- unselected, hover, forward, selected, or back.
-            class.show = function(state)
-                class.state = state
+            self.show_error = function(message)
+                if not self.error_node then
+                    return
+                end
+                text.set(self.error_node, "network_error", message or "", 420, "center")
+                self.error_node:set_position(400, 455)
+            end
 
-                local transitioning = state == "forward" or state == "back"
+            -- Store this helper on the scene because many class callbacks below need
+            -- to replace the same two text nodes with the hovered/selected class copy.
+            self.show_class_copy = function(definition)
+                if not self.class_name then
+                    return
+                end
 
-                -- Bracket lookup with a computed key lets one function read
-                -- `hover_frames_per_second`, `selected_frames_per_second`, etc.
-                local frames_per_second = definition[state .. "_frames_per_second"]
+                local class_id = string.lower(definition.class)
+                position_text_from_top(
+                    self.class_name,
+                    screen.labels.class.style,
+                    assert(locale.text("d2legacy.character_class." .. class_id .. ".name")),
+                    recovered.class_name
+                )
+                position_text_from_top(
+                    self.class_description,
+                    screen.labels.description.style,
+                    assert(locale.text("d2legacy.character_class." .. class_id .. ".description")),
+                    recovered.description
+                )
+            end
 
-                if not frames_per_second then
-                    if transitioning then
-                        frames_per_second = recovered.transition_frames_per_second
-                    elseif state == "selected" then
-                        frames_per_second = recovered.idle_front_frames_per_second
-                    else
-                        frames_per_second = recovered.idle_back_frames_per_second
+            -- CLASS ACTORS -------------------------------------------------------
+            --
+            -- The original screen uses seven overlapping animated actors. One loop
+            -- constructs seven small Lua `class` objects from manifest data.
+            for _, definition in ipairs(screen.classes) do
+                local fallback = assert(screen.stage[definition.class])
+                local stage = assert(recovered.stage[definition.class])
+
+                local placement = {
+                    -- Prefer cross-checked recovered anchor/z facts, retain manifest
+                    -- fallback hit rectangles for headless/no-asset execution.
+                    anchor = stage.anchor or fallback.anchor,
+                    z = recovered.draw_order[definition.class] or fallback.z,
+                    hit = fallback.hit,
+                    overlay_draw_mode = stage.overlay_draw_mode,
+                }
+
+                -- This table represents ONE class actor's presentation state.
+                local class = { definition = definition, placement = placement }
+
+                if render.assets_available() then
+                    class.node = render.create("hud", self.root)
+                    class.overlay = render.create("hud", self.root)
+                    class.node:set_z(placement.z)
+                    class.overlay:set_z(placement.z + 1)
+
+                    if placement.overlay_draw_mode then
+                        class.overlay:set_blend(compat.draw_mode(placement.overlay_draw_mode))
+                    end
+
+                    -- Real decoded idle bounds are better hit geometry than guessed
+                    -- manifest rectangles. Convert animation-local bounds into this
+                    -- actor's shared screen anchor coordinate space.
+                    local x1, y1, x2, y2 = render.dc6_animation_bounds(
+                        definition.unselected,
+                        manifest.palettes[screen.class_palette],
+                        0,
+                        "offsets"
+                    )
+
+                    if x2 > x1 and y2 > y1 then
+                        placement.hit = {
+                            x = placement.anchor.x + x1,
+                            y = placement.anchor.y + y1,
+                            width = x2 - x1,
+                            height = y2 - y1,
+                        }
                     end
                 end
 
-                local frames = definition[state .. "_frames"] or 0
-                local loop = transitioning and "once" or "loop"
+                -- Switch this actor to one logical animation state:
+                -- unselected, hover, forward, selected, or back.
+                class.show = function(state)
+                    class.state = state
 
-                if class.node then
-                    local overlay_path = definition[state .. "_overlay"]
-                    local palette = manifest.palettes[screen.class_palette]
+                    local transitioning = state == "forward" or state == "back"
 
-                    if overlay_path then
-                        -- Some class states are two independently cropped layers.
-                        -- anchored_composite puts both in one common anchor canvas.
-                        class.animation_nodes = { class.node, class.overlay }
-                        frames = dc6.anchored_composite(
-                            class.animation_nodes,
-                            { definition[state], overlay_path },
-                            palette,
-                            placement.anchor.x,
-                            placement.anchor.y,
-                            frames_per_second,
-                            loop
-                        )
-                    else
-                        class.animation_nodes = { class.node }
-                        frames = dc6.anchored_animation(
-                            class.node,
-                            definition[state],
-                            palette,
-                            placement.anchor.x,
-                            placement.anchor.y,
-                            frames_per_second,
-                            loop
-                        )
+                    -- Bracket lookup with a computed key lets one function read
+                    -- `hover_frames_per_second`, `selected_frames_per_second`, etc.
+                    local frames_per_second = definition[state .. "_frames_per_second"]
+
+                    if not frames_per_second then
+                        if transitioning then
+                            frames_per_second = recovered.transition_frames_per_second
+                        elseif state == "selected" then
+                            frames_per_second = recovered.idle_front_frames_per_second
+                        else
+                            frames_per_second = recovered.idle_back_frames_per_second
+                        end
                     end
 
-                    class.node:set_visible(true)
-                    class.overlay:set_visible(overlay_path ~= nil)
+                    local frames = definition[state .. "_frames"] or 0
+                    local loop = transitioning and "once" or "loop"
 
-                    -- Pause managed playback and reset a scene-driven shared clock
-                    -- for every layer participating in this class state.
-                    class.animation_elapsed = 0
-                    dc6.pause_animations(class.animation_nodes)
-                    dc6.synchronize_animations(class.animation_nodes, 0)
-                end
+                    if class.node then
+                        local overlay_path = definition[state .. "_overlay"]
+                        local palette = manifest.palettes[screen.class_palette]
 
-                -- Transition scheduler below wants DURATION in seconds. Frame
-                -- count / FPS gives that duration; zero FPS safely gives zero.
-                return frames_per_second > 0 and frames / frames_per_second or 0
-            end
-
-            class.finish_selection = function()
-                class.show("selected")
-                self.selection_transition = nil
-                self.show_class_copy(definition)
-                self:set_form_visible(true)
-                self:update_ok_state()
-            end
-
-            -- Every actor starts in the back/unselected idle pose.
-            class.show("unselected")
-
-            class.control = self.controls:add({
-                id = string.lower(definition.class),
-                label = definition.class,
-                x = placement.hit.x,
-                y = placement.hit.y,
-                width = placement.hit.width,
-                height = placement.hit.height,
-
-                -- Actors overlap. Lower numeric base plus authored z means the
-                -- visually frontmost actor wins pointer overlap resolution.
-                hit_priority = -1000 + placement.z,
-
-                on_state = function(_, state)
-                    -- Hover/focus updates descriptive copy even before activation.
-                    if state == "hover" or state == "focused" then
-                        self.show_class_copy(definition)
-                    elseif self.selected then
-                        self.show_class_copy(self.selected.definition)
-                    end
-
-                    -- Never interrupt one-shot forward/back transition with a hover
-                    -- idle change. Otherwise nonselected actors can freely swap
-                    -- between hover and unselected idle presentation.
-                    if self.selected ~= class and class.state ~= "back" and class.state ~= "forward" then
-                        class.show((state == "hover" or state == "focused") and "hover" or "unselected")
-                    end
-                end,
-
-                on_activate = function()
-                    -- While one class is walking forward/back, freeze selection
-                    -- input until the one-shot transition completes.
-                    if self.selection_transition then
-                        return
-                    end
-
-                    -- Clicking the ALREADY-selected hero deselects them: play
-                    -- backward transition, hide form, and eventually return idle.
-                    if self.selected == class then
-                        local deselect = definition.deselect_sound
-                        if deselect and audio.exists(deselect) then
-                            audio.play(deselect, { bus = "ui" })
+                        if overlay_path then
+                            -- Some class states are two independently cropped layers.
+                            -- anchored_composite puts both in one common anchor canvas.
+                            class.animation_nodes = { class.node, class.overlay }
+                            frames = dc6.anchored_composite(
+                                class.animation_nodes,
+                                { definition[state], overlay_path },
+                                palette,
+                                placement.anchor.x,
+                                placement.anchor.y,
+                                frames_per_second,
+                                loop
+                            )
+                        else
+                            class.animation_nodes = { class.node }
+                            frames = dc6.anchored_animation(
+                                class.node,
+                                definition[state],
+                                palette,
+                                placement.anchor.x,
+                                placement.anchor.y,
+                                frames_per_second,
+                                loop
+                            )
                         end
 
-                        self.selected = nil
-                        self:set_form_visible(false)
-                        self:update_ok_state()
+                        class.node:set_visible(true)
+                        class.overlay:set_visible(overlay_path ~= nil)
 
-                        local duration = class.show("back")
+                        -- Pause managed playback and reset a scene-driven shared clock
+                        -- for every layer participating in this class state.
+                        class.animation_elapsed = 0
+                        dc6.pause_animations(class.animation_nodes)
+                        dc6.synchronize_animations(class.animation_nodes, 0)
+                    end
+
+                    -- Transition scheduler below wants DURATION in seconds. Frame
+                    -- count / FPS gives that duration; zero FPS safely gives zero.
+                    return frames_per_second > 0 and frames / frames_per_second or 0
+                end
+
+                class.finish_selection = function()
+                    class.show("selected")
+                    self.selection_transition = nil
+                    self.show_class_copy(definition)
+                    self:set_form_visible(true)
+                    self:update_ok_state()
+                end
+
+                -- Every actor starts in the back/unselected idle pose.
+                class.show("unselected")
+
+                class.control = self.controls:add({
+                    id = string.lower(definition.class),
+                    label = definition.class,
+                    x = placement.hit.x,
+                    y = placement.hit.y,
+                    width = placement.hit.width,
+                    height = placement.hit.height,
+
+                    -- Actors overlap. Lower numeric base plus authored z means the
+                    -- visually frontmost actor wins pointer overlap resolution.
+                    hit_priority = -1000 + placement.z,
+
+                    on_state = function(_, state)
+                        -- Hover/focus updates descriptive copy even before activation.
+                        if state == "hover" or state == "focused" then
+                            self.show_class_copy(definition)
+                        elseif self.selected then
+                            self.show_class_copy(self.selected.definition)
+                        end
+
+                        -- Never interrupt one-shot forward/back transition with a hover
+                        -- idle change. Otherwise nonselected actors can freely swap
+                        -- between hover and unselected idle presentation.
+                        if self.selected ~= class and class.state ~= "back" and class.state ~= "forward" then
+                            class.show((state == "hover" or state == "focused") and "hover" or "unselected")
+                        end
+                    end,
+
+                    on_activate = function()
+                        -- While one class is walking forward/back, freeze selection
+                        -- input until the one-shot transition completes.
+                        if self.selection_transition then
+                            return
+                        end
+
+                        -- Clicking the ALREADY-selected hero deselects them: play
+                        -- backward transition, hide form, and eventually return idle.
+                        if self.selected == class then
+                            local deselect = definition.deselect_sound
+                            if deselect and audio.exists(deselect) then
+                                audio.play(deselect, { bus = "ui" })
+                            end
+
+                            self.selected = nil
+                            self:set_form_visible(false)
+                            self:update_ok_state()
+
+                            local duration = class.show("back")
+                            if duration > 0 then
+                                self.selection_transition = class
+                                self.transitions[#self.transitions + 1] = {
+                                    class = class,
+                                    remaining = duration,
+                                    complete = function()
+                                        class.show("unselected")
+                                        self.selection_transition = nil
+                                    end,
+                                }
+                            else
+                                class.show("unselected")
+                            end
+                            return
+                        end
+
+                        -- Selecting a DIFFERENT class may require the previous hero
+                        -- to walk backward while the new one walks forward.
+                        if self.selected then
+                            local previous = self.selected
+                            local deselect = previous.definition.deselect_sound
+                            if deselect and audio.exists(deselect) then
+                                audio.play(deselect, { bus = "ui" })
+                            end
+
+                            local duration = previous.show("back")
+                            if duration > 0 then
+                                self.transitions[#self.transitions + 1] = {
+                                    class = previous,
+                                    remaining = duration,
+                                }
+                            else
+                                previous.show("unselected")
+                            end
+                        end
+
+                        self.selected = class
+                        self.show_class_copy(definition)
+                        self:set_form_visible(true)
+
+                        if definition.select_sound and audio.exists(definition.select_sound) then
+                            audio.play(definition.select_sound, { bus = "ui" })
+                        end
+
+                        local duration = class.show("forward")
                         if duration > 0 then
                             self.selection_transition = class
                             self.transitions[#self.transitions + 1] = {
                                 class = class,
                                 remaining = duration,
-                                complete = function()
-                                    class.show("unselected")
-                                    self.selection_transition = nil
-                                end,
+                                complete = class.finish_selection,
                             }
                         else
-                            class.show("unselected")
+                            class.finish_selection()
                         end
-                        return
-                    end
+                    end,
+                })
 
-                    -- Selecting a DIFFERENT class may require the previous hero
-                    -- to walk backward while the new one walks forward.
-                    if self.selected then
-                        local previous = self.selected
-                        local deselect = previous.definition.deselect_sound
-                        if deselect and audio.exists(deselect) then
-                            audio.play(deselect, { bus = "ui" })
-                        end
+                self.classes[#self.classes + 1] = class
+            end
 
-                        local duration = previous.show("back")
-                        if duration > 0 then
-                            self.transitions[#self.transitions + 1] = {
-                                class = previous,
-                                remaining = duration,
-                            }
-                        else
-                            previous.show("unselected")
-                        end
-                    end
+            -- INLINE CHARACTER FORM ---------------------------------------------
+            -- Original panel shows name + Expansion + Hardcore after class selected.
+            local name_definition = merged_definition({
+                palette = screen.palette,
+                width = 272,
+                height = 32,
+            }, recovered.form.name)
 
-                    self.selected = class
-                    self.show_class_copy(definition)
-                    self:set_form_visible(true)
+            self.name_field =
+                ui_text_field.create(self.root, self.controls, "character_name", name_definition, "CHARACTER NAME", {
+                    layer = "hud",
+                    text_style = "formal_large",
+                    label_style = screen.option_style,
+                    -- OK button eligibility changes whenever name changes.
+                    on_change = function()
+                        self:update_ok_state()
+                    end,
+                })
+            set_form_control_z(self.name_field, panel_z)
+            self.form_controls[#self.form_controls + 1] = self.name_field
 
-                    if definition.select_sound and audio.exists(definition.select_sound) then
-                        audio.play(definition.select_sound, { bus = "ui" })
-                    end
-
-                    local duration = class.show("forward")
-                    if duration > 0 then
-                        self.selection_transition = class
-                        self.transitions[#self.transitions + 1] = {
-                            class = class,
-                            remaining = duration,
-                            complete = class.finish_selection,
-                        }
-                    else
-                        class.finish_selection()
-                    end
-                end,
+            local expansion_definition = merged_definition(screen.options.expansion, {
+                x = recovered.form.expansion.x,
+                y = recovered.form.expansion.y,
+                width = compat.widgets.checkbox.width,
+                height = compat.widgets.checkbox.height,
+                checked = true,
             })
 
-            self.classes[#self.classes + 1] = class
-        end
+            self.expansion_control = ui_checkbox.create(
+                self.root,
+                self.controls,
+                "expansion",
+                expansion_definition,
+                assert(locale.text(screen.options.expansion.label)),
+                {
+                    layer = "hud",
+                    on_change = function(_, checked)
+                        self.expansion = checked
+                    end,
+                }
+            )
+            -- Original pointer checkbox should not become extra arrow-key focus stop.
+            self.expansion_control.focusable = false
+            set_form_control_z(self.expansion_control, panel_z)
+            self.form_controls[#self.form_controls + 1] = self.expansion_control
 
-        -- INLINE CHARACTER FORM ---------------------------------------------
-        -- Original panel shows name + Expansion + Hardcore after class selected.
-        local name_definition = merged_definition({
-            palette = screen.palette,
-            width = 272,
-            height = 32,
-        }, recovered.form.name)
-
-        self.name_field =
-            ui_text_field.create(self.root, self.controls, "character_name", name_definition, "CHARACTER NAME", {
-                layer = "hud",
-                text_style = "formal_large",
-                label_style = screen.option_style,
-                -- OK button eligibility changes whenever name changes.
-                on_change = function()
-                    self:update_ok_state()
-                end,
-            })
-        set_form_control_z(self.name_field, panel_z)
-        self.form_controls[#self.form_controls + 1] = self.name_field
-
-        local expansion_definition = merged_definition(screen.options.expansion, {
-            x = recovered.form.expansion.x,
-            y = recovered.form.expansion.y,
-            width = compat.widgets.checkbox.width,
-            height = compat.widgets.checkbox.height,
-            checked = true,
-        })
-
-        self.expansion_control = ui_checkbox.create(
-            self.root,
-            self.controls,
-            "expansion",
-            expansion_definition,
-            assert(locale.text(screen.options.expansion.label)),
-            {
-                layer = "hud",
-                on_change = function(_, checked)
-                    self.expansion = checked
-                end,
-            }
-        )
-        -- Original pointer checkbox should not become extra arrow-key focus stop.
-        self.expansion_control.focusable = false
-        set_form_control_z(self.expansion_control, panel_z)
-        self.form_controls[#self.form_controls + 1] = self.expansion_control
-
-        local hardcore_definition = merged_definition(screen.options.hardcore, {
-            x = recovered.form.hardcore.x,
-            y = recovered.form.hardcore.y,
-            width = compat.widgets.checkbox.width,
-            height = compat.widgets.checkbox.height,
-            checked = false,
-        })
-
-        self.hardcore_control = ui_checkbox.create(
-            self.root,
-            self.controls,
-            "hardcore",
-            hardcore_definition,
-            assert(locale.text(screen.options.hardcore.label)),
-            {
-                layer = "hud",
-                on_change = function(_, checked)
-                    self.hardcore = checked
-                end,
-            }
-        )
-        self.hardcore_control.focusable = false
-        set_form_control_z(self.hardcore_control, panel_z)
-        self.form_controls[#self.form_controls + 1] = self.hardcore_control
-
-        -- Show/hide the WHOLE inline form: manager interaction + every visual node.
-        self.set_form_visible = function(current, visible)
-            current.form_visible = visible
-            for _, control in ipairs(current.form_controls) do
-                current.controls:set_visible(control.id, visible)
-                set_form_control_visible(control, visible)
-            end
-            if visible then
-                current.controls:set_focus(current.name_field)
-            end
-        end
-
-        -- STATIC EXIT / OK ---------------------------------------------------
-        local exit_definition = compat.screen_control("character_create", "exit", assert(screen.controls.exit))
-        self.exit_button = ui_button.create(
-            self.root,
-            self.controls,
-            "exit",
-            exit_definition,
-            assert(locale.text(exit_definition.label)),
-            {
-                layer = "hud",
-                z = panel_z,
-                on_activate = leave_character_creation,
-            }
-        )
-        self.exit_button.focusable = false
-
-        -- Manifest may not yet carry every recovered OK art fact, so supply a
-        -- fallback definition and let compat.screen_control override recovered fields.
-        local ok_fallback = {
-            x = 630,
-            y = 535,
-            width = screen.controls.exit.width,
-            height = screen.controls.exit.height,
-            label = "d2legacy.dialog.ok",
-            sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6",
-            palette = screen.controls.exit.palette,
-            up_frames = { 0 },
-            down_frames = { 1 },
-        }
-        local ok_definition = compat.screen_control("character_create", "ok", ok_fallback)
-
-        self.ok_button =
-            ui_button.create(self.root, self.controls, "ok", ok_definition, assert(locale.text(ok_definition.label)), {
-                layer = "hud",
-                z = panel_z,
-                enabled = false,
-                on_activate = function()
-                    -- Defensive validation repeats the visible enabled-state rule.
-                    if not self.selected then
-                        return
-                    end
-
-                    local name = self.name_field.value or ""
-                    if #name < recovered.form.minimum_name_length then
-                        return
-                    end
-
-                    -- ACTUAL save creation is performed by d2legacy.save/v1. Lua passes
-                    -- plain requested values and gets back opaque ID or error.
-                    local id, err =
-                        saves.create_named(name, self.selected.definition.class, self.expansion, self.hardcore)
-
-                    if not id then
-                        self.error = err
-                        return
-                    end
-
-                    -- create_named atomically persists and selects the new opaque ID.
-                    if network_flow.start_selected() then
-                        scenes.replace("game_loading")
-                    end
-                end,
+            local hardcore_definition = merged_definition(screen.options.hardcore, {
+                x = recovered.form.hardcore.x,
+                y = recovered.form.hardcore.y,
+                width = compat.widgets.checkbox.width,
+                height = compat.widgets.checkbox.height,
+                checked = false,
             })
 
-        self.update_ok_state = function(current)
-            -- OK is eligible only when class is selected AND name meets minimum.
-            local valid = current.selected ~= nil
-                and #(current.name_field.value or "") >= recovered.form.minimum_name_length
-            current.controls:set_enabled("ok", valid)
-        end
+            self.hardcore_control = ui_checkbox.create(
+                self.root,
+                self.controls,
+                "hardcore",
+                hardcore_definition,
+                assert(locale.text(screen.options.hardcore.label)),
+                {
+                    layer = "hud",
+                    on_change = function(_, checked)
+                        self.hardcore = checked
+                    end,
+                }
+            )
+            self.hardcore_control.focusable = false
+            set_form_control_z(self.hardcore_control, panel_z)
+            self.form_controls[#self.form_controls + 1] = self.hardcore_control
 
-        -- Initial scene has no selected class, so form is hidden and OK disabled.
-        self:set_form_visible(false)
-        self:update_ok_state()
-        self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
-
-        -- Interaction states may have been prepared during startup; this helper
-        -- reuses that job or schedules them if necessary.
-        preload.character_create_interactions()
-    end,
-
-    update = function(self, elapsed)
-        if self.cursor then
-            self.cursor:update()
-        end
-
-        -- Advance every class's SHARED layer clock from scene elapsed time.
-        for _, class in ipairs(self.classes) do
-            if class.animation_nodes then
-                class.animation_elapsed = class.animation_elapsed + elapsed
-                dc6.synchronize_animations(class.animation_nodes, class.animation_elapsed)
-            end
-        end
-
-        -- Transition timers are removed while iterating. Walk BACKWARD so
-        -- `table.remove` cannot shift an unvisited later item into a skipped index.
-        for index = #self.transitions, 1, -1 do
-            local transition = self.transitions[index]
-            transition.remaining = transition.remaining - elapsed
-
-            if transition.remaining <= 0 then
-                table.remove(self.transitions, index)
-
-                if transition.complete then
-                    transition.complete()
-                else
-                    transition.class.show("unselected")
+            -- Show/hide the WHOLE inline form: manager interaction + every visual node.
+            self.set_form_visible = function(current, visible)
+                current.form_visible = visible
+                for _, control in ipairs(current.form_controls) do
+                    current.controls:set_visible(control.id, visible)
+                    set_form_control_visible(control, visible)
+                end
+                if visible then
+                    current.controls:set_focus(current.name_field)
                 end
             end
-        end
 
-        -- Class activation guards its own one-shot transition above. Keep the
-        -- rest of the form live while the selected hero walks forward so the
-        -- name field can accept input immediately.
-        local confirm_from_name = self.form_visible
-            and self.controls.focus == self.name_field
-            and input.pressed("confirm")
-        self.controls:update()
+            -- STATIC EXIT / OK ---------------------------------------------------
+            local exit_definition = compat.screen_control("character_create", "exit", assert(screen.controls.exit))
+            self.exit_button = ui_button.create(
+                self.root,
+                self.controls,
+                "exit",
+                exit_definition,
+                assert(locale.text(exit_definition.label)),
+                {
+                    layer = "hud",
+                    z = panel_z,
+                    on_activate = roster.leave_creation,
+                }
+            )
+            self.exit_button.focusable = false
 
-        -- Enter/Confirm from name field acts like OK when form is valid, without
-        -- requiring keyboard focus to travel to the mostly pointer-authored OK art.
-        if confirm_from_name and self.ok_button.enabled then
-            self.controls:activate(self.ok_button)
-        end
+            -- Manifest may not yet carry every recovered OK art fact, so supply a
+            -- fallback definition and let compat.screen_control override recovered fields.
+            local ok_fallback = {
+                x = 630,
+                y = 535,
+                width = screen.controls.exit.width,
+                height = screen.controls.exit.height,
+                label = "d2legacy.dialog.ok",
+                sheet = "data/global/ui/FrontEnd/MediumSelButtonBlank.dc6",
+                palette = screen.controls.exit.palette,
+                up_frames = { 0 },
+                down_frames = { 1 },
+            }
+            local ok_definition = compat.screen_control("character_create", "ok", ok_fallback)
 
-        if input.pressed("cancel") then
-            if self.form_visible and self.selected and self.controls.focus ~= self.selected.control then
-                -- First Cancel from inside form returns focus to selected hero.
-                self.controls:set_focus(self.selected.control)
-            else
-                -- Next Cancel (or Cancel with no selection) leaves scene safely.
-                leave_character_creation()
+            self.ok_button = ui_button.create(
+                self.root,
+                self.controls,
+                "ok",
+                ok_definition,
+                assert(locale.text(ok_definition.label)),
+                {
+                    layer = "hud",
+                    z = panel_z,
+                    enabled = false,
+                    on_activate = function()
+                        -- Defensive validation repeats the visible enabled-state rule.
+                        if not self.selected then
+                            return
+                        end
+
+                        local name = self.name_field.value or ""
+                        if #name < recovered.form.minimum_name_length then
+                            return
+                        end
+
+                        -- The shared presentation submits choices to the active
+                        -- authority. Local play persists immediately; Realm play
+                        -- completes asynchronously and joins the public lobby.
+                        local accepted, err =
+                            roster.create(self, name, self.selected.definition.class, self.expansion, self.hardcore)
+
+                        if not accepted then
+                            self.error = err
+                            return
+                        end
+                        self.error = nil
+                        self.roster_error = nil
+                    end,
+                }
+            )
+
+            self.update_ok_state = function(current)
+                -- OK is eligible only when class is selected AND name meets minimum.
+                local valid = current.selected ~= nil
+                    and #(current.name_field.value or "") >= recovered.form.minimum_name_length
+                current.controls:set_enabled("ok", valid)
             end
-        end
-    end,
-}
+
+            -- Initial scene has no selected class, so form is hidden and OK disabled.
+            self:set_form_visible(false)
+            self:update_ok_state()
+            self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
+
+            -- Interaction states may have been prepared during startup; this helper
+            -- reuses that job or schedules them if necessary.
+            preload.character_create_interactions()
+        end,
+
+        update = function(self, elapsed)
+            roster.update(self)
+            local current_error = self.roster_error or self.error
+            if current_error ~= self.displayed_roster_error then
+                self.displayed_roster_error = current_error
+                self.show_error(current_error)
+            end
+
+            if self.cursor then
+                self.cursor:update()
+            end
+
+            -- Advance every class's SHARED layer clock from scene elapsed time.
+            for _, class in ipairs(self.classes) do
+                if class.animation_nodes then
+                    class.animation_elapsed = class.animation_elapsed + elapsed
+                    dc6.synchronize_animations(class.animation_nodes, class.animation_elapsed)
+                end
+            end
+
+            -- Transition timers are removed while iterating. Walk BACKWARD so
+            -- `table.remove` cannot shift an unvisited later item into a skipped index.
+            for index = #self.transitions, 1, -1 do
+                local transition = self.transitions[index]
+                transition.remaining = transition.remaining - elapsed
+
+                if transition.remaining <= 0 then
+                    table.remove(self.transitions, index)
+
+                    if transition.complete then
+                        transition.complete()
+                    else
+                        transition.class.show("unselected")
+                    end
+                end
+            end
+
+            -- Class activation guards its own one-shot transition above. Keep the
+            -- rest of the form live while the selected hero walks forward so the
+            -- name field can accept input immediately.
+            local confirm_from_name = self.form_visible
+                and self.controls.focus == self.name_field
+                and input.pressed("confirm")
+            self.controls:update()
+
+            -- Enter/Confirm from name field acts like OK when form is valid, without
+            -- requiring keyboard focus to travel to the mostly pointer-authored OK art.
+            if confirm_from_name and self.ok_button.enabled then
+                self.controls:activate(self.ok_button)
+            end
+
+            if input.pressed("cancel") then
+                if self.form_visible and self.selected and self.controls.focus ~= self.selected.control then
+                    -- First Cancel from inside form returns focus to selected hero.
+                    self.controls:set_focus(self.selected.control)
+                else
+                    -- Next Cancel (or Cancel with no selection) leaves scene safely.
+                    roster.leave_creation()
+                end
+            end
+        end,
+    }
+end
+
+return { for_mode = for_mode }

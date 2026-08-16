@@ -1,0 +1,162 @@
+:root {
+  color-scheme: dark;
+  background: #050505;
+  font-family: Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #050505 url("/account/assets/background.png?revision=3") center / cover no-repeat fixed;
+  color: #b9aa8b;
+}
+
+.dialog {
+  width: min(510px, 96vw);
+  height: 336px;
+  padding: 32px 76px 24px;
+  background: rgba(5, 5, 5, 0.92) url("/account/assets/dialog.png?revision=3") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 12px 22px #000);
+  text-align: center;
+}
+
+.action-dialog {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  color: #d6b56d;
+  font-size: 25px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+p {
+  margin: 4px 0 8px;
+  color: #aaa18f;
+  font-size: 15px;
+}
+
+label {
+  display: block;
+  margin: 8px 0 3px;
+  color: #c8aa6e;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.bitmap-field {
+  position: relative;
+  width: 100%;
+  height: 39px;
+}
+
+.bitmap-field input {
+  width: 100%;
+  height: 100%;
+  padding: 8px 14px;
+  border: 0;
+  outline: 0;
+  background: #050505 url("/account/assets/textbox.png?revision=3") center / 100% 100% no-repeat;
+  color: #d8b976;
+  caret-color: #e8c87d;
+  font: 18px Georgia, serif;
+}
+
+.bitmap-field input:focus {
+  filter: brightness(1.18);
+}
+
+.bitmap-field canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.font-ready .bitmap-field input {
+  color: transparent;
+  caret-color: transparent;
+}
+
+button {
+  position: relative;
+  width: 272px;
+  height: 35px;
+  margin-top: 4px;
+  border: 0;
+  outline: 0;
+  background: transparent url("/account/assets/button.png?revision=3") center / 100% 100% no-repeat;
+  color: #777;
+  cursor: pointer;
+  font: 17px Georgia, serif;
+  text-transform: uppercase;
+}
+
+button:hover,
+button:focus-visible {
+  color: #819bd2;
+}
+
+button:active {
+  background-image: url("/account/assets/button-pressed.png?revision=3");
+  transform: translateY(1px);
+}
+
+.message-slot {
+  min-height: 20px;
+  margin-top: 5px;
+}
+
+.error {
+  margin: 0;
+  color: #d63333;
+}
+
+.font-ready [data-d2-text] {
+  color: transparent;
+  font-size: 0;
+}
+
+.d2-text-canvas {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+label .d2-text-canvas {
+  margin: 0;
+}
+
+button .d2-text-canvas {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+@media (max-width: 560px) {
+  body {
+    padding: 8px;
+  }
+
+  .dialog {
+    padding: 32px 12vw 24px;
+  }
+}

@@ -55,6 +55,15 @@ local function marker_at(value, cursor)
     return value .. "_"
 end
 
+local function character_count(value)
+    local count = 0
+    for index = 1, #value do
+        local byte = value:byte(index)
+        if byte < 128 or byte >= 192 then count = count + 1 end
+    end
+    return count
+end
+
 function M.create(root, manager, id, definition, label, options)
     definition = definition or {}
     options = options or {}
@@ -76,24 +85,31 @@ function M.create(root, manager, id, definition, label, options)
     local height = definition.height
 
     if render.assets_available() then
-        background = render.create(options.layer or "hud", root)
-        local decoded_width, decoded_height = background:set_dc6(sheet, palette, 0, definition.frame or 0)
+        if definition.background ~= false then
+            background = render.create(options.layer or "hud", root)
+            local decoded_width, decoded_height
+            if definition.combined then
+                decoded_width, decoded_height = background:set_dc6_combined(sheet, palette, 0, definition.page or 0)
+            else
+                decoded_width, decoded_height = background:set_dc6(sheet, palette, 0, definition.frame or 0)
+            end
 
-        -- Character-name entry is a specifically authored frontend control. When
-        -- real assets exist, their decoded dimensions are authoritative.
-        if definition.kind == "name" then
-            width, height = decoded_width, decoded_height
-        else
-            width = width or decoded_width
-            height = height or decoded_height
+            -- Character-name entry is a specifically authored frontend control. When
+            -- real assets exist, their decoded dimensions are authoritative.
+            if definition.kind == "name" or definition.combined then
+                width, height = decoded_width, decoded_height
+            else
+                width = width or decoded_width
+                height = height or decoded_height
+            end
+
+            -- The source x/y is top-left. The historical background_y value is a
+            -- small authored vertical correction before converting to center space.
+            background:set_position(
+                x + decoded_width / 2,
+                y + defaults.background_y + decoded_height / 2
+            )
         end
-
-        -- The source x/y is top-left. The historical background_y value is a
-        -- small authored vertical correction before converting to center space.
-        background:set_position(
-            x + decoded_width / 2,
-            y + defaults.background_y + decoded_height / 2
-        )
 
         -- Text gets its own node so changing characters does not rebuild the box art.
         value_node = render.create(options.layer or "hud", root)
@@ -123,10 +139,18 @@ function M.create(root, manager, id, definition, label, options)
         if not value_node then return end
 
         local shown = current.value
+        if definition.mask then
+            -- Keep the actual value inside the focused control while rendering
+            -- one marker per UTF-8 character. Passwords never enter retained
+            -- text nodes, screenshots, or renderer diagnostics.
+            shown = string.rep("*", character_count(current.value))
+        end
 
-        -- Focused field shows the underscore cursor at the manager's character position.
-        if current.state == "focused" then
-            shown = marker_at(current.value, current.cursor or 0)
+        -- Focused fields blink an underscore at the manager's character
+        -- position. Cursor bookkeeping remains in controls.lua; this widget
+        -- owns only its presentation clock.
+        if current.manager.focus == current and current.caret_visible ~= false then
+            shown = marker_at(shown, current.cursor or 0)
         end
 
         -- Leave room for the authored inset and a small right margin.
@@ -141,7 +165,7 @@ function M.create(root, manager, id, definition, label, options)
 
         value_node:set_position(
             x + defaults.text_x + value_width / 2,
-            y + defaults.text_y + text_height / 2
+            y + defaults.background_y + height / 2
         )
     end
 
@@ -172,11 +196,44 @@ function M.create(root, manager, id, definition, label, options)
 
         -- Focus changes matter visually because focused text displays the cursor.
         on_state = function(current)
+            current.caret_elapsed = 0
+            current.caret_visible = true
             draw_value(current)
+        end,
+
+        on_tick = function(current, elapsed)
+            if current.manager.focus ~= current then return end
+            current.caret_elapsed = (current.caret_elapsed or 0) + elapsed
+            local visible = (current.caret_elapsed % 1.0) < 0.55
+            if visible ~= current.caret_visible then
+                current.caret_visible = visible
+                draw_value(current)
+            end
         end,
     })
 
+    if value_node then
+        value_node:set_clip(
+            x + defaults.text_x,
+            y + defaults.background_y,
+            math.max(1, width - defaults.text_x - 4),
+            height
+        )
+    end
+
     draw_value(control)
+
+    -- Programmatic population (for example selecting a named Realm game) must
+    -- update the retained value and its presentation together. Direct field
+    -- mutation is intentionally unnecessary for callers that need a redraw.
+    function control:set_value(value)
+        value = tostring(value or "")
+        if self.filter then value = self.filter(value) end
+        if self.max_length then value = value:sub(1, self.max_length) end
+        self.value = value
+        self.cursor = character_count(value)
+        draw_value(self)
+    end
 
     -- Expose child handles so a composite form can hide/reorder the complete field.
     control.background_node = background

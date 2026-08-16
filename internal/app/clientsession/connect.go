@@ -276,7 +276,8 @@ func joinVerified(ctx context.Context, transport *sessionquic.Client, gameID str
 		_ = transport.Close()
 		return nil, err
 	}
-	if characterID != "" && (joined.Admission.CharacterID != characterID || view.HUD.Player.CharacterID != characterID) {
+	if strings.TrimSpace(joined.Admission.CharacterID) == "" || view.HUD.Player.CharacterID != joined.Admission.CharacterID ||
+		characterID != "" && joined.Admission.CharacterID != characterID {
 		_ = transport.Close()
 		return nil, ErrAssignment
 	}
@@ -470,6 +471,84 @@ func (session *Session) Reconnect(ctx context.Context) error {
 	session.publishPresentationLocked()
 	if oldTransport != transport {
 		_ = oldTransport.Close()
+	}
+	return nil
+}
+
+// Reassign consumes a fresh Realm ticket for a replacement authority while
+// retaining the client-side session object used by input and presentation
+// loops. The game, runtime, character, and authenticated player identities may
+// not change. Unacknowledged exact inputs are resubmitted after the atomic
+// transport swap; the recovered authority suppresses inputs it already owns.
+func (session *Session) Reassign(ctx context.Context, assignment realm.JoinAssignment, tlsConfig *tls.Config) error {
+	if session == nil || ctx == nil || tlsConfig == nil || strings.TrimSpace(assignment.Ticket) == "" {
+		return ErrAssignment
+	}
+	session.reconnectMu.Lock()
+	session.mu.Lock()
+	if session.closed || assignment.GameID != session.gameID {
+		session.mu.Unlock()
+		session.reconnectMu.Unlock()
+		return ErrAssignment
+	}
+	expectedHash := session.Admission.Admission.IdentityHash
+	expectedCharacter := session.Admission.Admission.CharacterID
+	expectedOwner := session.reliableHUD.Player
+	expectedIdentity := session.identity
+	session.mu.Unlock()
+	digest, err := assignment.Runtime.Digest()
+	if err != nil || digest != expectedHash {
+		session.reconnectMu.Unlock()
+		return ErrAssignment
+	}
+	replacement, err := Connect(ctx, assignment, tlsConfig)
+	if err != nil {
+		session.reconnectMu.Unlock()
+		return err
+	}
+	replacement.mu.Lock()
+	viewOwner := replacement.reliableHUD.Player
+	if replacement.Admission.Admission.IdentityHash != expectedHash ||
+		replacement.Admission.Admission.CharacterID != expectedCharacter ||
+		validateOwnerIdentity(expectedOwner, viewOwner) != nil {
+		replacement.mu.Unlock()
+		session.reconnectMu.Unlock()
+		_ = replacement.Close(context.Background())
+		return ErrAssignment
+	}
+	newTransport := replacement.transport
+	replacement.transport = nil
+	replacement.closed = true
+	replacement.mu.Unlock()
+
+	session.mu.Lock()
+	if session.closed || session.gameID != assignment.GameID {
+		session.mu.Unlock()
+		session.reconnectMu.Unlock()
+		_ = newTransport.Close()
+		return ErrStaleCorrection
+	}
+	oldTransport := session.transport
+	session.transport, session.credential = newTransport, replacement.credential
+	session.identity, session.endpoint, session.tlsConfig = expectedIdentity, assignment.Endpoint, tlsConfig.Clone()
+	session.Admission, session.HUD, session.World, session.Private = replacement.Admission, replacement.HUD, replacement.World, replacement.Private
+	session.reliableHUD, session.reliableWorld = replacement.reliableHUD, replacement.reliableWorld
+	session.clock, session.reconnectNonce = replacement.clock, ""
+	session.viewRevision++
+	session.discardAcknowledgedLocked(replacement.Admission.Snapshot.AcknowledgedInput)
+	pending := make([]gameserver.CommandIntent, 0, len(session.pending))
+	for _, intent := range session.pending {
+		pending = append(pending, intent)
+	}
+	sort.Slice(pending, func(i, j int) bool { return pending[i].Sequence < pending[j].Sequence })
+	session.publishPresentationLocked()
+	session.mu.Unlock()
+	session.reconnectMu.Unlock()
+	_ = oldTransport.Close()
+	for _, intent := range pending {
+		if err := session.Submit(ctx, intent); err != nil {
+			return err
+		}
 	}
 	return nil
 }

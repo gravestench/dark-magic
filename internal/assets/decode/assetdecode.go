@@ -230,3 +230,59 @@ func FrameImage(asset *dc6.DC6, frame *dc6.Frame) (*image.RGBA, error) {
 	}
 	return result, nil
 }
+
+// CombinedDC6Pages reconstructs tiled logical images using Diablo II's 256px
+// DC6 page convention. Interface backgrounds, dialogs, wide fields, and wide
+// buttons are authored as grids rather than as one independently usable frame.
+func CombinedDC6Pages(asset *dc6.DC6, direction int) ([]image.Image, error) {
+	if asset == nil || direction < 0 || direction >= len(asset.Directions) {
+		return nil, fmt.Errorf("DC6 combined direction %d is out of range", direction)
+	}
+	frames := asset.Directions[direction].Frames
+	if len(frames) == 0 {
+		return nil, fmt.Errorf("DC6 combined direction has no frames")
+	}
+	const pageSize = 256
+	columns, width := 0, 0
+	for _, frame := range frames {
+		columns++
+		width += int(frame.Width)
+		if frame.Width < pageSize {
+			break
+		}
+	}
+	rows, height := 0, 0
+	for index := 0; index < len(frames); index += columns {
+		rows++
+		height += int(frames[index].Height)
+		if frames[index].Height < pageSize {
+			break
+		}
+	}
+	framesPerPage := rows * columns
+	if framesPerPage <= 0 || len(frames)%framesPerPage != 0 {
+		return nil, fmt.Errorf("DC6 combined grid %dx%d does not divide %d frames", columns, rows, len(frames))
+	}
+	pages := make([]image.Image, 0, len(frames)/framesPerPage)
+	frameIndex := 0
+	for page := 0; page < len(frames)/framesPerPage; page++ {
+		canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+		y := 0
+		for row := 0; row < rows; row++ {
+			x := 0
+			for column := 0; column < columns; column++ {
+				frame := frames[frameIndex]
+				frameIndex++
+				decoded, err := FrameImage(asset, frame)
+				if err != nil {
+					return nil, err
+				}
+				draw.Draw(canvas, decoded.Bounds().Add(image.Pt(x, y)), decoded, decoded.Bounds().Min, draw.Over)
+				x += int(frame.Width)
+			}
+			y += pageSize
+		}
+		pages = append(pages, canvas)
+	}
+	return pages, nil
+}

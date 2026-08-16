@@ -27,13 +27,13 @@ func Identity(source fs.FS, configuration ...map[string]any) (simulation.Runtime
 		ID: builtin.Manifest.ID, Version: builtin.Manifest.Version, Digest: builtin.Descriptor.Digest,
 		Size: builtin.Descriptor.Size, Redistributable: builtin.Descriptor.Redistributable,
 	}}
-	return IdentityForPackages(source, packages, configuration...)
+	return IdentityForPackages(source, packages, simulation.EmptyAssetSetID, configuration...)
 }
 
 // IdentityForPackages builds the one canonical recipe used by every
 // production host and client. It also proves that the supplied package set
 // names the exact built-in d2legacy bytes used to construct the runtime.
-func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
+func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, assetSetID string, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
 	builtin, err := modcache.DescribeBuiltin(source)
 	if err != nil {
 		return simulation.RuntimeIdentity{}, err
@@ -64,15 +64,27 @@ func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, co
 	return simulation.RuntimeIdentity{
 		Recipe: simulation.RuntimeRecipe{
 			Schema: simulation.RuntimeRecipeSchema, EngineAPI: modcache.EngineAPI,
-			NetworkProtocol: simulation.RuntimeNetworkProtocol, Packages: packages,
+			NetworkProtocol: simulation.RuntimeNetworkProtocol, AssetSetID: assetSetID, Packages: packages,
 			AuthoritativeHash: authoritativeDigest, ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
-			CapabilityVersions: map[string]string{
-				"engine.authority_command": "v1", "engine.authority_random": "v1",
-				"engine.authority_state": "v1", "engine.deterministic": "v1", "engine.ecs": "v1",
-				"engine.records": "v1", "engine.worldgen": "v1",
-			},
+			CapabilityVersions: authoritativeCapabilityVersions(),
 		},
 	}, nil
+}
+
+func authoritativeCapabilityVersions() map[string]string {
+	return map[string]string{
+		"d2legacy.map_catalog":     "v1",
+		"d2legacy.movement_rules":  "v1",
+		"d2legacy.quest_catalog":   "v1",
+		"engine.authority_command": "v1",
+		"engine.authority_random":  "v1",
+		"engine.authority_state":   "v1",
+		"engine.deterministic":     "v1",
+		"engine.ecs":               "v1",
+		"engine.initial_data":      "v1",
+		"engine.records":           "v1",
+		"engine.worldgen":          "v1",
+	}
 }
 
 func hashSource(source fs.FS, root string, include func(string) bool) (string, error) {

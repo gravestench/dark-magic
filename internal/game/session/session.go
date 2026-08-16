@@ -65,6 +65,7 @@ type Session struct {
 	closed              bool
 	history             []rollbackFrame
 	processed           map[string]sequenceProgress
+	recoveryAccepted    map[string]simulation.Command
 }
 
 type sequenceProgress struct {
@@ -184,6 +185,7 @@ func New(engine *gameecs.Engine, config Config) (*Session, error) {
 		engine: engine, admitter: simulation.NewAdmitter(config.MaxCommandLead), config: config,
 		handlers: make(map[string]CommandHandler), pending: make(map[uint64][]simulation.Command), initial: initial,
 		processed: make(map[string]sequenceProgress), history: []rollbackFrame{{tick: initial.Tick, ecs: initial}},
+		recoveryAccepted: make(map[string]simulation.Command),
 	}, nil
 }
 
@@ -285,6 +287,9 @@ func (session *Session) ProcessedSequence(player string) uint64 {
 func (session *Session) AcceptedNetworkCommand(player string, sequence uint64) (simulation.Command, bool) {
 	session.mu.Lock()
 	defer session.mu.Unlock()
+	if command, found := session.recoveryAccepted[recoveryCommandKey(simulation.Command{Player: player, Sequence: sequence})]; found {
+		return command, true
+	}
 	for _, commands := range session.pending {
 		for _, command := range commands {
 			if command.Player == player && command.Sequence == sequence {
@@ -391,6 +396,12 @@ func (session *Session) stepLocked() error {
 		// retry after the faulty runtime is replaced.
 		session.pending[tick] = commands
 		return rollback(err)
+	}
+	current := session.engine.Tick()
+	for key, accepted := range session.recoveryAccepted {
+		if current >= accepted.Tick && current-accepted.Tick > session.config.RollbackWindow {
+			delete(session.recoveryAccepted, key)
+		}
 	}
 	if tick%session.config.CheckpointInterval == 0 {
 		return session.checkpointLocked()

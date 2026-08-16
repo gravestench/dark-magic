@@ -243,6 +243,15 @@ function Manager:set_enabled(id, enabled)
     -- Focus/capture must never remain stuck on a control that can no longer act.
     if self.focus == control and not control.enabled then self:move_focus(1) end
     if self.pointer_capture == control and not control.enabled then self.pointer_capture = nil end
+
+    -- State-changing APIs update retained presentation immediately. Screens do
+    -- not have to wait for another input tick before authored disabled art is
+    -- selected, which also keeps captures and accessibility state coherent.
+    local next_state = control.enabled and "normal" or "disabled"
+    if control.state ~= next_state then
+        control.state = next_state
+        if control.on_state then control.on_state(control, next_state) end
+    end
 end
 
 function Manager:set_visible(id, visible)
@@ -250,6 +259,18 @@ function Manager:set_visible(id, visible)
     control.visible = visible == true
     if self.focus == control and not control.visible then self:move_focus(1) end
     if self.pointer_capture == control and not control.visible then self.pointer_capture = nil end
+    local next_state
+    if not control.visible then
+        next_state = "hidden"
+    elseif not control.enabled then
+        next_state = "disabled"
+    else
+        next_state = "normal"
+    end
+    if control.state ~= next_state then
+        control.state = next_state
+        if control.on_state then control.on_state(control, next_state) end
+    end
 end
 
 function Manager:set_focus(target)
@@ -399,7 +420,7 @@ local function edit_text(control)
     if old ~= control.value and control.on_change then control.on_change(control, control.value) end
 end
 
-function Manager:update()
+function Manager:update(elapsed)
     -- FIRST: keyboard/controller navigation and range adjustment.
     local focused_range = is_range(self.focus)
     local adjustable_range = focused_range and self.focus.max > self.focus.min
@@ -501,6 +522,7 @@ function Manager:update()
             control.state = next_state
             if control.on_state then control.on_state(control, next_state) end
         end
+        if control.on_tick then control.on_tick(control, elapsed or 0) end
     end
 end
 

@@ -23,6 +23,7 @@ type impairedPacketConn struct {
 	net.PacketConn
 	mu            sync.Mutex
 	pending       sync.WaitGroup
+	closing       bool
 	writes        int
 	dropped       int
 	delayed       int
@@ -69,6 +70,10 @@ type soakMember struct {
 
 func (connection *impairedPacketConn) WriteTo(payload []byte, address net.Addr) (int, error) {
 	connection.mu.Lock()
+	if connection.closing {
+		connection.mu.Unlock()
+		return 0, net.ErrClosed
+	}
 	connection.writes++
 	sequence := connection.writes
 	drop := connection.profile.dropEvery > 0 && sequence%connection.profile.dropEvery == 0
@@ -88,11 +93,15 @@ func (connection *impairedPacketConn) WriteTo(payload []byte, address net.Addr) 
 		connection.delayed++
 		connection.injectedDelay += delay
 	}
+	if reorder {
+		// Add while holding the same mutex used by wait. Once wait marks the
+		// connection closing, no writer can add work concurrently with Wait.
+		connection.pending.Add(1)
+	}
 	connection.mu.Unlock()
 
 	if reorder {
 		copy := append([]byte(nil), payload...)
-		connection.pending.Add(1)
 		go func() {
 			defer connection.pending.Done()
 			time.Sleep(delay)
@@ -118,7 +127,12 @@ func (connection *impairedPacketConn) stats() impairmentStats {
 	}
 }
 
-func (connection *impairedPacketConn) wait() { connection.pending.Wait() }
+func (connection *impairedPacketConn) wait() {
+	connection.mu.Lock()
+	connection.closing = true
+	connection.mu.Unlock()
+	connection.pending.Wait()
+}
 
 func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 	identity := testRuntimeIdentity()

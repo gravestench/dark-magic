@@ -207,6 +207,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 		d2save.Module(saves),
 		modruntime.SimulationModule(simulation),
 		modruntime.LoadingModule(loading),
+		modruntime.RealmModule(nil),
 		scenes.Module(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {

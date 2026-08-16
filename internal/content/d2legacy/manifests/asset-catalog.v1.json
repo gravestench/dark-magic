@@ -86,6 +86,17 @@
       ]
     },
     {
+      "id": "button-narrow",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/NarrowButtonBlank.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "compact gateway button states",
+      "references": [
+        "Owned archive",
+        "User-supplied original client screenshot"
+      ]
+    },
+    {
       "id": "button-3wide",
       "screen": "front-end-common",
       "path": "data/global/ui/FrontEnd/3WideButtonBlank.dc6",
@@ -107,6 +118,17 @@
       ]
     },
     {
+      "id": "button-cancel",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/CancelButtonBlank.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "compact cancel button states",
+      "references": [
+        "Owned archive",
+        "User-supplied original client screenshot"
+      ]
+    },
+    {
       "id": "popup-ok-cancel",
       "screen": "front-end-common",
       "path": "data/global/ui/FrontEnd/PopUpOKCancel.dc6",
@@ -114,6 +136,96 @@
       "meaning": "confirmation popup",
       "references": [
         "OpenDiablo2"
+      ]
+    },
+    {
+      "id": "popup-340x224",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/PopUp_340x224.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "compact bordered Realm dialog",
+      "references": [
+        "Owned archive",
+        "User-supplied original client screenshot"
+      ]
+    },
+    {
+      "id": "realm-lobby-background",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/waitingroombkgd.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "Realm chat, live roster, and game-browser frame",
+      "references": [
+        "Owned archive",
+        "User-supplied original client screenshot",
+        "Riiablo"
+      ]
+    },
+    {
+      "id": "realm-lobby-join-panel",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/joingamebckg.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "named-game browser, manual join fields, and selected-game detail panel",
+      "references": ["Owned archive", "User-supplied original client screenshot", "Riiablo"]
+    },
+    {
+      "id": "realm-lobby-create-panel",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/creategamebckg.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "named-game creation panel",
+      "references": ["Owned archive", "Riiablo"]
+    },
+    {
+      "id": "realm-lobby-top-button",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/chatrighttopbuttons.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "Create and Join lobby button states",
+      "references": ["Owned archive", "User-supplied original client screenshot", "Riiablo"]
+    },
+    {
+      "id": "realm-lobby-bottom-button",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/chatrightbuttons.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "Channel, Ladder, and Quit lobby button states",
+      "references": ["Owned archive", "User-supplied original client screenshot"]
+    },
+    {
+      "id": "realm-lobby-chat-button",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/chatleftbuttons.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "Realm chat action button states",
+      "references": ["Owned archive", "User-supplied original client screenshot", "Riiablo"]
+    },
+    {
+      "id": "realm-lobby-panel-cancel-button",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/cancelbuttonblank.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "cancel button inside the active create or join game pane",
+      "references": ["Owned archive", "User-supplied original client screenshot", "Riiablo"]
+    },
+    {
+      "id": "realm-lobby-panel-game-button",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/gamebuttonblank.dc6",
+      "palette": "data/global/Palette/ACT1/pal.dat",
+      "meaning": "create or join confirmation inside the active game pane",
+      "references": ["Owned archive", "User-supplied original client screenshot", "Riiablo"]
+    },
+    {
+      "id": "text-box-wide",
+      "screen": "front-end-common",
+      "path": "data/global/ui/FrontEnd/EditTextBoxWide.dc6",
+      "palette": "data/global/Palette/units/pal.dat",
+      "meaning": "wide Realm account text-entry border",
+      "references": [
+        "Owned archive",
+        "User-supplied original client screenshot"
       ]
     },
     {
@@ -982,6 +1094,17 @@
       "meaning": "selection confirmation sound",
       "references": [
         "Community research"
+      ]
+    },
+    {
+      "id": "realm-create-number-arrows",
+      "screen": "realm-lobby",
+      "path": "data/global/ui/BIGMENU/numberarrows.dc6",
+      "palette": "data/global/Palette/sky/pal.dat",
+      "meaning": "Create Game maximum-player and character-difference stepper arrows",
+      "references": [
+        "OpenDiablo2",
+        "Owned-game UI verification"
       ]
     },
     {

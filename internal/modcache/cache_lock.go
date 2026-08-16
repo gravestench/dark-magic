@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -15,20 +14,23 @@ const (
 )
 
 // withMutationLock serializes the short read-modify-write sections shared by
-// multiple Dark Magic processes. O_EXCL is portable; stale ownership is
+// multiple Dark Magic processes. Atomically creating a directory is portable,
+// avoids Windows lock-file open/delete races, and leaves stale ownership
 // recoverable after a crashed process without relying on platform-only flock.
 func (store *Store) withMutationLock(operation func() error) error {
+	// Avoid making the filesystem arbitrate goroutines sharing one Store. The
+	// directory token remains necessary for independent Store instances and
+	// processes, but Windows has a brief remove/create interval in which it may
+	// report ACCESS_DENIED instead of either EXISTS or success.
+	store.mutation.Lock()
+	defer store.mutation.Unlock()
+
 	deadline := time.Now().Add(cacheLockTimeout)
 	lockPath := filepath.Join(store.root, ".mutation.lock")
+	permissionRaces := 0
 	for {
-		file, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		err := os.Mkdir(lockPath, 0o700)
 		if err == nil {
-			_, writeErr := file.WriteString(strconv.Itoa(os.Getpid()))
-			closeErr := file.Close()
-			if writeErr != nil || closeErr != nil {
-				_ = os.Remove(lockPath)
-				return errors.Join(writeErr, closeErr)
-			}
 			operationErr := operation()
 			removeErr := os.Remove(lockPath)
 			return errors.Join(operationErr, removeErr)
@@ -38,8 +40,18 @@ func (store *Store) withMutationLock(operation func() error) error {
 			return fmt.Errorf("modcache: acquire mutation lock: %w", inspectErr)
 		}
 		if !contended {
+			// If another Windows owner removed the directory between our failed
+			// Mkdir and Stat, the path is already gone but Mkdir's error remains
+			// ACCESS_DENIED. Retry that narrow race briefly. A persistent parent
+			// permission failure still returns its original error promptly.
+			if os.IsPermission(err) && permissionRaces < 10 {
+				permissionRaces++
+				time.Sleep(time.Millisecond)
+				continue
+			}
 			return fmt.Errorf("modcache: acquire mutation lock: %w", err)
 		}
+		permissionRaces = 0
 		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > cacheLockStale {
 			_ = os.Remove(lockPath)
 			continue

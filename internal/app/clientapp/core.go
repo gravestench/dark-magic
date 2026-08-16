@@ -2,14 +2,11 @@ package clientapp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
-	"sort"
-	"strings"
 
 	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/audio"
@@ -23,6 +20,7 @@ import (
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
 	d2legacymod "github.com/gravestench/dark-magic/internal/mod/d2legacy"
+	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
@@ -130,6 +128,7 @@ func (app *application) buildOfflineSession() error {
 		return err
 	}
 	app.network = newNetworkController(app)
+	app.realm = newRealmController(app)
 	if len(fixtures) > 0 && fixtureNeedsSelection(app.options.StartScene) {
 		if err := app.saves.Select(fixtures[0].ID); err != nil {
 			return wrap("select development fixture", err)
@@ -156,7 +155,7 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("resolve d2legacy package", err)
 	}
-	identity, err := d2legacymod.IdentityForPackages(d2legacySource, app.options.Packages, initialData)
+	identity, err := d2legacymod.IdentityForPackages(d2legacySource, app.options.Packages, app.options.AssetSetID, initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}
@@ -261,46 +260,13 @@ func (app *application) queueEntryPopulation() error {
 }
 
 func (app *application) populationBootstrapCommand() (simulation.Command, error) {
-	payload, err := json.Marshal(app.populationBootstrapData())
-	if err != nil {
-		return simulation.Command{}, wrap("encode entry population geometry", err)
-	}
-	return simulation.Command{
-		Tick: 1, Player: "d2legacy.population", Authority: simulation.AuthoritySystem,
-		Sequence: 1, Kind: "system.population.bootstrap", Payload: payload,
-	}, nil
+	nearby := developmentScenes[app.options.StartScene].nearbyHostiles
+	return app.preparedEntryWorld().PopulationCommand(nearby)
 }
 
 func (app *application) populationBootstrapData() map[string]any {
-	zone, worldMap := app.gameWorldZones[2], app.gameWorlds[2]
-	if zone == nil || worldMap == nil {
-		return nil
-	}
-	request := zone.Request()
-	populated := map[uint32]bool{}
-	for _, stamp := range zone.Stamps() {
-		populated[stamp.ID] = stamp.Populate
-	}
 	nearby := developmentScenes[app.options.StartScene].nearbyHostiles
-	player := app.gameWorldSpawns[2]
-	rooms := make([]any, 0, len(zone.Rooms()))
-	for _, room := range zone.Rooms() {
-		points := make([]any, 0, 8)
-		anchors := [][2]float64{}
-		if nearby > 0 {
-			anchors = [][2]float64{{player[0] + 10, player[1]}, {player[0] + 7, player[1] + 7}, {player[0], player[1] + 10}, {player[0] - 7, player[1] + 7}}
-		} else {
-			centerX, centerY := float64((room.X+room.Width/2)*5)+2, float64((room.Y+room.Height/2)*5)+2
-			anchors = [][2]float64{{centerX, centerY}, {centerX + 1, centerY}, {centerX, centerY + 1}, {centerX - 1, centerY}}
-		}
-		for _, anchor := range anchors {
-			if x, y, ok := worldMap.OpenPointNearSubtile(anchor[0], anchor[1]); ok {
-				points = append(points, map[string]any{"x": x, "y": y})
-			}
-		}
-		rooms = append(rooms, map[string]any{"id": float64(room.ID), "populate": populated[room.StampID], "points": points})
-	}
-	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms}
+	return app.preparedEntryWorld().PopulationData(nearby)
 }
 
 func (app *application) interactionBootstrapData() map[string]any {
@@ -308,40 +274,23 @@ func (app *application) interactionBootstrapData() map[string]any {
 	if app.options.StartScene == "vendor" {
 		initial = "act1-akara"
 	}
-	targets := []any{map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)}}
-	levels := make([]int, 0, len(app.gameWorlds))
-	for levelID := range app.gameWorlds {
-		levels = append(levels, levelID)
-	}
-	sort.Ints(levels)
-	for _, levelID := range levels {
-		worldMap := app.gameWorlds[levelID]
-		objects := make(map[string]gameworld.Object, len(worldMap.Objects))
-		for index, object := range worldMap.Objects {
-			objects[fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index)] = object
-		}
-		for _, selected := range worldMap.Selectables() {
-			object := objects[selected.ID]
-			name := strings.TrimSpace(object.Description)
-			if name == "" {
-				name = strings.TrimSpace(object.Class)
-			}
-			if name == "" {
-				continue
-			}
-			targets = append(targets, map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)})
-		}
-	}
-	return map[string]any{"owner": "local-player", "initial_target": initial, "targets": targets}
+	return entryworld.InteractionData(app.gameWorlds, "local-player", initial)
+}
+
+func (app *application) preparedEntryWorld() *entryworld.Prepared {
+	return &entryworld.Prepared{Worlds: app.gameWorlds, Zones: app.gameWorldZones, Spawns: app.gameWorldSpawns, Seam: app.transitionSeam}
 }
 
 func (app *application) buildLoadingCoordinator() error {
 	app.loading = loadcore.New(map[string]loadcore.Task{
 		"selected_character": func(context.Context) error {
-			if _, ok := app.saves.Selected(); !ok {
-				return errors.New("no character is selected")
+			if _, ok := app.saves.Selected(); ok {
+				return nil
 			}
-			return nil
+			if app.network != nil && app.network.hasSelectedCharacter() {
+				return nil
+			}
+			return errors.New("no character is selected")
 		},
 		"loading_assets": func(context.Context) error {
 			for _, name := range app.presentation.LoadingAssets {

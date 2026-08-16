@@ -123,9 +123,24 @@ function button.create(root, manager, id, definition, label, options)
             button_height = decoded_height > 0 and decoded_height or button_height
         end
 
+        local function tint_pieces(value)
+            for _, node in ipairs(pieces) do
+                node:set_tint(value, value, value)
+            end
+        end
+
         -- Decode normal art BEFORE registering the control so hitbox, label
         -- centering, and tooltip anchor all use real dimensions from the start.
         draw(up_frames)
+
+        -- Authored disabled frames are preferred. Some original sheets only
+        -- contain up/down states; RGB multiplication provides the same opaque
+        -- darkened affordance without fading the widget into its background.
+        local draw_frames = draw
+        draw = function(selected_frames, darken)
+            draw_frames(selected_frames)
+            tint_pieces(darken and 128 or 255)
+        end
 
         if options.show_label ~= false then
             local label_node = render.create(layer, root)
@@ -195,10 +210,10 @@ function button.create(root, manager, id, definition, label, options)
 
             -- Disabled art is optional. Without it, the normal/up image remains.
             if state == "disabled" and disabled_frames then
-                draw(disabled_frames)
+                draw(disabled_frames, false)
             else
                 -- Compact conditional: pressed -> down frames, otherwise up.
-                draw(pressed and down_frames or up_frames)
+                draw(pressed and down_frames or up_frames, state == "disabled")
             end
 
             if state == "disabled" then

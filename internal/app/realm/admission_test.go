@@ -3,6 +3,7 @@ package realm
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -27,11 +28,15 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
 	admissions, err := NewAdmissions(manager, repository, time.Minute, 10*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := admissions.RegisterGame("game", authority, GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); err != nil {
+	if err := admissions.RegisterGame("game", tickets, GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); err != nil {
 		t.Fatal(err)
 	}
 	destination, err := playeradapter.NewDestination(10, 20, 100, 100, 1, 40)
@@ -53,8 +58,21 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	if _, _, err := repository.Acquire(context.Background(), "account", "character", "other", time.Minute); !errors.Is(err, ErrCharacterLeased) {
 		t.Fatalf("lease error = %v", err)
 	}
-	if _, err := admissions.RenewMembership(context.Background(), "game", "player"); err != nil {
+	renewed, err := admissions.RenewMembership(context.Background(), "game", "player")
+	if err != nil {
 		t.Fatal(err)
+	}
+	now := renewed.ExpiresAt.Add(-admissions.leaseLifetime/2 + time.Millisecond)
+	admissions.now = func() time.Time { return now }
+	repository.now = func() time.Time { return now }
+	if count, err := admissions.RenewGameMemberships(context.Background(), "game"); err != nil || count != 1 {
+		t.Fatalf("renew game memberships = %d, %v", count, err)
+	}
+	admissions.mu.RLock()
+	periodicRenewal := admissions.memberships["game\x00player"].lease
+	admissions.mu.RUnlock()
+	if !periodicRenewal.ExpiresAt.After(renewed.ExpiresAt) {
+		t.Fatalf("periodic renewal expiration = %s, want after %s", periodicRenewal.ExpiresAt, renewed.ExpiresAt)
 	}
 	if err := host.Session.Step(); err != nil {
 		t.Fatal(err)
@@ -76,6 +94,122 @@ func TestAdmissionsLeasesValidatesEntersAndIssuesTicket(t *testing.T) {
 	}
 	if _, err := admissions.CommitMembership(context.Background(), "game", "player", committed.Character); !errors.Is(err, ErrLease) {
 		t.Fatalf("replayed membership commit error = %v", err)
+	}
+}
+
+func TestAdmissionsResumeGameRehydratesDurableMemberships(t *testing.T) {
+	manager, host, _ := admissionFixture(t, func(simulation.Command) error { return nil })
+	record := CharacterRecord{AccountID: "account", Revision: 4,
+		Character:     d2save.Character{ID: "character", Name: "Hero", Class: "Amazon", Level: 1},
+		Compatibility: host.Allocation.Durable("character")}
+	characters, err := NewMemoryCharacters(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline, lease, err := characters.Acquire(t.Context(), "account", "character", "game", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memberships, err := NewMemoryMemberships(characters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := memberships.Admit(t.Context(), MembershipRecord{GameID: "game", PlayerID: "player",
+		AccountID: "account", Baseline: baseline, Lease: lease, State: MembershipActive}); err != nil {
+		t.Fatal(err)
+	}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissionsWithMemberships(manager, characters, memberships, 2*time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resumed, err := admissions.ResumeGame(t.Context(), "game", tickets,
+		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resumed) != 1 || resumed[0].Lease.Token == "" || !resumed[0].Lease.ExpiresAt.After(lease.ExpiresAt) {
+		t.Fatalf("resumed memberships = %#v", resumed)
+	}
+	playerID, recovered, err := admissions.CharacterMembership("game", "account", "character")
+	if err != nil || playerID != "player" || recovered.Character.ID != "character" {
+		t.Fatalf("recovered membership player=%q record=%#v error=%v", playerID, recovered, err)
+	}
+	if err := admissions.RegisterGame("game", tickets,
+		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); !errors.Is(err, ErrGameExists) {
+		t.Fatalf("duplicate resumed game error = %v", err)
+	}
+	assignment, err := admissions.ReconnectAssignment(t.Context(), "game", "account", "character")
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal, err := authority.Authenticate(t.Context(), assignment.Ticket)
+	if err != nil || assignment.Endpoint.Address != "game.example:4433" || principal.PlayerID != "player" ||
+		principal.CharacterID != "character" || principal.CharacterRevision != 4 {
+		t.Fatalf("reconnect assignment=%#v principal=%#v error=%v", assignment, principal, err)
+	}
+}
+
+func TestAdmissionsReconnectSameAccountCharactersIndependently(t *testing.T) {
+	manager, host, _ := admissionFixture(t, func(simulation.Command) error { return nil })
+	records := []CharacterRecord{
+		{AccountID: "account", Revision: 2, Character: d2save.Character{ID: "first-character", Name: "First", Class: "Amazon", Level: 1}, Compatibility: host.Allocation.Durable("first-character")},
+		{AccountID: "account", Revision: 3, Character: d2save.Character{ID: "second-character", Name: "Second", Class: "Barbarian", Level: 1}, Compatibility: host.Allocation.Durable("second-character")},
+	}
+	characters, err := NewMemoryCharacters(records...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memberships, err := NewMemoryMemberships(characters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, record := range records {
+		baseline, lease, err := characters.Acquire(t.Context(), record.AccountID, record.Character.ID, "game", time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := memberships.Admit(t.Context(), MembershipRecord{
+			GameID: "game", PlayerID: fmt.Sprintf("player-%d", index+1), AccountID: record.AccountID,
+			Baseline: baseline, Lease: lease, State: MembershipActive,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissionsWithMemberships(manager, characters, memberships, 2*time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admissions.ResumeGame(t.Context(), "game", tickets,
+		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); err != nil {
+		t.Fatal(err)
+	}
+	for index, record := range records {
+		assignment, err := admissions.ReconnectAssignment(t.Context(), "game", record.AccountID, record.Character.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		principal, err := authority.Authenticate(t.Context(), assignment.Ticket)
+		if err != nil || principal.PlayerID != fmt.Sprintf("player-%d", index+1) ||
+			principal.CharacterID != record.Character.ID || principal.CharacterRevision != record.Revision {
+			t.Fatalf("character %q reconnect assignment=%#v principal=%#v error=%v",
+				record.Character.ID, assignment, principal, err)
+		}
 	}
 }
 
@@ -118,11 +252,15 @@ func TestAdmissionsRollsBackLeaseAndTicketWhenEntryRejected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
 	admissions, err := NewAdmissions(manager, repository, time.Minute, 10*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := admissions.RegisterGame("game", authority, GameEndpoint{Address: "server", TLSFingerprint: "cert"}); err != nil {
+	if err := admissions.RegisterGame("game", tickets, GameEndpoint{Address: "server", TLSFingerprint: "cert"}); err != nil {
 		t.Fatal(err)
 	}
 	destination, _ := playeradapter.NewDestination(1, 1, 10, 10, 1, 1)
@@ -132,6 +270,144 @@ func TestAdmissionsRollsBackLeaseAndTicketWhenEntryRejected(t *testing.T) {
 	if _, _, err := repository.Acquire(context.Background(), "account", "character", "other", time.Minute); err != nil {
 		t.Fatalf("lease was not released: %v", err)
 	}
+}
+
+func TestAdmissionsRollBackWorkerAndLeaseWhenMembershipPersistenceFails(t *testing.T) {
+	manager, host, _ := admissionFixture(t, func(simulation.Command) error { return nil })
+	record := CharacterRecord{AccountID: "account", Revision: 1,
+		Character:     d2save.Character{ID: "character", Name: "Hero", Class: "Amazon"},
+		Compatibility: host.Allocation.Durable("character")}
+	characters, err := NewMemoryCharacters(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memberships, err := NewMemoryMemberships(characters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &rejectingMembershipStore{MembershipRepository: memberships, err: errors.New("database unavailable")}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissionsWithMemberships(manager, characters, store, time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admissions.RegisterGame("game", tickets,
+		GameEndpoint{Address: "game.example:4433", TLSFingerprint: "sha256:cert"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admissions.Join(t.Context(), JoinRequest{AccountID: "account", CharacterID: "character",
+		PlayerID: "player", GameID: "game"}); err == nil {
+		t.Fatal("membership persistence failure admitted a player")
+	}
+	if _, err := memberships.ByPlayer(t.Context(), "game", "player"); !errors.Is(err, ErrMembership) {
+		t.Fatalf("failed admission persisted membership: %v", err)
+	}
+	_, lease, err := characters.Acquire(t.Context(), "account", "character", "replacement", time.Minute)
+	if err != nil {
+		t.Fatalf("failed admission leaked character lease: %v", err)
+	}
+	if err := characters.Release(t.Context(), lease); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type rejectingMembershipStore struct {
+	MembershipRepository
+	err error
+}
+
+func (store *rejectingMembershipStore) Admit(context.Context, MembershipRecord) error {
+	return store.err
+}
+
+func TestAdmissionsRejectsInconsistentWorkerIdentityAndReleasesLease(t *testing.T) {
+	manager, host, identity := admissionFixture(t, func(simulation.Command) error { return nil })
+	worker, found := manager.Game("game")
+	if !found {
+		t.Fatal("fixture worker is missing")
+	}
+	manager.workers["game"] = descriptionWorker{WorkerClient: worker,
+		description: WorkerDescription{Runtime: identity, IdentityHash: "inconsistent"}}
+	repository, err := NewMemoryCharacters(CharacterRecord{AccountID: "account", Revision: 1,
+		Character:     d2save.Character{ID: "character", Name: "Hero", Class: "Amazon"},
+		Compatibility: host.Allocation.Durable("character")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissions(manager, repository, time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admissions.RegisterGame("game", tickets, GameEndpoint{Address: "server", TLSFingerprint: "cert"}); err != nil {
+		t.Fatal(err)
+	}
+	destination, _ := playeradapter.NewDestination(1, 1, 10, 10, 1, 1)
+	if _, err := admissions.Join(t.Context(), JoinRequest{AccountID: "account", CharacterID: "character",
+		PlayerID: "player", GameID: "game", Destination: destination}); !errors.Is(err, ErrAdmission) {
+		t.Fatalf("join error = %v", err)
+	}
+	if _, _, err := repository.Acquire(t.Context(), "account", "character", "other", time.Minute); err != nil {
+		t.Fatalf("lease was not released: %v", err)
+	}
+}
+
+func TestAdmissionsCancellationStillReleasesLease(t *testing.T) {
+	manager, host, _ := admissionFixture(t, func(simulation.Command) error { return nil })
+	repository, err := NewMemoryCharacters(CharacterRecord{AccountID: "account", Revision: 1,
+		Character:     d2save.Character{ID: "character", Name: "Hero", Class: "Amazon"},
+		Compatibility: host.Allocation.Durable("character")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := gameserver.NewTicketAuthority([]byte("0123456789abcdef0123456789abcdef"), "game")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tickets, err := newLocalTicketIssuer(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admissions, err := NewAdmissions(manager, repository, time.Minute, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admissions.RegisterGame("game", tickets, GameEndpoint{Address: "server", TLSFingerprint: "cert"}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	destination, _ := playeradapter.NewDestination(1, 1, 10, 10, 1, 1)
+	if _, err := admissions.Join(ctx, JoinRequest{AccountID: "account", CharacterID: "character",
+		PlayerID: "player", GameID: "game", Destination: destination}); !errors.Is(err, ErrAdmission) {
+		t.Fatalf("join error = %v", err)
+	}
+	if _, _, err := repository.Acquire(t.Context(), "account", "character", "other", time.Minute); err != nil {
+		t.Fatalf("canceled join leaked its lease: %v", err)
+	}
+}
+
+type descriptionWorker struct {
+	WorkerClient
+	description WorkerDescription
+}
+
+func (worker descriptionWorker) Describe(context.Context) (WorkerDescription, error) {
+	return worker.description, nil
 }
 
 func admissionFixture(t *testing.T, validate simulation.CommandValidator) (*Manager, *gameserver.Host, simulation.RuntimeIdentity) {
@@ -150,7 +426,7 @@ func admissionFixture(t *testing.T, validate simulation.CommandValidator) (*Mana
 		t.Fatal(err)
 	}
 	identity := simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
 		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1, Redistributable: true}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}
@@ -160,6 +436,10 @@ func admissionFixture(t *testing.T, validate simulation.CommandValidator) (*Mana
 		t.Fatal(err)
 	}
 	host := &gameserver.Host{Engine: engine, Session: session, Allocation: allocation}
-	manager.hosts["game"] = host
+	worker, err := newInProcessWorker(host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager.workers["game"] = worker
 	return manager, host, identity
 }

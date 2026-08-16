@@ -9,6 +9,9 @@ import (
 const (
 	RuntimeRecipeSchema    = "dark-magic.runtime-recipe/v1"
 	RuntimeNetworkProtocol = "dark-magic.game-session/v2"
+	// EmptyAssetSetID is the canonical identity for runtimes with no external
+	// mounted game data, such as hermetic unit tests and synthetic fixtures.
+	EmptyAssetSetID = "sha256:4b5f42b9b0f48dc738578940d8ca3db3eaac90364a5106411f83012d47998ef6"
 )
 
 type RuntimePackage struct {
@@ -33,6 +36,7 @@ type RuntimeRecipe struct {
 	Schema             string            `json:"schema"`
 	EngineAPI          string            `json:"engine_api"`
 	NetworkProtocol    string            `json:"network_protocol"`
+	AssetSetID         string            `json:"asset_set_id"`
 	Packages           RuntimePackageSet `json:"packages"`
 	AuthoritativeHash  string            `json:"authoritative_hash"`
 	ConfigurationHash  string            `json:"configuration_hash"`
@@ -42,7 +46,7 @@ type RuntimeRecipe struct {
 func (recipe RuntimeRecipe) Validate() error {
 	if recipe.Schema != RuntimeRecipeSchema || strings.TrimSpace(recipe.EngineAPI) == "" ||
 		strings.TrimSpace(recipe.NetworkProtocol) == "" || strings.TrimSpace(recipe.AuthoritativeHash) == "" ||
-		strings.TrimSpace(recipe.ConfigurationHash) == "" {
+		strings.TrimSpace(recipe.ConfigurationHash) == "" || ValidateAssetSetID(recipe.AssetSetID) != nil {
 		return errors.New("simulation: invalid runtime recipe contract")
 	}
 	if err := validateRuntimePackage(recipe.Packages.Base); err != nil {
@@ -71,6 +75,15 @@ func (recipe RuntimeRecipe) Validate() error {
 		if strings.TrimSpace(name) == "" || strings.TrimSpace(version) == "" {
 			return errors.New("simulation: invalid runtime capability version")
 		}
+	}
+	return nil
+}
+
+// ValidateAssetSetID validates the storage-neutral digest shared by product
+// composition, Realm allocation, workers, clients, and durable session state.
+func ValidateAssetSetID(value string) error {
+	if !validSHA256Digest(value) {
+		return errors.New("simulation: invalid asset-set identity")
 	}
 	return nil
 }

@@ -111,11 +111,17 @@ Dark Magic targets two primary executables under `cmd`:
   self-hosted multiplayer, and realm-connected games. Offline play may host the
   same authoritative simulation in-process, but client code must not become the
   authority for a remote realm character.
-* **Realm** — provides the Battle.net-like control plane: authentication,
+* **Realm** — provides the account and session control plane: authentication,
   accounts, trusted character persistence, game creation and discovery, and
   assignment to authoritative game sessions. It publishes the exact mod
   manifest required by a game and serves or identifies the corresponding
   redistributable payloads. User-supplied Diablo II data is never distributed.
+
+  Realm behavior is independent of deployment topology. A supported Realm can
+  run with PostgreSQL and ordinary game-worker processes on one machine or use
+  a cluster allocator later; Kubernetes and cloud-edge services do not define
+  account, character, admission, or gameplay semantics. See the
+  [Realm documentation](docs/realm/README.md).
 
 The deterministic game-session server is shared infrastructure. It can run
 in-process for offline play, as a client-created listen server, as a standalone
@@ -279,7 +285,11 @@ authoritative networking, and end-to-end gameplay remain in progress.
 
 See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package ownership, dependency
-direction, and guidance on where new work belongs.
+direction, and guidance on where new work belongs. Realm architecture,
+security, persistence, local operation, and the deferred cloud plan are indexed
+under [docs/realm](docs/realm/README.md). Client, server, and Realm process
+settings can be kept in private per-role files described in
+[process configuration](docs/CONFIGURATION.md).
 
 For the focused playable-character acceptance loop, point `MPQ_DIRECTORY` at
 legally obtained game data and run `make play-game-world`. The command selects

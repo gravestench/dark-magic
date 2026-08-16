@@ -91,6 +91,20 @@ func TestMalformedTrustFilesFailClosed(t *testing.T) {
 	}
 }
 
+func TestPinnedTLSFingerprintRejectsMalformedValues(t *testing.T) {
+	valid := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	config, err := PinnedTLSFingerprint(valid)
+	if err != nil || config == nil || config.VerifyPeerCertificate == nil {
+		t.Fatalf("config=%#v error=%v", config, err)
+	}
+	for _, value := range []string{"", "sha256:short", "md5:" + valid,
+		"sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"} {
+		if _, err := PinnedTLSFingerprint(value); err == nil {
+			t.Fatalf("malformed fingerprint %q was accepted", value)
+		}
+	}
+}
+
 func verify(client, server *tls.Config) error {
 	return client.VerifyPeerCertificate(server.Certificates[0].Certificate, nil)
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/app/clientapp"
+	"github.com/gravestench/dark-magic/internal/app/envconfig"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/dev/capture"
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
@@ -35,7 +36,14 @@ func main() {
 	// macOS requires the window to live on the first operating-system thread.
 	// Locking here keeps that rule out of the rest of the application.
 	runtime.LockOSThread()
+	environment, err := envconfig.Bootstrap("client", os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		exitCode = 1
+		return
+	}
 
+	_ = flag.String("env-file", environment.DefaultPath, "environment file (overrides the default client.env selection)")
 	logLevelFlag := flag.String("log-level", environmentDefault("DARK_MAGIC_LOG_LEVEL", "info"), "log verbosity: trace, debug, info, warn, or error")
 	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
 	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
@@ -130,6 +138,11 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
 func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.RuntimePackageSet, modStore *modcache.Store, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, logs *shell.LogBuffer) error {
+	assetSetID, err := content.AssetSetIdentityFromEnvironment()
+	if err != nil {
+		return fmt.Errorf("identify external game assets: %w", err)
+	}
+	slog.Debug("identified external game asset set", "asset_set_id", assetSetID)
 	playerProfilePath := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE"))
 	if playerProfilePath == "" {
 		configurationDirectory, err := os.UserConfigDir()
@@ -139,7 +152,7 @@ func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.
 		playerProfilePath = filepath.Join(configurationDirectory, "dark-magic", "player-profile.json")
 	}
 	options := clientapp.Options{
-		Content: contentFS, Mods: mods, Packages: packages, ModCache: modStore, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
+		Content: contentFS, Mods: mods, Packages: packages, AssetSetID: assetSetID, ModCache: modStore, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
 			return capture.New(directory, scenes, settle, renderer)
 		}, CaptureDirectory: captureDirectory,
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,

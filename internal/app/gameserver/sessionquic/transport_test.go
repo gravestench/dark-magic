@@ -163,7 +163,7 @@ func TestQUICJoinCommandAndReconnect(t *testing.T) {
 func testRuntimeIdentity() simulation.RuntimeIdentity {
 	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
 		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}

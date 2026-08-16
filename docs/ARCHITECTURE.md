@@ -101,6 +101,14 @@ server may host multiple isolated sessions, each pinned to its own compatible
 mod package. Realm services select a capable worker and coordinate durable
 results; they do not resolve combat ticks.
 
+Realm semantics are topology-independent. The required first production
+topology runs the Realm, PostgreSQL, and ordinary `cmd/server` worker processes
+on one machine through a versioned private worker boundary. A future cluster
+implements the same allocation and worker contracts; Kubernetes, Agones, and
+edge-provider resources may not appear in Realm domain APIs. The canonical
+Realm architecture and deployment-status map live in
+[the Realm documentation](realm/README.md).
+
 ## Engine and mod ownership boundary
 
 “Authoritative” describes who is allowed to decide and commit gameplay state;
@@ -144,7 +152,9 @@ The Go engine owns reusable mechanisms:
   management.
 
 The transport split, authenticated game-session boundary, and verified P2P mod
-cache are specified in [NETWORKING.md](NETWORKING.md).
+cache are specified in [NETWORKING.md](NETWORKING.md). Account, character,
+worker, persistence, and deployment responsibilities are specified in
+[the Realm documentation](realm/README.md).
 
 The first-party `d2legacy` Lua mod owns Diablo II policy:
 
@@ -186,6 +196,7 @@ means a resource scope owns it. `Stateless` means there is no runtime lifecycle.
 | `cmd/client` | Client composition root | executable | Process | Keep thin |
 | `cmd/server` | Standalone authoritative game-worker composition root | executable | Process | Keep thin |
 | `cmd/realm` | Realm/control-plane composition root | executable | Process | Never own gameplay simulation |
+| `internal/app/realm` | Versioned realm accounts/sessions, account-owned character records, channel presence/chat, named game directory, worker allocation/admission, and leases | `cmd/realm`, future realm transports/capabilities | Process | Keep transport-neutral; never expose worker endpoints through directory views or accept client-asserted identity |
 | `internal/app/host` | Ordered component lifecycle | command, runtime API, Lua | Application | Keep |
 | `internal/content` | Layered directory/MPQ/ZIP/mod VFS | command, reload, Lua, tools | Application | Keep |
 | `internal/game/data/store` | Generic immutable TSV rows, provenance, caching, and invalidation | Lua, typed decoding, tools | Application | Keep internal and mod-neutral |
@@ -316,8 +327,10 @@ Every game session pins an authoritative mod identity containing at least:
 - mod ID and semantic contract/version;
 - package/content hash and authoritative Lua source or bytecode hash;
 - the complete dependency graph and dependency hashes;
-- gameplay configuration identity; and
-- required engine capability/API and network protocol versions.
+- gameplay configuration identity;
+- required engine capability/API and network protocol versions; and
+- a path-independent digest of the ordered, operator-supplied external
+  game-asset set.
 
 The realm selects a worker that supports this identity and binds it into session
 creation and matchmaking. The game server validates it during handshake,
@@ -326,6 +339,12 @@ migration. Replay headers and checkpoints carry it. Durable characters carry
 the rule/schema compatibility metadata needed to decide whether admission or
 migration is legal. No path may silently restore, join, or replay a session with
 different authoritative code or configuration.
+
+Realm independently computes the expected asset-set identity and validates a
+worker's complete reported runtime before allocation readiness. Clients compare
+their locally hashed set before network recomposition; checkpoints, replay
+participants, reconnect tokens, and durable compatibility then inherit the same
+complete identity digest.
 
 Persisted session replays use the versioned `dark-magic-replay` container in
 `internal/game/simulation`. The envelope carries the deterministic initial

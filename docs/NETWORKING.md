@@ -118,17 +118,26 @@ trusted next-tick player-entry command with a realm-owned monotonic sequence,
 and returns the worker address, TLS fingerprint, exact runtime identity, public
 character revision, and short-lived ticket. The ticket additionally binds the character revision
 and runtime identity hash. Validation or submission failure releases the lease
-and revokes the unused ticket. Active memberships renew their lease through the
-realm; reconnect never accepts client-reported durable state.
+and revokes the unused ticket. Healthy Realm maintenance renews active leases
+after half their configured lifetime. The admission also carries the one-use
+ticket deadline, so a client that dies before its first QUIC join is reclaimed.
+Reconnect never accepts client-reported durable state.
 
 Character ownership is independent of topology. Single-player, listen-server,
 and self-hosted dedicated-server play use the player's local profile roster;
 those hosts may admit player-controlled save data according to their own policy,
-but that data never becomes realm-trusted. Realm play begins with account login
-or initial account creation, loads only the characters associated with that
-account, and requires character selection before browsing, creating through the
-realm, or joining a realm game. A new realm account therefore begins with no
-characters just as a new local profile does.
+but that data never becomes realm-trusted. Realm play requires an explicitly
+created, verified account. The native client completes endpoint trust and a
+version check, then always requests the account name and password.
+Verification and password recovery complete in the browser but never
+implicitly log the client in. After authentication it
+loads only account-owned Realm characters and requires character selection
+before browsing, creating through the Realm, or joining a Realm game. A newly
+verified account begins with no Realm characters just as a new local profile
+begins with no offline characters.
+
+The complete account, persistence, worker, and deployment contract is indexed
+in [the Realm documentation](realm/README.md).
 
 The character lease is a realm/worker capability and never crosses the client
 assignment boundary. A trusted realm worker commit must present the active,
@@ -216,6 +225,25 @@ world, participant state, pending commands, replay log, checkpoints, history,
 and acknowledgement state together. Older input is rejected and corrected by
 the next canonical projection.
 
+A durable game-recovery checkpoint is deliberately larger than the canonical
+ECS checkpoint used for projections. It also contains accepted future commands,
+recent exact applied commands, and each player's contiguous-plus-sparse input
+sequence state. The future-command set prevents acknowledged input from being
+lost if authority fails before its target tick. The recent applied-command set
+and sequence state prevent an input whose acknowledgement was lost from being
+applied twice after recovery. Recovery validates the complete checksum and
+runtime identity before mutating a newly composed session, resets replay history
+at the recovered boundary, and preserves this metadata across repeated
+checkpoint/restore generations.
+
+Realm clients have a second recovery tier beyond ordinary transport credential
+rotation. If the owning Realm replaces a failed worker, the client authenticates
+back to Realm for a new private endpoint and one-use join ticket. The native
+client keeps the same session object, verifies unchanged game, runtime,
+character, and player identities, atomically swaps transport and canonical
+projection, and resubmits its exact unacknowledged inputs. Lua sees only
+connection state; neither endpoint nor ticket crosses the Lua boundary.
+
 The live game-world acceptance in `internal/app/clientsession` crosses this
 entire boundary without substituting a fake projection: it starts the embedded
 production d2legacy Lua authority, advances the authoritative ECS session,
@@ -269,10 +297,13 @@ and route movement collision by each entity's authoritative level. Public
 interest filtering requires the same act and level before applying distance.
 One canonical checkpoint is captured per server tick and shared by all per-player
 projections. Each membership owns at most one long-lived correction stream.
-Explicit leave revokes membership immediately. QUIC connection loss starts the
-reconnect lease; expiration revokes membership and submits the same deterministic
-`system.player.leave` command, which removes the player, admission-owned state,
-and its marked null interaction target without leaking shared target definitions.
+Explicit leave revokes transport membership immediately. QUIC connection loss
+starts a short reconnect grace. In direct/listen modes, expiration submits the
+deterministic `system.player.leave` command. In Realm mode, expiration is
+reported over private worker control so Realm first projects and commits the
+canonical character under its lease; only then does worker removal submit that
+same command. It removes the player, admission-owned state, and its marked null
+interaction target without leaking shared target definitions.
 Self-host profile throttling is per normalized remote IP
 and refills over time; one abusive address cannot exhaust a process-global join
 counter.

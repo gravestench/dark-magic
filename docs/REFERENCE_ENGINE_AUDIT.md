@@ -76,7 +76,9 @@ Known palette names are `act1` through `act5`, `endgame`, `endgame2`, `fechar`,
   for common wide/medium buttons.
 - Popup sheets include `PopUpOkCancel.dc6`, `PopUpOkCancel2.dc6`, `PopUpOk.dc6`,
   `PopUpLarge.dc6`, `PopUpLargest.dc6`, `PopUpWide.dc6`, and
-  `PopUp_340x224.dc6`; `fechar` is the recurring popup palette.
+  `PopUp_340x224.dc6`. `fechar` is common among the confirmation sheets, but
+  archive-backed palette probes show that `PopUp_340x224.dc6` uses `units`;
+  decoding it with `fechar` produces cyan/magenta corruption.
 
 ### Audio and text
 

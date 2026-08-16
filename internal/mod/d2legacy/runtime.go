@@ -56,6 +56,9 @@ type Config struct {
 	// product composition. Tests and bounded tools may omit it to derive the
 	// vanilla built-in package identity directly from source.
 	Packages simulation.RuntimePackageSet
+	// AssetSetID is the path-independent digest of external game data mounted
+	// by product composition. An empty value is valid only for embedded tests.
+	AssetSetID string
 	// PackageContent and Extensions are supplied together by production
 	// composition so private Lua namespaces and authoritative entrypoints from
 	// every locked extension run on the actual authority.
@@ -81,10 +84,13 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	}
 	var identity simulation.RuntimeIdentity
 	var err error
+	if config.AssetSetID == "" {
+		config.AssetSetID = simulation.EmptyAssetSetID
+	}
 	if config.Packages.Base.ID == "" {
 		identity, err = Identity(source, config.InitialData)
 	} else {
-		identity, err = IdentityForPackages(source, config.Packages, config.InitialData)
+		identity, err = IdentityForPackages(source, config.Packages, config.AssetSetID, config.InitialData)
 	}
 	if err != nil {
 		return nil, err
@@ -139,6 +145,9 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 		}
 	}
 	if err := ConfigureRuntime(result.Runtime, source, records, engine, session, result.State, streams, config.InitialData); err != nil {
+		return nil, err
+	}
+	if err := validateCapabilityIdentity(identity, result.Runtime.ModuleNames()); err != nil {
 		return nil, err
 	}
 	if err := result.Runtime.Start(ctx); err != nil {
@@ -210,6 +219,28 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	}
 	result.components = manager
 	return result, nil
+}
+
+func validateCapabilityIdentity(identity simulation.RuntimeIdentity, moduleNames []string) error {
+	expected := make(map[string]bool, len(identity.Recipe.CapabilityVersions))
+	for name, version := range identity.Recipe.CapabilityVersions {
+		expected[name+"/"+version] = true
+	}
+	actual := make(map[string]bool, len(moduleNames))
+	for _, name := range moduleNames {
+		actual[name] = true
+	}
+	for name := range expected {
+		if !actual[name] {
+			return fmt.Errorf("d2legacy: runtime identity names unavailable authoritative capability %q", name)
+		}
+	}
+	for name := range actual {
+		if !expected[name] {
+			return fmt.Errorf("d2legacy: authoritative capability %q is absent from runtime identity", name)
+		}
+	}
+	return nil
 }
 
 // ConfigureRuntime installs the one canonical authoritative d2legacy capability

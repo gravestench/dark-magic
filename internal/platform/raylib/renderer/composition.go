@@ -221,6 +221,13 @@ func (b *compositionBackend) applyNode(node *node, state render.Node) error {
 	node.setScaleXY(float32(state.ScaleX), float32(state.ScaleY))
 	node.SetRotation(float32(state.Rotation))
 	node.SetOrigin(state.OriginX, state.OriginY)
+	// RGB tint is deliberately independent of opacity. Disabled UI can be
+	// visibly dark without becoming translucent over the scene behind it.
+	tint := state.Tint
+	if tint.A == 0 {
+		tint = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	}
+	node.SetTint(rl.NewColor(tint.R, tint.G, tint.B, 255))
 	if state.Clip == nil {
 		node.SetClip(nil)
 	} else {

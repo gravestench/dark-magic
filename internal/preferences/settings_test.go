@@ -18,6 +18,7 @@ func TestSettingsValidatePersistAndReload(t *testing.T) {
 	values.TextureCacheBudgetMB = 768
 	values.CameraFollowStrategy, values.CameraFollowDuration = "back_out", .25
 	values.CameraFollowParam1 = 2.25
+	values.RealmGateway = "realm.example"
 	if err := settings.Update(values); err != nil {
 		t.Fatal(err)
 	}

@@ -70,7 +70,8 @@ return {
             -- Connection refusal/timeout is an ordinary multiplayer outcome, not
             -- a process-fatal scene error. TCP/IP reads and displays the retained
             -- network failure on entry.
-            scenes.replace("tcpip")
+            if network_status.mode == "realm" then scenes.replace("realm_lobby")
+            else scenes.replace("tcpip") end
             return
         end
 

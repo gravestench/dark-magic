@@ -26,6 +26,7 @@ type Config struct {
 	Session     gamesession.Config
 	InitialData map[string]any
 	Packages    simulation.RuntimePackageSet
+	AssetSetID  string
 	Content     fs.FS
 	Mods        *modcache.ResolvedSet
 }
@@ -72,7 +73,7 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 		_ = engine.Close()
 		return nil, err
 	}
-	d2config := d2legacy.Config{Seed: config.Seed, InitialData: config.InitialData, Packages: config.Packages}
+	d2config := d2legacy.Config{Seed: config.Seed, InitialData: config.InitialData, Packages: config.Packages, AssetSetID: config.AssetSetID}
 	if config.Mods != nil {
 		if config.Content == nil {
 			_ = session.Close()

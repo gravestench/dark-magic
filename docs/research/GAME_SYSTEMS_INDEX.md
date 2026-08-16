@@ -59,6 +59,7 @@ Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQU
 - [ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md](ITEM_ECONOMY_AUDIO_HANDOFF_FOR_CODEX.md) orders generated-item, source-activation, economy, quest-item, and audio slices.
 - [WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md](WORLD_NPC_DIFFICULTY_HANDOFF_FOR_CODEX.md) orders object, transition, NPC, difficulty, and endgame slices.
 - [MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md](MULTIPLAYER_REALM_UI_HANDOFF_FOR_CODEX.md) orders party, trade, realm, transport, persistence, and UI projection slices.
+- [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md) separates realm social, in-game chat, local diagnostics, and authoritative gameplay commands and records the legacy command verification queue.
 - [FOUNDATION_VERIFICATION_QUEUE.md](FOUNDATION_VERIFICATION_QUEUE.md) tracks the highest-value foundation probes.
 - [COMBAT_SIMULATION_VERIFICATION_QUEUE.md](COMBAT_SIMULATION_VERIFICATION_QUEUE.md) tracks the empirical combat/simulation probes.
 - [ITEM_ECONOMY_AUDIO_VERIFICATION_QUEUE.md](ITEM_ECONOMY_AUDIO_VERIFICATION_QUEUE.md), [WORLD_NPC_DIFFICULTY_VERIFICATION_QUEUE.md](WORLD_NPC_DIFFICULTY_VERIFICATION_QUEUE.md), and [MULTIPLAYER_REALM_UI_VERIFICATION_QUEUE.md](MULTIPLAYER_REALM_UI_VERIFICATION_QUEUE.md) track the later tranche probes.

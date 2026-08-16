@@ -67,16 +67,17 @@ M.widgets = {
         ip_sheet = "data/global/ui/FrontEnd/IPAddressBox.dc6",
         background_y = 4,
         text_x = 6,
-        text_y = -2,
+        -- Value text is vertically centered inside the decoded field art. The
+        -- old negative top offset placed glyphs across the upper border.
+        text_y = 0,
         label_y = -15,
-        text_style = "frontend_legal",
+        text_style = "text_field_value",
         label_style = "character_create_option",
     },
     button = {
         pressed_dx = -2,
         pressed_dy = 2,
         text_draw_mode = 4,
-        disabled_alpha = 0.5,
         click_sound = "data/global/sfx/cursor/button.wav",
     },
     -- OpenDiablo2 recovered these TextSlid.dc6 frame meanings while rebuilding
@@ -119,6 +120,8 @@ M.frontend = {
             -- frames represent up/down/disabled states. Multi-frame buttons are
             -- arrays because their art is assembled side by side.
             single_player = { x = 265, y = 290, sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5} },
+            realm = { x = 265, y = 330, sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5} },
+            gateway = { x = 265, y = 365, sheet = "data/global/ui/FrontEnd/NarrowButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3} },
             multiplayer = { x = 265, y = 400, sheet = "data/global/ui/FrontEnd/3WideButtonBlank.dc6", up_frames = {0, 1}, down_frames = {2, 3}, disabled_frames = {4, 5} },
             credits = { x = 265, y = 495, sheet = "data/global/ui/FrontEnd/MediumButtonBlank.dc6", up_frames = {0}, down_frames = {1} },
             cinematics = { x = 410, y = 495, sheet = "data/global/ui/FrontEnd/MediumButtonBlank.dc6", up_frames = {0}, down_frames = {1} },

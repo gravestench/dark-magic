@@ -47,6 +47,7 @@ type Options struct {
 	Content               *content.FS
 	Mods                  *modcache.ResolvedSet
 	Packages              simulation.RuntimePackageSet
+	AssetSetID            string
 	ModCache              *modcache.Store
 	Profile               Profile
 	NewCapture            CaptureFactory
@@ -143,6 +144,7 @@ type application struct {
 	loading              *loadcore.Coordinator
 	pointerAcceptance    *pointerMovementAcceptance
 	network              *networkController
+	realm                *realmController
 
 	components      *host.Manager
 	packageRegistry *modruntime.PackageRegistry

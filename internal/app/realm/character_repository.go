@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -18,8 +19,12 @@ var (
 	ErrCharacterNotFound = errors.New("realm: character not found")
 	ErrCharacterOwner    = errors.New("realm: character ownership differs")
 	ErrCharacterLeased   = errors.New("realm: character is already leased")
+	ErrCharacterOnline   = errors.New("realm: character is already online")
 	ErrLease             = errors.New("realm: invalid character lease")
 	ErrCharacterCommit   = errors.New("realm: invalid authoritative character commit")
+	ErrCharacterExists   = errors.New("realm: character name already exists")
+	ErrCharacterLimit    = errors.New("realm: character limit reached")
+	ErrCharacterInput    = errors.New("realm: invalid character input")
 )
 
 type CharacterRecord struct {
@@ -27,6 +32,17 @@ type CharacterRecord struct {
 	Revision      uint64
 	Character     d2save.Character
 	Compatibility gamesession.DurableCompatibility
+}
+
+// CharacterSummary is the client-safe realm roster projection. Account IDs and
+// authoritative package compatibility remain server-side.
+type CharacterSummary struct {
+	Revision  uint64           `json:"revision"`
+	Character d2save.Character `json:"character"`
+}
+
+func publicCharacter(record CharacterRecord) CharacterSummary {
+	return CharacterSummary{Revision: record.Revision, Character: cloneCharacter(record.Character)}
 }
 
 type CharacterLease struct {
@@ -38,10 +54,39 @@ type CharacterLease struct {
 }
 
 type CharacterRepository interface {
+	Create(context.Context, CharacterRecord) error
+	Delete(context.Context, string, string) error
+	Get(context.Context, string, string) (CharacterRecord, error)
+	List(context.Context, string) ([]CharacterRecord, error)
 	Acquire(context.Context, string, string, string, time.Duration) (CharacterRecord, CharacterLease, error)
+	BindCompatibility(context.Context, CharacterLease, gamesession.DurableCompatibility) (CharacterRecord, error)
 	Renew(context.Context, CharacterLease, time.Duration) (CharacterLease, error)
 	Release(context.Context, CharacterLease) error
+	ReleaseGame(context.Context, string) (int, error)
 	Commit(context.Context, CharacterLease, d2save.Character) (CharacterRecord, error)
+}
+
+// BindCompatibility atomically pins an unbound character to the first verified
+// authoritative runtime that admits it. Existing bindings are immutable here;
+// changing them requires an explicit reviewed migration.
+func (repository *MemoryCharacters) BindCompatibility(_ context.Context, lease CharacterLease, compatibility gamesession.DurableCompatibility) (CharacterRecord, error) {
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	entry, found := repository.records[lease.CharacterID]
+	if !found || !sameLease(entry.lease, lease) || !entry.lease.ExpiresAt.After(repository.now()) ||
+		compatibility.CharacterID != lease.CharacterID || strings.TrimSpace(compatibility.ModID) == "" ||
+		strings.TrimSpace(compatibility.ContractVersion) == "" || strings.TrimSpace(compatibility.IdentityHash) == "" {
+		return CharacterRecord{}, ErrCharacterCommit
+	}
+	if !emptyCompatibility(entry.record.Compatibility) && entry.record.Compatibility != compatibility {
+		return CharacterRecord{}, ErrCharacterCommit
+	}
+	entry.record.Compatibility = compatibility
+	return cloneCharacterRecord(entry.record), nil
+}
+
+func emptyCompatibility(value gamesession.DurableCompatibility) bool {
+	return value == (gamesession.DurableCompatibility{})
 }
 
 type memoryCharacter struct {
@@ -61,15 +106,88 @@ type MemoryCharacters struct {
 func NewMemoryCharacters(records ...CharacterRecord) (*MemoryCharacters, error) {
 	repository := &MemoryCharacters{now: time.Now, records: make(map[string]*memoryCharacter)}
 	for _, record := range records {
-		if strings.TrimSpace(record.AccountID) == "" || strings.TrimSpace(record.Character.ID) == "" || record.Revision == 0 {
-			return nil, errors.New("realm: character record requires account, character, and revision")
+		if err := repository.Create(context.Background(), record); err != nil {
+			return nil, err
 		}
-		if _, exists := repository.records[record.Character.ID]; exists {
-			return nil, fmt.Errorf("realm: duplicate character %q", record.Character.ID)
-		}
-		repository.records[record.Character.ID] = &memoryCharacter{record: cloneCharacterRecord(record)}
 	}
 	return repository, nil
+}
+
+func (repository *MemoryCharacters) Create(ctx context.Context, record CharacterRecord) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if repository == nil || strings.TrimSpace(record.AccountID) == "" || strings.TrimSpace(record.Character.ID) == "" || record.Revision == 0 {
+		return errors.New("realm: character record requires account, character, and revision")
+	}
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	if _, exists := repository.records[record.Character.ID]; exists {
+		return fmt.Errorf("realm: duplicate character %q", record.Character.ID)
+	}
+	repository.records[record.Character.ID] = &memoryCharacter{record: cloneCharacterRecord(record)}
+	return nil
+}
+
+func (repository *MemoryCharacters) Delete(ctx context.Context, accountID, characterID string) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if repository == nil || strings.TrimSpace(accountID) == "" || strings.TrimSpace(characterID) == "" {
+		return ErrCharacterNotFound
+	}
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	entry := repository.records[characterID]
+	if entry == nil {
+		return ErrCharacterNotFound
+	}
+	if entry.record.AccountID != accountID {
+		return ErrCharacterOwner
+	}
+	if entry.lease != nil && entry.lease.ExpiresAt.After(repository.now()) {
+		return ErrCharacterLeased
+	}
+	delete(repository.records, characterID)
+	return nil
+}
+
+func (repository *MemoryCharacters) Get(ctx context.Context, accountID, characterID string) (CharacterRecord, error) {
+	if err := contextErr(ctx); err != nil {
+		return CharacterRecord{}, err
+	}
+	if repository == nil || strings.TrimSpace(accountID) == "" || strings.TrimSpace(characterID) == "" {
+		return CharacterRecord{}, ErrCharacterNotFound
+	}
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	entry := repository.records[characterID]
+	if entry == nil {
+		return CharacterRecord{}, ErrCharacterNotFound
+	}
+	if entry.record.AccountID != accountID {
+		return CharacterRecord{}, ErrCharacterOwner
+	}
+	return cloneCharacterRecord(entry.record), nil
+}
+
+func (repository *MemoryCharacters) List(ctx context.Context, accountID string) ([]CharacterRecord, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if repository == nil || strings.TrimSpace(accountID) == "" {
+		return nil, ErrCharacterOwner
+	}
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	result := make([]CharacterRecord, 0)
+	for _, entry := range repository.records {
+		if entry.record.AccountID == accountID {
+			result = append(result, cloneCharacterRecord(entry.record))
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Character.ID < result[j].Character.ID })
+	return result, nil
 }
 
 func (repository *MemoryCharacters) Acquire(_ context.Context, accountID, characterID, gameID string, lifetime time.Duration) (CharacterRecord, CharacterLease, error) {
@@ -119,6 +237,29 @@ func (repository *MemoryCharacters) Release(_ context.Context, lease CharacterLe
 	}
 	entry.lease = nil
 	return nil
+}
+
+// ReleaseGame is the fail-closed restart path used only after Realm proves the
+// former allocation authority is unavailable. It never commits replacement
+// character state; the last durable revision remains canonical.
+func (repository *MemoryCharacters) ReleaseGame(ctx context.Context, gameID string) (int, error) {
+	if err := contextErr(ctx); err != nil {
+		return 0, err
+	}
+	gameID = strings.TrimSpace(gameID)
+	if repository == nil || gameID == "" {
+		return 0, ErrLease
+	}
+	repository.mu.Lock()
+	defer repository.mu.Unlock()
+	released := 0
+	for _, entry := range repository.records {
+		if entry.lease != nil && entry.lease.GameID == gameID {
+			entry.lease = nil
+			released++
+		}
+	}
+	return released, nil
 }
 
 // Commit atomically replaces realm-owned character state, advances its

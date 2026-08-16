@@ -19,6 +19,7 @@ internal/content/d2legacy/lua/d2legacy/ui/	adapter	lua:presentation	reusable UI 
 internal/content/d2legacy/lua/d2legacy/authoritative.lua	d2-policy	lua:d2legacy	canonical authoritative gameplay composition root
 internal/content/d2legacy/lua/d2legacy/audio.lua	d2-policy	lua:d2legacy	Diablo Sounds.txt selection path and playback policy
 internal/content/d2legacy/lua/d2legacy/bootstrap/	adapter	lua:composition	presentation composition and scene registration
+internal/content/d2legacy/lua/d2legacy/characters/	adapter	lua:presentation	shared local and realm character-roster authority and compact composite presentation
 internal/content/d2legacy/lua/d2legacy/commands/	d2-policy	lua:d2legacy	authoritative Diablo command validation and admission
 internal/content/d2legacy/lua/d2legacy/components/	d2-policy	lua:d2legacy	authoritative Diablo component schemas
 internal/content/d2legacy/lua/d2legacy/data/	d2-policy	lua:d2legacy	interpretation of decoded records as Diablo rules
@@ -27,6 +28,7 @@ internal/content/d2legacy/lua/d2legacy/interactions/	d2-policy	lua:d2legacy	Diab
 internal/content/d2legacy/lua/d2legacy/loot/	d2-policy	lua:d2legacy	Diablo treasure class quality affix and property policy
 internal/content/d2legacy/lua/d2legacy/mapgen/	d2-policy	lua:d2legacy	authoritative Diablo preset maze and outdoor generation policy
 internal/content/d2legacy/lua/d2legacy/network/	adapter	lua:presentation	multiplayer presentation flow over engine-owned transport capabilities
+internal/content/d2legacy/lua/d2legacy/realm/	adapter	lua:presentation	realm frontend composition over engine-owned authenticated service capabilities
 internal/content/d2legacy/lua/d2legacy/owned_units/	d2-policy	lua:d2legacy	Diablo summon pet trap minion and hireling ownership limits lifetime and attribution policy
 internal/content/d2legacy/lua/d2legacy/player_intents.lua	adapter	lua:d2legacy	Diablo input vocabulary translated into generic command intents
 internal/content/d2legacy/lua/d2legacy/policy/	d2-policy	lua:d2legacy	Diablo formulas and decisions

@@ -184,6 +184,8 @@ function M.confirm(parent, definition, _, popup_palette, _, message, yes_label, 
     }, yes_label, {
         layer = "modal",
         scope = "dialog",
+        normal_style = "dialog_button_normal",
+        hover_style = "dialog_button_hover",
         on_activate = function()
             dialog:close(true)
         end,
@@ -198,6 +200,8 @@ function M.confirm(parent, definition, _, popup_palette, _, message, yes_label, 
     }, no_label, {
         layer = "modal",
         scope = "dialog",
+        normal_style = "dialog_button_normal",
+        hover_style = "dialog_button_hover",
         on_activate = function()
             dialog:close(false)
         end,

@@ -5,10 +5,33 @@ import (
 	"fmt"
 	"io/fs"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/assets/catalog"
 )
+
+func TestD2LegacyRealmTerminologyDoesNotUseThirdPartyServiceMark(t *testing.T) {
+	t.Parallel()
+	if err := fs.WalkDir(D2Legacy(), ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !(strings.HasSuffix(path, ".lua") || strings.HasSuffix(path, ".json")) {
+			return err
+		}
+		data, err := fs.ReadFile(D2Legacy(), path)
+		if err != nil {
+			return err
+		}
+		lower := strings.ToLower(string(data))
+		markedName := "battle" + "." + "net"
+		markedAlias := "battle" + "net"
+		if strings.Contains(lower, markedName) || strings.Contains(lower, markedAlias) {
+			t.Errorf("%s uses a third-party service mark; Dark Magic calls this service Realm", path)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // TestD2LegacyPresentationManifestContract protects the architectural boundary
 // between native engine code and mod-owned presentation knowledge. Go should
@@ -322,8 +345,8 @@ func TestD2LegacyAssetFixtureContract(t *testing.T) {
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.Assets) != 100 {
-		t.Fatalf("asset fixture contains %d entries, want 100", len(fixture.Assets))
+	if len(fixture.Assets) != 113 {
+		t.Fatalf("asset fixture contains %d entries, want 113", len(fixture.Assets))
 	}
 }
 
@@ -364,7 +387,23 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// data/global/missiles prefix.
 	// The additional code-owned paths are Lua test fixtures colocated with the
 	// production modules; they are not new presentation asset dependencies.
-	const auditedFingerprint = "600e057601b86f77f7e419fdff4f08eef5035767cff6ed532c91dab1d2d5067a"
+	// Realm presentation adds the archive-verified NarrowButtonBlank gateway
+	// strip, the dedicated compact confirmation and Cancel buttons, the verified
+	// 340x224 frontend popup, and the code-owned waiting-room background. Its Act I PL2 transform
+	// reuses the already cataloged Act I
+	// palette family for realm bitmap text. EditTextBoxWide remains cataloged and
+	// fixture-verified for future full-width forms, but is not a shipping screen
+	// dependency now that Realm association is automatic. The lobby frame and
+	// three original button families are decoded with the Act I palette. The
+	// original join/create pane overlays are likewise fixture-pinned with Act I,
+	// so named-game fields and details use their authored borders rather than
+	// approximate screen-local rectangles. The pane-local Cancel and Join Game
+	// controls use their distinct authored 96x32 and 172x32 button families.
+	// Realm lobby typography now includes the original fontridiculous assets;
+	// presentation-coverage verified both files in the mounted archive.
+	// The Create Game pane uses the archive-authored four-state numeric arrow
+	// sheet for its capacity and character-level restriction selectors.
+	const auditedFingerprint = "4aa15491b158ed2e06e62b6975e4959f2bda0d94e917b35e348aca27233a5a63"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

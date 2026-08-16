@@ -90,6 +90,24 @@ type FS struct {
 	nextSubID   uint64
 }
 
+// Close releases archive-backed layers. Directory and embedded layers are
+// harmless no-ops. Callers that construct a long-lived environment stack own
+// this lifecycle.
+func (f *FS) Close() error {
+	if f == nil {
+		return nil
+	}
+	f.mu.Lock()
+	layers := append([]Layer(nil), f.layers...)
+	f.layers = nil
+	f.mu.Unlock()
+	var result error
+	for _, layer := range layers {
+		result = errors.Join(result, Close(layer.FS))
+	}
+	return result
+}
+
 // Change reports that content at Path may resolve differently. Generation is
 // monotonically increasing for the lifetime of the layered filesystem.
 type Change struct {

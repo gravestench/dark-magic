@@ -35,6 +35,26 @@ func TestIdentityIncludesCanonicalGameplayConfiguration(t *testing.T) {
 	}
 }
 
+func TestAuthoritativeCapabilityIdentityRejectsCompositionDrift(t *testing.T) {
+	identity, err := Identity(content.D2Legacy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	modules := make([]string, 0, len(identity.Recipe.CapabilityVersions))
+	for name, version := range identity.Recipe.CapabilityVersions {
+		modules = append(modules, name+"/"+version)
+	}
+	if err := validateCapabilityIdentity(identity, modules); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateCapabilityIdentity(identity, modules[1:]); err == nil {
+		t.Fatal("runtime missing an identity-pinned capability was accepted")
+	}
+	if err := validateCapabilityIdentity(identity, append(modules, "engine.unpinned/v1")); err == nil {
+		t.Fatal("runtime with an unpinned authoritative capability was accepted")
+	}
+}
+
 func TestIdentitySeparatesPackageAndAuthoritativeLuaHashes(t *testing.T) {
 	manifest, _ := json.Marshal(modcache.Manifest{Schema: modcache.ManifestSchema, ID: "d2legacy", Name: "test",
 		Version: "1.0.0", Kind: "game", EngineAPI: modcache.EngineAPI, Redistributable: true})
@@ -124,7 +144,7 @@ func TestIdentityForPackagesRejectsBuiltinMetadataDrift(t *testing.T) {
 		ID: builtin.Manifest.ID, Version: builtin.Manifest.Version, Digest: builtin.Descriptor.Digest,
 		Size: builtin.Descriptor.Size + 1, Redistributable: builtin.Descriptor.Redistributable,
 	}}
-	if _, err := IdentityForPackages(source, packages); err == nil {
+	if _, err := IdentityForPackages(source, packages, simulation.EmptyAssetSetID); err == nil {
 		t.Fatal("built-in package metadata drift was accepted")
 	}
 }

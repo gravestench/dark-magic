@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gravestench/dark-magic/internal/game/simulation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
@@ -16,6 +17,9 @@ import (
 // Each helper below owns one small part of that story.
 func Run(options Options) error {
 	options = applyDevelopmentSceneDefaults(options)
+	if options.AssetSetID == "" {
+		options.AssetSetID = simulation.EmptyAssetSetID
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	app := &application{
 		options:     options,
@@ -92,6 +96,11 @@ func (app *application) shutdown() error {
 			err = errors.Join(err, persistOfflineCharacter(app.saves, app.offlineSession, "local-player"))
 		}
 		err = errors.Join(err, app.network.Close())
+	}
+	if app.realm != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		err = errors.Join(err, app.realm.Close(ctx))
+		cancel()
 	}
 	if app.saves != nil && app.playerProfilePath != "" {
 		err = errors.Join(err, d2save.WriteProfileFile(app.playerProfilePath, app.saves.Profile()))

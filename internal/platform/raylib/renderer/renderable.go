@@ -15,6 +15,7 @@ func (s *Service) newNode() *node {
 		renderer:       s,
 		uuid:           uuid.New(),
 		opacity:        1,
+		tint:           rl.White,
 		enabled:        true,
 		visible:        true,
 		transformDirty: true,
@@ -32,6 +33,7 @@ type node struct {
 	renderer              *Service
 	uuid                  uuid.UUID
 	opacity               float32
+	tint                  rl.Color
 	blendMode             rl.BlendMode
 	image                 image.Image
 	enabled               bool
@@ -214,6 +216,10 @@ func (n *node) Opacity() (opacity float32) {
 func (n *node) SetOpacity(opacity float32) {
 	n.opacity = opacity
 }
+
+func (n *node) Tint() rl.Color { return n.tint }
+
+func (n *node) SetTint(tint rl.Color) { n.tint = tint }
 
 func (n *node) BlendMode() (mode rl.BlendMode) {
 	return n.blendMode

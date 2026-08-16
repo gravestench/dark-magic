@@ -65,6 +65,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.CommandIntentModule(app.commandIntents),
 		modruntime.LoadingModule(app.loading),
 		modruntime.NetworkModule(app.network),
+		modruntime.RealmModule(app.realm),
 	}
 }
 
