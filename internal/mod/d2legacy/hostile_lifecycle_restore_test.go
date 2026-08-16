@@ -42,22 +42,32 @@ func TestGeneratedHostileLifecycleRestoresIdentically(t *testing.T) {
 	})
 	populationPayload, _ := json.Marshal(map[string]any{
 		"act": 1, "level_id": 2, "difficulty": 0,
+		"links": []map[string]any{},
 		"rooms": []map[string]any{{
 			"id": "blood-moor-a", "populate": true,
+			"x": 0, "y": 0, "width": 10, "height": 10,
 			"points": []map[string]any{{"x": 4, "y": 0}},
 		}},
 	})
-	for _, command := range []simulation.Command{
-		{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.player.enter", Payload: playerPayload},
-		{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.population.bootstrap", Payload: populationPayload},
-	} {
-		if err := session.Submit(command); err != nil {
-			t.Fatal(err)
-		}
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: populationPayload}); err != nil {
+		t.Fatal(err)
 	}
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
+	if identities.Len() != 0 {
+		t.Fatalf("population bootstrap eagerly created %d monsters without an active player room", identities.Len())
+	}
+	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: playerPayload}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertMonsterPlayerCount(t, engine, "level:2:room:blood-moor-a:monster:1", 1)
 	replay, err := session.Replay()
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +78,7 @@ func TestGeneratedHostileLifecycleRestoresIdentically(t *testing.T) {
 		"side": "left", "target_x": 4, "target_y": 0,
 		"target_id": "monster:level:2:room:blood-moor-a:monster:1",
 	})
-	cast := simulation.Command{Tick: 2, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "player.use_skill", Payload: castPayload}
+	cast := simulation.Command{Tick: 3, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "player.use_skill", Payload: castPayload}
 	if err := session.Submit(cast); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +127,117 @@ func TestGeneratedHostileLifecycleRestoresIdentically(t *testing.T) {
 		t.Fatalf("restored hostile lifecycle checksum = %s, want %s", continued.Checksum, original.Checksum)
 	}
 	assertCompletedHostileLifecycle(t, restoredEngine)
+}
+
+func TestPopulationActivatesAdjacentRoomsAndPinsCurrentPlayerCount(t *testing.T) {
+	ctx := context.Background()
+	engine := gameecs.New()
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	defer engine.Close()
+	authority, err := Start(ctx, content.D2Legacy(), generatedHostileRecords(), engine, session, 314)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authority.Stop(ctx)
+
+	population, _ := json.Marshal(map[string]any{
+		"act": 1, "level_id": 2, "difficulty": 0,
+		"links": []map[string]any{{"from": "a", "to": "b"}},
+		"rooms": []map[string]any{
+			{"id": "a", "populate": true, "x": 0, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{{"x": 4, "y": 0}}},
+			{"id": "b", "populate": true, "x": 10, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{{"x": 14, "y": 0}}},
+			{"id": "c", "populate": true, "x": 20, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{{"x": 24, "y": 0}}},
+		},
+	})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: population}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if got := monsterCount(engine); got != 0 {
+		t.Fatalf("monster count before room activation = %d, want 0", got)
+	}
+
+	first := generatedPlayerPayload(t, "hero", "alice", 1, 1)
+	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: first}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if got := monsterCount(engine); got != 2 {
+		t.Fatalf("monster count after activating room and neighbor = %d, want 2", got)
+	}
+	assertMonsterPlayerCount(t, engine, "level:2:room:a:monster:1", 1)
+	assertMonsterPlayerCount(t, engine, "level:2:room:b:monster:1", 1)
+
+	second := generatedPlayerPayload(t, "hero-2", "bob", 21, 1)
+	if err := session.Submit(simulation.Command{Tick: 3, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 2, Kind: "system.player.enter", Payload: second}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if got := monsterCount(engine); got != 3 {
+		t.Fatalf("monster count after activating remote room = %d, want 3", got)
+	}
+	assertMonsterPlayerCount(t, engine, "level:2:room:a:monster:1", 1)
+	assertMonsterPlayerCount(t, engine, "level:2:room:c:monster:1", 2)
+}
+
+func generatedPlayerPayload(t *testing.T, characterID, player string, x, y float64) json.RawMessage {
+	t.Helper()
+	payload, err := json.Marshal(map[string]any{
+		"character_id": characterID, "player": player, "name": characterID, "class": "Amazon",
+		"level": 1, "experience": 0, "dexterity": 20, "defense": 0,
+		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
+		"direction": 0, "mode": "NU", "x": x, "y": y,
+		"world_width": 100, "world_height": 100, "act": 1, "level_id": 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return payload
+}
+
+func monsterCount(engine *gameecs.Engine) int {
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
+	return identities.Len()
+}
+
+func assertMonsterPlayerCount(t *testing.T, engine *gameecs.Engine, spawnID string, want int64) {
+	t.Helper()
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
+	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		current, _ := identity.Get("spawn_id")
+		if current != spawnID {
+			continue
+		}
+		values, present := stats.Get(entity)
+		if !present {
+			t.Fatalf("monster %s has no stats", spawnID)
+		}
+		count, _ := values.Get("player_count")
+		if count != want {
+			t.Fatalf("monster %s player count = %v, want %d", spawnID, count, want)
+		}
+		return
+	}
+	t.Fatalf("monster %s was not created", spawnID)
 }
 
 func stepSession(t *testing.T, session *gamesession.Session, count int) {
