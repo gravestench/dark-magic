@@ -117,19 +117,12 @@ end
 
 local function no_drop_exponent(context)
     assert(type(context) == "table", "NoDrop player context is required")
-    local effective = context.effective_player_count
-    local nearby = context.nearby_party_member_count
+    local count = context.no_drop_player_count
     assert(
-        type(effective) == "number" and effective >= 1 and effective <= 8 and effective == math.floor(effective),
-        "effective player count must be an integer from 1 through 8"
+        type(count) == "number" and count >= 1 and count <= 8 and count == math.floor(count),
+        "NoDrop player count must be an integer from 1 through 8"
     )
-    assert(
-        type(nearby) == "number" and nearby >= 0 and nearby <= 7 and nearby == math.floor(nearby),
-        "nearby party member count must be an integer from 0 through 7"
-    )
-    -- LoD 1.14d counts each additional effective game player as one half and
-    -- each additional nearby party member as another half, flooring the sum.
-    return math.floor(1 + (effective - 1) / 2 + nearby / 2)
+    return count
 end
 
 local function adjusted_no_drop(class, context)

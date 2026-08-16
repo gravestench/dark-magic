@@ -59,11 +59,12 @@ local function count_game_players(entities)
 end
 
 local function roll_loot(entities, identity, stats)
+    local monster_player_count = math.max(stats:get("player_count"), 1)
     local drops = loot.roll(identity:get("treasure_class"), {
         version = 100,
         monster_level = stats:get("level"),
         magic_find = 0,
-        player_count = player_count.no_drop(count_game_players(entities), 0),
+        player_count = player_count.no_drop(count_game_players(entities), 0, monster_player_count),
     })
     return loot.encode(drops)
 end
