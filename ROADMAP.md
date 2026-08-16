@@ -59,7 +59,7 @@ policy**, and **unresolved**.
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; authoritative semantic projections must replace remaining raw/ad hoc reads as gameplay domains mature. |
-| M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete durable semantic character and loss-preserving `.d2s` adapter do not. |
+| M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, and population foundations exist; dynamic occupancy, inactive units, object authority, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
@@ -108,9 +108,14 @@ Already true:
 
 Still required:
 
-- [ ] Introduce an explicit `GameDataGenerationID` derived from the effective authoritative data inputs plus relevant parser/schema identity, rather than treating the broader presentation-inclusive asset-set digest as the final semantic identity.
+- [x] Introduce an explicit `GameDataGenerationID` in runtime-recipe v2 that
+  binds mounted bytes to the authoritative record parser/schema contract.
+- [ ] Narrow its byte input from the presentation-inclusive mounted asset set to
+  the effective authoritative data paths and preserve their winning provenance.
 - [ ] Pin the immutable typed/normalized data views used by one live session; prove store invalidation or hot reload only creates a generation for future sessions.
-- [ ] Carry the explicit generation through runtime/session identity, replay, checkpoint, reconnect, worker allocation/admission, and durable compatibility metadata.
+- [x] Carry the explicit generation through the canonical runtime identity and
+  therefore session admission, replay, checkpoint, reconnect, worker allocation,
+  and durable compatibility identity hashes.
 - [ ] Preserve and expose row ordinal, symbolic ID, explicit numeric ID, act-local index, source provenance, and derived index as distinct concepts where consumed.
 - [ ] Add deterministic generation/change/no-live-swap tests and one cross-table linkage diagnostic fixture.
 
@@ -260,11 +265,12 @@ allocation, skills, inventory/equipment/swap/stash, corpse, per-difficulty
 quest/waypoint/completion, hireling, and other proven durable facts. Keep transient
 checkpoint state separate.
 
-### G16 — `.d2s` compatibility adapter
+### G16 — Legacy interoperability
 
-Status: **research only**. Implement a section scanner, lossless parse,
-byte-exact no-op round trip, known-section semantic adapters, one-field diffs,
-and preservation of unknown bytes. The legacy layout is not the canonical model.
+Status: **out of scope**. Dark Magic will not import, export, or preserve vanilla
+`.d2s` files; speak BNCS, MCP, or D2GS; interoperate with vanilla servers; or
+preserve compatibility with old community tools. Its canonical content,
+network, replay, checkpoint, and durable character formats are independent.
 
 ### G17 — Trade
 
@@ -300,8 +306,8 @@ gates; do not postpone all UI/audio work to this gate.
 Implementation and empirical verification proceed independently. High-value
 probes remain:
 
-- foundation: explicit content generation, live invalidation, `.d2s` round trip,
-  cross-table links, ItemStatCost operations, CharStats vectors;
+- foundation: explicit content generation, live invalidation, cross-table links,
+  ItemStatCost operations, and CharStats vectors;
 - combat/motion: block, avoidance, mitigation, absorb, critical/deadly/mastery,
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
   cast timing, path types, stamina, and inactive rooms;
@@ -319,7 +325,8 @@ and credentials do not enter Git.
 
 ## Explicit deferrals
 
-- Original-client BNCS/MCP/D2GS protocol compatibility is an adapter project.
+- Vanilla client/server protocols, vanilla save files, and old community-tool
+  interoperability are permanently outside the supported product boundary.
 - Exact retail seed/layout reproduction is optional until explicitly targeted.
 - Classic-mode and pre-1.14d compatibility branches are out of scope.
 - Features not present in expansion 1.14d must not be back-projected into the

@@ -427,8 +427,9 @@ func admissionFixture(t *testing.T, validate simulation.CommandValidator) (*Mana
 	}
 	identity := simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
 		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
-		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1, Redistributable: true}},
-		AuthoritativeHash: "rules", ConfigurationHash: "config",
+		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID),
+		Packages:             simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1, Redistributable: true}},
+		AuthoritativeHash:    "rules", ConfigurationHash: "config",
 	}}
 	identity.Recipe.Packages.Extensions = []simulation.RuntimePackage{{ID: "realm_extension", Version: "1.0.0", Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Size: 2, Redistributable: true}}
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)

@@ -43,7 +43,8 @@ func TestPrepareSelfHostedExtensionsDownloadsAndVerifiesExactRecipe(t *testing.T
 	}
 	packages := simulation.RuntimePackageSet{Base: toRuntime(base), Extensions: []simulation.RuntimePackage{toRuntime(resolved.Extensions.Packages[0])}}
 	identity := simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID, Packages: packages,
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
+		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID), Packages: packages,
 		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
@@ -129,8 +130,9 @@ func TestAcquireExtensionsInterruptedDownloadLeavesNoPackageAndCleanRetrySucceed
 		Digest: descriptor.Digest, Size: descriptor.Size, Redistributable: descriptor.Redistributable}
 	recipe := simulation.RuntimeRecipe{Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1",
 		NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
-		Packages:          simulation.RuntimePackageSet{Base: baseRuntime, Extensions: []simulation.RuntimePackage{extensionRuntime}},
-		AuthoritativeHash: "rules", ConfigurationHash: "config"}
+		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID),
+		Packages:             simulation.RuntimePackageSet{Base: baseRuntime, Extensions: []simulation.RuntimePackage{extensionRuntime}},
+		AuthoritativeHash:    "rules", ConfigurationHash: "config"}
 
 	clientRoot := filepath.Join(t.TempDir(), "client")
 	clientStore, err := modcache.New(clientRoot)

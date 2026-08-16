@@ -57,8 +57,9 @@ func runtimeIdentityFixture(packageDigest string) RuntimeIdentity {
 	packageDigest = "sha256:" + hex.EncodeToString(digest[:])
 	return RuntimeIdentity{Recipe: RuntimeRecipe{
 		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
-		Packages:          RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
-		AuthoritativeHash: packageDigest, ConfigurationHash: "config",
+		GameDataGenerationID: GameDataGenerationIDForAssetSet(EmptyAssetSetID),
+		Packages:             RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
+		AuthoritativeHash:    packageDigest, ConfigurationHash: "config",
 		CapabilityVersions: map[string]string{"engine.ecs": "v1"},
 	}}
 }

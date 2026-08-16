@@ -64,7 +64,8 @@ func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, as
 	return simulation.RuntimeIdentity{
 		Recipe: simulation.RuntimeRecipe{
 			Schema: simulation.RuntimeRecipeSchema, EngineAPI: modcache.EngineAPI,
-			NetworkProtocol: simulation.RuntimeNetworkProtocol, AssetSetID: assetSetID, Packages: packages,
+			NetworkProtocol: simulation.RuntimeNetworkProtocol, AssetSetID: assetSetID,
+			GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(assetSetID), Packages: packages,
 			AuthoritativeHash: authoritativeDigest, ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
 			CapabilityVersions: authoritativeCapabilityVersions(),
 		},

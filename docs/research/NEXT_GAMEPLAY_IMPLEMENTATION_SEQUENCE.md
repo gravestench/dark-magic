@@ -306,7 +306,8 @@ Layer realm services around the stable game server:
 - graceful draining and crash recovery;
 - ladder/social/account data as separate realm state.
 
-Future BNCS/MCP/D2GS original-client compatibility belongs in adapters around semantic realm/game services, not inside the simulation API.
+Vanilla BNCS/MCP/D2GS protocols, vanilla save files, and old community-tool
+interoperability are outside the supported product boundary.
 
 ## Research and probes to run in parallel
 
@@ -323,8 +324,6 @@ Implementation should continue while exact compatibility questions are researche
 - player death/corpse/XP-loss behavior;
 - `Sounds.txt` pitch/fade/compound/falloff/tracking/solo/block semantics and `Levels.SoundEnv` behavior;
 - party reward sharing, hostility/PvP edge cases, trade UX/state;
-- BNCS/MCP/D2GS protocol mapping and legacy realm behavior;
-- lossless `.d2s` compatibility and TXT->BIN linkage.
 
 ## Rules for Codex gameplay PRs
 

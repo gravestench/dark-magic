@@ -1,14 +1,18 @@
 package simulation
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
 )
 
 const (
-	RuntimeRecipeSchema    = "dark-magic.runtime-recipe/v1"
-	RuntimeNetworkProtocol = "dark-magic.game-session/v2"
+	RuntimeRecipeSchema      = "dark-magic.runtime-recipe/v2"
+	RuntimeNetworkProtocol   = "dark-magic.game-session/v2"
+	GameDataGenerationSchema = "dark-magic.game-data-generation/v1"
+	RecordParserSchema       = "dark-magic.records-tsv/v1"
 	// EmptyAssetSetID is the canonical identity for runtimes with no external
 	// mounted game data, such as hermetic unit tests and synthetic fixtures.
 	EmptyAssetSetID = "sha256:4b5f42b9b0f48dc738578940d8ca3db3eaac90364a5106411f83012d47998ef6"
@@ -33,20 +37,22 @@ type RuntimePackageSet struct {
 // RuntimeRecipe is the complete deterministic implementation recipe pinned by
 // admission, reconnect, checkpoints, and replays.
 type RuntimeRecipe struct {
-	Schema             string            `json:"schema"`
-	EngineAPI          string            `json:"engine_api"`
-	NetworkProtocol    string            `json:"network_protocol"`
-	AssetSetID         string            `json:"asset_set_id"`
-	Packages           RuntimePackageSet `json:"packages"`
-	AuthoritativeHash  string            `json:"authoritative_hash"`
-	ConfigurationHash  string            `json:"configuration_hash"`
-	CapabilityVersions map[string]string `json:"capability_versions,omitempty"`
+	Schema               string            `json:"schema"`
+	EngineAPI            string            `json:"engine_api"`
+	NetworkProtocol      string            `json:"network_protocol"`
+	AssetSetID           string            `json:"asset_set_id"`
+	GameDataGenerationID string            `json:"game_data_generation_id"`
+	Packages             RuntimePackageSet `json:"packages"`
+	AuthoritativeHash    string            `json:"authoritative_hash"`
+	ConfigurationHash    string            `json:"configuration_hash"`
+	CapabilityVersions   map[string]string `json:"capability_versions,omitempty"`
 }
 
 func (recipe RuntimeRecipe) Validate() error {
 	if recipe.Schema != RuntimeRecipeSchema || strings.TrimSpace(recipe.EngineAPI) == "" ||
 		strings.TrimSpace(recipe.NetworkProtocol) == "" || strings.TrimSpace(recipe.AuthoritativeHash) == "" ||
-		strings.TrimSpace(recipe.ConfigurationHash) == "" || ValidateAssetSetID(recipe.AssetSetID) != nil {
+		strings.TrimSpace(recipe.ConfigurationHash) == "" || ValidateAssetSetID(recipe.AssetSetID) != nil ||
+		ValidateGameDataGenerationID(recipe.GameDataGenerationID) != nil {
 		return errors.New("simulation: invalid runtime recipe contract")
 	}
 	if err := validateRuntimePackage(recipe.Packages.Base); err != nil {
@@ -75,6 +81,23 @@ func (recipe RuntimeRecipe) Validate() error {
 		if strings.TrimSpace(name) == "" || strings.TrimSpace(version) == "" {
 			return errors.New("simulation: invalid runtime capability version")
 		}
+	}
+	return nil
+}
+
+// GameDataGenerationIDForAssetSet binds mounted source bytes to the parser and
+// schema contract that turns them into authoritative records. It is distinct
+// from AssetSetID so a parser/schema change invalidates deterministic sessions
+// even when the legally supplied files are unchanged.
+func GameDataGenerationIDForAssetSet(assetSetID string) string {
+	payload := GameDataGenerationSchema + "\x00" + assetSetID + "\x00" + RecordParserSchema
+	digest := sha256.Sum256([]byte(payload))
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
+func ValidateGameDataGenerationID(value string) error {
+	if !validSHA256Digest(value) {
+		return errors.New("simulation: invalid game-data generation identity")
 	}
 	return nil
 }

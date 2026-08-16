@@ -384,6 +384,7 @@ func (processHelperTickets) Revoke(context.Context, string) error { return nil }
 func processHelperDescription() realm.WorkerDescription {
 	identity := simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
 		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
+		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID),
 		Packages: simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0",
 			Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Size: 1}},
 		AuthoritativeHash: "rules", ConfigurationHash: "config",

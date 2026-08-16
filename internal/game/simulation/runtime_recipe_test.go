@@ -1,6 +1,10 @@
 package simulation
 
-import "testing"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"testing"
+)
 
 func TestRuntimeRecipeDigestPinsExtensionOrderAndCompleteMetadata(t *testing.T) {
 	const (
@@ -10,6 +14,7 @@ func TestRuntimeRecipeDigestPinsExtensionOrderAndCompleteMetadata(t *testing.T) 
 	)
 	recipe := RuntimeRecipe{
 		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
+		GameDataGenerationID: GameDataGenerationIDForAssetSet(EmptyAssetSetID),
 		Packages: RuntimePackageSet{
 			Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: baseDigest, Size: 1, Redistributable: true},
 			Extensions: []RuntimePackage{
@@ -60,11 +65,36 @@ func TestRuntimeRecipeRequiresCanonicalAssetSetIdentity(t *testing.T) {
 	}
 }
 
+func TestGameDataGenerationPinsAssetBytesAndParserSchema(t *testing.T) {
+	first := GameDataGenerationIDForAssetSet(EmptyAssetSetID)
+	if err := ValidateGameDataGenerationID(first); err != nil {
+		t.Fatal(err)
+	}
+	other := GameDataGenerationIDForAssetSet("sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+	if first == other {
+		t.Fatal("different mounted bytes produced the same game-data generation")
+	}
+	payload := GameDataGenerationSchema + "\x00" + EmptyAssetSetID + "\x00different-parser/v1"
+	digest := sha256.Sum256([]byte(payload))
+	if first == "sha256:"+hex.EncodeToString(digest[:]) {
+		t.Fatal("different parser schema produced the same game-data generation")
+	}
+}
+
+func TestRuntimeRecipeRequiresGameDataGenerationIdentity(t *testing.T) {
+	recipe := runtimeIdentityFixture("generation-required").Recipe
+	recipe.GameDataGenerationID = ""
+	if err := recipe.Validate(); err == nil {
+		t.Fatal("runtime recipe without a game-data generation identity was accepted")
+	}
+}
+
 func TestRuntimeRecipeRejectsNonCanonicalPackageDigest(t *testing.T) {
 	recipe := RuntimeRecipe{
 		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
-		Packages:          RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: "not-a-digest", Size: 1}},
-		AuthoritativeHash: "rules", ConfigurationHash: "config",
+		GameDataGenerationID: GameDataGenerationIDForAssetSet(EmptyAssetSetID),
+		Packages:             RuntimePackageSet{Base: RuntimePackage{ID: "d2legacy", Version: "1", Digest: "not-a-digest", Size: 1}},
+		AuthoritativeHash:    "rules", ConfigurationHash: "config",
 	}
 	if err := recipe.Validate(); err == nil {
 		t.Fatal("non-canonical package digest was accepted")
@@ -78,6 +108,7 @@ func TestRuntimeRecipeRejectsOverlappingPackageNamespaces(t *testing.T) {
 	)
 	recipe := RuntimeRecipe{
 		Schema: RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: EmptyAssetSetID,
+		GameDataGenerationID: GameDataGenerationIDForAssetSet(EmptyAssetSetID),
 		Packages: RuntimePackageSet{
 			Base:       RuntimePackage{ID: "d2legacy", Version: "1", Digest: baseDigest, Size: 1},
 			Extensions: []RuntimePackage{{ID: "d2legacy.feature", Version: "1", Digest: extensionDigest, Size: 1}},

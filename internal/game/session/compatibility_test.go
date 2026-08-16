@@ -14,8 +14,9 @@ func compatibilityIdentity(packageHash string) simulation.RuntimeIdentity {
 	packageHash = "sha256:" + hex.EncodeToString(digestBytes[:])
 	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
 		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
-		Packages:          simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageHash, Size: 1, Redistributable: true}},
-		AuthoritativeHash: packageHash, ConfigurationHash: "config",
+		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID),
+		Packages:             simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageHash, Size: 1, Redistributable: true}},
+		AuthoritativeHash:    packageHash, ConfigurationHash: "config",
 		CapabilityVersions: map[string]string{"engine.ecs": "v1"},
 	}}
 }

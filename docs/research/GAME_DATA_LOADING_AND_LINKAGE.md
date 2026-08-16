@@ -15,7 +15,7 @@ layered VFS bytes
   -> session-pinned authoritative data generation
 ```
 
-The important remaining work is not another record manager. It is to make row identity, column preservation, cross-table linkage, simulation-generation pinning, localization linkage, and eventual legacy BIN compatibility explicit.
+The important remaining work is not another record manager. It is to make row identity, column preservation, cross-table linkage, simulation-generation pinning, and localization linkage explicit. Source-faithful rewriting and legacy BIN/tool interoperability are out of scope.
 
 The current `internal/game/data/store` already reads original layered bytes, exposes streams, parses generic TSV, preserves duplicate/unnamed headers, reports source provenance, caches defensive copies, and invalidates per path. `internal/game/data/catalog` already builds a large typed snapshot atomically and derives deterministic indexes. [GAME_DATA_RECORDS.md](../GAME_DATA_RECORDS.md) correctly states that source bytes outrank documentation and that unused/sentinel/dangling data must not be silently repaired.
 
@@ -57,7 +57,7 @@ A typed `map[code]record` is an index over a table; it must not erase the ordere
 
 ## Raw-table representation
 
-The current generic `map[string]string` rows are useful but do not preserve original header order as a first-class structure. Raw bytes remain available, so no data is irretrievably lost. Before Dark Magic claims lossless TXT/BIN tooling or round-trip mod authoring, introduce a renderer/gameplay-independent raw document shape roughly equivalent to:
+The current generic `map[string]string` rows are useful but do not preserve original header order as a first-class structure. Raw bytes remain available, so no source information is irretrievably lost. If Dark Magic needs stronger diagnostics, introduce a renderer/gameplay-independent raw document shape roughly equivalent to:
 
 ```text
 RawTableDocument
@@ -70,7 +70,7 @@ RawTableDocument
   parse diagnostics
 ```
 
-This is **not** required for ordinary typed gameplay reads. It is required if later tooling must preserve duplicate headers, unknown columns, column order, trailing cells, or source-faithful rewrites.
+This is **not** required for ordinary typed gameplay reads. It is useful only when diagnostics must expose duplicate headers, unknown columns, column order, or trailing cells; source-faithful rewriting is not a product requirement.
 
 The current generic parser fills missing cells with empty strings. Extra cells beyond the header are not represented in the row map. A raw document should preserve them and report them, even if typed decoding ignores them.
 
@@ -153,17 +153,11 @@ Research still needed:
 
 ## TXT versus BIN
 
-Dark Magic does not need to reproduce the legacy compiler just to execute game rules from TXT. Treat BIN support as a compatibility/tooling adapter.
-
-Before implementing BIN writing:
-
-1. identify every target BIN structure and patch version;
-2. establish whether row order is compiled into record number references;
-3. identify string-pointer/index transformation and field packing;
-4. compare compiler output from lawfully owned installs or repeatable `-direct -txt` runs;
-5. preserve unknown/unused fields rather than normalizing them.
-
-A BIN decoder should emit the same canonical typed domain records as TXT where equivalent, while retaining format-specific raw metadata for diagnostics.
+Dark Magic consumes the legally supplied expansion data needed by its own typed
+runtime. Reproducing the legacy compiler, writing legacy BIN files, and
+supporting old community-tool round trips are out of scope. Any future BIN
+reader must be justified solely as an internal data-ingestion path and emit the
+same canonical records as TXT; it is not an interoperability commitment.
 
 ## Mod override semantics
 
@@ -178,7 +172,8 @@ For mod-added records, define per table whether:
 - old saves can load without the mod;
 - client/server must share the exact extension.
 
-A content mod that adds a new skill may be valid for an offline Dark Magic save while being impossible to serialize into a legacy `.d2s` field or legacy packet. That is an adapter limitation, not a reason to cripple the canonical runtime ID model.
+A content mod that adds a new skill may use Dark Magic-native identifiers without
+regard for vanilla save, packet, or community-tool encodings.
 
 ## Client/server agreement
 
@@ -219,15 +214,13 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
    - canonical hash of authoritative table inputs;
    - expose to session/replay diagnostics.
 2. **Raw ordered table document**
-   - preserve ordered headers/cells/trailing values for tooling and future BIN work.
+   - preserve ordered headers/cells/trailing values when diagnostics require them.
 3. **Link registry/report**
    - document and validate per-table foreign-key semantics without making a runtime service locator.
 4. **Session pinning**
    - ensure authoritative domain views do not swap generations during a live replayable session.
 5. **Localization linkage audit**
    - record key/index semantics and table precedence.
-6. **TXT/BIN compatibility lab**
-   - inspect lawfully owned outputs and build round-trip/golden fixtures without coupling codecs to gameplay.
 
 ## Acceptance criteria
 
@@ -239,7 +232,7 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 - Invalid cross-links report source, row, column, and raw value.
 - Mod overrides report which layer won.
 - Localization can change without changing authoritative entity/item/quest IDs.
-- Legacy BIN adapters can be omitted without forcing gameplay to parse BIN.
+- Gameplay does not depend on legacy BIN writing or third-party tool compatibility.
 
 ## Verification backlog
 
@@ -250,7 +243,6 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 5. Establish exact localization TBL precedence and duplicate-key behavior.
 6. Build client/server content-fingerprint experiments for a simulation-affecting one-row mod.
 7. Verify expansion 1.14d table selection and treatment of authored expansion flags.
-8. Document which mod-added identifiers cannot round-trip through legacy save/network formats.
 
 ## Sources
 

@@ -1,6 +1,8 @@
 # Multiplayer/realm/UI verification queue
 
-This queue consolidates empirical work for parties/PvP/trade, legacy realm/protocol compatibility, networking behavior and UI-visible gameplay contracts.
+This queue consolidates empirical work for parties/PvP/trade, Dark Magic
+networking behavior, Realm services, and UI-visible gameplay contracts. Vanilla
+protocol and old community-tool interoperability are out of scope.
 
 ## P0: architecture-shaping probes
 
@@ -12,7 +14,6 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 - Build a character lease/CAS simulation proving two game workers cannot commit the same durable revision concurrently.
 - Define the first versioned per-client world/player snapshot and prove private inventory/hidden server facts are filtered.
 - Map current Lua HUD/item/quest/interaction reads to explicit semantic view models and remove one direct/raw state dependency if any remains.
-- Pin the broad historical gateway/realm/game-server connection/service responsibilities for one target original client version before implementing any legacy packet adapter.
 
 ## P1: party/social
 
@@ -108,22 +109,6 @@ This queue consolidates empirical work for parties/PvP/trade, legacy realm/proto
 - continuity across lobby panels and teardown/reconnect behavior;
 - separation of realm social, game chat, local diagnostic, and authoritative
   gameplay command dispatch.
-
-## P1: legacy protocol adapters
-
-These are implementation blockers only if original-client compatibility becomes a near-term goal:
-
-- BNCS authentication/chat/session states for target client;
-- realm/MCP character list/create/delete/game list/create/join states;
-- D2GS handshake/game join/gameplay unit state;
-- character lock/load/save/release inter-server protocol;
-- server/version/checksum negotiation;
-- original command anti-cheat validation;
-- packet field units/endianness/string limits;
-- fragmentation/compression if present;
-- original interest/unit update behavior;
-- disconnect/error codes;
-- compatibility with the expansion 1.14d client only.
 
 ## P1: UI-visible gameplay state
 
