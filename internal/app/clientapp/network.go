@@ -270,7 +270,8 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 		fail(err)
 		return
 	}
-	identity, err := d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
+	identity, err := d2legacy.IdentityForPackagesAndData(d2legacySource, controller.app.options.Packages,
+		controller.app.options.AssetSetID, controller.app.gameDataGenerationID(), controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return
@@ -296,7 +297,8 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 	// Package acquisition verifies exact extension archives without mutating the
 	// live VFS. Reconstruct the deterministic recipe from the local built-in and
 	// verified descriptors before any selected character is offered to the host.
-	identity, err = d2legacy.IdentityForPackages(d2legacySource, recipe.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
+	identity, err = d2legacy.IdentityForPackagesAndData(d2legacySource, recipe.Packages,
+		controller.app.options.AssetSetID, controller.app.gameDataGenerationID(), controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return
@@ -318,7 +320,8 @@ func (controller *networkController) startJoin(ctx context.Context, generation u
 		fail(err)
 		return
 	}
-	identity, err = d2legacy.IdentityForPackages(d2legacySource, controller.app.options.Packages, controller.app.options.AssetSetID, controller.app.sessionInitialData())
+	identity, err = d2legacy.IdentityForPackagesAndData(d2legacySource, controller.app.options.Packages,
+		controller.app.options.AssetSetID, controller.app.gameDataGenerationID(), controller.app.sessionInitialData())
 	if err != nil {
 		fail(err)
 		return

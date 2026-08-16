@@ -35,6 +35,30 @@ func TestIdentityIncludesCanonicalGameplayConfiguration(t *testing.T) {
 	}
 }
 
+func TestIdentityPinsExplicitGameDataGeneration(t *testing.T) {
+	baseline, err := Identity(content.D2Legacy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstID := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	secondID := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	first, err := IdentityForPackagesAndData(content.D2Legacy(), baseline.Recipe.Packages,
+		simulation.EmptyAssetSetID, firstID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := IdentityForPackagesAndData(content.D2Legacy(), baseline.Recipe.Packages,
+		simulation.EmptyAssetSetID, secondID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstDigest, _ := first.Digest()
+	secondDigest, _ := second.Digest()
+	if firstDigest == secondDigest || first.Recipe.GameDataGenerationID != firstID {
+		t.Fatal("explicit game-data generation did not change the runtime identity")
+	}
+}
+
 func TestAuthoritativeCapabilityIdentityRejectsCompositionDrift(t *testing.T) {
 	identity, err := Identity(content.D2Legacy())
 	if err != nil {

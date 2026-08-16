@@ -34,6 +34,13 @@ func Identity(source fs.FS, configuration ...map[string]any) (simulation.Runtime
 // production host and client. It also proves that the supplied package set
 // names the exact built-in d2legacy bytes used to construct the runtime.
 func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, assetSetID string, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
+	return IdentityForPackagesAndData(source, packages, assetSetID,
+		simulation.GameDataGenerationIDForAssetSet(assetSetID), configuration...)
+}
+
+// IdentityForPackagesAndData pins the exact immutable authoritative table
+// generation used by a live session independently from presentation assets.
+func IdentityForPackagesAndData(source fs.FS, packages simulation.RuntimePackageSet, assetSetID, gameDataGenerationID string, configuration ...map[string]any) (simulation.RuntimeIdentity, error) {
 	builtin, err := modcache.DescribeBuiltin(source)
 	if err != nil {
 		return simulation.RuntimeIdentity{}, err
@@ -44,6 +51,9 @@ func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, as
 	}
 	if packages.Base != expectedBase {
 		return simulation.RuntimeIdentity{}, fmt.Errorf("d2legacy: runtime package set does not identify the built-in base")
+	}
+	if err := simulation.ValidateGameDataGenerationID(gameDataGenerationID); err != nil {
+		return simulation.RuntimeIdentity{}, err
 	}
 	authoritativeDigest, err := hashSource(source, "lua/d2legacy", func(name string) bool {
 		return strings.HasSuffix(name, ".lua")
@@ -65,7 +75,7 @@ func IdentityForPackages(source fs.FS, packages simulation.RuntimePackageSet, as
 		Recipe: simulation.RuntimeRecipe{
 			Schema: simulation.RuntimeRecipeSchema, EngineAPI: modcache.EngineAPI,
 			NetworkProtocol: simulation.RuntimeNetworkProtocol, AssetSetID: assetSetID,
-			GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(assetSetID), Packages: packages,
+			GameDataGenerationID: gameDataGenerationID, Packages: packages,
 			AuthoritativeHash: authoritativeDigest, ConfigurationHash: hex.EncodeToString(configurationDigest[:]),
 			CapabilityVersions: authoritativeCapabilityVersions(),
 		},

@@ -210,15 +210,17 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 
 ## Implementation slices
 
-1. **Generation fingerprint**
-   - canonical hash of authoritative table inputs;
-   - expose to session/replay diagnostics.
+1. **Generation fingerprint — implemented**
+   - canonical hash of effective authoritative table bytes, winning provenance,
+     and parser schema;
+   - pinned through runtime-recipe v2 and every session identity surface.
 2. **Raw ordered table document**
    - preserve ordered headers/cells/trailing values when diagnostics require them.
 3. **Link registry/report**
    - document and validate per-table foreign-key semantics without making a runtime service locator.
-4. **Session pinning**
-   - ensure authoritative domain views do not swap generations during a live replayable session.
+4. **Session pinning — implemented for generic records**
+   - copied table bytes back an immutable per-authority store, so invalidation
+     cannot swap generations during a live replayable session.
 5. **Localization linkage audit**
    - record key/index semantics and table precedence.
 

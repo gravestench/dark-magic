@@ -98,7 +98,15 @@ func (app *application) buildPresentationCore() error {
 }
 
 func (app *application) loadGameCatalogs() error {
-	app.records = recordstore.New(app.options.Content)
+	pinned, generation, err := recordstore.Pin(app.options.Content)
+	if err != nil && !errors.Is(err, recordstore.ErrNoAuthoritativeTables) {
+		return wrap("pin authoritative game data", err)
+	}
+	if err == nil {
+		app.records = pinned
+	} else {
+		app.records = recordstore.New(app.options.Content)
+	}
 	app.records.SetLogger(slog.Default().With("component", "records"))
 	app.questCatalog = recovered.New(app.options.Content)
 
@@ -111,9 +119,17 @@ func (app *application) loadGameCatalogs() error {
 		return err
 	}
 	slog.Info("loaded recovered d2legacy records",
+		"game_data_generation_id", generation.ID,
 		"quests", len(recoveredData.Quests), "speech", len(recoveredData.Speech),
 		"map_objects", len(recoveredData.MapObjects))
 	return nil
+}
+
+func (app *application) gameDataGenerationID() string {
+	if app.records != nil && app.records.GenerationID() != "" {
+		return app.records.GenerationID()
+	}
+	return simulation.GameDataGenerationIDForAssetSet(app.options.AssetSetID)
 }
 
 func (app *application) buildOfflineSession() error {
@@ -155,7 +171,8 @@ func (app *application) buildOfflineSession() error {
 	if err != nil {
 		return wrap("resolve d2legacy package", err)
 	}
-	identity, err := d2legacymod.IdentityForPackages(d2legacySource, app.options.Packages, app.options.AssetSetID, initialData)
+	identity, err := d2legacymod.IdentityForPackagesAndData(d2legacySource, app.options.Packages,
+		app.options.AssetSetID, app.gameDataGenerationID(), initialData)
 	if err != nil {
 		return wrap("identify d2legacy mod", err)
 	}

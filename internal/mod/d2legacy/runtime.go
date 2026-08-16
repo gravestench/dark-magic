@@ -59,6 +59,9 @@ type Config struct {
 	// AssetSetID is the path-independent digest of external game data mounted
 	// by product composition. An empty value is valid only for embedded tests.
 	AssetSetID string
+	// GameDataGenerationID identifies the immutable authoritative record view.
+	// When omitted, StartWithConfig reads it from a pinned Records implementation.
+	GameDataGenerationID string
 	// PackageContent and Extensions are supplied together by production
 	// composition so private Lua namespaces and authoritative entrypoints from
 	// every locked extension run on the actual authority.
@@ -87,10 +90,18 @@ func StartWithConfig(ctx context.Context, source fs.FS, records Records, engine 
 	if config.AssetSetID == "" {
 		config.AssetSetID = simulation.EmptyAssetSetID
 	}
+	if config.GameDataGenerationID == "" {
+		if pinned, ok := records.(interface{ GenerationID() string }); ok {
+			config.GameDataGenerationID = pinned.GenerationID()
+		}
+	}
 	if config.Packages.Base.ID == "" {
 		identity, err = Identity(source, config.InitialData)
 	} else {
-		identity, err = IdentityForPackages(source, config.Packages, config.AssetSetID, config.InitialData)
+		if config.GameDataGenerationID == "" {
+			config.GameDataGenerationID = simulation.GameDataGenerationIDForAssetSet(config.AssetSetID)
+		}
+		identity, err = IdentityForPackagesAndData(source, config.Packages, config.AssetSetID, config.GameDataGenerationID, config.InitialData)
 	}
 	if err != nil {
 		return nil, err

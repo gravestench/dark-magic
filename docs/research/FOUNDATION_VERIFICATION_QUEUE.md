@@ -4,10 +4,11 @@ These are the highest-value empirical probes extracted from the six foundation r
 
 ## P0: unblock architecture contracts
 
-- [ ] Narrow the new runtime-recipe v2 game-data generation from the full mounted
-  asset-set digest to effective authoritative paths/provenance, then prove
-  whether a live session can observe record-store invalidation/rebuild. Parser
-  schema and all compatibility surfaces are already pinned.
+- [x] Narrow runtime-recipe v2 game-data generation to effective authoritative
+  table bytes and winning provenance. The session store copies those bytes;
+  invalidation reparses the pinned generation, while source or mount changes
+  produce a new generation only for a future authority. Parser schema and all
+  compatibility surfaces are pinned.
 - Add exact D2 seed recurrence vectors and state serialization tests.
 - Enumerate ItemStatCost op dependencies used by the mounted LoD data and identify unsupported forms.
 - Extract all seven `CharStats` class rows into local/non-distributed golden vectors and determine fixed-point scaling for resource gains.

@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 
+	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -66,6 +67,22 @@ func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config C
 	}
 	if err := gamesession.ValidatePredictionTier(config.Prediction); err != nil {
 		return nil, err
+	}
+	if config.Content != nil {
+		pinnable, ok := config.Content.(interface {
+			fs.FS
+			List(string, string) ([]string, error)
+			ResolveSource(string) (string, string, error)
+		})
+		if ok {
+			pinned, _, pinErr := recordstore.Pin(pinnable)
+			if pinErr != nil && !errors.Is(pinErr, recordstore.ErrNoAuthoritativeTables) {
+				return nil, fmt.Errorf("game server: pin authoritative records: %w", pinErr)
+			}
+			if pinErr == nil {
+				records = pinned
+			}
+		}
 	}
 	engine := gameecs.New()
 	session, err := gamesession.New(engine, config.Session)

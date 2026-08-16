@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/gravestench/dark-magic/internal/content"
+	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 	"github.com/gravestench/dark-magic/internal/modcache"
@@ -41,7 +43,8 @@ func (app *application) restoreConfiguredPackages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	identity, err := d2legacy.IdentityForPackages(source, app.configuredMods, app.options.AssetSetID, app.sessionInitialData())
+	identity, err := d2legacy.IdentityForPackagesAndData(source, app.configuredMods, app.options.AssetSetID,
+		app.gameDataGenerationID(), app.sessionInitialData())
 	if err != nil {
 		return err
 	}
@@ -217,7 +220,16 @@ func (app *application) refreshPackageDerivedContent() error {
 	if _, err := app.options.Content.Invalidate("."); err != nil {
 		return err
 	}
-	app.records.InvalidateAll()
+	pinned, _, err := recordstore.Pin(app.options.Content)
+	if err != nil && !errors.Is(err, recordstore.ErrNoAuthoritativeTables) {
+		return err
+	}
+	if err == nil {
+		pinned.SetLogger(slog.Default().With("component", "records"))
+		app.records = pinned
+	} else {
+		app.records = recordstore.New(app.options.Content)
+	}
 	app.questCatalog.Invalidate()
 	app.locale.Invalidate()
 	recoveredData, err := app.questCatalog.Snapshot()

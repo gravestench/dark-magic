@@ -110,14 +110,21 @@ Still required:
 
 - [x] Introduce an explicit `GameDataGenerationID` in runtime-recipe v2 that
   binds mounted bytes to the authoritative record parser/schema contract.
-- [ ] Narrow its byte input from the presentation-inclusive mounted asset set to
-  the effective authoritative data paths and preserve their winning provenance.
-- [ ] Pin the immutable typed/normalized data views used by one live session; prove store invalidation or hot reload only creates a generation for future sessions.
+- [x] Narrow its byte input from the presentation-inclusive mounted asset set to
+  the effective authoritative `.txt` data paths and preserve their winning
+  layer/path provenance.
+- [x] Pin copied immutable record bytes for one live authority; invalidation can
+  only reparse that generation, while source edits or mount changes create a
+  different store and generation for a future authority.
 - [x] Carry the explicit generation through the canonical runtime identity and
   therefore session admission, replay, checkpoint, reconnect, worker allocation,
   and durable compatibility identity hashes.
 - [ ] Preserve and expose row ordinal, symbolic ID, explicit numeric ID, act-local index, source provenance, and derived index as distinct concepts where consumed.
-- [ ] Add deterministic generation/change/no-live-swap tests and one cross-table linkage diagnostic fixture.
+- [x] Add deterministic byte/provenance/change/presentation-exclusion and
+  no-live-swap generation tests.
+- [ ] Add one cross-table linkage diagnostic fixture and complete the audit of
+  row ordinal, symbolic ID, explicit numeric ID, act-local index, provenance,
+  and derived lookup identities as consumers migrate.
 
 Known behavior: current Dark Magic identity and pinning are verified. Exact
 legacy TXT-to-BIN compilation/link behavior remains unresolved and must not be

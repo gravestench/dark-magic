@@ -14,10 +14,22 @@ import (
 
 // Store caches immutable generic TSV records by normalized content path.
 type Store struct {
-	source fs.FS
-	logger *slog.Logger
-	mu     sync.RWMutex
-	cache  map[string][]map[string]string
+	source       fs.FS
+	logger       *slog.Logger
+	mu           sync.RWMutex
+	cache        map[string][]map[string]string
+	generationID string
+}
+
+// GenerationID identifies an immutable pinned authoritative view. Ordinary
+// development stores return an empty ID and must not be attached to a Session.
+func (s *Store) GenerationID() string {
+	if s == nil {
+		return ""
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.generationID
 }
 
 // New constructs a record store over source.
