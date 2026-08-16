@@ -161,7 +161,7 @@ they are not a substitute for one immutable game-wide semantic context.
 
 ### G4 — Multiplayer player-count and party context
 
-Status: **not started beyond authenticated membership and UI shells**.
+Status: **partial; NoDrop count contexts established, party authority pending**.
 
 - [ ] Represent game player count, effective `/players X` count, nearby eligible
   count, and party reward eligibility as distinct contexts.
@@ -170,6 +170,13 @@ Status: **not started beyond authenticated membership and UI shells**.
 - [ ] Add proximity/same-level queries and party XP, kill/owned-unit credit,
   quest credit, gold sharing, and NoDrop party consumers as verified.
 - [ ] Project party state to UI; do not make the UI roster authoritative.
+
+NoDrop now distinguishes actual game population, the effective configured
+player count, and additional nearby party members. The 1.14d probability
+adjustment is implemented; until party authority exists, monster death passes
+zero additional nearby party members explicitly. Monster life/XP scaling and
+party-derived proximity remain open, so the combined consumer gate is not yet
+complete.
 
 ### G5 — Locomotion and motion-state foundation
 

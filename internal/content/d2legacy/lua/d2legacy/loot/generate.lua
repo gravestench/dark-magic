@@ -18,7 +18,9 @@ end
 
 local function sorted_keys(value)
     local keys = {}
-    for key in pairs(value) do keys[#keys + 1] = key end
+    for key in pairs(value) do
+        keys[#keys + 1] = key
+    end
     table.sort(keys, function(left, right)
         return tostring(left) < tostring(right)
     end)
@@ -30,9 +32,15 @@ end
 -- keys keep the serialized death event stable across replay and checkpoints.
 local function encode(value, force_array)
     local kind = type(value)
-    if kind == "string" then return quoted(value) end
-    if kind == "number" or kind == "boolean" then return tostring(value) end
-    if kind ~= "table" then return "null" end
+    if kind == "string" then
+        return quoted(value)
+    end
+    if kind == "number" or kind == "boolean" then
+        return tostring(value)
+    end
+    if kind ~= "table" then
+        return "null"
+    end
 
     if force_array or #value > 0 then
         local entries = {}
@@ -60,12 +68,7 @@ end
 
 local function generated_drop(drop, base, context)
     local rolled_quality = quality.roll(base, context, drop.quality)
-    local prefixes, suffixes = affixes.roll(
-        base,
-        rolled_quality,
-        context.monster_level,
-        context.version
-    )
+    local prefixes, suffixes = affixes.roll(base, rolled_quality, context.monster_level, context.version)
     local stats, effects, unsupported = properties.apply(prefixes, suffixes)
 
     return {
@@ -88,7 +91,8 @@ end
 
 function M.roll(treasure_class, context)
     local result = {}
-    for _, drop in ipairs(treasure.roll(treasure_class)) do
+    assert(type(context.player_count) == "table", "loot NoDrop player context is required")
+    for _, drop in ipairs(treasure.roll(treasure_class, context.player_count)) do
         local base = items.base(drop.code)
         if base then
             result[#result + 1] = generated_drop(drop, base, context)

@@ -28,6 +28,8 @@ return test.suite({
                 )
                 value.difficulty = 2
                 test.assert(rules.difficulty() == 1, [=[rules.difficulty() == 1]=])
+                test.assert(rules.effective_player_count(1) == 2, [=[rules.effective_player_count(1) == 2]=])
+                test.assert(rules.effective_player_count(3) == 3, [=[rules.effective_player_count(3) == 3]=])
                 local state = require("engine.authority_state/v1").read("d2legacy.game_rules")
                 test.assert(state.difficulty == 1, [=[state.difficulty == 1]=])
                 test.assert(
