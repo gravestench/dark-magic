@@ -126,12 +126,39 @@ local function resolves_cof_layer_weapon_classes()
     assert_network_synchronization(adapter)
 end
 
+local function movement_distance_does_not_drive_animation_playback()
+    install_render_fixture()
+    local adapter = require("d2legacy.gameplay.player_composite")
+    local ordinary = player_recipe(3)
+    ordinary.velocity_x = 6
+    ordinary.item_fastermovevelocity = 0
+    local faster = player_recipe(3)
+    faster.velocity_x = 12
+    faster.item_fastermovevelocity = 100
+
+    local ordinary_composite = adapter.unarmed(ordinary)
+    local faster_composite = adapter.unarmed(faster)
+    test.expect(ordinary_composite.rate):equals(333)
+    test.expect(faster_composite.rate):equals(333)
+
+    local ordinary_playback = adapter.new_playback(ordinary_composite)
+    local faster_playback = adapter.new_playback(faster_composite)
+    adapter.advance(ordinary_playback, ordinary_composite, 0.1)
+    adapter.advance(faster_playback, faster_composite, 0.1)
+    test.expect(ordinary_playback.frame):equals(faster_playback.frame)
+    test.expect(ordinary_playback.seconds):equals(faster_playback.seconds)
+end
+
 return test.suite({
     profile = "module",
     tier = "fast",
+    covers = { "internal/game/player" },
     cases = {
         test.case("resolves_cof_layer_weapon_classes", {
             { run = resolves_cof_layer_weapon_classes },
+        }),
+        test.case("movement_distance_does_not_drive_animation_playback", {
+            { run = movement_distance_does_not_drive_animation_playback },
         }),
     },
 })

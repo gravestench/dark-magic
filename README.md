@@ -112,7 +112,9 @@ recovery, exhaustion fallback, owner-private HUD projection, and connected
 prediction share the same rule boundary. Client routes are world-scoped input
 plans; admitted locomotion and melee approaches claim an explicit checkpointed
 motion owner, and one authoritative resolver derives player velocity and WL/RN
-mode. Chill/slow ordering and max-stamina recalculation from progression and
+mode. Composite playback independently consumes `AnimData.d2` timing plus
+presentation/network time; displacement never advances animation frames.
+Chill/slow ordering and max-stamina recalculation from progression and
 active sources remain separately gated.
 
 ### Product binaries
