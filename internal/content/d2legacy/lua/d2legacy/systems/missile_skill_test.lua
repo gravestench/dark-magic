@@ -47,8 +47,11 @@ return test.suite({
                 test.assert(#events == 1, [=[#events == 1]=])
                 local event = ecs.get(events[1], "d2legacy.combat.event")
                 test.assert(
-                    event:get("target_id") == "monster:fallen" and event:get("damage_channel") == "fire",
-                    [=[event:get("target_id") == "monster:fallen" and event:get("damage_channel") == "fire"]=]
+                    event:get("target_id") == "monster:fallen"
+                        and event:get("source_kind") == "missile"
+                        and event:get("damage_channel") == "fire"
+                        and event:get("rolled_damage_raw") >= event:get("damage_raw"),
+                    [=[missile contact emits the shared ordered damage result]=]
                 )
             end),
         }),

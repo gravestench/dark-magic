@@ -71,16 +71,18 @@ local function first_contact(projectile_entity, projectile, position, location, 
     return best
 end
 
-local function emit_hit(context, projectile, target, damage_raw, remaining, structural)
+local function emit_hit(context, projectile, target, result, structural)
     structural:create({
         ["d2legacy.combat.event"] = {
-            kind = remaining == 0 and "unit_died" or "damage_applied",
+            kind = result.lethal and "unit_died" or "damage_applied",
             tick = context.tick,
             attacker_id = projectile:get("owner_id"),
             target_id = target.id,
-            damage_channel = projectile:get("damage_channel"),
-            damage_raw = damage_raw,
-            remaining_health_raw = remaining,
+            source_kind = "missile",
+            damage_channel = result.channel,
+            rolled_damage_raw = result.rolled_damage_raw,
+            damage_raw = result.damage_raw,
+            remaining_health_raw = result.remaining_health_raw,
         },
     })
 end
@@ -105,8 +107,8 @@ local function resolve_contacts(context, entities, structural)
             local target = first_contact(entity, projectile, position, location, targets)
             if target then
                 local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
-                local remaining, _, applied = damage.apply(target.entity, amount, ecs, projectile:get("damage_channel"))
-                emit_hit(context, projectile, target, applied, remaining, structural)
+                local result = damage.resolve(target.entity, amount, ecs, projectile:get("damage_channel"))
+                emit_hit(context, projectile, target, result, structural)
                 structural:destroy(entity)
             elseif projectile:get("remaining_ticks") <= 0 then
                 structural:destroy(entity)

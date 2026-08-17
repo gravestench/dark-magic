@@ -73,7 +73,15 @@ stable room residency. Both cross inactive checkpoint/reactivation on their
 original entities with checksum parity. This completes G7's type/relationship
 mechanism breadth without claiming retail Objects.txt family mappings,
 scheduled-event execution, collision transitions, or exact 1.14d inactive
-event timing. G9 remains current through
+event timing. G8 now has one Lua-owned direct-damage commit boundary shared by
+melee and missile contact. Its explicit result records distinguish rolled,
+mitigated-and-committed, remaining-health, channel, and lethal facts. A
+successful melee result is one ECS entity composed from the generic damage
+event and melee-specific reaction event, so death, reactive-state, replay, and
+future effect consumers do not need parallel attacks or inferred joins. The
+current whole-health player component quantizes applied raw damage at that
+boundary; exact Expansion 1.14d fractional player-life storage/rounding remains
+probe-gated rather than inherited from older recovered code. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -145,7 +153,7 @@ policy**, and **unresolved**.
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, an owned-unit graph, corpse, straight projectile, imported ground item, stateful interaction object, and separately resident pending-action relationship survive inactivation without scalar graph copies. The inactive ECS tag removes live capabilities, suspends opted-in systems, and filters projections; generic pre-plan attachment plus pickup/re-drop transitions reuse the same contract. Public loot policy, retail object/event families, exact corpse/projectile/event timing, 1.14d streaming behavior, and campaign breadth remain. |
-| M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
+| M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Melee and missile contact now share one ordered direct-damage commit/result boundary, with ECS component composition preserving both generic and source-specific semantics. Block/avoidance, typed bundle breadth, secondary damage effects, player death, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
@@ -657,7 +665,32 @@ recovered inactive-unit code is architectural evidence only.
 ### G8 — Combat fidelity tranche 1
 
 Status: **partial**. One Lua-owned melee/missile damage path, timed states,
-death transaction, fixed-point vocabulary, and deterministic vectors exist.
+death transaction, fixed-point vocabulary, deterministic vectors, and an
+explicit shared direct-damage result record exist.
+
+- [x] Route successful melee and straight-missile contact through one Lua-owned
+  health-mutation boundary that reports channel, rolled raw damage, damage
+  actually committed after mitigation/storage quantization, remaining raw
+  health, and lethality.
+- [x] Compose a successful melee result as one ECS entity carrying both
+  `d2legacy.combat.event` and `d2legacy.combat.melee_event`. Generic death/event
+  consumers and melee reaction consumers therefore observe one authoritative
+  fact without source-specific joins or duplicate event entities.
+- [x] Keep misses and invalidated melee impacts as melee-resolution facts with
+  no generic damage component, while missile contact emits the same generic
+  ordered result vocabulary with `source_kind=missile`.
+- [x] Quantize committed player damage once at the current whole-health
+  component boundary so event output matches durable ECS state. This is an
+  internal-consistency rule, not a verified Expansion 1.14d rounding claim.
+- [ ] Replace the scalar result with a typed multi-channel bundle as verified
+  families require it; preserve independent physical, fire, lightning, cold,
+  magic, poison, drain, and duration facts rather than prematurely summing.
+- [ ] Add target-locked Expansion 1.14d evidence and ordered stages for block,
+  avoidance, resistance caps/negative values, pierce, absorb, critical/deadly/
+  mastery, Crushing Blow, Open Wounds, leech, hit recovery, poison/periodic
+  damage, and durability.
+- [ ] Complete ordinary softcore player death, corpse, gold, and XP semantics
+  before Hardcore durable death or broad PvP.
 
 Implement one shared ordered transaction for chance-to-hit, block, avoidance,
 physical/elemental/magic mitigation, caps/negative resistance, pierce, absorb,

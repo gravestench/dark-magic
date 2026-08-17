@@ -64,15 +64,30 @@ return test.suite({
                     mitigation.apply(1000, "physical", defense) == 730,
                     [=[mitigation.apply(1000, "physical", defense) == 730]=]
                 )
-                local remaining, lethal, applied = damage.apply(player, 4096, ecs, "fire")
+                local result = damage.resolve(player, 255, ecs, "fire")
                 test.assert(
-                    applied == 2048 and remaining == 512 and not lethal,
-                    [=[applied == 2048 and remaining == 512 and not lethal]=]
+                    result.rolled_damage_raw == 255
+                        and result.damage_raw == 0
+                        and result.remaining_health_raw == 2560
+                        and not result.lethal,
+                    [=[whole-health storage reports only damage actually committed]=]
                 )
-                remaining, lethal, applied = damage.apply(player, 1024, ecs, "fire")
+                result = damage.resolve(player, 4096, ecs, "fire")
                 test.assert(
-                    applied == 512 and remaining == 0 and lethal,
-                    [=[applied == 512 and remaining == 0 and lethal]=]
+                    result.channel == "fire"
+                        and result.rolled_damage_raw == 4096
+                        and result.damage_raw == 2048
+                        and result.remaining_health_raw == 512
+                        and not result.lethal,
+                    [=[shared result records rolled, mitigated, and remaining damage in order]=]
+                )
+                result = damage.resolve(player, 1024, ecs, "fire")
+                test.assert(
+                    result.rolled_damage_raw == 1024
+                        and result.damage_raw == 512
+                        and result.remaining_health_raw == 0
+                        and result.lethal,
+                    [=[shared result marks lethal damage after application]=]
                 )
             end),
         }),

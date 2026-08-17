@@ -8,7 +8,7 @@
 local ecs = require("engine.ecs/v1")
 local combat_target = require("d2legacy.gameplay.combat_target")
 local policy = require("d2legacy.policy.melee")
-local mitigation = require("d2legacy.policy.mitigation")
+local damage_policy = require("d2legacy.policy.damage")
 local M = {}
 
 local function identity(entity)
@@ -25,21 +25,6 @@ local function target_for(attacker, wanted, hand, candidates)
     return combat_target.select_melee(attacker, wanted, attack_range, candidates)
 end
 
-local function hurt(target, damage)
-    damage = mitigation.apply(damage, "physical", ecs.get(target, "d2legacy.combat.defense"))
-    local monster = ecs.get(target, "d2legacy.monster.stats")
-    if monster then
-        local remaining = math.max(monster:get("health") - damage, 0)
-        monster:set("health", remaining)
-        return remaining, damage
-    end
-    local player = assert(ecs.get(target, "d2legacy.player.vitals"), "melee target has no health")
-    local whole = math.floor(damage / 256)
-    local remaining = math.max(player:get("health") - whole, 0)
-    player:set("health", remaining)
-    return remaining * 256, damage
-end
-
 local function combat_values(entity)
     local monster = ecs.get(entity, "d2legacy.monster.stats")
     if monster then
@@ -50,8 +35,22 @@ local function combat_values(entity)
     return progress:get("level"), stats:get("attack_rating"), stats:get("defense")
 end
 
-local function event(structural, values)
-    structural:create({ ["d2legacy.combat.melee_event"] = values })
+local function event(structural, values, damage)
+    local components = { ["d2legacy.combat.melee_event"] = values }
+    if damage then
+        components["d2legacy.combat.event"] = {
+            kind = damage.lethal and "unit_died" or "damage_applied",
+            tick = values.tick,
+            attacker_id = values.attacker_id,
+            target_id = values.target_id,
+            source_kind = "melee",
+            damage_channel = damage.channel,
+            rolled_damage_raw = damage.rolled_damage_raw,
+            damage_raw = damage.damage_raw,
+            remaining_health_raw = damage.remaining_health_raw,
+        }
+    end
+    structural:create(components)
 end
 
 local function damage_range(profile, hand)
@@ -97,6 +96,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.combat.melee_event",
+            "d2legacy.combat.event",
         },
         update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
@@ -120,6 +120,7 @@ function M.register()
                         defense = 0,
                         hit_chance = 0,
                     }
+                    local result
                     if target then
                         local attacker_level, attack_rating = combat_values(attacker)
                         local defender_level, _, defense = combat_values(target)
@@ -129,12 +130,14 @@ function M.register()
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
                             local minimum, maximum = damage_range(profile, request:get("hand"))
-                            local damage = policy.damage(minimum, maximum)
+                            local rolled = policy.damage(minimum, maximum)
+                            result = damage_policy.resolve(target, rolled, ecs, "physical")
                             base.hit = true
-                            base.remaining_health_raw, base.damage_raw = hurt(target, damage)
+                            base.remaining_health_raw = result.remaining_health_raw
+                            base.damage_raw = result.damage_raw
                         end
                     end
-                    event(structural, base)
+                    event(structural, base, result)
                 end
             end
         end,
