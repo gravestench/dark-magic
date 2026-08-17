@@ -209,7 +209,13 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 				ctx.Err(), secondHUD, secondWorld, replay.Commands)
 		}
 	}
-	commandTick := connected.World.Tick + 2
+	// The second membership's movement may advance authority well beyond the
+	// first client's last correction. Refresh that independent connection before
+	// deriving a tick from its synchronized network clock.
+	if _, err := connected.Refresh(ctx); err != nil {
+		t.Fatal(err)
+	}
+	commandTick := connected.NextInputTick(time.Now())
 	watchContext, stopWatch := context.WithCancel(ctx)
 	deltas, watchErrors, err := connected.Watch(watchContext)
 	if err != nil {
