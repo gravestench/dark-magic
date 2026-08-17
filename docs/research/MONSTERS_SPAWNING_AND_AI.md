@@ -336,7 +336,11 @@ An ordinary corpse now crosses the same inactive room boundary on its original
 entity with death/loot, identity, appearance, and spatial facts intact. Death
 removes the generic velocity-mover opt-in in addition to AI, collider, and
 selection, so the inactive record cannot restore a stale live simulation
-capability. Ground-item/projectile residency and stateful object operation/event attachment,
+capability. A production-cast straight projectile now joins the same room plan
+through its spawn point and suspends movement/lifetime while the shared inactive
+tag is present; checkpoint reactivation preserves the original projectile ECS
+state without a parallel archive. Ground-item residency and stateful object
+operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.
 
@@ -467,9 +471,10 @@ Add explicit leader/minion relationships and one command-sharing/group behavior.
 
 Death/corpse and XP/loot event integration plus persistent-identity live-monster
 and ordinary-corpse room inactivation/resume paths are implemented. Timed-state,
-stat-source, and state-event references survive that path. Champion/unique
-modifier composition, item/object/projectile activation graphs, specialized
-corpse policy, and broader inactive-unit kinds remain.
+stat-source, and state-event references survive that path, and a straight
+projectile now crosses the same ECS activation boundary. Champion/unique
+modifier composition, item/stateful-object/pending-action activation graphs,
+specialized corpse policy, and broader inactive-unit kinds remain.
 
 ## Verification backlog
 
