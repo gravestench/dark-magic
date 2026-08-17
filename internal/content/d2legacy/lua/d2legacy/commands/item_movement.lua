@@ -9,6 +9,7 @@ local ecs = require("engine.ecs/v1")
 local owner = require("d2legacy.items.command_owner")
 local find = require("d2legacy.items.find")
 local placement = require("d2legacy.items.placement")
+local world = require("d2legacy.items.world")
 local M = {}
 
 local function item_entities()
@@ -18,6 +19,18 @@ local function item_entities()
             "d2legacy.item.identity",
         },
     })
+end
+
+local function player_location(player_id)
+    for _, entity in ipairs(ecs.query({
+        all = { "d2legacy.player.identity", "d2legacy.world.location" },
+    })) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        if identity:get("player") == player_id then
+            return ecs.get(entity, "d2legacy.world.location")
+        end
+    end
+    return nil
 end
 
 function M.validate_move(command)
@@ -35,7 +48,15 @@ function M.validate_move(command)
         assert(placement.is_held_destination(payload.destination.container),
             "invalid held-item destination")
     end
-    owner.resolve(command)
+    if payload.destination.container == "world" then
+        assert(type(payload.destination.x) == "number", "world item x is required")
+        assert(type(payload.destination.y) == "number", "world item y is required")
+        assert(player_location(owner.resolve(command)), "world item owner location is required")
+    end
+    local entities = item_entities()
+    local layout_entity = assert(find.layout(owner.resolve(command), entities))
+    local item_entity = assert(find.item(layout_entity, payload.item_id, entities))
+    assert(not ecs.get(item_entity, "d2legacy.world.inactive"), "item is unavailable")
 end
 
 function M.apply_move(command)
@@ -64,7 +85,20 @@ function M.apply_move(command)
         entities,
         command.payload.place_held
     )
-    placement.set(current, command.payload.destination)
+    local destination = command.payload.destination
+    placement.set(current, destination)
+    if destination.container == "world" then
+        world.place(
+            item_entity,
+            layout:get("owner"),
+            item:get("id"),
+            assert(player_location(owner.resolve(command))),
+            destination.x,
+            destination.y
+        )
+    else
+        world.clear(item_entity)
+    end
     if displaced then
         placement.set(ecs.get(displaced, "d2legacy.item.placement"), {
             container = "held",

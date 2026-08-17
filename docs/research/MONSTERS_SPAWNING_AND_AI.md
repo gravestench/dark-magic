@@ -339,7 +339,9 @@ selection, so the inactive record cannot restore a stale live simulation
 capability. A production-cast straight projectile now joins the same room plan
 through its spawn point and suspends movement/lifetime while the shared inactive
 tag is present; checkpoint reactivation preserves the original projectile ECS
-state without a parallel archive. Ground-item residency and stateful object
+state without a parallel archive. An imported ground-item placement also now
+crosses that boundary through a generic pre-plan ECS attachment request, while
+public generated-loot ownership/drop/pickup policy and stateful object
 operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.

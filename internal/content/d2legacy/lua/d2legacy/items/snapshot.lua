@@ -42,7 +42,10 @@ function M.for_owner(owner)
     }
     for _, entity in
         ipairs(
-            ecs.query({ all = { "d2legacy.item.identity", "d2legacy.item.placement", "d2legacy.item.presentation" } })
+            ecs.query({
+                all = { "d2legacy.item.identity", "d2legacy.item.placement", "d2legacy.item.presentation" },
+                none = { "d2legacy.world.inactive" },
+            })
         )
     do
         local item = ecs.get(entity, "d2legacy.item.identity")
