@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
 
 test:
 	go test ./...
@@ -42,6 +42,13 @@ fmt:
 vet:
 	go vet ./...
 
+# Raylib remains the default binary. The explicit tags make local and CI
+# backend selection visible and catch either adapter drifting out of contract.
+build-client-backends:
+	mkdir -p .local/bin
+	go build -tags raylib -o .local/bin/dark-magic-raylib ./cmd/client
+	go build -tags ebitengine -o .local/bin/dark-magic-ebitengine ./cmd/client
+
 realm-up:
 	./scripts/realm/up.sh
 
@@ -83,6 +90,9 @@ skill-evidence:
 
 PROFILE_DIR ?= ./profiles/acceptance
 PROFILE_BUDGETS ?= ./docs/profile-budgets.json
+RENDER_PROFILE_DIR ?= ./profiles/render-backends
+RENDER_PROFILE_SCENE ?= game_world
+RENDER_PROFILE_SETTLE ?= 300
 
 profile:
 	go run -tags ffmpeg ./cmd/client --profile-dir "$(PROFILE_DIR)" --profile-scenes all
@@ -97,6 +107,14 @@ profile-acceptance:
 	go run -tags ffmpeg ./cmd/client --profile-dir "$(PROFILE_DIR)" --profile-scenes character_create --capture-dir "$(PROFILE_DIR)/captures/character_create" --capture-scenes character_create --capture-settle-frames 60 --start-scene character_create --fixture-characters 3
 	go run -tags ffmpeg ./cmd/client --profile-dir "$(PROFILE_DIR)" --profile-scenes game_loading --capture-dir "$(PROFILE_DIR)/captures/game_loading" --capture-scenes game_world --capture-settle-frames 120 --start-scene game_loading --fixture-characters 3 --fixture-world-level 2
 	go run -tags ffmpeg ./cmd/client --profile-dir "$(PROFILE_DIR)" --profile-scenes game_world --capture-dir "$(PROFILE_DIR)/captures/game_world" --capture-scenes game_world --capture-settle-frames 180 --start-scene game_world --fixture-characters 1 --fixture-world-level 2 --fixture-pointer-move=true
+
+# Build once, then run the same deterministic workload through each native
+# renderer. Audio is muted on both paths so backend-specific sound work cannot
+# contaminate the graphics comparison.
+profile-render-backends: build-client-backends
+	MPQ_DIRECTORY="$${MPQ_DIRECTORY}" .local/bin/dark-magic-raylib --native-audio=false --profile-dir "$(RENDER_PROFILE_DIR)/raylib" --profile-scenes "$(RENDER_PROFILE_SCENE)" --capture-dir "$(RENDER_PROFILE_DIR)/raylib/captures" --capture-scenes "$(RENDER_PROFILE_SCENE)" --capture-settle-frames "$(RENDER_PROFILE_SETTLE)" --start-scene "$(RENDER_PROFILE_SCENE)" --fixture-characters 1 --fixture-world-level 2 --fixture-pointer-move=true
+	MPQ_DIRECTORY="$${MPQ_DIRECTORY}" .local/bin/dark-magic-ebitengine --native-audio=false --profile-dir "$(RENDER_PROFILE_DIR)/ebitengine" --profile-scenes "$(RENDER_PROFILE_SCENE)" --capture-dir "$(RENDER_PROFILE_DIR)/ebitengine/captures" --capture-scenes "$(RENDER_PROFILE_SCENE)" --capture-settle-frames "$(RENDER_PROFILE_SETTLE)" --start-scene "$(RENDER_PROFILE_SCENE)" --fixture-characters 1 --fixture-world-level 2 --fixture-pointer-move=true
+	go run ./internal/dev/tools/render_backend_compare -profile-dir "$(RENDER_PROFILE_DIR)" -scene "$(RENDER_PROFILE_SCENE)"
 
 profile-check:
 	go run ./internal/dev/tools/profile_check -profile-dir "$(PROFILE_DIR)" -budgets "$(PROFILE_BUDGETS)"

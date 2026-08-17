@@ -70,7 +70,7 @@ func (app *application) baseLuaModules() []modruntime.Module {
 }
 
 func (app *application) registerVideoModule() error {
-	window := image.Pt(app.rendererConfig.Window.Width, app.rendererConfig.Window.Height)
+	window := app.renderWindow
 	backend := newClientVideoBackend(app.composer, app.mixer, window)
 	if resizable, ok := backend.(interface{ Resize(image.Point) error }); ok {
 		app.renderer.SubscribeViewport(func(width, height int) {
@@ -93,7 +93,7 @@ func (app *application) registerPresentationModules() error {
 		app.options.Profile.SetDiagnostics(func() any {
 			return map[string]any{
 				"composition":    renderCapability.Diagnostics(),
-				"raylib_backend": app.renderer.BackendDiagnostics(),
+				"render_backend": map[string]any{"name": app.renderer.Name(), "diagnostics": app.renderer.BackendDiagnostics()},
 				"texture_cache":  app.renderer.CacheDiagnostics(),
 				"frame_timing":   app.frameMetrics.Snapshot(),
 			}

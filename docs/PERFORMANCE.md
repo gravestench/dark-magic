@@ -5,6 +5,76 @@ The checked budgets cover decoded and native residency, resource counts, decode
 time, and rolling per-scene frame/update percentiles. Frame timing uses the most
 recent 512 samples so long sessions remain bounded.
 
+## Native renderer A/B workflow
+
+The interactive client has one backend-neutral desktop contract and two
+compile-time native implementations. Raylib remains the default and production
+path. `-tags ebitengine` selects the experimental Ebitengine renderer/input
+adapter; `-tags raylib` makes the default choice explicit in scripts and CI.
+Gameplay, Lua scenes, retained composition, fixtures, profiling, and capture
+remain the same code in both binaries.
+
+Compile both clients without launching them:
+
+```shell
+make build-client-backends
+```
+
+Run the matched Blood Moor comparison against legally obtained Expansion 1.14d
+assets:
+
+```shell
+MPQ_DIRECTORY=/path/to/diablo-ii make profile-render-backends
+```
+
+The target builds both binaries once, disables native audio in both, runs the
+same `game_world` fixture with the same viewport and 300-frame settle window,
+and writes raw profiles, diagnostics, captures, and
+`profiles/render-backends/summary.md`. Override `RENDER_PROFILE_SCENE`,
+`RENDER_PROFILE_SETTLE`, or `RENDER_PROFILE_DIR` to test another matched load.
+Compare captures as well as timings: a faster backend that renders a different
+scene has not won.
+
+Current Ebitengine limitations are explicit. Native audio commands are drained
+muted, the developer shell session has no native text overlay, final-display
+`pal.dat` quantization is rejected, and per-node palettes use cached CPU
+quantization rather than the Raylib GPU lookup shader. These keep the adapter
+useful for graphics/input experimentation without pretending it is ready to
+replace the Raylib client. The ordinary Raylib client keeps native audio unless
+`--native-audio=false` is supplied.
+
+The first real-asset smoke capture completed the `ui_lab` lifecycle and produced
+an 800x600 Ebitengine screenshot through the same capture session. CI compiles
+both native clients; it does not launch GUI benchmarks on shared runners.
+
+### Initial matched result
+
+The first post-parity Blood Moor run used the default 300-frame settle recipe
+on Apple Silicon with Go 1.25.12. Raylib and Ebitengine submitted 150 and 149
+draws respectively after Ebitengine gained the same ancestor-visibility,
+inherited-clip, and offscreen-culling rules. The two 800x600 captures differed
+in 0.75% of pixels, concentrated in time-dependent cursor/actor frames; static
+terrain, HUD placement, and camera composition aligned. A focused UI Lab crop
+covering both authored buttons was pixel-identical after correcting Ebitengine's
+Diablo draw-mode-4 blend to preserve the `ONE_MINUS_SRC_ALPHA` destination
+term.
+
+| Backend | Samples | Frame p50 | Frame p95 | Update p50 | Update p95 | Final native render | Draws | Nodes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Raylib | 438 | 17.088 ms | 17.277 ms | 3.656 ms | 7.095 ms | 0.505 ms | 150 | 447 |
+| Ebitengine | 480 | 16.666 ms | 16.811 ms | 3.679 ms | 6.594 ms | 0.399 ms | 149 | 451 |
+
+This single simple-world run says the experimental adapter is competitive; it
+does not establish a replacement decision. Repeat runs, dense combat, palette-
+heavy creatures/effects, native audio, console, and final-palette parity remain
+required before changing the default.
+
+With dependencies already downloaded and separate empty Go build caches, the
+same machine compiled the full Raylib client in 33.87 seconds and Ebitengine in
+22.68 seconds. Immediate cached rebuilds took 0.51 and 0.39 seconds. Ebitengine
+was about 33% faster for this fresh compilation sample; ordinary incremental
+rebuild time was effectively equivalent.
+
 ## August 2026 frontend localization pass
 
 A matched real-asset capture reproduced the trademark/title-to-main-menu hitch

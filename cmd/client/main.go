@@ -60,6 +60,7 @@ func main() {
 	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
 	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
 	fullscreen := flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless window")
+	nativeAudio := flag.Bool("native-audio", true, "enable the selected backend's native audio adapter")
 	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
 	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated extension IDs, or 'none' for vanilla d2legacy")
 	flag.Parse()
@@ -120,7 +121,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	if err := run(contentFS, &mods.Resolved, mods.Packages, mods.Cache, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *presentationProfile, logs); err != nil {
+	if err := run(contentFS, &mods.Resolved, mods.Packages, mods.Cache, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *nativeAudio, *presentationProfile, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
 		exitCode = 1
 	}
@@ -137,7 +138,7 @@ func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel
 
 // run is intentionally boring. The command hands the pieces to the client
 // application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.RuntimePackageSet, modStore *modcache.Store, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen bool, presentationProfileID string, logs *shell.LogBuffer) error {
+func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.RuntimePackageSet, modStore *modcache.Store, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen, nativeAudio bool, presentationProfileID string, logs *shell.LogBuffer) error {
 	assetSetID, err := content.AssetSetIdentityFromEnvironment()
 	if err != nil {
 		return fmt.Errorf("identify external game assets: %w", err)
@@ -158,7 +159,7 @@ func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.
 		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,
 		FixtureCharacters: fixtureCharacters, FixtureWorldLevel: fixtureWorldLevel, FixtureWorldSpawn: fixtureWorldSpawn, FixturePointerMove: fixturePointerMove, OutputPalette: outputPalette,
 		PlayerProfilePath: playerProfilePath,
-		ViewportFit:       viewportFit, BorderlessFullscreen: fullscreen, PresentationProfileID: presentationProfileID, Logs: logs,
+		ViewportFit:       viewportFit, BorderlessFullscreen: fullscreen, DisableNativeAudio: !nativeAudio, PresentationProfileID: presentationProfileID, Logs: logs,
 	}
 	// A nil pointer stored inside an interface looks non-nil. Only put the
 	// profiler in the box when one was really started.

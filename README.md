@@ -270,6 +270,19 @@ game aspect ratio. `DARK_MAGIC_VIEWPORT_FIT` provides the equivalent environment
 setting. Mouse input is mapped back into logical game coordinates; input in
 letterbox regions is excluded from the game viewport.
 
+Raylib is the default native client backend. An experimental Ebitengine build
+uses the same gameplay, Lua scenes, retained composer, logical input, and
+capture path:
+
+```shell
+go run -tags ebitengine ./cmd/client --start-scene ui_lab
+```
+
+Use `make build-client-backends` to compile both choices and
+`MPQ_DIRECTORY=/path/to/diablo-ii make profile-render-backends` for a matched,
+audio-muted A/B capture. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for the
+known Ebitengine parity gaps and artifact layout.
+
 Use `--fullscreen` for a maximized borderless window that retains desktop
 window semantics instead of switching the monitor into an exclusive video
 mode. Set `DARK_MAGIC_FULLSCREEN=true` for the environment equivalent.

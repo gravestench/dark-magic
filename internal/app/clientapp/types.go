@@ -7,6 +7,7 @@ package clientapp
 
 import (
 	"context"
+	"image"
 	"sync"
 	"time"
 
@@ -31,14 +32,12 @@ import (
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	"github.com/gravestench/dark-magic/internal/modcache"
-	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
-	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/platform/desktop"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	"github.com/gravestench/dark-magic/internal/shell"
-	raylibshell "github.com/gravestench/dark-magic/internal/shell/raylib"
 )
 
 // Options are the few choices made outside the client composition root.
@@ -64,6 +63,7 @@ type Options struct {
 	OutputPalette         string
 	ViewportFit           string
 	BorderlessFullscreen  bool
+	DisableNativeAudio    bool
 	PresentationProfileID string
 	Logs                  *shell.LogBuffer
 }
@@ -101,9 +101,9 @@ type application struct {
 	profile       content.PresentationProfile
 	presentation  content.PresentationBootstrap
 
-	renderer         *raylibrenderer.Service
-	rendererConfig   raylibrenderer.Config
-	input            *raylibinput.Service
+	renderer         desktop.Renderer
+	renderWindow     image.Point
+	input            desktop.Input
 	inputState       *inputstate.Store
 	locale           *localization.Locale
 	scripts          *modruntime.Runtime
@@ -156,7 +156,7 @@ type application struct {
 	recomposeMu     sync.Mutex
 	engineHost      *host.Host
 	shellSession    *shell.Session
-	console         *raylibshell.Overlay
+	console         desktop.Console
 
 	sceneErrors  chan error
 	capture      Capture
