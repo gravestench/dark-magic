@@ -107,6 +107,10 @@ local function install_current_world(self)
     destroy_players(self)
     destroy_missiles(self)
     destroy_warps(self)
+    -- Selection and held-input state names coordinates/entities in the old
+    -- world. It must not survive into the destination presentation.
+    self.pending_interaction = nil
+    self.held_hostile = nil
     self.collision_node, self.collision_region_key = nil, nil
     self.tile_debug_node, self.tile_debug_region_key = nil, nil
     self.hero_origin = nil
@@ -133,6 +137,7 @@ local function install_current_world(self)
     self.hero_composite_key = nil
     if self.gameplay then
         self.gameplay_world.set_collision(self.gameplay, next_world, level_id)
+        self.gameplay_world.snap_camera(self.gameplay)
     end
     return true
 end

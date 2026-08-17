@@ -131,6 +131,14 @@ function M.refresh_camera_settings(entity)
     follow:set("param_3", settings.get("camera_follow_param_3"))
 end
 
+function M.snap_camera(state)
+    if not state or not state.camera or not state.camera:exists() or not state.hero or not state.hero:exists() then
+        return false
+    end
+    systems.snap_camera(state.camera)
+    return true
+end
+
 function M.set_collision(state, collision, level_id)
     state.collision = collision
     systems.set_collision(level_id or collision, level_id and collision or nil)

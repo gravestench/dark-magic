@@ -78,6 +78,20 @@ return test.suite({
                     ecs.get(eased, "d2legacy.world.position"):get("x") == 10,
                     [=[ecs.get(eased, "d2legacy.world.position"):get("x") == 10]=]
                 )
+                local target_position = ecs.get(target, "d2legacy.world.position")
+                target_position:set("x", 80)
+                target_position:set("y", 45)
+                require("d2legacy.gameplay.systems.camera_follow").snap(eased)
+                local camera_position = ecs.get(eased, "d2legacy.world.position")
+                local follow = ecs.get(eased, "d2legacy.world.camera_follow")
+                test.assert(
+                    camera_position:get("x") == 80 and camera_position:get("y") == 45,
+                    "relocation camera retained the previous world's coordinates"
+                )
+                test.assert(
+                    follow:get("origin_x") == 80 and follow:get("destination_x") == 80 and follow:get("elapsed") == 0,
+                    "relocation camera retained interpolation state"
+                )
             end),
         }),
     },
