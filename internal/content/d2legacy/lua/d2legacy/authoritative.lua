@@ -89,6 +89,10 @@ function M.start()
         M.skill_behavior_coverage.by_family["missile.straight-freeze"] or {},
         "missile.straight-freeze"
     )
+    M.area_freeze_missile_skills = missile_skill_data.load(
+        M.skill_behavior_coverage.by_family["missile.straight-impact-area-freeze"] or {},
+        "missile.straight-impact-area-freeze"
+    )
     M.radial_missile_skills =
         radial_missile_skill_data.load(M.skill_behavior_coverage.by_family["missile.radial"] or {})
     M.melee_skills = melee_skill_data.load(M.skill_behavior_coverage.by_family["action.melee"] or {})
@@ -107,6 +111,10 @@ function M.start()
         M.cast_skills[skill_id] = definition
     end
     for skill_id, definition in pairs(M.freeze_missile_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
+    for skill_id, definition in pairs(M.area_freeze_missile_skills) do
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
@@ -164,6 +172,7 @@ function M.stop()
     M.radial_missile_skills = nil
     M.impact_missile_skills = nil
     M.freeze_missile_skills = nil
+    M.area_freeze_missile_skills = nil
     M.melee_skills = nil
     M.state_skills = nil
     M.cast_skills = nil

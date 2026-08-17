@@ -155,7 +155,16 @@ and the existing timed-state/action filter owns checkpointing, suppression,
 refresh, and expiration. A separate presentation-only entity uses the
 referenced freeze explosion. Exact 1.14d resistance/immunity, monster-class
 cold effectiveness, cross-source state replacement, PvP chill conversion, and
-impact/action timing remain probe-gated. A matched frontend profile also
+impact/action timing remain probe-gated. Glacial Spike now composes those same
+mechanisms as exact-ID `missile.straight-impact-area-freeze`: its owned radius
+and freeze-length formulas, Blizzard duration modifier, three cold-damage
+synergies, and localized area-freeze intent produce stable ordered area damage
+plus one ordinary freeze request per surviving target. The projectile and
+state systems contain no Glacial Spike branch. Its referenced center explosion
+is presentation-only; the second ejecta sub-missile, exact radius/footprint and
+rounding, resistance/immunity and monster-class effectiveness, cross-source
+replacement, PvP chill conversion, and action timing remain explicit probes.
+A matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
@@ -218,7 +227,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 6 exact-ID implementations, 351 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 7 exact-ID implementations, 350 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -878,6 +887,13 @@ runtime composition and the coverage report.
   hard-point duration synergy. Snapshot duration on the cast, emit a generic
   monster-cold state request only after nonlethal contact, and prove existing
   ECS action filtering, checkpointing, refresh, and expiration own the result.
+- [x] Compose the reusable straight-missile area-impact and on-hit-state
+  mechanisms and admit exact Expansion 1.14d Glacial Spike by ID. Validate its
+  area hit function, freeze result flags, radius and freeze formulas, Blizzard
+  duration modifier, three hard-point damage synergies, and center explosion;
+  apply independently rolled shared cold results in stable target order and
+  emit an ordinary freeze request for each nonlethal in-radius result without a
+  Glacial-Spike-specific command, component, or system branch.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -900,8 +916,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 6 explicitly admitted
-configurations, and 351 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 7 explicitly admitted
+configurations, and 350 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -920,6 +936,12 @@ reports its Ice Bolt/Blizzard/Frozen Orb damage and Glacial Spike duration
 relationships. Nova's
 locale records name it and describe an expanding electrically charged ring that
 shocks nearby enemies; its joined formulas contain no cross-skill references.
+Glacial Spike's localized records describe a magical ice comet that freezes or
+kills nearby enemies and expose radius/freeze labels; its formulas resolve Ice
+Bolt, Ice Blast, and Frozen Orb hard levels for cold damage plus Blizzard hard
+levels for freeze duration. The decoder binds those player-visible
+relationships to the exact owned Skills/Missiles rows rather than inferring
+behavior from text alone.
 TBL wording establishes intended relationships and player-visible claims;
 Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
@@ -967,10 +989,27 @@ resistance/immunity, monster-class cold effectiveness, cross-source state
 replacement, PvP freeze-to-chill conversion, and impact/action timing remain
 owned-runtime probes.
 
+Glacial Spike is the first `missile.straight-impact-area-freeze`
+configuration. Its exact skill row supplies radius `ln12` from Param1/2 (4 + 0
+per level), freeze length `ln34` from Param3/4 (50 + 3 frames per level), and a
+3% Blizzard-hard-point multiplier through Param7. Its cold damage receives 5%
+per Ice Bolt, Ice Blast, and Frozen Orb hard point. The exact missile row binds
+server hit function 13, `frze`, HitFlags 2, one-shot collision, and the
+`freezingarrowexp1` center explosion. On first swept contact, the generic area
+query emits ordered shared cold-damage results and one ordinary monster-cold
+state request for every nonlethal in-radius result; checkpointed timed-state
+instances and action filters own the rest. The record also references
+`freezingarrowexp2` ejecta, which is intentionally not claimed by the current
+single-effect presentation recipe. Exact radius/footprint units, impact and
+percentage rounding, per-target RNG, resistance/immunity, monster-class cold
+effectiveness, cross-source replacement, PvP chill conversion, secondary
+ejecta presentation, and action timing remain owned-runtime probes.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. `d2legacy.data.missile_skills` validates admitted
-row graphs into immutable straight-trajectory, area-impact, or on-hit-state
+row graphs into immutable straight-trajectory, area-impact, on-hit-state, or
+composed area-impact/on-hit-state
 definitions; the earlier Frozen
 Armor name lookup is now the generic `state.self-timed-stat` decoder selected
 by ID. It validates server function 18, `frozenarmor`,

@@ -2,6 +2,7 @@ package skillevidence
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
@@ -30,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 55}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,5 +45,24 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if modifiers := report.Skills[2].CrossSkillModifiers; len(modifiers) != 8 ||
 		modifiers[0].ReferencedID != 50 || modifiers[1].ReferencedID != 60 {
 		t.Fatalf("Frozen Armor modifiers = %#v", modifiers)
+	}
+	glacial := report.Skills[3]
+	if modifiers := glacial.CrossSkillModifiers; len(modifiers) != 5 ||
+		modifiers[0].ReferencedID != 39 || modifiers[1].ReferencedID != 45 ||
+		modifiers[2].ReferencedID != 64 || modifiers[3].ReferencedID != 59 ||
+		modifiers[4].ReferencedID != 59 {
+		t.Fatalf("Glacial Spike modifiers = %#v", modifiers)
+	}
+	localized := map[string]LocalizationReference{}
+	for _, evidence := range glacial.Localization {
+		localized[evidence.Column] = evidence
+	}
+	if localized["dsc2texta1"].Text != "Radius: " ||
+		localized["desctexta2"].Text != "Freezes for " ||
+		!strings.Contains(localized["str long"].Text, "nearby enemies") ||
+		localized["dsc3texta1"].Source != "data/local/lng/eng/patchstring.tbl" ||
+		len(localized["dsc3texta1"].ReplacementTokens) != 1 ||
+		localized["dsc3texta1"].ReplacementTokens[0] != "%s" {
+		t.Fatalf("Glacial Spike localization = %#v", glacial.Localization)
 	}
 }

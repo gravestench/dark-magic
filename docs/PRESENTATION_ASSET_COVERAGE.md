@@ -22,7 +22,9 @@ migration inventory, not proof that an asset is absent from a supplied
 installation. The game-world manifest owns the exact blue/red warp COF and
 component paths; authoritative warp state selects only the declared appearance
 token. The Fire Ball impact tranche adds the owned ExpArrowExplode DCC under the
-existing dynamic missile prefix.
+existing dynamic missile prefix. Ice Blast and Glacial Spike reuse the owned
+FreezeExplodeCenter DCC through the same record-driven prefix; Glacial Spike's
+separate ejecta reference remains explicit presentation follow-up.
 
 `catalog_fixture_gaps` must always be empty. CI also pins the complete sorted-set
 fingerprint, so adding, removing, or moving a static path requires running the

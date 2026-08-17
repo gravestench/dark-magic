@@ -47,6 +47,19 @@ ice_blast.ELevLen2 = "5"
 ice_blast.ELevLen3 = "5"
 ice_blast.ELenSymPerCalc = "(skill('Glacial Spike'.blvl))*par7"
 ice_blast.Param7 = "10"
+local glacial_spike = skill(55, "Glacial Spike", "glacialspike", "cold")
+glacial_spike.EMin = "32"
+glacial_spike.EMax = "48"
+glacial_spike.HitShift = "7"
+glacial_spike.EDmgSymPerCalc = "(skill('Ice Bolt'.blvl)+skill('Ice Blast'.blvl)+skill('Frozen Orb'.blvl))*par8"
+glacial_spike.Param8 = "5"
+glacial_spike.aurarangecalc = "ln12"
+glacial_spike.Param1 = "4"
+glacial_spike.Param2 = "0"
+glacial_spike.Param3 = "50"
+glacial_spike.Param4 = "3"
+glacial_spike.Param7 = "3"
+glacial_spike.auralencalc = "ln34 * (100 + skill('Blizzard'.blvl) * par7) / 100"
 local fixture_burst = skill(901, "Fixture Burst", "fixtureburst", "magic")
 
 local function impact_missile(name, skill_name, explosion, radius)
@@ -78,8 +91,8 @@ return test.suite({
             fire_bolt,
             fire_ball,
             ice_blast,
+            glacial_spike,
             { Id = "39", skill = "Ice Bolt" },
-            { Id = "55", skill = "Glacial Spike" },
             { Id = "56", skill = "Meteor" },
             { Id = "59", skill = "Blizzard" },
             { Id = "64", skill = "Frozen Orb" },
@@ -97,6 +110,14 @@ return test.suite({
                 local result = missile("iceblast", "Ice Blast", 12)
                 result.pSrvDmgFunc = "4"
                 result.ExplosionMissile = "freezingarrowexp1"
+                return result
+            end)(),
+            (function()
+                local result = missile("glacialspike", "Glacial Spike", 16)
+                result.pSrvHitFunc = "13"
+                result.EType = "frze"
+                result.HitFlags = "2"
+                result.CltHitSubMissile1 = "freezingarrowexp1"
                 return result
             end)(),
             explosion("fireexplosion", 16),
@@ -152,6 +173,25 @@ return test.suite({
                 test.expect(definition.damage_synergy_skill_ids[2]):equals(59)
                 test.expect(definition.damage_synergy_skill_ids[3]):equals(64)
                 test.expect(definition.damage_synergy_percent_per_level):equals(8)
+                test.expect(definition.impact_missile_id):equals("freezingarrowexp1")
+            end)
+        end),
+        test.case("composes_area_impact_and_freeze_without_a_skill_branch", function(t)
+            t:run(function()
+                local definition =
+                    require("d2legacy.data.missile_skills").load({ 55 }, "missile.straight-impact-area-freeze")[55]
+                test.expect(definition.trajectory):equals("straight")
+                test.expect(definition.impact_radius):equals(4)
+                test.expect(definition.impact_radius_per_level):equals(0)
+                test.expect(definition.on_hit_state_id):equals("freeze")
+                test.expect(definition.effect_duration_base):equals(50)
+                test.expect(definition.effect_duration_per_level):equals(3)
+                test.expect(definition.effect_duration_synergy_skill_ids[1]):equals(59)
+                test.expect(definition.effect_duration_synergy_percent_per_level):equals(3)
+                test.expect(definition.damage_synergy_skill_ids[1]):equals(39)
+                test.expect(definition.damage_synergy_skill_ids[2]):equals(45)
+                test.expect(definition.damage_synergy_skill_ids[3]):equals(64)
+                test.expect(definition.damage_synergy_percent_per_level):equals(5)
                 test.expect(definition.impact_missile_id):equals("freezingarrowexp1")
             end)
         end),
