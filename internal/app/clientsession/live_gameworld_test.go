@@ -119,6 +119,10 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if second.HUD.Player.PlayerID != "alice-2" || second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
 	}
+	// The invite is a UI-visible relationship action. Make the inviter observe
+	// the newly entered target before deriving its command tick; otherwise a
+	// stale client timeline can legally replay the invite before target entry.
+	waitForProjectedPlayer(t, ctx, connected, "player:alice-2")
 	invitePayload, _ := json.Marshal(map[string]any{"target": "alice-2"})
 	if err := connected.Submit(ctx, gameserver.CommandIntent{TargetTick: connected.NextInputTick(time.Now()), Sequence: 1,
 		Kind: "party.invite", Payload: invitePayload}); err != nil {
@@ -270,6 +274,26 @@ func waitForPartyInvite(t *testing.T, ctx context.Context, store *simulation.Sta
 		case <-ticker.C:
 		case <-ctx.Done():
 			t.Fatalf("party invitation %s -> %s timed out: %v", inviter, target, ctx.Err())
+		}
+	}
+}
+
+func waitForProjectedPlayer(t *testing.T, ctx context.Context, session *Session, selectableID string) {
+	t.Helper()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if _, err := session.Refresh(ctx); err != nil {
+			t.Fatal(err)
+		}
+		_, world := session.View()
+		if _, found := findWorldEntity(world.Entities, selectableID, "player"); found {
+			return
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("projected player %s timed out: %v", selectableID, ctx.Err())
 		}
 	}
 }
