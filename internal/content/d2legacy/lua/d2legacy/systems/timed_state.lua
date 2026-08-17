@@ -10,12 +10,15 @@ local function same(instance, request)
         and instance:get("source_id") == request:get("source_id")
 end
 
-local function group_conflict(instance, request)
+local function same_group(instance, request)
     local group = request:get("exclusive_group")
     return group ~= ""
         and instance:get("target"):id() == request:get("target"):id()
         and instance:get("exclusive_group") == group
-        and not same(instance, request)
+end
+
+local function group_conflict(instance, request)
+    return same_group(instance, request) and not same(instance, request)
 end
 
 local function request_key(request)
@@ -160,6 +163,8 @@ local function update_instance(instance, request, expires)
         "stat_value",
         "stat_order",
         "exclusive_group",
+        "replacement_priority",
+        "reject_lower_priority",
         "on_melee_hit_state_id",
         "on_melee_hit_duration",
         "on_melee_hit_disables_action",
@@ -182,6 +187,8 @@ local function instance_values(request, tick, expires)
         stat_value = request:get("stat_value"),
         stat_order = request:get("stat_order"),
         exclusive_group = request:get("exclusive_group"),
+        replacement_priority = request:get("replacement_priority"),
+        reject_lower_priority = request:get("reject_lower_priority"),
         on_melee_hit_state_id = request:get("on_melee_hit_state_id"),
         on_melee_hit_duration = request:get("on_melee_hit_duration"),
         on_melee_hit_disables_action = request:get("on_melee_hit_disables_action"),
@@ -217,16 +224,30 @@ function M.register()
         },
         update = function(context, entities, structural)
             local touched = {}
-            local last_request = {}
+            local selected_request = {}
             for _, entity in ipairs(entities) do
                 local request = ecs.get(entity, "d2legacy.state.request")
                 if request then
-                    last_request[request_key(request)] = entity:id()
+                    local key = request_key(request)
+                    local selected = selected_request[key]
+                    local ranked = request:get("reject_lower_priority")
+                    if
+                        not selected
+                        or not ranked
+                        or not selected.ranked
+                        or request:get("replacement_priority") >= selected.priority
+                    then
+                        selected_request[key] = {
+                            entity = entity:id(),
+                            ranked = ranked,
+                            priority = request:get("replacement_priority"),
+                        }
+                    end
                 end
             end
             for _, request_entity in ipairs(entities) do
                 local request = ecs.get(request_entity, "d2legacy.state.request")
-                if request and last_request[request_key(request)] == request_entity:id() then
+                if request and selected_request[request_key(request)].entity == request_entity:id() then
                     assert(
                         request:get("state_id") ~= ""
                             and request:get("source_id") ~= ""
@@ -245,6 +266,32 @@ function M.register()
                     if operation == "apply" then
                         assert(request:get("duration") > 0, "state duration must be positive")
                         local expires = context.tick + request:get("duration")
+                        local blocked = false
+                        if request:get("reject_lower_priority") and request:get("exclusive_group") ~= "" then
+                            for _, candidate in ipairs(entities) do
+                                local instance = ecs.get(candidate, "d2legacy.state.instance")
+                                if
+                                    instance
+                                    and same_group(instance, request)
+                                    and request:get("replacement_priority") < instance:get("replacement_priority")
+                                then
+                                    blocked = true
+                                    break
+                                end
+                            end
+                        end
+                        if blocked then
+                            emit_request(
+                                structural,
+                                "state_rejected",
+                                context.tick,
+                                request,
+                                expires,
+                                "lower_replacement_priority"
+                            )
+                            structural:destroy(request_entity)
+                            goto continue_request
+                        end
                         for _, candidate in ipairs(entities) do
                             local instance = ecs.get(candidate, "d2legacy.state.instance")
                             if instance and group_conflict(instance, request) then
@@ -291,10 +338,11 @@ function M.register()
                     end
                     structural:destroy(request_entity)
                 elseif request then
-                    -- Stable entity order makes the last same-tick request for
-                    -- one state/source or exclusive group authoritative.
+                    -- Ranked groups select the highest same-tick priority;
+                    -- ordinary groups retain stable last-request authority.
                     structural:destroy(request_entity)
                 end
+                ::continue_request::
             end
             for _, entity in ipairs(entities) do
                 if ecs.get(entity, "d2legacy.state.stat_request") then

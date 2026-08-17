@@ -44,6 +44,8 @@ local facing = require("d2legacy.systems.facing")
 local state_skill_data = require("d2legacy.data.state_skills")
 local targeted_state_skill_data = require("d2legacy.data.targeted_state_skills")
 local targeted_state_skill_system = require("d2legacy.systems.targeted_state_skill")
+local area_curse_skill_data = require("d2legacy.data.area_curse_skills")
+local area_curse_skill_system = require("d2legacy.systems.area_curse_skill")
 local quest_components = require("d2legacy.components.quests")
 local quest_commands = require("d2legacy.commands.quests")
 local derived_stats = require("d2legacy.systems.derived_stats")
@@ -106,6 +108,8 @@ function M.start()
     M.state_skills = state_skill_data.load(M.skill_behavior_coverage.by_family["state.self-timed"] or {})
     M.targeted_state_skills =
         targeted_state_skill_data.load(M.skill_behavior_coverage.by_family["state.targeted-timed"] or {})
+    M.area_curse_skills =
+        area_curse_skill_data.load(M.skill_behavior_coverage.by_family["state.point-area-curse"] or {})
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
         M.cast_skills[skill_id] = definition
@@ -142,6 +146,10 @@ function M.start()
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
+    for skill_id, definition in pairs(M.area_curse_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
     cast_command.register(M.cast_skills)
     cast_system.register(M.cast_skills)
     melee_skill_system.register(M.melee_skills)
@@ -149,6 +157,7 @@ function M.start()
     point_movement_skill_system.register(M.point_movement_skills)
     state_skill_system.register(M.state_skills)
     targeted_state_skill_system.register(M.targeted_state_skills)
+    area_curse_skill_system.register(M.area_curse_skills)
     projectile_system.register()
     melee_system.register()
     monster_ai.register()
@@ -195,6 +204,7 @@ function M.stop()
     M.point_movement_skills = nil
     M.state_skills = nil
     M.targeted_state_skills = nil
+    M.area_curse_skills = nil
     M.cast_skills = nil
     M.skill_behavior_coverage = nil
     M.progression = nil
