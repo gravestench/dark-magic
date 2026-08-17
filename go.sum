@@ -67,6 +67,8 @@ github.com/gravestench/pl2 v0.2.0 h1:yRm3wGmqWbRfmn/lCizzR33bQEA60z0UdDLJf8bpiF8
 github.com/gravestench/pl2 v0.2.0/go.mod h1:NejJboSMf/MYmm1DPc97Dtws3lnqHhfMM+W//OBDyps=
 github.com/gravestench/tbl_text v0.2.0 h1:57df54UHF/hpKwGEEOWS/9PGIlh8iBQYi1KHayufYb0=
 github.com/gravestench/tbl_text v0.2.0/go.mod h1:Cw33p5B3pzxOu5oaj4p+nglMo6J+UUMo7NSE9tFNJhk=
+github.com/gravestench/tbl_text v0.2.1-0.20260817040431-98316da86804 h1:MHt1M4QlfmthcRDsSGFe+7LUOWzpns2E8NO9Hz46KZE=
+github.com/gravestench/tbl_text v0.2.1-0.20260817040431-98316da86804/go.mod h1:Cw33p5B3pzxOu5oaj4p+nglMo6J+UUMo7NSE9tFNJhk=
 github.com/gravestench/tsv v0.2.1 h1:nwBmXdS5CD6sI3oFdpvtar3ZwzvTYVUuZl2gnqR9WR0=
 github.com/gravestench/tsv v0.2.1/go.mod h1:Y/9agPFwBUEniuqNLKbbIOyhPlZSUloA0mk4/Of4HKU=
 github.com/gravestench/wav v0.1.0 h1:LBfyzhVYHz8M3bHqx7CCXa5wUqyuT6LXNGuH4hw1Tow=

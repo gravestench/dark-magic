@@ -2,8 +2,8 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G9 target-locked mounted-data,
-generic melee action, missile, timed-state, and reactive-state slices on
-2026-08-16.
+localized skill evidence, generic melee action, missile, timed-state, and
+reactive-state slices on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -58,7 +58,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -327,6 +327,9 @@ runtime composition and the coverage report.
 
 - [x] Generate a mounted-data report of server start/do behavior IDs, consuming
   skills, implementation family, missing family, and evidence status.
+- [x] Generate exact skill-investigation evidence by joining Skills.txt and
+  SkillDesc.txt to base/Expansion/patch locale TBL keys, winning text source,
+  replacement tokens, and resolved `.blvl`/`.lvl` cross-skill references.
 - [x] Replace the first skill-specific Fire Bolt authority with an explicitly
   configured, definition-driven straight-missile family dispatched by skill ID.
 - [x] Replace Attack's skill-ID-zero command branch with an exact-ID,
@@ -362,6 +365,21 @@ configurations, and 354 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
+
+`skill_evidence` is the required companion investigation report for skill-tree
+synergies and skills that modify other skills. It accepts exact IDs and a locale,
+joins each Skills.txt row to SkillDesc.txt, resolves every name/description/
+tooltip label through layered `string.tbl`, `expansionstring.tbl`, and
+`patchstring.tbl`, records replacement tokens such as `%s`, and parses every
+`skill('name'.blvl|lvl)` formula back to the referenced target skill ID. Missing
+keys and unknown skill references fail or remain explicit instead of silently
+dropping documentation. Fire Bolt now reports Fire Ball/Meteor hard-level fire-
+damage synergies; Frozen Armor reports Shiver/Chilling Armor hard-level duration
+and freeze-length modifiers in both gameplay and tooltip formulas. TBL wording
+establishes intended relationships and player-visible claims; Skills.txt calc/
+parameter fields and owned 1.14d runtime probes remain authoritative for exact
+arithmetic, rounding, and ordering. The corrected version-1 TBL codec and a
+layer-precedence/source test make this evidence path executable.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
@@ -417,7 +435,8 @@ in evidence order, finish Frozen Armor's remaining target-sensitive cold-
 duration/PvP rules. Then use the report to select one high-leverage missing
 target/point/area signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
-function IDs.
+function IDs, and synergy/cross-skill work begins with the joined TBL evidence
+report rather than formula inspection in isolation.
 
 ### G10 — Item-source lifecycle
 

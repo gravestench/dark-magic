@@ -69,6 +69,8 @@ A completed baseline should cover:
 
 - player-visible behavior;
 - relevant TXT/BIN/TBL/save/network records and cross-links;
+- for skills, the exact SkillDesc-to-locale-TBL text and replacement tokens,
+  especially synergy labels and formulas that modify another skill;
 - stable identifiers and runtime domain model;
 - state machine/lifecycle;
 - authoritative inputs and consequences;

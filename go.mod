@@ -19,7 +19,7 @@ require (
 	github.com/gravestench/dt1 v0.3.2-0.20260811213836-e413758e7628
 	github.com/gravestench/mpq v0.2.0
 	github.com/gravestench/pl2 v0.2.0
-	github.com/gravestench/tbl_text v0.2.0
+	github.com/gravestench/tbl_text v0.2.1-0.20260817040431-98316da86804
 	github.com/gravestench/tsv v0.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/quic-go/quic-go v0.61.0

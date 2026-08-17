@@ -55,6 +55,13 @@ target-locked server-function/missile linkage inventory. The report never
 infers support from matching row shapes: each supported consumer must have its
 own exact-ID declaration and evidence status. Generated reports stay local.
 
+Run `MPQ_DIRECTORY=/path/to/mpqs make skill-evidence` to join the default exact
+skill IDs to SkillDesc and English base/Expansion/patch TBL text. Override
+`SKILL_IDS=...` for the skill under investigation or pass another locale to the
+underlying tool. The report retains localized replacement tokens and resolves
+cross-skill `.blvl`/`.lvl` formulas to exact IDs; it is required evidence for
+synergies and skills that modify other skills, not a gameplay formula engine.
+
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
 
