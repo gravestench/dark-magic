@@ -60,6 +60,10 @@ return test.suite({
                         and bundle:get("physical_rolled_raw") == 0,
                     [=[missile result preserves fire separately from other channels]=]
                 )
+                test.assert(
+                    ecs.get(events[1], "d2legacy.combat.death_observed") ~= nil,
+                    [=[generic death consumer marks the missile result exactly once]=]
+                )
             end),
         }),
         test.case("underfunded_cast_has_no_effect_and_preserves_mana", {
