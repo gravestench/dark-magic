@@ -356,6 +356,11 @@ function M.register()
                                 "item_fastermovevelocity",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
+                                "vitality",
+                                "maxstamina",
+                                "skill_staminapercent",
+                                "skill_passive_staminapercent",
+                                "item_stamina_perlevel",
                             }) do
                                 sync_sources(
                                     entities,
@@ -397,6 +402,11 @@ function M.register()
                                 "item_fastermovevelocity",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
+                                "vitality",
+                                "maxstamina",
+                                "skill_staminapercent",
+                                "skill_passive_staminapercent",
+                                "item_stamina_perlevel",
                             }) do
                                 sync_sources(
                                     entities,

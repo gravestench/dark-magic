@@ -89,7 +89,7 @@ type predictionMovementRecords struct{}
 func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 	return []map[string]string{{
 		"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9",
-		"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
+		"vit": "20", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 	}}, nil
 }
 

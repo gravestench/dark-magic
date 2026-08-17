@@ -1,12 +1,14 @@
 # Dark Magic roadmap
 
 Status: fully refreshed through the G4 player-population/override correction,
-the target-locked party-XP probe contract, the G5 production Warp Lab
-realignment, pinned class movement/stamina facts, authoritative stamina and
-generic Faster Run/Walk slice, and the G9 target-locked mounted-data, localized skill evidence,
-case-stable pinned MPQ tables, AnimData/effective-attack-rate generic melee
-action, current-state melee target revalidation, missile, timed-state, and
-reactive-state slices on 2026-08-16.
+the target-locked party-XP probe contract, and the G5 production Warp Lab,
+post-warp route invalidation, semantic motion ownership, AnimData-independent
+playback, pinned class movement/stamina, authoritative drain/recovery/FRW, and
+progression/source-derived maximum-stamina slices. G9 remains current through
+target-locked mounted-data and localized TBL skill evidence, case-stable pinned
+MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
+melee target revalidation, missile, timed-state, and reactive-state slices as
+of 2026-08-17.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -297,8 +299,19 @@ and monster chase exist. Still required:
   `item_fastermovevelocity` diminishing returns. The owned Expansion 1.14d
   archive pins every class's starting stamina, RunDrain, per-level/per-Vitality
   terms, ItemStatCost identities, and `move1`/`move2`/`move3` Properties links.
-- [ ] Recompute maximum stamina from level, Vitality, skills, and item sources;
-  define proportional current-resource adjustment when max changes.
+- [x] Recompute authoritative 8.8 maximum stamina from the pinned class starting
+  Vitality/stamina facts, quarter-unit per-level and per-Vitality terms, direct
+  `maxstamina`, bonus Vitality, active/passive skill-percent, and item-per-level
+  ItemStatCost operands. Durable Vitality now survives admission as a live
+  stamina progression fact; equipment and generic sources share the same graph.
+  Max-source changes preserve positive current stamina proportionally with the
+  recovered double/truncate/clamp callback, zero remains zero, and level-up
+  explicitly fills the new derived maximum. Owned Expansion 1.14d tests pin the
+  relevant ItemStatCost operations and `stam`/`stam/lvl` Properties links.
+- [ ] Add the environment-period evaluator required by `item_stamina_bytime`
+  and pin stat-allocation/max-callback ordering before exposing a live base-
+  Vitality allocation command. These are explicit maximum-stamina holdouts,
+  not permission to trust admitted redundant max-resource fields.
 - [ ] Verify and implement chill/freeze, skill `velocitypercent`, armor/shield
   velocity penalties, and movement-floor ordering against Expansion 1.14d
   runtime vectors. The generic source channel exists, but broad content is not
@@ -664,7 +677,8 @@ probes remain:
 - combat/motion: block, avoidance, mitigation, absorb, critical/deadly/mastery,
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
   attack-rate breakpoints/dual wield/mid-action changes, cast timing, path
-  types, remaining stamina/max-resource and chill/slow ordering, and inactive rooms;
+  types, time-of-day stamina sources, base-Vitality allocation/max-callback
+  ordering, chill/slow ordering, and inactive rooms;
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;

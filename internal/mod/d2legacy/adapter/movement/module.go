@@ -14,11 +14,13 @@ func RulesModule(catalog Catalog) modruntime.Module {
 		Help: modruntime.ModuleHelp{
 			Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 			Commands: map[string]modruntime.CommandHelp{
-				"velocity":    {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
-				"rates":       {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
-				"class_facts": {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, and stamina progression terms."},
-				"is_town":     {Usage: "d2legacy.movement_rules.is_town(level_id)", Summary: "Report whether a level is one of the five target act towns."},
-				"stamina":     {Usage: "d2legacy.movement_rules.stamina(current, maximum, run_drain, armor, slower_drain, recovery, running, moving, town, can_recover)", Summary: "Advance one authoritative 25 Hz 8.8 stamina tick."},
+				"velocity":        {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
+				"rates":           {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
+				"class_facts":     {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, stamina progression terms, and starting Vitality."},
+				"is_town":         {Usage: "d2legacy.movement_rules.is_town(level_id)", Summary: "Report whether a level is one of the five target act towns."},
+				"stamina":         {Usage: "d2legacy.movement_rules.stamina(current, maximum, run_drain, armor, slower_drain, recovery, running, moving, town, can_recover)", Summary: "Advance one authoritative 25 Hz 8.8 stamina tick."},
+				"maximum_stamina": {Usage: "d2legacy.movement_rules.maximum_stamina(class, level, base_vitality, bonus_vitality, flat_maximum, skill_percent, passive_percent, item_per_level)", Summary: "Resolve Expansion 1.14d maximum stamina in 8.8 units."},
+				"rescale_stamina": {Usage: "d2legacy.movement_rules.rescale_stamina(current, previous_maximum, new_maximum)", Summary: "Apply the maxstamina source-change callback."},
 			},
 		},
 		Loader: func(state *lua.LState) int {
@@ -74,7 +76,25 @@ func RulesModule(catalog Catalog) modruntime.Module {
 					state.Push(lua.LNumber(rates.RunDrain))
 					state.Push(lua.LNumber(rates.StaminaPerLevel))
 					state.Push(lua.LNumber(rates.StaminaPerVitality))
-					return 4
+					state.Push(lua.LNumber(rates.StartingVitality))
+					return 5
+				},
+				"maximum_stamina": func(state *lua.LState) int {
+					rates, found := catalog.Rates(state.CheckString(1))
+					if !found {
+						state.RaiseError("d2legacy movement: class has no pinned CharStats stamina facts")
+					}
+					value := MaximumStamina(rates, int64(state.CheckInt(2)), int64(state.CheckInt(3)), StaminaMaximumSources{
+						BonusVitality: int64(state.OptInt(4, 0)), FlatMaximum: int64(state.OptInt(5, 0)),
+						SkillStaminaPercent: int64(state.OptInt(6, 0)), SkillPassiveStaminaPercent: int64(state.OptInt(7, 0)),
+						ItemStaminaPerLevel: int64(state.OptInt(8, 0)),
+					})
+					state.Push(lua.LNumber(value))
+					return 1
+				},
+				"rescale_stamina": func(state *lua.LState) int {
+					state.Push(lua.LNumber(RescaleCurrentStamina(int64(state.CheckInt(1)), int64(state.CheckInt(2)), int64(state.CheckInt(3)))))
+					return 1
 				},
 				"is_town": func(state *lua.LState) int {
 					state.Push(lua.LBool(IsTownLevel(int64(state.CheckInt(1)))))

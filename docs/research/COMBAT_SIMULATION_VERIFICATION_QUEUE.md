@@ -25,9 +25,11 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 - Trace one monster's AI-think cadence from activation through target acquisition and attack, including RNG consumption.
 - [x] Pin all seven Expansion 1.14d `CharStats.txt` walk/run and stamina fields,
   implement shared 25 Hz 8.8 stamina/FRW policy, and cover authority/prediction,
-  exhaustion, town recovery, item FRW, and equipment-source lifecycles. Direct
-  1.14d holdout vectors for arithmetic/rounding and chill/slow ordering remain
-  in the movement queue.
+  exhaustion, town recovery, item FRW, and equipment-source lifecycles. The
+  level/Vitality/direct/skill/item-per-level maximum graph and proportional
+  source transition are also implemented and target-record pinned. Time-of-day,
+  live base-Vitality allocation, and chill/slow ordering remain in the movement
+  queue.
 - Compare Dark Magic A* output with original path behavior for a small blocked room and identify where the original selects A*, IDA*, direct, or other path types.
 - Define canonical checkpoint state for one active monster, one missile, one timed state, one pending cast, and one owned unit.
 

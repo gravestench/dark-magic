@@ -11,6 +11,7 @@ return test.suite({
                 WalkVelocity = "6",
                 RunVelocity = "9",
                 stamina = "84",
+                vit = "20",
                 RunDrain = "20",
                 StaminaPerLevel = "4",
                 StaminaPerVitality = "4",

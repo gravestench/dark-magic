@@ -24,6 +24,7 @@ function M.player_entry(overrides)
         level = 1,
         experience = 0,
         dexterity = 20,
+        vitality = 20,
         defense = 0,
         health = 50,
         max_health = 50,

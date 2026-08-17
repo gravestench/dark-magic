@@ -85,7 +85,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	go func() { serveErrors <- server.Serve(serveContext) }()
 
 	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1, Expansion: true,
-		Stats: &d2save.Stats{Dexterity: 20, Health: 50, MaxHealth: 50, Mana: 20, MaxMana: 20}}
+		Stats: &d2save.Stats{Dexterity: 20, Vitality: 20, Health: 50, MaxHealth: 50, Mana: 20, MaxMana: 20}}
 	profile := d2save.New(character)
 	if err := profile.Select(character.ID); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
 	barbarian := d2save.Character{ID: "barbarian", Name: "Conan", Class: "Barbarian", Level: 1, Expansion: true,
-		Stats: &d2save.Stats{Dexterity: 20, Health: 60, MaxHealth: 60, Mana: 10, MaxMana: 10}}
+		Stats: &d2save.Stats{Dexterity: 20, Vitality: 25, Health: 60, MaxHealth: 60, Mana: 10, MaxMana: 10}}
 	barbarianProfile := d2save.New(barbarian)
 	if err := barbarianProfile.Select(barbarian.ID); err != nil {
 		t.Fatal(err)
@@ -376,8 +376,8 @@ func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{
-			{"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
-			{"class": "Barbarian", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "92", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
+			{"class": "Amazon", "vit": "20", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
+			{"class": "Barbarian", "vit": "25", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "92", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
 		}, nil
 	case "data/global/excel/levels.txt":
 		return []map[string]string{{"Id": "2", "MonDen": "100000", "NumMon": "1", "mon1": "fallen"}}, nil

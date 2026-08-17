@@ -128,6 +128,14 @@ local armor = {
             value = 30,
             order = 50,
         },
+        {
+            source_id = "endurance",
+            source_kind = "affix",
+            stat = "maxstamina",
+            operation = "add",
+            value = 10,
+            order = 60,
+        },
     },
 }
 
@@ -183,6 +191,7 @@ local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:defense:armor", 61)
     expect_source(sources, "equipment:armor-velocity:armor", -5)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
+    expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", 10)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", 20)
@@ -213,6 +222,7 @@ local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:defense:armor", nil)
     expect_source(sources, "equipment:armor-velocity:armor", nil)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", nil)
+    expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", nil)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", nil)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", nil)
@@ -224,6 +234,7 @@ local function assert_resolved_stats()
     local stats = ecs.get(players[1], "d2legacy.player.combat_stats")
     local rates = ecs.get(players[1], "d2legacy.combat.action_rate")
     local movement = ecs.get(players[1], "d2legacy.player.movement_stats")
+    local vitals = ecs.get(players[1], "d2legacy.player.vitals")
     -- AR: (5 * (20 - 7)) + 900 + 75 + 25, then +20%.
     test.expect(stats:get("attack_rating")):equals(1278)
     -- Defense: Dex/4 + enhanced armor 61 + flat 10, then +20%.
@@ -232,6 +243,8 @@ local function assert_resolved_stats()
     test.expect(rates:get("item_fasterattackrate")):equals(40)
     test.expect(movement:get("velocitypercent")):equals(-5)
     test.expect(movement:get("item_fastermovevelocity")):equals(30)
+    test.expect(vitals:get("max_stamina_raw")):equals(94 * 256)
+    test.expect(vitals:get("stamina_raw")):equals(94 * 256)
 end
 
 -- Move an item from one container to another.
@@ -289,6 +302,10 @@ return test.suite({
             test.step(2),
             test.run(function()
                 assert_unequipped_armor_sources(collect_sources())
+                local ecs = require("engine.ecs/v1")
+                local vitals = ecs.get(test.entities_with("d2legacy.player.vitals")[1], "d2legacy.player.vitals")
+                test.expect(vitals:get("max_stamina_raw")):equals(84 * 256)
+                test.expect(vitals:get("stamina_raw")):equals(84 * 256)
             end),
         }),
     },

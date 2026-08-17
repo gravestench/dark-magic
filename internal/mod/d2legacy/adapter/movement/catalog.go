@@ -18,6 +18,7 @@ type recordsGateway interface {
 type ClassRates struct {
 	Walk               float64
 	Run                float64
+	StartingVitality   int64
 	StartingStamina    int64
 	RunDrain           int64
 	StaminaPerLevel    int64
@@ -48,10 +49,11 @@ func LoadCatalog(records recordsGateway) (Catalog, error) {
 		walk, walkErr := positiveNumber(row["WalkVelocity"])
 		run, runErr := positiveNumber(row["RunVelocity"])
 		stamina, staminaErr := positiveInteger(row["stamina"])
+		vitality, baseVitalityErr := positiveInteger(row["vit"])
 		runDrain, runDrainErr := positiveInteger(row["RunDrain"])
 		staminaPerLevel, levelErr := nonNegativeInteger(row["StaminaPerLevel"])
 		staminaPerVitality, vitalityErr := nonNegativeInteger(row["StaminaPerVitality"])
-		if walkErr != nil || runErr != nil || staminaErr != nil || runDrainErr != nil || levelErr != nil || vitalityErr != nil || run < walk {
+		if walkErr != nil || runErr != nil || staminaErr != nil || baseVitalityErr != nil || runDrainErr != nil || levelErr != nil || vitalityErr != nil || run < walk {
 			return Catalog{}, fmt.Errorf("d2legacy movement: %s row %d class %q has invalid movement/stamina facts", charStatsPath, index+2, class)
 		}
 		key := strings.ToLower(class)
@@ -59,7 +61,7 @@ func LoadCatalog(records recordsGateway) (Catalog, error) {
 			return Catalog{}, fmt.Errorf("d2legacy movement: %s contains duplicate class %q", charStatsPath, class)
 		}
 		result.byClass[key] = ClassRates{
-			Walk: walk, Run: run, StartingStamina: stamina, RunDrain: runDrain,
+			Walk: walk, Run: run, StartingVitality: vitality, StartingStamina: stamina, RunDrain: runDrain,
 			StaminaPerLevel: staminaPerLevel, StaminaPerVitality: staminaPerVitality,
 		}
 	}

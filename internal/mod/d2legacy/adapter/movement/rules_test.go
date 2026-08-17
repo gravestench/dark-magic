@@ -59,6 +59,33 @@ func TestAdvanceStaminaUsesFixedPointDrainRecoveryAndTownRules(t *testing.T) {
 	}
 }
 
+func TestMaximumStaminaUsesExpansionFixedPointDependencyGraph(t *testing.T) {
+	rates := ClassRates{StartingVitality: 20, StartingStamina: 84, StaminaPerLevel: 4, StaminaPerVitality: 4}
+	base := MaximumStamina(rates, 10, 29, StaminaMaximumSources{})
+	if base != 102*256 {
+		t.Fatalf("level/vitality maximum = %d, want %d", base, 102*256)
+	}
+	withSources := MaximumStamina(rates, 10, 29, StaminaMaximumSources{
+		BonusVitality: 5, FlatMaximum: 10, SkillStaminaPercent: 25,
+		SkillPassiveStaminaPercent: 10, ItemStaminaPerLevel: 8,
+	})
+	if withSources != 39997 {
+		t.Fatalf("source-derived maximum = %d, want 39997", withSources)
+	}
+}
+
+func TestRescaleCurrentStaminaMatchesMaxStatCallback(t *testing.T) {
+	if got := RescaleCurrentStamina(42*256, 84*256, 102*256); got != 51*256 {
+		t.Fatalf("rescaled current = %d", got)
+	}
+	if got := RescaleCurrentStamina(0, 84*256, 102*256); got != 0 {
+		t.Fatalf("zero current = %d", got)
+	}
+	if got := RescaleCurrentStamina(1, 102*256, 84*256); got != 1 {
+		t.Fatalf("minimum current = %d", got)
+	}
+}
+
 func TestTownLevelsAreTheFiveExpansion114dActTowns(t *testing.T) {
 	for _, level := range []int64{1, 45, 80, 108, 114} {
 		if !IsTownLevel(level) {

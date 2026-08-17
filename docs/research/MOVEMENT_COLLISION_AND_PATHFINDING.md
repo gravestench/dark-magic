@@ -244,10 +244,10 @@ Do not make a visual door animation itself toggle collision.
 
 ## Player walk/run and stamina
 
-The production locomotion catalog now pins `WalkVelocity`, `RunVelocity`,
-starting stamina, `RunDrain`, `StaminaPerLevel`, and `StaminaPerVitality` from
-the mounted Expansion 1.14d `CharStats.txt` generation for all seven classes.
-There is no longer a hard-coded player walk/run rate.
+The production locomotion catalog now pins starting Vitality, `WalkVelocity`,
+`RunVelocity`, starting stamina, `RunDrain`, `StaminaPerLevel`, and
+`StaminaPerVitality` from the mounted Expansion 1.14d `CharStats.txt` generation
+for all seven classes. There is no longer a hard-coded player walk/run rate.
 
 Current/max stamina is authoritative 8.8 ECS state. One shared pure rule drives
 the Lua authority and connected prediction: wilderness running drains twice the
@@ -259,15 +259,33 @@ The equipped-stat graph also exposes generic `velocitypercent`,
 Item FRW uses the recovered 150-point diminishing-return conversion before it
 joins the velocity channel.
 
+Maximum stamina is now reconstructed in the same shared Go rule used by Lua
+authority. `CharStats.stamina` is shifted to 8.8, while per-level and allocated
+base-Vitality terms are quarter values (`<< 6`). The target-owned
+`ItemStatCost.txt` graph pins bonus Vitality op 9, active/passive skill stamina
+percent op 1, and `item_stamina_perlevel` op 2 with level base and parameter 3;
+direct `maxstamina` is a whole-point property shifted to 8.8. Op-derived skill
+percentages use the direct max value, while bonus Vitality and per-level item
+terms remain separate graph contributions.
+
+When an active max source changes, positive current stamina is multiplied by
+new/old maximum through the recovered double calculation, truncated, and
+clamped to `[1,newMax]`; zero remains zero. Level-up is a distinct transaction
+and fills the newly derived maximum. The live stamina-progression component
+retains admitted base Vitality and the previous progression boundary across
+checkpoint/replay. Equipment source activation/removal and the owner-private
+HUD therefore observe the same authoritative raw values.
+
 The archive and declarative record identities are target-locked to Expansion
 1.14d. Arithmetic is corroborated by recovered executable structure and
-independent community measurements, but the remaining chill/slow ordering,
-armor/shield breadth, progression-derived maximum, and boundary rounding still
-require owned 1.14d runtime vectors before they become verified completion.
+independent community measurements. Remaining target work is chill/slow
+ordering, armor/shield breadth, the environment-period evaluator for
+`item_stamina_bytime`, and a direct base-Vitality allocation/max-callback
+ordering vector.
 
 The remaining player locomotion model needs:
 
-- progression/source-derived maximum stamina;
+- time-of-day maximum-stamina item sources and base-Vitality allocation ordering;
 - verified slow/chill/freeze and skill velocity ordering;
 - complete armor/shield penalty activation;
 - state effects such as chill/freeze;
@@ -471,8 +489,10 @@ Package names are suggestions. Keep generic map facts in `world`; do not turn `w
 ### MV1 — locomotion data policy (implemented foundation)
 
 Pinned `CharStats`/stat-driven movement and authoritative stamina drain/recovery
-now replace the hard-coded rate. Finish the explicitly listed Expansion 1.14d
-runtime probes before widening modifier content.
+now replace the hard-coded rate. Level/Vitality/direct/skill/item-per-level
+maximum stamina and proportional source transitions are also authoritative.
+Finish the explicitly listed Expansion 1.14d runtime probes before widening
+time-of-day or slow modifier content.
 
 Keep existing A* unchanged.
 
@@ -546,4 +566,10 @@ probe rather than a compatibility claim.
 - D2MOO pinned 1.10f `source/D2Common/include/Path/Path.h` and path algorithm files (`AStar`, `IDAStar`, `PathWF`, `Path`, `PathMisc`, `Step`) as secondary recovered evidence, not the 1.14d target authority.
 - D2MOO missile creation/path configuration.
 - D2MOO `source/D2Game/src/UNIT/SUnitInactive.cpp` for room/inactive monster restoration.
+- Owned Expansion 1.14d `CharStats.txt`, `ItemStatCost.txt`, and `Properties.txt`
+  rows for maximum-stamina units/dependencies and property links.
+- D2MOO `D2StatList.cpp`, `PlayerStats.cpp`, and `ItemMode.cpp` for corroborating
+  fixed-point dependency, level refill, and max-source current-resource callback
+  structure; recovered code remains secondary evidence where a target runtime
+  vector is still listed above.
 - Current Dark Magic `internal/game/world/navigation.go`, `internal/game/session/movement.go`, generated map/collision/transition architecture and recent world diagnostics.

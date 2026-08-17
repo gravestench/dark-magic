@@ -39,6 +39,8 @@ function M.validate(command)
     assert(p.level >= 1 and p.health >= 0 and p.max_health >= p.health, "player entry progression or health is invalid")
     assert(p.mana >= 0 and p.max_mana >= p.mana, "player entry mana is invalid")
     assert(p.stamina >= 0 and p.max_stamina >= p.stamina, "player entry stamina is invalid")
+    local _, _, _, _, starting_vitality = movement_rules.class_facts(p.class)
+    assert(p.vitality >= starting_vitality, "player entry vitality is below the class starting value")
     assert(
         finite(p.x) and finite(p.y) and finite(p.world_width) and finite(p.world_height),
         "player entry world values must be finite"
@@ -91,13 +93,27 @@ local function create_passive_sources(player, sources)
                 or source.stat == "velocitypercent"
                 or source.stat == "item_fastermovevelocity"
                 or source.stat == "staminarecoverybonus"
-                or source.stat == "item_staminadrainpct",
+                or source.stat == "item_staminadrainpct"
+                or source.stat == "vitality"
+                or source.stat == "maxstamina"
+                or source.stat == "skill_staminapercent"
+                or source.stat == "skill_passive_staminapercent"
+                or source.stat == "item_stamina_perlevel",
             "unsupported passive combat stat"
         )
         assert(
             source.operation == nil or source.operation == "add" or source.operation == "percent",
             "unsupported passive stat operation"
         )
+        if
+            source.stat == "vitality"
+            or source.stat == "maxstamina"
+            or source.stat == "skill_staminapercent"
+            or source.stat == "skill_passive_staminapercent"
+            or source.stat == "item_stamina_perlevel"
+        then
+            assert(source.operation == nil or source.operation == "add", "stamina operand must be additive")
+        end
         assert(
             type(source.value) == "number" and source.value == math.floor(source.value),
             "passive stat value must be an integer"
@@ -176,6 +192,11 @@ function M.apply(command)
             max_stamina = p.max_stamina,
             stamina_raw = p.stamina * 256,
             max_stamina_raw = p.max_stamina * 256,
+        },
+        ["d2legacy.player.stamina_progression"] = {
+            base_vitality = p.vitality,
+            vitality = p.vitality,
+            last_level = p.level,
         },
         ["d2legacy.player.movement_stats"] = {
             run_drain = run_drain,

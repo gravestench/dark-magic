@@ -43,6 +43,50 @@ type ResolvedStamina struct {
 	ForceWalk  bool
 }
 
+// StaminaMaximumSources are normalized ItemStatCost operands. Whole-point
+// maxstamina is shifted to 8.8 here; per-level remains in the record's eighths
+// encoding and the two skill percentages remain separate op-1 families.
+type StaminaMaximumSources struct {
+	BonusVitality              int64
+	FlatMaximum                int64
+	SkillStaminaPercent        int64
+	SkillPassiveStaminaPercent int64
+	ItemStaminaPerLevel        int64
+}
+
+// MaximumStamina reproduces the Expansion 1.14d maxstamina dependency graph.
+// CharStats level/vitality terms are quarters (hence << 6), while maxstamina
+// itself is 8.8. Op-1 percentages use the direct value before op-derived
+// vitality/per-level contributions, matching ItemStatCost evaluation.
+func MaximumStamina(rates ClassRates, level, baseVitality int64, sources StaminaMaximumSources) int64 {
+	level = max(int64(1), level)
+	baseVitality = max(rates.StartingVitality, baseVitality)
+	direct := rates.StartingStamina*256 +
+		(level-1)*rates.StaminaPerLevel*64 +
+		(baseVitality-rates.StartingVitality)*rates.StaminaPerVitality*64 +
+		sources.FlatMaximum*256
+	result := direct + sources.BonusVitality*rates.StaminaPerVitality*64
+	result += direct * sources.SkillStaminaPercent / 100
+	result += direct * sources.SkillPassiveStaminaPercent / 100
+	result += level * sources.ItemStaminaPerLevel >> 3
+	return max(int64(256), result)
+}
+
+// RescaleCurrentStamina is the maxstamina value-change callback: positive
+// current stamina preserves its ratio using a double calculation, truncates,
+// and clamps to [1,new]. Zero remains exhausted.
+func RescaleCurrentStamina(currentRaw, previousMaximumRaw, newMaximumRaw int64) int64 {
+	newMaximumRaw = max(int64(0), newMaximumRaw)
+	if currentRaw <= 0 {
+		return 0
+	}
+	if previousMaximumRaw <= 0 {
+		return min(currentRaw, newMaximumRaw)
+	}
+	rescaled := int64(float64(currentRaw) / float64(max(previousMaximumRaw, int64(256))) * float64(newMaximumRaw))
+	return max(int64(1), min(rescaled, newMaximumRaw))
+}
+
 // AdvanceStamina applies one 25 Hz Diablo II stamina event in 8.8 units.
 func AdvanceStamina(tick StaminaTick) ResolvedStamina {
 	current := max(int64(0), min(tick.CurrentRaw, tick.MaximumRaw))
