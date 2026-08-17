@@ -18,7 +18,30 @@ local M = {}
 local MAX_LEVEL_MONSTERS = 25
 local DENSITY_SCALE = 100000
 local PLAN_ID = "d2legacy.population.plan"
-local PLAN_SCHEMA = "d2legacy.population.plan/v1"
+local PLAN_SCHEMA = "d2legacy.population.plan/v2"
+
+-- Every archived field is a scalar or semantic string ID. Entity references
+-- and transient cross-entity event records are intentionally excluded from
+-- this first inactive-unit slice.
+local ARCHIVE_COMPONENTS = {
+    "d2legacy.population.room_resident",
+    "d2legacy.monster.identity",
+    "d2legacy.monster.stats",
+    "d2legacy.combat.melee_profile",
+    "d2legacy.monster.appearance",
+    "d2legacy.monster.ai",
+    "d2legacy.combat.basic_attack_request",
+    "d2legacy.combat.attack_approach",
+    "d2legacy.combat.attack_animation",
+    "d2legacy.monster.death",
+    "d2legacy.world.position",
+    "d2legacy.world.velocity",
+    "d2legacy.world.facing",
+    "d2legacy.world.location",
+    "d2legacy.world.collider",
+    "engine.world.velocity_mover",
+    "d2legacy.world.selectable",
+}
 
 local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
@@ -113,7 +136,9 @@ local function materialize_group(context, zone, room, definition, game_player_co
                 definition = definition,
             },
         }
-        structural:create(spawn.components(command, game_player_count))
+        local components = spawn.components(command, game_player_count)
+        components["d2legacy.population.room_resident"] = { room_id = room.id }
+        structural:create(components)
     end
     return count
 end
@@ -166,6 +191,8 @@ function M.apply(command)
 
     for _, room in ipairs(zone.rooms) do
         room.activated = false
+        room.active = false
+        room.archived = {}
     end
     zone.created = 0
     zone.installed = true
@@ -176,9 +203,10 @@ end
 local function containing_rooms(plan, entities)
     local active = {}
     for _, entity in ipairs(entities) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
         local location = ecs.get(entity, "d2legacy.world.location")
         local position = ecs.get(entity, "d2legacy.world.position")
-        if location:get("level_id") == plan.level_id then
+        if identity and location and position and location:get("level_id") == plan.level_id then
             local x, y = position:get("x"), position:get("y")
             for _, room in ipairs(plan.rooms) do
                 if x >= room.x and x < room.x + room.width and y >= room.y and y < room.y + room.height then
@@ -206,6 +234,46 @@ local function include_neighbors(active, links)
     return expanded
 end
 
+local function player_count(entities)
+    local count = 0
+    for _, entity in ipairs(entities) do
+        if ecs.get(entity, "d2legacy.player.identity") then
+            count = count + 1
+        end
+    end
+    return math.max(count, 1)
+end
+
+local function archive_room(room, entities, structural)
+    local archived = {}
+    for _, entity in ipairs(entities) do
+        local resident = ecs.get(entity, "d2legacy.population.room_resident")
+        if resident and resident:get("room_id") == room.id then
+            local components = {}
+            for _, name in ipairs(ARCHIVE_COMPONENTS) do
+                local component = ecs.get(entity, name)
+                if component then
+                    components[name] = component:snapshot()
+                end
+            end
+            local identity = assert(components["d2legacy.monster.identity"], "room resident has no monster identity")
+            archived[#archived + 1] = { spawn_id = identity.spawn_id, components = components }
+            structural:destroy(entity)
+        end
+    end
+    table.sort(archived, function(left, right)
+        return left.spawn_id < right.spawn_id
+    end)
+    room.archived = archived
+end
+
+local function restore_room(room, structural)
+    for _, archived in ipairs(room.archived or {}) do
+        structural:create(archived.components)
+    end
+    room.archived = {}
+end
+
 local function activate(context, entities, structural)
     local plan = state.read(PLAN_ID)
     if not plan or not plan.installed then
@@ -213,35 +281,36 @@ local function activate(context, entities, structural)
     end
 
     local active = include_neighbors(containing_rooms(plan, entities), plan.links)
-    if next(active) == nil then
-        return
-    end
-    local pending = false
-    for _, room in ipairs(plan.rooms) do
-        if active[room.id] and not room.activated then
-            pending = true
-            break
-        end
-    end
-    if not pending then
-        return
-    end
-
     local difficulty = game_rules.difficulty()
-    local level = assert(
-        find(records.load("data/global/excel/levels.txt"), "Id", tostring(plan.level_id)),
-        "population level is missing"
-    )
-    local candidates = candidate_monsters(level, difficulty)
-    local rarity = total_rarity(candidates)
+    local level, candidates, rarity
     local changed = false
     for _, room in ipairs(plan.rooms) do
-        if active[room.id] and not room.activated then
-            room.activated, changed = true, true
-            if #candidates > 0 and room_is_selected(room, integer(level, density_column(difficulty)), plan.created) then
-                local definition = weighted_monster(candidates, rarity)
-                plan.created = plan.created + materialize_group(context, plan, room, definition, #entities, structural)
+        local wanted = active[room.id] == true
+        if room.active and not wanted then
+            archive_room(room, entities, structural)
+            room.active, changed = false, true
+        elseif wanted and not room.active then
+            if #(room.archived or {}) > 0 then
+                restore_room(room, structural)
+            elseif not room.activated then
+                if not level then
+                    level = assert(
+                        find(records.load("data/global/excel/levels.txt"), "Id", tostring(plan.level_id)),
+                        "population level is missing"
+                    )
+                    candidates = candidate_monsters(level, difficulty)
+                    rarity = total_rarity(candidates)
+                end
+                if
+                    #candidates > 0 and room_is_selected(room, integer(level, density_column(difficulty)), plan.created)
+                then
+                    local definition = weighted_monster(candidates, rarity)
+                    plan.created = plan.created
+                        + materialize_group(context, plan, room, definition, player_count(entities), structural)
+                end
+                room.activated = true
             end
+            room.active, changed = true, true
         end
     end
     if changed then
@@ -268,23 +337,39 @@ function M.register()
         id = "d2legacy.population.active_rooms",
         phase = "pre_simulation",
         query = {
-            all = {
-                "d2legacy.player.identity",
-                "d2legacy.world.location",
-                "d2legacy.world.position",
-            },
+            any = { "d2legacy.player.identity", "d2legacy.population.room_resident" },
         },
         read = {
             "d2legacy.player.identity",
             "d2legacy.world.location",
             "d2legacy.world.position",
-        },
-        write = {
+            "d2legacy.population.room_resident",
             "d2legacy.monster.identity",
             "d2legacy.monster.stats",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.appearance",
             "d2legacy.monster.ai",
+            "d2legacy.combat.basic_attack_request",
+            "d2legacy.combat.attack_approach",
+            "d2legacy.combat.attack_animation",
+            "d2legacy.monster.death",
+            "d2legacy.world.velocity",
+            "d2legacy.world.facing",
+            "d2legacy.world.collider",
+            "engine.world.velocity_mover",
+            "d2legacy.world.selectable",
+        },
+        write = {
+            "d2legacy.monster.identity",
+            "d2legacy.population.room_resident",
+            "d2legacy.monster.stats",
+            "d2legacy.combat.melee_profile",
+            "d2legacy.monster.appearance",
+            "d2legacy.monster.ai",
+            "d2legacy.combat.basic_attack_request",
+            "d2legacy.combat.attack_approach",
+            "d2legacy.combat.attack_animation",
+            "d2legacy.monster.death",
             "d2legacy.world.position",
             "d2legacy.world.velocity",
             "d2legacy.world.facing",

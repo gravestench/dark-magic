@@ -309,6 +309,15 @@ Room streaming must preserve all deterministic AI/combat/state/RNG information n
 
 Do not despawn a monster merely because its render node was culled.
 
+Current implementation status: `d2legacy.population.plan/v2` now keeps a
+deterministic inactive archive per generated room. Ordinary generated monsters
+carry a semantic room-resident component, and the occupied-room-plus-neighbors
+policy archives/restores their current component-owned identity, stats, combat,
+appearance, AI/action, death, motion, location, collision, and selection facts.
+Checkpoint continuation proves deactivate/restore/reactivate parity. External
+state-instance/event graphs, owned units, corpses/items/objects, and exact 1.14d
+activation or long-inactive mutation policy remain unresolved.
+
 ## Death, corpses, resurrection
 
 Monster death flows into [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md).
@@ -423,9 +432,12 @@ Implement idle/wander/acquire/chase/basic-attack behavior using future fixed tic
 
 Add explicit leader/minion relationships and one command-sharing/group behavior.
 
-### M-AI5 — quality and lifecycle
+### M-AI5 — quality and lifecycle (partial)
 
-Add champion/unique modifier composition, death/corpse, XP/loot event integration, and room inactivation/resume.
+Death/corpse and XP/loot event integration plus the first ordinary-monster room
+inactivation/resume path are implemented. Champion/unique modifier composition,
+external state graphs, specialized corpses, and broader inactive-unit kinds
+remain.
 
 ## Verification backlog
 
