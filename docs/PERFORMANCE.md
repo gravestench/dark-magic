@@ -26,11 +26,38 @@ independently of the concrete mounted filesystem.
 | Main-menu update p50 | 0.146 ms | 0.159 ms | effectively unchanged |
 | Main-menu update p95 | 0.699 ms | 0.794 ms | remains sub-millisecond |
 
-The after heap profile still retained about 357 MB under eager frontend asset
-preloading (about 73% of the 487 MB profiled Go heap). That is a separate,
-measured residency problem and is not claimed as fixed by the localization
-change. Per-scene profiling forces collection at scene boundaries, so the
-remaining 152 ms maximum is instrumentation-inclusive.
+Per-scene profiling forces collection at scene boundaries, so the remaining
+152 ms maximum is instrumentation-inclusive.
+
+## August 2026 frontend preload residency pass
+
+The localization after-capture also exposed a separate residency problem:
+startup decoded the title, main menu, every secondary frontend destination,
+and all four interaction-state animation families for all seven character
+classes before the title could appear. That retained about 357 MB beneath the
+preloader and 487 MB in the profiled Go heap at the main menu.
+
+Preloading now has three consumer-timed stages. Startup gates only on title and
+main-menu assets. Once the main menu is useful, player think time warms
+secondary destinations and the visible unselected character actors. Hover,
+forward, selected, and back animations are scheduled only by character
+creation. Each stage remains an idempotent request bundle behind the same
+engine-owned cache and renderer residency authority.
+
+| Settled main-menu slice | Whole-frontend startup | Staged preload | Result |
+| --- | ---: | ---: | ---: |
+| Profiled Go heap | 486.99 MB | 215.70 MB | 55.7% lower |
+| Preloader-retained heap | 357.41 MB | 111.66 MB | 68.8% lower |
+| Combined decoded-cache weight | 338.86 MB | 59.15 MB | 82.5% lower |
+| Composed-cache weight | 262.37 MB | 30.34 MB | 88.4% lower |
+| Cumulative decode time | 4.098 s | 0.910 s | 77.8% lower |
+| Main-menu update p95 | 0.794 ms | 0.344 ms | remains sub-millisecond |
+| Pending preload requests at exit | 0 | 0 | settled workload complete |
+
+The staged capture remained on the real-asset main menu for 427 profiled frames
+after navigation, long enough for every secondary request to complete. A Lua
+contract test independently proves idempotence and prevents character
+interaction paths from leaking back into startup or main-menu bundles.
 
 ## August 2026 gameplay pass
 

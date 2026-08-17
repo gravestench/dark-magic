@@ -102,6 +102,11 @@ local function for_mode(mode)
 
     return {
         create = function(self)
+            -- Start scene-local interaction animation preparation before building
+            -- the retained shell so workers get the entire construction interval
+            -- before the first possible hover or activation.
+            preload.character_create_interactions()
+
             self.root = render.create("hud")
             self.background = dc6.frontend_background(
                 self.root,
@@ -588,9 +593,6 @@ local function for_mode(mode)
             self:update_ok_state()
             self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
 
-            -- Interaction states may have been prepared during startup; this helper
-            -- reuses that job or schedules them if necessary.
-            preload.character_create_interactions()
         end,
 
         update = function(self, elapsed)
