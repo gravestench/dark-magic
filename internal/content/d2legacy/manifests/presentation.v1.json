@@ -637,6 +637,7 @@
       "panel":{"sheet":"data/global/ui/MENU/party.dc6","palette":"sky","x":80,"y":64,"frames":[0,1,2,3]},
       "close":{"sheet":"data/global/ui/PANEL/buysellbtn.DC6","palette":"sky","up_frame":10,"down_frame":11,"x":358,"y":453,"width":32,"height":32,"label":"d2legacy.party.close"},
       "heading":{"x":180,"y":80,"width":180},
+      "roster":{"x":180,"y":120,"width":400,"row_height":34},
       "unavailable":{"x":240,"y":145,"width":280}
     },
     "stash": {

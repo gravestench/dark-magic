@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ClientViewVersion    uint32 = 4
+	ClientViewVersion    uint32 = 5
 	MaxHUDLearnedSkills         = 256
 	MaxHUDBeltSlots             = 16
 	MaxPrivateItems             = 1024
@@ -32,6 +32,7 @@ type ClientView struct {
 	HUD     HUD         `json:"hud"`
 	World   WorldView   `json:"world"`
 	Private PrivateView `json:"private"`
+	Party   PartyView   `json:"party"`
 }
 
 // ValidateClientView treats every network projection as untrusted input. It
@@ -42,7 +43,8 @@ func ValidateClientView(view ClientView, tick uint64) error {
 	if view.Version != ClientViewVersion || view.Tick != tick ||
 		view.HUD.Version != HUDVersion || view.HUD.Tick != tick ||
 		view.World.Version != WorldViewVersion || view.World.Tick != tick ||
-		view.Private.Version != PrivateViewVersion || view.Private.Tick != tick {
+		view.Private.Version != PrivateViewVersion || view.Private.Tick != tick ||
+		view.Party.Version != PartyViewVersion || view.Party.Tick != tick {
 		return ErrClientView
 	}
 	if err := validateHUDView(view.HUD); err != nil {
@@ -51,7 +53,47 @@ func ValidateClientView(view ClientView, tick uint64) error {
 	if err := validateDecodedWorldView(view.World); err != nil {
 		return err
 	}
-	return validatePrivateView(view.Private)
+	if err := validatePrivateView(view.Private); err != nil {
+		return err
+	}
+	return validatePartyView(view.Party, view.HUD.Player.PlayerID)
+}
+
+func validatePartyView(party PartyView, owner string) error {
+	if len(party.Roster) < 1 || len(party.Roster) > MaxPartyViewRoster ||
+		!bounded(party.PartyID, maxViewIdentityBytes) || party.Revision > uint64(1<<63-1) ||
+		party.Roster[0].PlayerID != owner || party.Roster[0].Relationship != "self" {
+		return ErrClientView
+	}
+	seen, ownerFound, memberFound := make(map[string]struct{}, len(party.Roster)), false, false
+	for _, entry := range party.Roster {
+		if !boundedRequired(entry.PlayerID, maxViewIdentityBytes) ||
+			!boundedRequired(entry.Name, maxViewLabelBytes) || !boundedRequired(entry.Class, maxWorldKindBytes) ||
+			entry.Level < 1 || !validPartyRelationship(entry.Relationship) {
+			return ErrClientView
+		}
+		if _, duplicate := seen[entry.PlayerID]; duplicate {
+			return ErrClientView
+		}
+		seen[entry.PlayerID] = struct{}{}
+		if entry.PlayerID == owner {
+			ownerFound = entry.Relationship == "self"
+		}
+		memberFound = memberFound || entry.Relationship == "party"
+	}
+	if !ownerFound || (party.PartyID == "") != !memberFound {
+		return ErrClientView
+	}
+	return nil
+}
+
+func validPartyRelationship(value string) bool {
+	switch value {
+	case "self", "party", "invited_you", "invited", "unavailable", "available":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateHUDView(hud HUD) error {
@@ -173,6 +215,10 @@ func ProjectClientView(playerID string, checkpoint simulation.Checkpoint) (json.
 	if err != nil {
 		return nil, err
 	}
+	party, err := ProjectPartyView(playerID, checkpoint)
+	if err != nil {
+		return nil, err
+	}
 	var hud HUD
 	var world WorldView
 	if err := json.Unmarshal(hudPayload, &hud); err != nil {
@@ -181,5 +227,5 @@ func ProjectClientView(playerID string, checkpoint simulation.Checkpoint) (json.
 	if err := json.Unmarshal(worldPayload, &world); err != nil {
 		return nil, fmt.Errorf("client view: world: %w", err)
 	}
-	return json.Marshal(ClientView{Version: ClientViewVersion, Tick: checkpoint.Tick, HUD: hud, World: world, Private: private})
+	return json.Marshal(ClientView{Version: ClientViewVersion, Tick: checkpoint.Tick, HUD: hud, World: world, Private: private, Party: party})
 }

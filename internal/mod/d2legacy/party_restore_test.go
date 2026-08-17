@@ -9,6 +9,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -86,6 +87,16 @@ func TestPartyAuthorityCommandsRestoreAndDepartureCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	aliceView, err := playeradapter.ProjectPartyView("alice", checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aliceView.Version != playeradapter.PartyViewVersion || aliceView.Revision != 4 || aliceView.PartyID != "party:1" ||
+		len(aliceView.Roster) != 3 || aliceView.Roster[0].PlayerID != "alice" || aliceView.Roster[0].Relationship != "self" ||
+		aliceView.Roster[1].PlayerID != "bob" || aliceView.Roster[1].Relationship != "party" ||
+		aliceView.Roster[2].PlayerID != "carol" || aliceView.Roster[2].Relationship != "available" {
+		t.Fatalf("alice party projection = %#v", aliceView)
+	}
 	submitPartyCommand(t, session, 5, "bob", 2, "party.leave", map[string]any{})
 	stepPartySession(t, session)
 	originalReplay, err := session.Replay()

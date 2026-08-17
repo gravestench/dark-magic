@@ -57,7 +57,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{PlayerID: "player", CharacterID: "character", Name: "Hero", Class: "Amazon"}}
 	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud,
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}},
-		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0}}
+		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0},
+		Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: 0,
+			Roster: []playeradapter.PartyRosterEntry{{PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self"}}}}
 	endpoint, err := gameserver.NewEndpoint(&gameserver.Host{Engine: engine, Session: session, Allocation: allocation}, authority,
 		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(view) })
 	if err != nil {

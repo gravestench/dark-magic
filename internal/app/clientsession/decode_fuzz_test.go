@@ -70,5 +70,12 @@ func validNetworkView(tick uint64) playeradapter.ClientView {
 			Tick:    tick,
 			Items:   playeradapter.ItemView{Items: []playeradapter.ItemEntityView{}},
 		},
+		Party: playeradapter.PartyView{
+			Version: playeradapter.PartyViewVersion,
+			Tick:    tick,
+			Roster: []playeradapter.PartyRosterEntry{{
+				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
+			}},
+		},
 	}
 }

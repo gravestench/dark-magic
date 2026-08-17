@@ -214,4 +214,68 @@ function M.additional_living_members_in_same_level(player_id, entities)
     return #members
 end
 
+local function roster_relationship(value, viewer, player_id)
+    if viewer == player_id then
+        return "self"
+    end
+    local viewer_party = value.membership[viewer]
+    if viewer_party and value.membership[player_id] == viewer_party then
+        return "party"
+    end
+    if invitation(value, player_id, viewer) then
+        return "invited_you"
+    end
+    if invitation(value, viewer, player_id) then
+        return "invited"
+    end
+    if value.membership[player_id] then
+        return "unavailable"
+    end
+    return "available"
+end
+
+-- Build one owner-scoped semantic roster projection. Other parties' stable IDs,
+-- membership lists, invitation ticks, and raw authority state are deliberately
+-- absent. This is presentation data only; gameplay consumers read current().
+function M.project(viewer, entities)
+    assert(present(viewer), "party projection player is required")
+    assert(player_entity(viewer, entities), "party projection player is not present")
+    local value = current()
+    local roster = {}
+    for _, entity in ipairs(entities) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        if identity then
+            local progress = ecs.get(entity, "d2legacy.player.progress")
+            roster[#roster + 1] = {
+                player = identity:get("player"),
+                name = identity:get("name"),
+                class = identity:get("class"),
+                level = progress and progress:get("level") or 1,
+            }
+        end
+    end
+    table.sort(roster, function(left, right)
+        if left.player == viewer then return true end
+        if right.player == viewer then return false end
+        return left.player < right.player
+    end)
+    assert(#roster <= game_rules.get().maximum_players, "party projection exceeds the game player limit")
+
+    local projected = {
+        schema_version = 1,
+        revision = value.revision,
+        party_id = value.membership[viewer] or "",
+        roster_count = #roster,
+    }
+    for slot = 1, game_rules.get().maximum_players do
+        local player = roster[slot]
+        projected["player_" .. slot] = player and player.player or ""
+        projected["name_" .. slot] = player and player.name or ""
+        projected["class_" .. slot] = player and player.class or ""
+        projected["level_" .. slot] = player and player.level or 0
+        projected["relationship_" .. slot] = player and roster_relationship(value, viewer, player.player) or ""
+    end
+    return projected
+end
+
 return M

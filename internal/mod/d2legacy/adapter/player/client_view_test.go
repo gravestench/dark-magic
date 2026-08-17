@@ -24,6 +24,11 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 			view.Private.Items.Items = make([]ItemEntityView, MaxPrivateItems+1)
 		},
 		"inconsistent interaction": func(view *ClientView) { view.Private.Interaction.Active = true },
+		"duplicate party player": func(view *ClientView) {
+			view.Party.Roster = append(view.Party.Roster, view.Party.Roster[0])
+		},
+		"unknown party relationship": func(view *ClientView) { view.Party.Roster[0].Relationship = "hostile" },
+		"missing party owner":        func(view *ClientView) { view.Party.Roster[0].PlayerID = "other" },
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -60,6 +65,13 @@ func validClientView(tick uint64) ClientView {
 			Items: ItemView{Items: []ItemEntityView{{
 				ID: "item", Code: "cap", Width: 1, Height: 1,
 			}}},
+		},
+		Party: PartyView{
+			Version: PartyViewVersion,
+			Tick:    tick,
+			Roster: []PartyRosterEntry{{
+				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
+			}},
 		},
 	}
 }

@@ -92,7 +92,7 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 		// Corrections update presentation state and interpolation targets. They
 		// must not overwrite an already-rendered position: doing so turns the
 		// 10 Hz authoritative stream into visible 100 ms teleports.
-		if err := app.installRemoteProjection(hud, presentation.Private, world.lastCorrection == 0); err != nil {
+		if err := app.installRemoteProjection(hud, presentation.Private, presentation.Party, world.lastCorrection == 0); err != nil {
 			return err
 		}
 		world.lastCorrection = max(world.lastCorrection, projection.Tick)

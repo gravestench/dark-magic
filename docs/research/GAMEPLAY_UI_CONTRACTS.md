@@ -399,6 +399,14 @@ ignore/squelch/chat policy
 
 UI never edits party IDs or friendliness directly.
 
+Current implemented subset: `d2legacy.player.party_view` is a derived,
+revisioned, eight-player owner projection. `ClientView/v5` carries only the
+authenticated player's copy, and the offline/connected Lua panel consumes the
+same component fields. It includes roster ID/name/class/level and the owner's
+relationship (`self`, party member, incoming/outgoing invitation, available, or
+unavailable), plus only the owner's party ID. Location, health, hostility,
+corpse-loot, and ignore fields remain gated by expansion 1.14d visibility probes.
+
 ## Trade UI contract
 
 Snapshot is a projection of an authoritative `TradeSession`:
@@ -626,11 +634,17 @@ Expose semantic quest status/objectives and waypoint unlock list without raw bit
 
 ### UI5 — Party/Trade projections
 
-Add versioned roster/invite/hostility/trade offer view models before building network UI.
+Party roster/invite relationship projection is implemented. Add verified
+hostility/corpse-loot/visibility fields and the trade-offer model before those
+network interactions are presented.
 
 ### UI6 — network projection reuse
 
 Use the same semantic view builders for local Lua and remote per-client snapshot adapters where appropriate, with private-field filtering.
+
+The party panel now satisfies this pattern through the shared materialized
+component and authenticated `ClientView/v5` selector; repeat it for later
+domains rather than adding panel-owned state.
 
 ## Verification backlog
 

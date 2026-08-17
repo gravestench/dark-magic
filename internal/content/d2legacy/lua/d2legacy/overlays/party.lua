@@ -1,8 +1,6 @@
--- Fixed-profile party panel shell.
---
--- Network/party roster state belongs to the engine/session. This Lua currently
--- draws the correct panel shape and selected hero heading, then clearly marks the
--- missing roster interaction rather than manufacturing fake multiplayer state.
+-- Fixed-profile party panel backed by the owner-scoped semantic projection.
+-- The panel observes d2legacy.party/v1 through a derived component and never
+-- treats its roster rows as authoritative membership.
 
 local render = require("engine.render/v1")
 local input = require("engine.input/v1")
@@ -24,6 +22,32 @@ local function panel_frame(root, panel, frame_index, x, y)
     node:set_position(x + w / 2, y + h / 2)
 end
 
+local function selected_party_view()
+    -- Frontend-only hosts register the scene catalog before a gameplay ECS
+    -- exists, so acquire this capability only when the in-game panel opens.
+    local ecs = require("engine.ecs/v1")
+    local selected = saves.selected()
+    local fallback
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.player.party_view" } })) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        local view = ecs.get(entity, "d2legacy.player.party_view")
+        fallback = fallback or { identity = identity, view = view }
+        if selected and identity:get("character_id") == selected.id then
+            return identity, view
+        end
+    end
+    return fallback and fallback.identity, fallback and fallback.view
+end
+
+local relationship_keys = {
+    self = "d2legacy.party.relationship.self",
+    party = "d2legacy.party.relationship.party",
+    invited_you = "d2legacy.party.relationship.invited_you",
+    invited = "d2legacy.party.relationship.invited",
+    unavailable = "d2legacy.party.relationship.unavailable",
+    available = "d2legacy.party.relationship.available",
+}
+
 return {
     blocks_update_below = true,
 
@@ -40,12 +64,34 @@ return {
         panel_frame(self.root, panel, panel.frames[3], panel.x + offset_x, panel.y + offset_y + 256)
         panel_frame(self.root, panel, panel.frames[4], panel.x + offset_x + 256, panel.y + offset_y + 256)
 
-        -- For now only show selected local character as a heading. A real party
-        -- roster should come from a network/session snapshot capability later.
-        local hero = saves.selected()
-        text.create(self.root, "panel_heading", hero and hero.name or "", screen.heading.x + offset_x, screen.heading.y + offset_y, screen.heading.width)
+        local identity, view = selected_party_view()
+        text.create(self.root, "panel_heading", identity and identity:get("name") or "", screen.heading.x + offset_x, screen.heading.y + offset_y, screen.heading.width)
 
-        text.create(self.root, "disabled", assert(locale.text("d2legacy.party.unavailable")), screen.unavailable.x + offset_x, screen.unavailable.y + offset_y, screen.unavailable.width)
+        if not view or view:get("schema_version") ~= 1 or view:get("roster_count") < 1 then
+            text.create(self.root, "disabled", assert(locale.text("d2legacy.party.unavailable")), screen.unavailable.x + offset_x, screen.unavailable.y + offset_y, screen.unavailable.width)
+        else
+            for slot = 1, view:get("roster_count") do
+                local relationship = view:get("relationship_" .. slot)
+                local status = assert(locale.text(assert(relationship_keys[relationship], "unknown party relationship")))
+                local row = string.format(
+                    "%s  %s  %s %d  %s",
+                    view:get("name_" .. slot),
+                    view:get("class_" .. slot),
+                    assert(locale.text("d2legacy.party.level")),
+                    view:get("level_" .. slot),
+                    status
+                )
+                text.create(
+                    self.root,
+                    "panel_label",
+                    row,
+                    screen.roster.x + offset_x,
+                    screen.roster.y + offset_y + (slot - 1) * screen.roster.row_height,
+                    screen.roster.width,
+                    "left"
+                )
+            end
+        end
 
         local close = screen.close
         local close_placement = {

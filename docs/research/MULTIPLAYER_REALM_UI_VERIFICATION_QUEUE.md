@@ -4,6 +4,11 @@ This queue consolidates empirical work for parties/PvP/trade, Dark Magic
 networking behavior, Realm services, and UI-visible gameplay contracts. Vanilla
 protocol and old community-tool interoperability are out of scope.
 
+Current Dark Magic evidence includes a versioned, bounded, authenticated-owner
+party projection carried by `ClientView/v5` and consumed by the Lua party
+panel. This proves the authority/projection boundary; it does not answer the
+queued expansion 1.14d roster-field, event-timing, or action-layout probes.
+
 ## P0: architecture-shaping probes
 
 - Bind two synthetic remote principals to one authoritative Dark Magic `Session` and prove local and remote movement commands produce identical replay/checkpoint results.

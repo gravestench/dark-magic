@@ -123,6 +123,22 @@ function M.register()
         { name = "experience", type = "i64" },
         { name = "unspent_skill_points", type = "i64" },
     })
+    -- Owner-scoped, derived presentation data. Party commands and reward
+    -- policy never read this component; d2legacy.party/v1 remains authoritative.
+    local party_view = {
+        { name = "schema_version", type = "i64" },
+        { name = "revision", type = "i64" },
+        { name = "party_id", type = "string" },
+        { name = "roster_count", type = "i64" },
+    }
+    for slot = 1, 8 do
+        party_view[#party_view + 1] = { name = "player_" .. slot, type = "string" }
+        party_view[#party_view + 1] = { name = "name_" .. slot, type = "string" }
+        party_view[#party_view + 1] = { name = "class_" .. slot, type = "string" }
+        party_view[#party_view + 1] = { name = "level_" .. slot, type = "i64" }
+        party_view[#party_view + 1] = { name = "relationship_" .. slot, type = "string" }
+    end
+    component("d2legacy.player.party_view", party_view)
     component("d2legacy.player.combat_stats", {
         { name = "base_attack_rating", type = "i64" },
         { name = "base_defense", type = "i64" },

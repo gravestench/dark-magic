@@ -26,10 +26,10 @@ func (app *application) installRemoteView(session *clientsession.Session, snap b
 	if presentation == nil {
 		return nil
 	}
-	return app.installRemoteProjection(presentation.HUD, presentation.Private, snap)
+	return app.installRemoteProjection(presentation.HUD, presentation.Private, presentation.Party, snap)
 }
 
-func (app *application) installRemoteProjection(hud playeradapter.HUD, private playeradapter.PrivateView, snap bool) error {
+func (app *application) installRemoteProjection(hud playeradapter.HUD, private playeradapter.PrivateView, party playeradapter.PartyView, snap bool) error {
 	if app.clientSimulation == nil {
 		return nil
 	}
@@ -90,6 +90,7 @@ func (app *application) installRemoteProjection(hud playeradapter.HUD, private p
 		"d2legacy.player.movement_mode":         {"running": hud.Movement.Running},
 		"d2legacy.player.skill_assignment":      {"left": hud.Skills.Left, "right": hud.Skills.Right},
 		"d2legacy.player.belt":                  beltFields(world, hud.Belt),
+		"d2legacy.player.party_view":            partyViewFields(party),
 		"d2legacy.world.selectable": {
 			"id": "player:" + hud.Player.PlayerID, "kind": "player", "label": hud.Player.Name,
 			"owner": hud.Player.PlayerID, "radius": float64(0.75), "priority": int64(10),
@@ -130,6 +131,32 @@ func (app *application) installRemoteProjection(hud playeradapter.HUD, private p
 	app.activateWorld(int(hud.Location.LevelID))
 	app.logNetworkRoster(hud)
 	return nil
+}
+
+func partyViewFields(view playeradapter.PartyView) map[string]any {
+	values := map[string]any{
+		"schema_version": int64(view.Version),
+		"revision":       int64(view.Revision),
+		"party_id":       view.PartyID,
+		"roster_count":   int64(len(view.Roster)),
+	}
+	for slot := 1; slot <= playeradapter.MaxPartyViewRoster; slot++ {
+		suffix := fmt.Sprintf("_%d", slot)
+		values["player"+suffix] = ""
+		values["name"+suffix] = ""
+		values["class"+suffix] = ""
+		values["level"+suffix] = int64(0)
+		values["relationship"+suffix] = ""
+		if slot <= len(view.Roster) {
+			entry := view.Roster[slot-1]
+			values["player"+suffix] = entry.PlayerID
+			values["name"+suffix] = entry.Name
+			values["class"+suffix] = entry.Class
+			values["level"+suffix] = entry.Level
+			values["relationship"+suffix] = entry.Relationship
+		}
+	}
+	return values
 }
 
 func movementBound(value float64) float64 {
