@@ -21,6 +21,61 @@ return test.suite({
                 )
             end),
         }),
+        test.case("state_snapshots_preserve_target_relationship_and_events_copy_position", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local world = require("d2legacy.gameplay.world")
+                local target = ecs.create({
+                    ["d2legacy.world.position"] = { x = 12, y = 8 },
+                    ["d2legacy.world.location"] = { act = 1, level_id = 2 },
+                    ["d2legacy.world.facing"] = { direction = 5, directions = 16 },
+                })
+                local instance = ecs.create({
+                    ["d2legacy.state.instance"] = {
+                        target = target,
+                        state_id = "syntheticcurse",
+                        source_id = "skill:owner:1",
+                        applied_tick = 4,
+                        expires_tick = 40,
+                        policy = "refresh_same_source",
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.state.event"] = {
+                        kind = "state_applied",
+                        tick = 4,
+                        target = target,
+                        state_id = "syntheticcurse",
+                        source_id = "skill:owner:1",
+                        expires_tick = 40,
+                        reason = "apply",
+                    },
+                })
+                local snapshots = world.state_snapshots()
+                test.assert(#snapshots == 1, [=[#snapshots == 1]=])
+                test.assert(
+                    snapshots[1].entity_id == instance:id()
+                        and snapshots[1].target_entity_id == target:id()
+                        and snapshots[1].state_id == "syntheticcurse"
+                        and snapshots[1].x == 12
+                        and snapshots[1].y == 8
+                        and snapshots[1].level_id == 2
+                        and snapshots[1].direction == 5,
+                    [=[active state snapshot follows its live ECS target]=]
+                )
+                local cues = world.semantic_cues()
+                local cue = cues[#cues]
+                test.assert(
+                    cue.cue_type == "state"
+                        and cue.kind == "state_applied"
+                        and cue.target == nil
+                        and cue.target_entity_id == target:id()
+                        and cue.x == 12
+                        and cue.y == 8,
+                    [=[state event copies target identity and current position]=]
+                )
+            end),
+        }),
         test.case("connected_roster_keeps_peers_and_excludes_the_authenticated_owner", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")

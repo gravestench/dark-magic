@@ -256,6 +256,39 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
     return result
 end
 
+-- Copy active timed-state relationships together with their current target
+-- position. State IDs remain semantic; the presentation adapter follows them
+-- through pinned States/Overlay records after this authority boundary.
+function M.state_snapshots()
+    local result = {}
+    local ok, instances = pcall(ecs.query, { all = { "d2legacy.state.instance" } })
+    if not ok then
+        return result
+    end
+    for _, entity in ipairs(instances) do
+        local instance = ecs.get(entity, "d2legacy.state.instance")
+        local target = instance:get("target")
+        if target and target:exists() and not optional_component(target, "d2legacy.world.inactive") then
+            local position = optional_component(target, "d2legacy.world.position")
+            local location = optional_component(target, "d2legacy.world.location")
+            if position and location then
+                local facing = optional_component(target, "d2legacy.world.facing")
+                result[#result + 1] = {
+                    entity_id = entity:id(),
+                    target_entity_id = target:id(),
+                    state_id = instance:get("state_id"),
+                    x = position:get("x"),
+                    y = position:get("y"),
+                    act = location:get("act"),
+                    level_id = location:get("level_id"),
+                    direction = facing and facing:get("direction") or 0,
+                }
+            end
+        end
+    end
+    return result
+end
+
 -- Semantic events are also copied. Consumers can remember entity_id to avoid
 -- presenting one durable event more than once; observation itself is read-only.
 function M.semantic_cues(observed)
@@ -270,6 +303,7 @@ function M.semantic_cues(observed)
         "d2legacy.combat.melee_event",
         "d2legacy.combat.event",
         "d2legacy.world.forced_motion_event",
+        "d2legacy.state.event",
     }) do
         local ok, matches = pcall(ecs.query, { all = { component } })
         if ok then
@@ -311,6 +345,23 @@ function M.semantic_cues(observed)
         local forced_motion = optional_component(entity, "d2legacy.world.forced_motion_event")
         if forced_motion then
             kind, values = "movement", forced_motion:snapshot()
+        end
+        local state = optional_component(entity, "d2legacy.state.event")
+        if state then
+            kind, values = "state", state:snapshot()
+            local target = values.target
+            values.target = nil
+            if target and target:exists() then
+                values.target_entity_id = target:id()
+                local position = optional_component(target, "d2legacy.world.position")
+                local location = optional_component(target, "d2legacy.world.location")
+                local facing = optional_component(target, "d2legacy.world.facing")
+                if position and location then
+                    values.x, values.y = position:get("x"), position:get("y")
+                    values.act, values.level_id = location:get("act"), location:get("level_id")
+                    values.direction = facing and facing:get("direction") or 0
+                end
+            end
         end
         if values then
             -- Dynamic entity fields are checked ECS handles. Collapse the

@@ -27,6 +27,7 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local state_overlay_presentation = require("d2legacy.gameplay.state_overlay_presentation")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
 local chunked_map = require("d2legacy.presentation.chunked_map")
@@ -76,6 +77,26 @@ local function destroy_missiles(self)
     self.missiles = {}
 end
 
+local function destroy_overlay_entry(entry)
+    if entry.pending_job then
+        render.preload_release(entry.pending_job)
+    end
+    if entry.node and entry.node:exists() then
+        entry.node:destroy()
+    end
+end
+
+local function destroy_state_overlays(self)
+    for _, overlay in pairs(self.state_overlays or {}) do
+        destroy_overlay_entry(overlay)
+    end
+    for _, overlay in pairs(self.state_overlay_effects or {}) do
+        destroy_overlay_entry(overlay)
+    end
+    self.state_overlays = {}
+    self.state_overlay_effects = {}
+end
+
 local function destroy_warps(self)
     for _, warp in pairs(self.warps or {}) do
         if warp.pending_job then
@@ -106,6 +127,7 @@ local function install_current_world(self)
     destroy_monsters(self)
     destroy_players(self)
     destroy_missiles(self)
+    destroy_state_overlays(self)
     destroy_warps(self)
     -- Selection and held-input state names coordinates/entities in the old
     -- world. It must not survive into the destination presentation.
@@ -470,6 +492,110 @@ local function update_monsters(self, elapsed)
     end
 end
 
+local function retained_state_overlay(self, collection, key, recipe)
+    local overlay = collection[key]
+    if overlay then
+        return overlay
+    end
+    overlay = {
+        node = render.create("world", self.map.root),
+        recipe = recipe,
+        pending_job = render.preload({ {
+            kind = "dcc",
+            path = recipe.path,
+            palette = recipe.palette,
+            direction = 0,
+        } }),
+    }
+    overlay.node:set_visible(false)
+    collection[key] = overlay
+    return overlay
+end
+
+local function update_overlay_node(self, overlay, snapshot)
+    if overlay.pending_job then
+        local status = render.preload_status(overlay.pending_job)
+        if status.done then
+            if status.failed == 0 then
+                local recipe = overlay.recipe
+                local direction = recipe.directions > 1 and math.floor((snapshot.direction or 0) / 2) % recipe.directions
+                    or 0
+                overlay.node:set_dcc_animation(
+                    recipe.path,
+                    recipe.palette,
+                    direction,
+                    recipe.frames_per_second,
+                    recipe.loop and "loop" or "once"
+                )
+                overlay.node:set_blend(recipe.blend)
+                overlay.node:set_visible(true)
+                overlay.ready = true
+            else
+                overlay.failed = true
+            end
+            overlay.pending_job = nil
+        end
+    end
+    local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+    overlay.node:set_position(
+        x - self.world_canvas_width / 2 + overlay.recipe.offset_x,
+        y - self.world_canvas_height / 2 + overlay.recipe.offset_y
+    )
+    local behind = overlay.recipe.predraw or overlay.recipe.layer == "back"
+    overlay.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y) + (behind and -1 or 1))
+end
+
+local function queue_state_overlay_effect(self, cue)
+    if not cue.x or not cue.y or cue.level_id ~= self.world_level_id then
+        return
+    end
+    local state = state_overlay_presentation.resolve(cue.state_id)
+    local recipe = state and (cue.kind == "state_removed" and state.removed or state.applied) or nil
+    if not recipe or cue.kind == "state_rejected" then
+        return
+    end
+    self.state_overlay_effects = self.state_overlay_effects or {}
+    local key = tostring(cue.entity_id)
+    local overlay = retained_state_overlay(self, self.state_overlay_effects, key, recipe)
+    overlay.snapshot = cue
+    overlay.remaining_seconds = recipe.duration_seconds
+end
+
+local function update_state_overlays(self, elapsed)
+    if not self.map or not self.world then
+        return
+    end
+    self.state_overlays = self.state_overlays or {}
+    self.state_overlay_effects = self.state_overlay_effects or {}
+    local seen = {}
+    for _, snapshot in ipairs(self.gameplay_world.state_snapshots()) do
+        if snapshot.level_id == self.world_level_id then
+            local state = state_overlay_presentation.resolve(snapshot.state_id)
+            for index, recipe in ipairs(state and state.active or {}) do
+                local key = tostring(snapshot.entity_id) .. ":" .. index .. ":" .. recipe.id
+                seen[key] = true
+                update_overlay_node(self, retained_state_overlay(self, self.state_overlays, key, recipe), snapshot)
+            end
+        end
+    end
+    for key, overlay in pairs(self.state_overlays) do
+        if not seen[key] then
+            destroy_overlay_entry(overlay)
+            self.state_overlays[key] = nil
+        end
+    end
+    for key, overlay in pairs(self.state_overlay_effects) do
+        update_overlay_node(self, overlay, overlay.snapshot)
+        if overlay.ready then
+            overlay.remaining_seconds = overlay.remaining_seconds - elapsed
+        end
+        if overlay.failed or overlay.remaining_seconds <= 0 then
+            destroy_overlay_entry(overlay)
+            self.state_overlay_effects[key] = nil
+        end
+    end
+end
+
 local function observe_semantic_cues(self)
     self.observed_cues = self.observed_cues or {}
     self.semantic_cues = {}
@@ -489,6 +615,9 @@ local function observe_semantic_cues(self)
             end
             if cue.cue_type == "missile" and cue.sound and cue.sound ~= "" then
                 pcall(legacy_audio.play_record, cue.sound, cue.tick or 0)
+            end
+            if cue.cue_type == "state" then
+                queue_state_overlay_effect(self, cue)
             end
         end
     end
@@ -649,6 +778,7 @@ return {
             update_missiles(self)
             update_warps(self)
             observe_semantic_cues(self)
+            update_state_overlays(self, elapsed)
         end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
         -- may keep the world updating while routing only certain input below.
@@ -1002,6 +1132,7 @@ return {
         destroy_monsters(self)
         destroy_players(self)
         destroy_missiles(self)
+        destroy_state_overlays(self)
         destroy_warps(self)
         chunked_map.destroy(self.map)
     end,

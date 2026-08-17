@@ -210,6 +210,17 @@ skill-specific policy. The same acceptance exposed `MonLvl.txt` as another
 retail hash-table member absent from incomplete MPQ listfiles; it is now pinned
 inside the immutable game-data generation, and production population fails with
 record-level context instead of silently admitting an empty encounter. A
+generic state-overlay presentation adapter now follows live ECS state IDs into
+the pinned States.txt `overlay1`/`overlay2`/`castoverlay`/`removerlay` keys and
+then into Overlay.txt. It renders record-selected DCC paths, unit palette,
+direction count, animation rate, offsets, front/back precedence, and legacy
+blend through ordinary retained world nodes. Apply/refresh/remove events drive
+one-shot effects while persistent overlays follow the current target position;
+the renderer contains no skill/state-name branch. Owned Expansion records and
+DCC members are pinned for Frozen Armor, Enchant, Amplify Damage, and Weaken.
+Skills.txt cast overlays, actor SC/SQ action timing, overlay height/light/1-of-N
+details, and connected-client state projection remain explicit presentation
+work. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -274,7 +285,7 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs and sounds, and semantic timed states now resolve States/Overlay records into shared active/apply/remove world overlays without skill-specific renderer branches. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Skills cast overlays/action timing, exact overlay height/light/variant semantics, connected-state projection, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -969,6 +980,11 @@ runtime composition and the coverage report.
   authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
   through record-derived mana payment and projectile damage. Keep its overlay
   diagnostic-only and renderer-neutral.
+- [x] Add a generic timed-state presentation path: snapshot active ECS
+  state-to-target relationships, resolve States.txt overlay references through
+  Overlay.txt, render active front/back layers and apply/remove one-shots, and
+  audit the dynamic `data/global/overlays/` asset family. Pin owned target rows
+  and DCC members without recognizing a skill/state name in presentation.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -1022,6 +1038,25 @@ record loading from the pinned store. Monster data loading preserves the
 underlying record error, and a nonempty Levels candidate set that resolves to
 zero valid monsters is now fatal rather than silently producing a lab or served
 game with no hostiles.
+
+Timed-state presentation now consumes the same ECS graph instead of asking
+skill systems to draw. `gameplay.world.state_snapshots` copies each live
+instance's state ID, state-entity/target identities, current position/location,
+and facing; inactive targets are excluded by the existing empty ECS marker.
+The shared adapter follows `overlay1`, `overlay2`, `castoverlay`, and
+`removerlay` from States.txt into Overlay.txt, whose `Filename`, `Frames`,
+`AnimRate`, `NumDirections`, `PreDraw`, `Trans`, and X/Y offsets create retained
+DCC recipes under `data/global/overlays/`. State apply/refresh/remove events
+carry copied target positions into one-shot presentation; active front/back
+recipes follow moving targets and disappear with the state. The presentation-
+coverage fingerprint now explicitly audits Overlay.txt plus the dynamic overlay
+directory, while owned 1.14d coverage proves the Frozen Armor, Enchant,
+Amplify Damage, Weaken, and shared curse-hit rows and DCCs exist. This does not
+yet claim exact Height1-4 attachment, light radius/color, `1ofN`, character
+restriction, multi-direction mapping, or connected-client state projection.
+Skills.txt cast overlays and actor SC/SQ animation/action timing are a separate
+generic cast-presentation slice; Fire Bolt remains governed by its record-
+selected missile DCC/sounds but does not yet receive those missing cast cues.
 
 `skill_evidence` is the required companion investigation report for skill-tree
 synergies and skills that modify other skills. It accepts exact IDs and a locale,
@@ -1320,10 +1355,12 @@ percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: use Spell Lab to close the shared presentation gaps that are now visible:
-resolve cast/action cues, missile travel/impact graphics and sounds from the
-pinned Skills/Missiles graph, and state overlays from States without adding
-skill-specific renderer branches. Then probe and replace Attack's remaining inferred distance, dynamic-door,
+Next: continue using Spell Lab to close the remaining shared presentation gaps:
+resolve Skills.txt cast overlays, cast sounds, and SC/SQ actor action timing;
+then project semantic states/cues to connected clients and pin Overlay height,
+light, variant, and multi-direction behavior without skill-specific renderer
+branches. Missile travel/impact graphics and sounds already follow the pinned
+Skills/Missiles graph. Then probe and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
