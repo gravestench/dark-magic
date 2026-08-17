@@ -147,7 +147,15 @@ generic fire results for ordered targets, and a separate short-lived
 presentation-only missile-effect entity. The latter has no damage component
 and can cross checkpoints without reapplying policy. Exact 1.14d footprint/
 radius units, per-target RNG stream behavior, impact-point rounding, and
-mastery/resistance ordering remain partial. A matched frontend profile also
+mastery/resistance ordering remain partial. The direct control-effect tranche
+now admits Ice Blast as exact-ID `missile.straight-freeze`. The generic cast
+snapshots record-authored freeze length plus hard-level duration synergies, the
+generic projectile emits an ordinary ECS state request after a nonlethal hit,
+and the existing timed-state/action filter owns checkpointing, suppression,
+refresh, and expiration. A separate presentation-only entity uses the
+referenced freeze explosion. Exact 1.14d resistance/immunity, monster-class
+cold effectiveness, cross-source state replacement, PvP chill conversion, and
+impact/action timing remain probe-gated. A matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
@@ -210,7 +218,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 5 exact-ID implementations, 352 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 6 exact-ID implementations, 351 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -863,6 +871,13 @@ runtime composition and the coverage report.
   in-radius targets through the shared damage boundary, and materialize a
   separate non-damaging ECS effect with record-authored lifetime. Prove family
   reuse with a synthetic configuration and checkpoint the live aftermath.
+- [x] Add a reusable straight-missile on-hit state family and admit exact
+  Expansion 1.14d Ice Blast by ID. Validate missile damage function 4, cold
+  damage and level bands, mana, direct freeze-explosion presentation,
+  hard-point damage synergies, base/per-level freeze frames, and Glacial Spike
+  hard-point duration synergy. Snapshot duration on the cast, emit a generic
+  monster-cold state request only after nonlethal contact, and prove existing
+  ECS action filtering, checkpointing, refresh, and expiration own the result.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -885,8 +900,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 5 explicitly admitted
-configurations, and 352 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 6 explicitly admitted
+configurations, and 351 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -900,7 +915,9 @@ tooltip label through layered `string.tbl`, `expansionstring.tbl`, and
 keys and unknown skill references fail or remain explicit instead of silently
 dropping documentation. Fire Bolt now reports Fire Ball/Meteor hard-level fire-
 damage synergies; Frozen Armor reports Shiver/Chilling Armor hard-level duration
-and freeze-length modifiers in both gameplay and tooltip formulas. Nova's
+and freeze-length modifiers in both gameplay and tooltip formulas; Ice Blast
+reports its Ice Bolt/Blizzard/Frozen Orb damage and Glacial Spike duration
+relationships. Nova's
 locale records name it and describe an expanding electrically charged ring that
 shocks nearby enemies; its joined formulas contain no cross-skill references.
 TBL wording establishes intended relationships and player-visible claims;
@@ -936,10 +953,25 @@ the owned skill row reuses the generic Fire Bolt/Meteor hard-level modifier at
 14% each. Exact 1.14d radius/footprint units, impact rounding, per-target RNG,
 and ordering against mastery, resistance, PvP, and other sources remain probes.
 
+Ice Blast is the first `missile.straight-freeze` configuration. Its exact owned
+skill row supplies 75 base freeze frames, 5 per level, 10% duration per Glacial
+Spike hard point, and 8% cold damage per Ice Bolt, Blizzard, and Frozen Orb hard
+point. Missile damage function 4 and localized TBL text establish a direct
+freezing hit; `ExplosionMissile=freezingarrowexp1` supplies a distinct 16-tick
+presentation aftermath. The cast snapshots both modifiers and the resolved
+duration. A nonlethal contact then emits an ordinary
+`d2legacy.state.request`; normal/nightmare/hell monster duration divisors reuse
+the existing cold policy, while timed-state instances and generic action
+filters own checkpointing, refresh, suppression, and expiration. Exact target
+resistance/immunity, monster-class cold effectiveness, cross-source state
+replacement, PvP freeze-to-chill conversion, and impact/action timing remain
+owned-runtime probes.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
-declarations as the report. `d2legacy.data.missile_skills` validates an admitted
-row pair into an immutable `missile.straight` definition; the earlier Frozen
+declarations as the report. `d2legacy.data.missile_skills` validates admitted
+row graphs into immutable straight-trajectory, area-impact, or on-hit-state
+definitions; the earlier Frozen
 Armor name lookup is now the generic `state.self-timed-stat` decoder selected
 by ID. It validates server function 18, `frozenarmor`,
 `skill_armor_percent`, `ln12`, and the `ln34 + hard-level synergies * par7`

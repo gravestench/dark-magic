@@ -9,6 +9,8 @@ local damage = require("d2legacy.policy.damage")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
 local geometry = require("d2legacy.policy.geometry")
 local population = require("d2legacy.bootstrap.population")
+local cold_duration = require("d2legacy.policy.cold_duration")
+local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -100,6 +102,37 @@ local function apply_hit(context, projectile, target, structural)
     local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
     local result = damage.resolve(target.entity, bundle, ecs)
     emit_hit(context, projectile, target, result, structural)
+    return result
+end
+
+local function apply_on_hit_state(projectile, target, damage_result, structural)
+    local state_id = projectile:get("on_hit_state_id")
+    if state_id == "" or damage_result.lethal then
+        return
+    end
+    local duration = projectile:get("on_hit_state_duration")
+    local policy = projectile:get("on_hit_state_duration_policy")
+    if policy == "monster_cold" then
+        if not ecs.get(target.entity, "d2legacy.monster.stats") then
+            return
+        end
+        duration = cold_duration.monster_frames(duration, game_rules.difficulty())
+    else
+        assert(policy == "", "unsupported on-hit state duration policy")
+    end
+    assert(duration > 0, "on-hit state duration must be positive")
+    structural:create({
+        ["d2legacy.state.request"] = {
+            operation = "apply",
+            target = target.entity,
+            state_id = state_id,
+            source_id = projectile:get("on_hit_state_source_id"),
+            duration = duration,
+            policy = "refresh_same_source",
+            exclusive_group = projectile:get("on_hit_state_exclusive_group"),
+            action_disabled = projectile:get("on_hit_state_action_disabled"),
+        },
+    })
 end
 
 local function impact_targets(projectile, location, targets, x, y)
@@ -188,16 +221,20 @@ local function resolve_contacts(context, entities, structural)
             local location = ecs.get(entity, "d2legacy.world.location")
             local target, along = first_contact(entity, projectile, position, location, targets, locks)
             if target then
+                local previous_x, previous_y = projectile:get("previous_x"), projectile:get("previous_y")
+                local impact_x = previous_x + (position:get("x") - previous_x) * along
+                local impact_y = previous_y + (position:get("y") - previous_y) * along
                 if projectile:get("impact_radius") > 0 then
-                    local previous_x, previous_y = projectile:get("previous_x"), projectile:get("previous_y")
-                    local impact_x = previous_x + (position:get("x") - previous_x) * along
-                    local impact_y = previous_y + (position:get("y") - previous_y) * along
                     for _, area_target in ipairs(impact_targets(projectile, location, targets, impact_x, impact_y)) do
-                        apply_hit(context, projectile, area_target, structural)
+                        local damage_result = apply_hit(context, projectile, area_target, structural)
+                        apply_on_hit_state(projectile, area_target, damage_result, structural)
                     end
-                    emit_impact(context, projectile, target, location, impact_x, impact_y, structural)
                 else
-                    apply_hit(context, projectile, target, structural)
+                    local damage_result = apply_hit(context, projectile, target, structural)
+                    apply_on_hit_state(projectile, target, damage_result, structural)
+                end
+                if projectile:get("impact_missile_id") ~= "" then
+                    emit_impact(context, projectile, target, location, impact_x, impact_y, structural)
                 end
                 local delay = projectile:get("next_hit_delay")
                 if delay > 0 then
@@ -268,6 +305,7 @@ function M.register()
             "d2legacy.world.position",
             "d2legacy.world.location",
             "d2legacy.world.room_resident",
+            "d2legacy.state.request",
         },
         update = resolve_contacts,
     })

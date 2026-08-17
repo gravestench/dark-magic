@@ -98,10 +98,29 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         skill_modifiers.hard_level_sum_percent(skill, "EDmgSymPerCalc", "Param8", skills_by_name, label)
     local impact_radius = 0
     local impact = nil
+    local duration_base = 0
+    local duration_per_level = 0
+    local duration_synergy_ids = {}
+    local duration_synergy_percent = 0
     if behavior == "missile.straight-impact-area" then
         assert(missile.pSrvHitFunc == "1", label .. " has unsupported impact function")
         impact_radius = required_integer(missile, "sHitPar1", nil, label)
         assert(impact_radius > 0, label .. " has no impact radius")
+    elseif behavior == "missile.straight-freeze" then
+        assert(missile.pSrvDmgFunc == "4", label .. " has unsupported damage function")
+        duration_base = required_integer(skill, "ELen", nil, label)
+        duration_per_level = required_integer(skill, "ELevLen1", nil, label)
+        assert(
+            duration_base > 0
+                and duration_per_level > 0
+                and required_integer(skill, "ELevLen2", nil, label) == duration_per_level
+                and required_integer(skill, "ELevLen3", nil, label) == duration_per_level,
+            label .. " has unsupported freeze-length bands"
+        )
+        duration_synergy_ids, duration_synergy_percent =
+            skill_modifiers.hard_level_sum_percent(skill, "ELenSymPerCalc", "Param7", skills_by_name, label)
+    end
+    if behavior == "missile.straight-impact-area" or behavior == "missile.straight-freeze" then
         local impact_id =
             assert(missile.ExplosionMissile ~= "" and missile.ExplosionMissile, label .. " has no impact missile")
         impact = assert(missiles[impact_id], label .. " impact missile is missing")
@@ -139,6 +158,14 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
             or 1,
         impact_loop = impact and impact.LoopAnim == "1" or false,
         impact_sound = impact and impact.TravelSound or "",
+        effect_duration_base = duration_base,
+        effect_duration_per_level = duration_per_level,
+        effect_duration_synergy_skill_ids = duration_synergy_ids,
+        effect_duration_synergy_percent_per_level = duration_synergy_percent,
+        on_hit_state_id = behavior == "missile.straight-freeze" and "freeze" or "",
+        on_hit_state_duration_policy = behavior == "missile.straight-freeze" and "monster_cold" or "",
+        on_hit_state_action_disabled = behavior == "missile.straight-freeze",
+        on_hit_state_exclusive_group = "",
         -- Preserve the target-authored byte without yet assigning binary-owned
         -- chance/result semantics to it.
         knockback_value = byte_or(missile, "KnockBack", 0, label),
@@ -161,7 +188,9 @@ function M.load(supported_ids, behavior)
     assert(type(supported_ids) == "table", "supported straight-missile skill IDs are required")
     behavior = behavior or "missile.straight"
     assert(
-        behavior == "missile.straight" or behavior == "missile.straight-impact-area",
+        behavior == "missile.straight"
+            or behavior == "missile.straight-impact-area"
+            or behavior == "missile.straight-freeze",
         "unsupported straight-missile behavior"
     )
     local skill_rows = assert(records.load("data/global/excel/skills.txt"))

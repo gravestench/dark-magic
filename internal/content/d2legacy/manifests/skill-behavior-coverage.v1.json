@@ -19,6 +19,11 @@
       "evidence_status": "owned-target-records-and-official-pvm-effect-partial"
     },
     {
+      "skill_id": 45,
+      "family": "missile.straight-freeze",
+      "evidence_status": "owned-target-records-and-localized-freeze-intent-partial"
+    },
+    {
       "skill_id": 47,
       "family": "missile.straight-impact-area",
       "evidence_status": "owned-target-records-and-localized-impact-intent-partial"
