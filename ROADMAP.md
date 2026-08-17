@@ -15,8 +15,9 @@ MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
 of 2026-08-17. A matched frontend profile also removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
-the remaining eager frontend asset residency is now an explicit performance
-follow-up rather than an unexplained transition hitch.
+staged title/menu, secondary-destination, and character-interaction preload
+bundles then reduced the settled main-menu heap from 487 MB to 216 MB without
+leaving background work pending.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -73,7 +74,7 @@ policy**, and **unresolved**.
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
-| M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Remaining work is UI fidelity and measured eager-asset residency, not the former multi-second menu transition stall. |
+| M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, population, and the first inactive-monster archive/restore path exist; dynamic occupancy, complete inactive entity graphs, object authority, and campaign breadth remain. |
@@ -81,7 +82,7 @@ policy**, and **unresolved**.
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
-| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. The after-capture still retained about 357 MB beneath eager frontend asset preloading, so that footprint remains a measured follow-up; other tasks are folded into projections, presentation, cleanup, and gameplay consumers below. |
+| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. Staged frontend bundles then reduced settled main-menu heap from 487 MB to 216 MB, preloader-retained heap from 357 MB to 112 MB, and decoded-cache weight from 339 MB to 59 MB with zero pending preloads. Other tasks are folded into projections, presentation, cleanup, and gameplay consumers below. |
 | M31-M43 creature authoring | deferred | Generated creature representation is independent work and must not displace the gameplay critical path. |
 | M44 Realm cloud operations | deferred | Local topology-neutral Realm is the prerequisite. Existing deployment groundwork does not make cloud operations a gameplay gate. |
 
@@ -101,10 +102,13 @@ in which networking followed the first gameplay loop.
   fell from 4.134 s to 152 ms (96.3%), while the former 3.77 s TBL decoder
   hotspot disappeared and steady main-menu updates remained sub-millisecond at
   p95.
-- [ ] Reduce eager frontend decoded-asset residency from the measured ~357 MB
-  preloader subtree without regressing transition smoothness or introducing a
-  second cache/lifetime authority. Re-profile the same navigation before
-  accepting that follow-up.
+- [x] Split the former whole-frontend startup bundle into title/main-menu,
+  secondary-destination, and character-creation-interaction stages without
+  adding another cache/lifetime authority. A settled real-asset main-menu
+  capture completed every background request while reducing profiled heap from
+  487 MB to 216 MB, the preloader subtree from 357 MB to 112 MB, and decoded-
+  cache weight from 339 MB to 59 MB. Main-menu update p95 remained below one
+  millisecond and improved from 0.794 ms to 0.344 ms.
 
 ## P0: post-networking gameplay foundations
 

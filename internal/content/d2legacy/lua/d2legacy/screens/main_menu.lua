@@ -44,12 +44,10 @@ return {
         self:configure_labels()
         self.cursor = cursor.new(self.root, manifest.cursor, manifest.palettes)
 
-        -- This is intentionally AFTER visible menu construction. If startup did
-        -- not already complete the immutable preload bundle, player "think time"
-        -- on this screen becomes useful background preparation time.
-		-- Build this scene first. Once it is visible, the menu becomes useful
-		-- think-time for warming the destinations behind Single Player.
-		preload.frontend()
+        -- Build this scene first. Once it is visible, the menu becomes useful
+        -- think-time for warming secondary destinations. Character interaction
+        -- animations remain scoped to the character-creation scene.
+        preload.frontend()
     end,
 
     configure_labels = function(self)

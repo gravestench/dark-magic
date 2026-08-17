@@ -30,7 +30,7 @@ local game_loading = assert(manifest.screens.game_loading)
 return {
     enter = function(self)
         -- Ask the renderer capability to start preparing the frontend bundle.
-        self.preload_job = preload.frontend()
+        self.preload_job = preload.startup()
 
         -- A nil job is a valid headless/no-assets case, so warming is a boolean
         -- derived from whether a real job exists.
@@ -41,8 +41,14 @@ return {
         self.root = render.create("transition")
         self.root:set_z(-1)
         self.root:set_position(screen.x, screen.y)
-        self.root:fill_rect(screen.width, screen.height,
-            screen.fill.red, screen.fill.green, screen.fill.blue, screen.fill.alpha)
+        self.root:fill_rect(
+            screen.width,
+            screen.height,
+            screen.fill.red,
+            screen.fill.green,
+            screen.fill.blue,
+            screen.fill.alpha
+        )
 
         if self.warming and render.assets_available() then
             -- Reuse the same progressive loading-screen art that game loading
@@ -64,7 +70,9 @@ return {
         self.index = 0
 
         -- Headless/no-assets mode has nothing to warm, so begin sequence immediately.
-        if not self.warming then self:advance() end
+        if not self.warming then
+            self:advance()
+        end
     end,
 
     -- Advance to the next playable startup movie, or to title when sequence ends.
@@ -109,7 +117,7 @@ return {
 
         if self.warming then
             -- CPU preload status and renderer diagnostics are VALUE snapshots.
-            local status = preload.frontend_status()
+            local status = preload.startup_status()
             local diagnostics = render.diagnostics()
 
             -- CPU is ready when there is no job/status or every request completed.
@@ -122,7 +130,8 @@ return {
             self.warm_pending_peak = math.max(self.warm_pending_peak or 0, diagnostics.pending_warm_bytes)
 
             local gpu_progress = self.warm_pending_peak > 0
-                and 1 - diagnostics.pending_warm_bytes / self.warm_pending_peak or 1
+                    and 1 - diagnostics.pending_warm_bytes / self.warm_pending_peak
+                or 1
 
             -- The visual bar reserves first 75% for CPU preparation and last 25%
             -- for GPU warm uploads. This is PRESENTATION math, not worker scheduling.
@@ -130,7 +139,9 @@ return {
             loading_graphic.seek(self.warm_animation, self.warm_frames, progress)
 
             -- Stay in warmup until BOTH kinds of work are done.
-            if not cpu_ready or not gpu_ready then return end
+            if not cpu_ready or not gpu_ready then
+                return
+            end
 
             self.warming = false
 
