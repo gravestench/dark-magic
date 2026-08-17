@@ -185,6 +185,28 @@ D2MOO damage/party code includes party XP helper structures and same-level party
 
 Keep XP calculation in progression/combat reward authority, not party UI.
 
+Blizzard's official expansion party guide provides stronger behavioral bounds:
+
+- eligible party members must be in the same named automap area and about two
+  screens from the monster death;
+- the party XP pool increases by 35% when another party member participates;
+- each member's share is weighted by their level over the sum of eligible
+  member levels;
+- the ordinary player-level versus monster-level sliding penalty applies after
+  the share is computed.
+
+The wording does not establish the exact 1.14d spatial threshold, whether the
+35% increase repeats for every additional member, or integer rounding/order.
+Those facts remain owned-runtime probes. The version-locked analyzer at
+`internal/dev/tools/party_xp_probe` accepts sanitized paired neutral/party
+captures, rejects Classic/other targets and community sources, and reports
+observed deltas plus candidate pool rounding without selecting gameplay policy.
+Start from `docs/research/probes/party-xp-lod-114d.template.json` and run:
+
+```text
+go run ./internal/dev/tools/party_xp_probe -input /path/to/sanitized-capture.json
+```
+
 ## Hardcore corpse-loot permission
 
 Pinned 1.10f `PartyScreen` has explicit per-player lootability toggles that only operate for Hardcore clients. It stores a relationship flag between the two players and emits roster/event updates.
@@ -463,6 +485,9 @@ Add the semantic relationship and integrate with death/corpse item access after 
 18. Trade item placement/grid/offer rules.
 19. Acceptance reset delay/revision behavior.
 20. Trade gold limits and destination capacity failure.
+
+Primary behavioral source for the party-XP bounds above: Blizzard's
+[The Arreat Summit — Parties](https://classic.battle.net/diablo2exp/basics/parties.shtml).
 21. Quest/nontradeable item rules.
 22. Disconnect/death/hostility during trade.
 23. Private state visibility in network snapshots.

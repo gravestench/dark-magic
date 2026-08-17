@@ -1,0 +1,66 @@
+{
+  "schema": "d2legacy.party_xp_probe/v1",
+  "target": "lod-1.14d",
+  "source": "owned-runtime",
+  "cases": [
+    {
+      "id": "neutral-baseline",
+      "difficulty": "normal",
+      "area": "Blood Moor",
+      "monster": "record-and-instance-identity",
+      "monster_level": 5,
+      "game_players": 2,
+      "party": false,
+      "members": [
+        {
+          "id": "player-a",
+          "level": 5,
+          "killer": true,
+          "same_area": true,
+          "distance_subtiles": 0,
+          "experience_before": 0,
+          "experience_after": 0
+        },
+        {
+          "id": "player-b",
+          "level": 5,
+          "killer": false,
+          "same_area": true,
+          "distance_subtiles": 0,
+          "experience_before": 0,
+          "experience_after": 0
+        }
+      ]
+    },
+    {
+      "id": "party-observation",
+      "baseline_id": "neutral-baseline",
+      "difficulty": "normal",
+      "area": "Blood Moor",
+      "monster": "record-and-instance-identity",
+      "monster_level": 5,
+      "game_players": 2,
+      "party": true,
+      "members": [
+        {
+          "id": "player-a",
+          "level": 5,
+          "killer": true,
+          "same_area": true,
+          "distance_subtiles": 0,
+          "experience_before": 0,
+          "experience_after": 0
+        },
+        {
+          "id": "player-b",
+          "level": 5,
+          "killer": false,
+          "same_area": true,
+          "distance_subtiles": 0,
+          "experience_before": 0,
+          "experience_after": 0
+        }
+      ]
+    }
+  ]
+}
