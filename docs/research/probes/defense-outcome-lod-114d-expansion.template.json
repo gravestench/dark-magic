@@ -1,0 +1,92 @@
+{
+  "schema": "d2legacy.defense_outcome_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "runtime": {
+    "patch": "1.14d",
+    "mode": "expansion",
+    "session": "single-player",
+    "executable_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256",
+    "observation": "video-frame-log"
+  },
+  "cases": [
+    {
+      "id": "standing-melee-control",
+      "mechanism": "control",
+      "difficulty": "normal",
+      "attack_kind": "melee",
+      "attacker_kind": "monster",
+      "attacker_level": 1,
+      "attack_rating": 0,
+      "defender": {
+        "kind": "player",
+        "record": "REPLACE_WITH_CLASS_AND_LOADOUT_ID",
+        "level": 1,
+        "defense": 0,
+        "state": "standing"
+      },
+      "trials": [
+        {
+          "outcome": "miss",
+          "reaction": "none",
+          "health_before_raw": 2560,
+          "health_after_raw": 2560
+        }
+      ]
+    },
+    {
+      "id": "standing-melee-shield-block",
+      "control_id": "standing-melee-control",
+      "mechanism": "shield_block",
+      "effect_record": "REPLACE_WITH_ITEM_RECORD",
+      "displayed_chance_percent": 1,
+      "difficulty": "normal",
+      "attack_kind": "melee",
+      "attacker_kind": "monster",
+      "attacker_level": 1,
+      "attack_rating": 0,
+      "defender": {
+        "kind": "player",
+        "record": "REPLACE_WITH_CLASS_AND_LOADOUT_ID",
+        "level": 1,
+        "defense": 0,
+        "state": "standing"
+      },
+      "trials": [
+        {
+          "outcome": "block",
+          "reaction": "block",
+          "health_before_raw": 2560,
+          "health_after_raw": 2560
+        }
+      ]
+    },
+    {
+      "id": "standing-melee-passive-avoidance",
+      "control_id": "standing-melee-control",
+      "mechanism": "passive_avoidance",
+      "effect_record": "REPLACE_WITH_SKILL_RECORD",
+      "displayed_chance_percent": 1,
+      "difficulty": "normal",
+      "attack_kind": "melee",
+      "attacker_kind": "monster",
+      "attacker_level": 1,
+      "attack_rating": 0,
+      "defender": {
+        "kind": "player",
+        "record": "REPLACE_WITH_CLASS_AND_LOADOUT_ID",
+        "level": 1,
+        "defense": 0,
+        "state": "standing"
+      },
+      "trials": [
+        {
+          "outcome": "avoid",
+          "reaction": "avoid",
+          "health_before_raw": 2560,
+          "health_after_raw": 2560
+        }
+      ]
+    }
+  ]
+}

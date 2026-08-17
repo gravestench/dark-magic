@@ -104,7 +104,12 @@ and avoidance vocabulary/arithmetic stay probe-gated. Combat Lab now
 coalesces those co-composed ECS facts by entity instead of
 showing duplicate rows, and formats current raw damage/channel/remaining-health
 fields rather than the retired scalar names that could fault after a hit.
-G9 remains current through
+The block/avoidance gate now has a strict analyzer/template contract accepting
+only sanitized visual observations from an owned Expansion 1.14d single-player
+runtime with a recorded executable SHA-256. It rejects Classic, earlier patches,
+server/community-tool sources, mismatched controls, and outcome/health/reaction
+contradictions. No block or avoidance arithmetic is promoted until that matrix
+is populated. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -725,6 +730,14 @@ explicit shared direct-damage result record exist.
 - [ ] Extend the generic outcome vocabulary with target-locked Expansion 1.14d
   block and avoidance families; do not infer their order or eligibility from
   the current hit boolean.
+- [x] Add a strict Expansion 1.14d single-player owned-runtime defense-outcome
+  analyzer and capture template. Fingerprint the executable and sanitized
+  capture; require matched controls and normalize miss/damage/block/avoid/lethal
+  rates without accepting Classic, older patches, servers, saves, community
+  tools, or reconstructed-runtime observations.
+- [ ] Populate standing/moving/attacking melee/missile shield-block and passive-
+  avoidance matrices from that owned runtime, then promote only the ordering,
+  eligibility, cap, and movement facts the observations resolve.
 - [ ] Define the complete independent consumer-marker/retirement contract as
   attacker, defender, proc, quest, audio, and presentation event families land;
   do not centralize their policy or retain completed event entities forever.
