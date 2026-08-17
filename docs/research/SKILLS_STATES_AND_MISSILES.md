@@ -82,6 +82,12 @@ opt-in owned-archive test boots the authority against the target expansion
 1.14d records so the generic decoder's production contract is checked without
 placing copyrighted tables in Git.
 
+That decoder now also preserves the raw target-authored `Missiles.KnockBack`
+byte in the immutable definition and checkpointed projectile. Owned 1.14d rows
+demonstrate blank, `1`, `33`, and `75`, so the field is neither collapsed to a
+boolean nor applied as a guessed percentage. Projectile contact will consume it
+only after a target-binary probe pins the roll and damage-result ordering.
+
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion

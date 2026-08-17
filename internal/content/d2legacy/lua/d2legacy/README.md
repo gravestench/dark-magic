@@ -37,7 +37,8 @@ state lifetime, units, and ordering rather than restating Lua syntax.
 2. Go admits `d2legacy.skill.cast` by identity, tick, sequence, and authority.
 3. `commands/cast.lua` validates its payload and creates a cast request.
 4. `data/missile_skills.lua` validates each explicitly supported 1.14d record
-   pair into one immutable `missile.straight` definition.
+   pair into one immutable `missile.straight` definition, preserving authored
+   fields such as `Missiles.KnockBack` without assigning unverified semantics.
 5. `systems/cast.lua` validates learned skill, target, and mana against the
    selected definition, then schedules its effect and completion ticks.
 6. `systems/missile_skill.lua` creates the configured projectile when the

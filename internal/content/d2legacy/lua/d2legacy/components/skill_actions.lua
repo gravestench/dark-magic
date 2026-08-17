@@ -40,7 +40,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 1,
+        version = 2,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "target_x", type = "f64" },
@@ -51,6 +51,7 @@ function M.register()
             { name = "previous_y", type = "f64" },
             { name = "remaining_ticks", type = "i64" },
             { name = "collision_radius", type = "f64" },
+            { name = "knockback_value", type = "i64" },
             { name = "minimum_damage_raw", type = "i64" },
             { name = "maximum_damage_raw", type = "i64" },
             { name = "damage_channel", type = "string" },

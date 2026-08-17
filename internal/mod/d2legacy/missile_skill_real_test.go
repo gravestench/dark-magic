@@ -36,6 +36,22 @@ func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	missiles, err := pinned.Load("data/global/excel/Missiles.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for missile, want := range map[string]string{
+		"firebolt":        "",
+		"amphibiangoo1":   "33",
+		"leapknockback":   "1",
+		"moltenboulder":   "1",
+		"baal cold maker": "75",
+	} {
+		row := rowBy(missiles, "Missile", missile)
+		if row == nil || row["KnockBack"] != want {
+			t.Fatalf("owned expansion 1.14d missile %q KnockBack = %#v, want %q", missile, row, want)
+		}
+	}
 	authority, err := Start(t.Context(), content.D2Legacy(), pinned, engine, session, 314)
 	if err != nil {
 		t.Fatal(err)

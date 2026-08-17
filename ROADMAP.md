@@ -7,7 +7,8 @@ playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
 armor/shield/cold-source ordering, and progression/source-derived maximum-
 stamina plus environment-period source slices, G6 deterministic dynamic
 occupancy, a generic checkpointed forced-motion transaction, and target-pinned
-monster knockback capability/size profiles. G9 remains current through
+monster knockback capability/size profiles plus authored missile knockback
+values. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -377,6 +378,11 @@ Status: **partial**.
   the resulting generic target profile; the owned `knock` property and
   `item_knockback` melee/missile event hooks are pinned without guessing their
   binary-owned chance arithmetic.
+- [x] Preserve the owned Expansion 1.14d `Missiles.KnockBack` byte in generic
+  straight-missile definitions and checkpointed projectile instances. Blank,
+  `1`, `33`, and `75` representative rows are pinned; combat does not interpret
+  the byte or emit forced motion until the target binary's roll/result policy
+  is verified.
 - [ ] Verify remaining target-runtime category rules for players, hirelings,
   summons, NPCs, and corpses, then decide which categories participate in A*
   planning versus only fixed-tick motion resolution.

@@ -386,6 +386,15 @@ the mounted MPQs. `Properties.knock -> item_knockback` and its
 `ItemStatCost` melee/missile event hooks are also pinned. Their event-function
 chance arithmetic remains binary-owned and therefore unimplemented.
 
+The owned Expansion 1.14d `Missiles.txt` table independently authors a
+`KnockBack` byte. Representative rows pin blank (`firebolt`), `1`
+(`leapknockback`, `moltenboulder`), `33` (`amphibiangoo1`), and `75`
+(`baal cold maker`). The generic straight-missile decoder now preserves that
+raw byte in each checkpointed projectile. It deliberately does not treat the
+value as a boolean or percentage and does not emit forced motion: recovered
+older code shows a random-threshold/result-flag structure, but only a 1.14d
+binary probe may promote that structure into current gameplay policy.
+
 Once those target rules are pinned, combat will emit the generic request;
 movement already owns spatial resolution.
 

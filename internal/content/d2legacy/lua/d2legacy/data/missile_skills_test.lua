@@ -17,7 +17,7 @@ local function skill(id, name, missile, channel)
     }
 end
 
-local function missile(name, skill_name, velocity)
+local function missile(name, skill_name, velocity, knockback)
     return {
         Missile = name,
         Skill = skill_name,
@@ -27,6 +27,7 @@ local function missile(name, skill_name, velocity)
         Vel = tostring(velocity),
         Range = "40",
         Size = "2",
+        KnockBack = knockback and tostring(knockback) or "",
         CelFile = name,
     }
 end
@@ -44,7 +45,7 @@ return test.suite({
         },
         ["data/global/excel/Missiles.txt"] = {
             missile("firebolt", "Fire Bolt", 20),
-            missile("fixturebolt", "Fixture Bolt", 25),
+            missile("fixturebolt", "Fixture Bolt", 25, 75),
         },
     },
     cases = {
@@ -54,9 +55,11 @@ return test.suite({
                 test.expect(definitions[36].behavior):equals("missile.straight")
                 test.expect(definitions[36].missile_id):equals("firebolt")
                 test.expect(definitions[36].damage_channel):equals("fire")
+                test.expect(definitions[36].knockback_value):equals(0)
                 test.expect(definitions[900].behavior):equals("missile.straight")
                 test.expect(definitions[900].missile_id):equals("fixturebolt")
                 test.expect(definitions[900].damage_channel):equals("magic")
+                test.expect(definitions[900].knockback_value):equals(75)
                 test.expect(definitions[900].speed_per_tick):equals(1)
             end)
         end),
