@@ -35,8 +35,15 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 
 ## P1: combat arithmetic
 
-- Block chance, cap, movement penalty, and ordering relative to hit/avoidance.
-- Dodge/Avoid/Evade and similar avoidance order.
+- [ ] Block chance, cap, movement penalty, and ordering relative to hit/
+  avoidance. The Expansion-1.14d-only owned-runtime analyzer and matched-control
+  template now live in `internal/dev/tools/defense_outcome_probe` and
+  `docs/research/probes/defense-outcome-lod-114d-expansion.template.json`.
+  Populate the matrix before promoting arithmetic.
+- [ ] Dodge/Avoid/Evade and similar avoidance order. The same contract records
+  exact effect-record identity, displayed chance, defender action state, visual
+  outcome/reaction, and raw health deltas; it rejects Classic, earlier patches,
+  servers, saves, community tools, and mismatched controls.
 - Physical resistance/percentage reduction/flat reduction ordering.
 - Fire/lightning/cold/magic resistance, max resistance, pierce, percentage absorb, and flat absorb ordering at negative/cap boundaries.
 - Critical Strike, weapon mastery critical, and Deadly Strike ordering/exclusivity.

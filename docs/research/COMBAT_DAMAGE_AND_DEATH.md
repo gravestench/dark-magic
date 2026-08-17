@@ -518,6 +518,23 @@ Owned-game probes should cover boundary values such as:
 - blocking and dodge families;
 - PvP scaling.
 
+The block/avoidance capture boundary is executable:
+
+```text
+go run ./internal/dev/tools/defense_outcome_probe \
+  -input /path/to/sanitized-defense-outcomes.json
+```
+
+Start from
+`docs/research/probes/defense-outcome-lod-114d-expansion.template.json`. The
+analyzer accepts only `diablo-ii-lod-1.14d-expansion`, `owned-runtime`,
+Expansion mode, patch 1.14d, single-player visual frame logs, and a 64-hex
+executable SHA-256. It fingerprints the complete sanitized capture, requires
+context-matched controls, validates outcome/reaction/health consistency, and
+reports Wilson intervals without comparing against an older recovered formula.
+It is observation tooling, not server/save interoperability and not permission
+to promote a policy before the matrix is populated.
+
 ## Open verification backlog
 
 1. Exact 1.10f chance-to-hit formula, clamps, and integer rounding.
