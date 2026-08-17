@@ -309,17 +309,22 @@ Room streaming must preserve all deterministic AI/combat/state/RNG information n
 
 Do not despawn a monster merely because its render node was culled.
 
-Current implementation status: `d2legacy.population.plan/v3` keeps stable
-inactive resident IDs per generated room. Ordinary generated monsters retain
-their ECS entity and full component/relationship graph; the deterministic
+Current implementation status: `d2legacy.population.plan/v4` keeps stable
+inactive resident records per generated room. The world-owned
+`d2legacy.world.room_resident {id, room_id}` contract no longer depends on
+monster identity, and each activation record preserves whether the generic
+velocity-mover opt-in existed. Ordinary generated monsters retain their ECS
+entity and full component/relationship graph; the deterministic
 occupied-room-plus-neighbors policy adds an empty `d2legacy.world.inactive`
 filter tag and removes the velocity-movement opt-in rather than copying an
 allowlisted scalar record and destroying the entity. Lua simulation systems and
 local/remote presentation projections exclude inactive residents. Checkpoint
 continuation preserves timed-state, stat-source, and state-event target
-references and proves deactivate/restore/reactivate parity. Owned-unit graphs,
-corpses/items/objects/projectiles, inactive timer-aging policy, and exact 1.14d
-activation or long-inactive mutation policy remain unresolved.
+references and proves deactivate/restore/reactivate parity; a non-monster,
+non-moving fixture proves reactivation does not invent movement capability.
+Production owned-unit/corpse/item/object/projectile residency attachment,
+inactive timer-aging policy, and exact 1.14d activation or long-inactive
+mutation policy remain unresolved.
 
 ## Death, corpses, resurrection
 

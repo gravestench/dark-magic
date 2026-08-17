@@ -239,6 +239,12 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	monsterID := monsterEntity(t, engine, spawnID)
 	graph := installMonsterTimedState(t, session, engine, monsterID)
 	assertMonsterStateGraph(t, engine, graph)
+	residentStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.room_resident")
+	objectID := engine.World().MustCreateEntity()
+	if _, err := residentStore.Set(objectID, map[string]any{"id": "object:room-a", "room_id": "a"}); err != nil {
+		t.Fatal(err)
+	}
+	assertResidentActivation(t, engine, objectID, true, false)
 	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
 	for playerPositionX(t, engine, "alice") < 20 {
 		if err := session.Step(); err != nil {
@@ -256,9 +262,10 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	if got := monsterCount(engine); got != 1 {
 		t.Fatalf("monster existence count after room deactivation = %d, want 1", got)
 	}
-	assertMonsterActivation(t, engine, monsterID, false)
+	assertResidentActivation(t, engine, monsterID, false, true)
+	assertResidentActivation(t, engine, objectID, false, false)
 	assertMonsterStateGraph(t, engine, graph)
-	assertInactiveRoom(t, authority, "a", spawnID)
+	assertInactiveRoom(t, authority, "a", spawnID, "object:room-a")
 	inactiveAI := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai")
 	stepSession(t, session, 5)
 	if got := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai"); !reflect.DeepEqual(got, inactiveAI) {
@@ -280,9 +287,10 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	if got := monsterCount(restoredEngine); got != 1 {
 		t.Fatalf("restored inactive monster existence count = %d, want 1", got)
 	}
-	assertMonsterActivation(t, restoredEngine, monsterID, false)
+	assertResidentActivation(t, restoredEngine, monsterID, false, true)
+	assertResidentActivation(t, restoredEngine, objectID, false, false)
 	assertMonsterStateGraph(t, restoredEngine, graph)
-	assertInactiveRoom(t, restored, "a", spawnID)
+	assertInactiveRoom(t, restored, "a", spawnID, "object:room-a")
 
 	returnTick := checkpoint.Tick + 1
 	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
@@ -313,16 +321,18 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	if !reflect.DeepEqual(restoredMonster, originalMonster) {
 		t.Fatalf("restored monster components = %#v, want %#v", restoredMonster, originalMonster)
 	}
-	assertMonsterActivation(t, engine, monsterID, true)
-	assertMonsterActivation(t, restoredEngine, monsterID, true)
+	assertResidentActivation(t, engine, monsterID, true, true)
+	assertResidentActivation(t, restoredEngine, monsterID, true, true)
+	assertResidentActivation(t, engine, objectID, true, false)
+	assertResidentActivation(t, restoredEngine, objectID, true, false)
 	assertMonsterStateGraph(t, engine, graph)
 	assertMonsterStateGraph(t, restoredEngine, graph)
-	assertRoomActiveWithoutArchive(t, authority, "a")
-	assertRoomActiveWithoutArchive(t, restored, "a")
+	assertRoomActiveWithoutInactiveResidents(t, authority, "a")
+	assertRoomActiveWithoutInactiveResidents(t, restored, "a")
 }
 
 var retainedMonsterComponents = []string{
-	"d2legacy.population.room_resident",
+	"d2legacy.world.room_resident",
 	"d2legacy.monster.identity",
 	"d2legacy.monster.stats",
 	"d2legacy.combat.melee_profile",
@@ -348,8 +358,9 @@ type populationRoomFixture struct {
 	InactiveResidents json.RawMessage `json:"inactive_residents"`
 }
 
-type inactiveMonsterFixture struct {
-	SpawnID string `json:"spawn_id"`
+type inactiveResidentFixture struct {
+	ID            string `json:"id"`
+	VelocityMover bool   `json:"velocity_mover"`
 }
 
 func submitMoveCommand(t *testing.T, session *gamesession.Session, tick uint64, player string, sequence uint64, x int) {
@@ -430,26 +441,35 @@ func readPopulationPlan(t *testing.T, authority *Authority) populationPlanFixtur
 	return plan
 }
 
-func assertInactiveRoom(t *testing.T, authority *Authority, roomID, spawnID string) {
+func assertInactiveRoom(t *testing.T, authority *Authority, roomID string, residentIDs ...string) {
 	t.Helper()
 	for _, room := range readPopulationPlan(t, authority).Rooms {
 		if room.ID != roomID {
 			continue
 		}
-		residents := decodeInactiveMonsters(t, room.InactiveResidents)
-		if room.Active || !room.Activated || len(residents) != 1 || residents[0].SpawnID != spawnID {
+		residents := decodeInactiveResidents(t, room.InactiveResidents)
+		if room.Active || !room.Activated || len(residents) != len(residentIDs) {
 			t.Fatalf("inactive room residents = %#v", room)
+		}
+		want := make(map[string]bool, len(residentIDs))
+		for _, id := range residentIDs {
+			want[id] = true
+		}
+		for _, resident := range residents {
+			if !want[resident.ID] {
+				t.Fatalf("unexpected inactive resident %#v", resident)
+			}
 		}
 		return
 	}
 	t.Fatalf("population room %s was not found", roomID)
 }
 
-func assertRoomActiveWithoutArchive(t *testing.T, authority *Authority, roomID string) {
+func assertRoomActiveWithoutInactiveResidents(t *testing.T, authority *Authority, roomID string) {
 	t.Helper()
 	for _, room := range readPopulationPlan(t, authority).Rooms {
 		if room.ID == roomID {
-			if !room.Active || !room.Activated || len(decodeInactiveMonsters(t, room.InactiveResidents)) != 0 {
+			if !room.Active || !room.Activated || len(decodeInactiveResidents(t, room.InactiveResidents)) != 0 {
 				t.Fatalf("restored room state = %#v", room)
 			}
 			return
@@ -458,12 +478,12 @@ func assertRoomActiveWithoutArchive(t *testing.T, authority *Authority, roomID s
 	t.Fatalf("population room %s was not found", roomID)
 }
 
-func decodeInactiveMonsters(t *testing.T, encoded json.RawMessage) []inactiveMonsterFixture {
+func decodeInactiveResidents(t *testing.T, encoded json.RawMessage) []inactiveResidentFixture {
 	t.Helper()
 	if len(encoded) == 0 || string(encoded) == "{}" {
 		return nil
 	}
-	var residents []inactiveMonsterFixture
+	var residents []inactiveResidentFixture
 	if err := json.Unmarshal(encoded, &residents); err != nil {
 		t.Fatal(err)
 	}
@@ -523,17 +543,17 @@ func componentSnapshot(t *testing.T, engine *gameecs.Engine, entity akara.Entity
 	return values
 }
 
-func assertMonsterActivation(t *testing.T, engine *gameecs.Engine, monster akara.Entity, active bool) {
+func assertResidentActivation(t *testing.T, engine *gameecs.Engine, entity akara.Entity, active, velocityMover bool) {
 	t.Helper()
 	inactive, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.inactive")
 	movers, _ := akara.GetDynamicStore(engine.World(), "engine.world.velocity_mover")
-	_, dormant := inactive.Get(monster)
-	_, moving := movers.Get(monster)
-	if active && (dormant || !moving) {
-		t.Fatalf("active monster %d inactive/mover = %v/%v", monster, dormant, moving)
+	_, dormant := inactive.Get(entity)
+	_, moving := movers.Get(entity)
+	if active && (dormant || moving != velocityMover) {
+		t.Fatalf("active resident %d inactive/mover = %v/%v, want false/%v", entity, dormant, moving, velocityMover)
 	}
 	if !active && (!dormant || moving) {
-		t.Fatalf("inactive monster %d inactive/mover = %v/%v", monster, dormant, moving)
+		t.Fatalf("inactive resident %d inactive/mover = %v/%v", entity, dormant, moving)
 	}
 }
 
