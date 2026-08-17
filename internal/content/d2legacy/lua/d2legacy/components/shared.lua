@@ -198,7 +198,8 @@ function M.register()
         { name = "seed", type = "string" },
         { name = "treasure_class", type = "string" },
     })
-    component("d2legacy.population.room_resident", {
+    component("d2legacy.world.room_resident", {
+        { name = "id", type = "string" },
         { name = "room_id", type = "string" },
     })
     component("d2legacy.monster.appearance", {

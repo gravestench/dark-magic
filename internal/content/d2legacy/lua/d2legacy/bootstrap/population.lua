@@ -18,7 +18,7 @@ local M = {}
 local MAX_LEVEL_MONSTERS = 25
 local DENSITY_SCALE = 100000
 local PLAN_ID = "d2legacy.population.plan"
-local PLAN_SCHEMA = "d2legacy.population.plan/v3"
+local PLAN_SCHEMA = "d2legacy.population.plan/v4"
 
 local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
@@ -114,7 +114,10 @@ local function materialize_group(context, zone, room, definition, game_player_co
             },
         }
         local components = spawn.components(command, game_player_count)
-        components["d2legacy.population.room_resident"] = { room_id = room.id }
+        components["d2legacy.world.room_resident"] = {
+            id = command.payload.spawn_id,
+            room_id = room.id,
+        }
         structural:create(components)
     end
     return count
@@ -223,13 +226,19 @@ end
 
 local function deactivate_room(room, entities, structural)
     local residents = {}
+    local seen = {}
     for _, entity in ipairs(entities) do
-        local resident = ecs.get(entity, "d2legacy.population.room_resident")
+        local resident = ecs.get(entity, "d2legacy.world.room_resident")
         local inactive = ecs.get(entity, "d2legacy.world.inactive")
         if resident and not inactive and resident:get("room_id") == room.id then
-            local identity =
-                assert(ecs.get(entity, "d2legacy.monster.identity"), "room resident has no monster identity")
-            residents[#residents + 1] = { spawn_id = identity:get("spawn_id") }
+            local id = resident:get("id")
+            assert(id ~= "", "room resident ID is required")
+            assert(not seen[id], "room resident IDs must be unique")
+            seen[id] = true
+            residents[#residents + 1] = {
+                id = id,
+                velocity_mover = ecs.get(entity, "engine.world.velocity_mover") ~= nil,
+            }
             structural:set(entity, "d2legacy.world.inactive", {})
             -- The engine velocity integrator uses its own opt-in empty tag.
             -- Remove that activation surface while the mod-owned inactive tag
@@ -238,7 +247,7 @@ local function deactivate_room(room, entities, structural)
         end
     end
     table.sort(residents, function(left, right)
-        return left.spawn_id < right.spawn_id
+        return left.id < right.id
     end)
     room.inactive_residents = residents
 end
@@ -246,19 +255,24 @@ end
 local function restore_room(room, entities, structural)
     local wanted = {}
     for _, resident in ipairs(room.inactive_residents or {}) do
-        wanted[resident.spawn_id] = true
+        assert(not wanted[resident.id], "inactive resident IDs must be unique")
+        wanted[resident.id] = resident
     end
     for _, entity in ipairs(entities) do
-        local identity = ecs.get(entity, "d2legacy.monster.identity")
+        local resident = ecs.get(entity, "d2legacy.world.room_resident")
         local inactive = ecs.get(entity, "d2legacy.world.inactive")
-        if identity and inactive and wanted[identity:get("spawn_id")] then
+        local id = resident and resident:get("id") or ""
+        local record = wanted[id]
+        if resident and inactive and resident:get("room_id") == room.id and record then
             structural:remove(entity, "d2legacy.world.inactive")
-            structural:set(entity, "engine.world.velocity_mover", {})
-            wanted[identity:get("spawn_id")] = nil
+            if record.velocity_mover then
+                structural:set(entity, "engine.world.velocity_mover", {})
+            end
+            wanted[id] = nil
         end
     end
-    for spawn_id in pairs(wanted) do
-        error("inactive room resident is missing: " .. spawn_id)
+    for id in pairs(wanted) do
+        error("inactive room resident is missing: " .. id)
     end
     room.inactive_residents = {}
 end
@@ -326,13 +340,13 @@ function M.register()
         id = "d2legacy.population.active_rooms",
         phase = "pre_simulation",
         query = {
-            any = { "d2legacy.player.identity", "d2legacy.population.room_resident" },
+            any = { "d2legacy.player.identity", "d2legacy.world.room_resident" },
         },
         read = {
             "d2legacy.player.identity",
             "d2legacy.world.location",
             "d2legacy.world.position",
-            "d2legacy.population.room_resident",
+            "d2legacy.world.room_resident",
             "d2legacy.monster.identity",
             "d2legacy.monster.stats",
             "d2legacy.combat.melee_profile",
@@ -354,7 +368,7 @@ function M.register()
         },
         write = {
             "d2legacy.monster.identity",
-            "d2legacy.population.room_resident",
+            "d2legacy.world.room_resident",
             "d2legacy.monster.stats",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.appearance",

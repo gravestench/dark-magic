@@ -525,14 +525,17 @@ A render chunk becoming invisible must not define whether the authoritative room
 Likewise, inactive-room persistence belongs in session/game state and replay/checkpoints, not the VFS or renderer cache.
 
 Current implementation status: the population authority evaluates one
-deterministic occupied-room-plus-immediate-neighbors set each tick. Its v3 room
-plan records stable inactive resident IDs while an empty ECS marker excludes the
-same retained entity from simulation and presentation; the generic velocity-
-movement opt-in is removed and restored at the activation boundary. The full
+deterministic occupied-room-plus-immediate-neighbors set each tick. Its v4 room
+plan records world-owned stable resident IDs plus each entity's existing
+velocity-mover opt-in while an empty ECS marker excludes the same retained
+entity from simulation and presentation. The generic velocity-movement opt-in
+is removed and conditionally restored at the activation boundary. The full
 component state plus timed-state/stat-source/event references therefore use the
 ordinary ECS checkpoint instead of a parallel scalar archive. A checkpoint made
 while inactive resumes to the same entity IDs and checksum. This establishes
-the first persistent-identity mechanism without claiming that graph distance,
+the first type-independent persistent-identity mechanism; a non-monster resident
+without movement opt-in crosses the same checkpoint/reactivation path. This
+does not claim that graph distance,
 phase ordering, timer aging, healing, corpse policy, or separate presentation-
 only residency matches expansion 1.14d.
 
@@ -645,9 +648,11 @@ as a standalone special case.
 
 One ordinary generated monster now deactivates/reactivates through an empty ECS
 filter tag without losing entity identity, component state, or timed-state/stat-
-source/event target references. The path is deterministic, checkpointed, and
-renderer-independent. Owned-unit, corpse, item, object, projectile, and pending-
-action activation graphs remain.
+source/event target references. Room identity itself is world-owned and type-
+independent; a non-monster/non-moving resident proves conditional activation-
+surface restoration. The path is deterministic, checkpointed, and renderer-
+independent. Production owned-unit, corpse, item, object, projectile, and
+pending-action residency attachment remains.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 
