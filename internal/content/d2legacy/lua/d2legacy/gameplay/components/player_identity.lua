@@ -49,6 +49,16 @@ function M.register()
             { name = "max_stamina_raw", type = "i64" },
         },
     })
+
+    ecs.component({
+        name = "d2legacy.player.stamina_progression",
+        version = 1,
+        fields = {
+            { name = "base_vitality", type = "i64" },
+            { name = "vitality", type = "i64" },
+            { name = "last_level", type = "i64" },
+        },
+    })
 end
 
 return M

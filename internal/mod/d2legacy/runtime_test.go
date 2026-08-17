@@ -103,7 +103,7 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 	defer authority.Stop(ctx)
 	payload, _ := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
-		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
+		"level": 1, "experience": 0, "dexterity": 20, "vitality": 20, "defense": 20,
 		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
 		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "",
@@ -303,7 +303,7 @@ func TestMonsterMeleeReachIncludesBothActorFootprints(t *testing.T) {
 
 	player, _ := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
-		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
+		"level": 1, "experience": 0, "dexterity": 20, "vitality": 20, "defense": 20,
 		"health": 500, "max_health": 500, "mana": 20, "max_mana": 20,
 		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
@@ -371,7 +371,7 @@ func (runtimeFixtureRecords) Load(path string) ([]map[string]string, error) {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
 			"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9",
-			"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
+			"vit": "20", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 		}}, nil
 	case "data/global/excel/skilldesc.txt":
 		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil
@@ -524,7 +524,7 @@ func TestStraightMissileCheckpointRestoreParity(t *testing.T) {
 
 	playerPayload, _ := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
-		"level": 1, "experience": 0, "dexterity": 20, "defense": 0,
+		"level": 1, "experience": 0, "dexterity": 20, "vitality": 20, "defense": 0,
 		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
 		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",

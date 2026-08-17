@@ -28,6 +28,11 @@ function M.register()
         { name = "stamina_raw", type = "i64" },
         { name = "max_stamina_raw", type = "i64" },
     })
+    component("d2legacy.player.stamina_progression", {
+        { name = "base_vitality", type = "i64" },
+        { name = "vitality", type = "i64" },
+        { name = "last_level", type = "i64" },
+    })
     component("d2legacy.player.learned_skill", {
         { name = "owner", type = "entity" },
         { name = "skill_id", type = "i64" },

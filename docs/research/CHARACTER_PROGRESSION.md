@@ -32,7 +32,11 @@ Do not persist a giant snapshot of every derived combat stat as canonical charac
 
 `ExperienceData` contains class-specific cumulative experience columns plus `ExpRatio`.
 
-`internal/game/player.Entry` currently admits level, experience, current/max life/mana, class/identity, appearance, world location, and learned skills. The live model still lacks base attributes, unspent points, permanent reward modifiers, and a complete skill-progression contract.
+`internal/mod/d2legacy/adapter/player.Entry` currently admits level, experience,
+Vitality, current/max life/mana/stamina, class/identity, appearance, and world
+location. Admitted Vitality is retained in checkpointed
+`d2legacy.player.stamina_progression`; the live model still lacks the complete
+four-attribute/unspent-point/permanent-reward and skill-progression contracts.
 
 ## Class definition
 
@@ -60,7 +64,10 @@ The source model calls the authored `int` column `Intelligence`; player-facing t
 
 ## Per-class formulas
 
-The class data exposes the symbolic inputs, but exact fixed-point scaling/rounding must be verified from the Data File Guide and original runtime.
+The class data exposes the symbolic inputs. Maximum stamina now has an
+implemented fixed-point interpretation pinned by the owned Expansion 1.14d
+record graph and recovered executable structure; life/mana and remaining
+progression transactions still need equivalent vectors.
 
 Research these relationships:
 
@@ -75,10 +82,11 @@ mana gain on level
   = ManaPerLevel
 mana gain from energy
   = ManaPerMagic
-stamina gain on level
-  = StaminaPerLevel
-stamina gain from vitality
-  = StaminaPerVitality
+maximum stamina raw (implemented)
+  = starting stamina << 8
+  + (level - 1) * StaminaPerLevel << 6
+  + (base Vitality - class starting Vitality) * StaminaPerVitality << 6
+  + direct maxstamina and ItemStatCost op contributions
 ```
 
 Do not divide/round until the exact scale is proven. Owned-data tests should generate non-distributable vectors for all seven classes: creation, +1 Vitality, +1 Energy, one level with no allocation, and one level plus allocated Vitality/Energy.
@@ -184,7 +192,11 @@ Research Akara reward, token respec, patch applicability, exactly which stats/sk
 
 ## Movement and stamina
 
-`CharStats` already includes walk/run velocity and run drain. Research conversion to subtile/tick movement, stamina drain/recovery, Vitality/level max-stamina effects, armor/shield penalties, and state/skill modifiers. Movement system owns integration; progression owns base class/resource terms.
+`CharStats` walk/run velocity, run drain, stamina drain/recovery, and the core
+level/Vitality/source-derived maximum are implemented. Movement owns integration;
+progression owns the base class/resource terms. Remaining work here is the
+environment-period `item_stamina_bytime` operand, live base-Vitality allocation
+ordering, and verified armor/shield/chill/freeze modifier ordering.
 
 ## Blocking and breakpoints
 
@@ -227,7 +239,7 @@ Keep durable hardcore flag, edition, Ladder/season identity, highest completed d
 4. stat allocation command;
 5. skill allocation command/prerequisites;
 6. authored starting loadout through item authority;
-7. exact fixed-point life/mana/stamina vectors;
+7. exact fixed-point life/mana vectors and remaining stamina time/allocation vectors;
 8. respec after quest/item dependencies;
 9. difficulty/title/hardcore integration.
 
@@ -248,8 +260,9 @@ Keep durable hardcore flag, edition, Ladder/season identity, highest completed d
 ## Verification backlog
 
 1. Extract all seven CharStats rows into non-distributable test vectors and document scaling.
-2. Verify creation max life/mana/stamina and `HPAdd` semantics.
-3. Verify per-level and per-Vitality/Energy rounding.
+2. Verify creation max life/mana and `HPAdd` semantics; maximum stamina core is pinned.
+3. Verify life/mana per-level and per-Vitality/Energy rounding plus stamina
+   base-Vitality allocation callback ordering.
 4. Verify Experience row semantics and level cap.
 5. Trace one XP grant crossing multiple levels.
 6. Trace party/level/difficulty XP penalties and integer rounding.

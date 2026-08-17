@@ -16,7 +16,14 @@ return test.suite({
                 tick = 1,
                 sequence = 1,
                 kind = "system.player.enter",
-                payload = fixtures.player_entry({ level_id = 2, stamina = 1, max_stamina = 1 }),
+                payload = fixtures.player_entry({
+                    level_id = 2,
+                    stamina = 1,
+                    max_stamina = 1,
+                    passive_stat_sources = {
+                        { id = "test-minimum-maximum", stat = "maxstamina", value = -83 },
+                    },
+                }),
             }),
             test.step(1),
             test.submit({

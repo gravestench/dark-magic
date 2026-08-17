@@ -349,7 +349,7 @@ func itemAcceptancePlayerPayload(t *testing.T) []byte {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
-		"level": 1, "experience": 0, "dexterity": 20, "defense": 0,
+		"level": 1, "experience": 0, "dexterity": 20, "vitality": 20, "defense": 0,
 		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
 		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",

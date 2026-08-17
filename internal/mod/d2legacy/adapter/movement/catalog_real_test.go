@@ -28,13 +28,13 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]ClassRates{
-		"Amazon":      {Walk: 6, Run: 9, StartingStamina: 84, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Sorceress":   {Walk: 6, Run: 9, StartingStamina: 74, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Necromancer": {Walk: 6, Run: 9, StartingStamina: 79, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Paladin":     {Walk: 6, Run: 9, StartingStamina: 89, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Barbarian":   {Walk: 6, Run: 9, StartingStamina: 92, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Druid":       {Walk: 6, Run: 9, StartingStamina: 84, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
-		"Assassin":    {Walk: 6, Run: 9, StartingStamina: 95, RunDrain: 15, StaminaPerLevel: 5, StaminaPerVitality: 5},
+		"Amazon":      {Walk: 6, Run: 9, StartingVitality: 20, StartingStamina: 84, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Sorceress":   {Walk: 6, Run: 9, StartingVitality: 10, StartingStamina: 74, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Necromancer": {Walk: 6, Run: 9, StartingVitality: 15, StartingStamina: 79, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Paladin":     {Walk: 6, Run: 9, StartingVitality: 25, StartingStamina: 89, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Barbarian":   {Walk: 6, Run: 9, StartingVitality: 25, StartingStamina: 92, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Druid":       {Walk: 6, Run: 9, StartingVitality: 25, StartingStamina: 84, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4},
+		"Assassin":    {Walk: 6, Run: 9, StartingVitality: 20, StartingStamina: 95, RunDrain: 15, StaminaPerLevel: 5, StaminaPerVitality: 5},
 	}
 	for class, expected := range want {
 		rates, found := catalog.Rates(class)
@@ -48,6 +48,20 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 		t.Fatal(err)
 	}
 	velocity, itemFRW := movementRowBy(stats, "Stat", "velocitypercent"), movementRowBy(stats, "Stat", "item_fastermovevelocity")
+	for stat, expected := range map[string]map[string]string{
+		"maxstamina":                   {"ID": "11", "ValShift": "8", "fCallback": "1"},
+		"vitality":                     {"ID": "3", "op": "9", "op stat2": "maxstamina"},
+		"skill_staminapercent":         {"ID": "162", "op": "1", "op stat1": "maxstamina"},
+		"skill_passive_staminapercent": {"ID": "163", "op": "1", "op stat1": "maxstamina"},
+		"item_stamina_perlevel":        {"ID": "242", "op": "2", "op base": "level", "op param": "3", "op stat1": "maxstamina"},
+	} {
+		row := movementRowBy(stats, "Stat", stat)
+		for field, value := range expected {
+			if row == nil || row[field] != value {
+				t.Fatalf("owned stamina stat %s field %s = %#v", stat, field, row)
+			}
+		}
+	}
 	if velocity == nil || velocity["ID"] != "67" || velocity["Signed"] != "1" || velocity["UpdateAnimRate"] != "1" ||
 		itemFRW == nil || itemFRW["ID"] != "96" || itemFRW["Signed"] != "1" || itemFRW["Multiply"] != "156" || itemFRW["Add"] != "4083" {
 		t.Fatalf("owned movement stats velocity=%#v item_frw=%#v", velocity, itemFRW)
@@ -60,6 +74,12 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 		row := movementRowBy(properties, "code", code)
 		if row == nil || row["func1"] != "8" || row["stat1"] != "item_fastermovevelocity" {
 			t.Fatalf("owned movement property %s = %#v", code, row)
+		}
+	}
+	for code, expected := range map[string]string{"stam": "maxstamina", "stam/lvl": "item_stamina_perlevel"} {
+		row := movementRowBy(properties, "code", code)
+		if row == nil || row["stat1"] != expected {
+			t.Fatalf("owned stamina property %s = %#v", code, row)
 		}
 	}
 }
