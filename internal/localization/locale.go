@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"strings"
 	"sync"
 
 	tbl "github.com/gravestench/tbl_text"
@@ -19,6 +20,7 @@ type Locale struct {
 	mu       sync.Mutex
 	once     sync.Once
 	strings  map[string]string
+	sources  map[string]string
 	err      error
 }
 
@@ -29,17 +31,23 @@ func New(source fs.FS, language string) *Locale {
 
 // Text resolves key, returning the key alongside an error when absent.
 func (l *Locale) Text(key string) (string, error) {
+	value, _, err := l.Resolve(key)
+	return value, err
+}
+
+// Resolve returns localized text together with the winning layered source.
+func (l *Locale) Resolve(key string) (string, string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.once.Do(l.load)
 	if l.err != nil {
-		return key, l.err
+		return key, "", l.err
 	}
 	value, exists := l.strings[key]
 	if !exists {
-		return key, fmt.Errorf("localization: key %q is not present", key)
+		return key, "", fmt.Errorf("localization: key %q is not present", key)
 	}
-	return value, nil
+	return value, l.sources[key], nil
 }
 
 // Invalidate discards the composed locale after VFS package layers change.
@@ -47,6 +55,7 @@ func (l *Locale) Invalidate() {
 	l.mu.Lock()
 	l.once = sync.Once{}
 	l.strings = nil
+	l.sources = nil
 	l.err = nil
 	l.mu.Unlock()
 }
@@ -54,22 +63,33 @@ func (l *Locale) Invalidate() {
 // GetSupportedLanguages satisfies compatibility UI localization seams.
 func (l *Locale) GetSupportedLanguages() []string { return []string{l.language} }
 
+func tableLanguage(language string) string {
+	if strings.EqualFold(language, "English") {
+		return "eng"
+	}
+	return language
+}
+
 func (l *Locale) load() {
 	l.strings = make(map[string]string)
+	l.sources = make(map[string]string)
 	shimPath := fmt.Sprintf("locales/%s.json", l.language)
 	if data, err := fs.ReadFile(l.source, shimPath); err == nil {
 		if err := json.Unmarshal(data, &l.strings); err != nil {
 			l.err = fmt.Errorf("localization: decode %q: %w", shimPath, err)
 			return
 		}
+		for key := range l.strings {
+			l.sources[key] = shimPath
+		}
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		l.err = fmt.Errorf("localization: read %q: %w", shimPath, err)
 		return
 	}
 	paths := []string{
-		fmt.Sprintf("data/local/lng/%s/string.tbl", l.language),
-		fmt.Sprintf("data/local/lng/%s/expansionstring.tbl", l.language),
-		fmt.Sprintf("data/local/lng/%s/patchstring.tbl", l.language),
+		fmt.Sprintf("data/local/lng/%s/string.tbl", tableLanguage(l.language)),
+		fmt.Sprintf("data/local/lng/%s/expansionstring.tbl", tableLanguage(l.language)),
+		fmt.Sprintf("data/local/lng/%s/patchstring.tbl", tableLanguage(l.language)),
 	}
 	loaded := len(l.strings) > 0
 	for _, path := range paths {
@@ -109,6 +129,7 @@ func (l *Locale) load() {
 		loaded = true
 		for key, value := range table {
 			l.strings[key] = value
+			l.sources[key] = path
 		}
 	}
 	if !loaded {

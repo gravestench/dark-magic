@@ -144,9 +144,16 @@ active TBL/string resources resolve player-visible text
 
 Never bake localized display text into authoritative IDs. A save, replay, network command, item identity, or quest record should survive changing language.
 
+Implemented investigation boundary:
+
+- Diablo string TBL version 1 is decoded through bounded random-access reads;
+- locale composition applies base, Expansion, then patch key precedence;
+- exact skill evidence reports the winning virtual TBL source and replacement
+  tokens without baking localized strings into authoritative IDs.
+
 Research still needed:
 
-- precedence among `string.tbl`, expansion/patch string tables for each supported patch;
+- precedence and character encoding across every non-English target locale;
 - numeric-string-index behavior where legacy formats store indexes instead of keys;
 - duplicate/missing keys and locale fallbacks;
 - Resurrected localization differences if supported later.

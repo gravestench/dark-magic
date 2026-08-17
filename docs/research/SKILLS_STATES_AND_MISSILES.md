@@ -93,6 +93,26 @@ evidence status. Exact declarations live in
 consumes. Thus sharing Fire Bolt's function signature cannot silently enable
 Ice Bolt or any other row.
 
+The companion `skill_evidence` tool makes localized documentation part of every
+exact skill investigation, especially synergy and cross-skill modifier work. It
+joins Skills.txt -> SkillDesc.txt -> the requested locale's layered base,
+Expansion, and patch TBL records; reports each resolved key, text, winning
+virtual source, and printf-style replacement token; and resolves every
+`skill('name'.blvl|lvl)` expression back to an exact skill ID. The format path
+is executable against owned 1.14d data after correcting the string-TBL decoder
+to the authored version-1 header. TBL wording is documentation evidence, not a
+replacement for formula/probe evidence: it identifies intended relationships
+and labels, while Skills.txt parameters and owned runtime vectors decide exact
+values, integer rounding, and event order.
+
+For the current fixtures, the joined report confirms Fire Bolt receives hard-
+level fire-damage bonuses from Fire Ball and Meteor. It separately confirms
+Frozen Armor receives hard-level modifiers from Shiver Armor and Chilling Armor
+for both seconds-per-level duration and freeze-length-per-level, matching the
+two owned Skills.txt expressions already decoded by the generic state family.
+Attack resolves to the localized name `Attack` and description `normal attack`
+with no cross-skill modifier formula.
+
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
 1/1, an A1 weapon action, attack-rate and target/search flags, weapon source
