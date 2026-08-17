@@ -125,6 +125,70 @@ return test.suite({
                 test.assert(replaced, [=[replaced]=])
             end),
         }),
+        test.case("one_state_owns_multiple_provenance_preserving_stat_sources", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.create({
+                    ["d2legacy.player.combat_stats"] = {
+                        base_attack_rating = 100,
+                        base_defense = 0,
+                        attack_rating = 100,
+                        defense = 0,
+                    },
+                })
+                local owner = "skill:alice:52"
+                ecs.create({
+                    ["d2legacy.state.request"] = {
+                        operation = "apply",
+                        target = target,
+                        state_id = "enchant",
+                        source_id = owner,
+                        duration = 3,
+                        policy = "refresh_same_source",
+                    },
+                })
+                for _, source in ipairs({
+                    { stat = "firemindam", operation = "add", value = 2048 },
+                    { stat = "firemaxdam", operation = "add", value = 2560 },
+                    { stat = "item_tohit_percent", operation = "percent", value = 20 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.state.stat_request"] = {
+                            target = target,
+                            owner_source_id = owner,
+                            source_id = owner .. ":" .. source.stat,
+                            stat = source.stat,
+                            operation = source.operation,
+                            value = source.value,
+                            order = 300,
+                        },
+                    })
+                end
+            end),
+            test.step(1),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sources = ecs.query({ all = { "d2legacy.stat.source" } })
+                test.expect(#sources):equals(3)
+                local seen = {}
+                for _, entity in ipairs(sources) do
+                    local source = ecs.get(entity, "d2legacy.stat.source")
+                    test.expect(source:get("owner_source_id")):equals("skill:alice:52")
+                    seen[source:get("stat")] = source:get("value")
+                end
+                test.expect(seen.firemindam):equals(2048)
+                test.expect(seen.firemaxdam):equals(2560)
+                test.expect(seen.item_tohit_percent):equals(20)
+            end),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.state.instance" } })):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(0)
+            end),
+        }),
         test.case("cold_velocity_orders_with_skill_armor_and_item_frw_then_expires", {
             test.submit_system({
                 tick = 1,

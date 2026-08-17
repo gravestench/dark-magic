@@ -15,6 +15,7 @@ return test.suite({
                 test.expect(coverage.by_family["missile.straight-freeze"][1]):equals(45)
                 test.expect(coverage.by_family["movement.point-relocate"][1]):equals(54)
                 test.expect(coverage.by_family["state.self-timed"][1]):equals(40)
+                test.expect(coverage.by_family["state.targeted-timed"][1]):equals(52)
                 test.expect(coverage.by_id[36].evidence_status)
                     :equals("owned-target-records-and-localized-synergy-partial")
                 test.expect(coverage.by_id[39] == nil):is_true()

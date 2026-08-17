@@ -42,6 +42,11 @@
       "skill_id": 48,
       "family": "missile.radial",
       "evidence_status": "owned-target-records-and-localized-intent-partial"
+    },
+    {
+      "skill_id": 52,
+      "family": "state.targeted-timed",
+      "evidence_status": "owned-target-records-and-localized-weapon-enchantment-partial"
     }
   ]
 }

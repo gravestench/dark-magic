@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 54, 55}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,22 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		modifiers[0].ReferencedID != 50 || modifiers[1].ReferencedID != 60 {
 		t.Fatalf("Frozen Armor modifiers = %#v", modifiers)
 	}
-	teleport := report.Skills[3]
+	enchant := report.Skills[3]
+	if modifiers := enchant.CrossSkillModifiers; len(modifiers) != 1 || modifiers[0].ReferencedID != 37 {
+		t.Fatalf("Enchant modifiers = %#v", modifiers)
+	}
+	enchantLocalized := map[string]LocalizationReference{}
+	for _, evidence := range enchant.Localization {
+		enchantLocalized[evidence.Column] = evidence
+	}
+	if enchantLocalized["str long"].Key != "skillld52" ||
+		!strings.Contains(enchantLocalized["str long"].Text, "targeted character or minion") ||
+		enchantLocalized["dsc3texta1"].Source != "data/local/lng/eng/patchstring.tbl" ||
+		len(enchantLocalized["dsc3texta1"].ReplacementTokens) != 1 ||
+		enchantLocalized["dsc3texta1"].ReplacementTokens[0] != "%s" {
+		t.Fatalf("Enchant localization = %#v", enchant.Localization)
+	}
+	teleport := report.Skills[4]
 	if len(teleport.CrossSkillModifiers) != 0 {
 		t.Fatalf("Teleport modifiers = %#v", teleport.CrossSkillModifiers)
 	}
@@ -60,7 +75,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		teleportLocalized["str long"].Source != "data/local/lng/eng/string.tbl" {
 		t.Fatalf("Teleport localization = %#v", teleport.Localization)
 	}
-	glacial := report.Skills[4]
+	glacial := report.Skills[5]
 	if modifiers := glacial.CrossSkillModifiers; len(modifiers) != 5 ||
 		modifiers[0].ReferencedID != 39 || modifiers[1].ReferencedID != 45 ||
 		modifiers[2].ReferencedID != 64 || modifiers[3].ReferencedID != 59 ||

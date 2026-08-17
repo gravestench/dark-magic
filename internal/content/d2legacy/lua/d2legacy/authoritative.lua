@@ -42,6 +42,8 @@ local owned_units = require("d2legacy.commands.owned_units")
 local owned_unit_component = require("d2legacy.components.owned_unit")
 local facing = require("d2legacy.systems.facing")
 local state_skill_data = require("d2legacy.data.state_skills")
+local targeted_state_skill_data = require("d2legacy.data.targeted_state_skills")
+local targeted_state_skill_system = require("d2legacy.systems.targeted_state_skill")
 local quest_components = require("d2legacy.components.quests")
 local quest_commands = require("d2legacy.commands.quests")
 local derived_stats = require("d2legacy.systems.derived_stats")
@@ -102,6 +104,8 @@ function M.start()
         point_movement_skill_data.load(M.skill_behavior_coverage.by_family["movement.point-relocate"] or {})
     M.progression = progression_data.load()
     M.state_skills = state_skill_data.load(M.skill_behavior_coverage.by_family["state.self-timed"] or {})
+    M.targeted_state_skills =
+        targeted_state_skill_data.load(M.skill_behavior_coverage.by_family["state.targeted-timed"] or {})
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
         M.cast_skills[skill_id] = definition
@@ -134,12 +138,17 @@ function M.start()
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
+    for skill_id, definition in pairs(M.targeted_state_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
     cast_command.register(M.cast_skills)
     cast_system.register(M.cast_skills)
     melee_skill_system.register(M.melee_skills)
     missile_skill_system.register(M.cast_skills)
     point_movement_skill_system.register(M.point_movement_skills)
     state_skill_system.register(M.state_skills)
+    targeted_state_skill_system.register(M.targeted_state_skills)
     projectile_system.register()
     melee_system.register()
     monster_ai.register()
@@ -185,6 +194,7 @@ function M.stop()
     M.melee_skills = nil
     M.point_movement_skills = nil
     M.state_skills = nil
+    M.targeted_state_skills = nil
     M.cast_skills = nil
     M.skill_behavior_coverage = nil
     M.progression = nil

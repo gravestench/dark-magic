@@ -54,40 +54,34 @@ local function emit_instance(structural, kind, tick, instance, reason)
     })
 end
 
-local function stat_source(entities, target, source_id)
+local function source_owner(source)
+    local owner = source:get("owner_source_id")
+    return owner ~= "" and owner or source:get("source_id")
+end
+
+local function stat_source(entities, target, owner_source_id, stat)
     for _, entity in ipairs(entities) do
         local source = ecs.get(entity, "d2legacy.stat.source")
-        if source and source:get("target"):id() == target:id() and source:get("source_id") == source_id then
+        if
+            source
+            and source:get("target"):id() == target:id()
+            and source_owner(source) == owner_source_id
+            and source:get("stat") == stat
+        then
             return entity
         end
     end
     return nil
 end
 
-local function reconcile_stat(structural, entities, request)
-    local existing = stat_source(entities, request:get("target"), request:get("source_id"))
-    if request:get("stat") == "" then
-        if existing then
-            structural:destroy(existing)
-        end
-        return
-    end
-    assert(
-        request:get("stat_operation") == "add" or request:get("stat_operation") == "percent",
-        "invalid timed-state stat operation"
-    )
-    local values = {
-        target = request:get("target"),
-        source_id = request:get("source_id"),
-        stat = request:get("stat"),
-        operation = request:get("stat_operation"),
-        value = request:get("stat_value"),
-        order = request:get("stat_order"),
-    }
+local function reconcile_stat(structural, entities, values)
+    local existing = stat_source(entities, values.target, values.owner_source_id, values.stat)
+    assert(values.operation == "add" or values.operation == "percent", "invalid timed-state stat operation")
     if existing then
         local source = ecs.get(existing, "d2legacy.stat.source")
         source:set("target", values.target)
         source:set("source_id", values.source_id)
+        source:set("owner_source_id", values.owner_source_id)
         source:set("stat", values.stat)
         source:set("operation", values.operation)
         source:set("value", values.value)
@@ -97,11 +91,65 @@ local function reconcile_stat(structural, entities, request)
     end
 end
 
-local function remove_stat(structural, entities, target, source_id)
-    local existing = stat_source(entities, target, source_id)
-    if existing then
-        structural:destroy(existing)
+local function remove_stats(structural, entities, target, owner_source_id, except)
+    for _, entity in ipairs(entities) do
+        local source = ecs.get(entity, "d2legacy.stat.source")
+        if
+            source
+            and source:get("target"):id() == target:id()
+            and source_owner(source) == owner_source_id
+            and not (except and except[source:get("stat")])
+        then
+            structural:destroy(entity)
+        end
     end
+end
+
+local function stat_requests(entities, target, owner_source_id)
+    local result = {}
+    for _, entity in ipairs(entities) do
+        local request = ecs.get(entity, "d2legacy.state.stat_request")
+        if
+            request
+            and request:get("target"):id() == target:id()
+            and request:get("owner_source_id") == owner_source_id
+        then
+            result[request:get("stat")] = {
+                target = target,
+                owner_source_id = owner_source_id,
+                source_id = request:get("source_id"),
+                stat = request:get("stat"),
+                operation = request:get("operation"),
+                value = request:get("value"),
+                order = request:get("order"),
+            }
+        end
+    end
+    return result
+end
+
+local function reconcile_stats(structural, entities, request)
+    local target = request:get("target")
+    local owner_source_id = request:get("source_id")
+    local desired = stat_requests(entities, target, owner_source_id)
+    if request:get("stat") ~= "" then
+        desired[request:get("stat")] = {
+            target = target,
+            owner_source_id = owner_source_id,
+            source_id = owner_source_id,
+            stat = request:get("stat"),
+            operation = request:get("stat_operation"),
+            value = request:get("stat_value"),
+            order = request:get("stat_order"),
+        }
+    end
+    local kept = {}
+    for stat, value in pairs(desired) do
+        assert(stat ~= "" and value.owner_source_id == owner_source_id, "invalid timed-state stat request")
+        kept[stat] = true
+        reconcile_stat(structural, entities, value)
+    end
+    remove_stats(structural, entities, target, owner_source_id, kept)
 end
 
 local function update_instance(instance, request, expires)
@@ -146,10 +194,23 @@ function M.register()
         id = "d2legacy.state.timed_instances",
         phase = "effects",
         after = { "d2legacy.state.react_to_melee_hit" },
-        query = { any = { "d2legacy.state.request", "d2legacy.state.instance", "d2legacy.stat.source" } },
-        read = { "d2legacy.state.request", "d2legacy.state.instance", "d2legacy.stat.source" },
+        query = {
+            any = {
+                "d2legacy.state.request",
+                "d2legacy.state.stat_request",
+                "d2legacy.state.instance",
+                "d2legacy.stat.source",
+            },
+        },
+        read = {
+            "d2legacy.state.request",
+            "d2legacy.state.stat_request",
+            "d2legacy.state.instance",
+            "d2legacy.stat.source",
+        },
         write = {
             "d2legacy.state.request",
+            "d2legacy.state.stat_request",
             "d2legacy.state.instance",
             "d2legacy.state.event",
             "d2legacy.stat.source",
@@ -188,7 +249,7 @@ function M.register()
                             local instance = ecs.get(candidate, "d2legacy.state.instance")
                             if instance and group_conflict(instance, request) then
                                 touched[candidate:id()] = true
-                                remove_stat(structural, entities, instance:get("target"), instance:get("source_id"))
+                                remove_stats(structural, entities, instance:get("target"), instance:get("source_id"))
                                 emit_instance(
                                     structural,
                                     "state_removed",
@@ -209,12 +270,12 @@ function M.register()
                             })
                             emit_request(structural, "state_applied", context.tick, request, expires, "apply")
                         end
-                        reconcile_stat(structural, entities, request)
+                        reconcile_stats(structural, entities, request)
                     elseif operation == "remove" then
                         if match then
                             local instance = ecs.get(match, "d2legacy.state.instance")
                             touched[match:id()] = true
-                            remove_stat(structural, entities, request:get("target"), request:get("source_id"))
+                            remove_stats(structural, entities, request:get("target"), request:get("source_id"))
                             emit_request(
                                 structural,
                                 "state_removed",
@@ -236,10 +297,15 @@ function M.register()
                 end
             end
             for _, entity in ipairs(entities) do
+                if ecs.get(entity, "d2legacy.state.stat_request") then
+                    structural:destroy(entity)
+                end
+            end
+            for _, entity in ipairs(entities) do
                 local instance = ecs.get(entity, "d2legacy.state.instance")
                 if instance and not touched[entity:id()] and context.tick >= instance:get("expires_tick") then
                     emit_instance(structural, "state_removed", context.tick, instance, "expired")
-                    remove_stat(structural, entities, instance:get("target"), instance:get("source_id"))
+                    remove_stats(structural, entities, instance:get("target"), instance:get("source_id"))
                     structural:destroy(entity)
                 end
             end
