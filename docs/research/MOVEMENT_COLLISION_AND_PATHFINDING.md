@@ -353,7 +353,20 @@ retroactively applying the new rate to all time since mode start.
 
 The original path system has distinct server and client knockback path types. Knockback should therefore be a semantic forced-motion transaction, not `position += vector` inside damage code.
 
-Future knockback needs to define:
+The generic transaction boundary is now implemented. A checkpointed
+`world.forced_motion_request` carries a semantic kind plus source point,
+policy-owned distance, speed, and request tick. The pre-simulation admission
+system derives a destination away from the source; the movement phase advances
+that destination through the same static collision, dynamic occupancy, bounds,
+and stable entity ordering as ordinary locomotion. Durable events distinguish
+completed, partial, blocked, and invalid outcomes. Active progress survives a
+checkpoint, and presentation may observe the event without authoring position.
+
+D2MOO's recovered 1.10f/1.13c server path is useful structural evidence: it
+selects a dedicated server knockback path, derives its ray away from the target
+unit, clips that ray against collision, and applies a dedicated velocity. Those
+older constants are deliberately **not** embedded in Dark Magic's target policy.
+Expansion 1.14d evidence still needs to define:
 
 - direction source;
 - distance/steps;
@@ -363,7 +376,8 @@ Future knockback needs to define:
 - target mode/hit recovery interaction;
 - client interpolation/correction.
 
-Combat emits a knockback request; movement owns spatial resolution.
+Once those target rules are pinned, combat will emit the generic request;
+movement already owns spatial resolution.
 
 ## Leap, charge, whirlwind, teleport
 
@@ -561,7 +575,11 @@ footprints affect A* planning before calling MV3 complete.
 
 ### MV4 — forced movement
 
-Implement knockback through movement authority, then one movement skill such as Leap or Charge.
+Generic checkpointed forced movement now advances policy-supplied distance and
+speed through movement authority with completed, partial, blocked, and invalid
+outcomes. Recover the Expansion 1.14d knockback policy that emits it, then extend
+the same strategy vocabulary for movement skills without implementing a skill
+as a standalone special case.
 
 ### MV5 — room inactive archive (first vertical slice implemented)
 

@@ -5,8 +5,9 @@ the target-locked party-XP probe contract, and the G5 production Warp Lab,
 post-warp route invalidation, semantic motion ownership, stat-derived locomotion
 playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
 armor/shield/cold-source ordering, and progression/source-derived maximum-
-stamina plus environment-period source slices, and the first G6 deterministic
-dynamic-occupancy boundary. G9 remains current through
+stamina plus environment-period source slices, G6 deterministic dynamic
+occupancy, and a generic checkpointed forced-motion transaction. G9 remains
+current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -373,8 +374,18 @@ Status: **partial**.
 - [ ] Verify target-runtime category rules for players, monsters, hirelings,
   summons, NPCs, and corpses, then decide which categories participate in A*
   planning versus only fixed-tick motion resolution.
-- [ ] Add a semantic knockback request resolved by movement/collision authority.
-- [ ] Cover blocked, partial, competing, replay, and checkpoint cases.
+- [x] Add a semantic forced-motion request resolved by movement/collision
+  authority. Direction is derived away from the supplied source, the request's
+  policy-owned distance and speed advance over fixed ticks, active progress is
+  checkpointed, and durable semantic outcomes distinguish completed, partial,
+  blocked, and invalid transactions. Presentation can observe the event but
+  cannot move the target.
+- [ ] Recover and pin Expansion 1.14d knockback eligibility, distance, speed,
+  unit-size/category, interruption, and GH/KB mode rules before combat emits
+  the generic request. Older recovered server/client path code is structural
+  evidence only, not permission to copy its constants into the target policy.
+- [ ] Cover competing forced-motion requests and target-runtime interaction with
+  ordinary locomotion, active skills, hit recovery, death, and client playback.
 
 ### G7 — Active-room/inactive-unit vertical slice
 

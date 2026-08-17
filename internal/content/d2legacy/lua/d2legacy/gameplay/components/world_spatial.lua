@@ -43,6 +43,49 @@ function M.register()
     })
 
     ecs.component({
+        name = "d2legacy.world.forced_motion_request",
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "source_x", type = "f64" },
+            { name = "source_y", type = "f64" },
+            { name = "distance", type = "f64" },
+            { name = "speed", type = "f64" },
+            { name = "request_tick", type = "i64" },
+        },
+    })
+
+    ecs.component({
+        name = "d2legacy.world.forced_motion",
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "target_x", type = "f64" },
+            { name = "target_y", type = "f64" },
+            { name = "speed", type = "f64" },
+            { name = "start_x", type = "f64" },
+            { name = "start_y", type = "f64" },
+            { name = "requested_distance", type = "f64" },
+            { name = "applied_distance", type = "f64", default = 0 },
+            { name = "start_tick", type = "i64" },
+        },
+    })
+
+    ecs.component({
+        name = "d2legacy.world.forced_motion_event",
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "outcome", type = "string" },
+            { name = "tick", type = "i64" },
+            { name = "target_id", type = "string" },
+            { name = "start_x", type = "f64" },
+            { name = "start_y", type = "f64" },
+            { name = "end_x", type = "f64" },
+            { name = "end_y", type = "f64" },
+            { name = "requested_distance", type = "f64" },
+            { name = "applied_distance", type = "f64" },
+        },
+    })
+
+    ecs.component({
         name = "d2legacy.world.player_control",
         fields = {
             -- Logical session player ID, not a native input-device handle.
