@@ -13,6 +13,7 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	"github.com/gravestench/dark-magic/internal/localization"
+	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
@@ -142,8 +143,10 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	if err := app.saves.Select(character.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
-		t.Fatal(err)
+	for range 10 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
 	}
 	monsters, found := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.identity")
 	if !found || monsters.Len() == 0 {
@@ -223,8 +226,10 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 		_ = content.Close(assets)
 	})
 
-	if _, err := app.offlineSession.AdvanceWithSource(time.Second, app.commandSource); err != nil {
-		t.Fatal(err)
+	for range 10 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
 	}
 	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.identity")
 	if !ok {
@@ -328,6 +333,138 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 			animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.attack_animation")
 			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.event")
 			t.Fatalf("Combat Lab basic attack left monster health unchanged at %v; player=(%.1f,%.1f) target=(%.1f,%.1f) approaches=%d animations=%d events=%d", afterHealth, playerX, playerY, targetX, targetY, approaches.Len(), animations.Len(), events.Len())
+		}
+	}
+}
+
+// Spell Lab adds only ephemeral fixture learning and a read-only legend to the
+// production world. This acceptance path proves its default Fire Bolt still
+// crosses ordinary assignment, mana, cast, missile, and combat authority.
+func TestSpellLabCastsProductionFireBolt(t *testing.T) {
+	if os.Getenv("MPQ_DIRECTORY") == "" {
+		t.Skip("MPQ_DIRECTORY is not configured")
+	}
+	options := realD2LegacyOptions(t)
+	options.StartScene = "spell_lab"
+	options = applyDevelopmentSceneDefaults(options)
+	app := &application{
+		options: options, inputState: &inputstate.Store{},
+		locale: localization.New(options.Content, "English"), scripts: modruntime.New(),
+	}
+	if err := app.loadGameCatalogs(); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.buildOfflineSession(); err != nil {
+		t.Fatal(err)
+	}
+	startTestD2LegacyAuthority(t, app)
+	t.Cleanup(func() {
+		app.loading.Close()
+		_ = app.offlineSession.Close()
+		_ = app.entitySimulation.Close()
+		_ = content.Close(options.Content)
+	})
+	for range 10 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	identities, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.identity")
+	if !ok {
+		t.Fatal("Spell Lab has no authoritative player identities")
+	}
+	if identities.Len() != 1 {
+		t.Fatalf("Spell Lab admitted players = %d, want 1", identities.Len())
+	}
+	player := identities.Entities()[0]
+	learned, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.learned_skill")
+	if !ok {
+		t.Fatal("Spell Lab has no authoritative learned skills")
+	}
+	if learned.Len() != 11 {
+		t.Fatalf("Spell Lab learned skills = %d, want 11 exact-ID behaviors", learned.Len())
+	}
+	learnedIDs := map[int64]bool{}
+	for _, entity := range learned.Entities() {
+		value, _ := learned.Get(entity)
+		owner, _ := value.Get("owner")
+		if owner == player {
+			id, _ := value.Get("skill_id")
+			level, _ := value.Get("level")
+			learnedIDs[id.(int64)] = level == int64(20)
+		}
+	}
+	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 72} {
+		if !learnedIDs[id] {
+			t.Fatalf("Spell Lab skill %d is missing or not level 20: %#v", id, learnedIDs)
+		}
+	}
+	assignments, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.skill_assignment")
+	assignment, _ := assignments.Get(player)
+	left, _ := assignment.Get("left")
+	right, _ := assignment.Get("right")
+	if left != int64(36) || right != int64(66) {
+		t.Fatalf("Spell Lab assignments = left %v right %v, want Fire Bolt/Amplify Damage", left, right)
+	}
+
+	monsters, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.identity")
+	if !ok || monsters.Len() == 0 {
+		spawn := app.gameWorldSpawns[2]
+		room, found := entryworld.RoomIDAt(app.gameWorldZones[2], spawn[0], spawn[1])
+		plan, installed := app.authoritativeState.Read("d2legacy.population.plan")
+		t.Fatalf("Spell Lab admitted no nearby Blood Moor hostiles; spawn=(%.1f,%.1f) room=%q found=%v plan_registered=%v plan=%s", spawn[0], spawn[1], room, found, installed, plan.Data)
+	}
+	positions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
+	playerPosition, _ := positions.Get(player)
+	playerX, _ := playerPosition.Get("x")
+	playerY, _ := playerPosition.Get("y")
+	stats, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.stats")
+	if !ok {
+		t.Fatal("Spell Lab has no authoritative monster stats")
+	}
+	selectables, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.selectable")
+	if !ok {
+		t.Fatal("Spell Lab has no authoritative selectable targets")
+	}
+	target := monsters.Entities()[0]
+	targetPosition, _ := positions.Get(target)
+	// Isolate the production cast -> projectile -> contact path from the
+	// independently covered monster locomotion path. The running lab keeps its
+	// naturally placed encounter; only this acceptance target is made stationary
+	// and placed directly in Fire Bolt's line of travel.
+	if err := targetPosition.Set("x", playerX.(float64)+6); err != nil {
+		t.Fatal(err)
+	}
+	if err := targetPosition.Set("y", playerY); err != nil {
+		t.Fatal(err)
+	}
+	targetX, _ := targetPosition.Get("x")
+	targetY, _ := targetPosition.Get("y")
+	targetSelectable, _ := selectables.Get(target)
+	targetID, _ := targetSelectable.Get("id")
+	before, _ := stats.Get(target)
+	beforeHealth, _ := before.Get("health")
+	if err := app.commandIntents.Submit("player.use_skill", map[string]any{
+		"side": "left", "target_x": targetX, "target_y": targetY, "target_id": targetID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 20 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
+	}
+	vitals, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.vitals")
+	playerVitals, _ := vitals.Get(player)
+	mana, _ := playerVitals.Get("mana")
+	if mana != int64(4093) {
+		t.Fatalf("Spell Lab Fire Bolt mana = %v, want 4093 after one level-20 cast", mana)
+	}
+	if after, alive := stats.Get(target); alive {
+		afterHealth, _ := after.Get("health")
+		if afterHealth.(int64) >= beforeHealth.(int64) {
+			t.Fatalf("Spell Lab Fire Bolt left target health unchanged at %v", afterHealth)
 		}
 	}
 }

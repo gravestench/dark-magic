@@ -23,7 +23,7 @@ func TestOwnedTargetArchivesPinRequiredUnlistedTablesCaseInsensitively(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, table := range []string{"monpreset", "skilldesc"} {
+	for _, table := range []string{"monlvl", "monpreset", "skilldesc"} {
 		path := "data/global/excel/" + table + ".txt"
 		if _, err := pinned.Load(path); err != nil {
 			var matching []string

@@ -5,10 +5,29 @@ import "testing"
 func TestFixtureNeedsSelectionForPlayableScenes(t *testing.T) {
 	t.Parallel()
 
-	for _, scene := range []string{"game_world", "game_loading", "combat_lab", "warp_lab"} {
+	for _, scene := range []string{"game_world", "game_loading", "combat_lab", "spell_lab", "warp_lab"} {
 		if !fixtureNeedsSelection(scene) {
 			t.Errorf("fixtureNeedsSelection(%q) = false; playable scenes need an admitted player", scene)
 		}
+	}
+}
+
+func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
+	t.Parallel()
+
+	options := applyDevelopmentSceneDefaults(Options{StartScene: "spell_lab"})
+	if options.FixtureCharacters != 1 || options.FixtureWorldLevel != 2 {
+		t.Fatalf("Spell Lab defaults = %+v, want one player in Blood Moor", options)
+	}
+	if !shouldActivateDevelopmentSession(options) || !developmentGameplayScene("spell_lab") {
+		t.Fatal("Spell Lab must activate the production gameplay session")
+	}
+	characters := developmentCharactersForScene("spell_lab", options.FixtureCharacters)
+	if len(characters) != 1 || characters[0].Class != "Sorceress" || characters[0].Level != 30 {
+		t.Fatalf("Spell Lab character = %+v", characters)
+	}
+	if characters[0].Stats.Mana != 4096 || characters[0].Stats.MaxMana != 4096 {
+		t.Fatalf("Spell Lab mana = %+v", characters[0].Stats)
 	}
 }
 

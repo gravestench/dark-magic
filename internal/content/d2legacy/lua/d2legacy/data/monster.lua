@@ -34,6 +34,12 @@ local component_names = {
 -- complete legacy tables for every monster considered during population.
 local catalog
 
+local function load_records(path)
+    local rows, err = records.load(path)
+    assert(rows, "load " .. path .. ": " .. tostring(err))
+    return rows
+end
+
 local function index_by(rows, key)
     local result = {}
     for _, row in ipairs(rows) do
@@ -50,9 +56,9 @@ local function monster_catalog()
         return catalog
     end
     catalog = {
-        stats = index_by(records.load("data/global/excel/monstats.txt"), "Id"),
-        graphics = index_by(records.load("data/global/excel/monstats2.txt"), "Id"),
-        levels = index_by(records.load("data/global/excel/monlvl.txt"), "Level"),
+        stats = index_by(load_records("data/global/excel/monstats.txt"), "Id"),
+        graphics = index_by(load_records("data/global/excel/monstats2.txt"), "Id"),
+        levels = index_by(load_records("data/global/excel/monlvl.txt"), "Level"),
     }
     return catalog
 end

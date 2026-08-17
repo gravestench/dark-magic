@@ -13,6 +13,8 @@ local game_rules = require("d2legacy.policy.game_rules")
 local movement_rules = require("d2legacy.movement_rules/v1")
 local M = {}
 
+local initial_available, initial = pcall(require, "engine.initial_data/v1")
+
 local function finite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
 end
@@ -67,7 +69,7 @@ local class_tokens = {
     druid = "DZ",
 }
 
-local function initial_skills(skills)
+local function initial_skills(skills, preferred)
     local left, right, left_chosen, right_chosen = 0, 0, false, false
     for _, skill in ipairs(skills or {}) do
         assert(skill.id >= 0 and skill.level >= 1 and skill.list_row >= 0, "learned skill is invalid")
@@ -79,7 +81,43 @@ local function initial_skills(skills)
             right, right_chosen = skill.id, true
         end
     end
+    preferred = preferred or {}
+    for _, skill in ipairs(skills or {}) do
+        if preferred.left == skill.id then
+            assert(skill.left_allowed, "preferred left skill is not left-assignable")
+            left, left_chosen = skill.id, true
+        end
+        if preferred.right == skill.id then
+            assert(skill.right_allowed, "preferred right skill is not right-assignable")
+            right, right_chosen = skill.id, true
+        end
+    end
     return left, right
+end
+
+local function configured_skills(class)
+    local learned = skills.starting_for_class(class)
+    local config = initial_available and initial.get("d2legacy.development_skills") or nil
+    if type(config) ~= "table" or config.enabled ~= true then
+        return learned, {}
+    end
+    local by_id = {}
+    if config.replace ~= true then
+        for _, skill in ipairs(learned) do
+            by_id[skill.id] = skill
+        end
+    end
+    for _, skill in ipairs(skills.learned_for_ids(config.skill_ids or {}, config.skill_level or 1)) do
+        by_id[skill.id] = skill
+    end
+    learned = {}
+    for _, skill in pairs(by_id) do
+        learned[#learned + 1] = skill
+    end
+    table.sort(learned, function(left, right)
+        return left.id < right.id
+    end)
+    return learned, { left = config.left, right = config.right }
 end
 
 local function create_passive_sources(player, sources)
@@ -145,9 +183,9 @@ function M.apply(command)
         p.difficulty == nil or p.difficulty == difficulty,
         "player entry difficulty differs from immutable game rules"
     )
-    local learned = skills.starting_for_class(p.class)
+    local learned, preferred_skills = configured_skills(p.class)
     local _, run_drain = movement_rules.class_facts(p.class)
-    local left, right = initial_skills(learned)
+    local left, right = initial_skills(learned, preferred_skills)
     local player = ecs.create({
         ["d2legacy.player.identity"] = {
             character_id = p.character_id,

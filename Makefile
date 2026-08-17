@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
 
 test:
 	go test ./...
@@ -174,6 +174,9 @@ play-missile-lab:
 play-combat-lab:
 	go run -tags ffmpeg ./cmd/client --start-scene combat_lab --fixture-characters 1 --fixture-world-level 2
 
+play-spell-lab:
+	go run -tags ffmpeg ./cmd/client --start-scene spell_lab
+
 play-warp-lab:
 	go run -tags ffmpeg ./cmd/client --start-scene warp_lab
 
@@ -186,12 +189,15 @@ capture-missile-lab:
 capture-combat-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=combat_lab START_SCENE=combat_lab FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 CAPTURE_SETTLE=60
 
+capture-spell-lab:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=spell_lab START_SCENE=spell_lab FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 CAPTURE_SETTLE=60
+
 capture-warp-lab:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)" CAPTURE_SCENES=warp_lab START_SCENE=warp_lab CAPTURE_SETTLE=60
 
 CAPTURE_ALL_DIR ?= ./captures/all-scenes
 CAPTURE_ALL_FIXTURE_CHARACTERS ?= 10
-CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip realm_connecting realm_gateway realm_login realm_signup realm_recovery realm_characters realm_create realm_lobby realm_game_create credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab combat_lab dt1_lab ds1_lab mapgen_lab warp_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
+CAPTURE_ALL_SCENES := loading title main_menu character_select character_create game_world game_loading tcpip realm_connecting realm_gateway realm_login realm_signup realm_recovery realm_characters realm_create realm_lobby realm_game_create credits cinematics font_lab ui_lab composite_lab monster_lab missile_lab combat_lab spell_lab dt1_lab ds1_lab mapgen_lab warp_lab inventory character skills automap options pause help quests party stash cube hireling vendor waypoint quick_skills belt messages move_gold npc_interaction npc_dialogue item_tooltip ground_items confirmation_dialog death area_transition player_trade gambling npc_services hireling_hire chat overhead_labels
 
 # Launch each scene in isolation because the capture session records visited
 # scenes; it does not manufacture navigation through unrelated UI flows.
