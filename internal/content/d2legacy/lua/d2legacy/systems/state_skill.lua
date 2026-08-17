@@ -52,6 +52,18 @@ function M.register(definitions)
                     local skill_level = cast:get("skill_level")
                     local duration = level_value(definition.duration_base, definition.duration_per_level, skill_level)
                         + synergy_levels(definition, levels) * definition.duration_synergy_per_level
+                    local reaction_synergies = 0
+                    for _, skill_id in ipairs(definition.on_melee_hit_synergy_skill_ids) do
+                        reaction_synergies = reaction_synergies + (levels[skill_id] or 0)
+                    end
+                    local reaction_duration = level_value(
+                        definition.on_melee_hit_duration_base,
+                        definition.on_melee_hit_duration_per_level,
+                        skill_level
+                    )
+                    reaction_duration = math.floor(
+                        reaction_duration * (100 + reaction_synergies * definition.on_melee_hit_synergy_percent) / 100
+                    )
                     local source_id = "skill:" .. identity:get("player") .. ":" .. cast:get("skill_id")
                     structural:create({
                         ["d2legacy.state.request"] = {
@@ -65,6 +77,10 @@ function M.register(definitions)
                             stat_operation = definition.stat_operation,
                             stat_value = level_value(definition.stat_base, definition.stat_per_level, skill_level),
                             stat_order = 300,
+                            exclusive_group = definition.exclusive_group,
+                            on_melee_hit_state_id = definition.on_melee_hit_state_id,
+                            on_melee_hit_duration = reaction_duration,
+                            on_melee_hit_disables_action = definition.on_melee_hit_disables_action,
                         },
                     })
                     structural:create({

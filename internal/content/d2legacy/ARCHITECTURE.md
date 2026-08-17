@@ -175,13 +175,14 @@ cross-system handoff. Do not depend on incidental Lua module load order.
 | `player_melee` | `pre_simulation` | Owns approach, swing timing, selected hand, and impact requests. |
 | `equipment` | `pre_simulation` | Projects the active equipment set into melee and named stat sources. |
 | `derived_stats` | `pre_simulation` | Rebuilds effective stats from durable bases and removable sources. |
+| `reactive_state` | `effects` | Converts factual melee hits into generic reactions declared by active state instances. |
+| `timed_state` | `effects` | Applies, refreshes, group-replaces, and expires state instances with exact stat-source cleanup. |
 | `monster_ai` | `intent` | Chooses deterministic monster intent from authoritative world facts. |
 | `projectile` | `movement`, `combat` | Moves projectiles, selects first contact, resolves damage, and expires them. |
 | `world_transition` | `collision` | Validates and executes spatial transition requests. |
 | `melee` | `combat` | Selects eligible targets and resolves hit, mitigation, health, and events. |
 | `monster_death` | `effects` | Converts lethal monster state into corpse, credit, XP, and loot consequences. |
 | `progression` | `effects` | Applies experience and level progression definitions. |
-| `timed_state` | `effects` | Refreshes and expires deterministic state instances. |
 | `owned_unit_lifecycle` | `effects` | Enforces ownership limits, expiry, transitions, and unsummon policy. |
 | `facing` | `presentation` | Derives presentation-facing direction from authoritative motion. |
 

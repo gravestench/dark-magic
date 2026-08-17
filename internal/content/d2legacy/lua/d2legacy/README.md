@@ -69,13 +69,20 @@ purpose-named engine stream, so replay and checkpoint restore reproduce them.
 4. `systems/state_skill.lua` computes the authored duration/stat value and emits
    one source-tagged state request at the effect tick.
 5. `systems/timed_state.lua` applies or refreshes the state and its named stat
-   source together; explicit removal or expiration removes that exact source.
-6. `systems/derived_stats.lua` deterministically rebuilds effective defense.
+   source together; state-group replacement, explicit removal, or expiration
+   removes that exact source.
+6. `systems/reactive_state.lua` turns a factual successful melee hit into the
+   active state's configured response, never a skill-name callback.
+7. Generic disabled-action state facts stop monster AI and motion until the
+   timed state expires; `systems/derived_stats.lua` independently rebuilds
+   effective defense.
 
-Frozen Armor is the first configuration. Its defense and duration are backed by
-the owned Expansion 1.14d row and Blizzard's official table. Its melee-hit
-freeze response, difficulty/PvP cold-length handling, cold-armor exclusion, and
-exact cast animation timing remain explicitly incomplete.
+Frozen Armor is the first configuration. Its defense, armor duration, PvM melee-
+hit freeze response, difficulty divisor, and cold-armor exclusion are backed by
+owned Expansion 1.14d rows and Blizzard's official table. PvP chill conversion,
+target cold resistance/immunity and monster-class duration modifiers, exact
+integer/tick ordering, presentation, and cast animation timing remain explicitly
+incomplete.
 
 ## Player population and `/players X`
 

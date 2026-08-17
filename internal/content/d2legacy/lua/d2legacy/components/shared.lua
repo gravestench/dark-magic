@@ -207,6 +207,11 @@ function M.register()
         { name = "stat_operation", type = "string" },
         { name = "stat_value", type = "i64" },
         { name = "stat_order", type = "i64" },
+        { name = "exclusive_group", type = "string" },
+        { name = "on_melee_hit_state_id", type = "string" },
+        { name = "on_melee_hit_duration", type = "i64" },
+        { name = "on_melee_hit_disables_action", type = "bool" },
+        { name = "action_disabled", type = "bool" },
     })
     component("d2legacy.state.instance", {
         { name = "target", type = "entity" },
@@ -219,6 +224,11 @@ function M.register()
         { name = "stat_operation", type = "string" },
         { name = "stat_value", type = "i64" },
         { name = "stat_order", type = "i64" },
+        { name = "exclusive_group", type = "string" },
+        { name = "on_melee_hit_state_id", type = "string" },
+        { name = "on_melee_hit_duration", type = "i64" },
+        { name = "on_melee_hit_disables_action", type = "bool" },
+        { name = "action_disabled", type = "bool" },
     })
     component("d2legacy.state.event", {
         { name = "kind", type = "string" },

@@ -97,6 +97,7 @@ function M.register()
             { name = "attack_rating", type = "i64" },
             { name = "defense", type = "i64" },
             { name = "hit_chance", type = "i64" },
+            { name = "defender_effects_processed", type = "bool", default = false },
         },
     })
 end
