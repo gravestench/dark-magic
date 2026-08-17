@@ -6,8 +6,8 @@ post-warp route invalidation, semantic motion ownership, stat-derived locomotion
 playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
 armor/shield/cold-source ordering, and progression/source-derived maximum-
 stamina plus environment-period source slices, G6 deterministic dynamic
-occupancy, and a generic checkpointed forced-motion transaction. G9 remains
-current through
+occupancy, a generic checkpointed forced-motion transaction, and target-pinned
+monster knockback capability/size profiles. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -371,7 +371,13 @@ Status: **partial**.
   temporary overlap, so movement that strictly increases separation is allowed
   while entry or deeper overlap remains blocked. Checkpoint parity pins both
   decisions.
-- [ ] Verify target-runtime category rules for players, monsters, hirelings,
+- [x] Pin owned Expansion 1.14d `MonStats2` knockback-mode and small/normal/large
+  target facts, including representative capable small/large monsters and a
+  mode-incapable normal monster. Spawned and inactive-archived monsters carry
+  the resulting generic target profile; the owned `knock` property and
+  `item_knockback` melee/missile event hooks are pinned without guessing their
+  binary-owned chance arithmetic.
+- [ ] Verify remaining target-runtime category rules for players, hirelings,
   summons, NPCs, and corpses, then decide which categories participate in A*
   planning versus only fixed-tick motion resolution.
 - [x] Add a semantic forced-motion request resolved by movement/collision
@@ -380,10 +386,11 @@ Status: **partial**.
   checkpointed, and durable semantic outcomes distinguish completed, partial,
   blocked, and invalid transactions. Presentation can observe the event but
   cannot move the target.
-- [ ] Recover and pin Expansion 1.14d knockback eligibility, distance, speed,
-  unit-size/category, interruption, and GH/KB mode rules before combat emits
-  the generic request. Older recovered server/client path code is structural
-  evidence only, not permission to copy its constants into the target policy.
+- [ ] Recover and pin remaining Expansion 1.14d knockback chance, distance,
+  speed, player/owned-unit eligibility, interruption, and GH/KB mode rules
+  before combat emits the generic request. Older recovered server/client path
+  code is structural evidence only, not permission to copy its constants into
+  the target policy.
 - [ ] Cover competing forced-motion requests and target-runtime interaction with
   ordinary locomotion, active skills, hit recovery, death, and client playback.
 

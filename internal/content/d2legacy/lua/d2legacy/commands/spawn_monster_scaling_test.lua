@@ -53,6 +53,9 @@ return test.suite({
                 test.expect(stats.health):equals(24 * 256)
                 test.expect(stats.max_health):equals(24 * 256)
                 test.expect(stats.experience):equals(150)
+                local knockback = created["d2legacy.combat.knockback_target"]
+                test.expect(knockback.mode_supported):equals(false)
+                test.expect(knockback.size_class):equals("normal")
             end)
         end),
     },

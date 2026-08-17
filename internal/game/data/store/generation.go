@@ -27,6 +27,7 @@ const (
 // enter the same immutable generation and provenance boundary.
 var requiredUnlistedPaths = []string{
 	"data/global/excel/MonPreset.txt",
+	"data/global/excel/MonStats2.txt",
 	"data/global/excel/SkillDesc.txt",
 }
 
