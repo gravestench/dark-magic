@@ -21,11 +21,11 @@ architecture:
 	go test ./internal/acceptance -run 'Test(Retired|LegacyRenderer|NoAccidental|DependencyDirection|CommandRemains|GameplayOwnership)'
 
 test-race:
-	# Race instrumentation makes the Lua-heavy integration packages contend for
-	# their fixed startup deadlines when Go runs the repository in parallel.
-	# Keep complete package coverage while making the gate deterministic on CI
-	# and developer machines with constrained cores or memory.
-	go test -race -p 1 ./...
+	# Race instrumentation makes the Lua-heavy integration packages and their
+	# t.Parallel cases contend for fixed startup deadlines. Keep complete package
+	# and test coverage while making the gate deterministic on CI and developer
+	# machines with constrained cores or memory.
+	go test -race -p 1 -parallel 1 ./...
 
 NETWORK_SOAK_TICKS ?= 80
 
