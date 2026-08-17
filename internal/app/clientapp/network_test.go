@@ -3,6 +3,7 @@ package clientapp
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/networkclock"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
@@ -62,18 +64,29 @@ func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *te
 }
 
 func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
+	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	payload, _ := json.Marshal(map[string]any{"x": 1, "y": 0, "running": true})
 	hud := playeradapter.HUD{
 		Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
+		Player:   playeradapter.HUDIdentity{Class: "Amazon"},
 		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1},
 	}
 	got := predictPosition(hud, []gameserver.CommandIntent{
 		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
 		{TargetTick: 12, Sequence: 2, Kind: "player.move", Payload: payload},
-	}, networkclock.Moment{Tick: 12}, nil, networkInputStep)
-	if got.X != 11.2 || got.Y != 20 {
-		t.Fatalf("predicted position = %#v, want x=11.2 y=20", got)
+	}, networkclock.Moment{Tick: 12}, nil, networkInputStep, catalog)
+	if math.Abs(got.X-10.72) > 1e-12 || got.Y != 20 {
+		t.Fatalf("predicted position = %#v, want x=10.72 y=20", got)
 	}
+}
+
+type predictionMovementRecords struct{}
+
+func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
+	return []map[string]string{{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9"}}, nil
 }
 
 func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {

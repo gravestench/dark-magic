@@ -5,7 +5,7 @@ return test.suite({
     tier = "fast",
     records = {
         ["data/global/excel/charstats.txt"] = {
-            { class = "Amazon", ToHitFactor = "5" },
+            { class = "Amazon", ToHitFactor = "5", WalkVelocity = "6", RunVelocity = "9" },
         },
     },
     cases = {

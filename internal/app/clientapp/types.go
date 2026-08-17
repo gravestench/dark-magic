@@ -132,6 +132,7 @@ type application struct {
 	authoritativeRandom  *simulation.RandomStreams
 	playerControl        *d2movement.MovementController
 	movementSource       *d2movement.MovementSource
+	movementCatalog      d2movement.Catalog
 	transitionSeam       gametransition.Seam
 	commandIntents       *gamesession.IntentController
 	commandIntentSource  *gamesession.IntentSource

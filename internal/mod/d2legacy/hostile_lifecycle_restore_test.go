@@ -240,7 +240,7 @@ func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
-		if engine.Tick() > 80 {
+		if engine.Tick() > 100 {
 			t.Fatal("player did not reach the remote room")
 		}
 	}

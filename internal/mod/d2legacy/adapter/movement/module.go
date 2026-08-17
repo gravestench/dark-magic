@@ -8,19 +8,24 @@ import (
 
 // RulesModule exposes the same movement resolver to authoritative Lua that the
 // owning client's rollback/replay predictor uses in Go.
-func RulesModule() modruntime.Module {
+func RulesModule(catalog Catalog) modruntime.Module {
 	return modruntime.Module{
 		Name: "d2legacy.movement_rules/v1",
 		Help: modruntime.ModuleHelp{
 			Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 			Commands: map[string]modruntime.CommandHelp{
-				"velocity": {Usage: "d2legacy.movement_rules.velocity(x, y, payload)", Summary: "Return authoritative x/y velocity and whether movement is active."},
+				"velocity": {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload)", Summary: "Return authoritative x/y velocity and whether movement is active."},
 			},
 		},
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 				"velocity": func(state *lua.LState) int {
-					payload := state.CheckTable(3)
+					class := state.CheckString(3)
+					rates, found := catalog.Rates(class)
+					if !found {
+						state.RaiseError("d2legacy movement: class %q has no pinned CharStats velocity", class)
+					}
+					payload := state.CheckTable(4)
 					move := MovePayload{
 						X:       luaInteger(payload.RawGetString("x")),
 						Y:       luaInteger(payload.RawGetString("y")),
@@ -33,7 +38,7 @@ func RulesModule() modruntime.Module {
 							StopRadius: luaOptionalNumber(target.RawGetString("stop_radius")),
 						}
 					}
-					resolved := Resolve(gameworld.Point{X: float64(state.CheckNumber(1)), Y: float64(state.CheckNumber(2))}, move)
+					resolved := Resolve(gameworld.Point{X: float64(state.CheckNumber(1)), Y: float64(state.CheckNumber(2))}, move, rates)
 					state.Push(lua.LNumber(resolved.Velocity.X))
 					state.Push(lua.LNumber(resolved.Velocity.Y))
 					state.Push(lua.LBool(resolved.Moving))

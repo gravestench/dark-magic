@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	WalkSpeed       = 10.0
-	RunSpeed        = 15.0
 	ArrivalDistance = 0.2
 	diagonalScale   = 0.7071067811865476
 )
@@ -21,7 +19,7 @@ type ResolvedMovement struct {
 
 // Resolve applies the production d2legacy input policy without touching ECS.
 // Both authoritative Lua and client prediction call this implementation.
-func Resolve(position gameworld.Point, payload MovePayload) ResolvedMovement {
+func Resolve(position gameworld.Point, payload MovePayload, rates ClassRates) ResolvedMovement {
 	x, y := float64(payload.X), float64(payload.Y)
 	if payload.Target != nil {
 		x, y = payload.Target.X-position.X, payload.Target.Y-position.Y
@@ -34,9 +32,9 @@ func Resolve(position gameworld.Point, payload MovePayload) ResolvedMovement {
 	} else if x != 0 && y != 0 {
 		x, y = x*diagonalScale, y*diagonalScale
 	}
-	speed := WalkSpeed
+	speed := rates.Walk
 	if payload.Running {
-		speed = RunSpeed
+		speed = rates.Run
 	}
 	return ResolvedMovement{
 		Velocity: gameworld.Point{X: x * speed, Y: y * speed},
