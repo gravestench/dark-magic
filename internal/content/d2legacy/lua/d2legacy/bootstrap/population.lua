@@ -185,6 +185,15 @@ function M.apply(command)
     state.replace(PLAN_ID, PLAN_SCHEMA, zone)
 end
 
+local function room_at(plan, x, y)
+    for _, room in ipairs(plan.rooms) do
+        if x >= room.x and x < room.x + room.width and y >= room.y and y < room.y + room.height then
+            return room
+        end
+    end
+    return nil
+end
+
 local function containing_rooms(plan, entities)
     local active = {}
     for _, entity in ipairs(entities) do
@@ -192,15 +201,27 @@ local function containing_rooms(plan, entities)
         local location = ecs.get(entity, "d2legacy.world.location")
         local position = ecs.get(entity, "d2legacy.world.position")
         if identity and location and position and location:get("level_id") == plan.level_id then
-            local x, y = position:get("x"), position:get("y")
-            for _, room in ipairs(plan.rooms) do
-                if x >= room.x and x < room.x + room.width and y >= room.y and y < room.y + room.height then
-                    active[room.id] = true
-                end
-            end
+            local room = room_at(plan, position:get("x"), position:get("y"))
+            if room then active[room.id] = true end
         end
     end
     return active
+end
+
+local function sync_resident_rooms(plan, entities)
+    for _, entity in ipairs(entities) do
+        local resident = ecs.get(entity, "d2legacy.world.room_resident")
+        local inactive = ecs.get(entity, "d2legacy.world.inactive")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        local position = ecs.get(entity, "d2legacy.world.position")
+        if resident and not inactive and location and position and location:get("level_id") == plan.level_id then
+            local room = room_at(plan, position:get("x"), position:get("y"))
+            if room then
+                resident:set("level_id", plan.level_id)
+                resident:set("room_id", room.id)
+            end
+        end
+    end
 end
 
 local function include_neighbors(active, links)
@@ -299,6 +320,9 @@ local function activate(context, entities, structural)
         return
     end
 
+    -- Movement runs after this phase, so synchronize the result of the prior
+    -- fixed tick before deciding which rooms leave the active window.
+    sync_resident_rooms(plan, entities)
     local active = include_neighbors(containing_rooms(plan, entities), plan.links)
     local difficulty = game_rules.difficulty()
     local level, candidates, rarity

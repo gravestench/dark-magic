@@ -20,7 +20,10 @@ velocity-mover opt-in. Residency is scoped by canonical level/room IDs, and
 production DS1 interaction targets now acquire it from generated zone geometry
 without turning map/presentation data into authority. Warp Lab's paired
 authoritative endpoints use the same geometry join and the real-asset lab test
-pins both endpoint residents. G9 remains current through
+pins both endpoint residents. Active moving residents now synchronize their
+room membership from authoritative level/position before the next activation
+decision, so crossing a generated boundary does not leave them owned by their
+spawn room. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -91,7 +94,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies; a non-monster fixture proves the mechanism has no monster/mover assumption, and production DS1 interaction targets now attach through generated room geometry. Stateful object authority, ground-item/owned-unit/projectile attachment, exact 1.14d streaming behavior, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies; non-monster fixtures prove the mechanism has no monster/mover assumption and follows authoritative movement across room boundaries, while production DS1 interaction targets attach through generated room geometry. Stateful object authority, ground-item/owned-unit/projectile attachment, exact 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -477,6 +480,9 @@ ordinary-monster inactivation/reactivation implemented**.
 - [x] Attach Warp Lab's paired authoritative warp entities to generated rooms
   through the same entry-world point resolver. The endpoint stays one ordinary
   interaction/transition entity; residency adds no warp-specific lifecycle.
+- [x] Synchronize every active positioned resident to its current generated
+  room before activation decisions. A moving non-monster crosses from room A to
+  B, then remains active when A leaves the player window and B remains active.
 - [ ] Extend the same explicit activation policy to owned-unit graphs, corpses,
   items, objects, projectiles/pending actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
@@ -502,7 +508,9 @@ monster/non-moving resident, proves an equal room ID in another level is not
 affected, and reaches identical reactivation checksums. Entry-world preparation
 joins resolved DS1 interaction points and synthetic paired Warp Lab endpoints to
 the same canonical residency contract; the mounted-asset lab proves both warps
-materialize with resident components.
+materialize with resident components. Before each activation decision, active
+positioned residents resolve against the same authoritative room bounds; an
+entity crossing a boundary is no longer inactivated with its spawn room.
 This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 

@@ -537,7 +537,10 @@ the first type-independent persistent-identity mechanism; a non-monster resident
 without movement opt-in crosses the same checkpoint/reactivation path, while an
 equal room ID in another level remains active. Generated room/link IDs are
 canonical strings, and production DS1 interaction points acquire residency from
-zone room bounds. This does not claim that graph distance,
+zone room bounds. An active positioned resident resolves those bounds again
+before every activation decision; a non-monster regression crosses from one
+room to the next and stays active with its current room after the origin room
+deactivates. This does not claim that graph distance,
 phase ordering, timer aging, healing, corpse policy, or separate presentation-
 only residency matches expansion 1.14d.
 
@@ -652,10 +655,11 @@ One ordinary generated monster now deactivates/reactivates through an empty ECS
 filter tag without losing entity identity, component state, or timed-state/stat-
 source/event target references. Room identity itself is world-owned and type-
 independent; a non-monster/non-moving resident proves conditional activation-
-surface restoration. The path is deterministic, checkpointed, and renderer-
-independent. Production resolved DS1 interaction targets now attach to this
-boundary; stateful objects, owned units, corpses, ground items, projectiles, and
-pending-action residency remain.
+surface restoration, while a moving non-monster proves current-room membership
+replaces spawn-room membership before activation. The path is deterministic,
+checkpointed, and renderer-independent. Production resolved DS1 interaction
+targets now attach to this boundary; stateful objects, owned units, corpses,
+ground items, projectiles, and pending-action residency remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

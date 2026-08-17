@@ -198,6 +198,69 @@ func TestPopulationActivatesAdjacentRoomsAndPinsCurrentPlayerCount(t *testing.T)
 	assertMonsterPlayerCount(t, engine, "level:2:room:c:monster:1", 2)
 }
 
+func TestPopulationTracksMovingResidentCurrentRoom(t *testing.T) {
+	ctx := context.Background()
+	authority, engine, session := startPartyFixture(t, nil)
+	t.Cleanup(func() {
+		_ = authority.Stop(ctx)
+		_ = session.Close()
+		_ = engine.Close()
+	})
+
+	population, _ := json.Marshal(map[string]any{
+		"act": 1, "level_id": 2, "difficulty": 0,
+		"links": []map[string]any{{"from": "a", "to": "b"}, {"from": "b", "to": "c"}},
+		"rooms": []map[string]any{
+			{"id": "a", "populate": false, "x": 0, "y": 0, "width": 10, "height": 10, "points": []map[string]any{}},
+			{"id": "b", "populate": false, "x": 10, "y": 0, "width": 10, "height": 10, "points": []map[string]any{}},
+			{"id": "c", "populate": false, "x": 20, "y": 0, "width": 10, "height": 10, "points": []map[string]any{}},
+		},
+	})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: population}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, "hero", "alice", 1, 1)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+
+	residentStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.room_resident")
+	positionStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+	locationStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
+	objectID := engine.World().MustCreateEntity()
+	if _, err := residentStore.Set(objectID, map[string]any{"id": "object:moving", "level_id": int64(2), "room_id": "a"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := positionStore.Set(objectID, map[string]any{"x": float64(1), "y": float64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := locationStore.Set(objectID, map[string]any{"act": int64(1), "level_id": int64(2)}); err != nil {
+		t.Fatal(err)
+	}
+	setEntityPosition(t, positionStore, objectID, 11, 1)
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertResidentRoom(t, residentStore, objectID, 2, "b")
+
+	playerID := playerEntity(t, engine, "alice")
+	setEntityPosition(t, positionStore, playerID, 21, 1)
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertResidentRoom(t, residentStore, objectID, 2, "b")
+	assertResidentActivation(t, engine, objectID, true, false)
+	assertInactiveRoom(t, authority, "a")
+	assertRoomActiveWithoutInactiveResidents(t, authority, "b")
+}
+
 func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	ctx := context.Background()
 	authority, engine, session := startPartyFixture(t, nil)
@@ -403,6 +466,47 @@ func playerPositionX(t *testing.T, engine *gameecs.Engine, player string) float6
 	}
 	t.Fatalf("player %s was not found", player)
 	return 0
+}
+
+func playerEntity(t *testing.T, engine *gameecs.Engine, player string) akara.Entity {
+	t.Helper()
+	controls, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.player_control")
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		current, _ := control.Get("player")
+		if current == player {
+			return entity
+		}
+	}
+	t.Fatalf("player %s was not found", player)
+	return 0
+}
+
+func setEntityPosition(t *testing.T, positions *akara.DynamicStore, entity akara.Entity, x, y float64) {
+	t.Helper()
+	position, present := positions.Get(entity)
+	if !present {
+		t.Fatalf("entity %d has no position", entity)
+	}
+	if err := position.Set("x", x); err != nil {
+		t.Fatal(err)
+	}
+	if err := position.Set("y", y); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertResidentRoom(t *testing.T, residents *akara.DynamicStore, entity akara.Entity, levelID int64, roomID string) {
+	t.Helper()
+	resident, present := residents.Get(entity)
+	if !present {
+		t.Fatalf("entity %d has no room resident", entity)
+	}
+	level, _ := resident.Get("level_id")
+	room, _ := resident.Get("room_id")
+	if level != levelID || room != roomID {
+		t.Fatalf("entity %d resident level/room = %v/%v, want %d/%s", entity, level, room, levelID, roomID)
+	}
 }
 
 func monsterComponentSnapshot(t *testing.T, engine *gameecs.Engine, spawnID string) map[string]map[string]any {
