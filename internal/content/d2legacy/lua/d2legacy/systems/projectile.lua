@@ -119,7 +119,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.missile.move",
         phase = "movement",
-        query = { all = { "d2legacy.missile.projectile", "d2legacy.world.position" } },
+        query = {
+            all = { "d2legacy.missile.projectile", "d2legacy.world.position" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = { "d2legacy.missile.projectile", "d2legacy.world.position" },
         write = { "d2legacy.missile.projectile", "d2legacy.world.position" },
         update = function(_, entities)

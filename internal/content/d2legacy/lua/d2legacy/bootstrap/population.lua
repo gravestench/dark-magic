@@ -194,6 +194,24 @@ local function room_at(plan, x, y)
     return nil
 end
 
+-- Resolve a newly materialized world entity into the installed authoritative
+-- room plan. Callers retain ownership of the entity's semantic ID and policy;
+-- this module only supplies the canonical level/room residency fields.
+function M.resident_at(id, level_id, x, y)
+    assert(type(id) == "string" and id ~= "", "room resident ID is required")
+    assert(type(level_id) == "number", "room resident level is required")
+    assert(type(x) == "number" and type(y) == "number", "room resident point is required")
+    local plan = state.read(PLAN_ID)
+    if not plan or not plan.installed or plan.level_id ~= level_id then
+        return nil
+    end
+    local room = room_at(plan, x, y)
+    if not room then
+        return nil
+    end
+    return { id = id, level_id = level_id, room_id = room.id }
+end
+
 local function containing_rooms(plan, entities)
     local active = {}
     for _, entity in ipairs(entities) do

@@ -555,6 +555,17 @@ marker before room deactivation. Its inactive record therefore pins
 semantic corpse without restoring a movement surface. Corpse lifetime and
 skill/object eligibility remain outside this streaming slice.
 
+A production-cast straight projectile is now a third explicit residency kind.
+Missile materialization asks the installed population plan to resolve its
+authoritative level/position into the canonical room and attaches a stable
+world-owned resident ID. The shared room synchronizer and empty inactive tag
+then govern it like any other entity; the projectile movement/lifetime query
+excludes inactive residents. A checkpoint acceptance test proves unchanged
+position, remaining lifetime, and projectile/location/residency components
+through deactivate, restore, and reactivate. Its deliberately long lifetime is
+synthetic test scaffolding, not evidence for Expansion 1.14d inactive missile
+aging or expiry rules.
+
 ## Streaming policy should be deterministic
 
 Research still needs the exact original activation radius/call order. Whatever Dark Magic policy chooses, activation/inactivation must not depend on host scheduling races.
@@ -672,7 +683,9 @@ checkpointed, and renderer-independent. Production resolved DS1 interaction
 targets now attach to this boundary. An owned resident's relationship graph and
 lifecycle filter also cross it without a second archive. An ordinary corpse
 retains its semantic entity while all live movement surfaces remain absent;
-stateful objects, ground items, projectiles, and pending-action residency remain.
+a straight projectile attaches at materialization and suspends movement and
+lifetime under the same inactive marker without a missile archive. Stateful
+objects, ground items, and pending-action residency remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

@@ -51,7 +51,14 @@ death/loot/identity/appearance/spatial state, and room identity across the same
 checkpoint path. Death now removes the generic velocity-mover opt-in alongside
 AI, collider, and selection, so deactivation cannot record and reintroduce a
 stale simulation capability. Exact corpse lifetime and usability policy remain
-probe-gated. G9 remains current through
+probe-gated. Straight-missile materialization now asks the installed population
+plan for canonical room residency and assigns a deterministic world-owned ID.
+Projectile movement and lifetime progression exclude the same empty inactive
+marker, so an in-flight entity keeps its authoritative position, projectile
+state, and room identity across deactivate, checkpoint, restore, and reactivate
+without a projectile archive. The long synthetic lifetime used to exercise
+that boundary is test scaffolding; exact Expansion 1.14d missile lifetime and
+inactive-room timing remain unresolved. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -122,7 +129,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, the first owned-unit owner/category/lifetime graph, and an ordinary corpse survive inactivation without scalar graph copies; death removes every live movement/AI/collision/selection opt-in before the corpse crosses the room checkpoint. Non-monster fixtures prove the mechanism follows authoritative movement across room boundaries, while production DS1 interaction targets attach through generated room geometry. Stateful object authority, ground-item/projectile/pending-action attachment, exact corpse lifetime and 1.14d streaming behavior, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, the first owned-unit owner/category/lifetime graph, an ordinary corpse, and a production-cast straight projectile survive inactivation without scalar graph copies; death removes every live movement/AI/collision/selection opt-in before the corpse crosses the room checkpoint, while the inactive ECS tag suspends projectile movement/lifetime. Non-monster fixtures prove the mechanism follows authoritative movement across room boundaries, production DS1 interaction targets attach through generated room geometry, and straight-missile materialization uses the same point-to-room resolver. Stateful object authority, ground-item/pending-action attachment, exact corpse/projectile lifetime and 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -503,8 +510,8 @@ Status: **partial**.
 
 ### G7 — Active-room/inactive-unit vertical slice
 
-Status: **partial; deterministic room activation and persistent-identity
-ordinary-monster inactivation/reactivation implemented**.
+Status: **partial; deterministic room activation plus persistent-identity
+monster, owned-unit, corpse, and straight-projectile residency implemented**.
 
 - [x] Separate authoritative world existence from active simulation and
   presentation residency for one ordinary monster. An empty ECS inactive tag
@@ -539,8 +546,12 @@ ordinary-monster inactivation/reactivation implemented**.
   identity, appearance, position, and room membership through inactive
   checkpoint/reactivation. Death removes AI, collider, selection, and the
   generic velocity-mover opt-in, so reactivation restores no live capability.
+- [x] Attach a production-cast straight projectile to the installed room plan
+  with a deterministic world-owned resident ID. The common inactive ECS tag
+  suspends its movement and lifetime fields, and the same entity/component
+  state survives deactivate -> checkpoint -> restore -> reactivate.
 - [ ] Extend the same explicit activation policy to items, stateful
-  objects, projectiles/pending actions, and any relationship entity whose
+  objects, pending actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
 - [x] Drive initial Blood Moor population activation from a deterministic
   all-player room graph.
@@ -572,7 +583,16 @@ death before leaving the room, preserves the corpse's semantic component set
 through inactive checkpoint reconstruction, and proves the room plan records
 `velocity_mover=false`. The death transaction now removes the generic mover
 opt-in together with AI, collider, and selection; neither direct reactivation
-nor restore may invent it. Entry-world preparation
+nor restore may invent it. A third production path casts the generic straight-
+missile family inside a generated room. Materialization assigns a deterministic
+projectile resident ID through the population plan's canonical point resolver;
+the ordinary room-sync and activation systems then move it across the same ECS
+boundary. While inactive, the projectile movement query does not change its
+position or remaining lifetime. Checkpoint reconstruction and reactivation
+preserve the original entity and component state with checksum parity, without
+introducing a missile-specific dormant record. The test's extended lifetime is
+synthetic scaffolding and does not assert exact target timing. Entry-world
+preparation
 joins resolved DS1 interaction points and synthetic paired Warp Lab endpoints to
 the same canonical residency contract; the mounted-asset lab proves both warps
 materialize with resident components. Before each activation decision, active
@@ -582,7 +602,8 @@ This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 
 Exact expansion 1.14d activation distance/tick ordering, long-inactive healing,
-timer aging while inactive, corpse lifetime/usability, item/object/projectile/pending-action
+timer aging while inactive, corpse lifetime/usability, projectile lifetime,
+item/object/pending-action
 activation graphs, stateful object operation/events, ground item drops, broader
 generated-level coverage, and independent visible-
 but-not-simulated presentation residency remain open and probe-gated. Older

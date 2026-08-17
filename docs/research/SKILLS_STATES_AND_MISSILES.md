@@ -82,6 +82,16 @@ opt-in owned-archive test boots the authority against the target expansion
 1.14d records so the generic decoder's production contract is checked without
 placing copyrighted tables in Git.
 
+When that generic family materializes inside an installed generated-level
+plan, it now attaches `d2legacy.world.room_resident` using the common canonical
+point-to-room resolver and a deterministic projectile identity. The ordinary
+room activation path adds the empty inactive ECS marker; projectile movement
+and remaining-lifetime progression query it out. Production-cast checkpoint
+coverage proves that the same entity and projectile/location/residency state
+resume after room reactivation. The test uses a synthetic extended lifetime to
+isolate residency mechanics. Exact Expansion 1.14d missile expiration and
+whether any timer ages while its room is inactive remain probe-gated.
+
 That decoder now also preserves the raw target-authored `Missiles.KnockBack`
 byte in the immutable definition and checkpointed projectile. Owned 1.14d rows
 demonstrate blank, `1`, `33`, and `75`, so the field is neither collapsed to a

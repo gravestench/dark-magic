@@ -2,6 +2,7 @@
 
 local ecs = require("engine.ecs/v1")
 local geometry = require("d2legacy.policy.geometry")
+local population = require("d2legacy.bootstrap.population")
 
 local M = {}
 
@@ -22,11 +23,15 @@ local function projectile_components(caster, cast, definition)
     local location = ecs.get(caster, "d2legacy.world.location")
     local dx, dy =
         geometry.normalized_direction(position:get("x"), position:get("y"), cast:get("target_x"), cast:get("target_y"))
-    return {
+    local owner_id = selectable_id(caster)
+    local projectile_id = "projectile:" .. owner_id
+        .. ":skill:" .. cast:get("skill_id")
+        .. ":effect:" .. cast:get("effect_tick")
+    local components = {
         ["d2legacy.world.position"] = { x = position:get("x"), y = position:get("y") },
         ["d2legacy.world.location"] = location:snapshot(),
         ["d2legacy.missile.projectile"] = {
-            owner_id = selectable_id(caster),
+            owner_id = owner_id,
             target_x = cast:get("target_x"),
             target_y = cast:get("target_y"),
             velocity_x = dx * definition.speed_per_tick,
@@ -52,6 +57,16 @@ local function projectile_components(caster, cast, definition)
             offset_z = definition.offset_z,
         },
     }
+    local resident = population.resident_at(
+        projectile_id,
+        location:get("level_id"),
+        position:get("x"),
+        position:get("y")
+    )
+    if resident then
+        components["d2legacy.world.room_resident"] = resident
+    end
+    return components
 end
 
 function M.register(definitions)
@@ -78,6 +93,7 @@ function M.register(definitions)
             "d2legacy.missile.projectile",
             "d2legacy.world.position",
             "d2legacy.world.location",
+            "d2legacy.world.room_resident",
         },
         update = function(context, casters, structural)
             for _, caster in ipairs(casters) do
