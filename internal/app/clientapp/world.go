@@ -146,13 +146,18 @@ func (app *application) warpBootstrapData() map[string]any {
 	wildernessArrival := openNear(wilderness, wildernessPortal, 4, 1)
 	endpoint := func(id, pair, token, label string, level int, position, destination [2]float64,
 		destinationLevel int, destinationMap *gameworld.Map) map[string]any {
-		return map[string]any{
+		result := map[string]any{
 			"id": id, "pair_id": pair, "token": token, "label": label,
 			"level_id": level, "x": position[0], "y": position[1], "radius": float64(3.5),
 			"destination_level": destinationLevel, "destination_x": destination[0],
 			"destination_y": destination[1], "destination_width": float64(destinationMap.WidthSubtiles),
 			"destination_height": float64(destinationMap.HeightSubtiles),
 		}
+		if roomID, found := entryworld.RoomIDAt(app.gameWorldZones[level], position[0], position[1]); found {
+			result["resident_id"] = id
+			result["room_id"] = roomID
+		}
+		return result
 	}
 	return map[string]any{"endpoints": []any{
 		endpoint("warp-lab:town", "warp-lab:wilderness", "TP", "BLUE TOWN WARP", townLevel,
