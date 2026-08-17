@@ -82,7 +82,9 @@ function M.apply(command)
     end
 
     local position = assert(ecs.get(entity, "d2legacy.world.position"))
-    local velocity_x, velocity_y, moving = movement_rules.velocity(position:get("x"), position:get("y"), payload)
+    local identity = assert(ecs.get(entity, "d2legacy.player.identity"))
+    local velocity_x, velocity_y, moving =
+        movement_rules.velocity(position:get("x"), position:get("y"), identity:get("class"), payload)
     local velocity = assert(ecs.get(entity, "d2legacy.world.velocity"))
     velocity:set("x", velocity_x)
     velocity:set("y", velocity_y)

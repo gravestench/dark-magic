@@ -311,11 +311,15 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	if err := runtime.RegisterModuleDefault(modruntime.DataModule(source)); err != nil {
 		return err
 	}
+	movementCatalog, err := adaptermovement.LoadCatalog(records)
+	if err != nil {
+		return err
+	}
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
 		modruntime.RecordsModule(records), modruntime.AnimDataModule(animationSource),
 		modruntime.AuthorityRandomModule(random),
-		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(),
+		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(movementCatalog),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {
 			return err

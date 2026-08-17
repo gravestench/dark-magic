@@ -117,11 +117,11 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 	// prediction clock every frame.
 	pending := session.PendingInputs()
 	collision := app.gameWorlds[int(hud.Location.LevelID)]
-	predicted := predictPosition(hud, pending, timeline.Prediction, collision, networkInputStep)
+	predicted := predictPosition(hud, pending, timeline.Prediction, collision, networkInputStep, app.movementCatalog)
 	correction := playeradapter.HUDPosition{}
 	sameOwnerWorld := world.hasHUD && world.lastHUD.Player.PlayerID == hud.Player.PlayerID && world.lastHUD.Location == hud.Location
 	if corrected && sameOwnerWorld {
-		previous := predictPosition(world.lastHUD, mergeInputHistory(world.lastPending, pending), timeline.Prediction, collision, networkInputStep)
+		previous := predictPosition(world.lastHUD, mergeInputHistory(world.lastPending, pending), timeline.Prediction, collision, networkInputStep, app.movementCatalog)
 		correction = playeradapter.HUDPosition{X: previous.X - predicted.X, Y: previous.Y - predicted.Y}
 	} else if !sameOwnerWorld {
 		world.local = localPresentation{}
@@ -139,7 +139,7 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 	return nil
 }
 
-func predictPosition(hud playeradapter.HUD, pending []gameserver.CommandIntent, moment networkclock.Moment, collision *gameworld.Map, step time.Duration) playeradapter.HUDPosition {
+func predictPosition(hud playeradapter.HUD, pending []gameserver.CommandIntent, moment networkclock.Moment, collision *gameworld.Map, step time.Duration, catalog movement.Catalog) playeradapter.HUDPosition {
 	position := gameworld.Point{X: hud.Position.X, Y: hud.Position.Y}
 	velocity := gameworld.Point{X: hud.Movement.Velocity.X, Y: hud.Movement.Velocity.Y}
 	bounds := gameworld.Point{X: movementBound(hud.Movement.Bounds.X), Y: movementBound(hud.Movement.Bounds.Y)}
@@ -151,14 +151,15 @@ func predictPosition(hud playeradapter.HUD, pending []gameserver.CommandIntent, 
 		return hud.Position
 	}
 	applied := make(map[uint64]bool, len(pending))
+	rates, classKnown := catalog.Rates(hud.Player.Class)
 	applyInputs := func(tick uint64) {
 		for _, intent := range pending {
 			if applied[intent.Sequence] || intent.Kind != movement.MoveCommand || intent.TargetTick > tick {
 				continue
 			}
 			var payload movement.MovePayload
-			if json.Unmarshal(intent.Payload, &payload) == nil {
-				velocity = movement.Resolve(position, payload).Velocity
+			if json.Unmarshal(intent.Payload, &payload) == nil && classKnown {
+				velocity = movement.Resolve(position, payload, rates).Velocity
 			}
 			applied[intent.Sequence] = true
 		}

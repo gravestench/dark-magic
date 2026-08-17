@@ -279,8 +279,9 @@ Lua-defined Akara ECS, DS1/DT1 world decoding, and developer inspection tools
 are operational. The playable world presents DS1 maps through sparse,
 camera-culled texture chunks whose placement follows authoritative ECS camera
 coordinates; it does not allocate a full-map GPU texture. Player movement is
-fixed-tick and command-driven, with normalized diagonal speed and a subtile
-collision footprint rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
+fixed-tick and command-driven, with pinned `CharStats.txt` class walk/run
+velocity shared by authority and client prediction, normalized diagonal speed,
+and a subtile collision footprint rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
 authoritative networking, and end-to-end gameplay remain in progress.
 
 See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and

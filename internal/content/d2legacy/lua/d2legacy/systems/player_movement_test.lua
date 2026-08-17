@@ -38,7 +38,7 @@ return test.suite({
                 local animation = ecs.get(players[1], "d2legacy.player.animation")
                 local facing = ecs.get(players[1], "d2legacy.world.facing")
                 local mode = ecs.get(players[1], "d2legacy.player.movement_mode")
-                local expected = 15 * 0.7071067811865476
+                local expected = 9 * 0.7071067811865476
                 test.assert(
                     math.abs(velocity:get("x") - expected) < 0.000000001,
                     [=[math.abs(velocity:get("x") - expected) < 0.000000001]=]

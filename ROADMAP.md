@@ -2,7 +2,7 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, the G5 production Warp Lab
-realignment, and the G9 target-locked mounted-data, localized skill evidence,
+realignment and pinned class movement rates, and the G9 target-locked mounted-data, localized skill evidence,
 case-stable pinned MPQ tables, AnimData/effective-attack-rate generic melee
 action, current-state melee target revalidation, missile, timed-state, and
 reactive-state slices on 2026-08-16.
@@ -280,7 +280,9 @@ and monster chase exist. Still required:
   mutable target/range observations as rejected actions rather than fatal
   session errors; cover the actual point-click ordering in the owned-data lab.
 
-- [ ] Replace placeholder walk/run rates with class/data-derived policy.
+- [x] Replace placeholder walk/run rates with one immutable, case-insensitive
+  `CharStats.txt` class catalog shared by authority and client prediction; pin
+  all seven Expansion 1.14d classes to the owned-data 6/9 walk/run records.
 - [ ] Add Faster Run/Walk, stamina amount/max, drain, recovery, cannot-run, and
   verified chill/slow interactions.
 - [ ] Separate route planning from authoritative motion execution state.

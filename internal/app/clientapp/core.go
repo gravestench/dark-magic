@@ -108,6 +108,10 @@ func (app *application) loadGameCatalogs() error {
 		app.records = recordstore.New(app.options.Content)
 	}
 	app.records.SetLogger(slog.Default().With("component", "records"))
+	app.movementCatalog, err = d2movement.LoadCatalog(app.records)
+	if err != nil {
+		return wrap("load class movement rates", err)
+	}
 	app.questCatalog = recovered.New(app.options.Content)
 
 	recoveredData, err := app.questCatalog.Snapshot()
