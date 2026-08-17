@@ -5,6 +5,7 @@ import (
 
 	"github.com/gravestench/akara"
 
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -117,6 +118,48 @@ func (app *application) transitionBootstrapData() map[string]any {
 	seam := app.transitionSeam
 	app.worldMu.RUnlock()
 	return entryworld.TransitionData(seam)
+}
+
+// warpBootstrapData supplies an explicitly synthetic pair only to Warp Lab.
+// Lua still owns operation and relocation policy; Go contributes materialized
+// level bounds and collision-checked fixture coordinates just as it does for
+// the generated entry seam.
+func (app *application) warpBootstrapData() map[string]any {
+	if app.options.StartScene != "warp_lab" {
+		return map[string]any{"endpoints": []any{}}
+	}
+	townLevel, wildernessLevel := app.transitionSeam.Town.LevelID, app.transitionSeam.Wilderness.LevelID
+	town, wilderness := app.gameWorlds[townLevel], app.gameWorlds[wildernessLevel]
+	if town == nil || wilderness == nil {
+		return map[string]any{"endpoints": []any{}}
+	}
+	townSpawn, wildernessSpawn := app.gameWorldSpawns[townLevel], app.gameWorldSpawns[wildernessLevel]
+	openNear := func(worldMap *gameworld.Map, spawn [2]float64, offset, radius float64) [2]float64 {
+		if x, y, ok := worldMap.OpenPointNearSubtileForRadius(spawn[0]+offset, spawn[1], radius); ok {
+			return [2]float64{x, y}
+		}
+		return spawn
+	}
+	townPortal := openNear(town, townSpawn, 7, 0)
+	wildernessPortal := openNear(wilderness, wildernessSpawn, 7, 0)
+	townArrival := openNear(town, townPortal, -4, 1)
+	wildernessArrival := openNear(wilderness, wildernessPortal, 4, 1)
+	endpoint := func(id, pair, token, label string, level int, position, destination [2]float64,
+		destinationLevel int, destinationMap *gameworld.Map) map[string]any {
+		return map[string]any{
+			"id": id, "pair_id": pair, "token": token, "label": label,
+			"level_id": level, "x": position[0], "y": position[1], "radius": float64(3.5),
+			"destination_level": destinationLevel, "destination_x": destination[0],
+			"destination_y": destination[1], "destination_width": float64(destinationMap.WidthSubtiles),
+			"destination_height": float64(destinationMap.HeightSubtiles),
+		}
+	}
+	return map[string]any{"endpoints": []any{
+		endpoint("warp-lab:town", "warp-lab:wilderness", "TP", "BLUE TOWN WARP", townLevel,
+			townPortal, wildernessArrival, wildernessLevel, wilderness),
+		endpoint("warp-lab:wilderness", "warp-lab:town", "PP", "RED WILDERNESS WARP", wildernessLevel,
+			wildernessPortal, townArrival, townLevel, town),
+	}}
 }
 
 func (app *application) currentWorld() modruntime.CurrentWorld {

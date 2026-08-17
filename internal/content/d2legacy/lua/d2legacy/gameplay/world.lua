@@ -305,16 +305,13 @@ function M.missile_snapshots()
     -- Projectile schemas are d2legacy authority facts. Presentation copies
     -- either supported shape without deciding how the projectile behaves.
     for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile" }) do
-        local ok, entities = pcall(
-            ecs.query,
-            {
-                all = {
-                    component,
-                    "d2legacy.world.position",
-                    "d2legacy.world.location",
-                },
-            }
-        )
+        local ok, entities = pcall(ecs.query, {
+            all = {
+                component,
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+            },
+        })
         if ok then
             for _, entity in ipairs(entities) do
                 local snapshot = ecs.get(entity, component):snapshot()
@@ -327,6 +324,37 @@ function M.missile_snapshots()
                 result[#result + 1] = snapshot
             end
         end
+    end
+    return result
+end
+
+-- Copy authoritative warp endpoints for the ordinary world renderer. Operation
+-- and relocation never consult these presentation values.
+function M.warp_snapshots()
+    local result = {}
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.world.warp",
+                "d2legacy.world.warp_appearance",
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+                "d2legacy.world.selectable",
+            },
+        }))
+    do
+        local appearance = ecs.get(entity, "d2legacy.world.warp_appearance")
+        local position = ecs.get(entity, "d2legacy.world.position")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        local selectable = ecs.get(entity, "d2legacy.world.selectable")
+        result[#result + 1] = {
+            entity_id = entity:id(),
+            token = appearance:get("token"),
+            x = position:get("x"),
+            y = position:get("y"),
+            level_id = location:get("level_id"),
+            label = selectable:get("label"),
+        }
     end
     return result
 end

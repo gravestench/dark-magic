@@ -377,9 +377,9 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
 	// Map Labs intentionally add the Act II-V DAT/PL2 palettes as code-owned
-	// developer choices. Warp Lab likewise names the verified TP/PP ON-mode COF
-	// and HD/TR components recovered from OpenDiablo2 and visually checked against
-	// mounted production assets. Random map/tile paths remain dynamic VFS
+	// developer choices. The game-world manifest likewise owns Warp Lab's TP/PP
+	// ON-mode COF and HD/TR components recovered from OpenDiablo2 and visually
+	// checked against mounted production assets. Random map/tile paths remain dynamic VFS
 	// discoveries and therefore do not pretend every mounted asset is manifest-owned.
 	// The d2legacy straight-missile family declares its immutable Skills.txt and
 	// Missiles.txt inputs directly. Fire Bolt is its first configuration, not a
@@ -407,7 +407,7 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// presentation-coverage verified both files in the mounted archive.
 	// The Create Game pane uses the archive-authored four-state numeric arrow
 	// sheet for its capacity and character-level restriction selectors.
-	const auditedFingerprint = "ae5553b8f162cfd41bf40fff28199a6ff55a39b14f152808cae4b3146a835aea"
+	const auditedFingerprint = "fb12769532c37cd91c175e4289287e2f60e159e62d5dff7f726a5c8e9b1484c5"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

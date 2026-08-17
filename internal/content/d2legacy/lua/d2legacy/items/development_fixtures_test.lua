@@ -88,8 +88,8 @@ return test.suite({
                     [=[sword.body_slots == "rarm,larm" and sword.composite == "RH=SSD"]=]
                 )
                 test.assert(
-                    sword.weapon_class == "1HS" and sword.melee_range == 2,
-                    [=[sword.weapon_class == "1HS" and sword.melee_range == 2]=]
+                    sword.weapon_class == "1HS" and sword.melee_range == 2 and sword.attack_rate == 0,
+                    [=[sword.weapon_class == "1HS" and sword.melee_range == 2 and sword.attack_rate == 0]=]
                 )
                 test.assert(
                     sword.physical_min == 512 and sword.physical_max == 1792,

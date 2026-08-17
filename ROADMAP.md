@@ -1,10 +1,11 @@
 # Dark Magic roadmap
 
 Status: fully refreshed through the G4 player-population/override correction,
-the target-locked party-XP probe contract, and the G9 target-locked mounted-data,
-localized skill evidence, AnimData-timed generic melee action, current-state
-melee target revalidation, missile, timed-state, and reactive-state slices on
-2026-08-16.
+the target-locked party-XP probe contract, the G5 production Warp Lab
+realignment, and the G9 target-locked mounted-data, localized skill evidence,
+case-stable pinned MPQ tables, AnimData/effective-attack-rate generic melee
+action, current-state melee target revalidation, missile, timed-state, and
+reactive-state slices on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -122,6 +123,15 @@ Still required:
 - [x] Pin copied immutable record bytes for one live authority; invalidation can
   only reparse that generation, while source edits or mount changes create a
   different store and generation for a future authority.
+- [x] Preserve MPQ case-insensitive table lookup after pinning while retaining
+  the authored winning path/case in generation provenance.
+- [x] Discover startup-critical `MonPreset.txt` and `SkillDesc.txt` hash-table
+  members when a retail MPQ's incomplete `(listfile)` omits them, and pin them
+  normally rather than letting labs, character admission, or servers bypass
+  the immutable record generation.
+- [x] Compose the policy-neutral authoritative data module as a default so the
+  interactive client retains its presentation-profile-aware `engine.data/v1`
+  override instead of failing lab startup on duplicate registration.
 - [x] Carry the explicit generation through the canonical runtime identity and
   therefore session admission, replay, checkpoint, reconnect, worker allocation,
   and durable compatibility identity hashes.
@@ -257,6 +267,19 @@ Status: **partial**.
 Deterministic pointer-first A*, level collision, prediction-compatible movement,
 and monster chase exist. Still required:
 
+- [x] Make direct-start gameplay fixtures activate the ordinary offline Session
+  and route gameplay input through wrapper scenes instead of leaving animation-
+  only intents stranded while authority remains in frontend mode.
+- [x] Replace Warp Lab's private actor, route state, locomotion system, and
+  direct portal teleport with production game-world movement, collision,
+  interaction admission, shared relocation, animation, camera, and world
+  presentation; retain only read-only diagnostics and masking in the lab. Pin
+  both arrival anchors against the full player footprint and prove round-trip
+  travel followed by fresh locomotion.
+- [x] Gate click-to-operate on authoritative route completion and treat stale
+  mutable target/range observations as rejected actions rather than fatal
+  session errors; cover the actual point-click ordering in the owned-data lab.
+
 - [ ] Replace placeholder walk/run rates with class/data-derived policy.
 - [ ] Add Faster Run/Walk, stamina amount/max, drain, recovery, cannot-run, and
   verified chill/slow interactions.
@@ -341,6 +364,9 @@ runtime composition and the coverage report.
 - [x] Replace fallback base melee impact/completion ticks with the definition's
   animation mode plus the actor/weapon composite's pinned AnimData fixed-point
   attack event and cursor-wrap schedule.
+- [x] Route `UseAttackRate` timing through one reusable action-rate policy fed by
+  authored `attackrate`, `item_fasterattackrate`, weapon-speed, dual-wield, and
+  pinned AnimData facts rather than an Attack-specific delay table.
 - [x] Centralize current PvE melee target legality and revalidate semantic ID,
   player/hostile alignment, living state, act/level, footprint reach, and the
   authored melee-barrier trace both before Attack animation and at impact.
@@ -424,13 +450,35 @@ rate, frame count, and typed event bytes through renderer-free
 `engine.animdata/v1`; Lua schedules the first attack marker and cursor wrap at
 integer simulation ticks. The owned unarmed Amazon `AMA1HTH` record is 13
 frames at rate 256 with its attack event on frame 8, producing impact/completion
-delays of 8/13 ticks before attack-rate modifiers. `player.use_skill`
+delays of 8/13 ticks at the unmodified 100% rate. `player.use_skill`
 creates the same generic cast request used by Fire Bolt and Frozen Armor; the
 shared lifecycle verifies the authoritative learned level and accepts the
 literal zero cost, then a family adapter emits the reusable approach, selected-
 hand, animation, and impact action. No command, component, or system branches
 on Attack's ID or name, and a synthetic second-row decoder test proves family
 reuse without claiming another retail melee skill.
+
+The reusable action-rate layer now resolves the owned ItemStatCost names
+`attackrate` (signed ID 68, `UpdateAnimRate=1`) and
+`item_fasterattackrate` (signed ID 93) from named stat sources. Equipped weapon
+base speed contributes with the authored inverse sign, so the owned Expansion
+rows Phase Blade `speed=-30` and War Pike `speed=20` become +30 and -20
+`attackrate`. Owned Properties.txt maps `swing1`, `swing2`, and `swing3`
+directly to `item_fasterattackrate`. One skill-agnostic policy applies integer
+effective IAS `120*IAS/(IAS+120)`, primary/secondary weapon averaging for dual
+wield, the 15%-175% rate bounds, integer effective AnimData speed, and the same
+fixed-point marker/wrap scheduler. Equipment and passive/skill facts enter the
+existing provenance-preserving source resolver; equipping, swapping, or
+removing the source updates subsequent actions without an Attack-only branch.
+An admitted action snapshots its impact and completion ticks, so checkpoint and
+replay do not depend on later presentation playback.
+
+The table identities, property mapping, weapon values, and owned
+`AMA1HTH` record are verified directly against the pinned Expansion 1.14d
+generation. The arithmetic and dual-wield structure are high-confidence
+recovered behavior whose exact 1.14d breakpoint, sequence-action, shapeshift,
+slow/chill, and mid-swing stat-change boundaries still require owned runtime
+vectors. No older-version branch or compatibility mode exists.
 
 The generic melee target service now treats command target IDs as untrusted
 requests and re-resolves current ECS facts. Player attacks require a living
@@ -460,8 +508,9 @@ structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
 Next: probe and replace Attack's remaining inferred distance, dynamic-door,
-special-unit, and path-to-range edges, then admit its attack-rate modifier
-formula. In evidence order, finish Frozen Armor's remaining target-sensitive
+special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
+dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
+runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
 cold-duration/PvP rules. Then use the report to select one high-leverage missing
 target/point/area signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
@@ -473,7 +522,9 @@ then bind those player-visible relationships to Skills.txt formulas and owned
 ### G10 — Item-source lifecycle
 
 Status: **partial**. Provenance-preserving stat sources, authoritative containers,
-equipment transactions, generation, sockets, and runeword recognition foundations exist.
+equipment transactions, generation, sockets, and runeword recognition foundations
+exist. Active equipment now projects weapon `attackrate` and authored
+`item_fasterattackrate` into generic action timing and removes them on unequip.
 
 Activate ordinary equipment, weapon swap, broken/requirements suppression,
 charms by container, socket children, gems/runes/jewels, runewords, set thresholds,
@@ -497,6 +548,15 @@ Status: **partial foundation; representative behaviors missing**.
 Implement one reusable door, chest, shrine, waypoint, and Town Portal authority.
 Object operation must commit state/collision/loot/effect/travel first; animation,
 audio, and UI observe committed semantic state.
+
+- [x] Add component-dispatched world-object operation, paired warp endpoints,
+  and one relocation transaction shared with authored level seams; prove the
+  pair through interaction admission, production locomotion, checkpoint restore,
+  bidirectional active-world switching, footprint-safe arrival, post-return
+  locomotion, and the ordinary game renderer in Warp Lab.
+- [ ] Pin and implement expansion 1.14d Town Portal creation, owner/party access,
+  replacement, lifetime, origin/return placement, and teardown behavior before
+  treating the development pair as the Town Portal gameplay feature.
 
 ### G13 — Monster quality/pack/boss framework
 
@@ -572,7 +632,8 @@ probes remain:
   ItemStatCost operations, and CharStats vectors;
 - combat/motion: block, avoidance, mitigation, absorb, critical/deadly/mastery,
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
-  cast timing, path types, stamina, and inactive rooms;
+  attack-rate breakpoints/dual wield/mid-action changes, cast timing, path
+  types, stamina, and inactive rooms;
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;

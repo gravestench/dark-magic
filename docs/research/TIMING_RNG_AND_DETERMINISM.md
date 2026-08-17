@@ -127,12 +127,18 @@ D2MOO's item data includes both an item seed object and an initial/start seed. T
 Authoritative scheduling should use integer ticks.
 
 For composite actions backed by `AnimData.d2`, Dark Magic advances the authored
-24.8 frame cursor at the format's 25 Hz rate. A marker on zero-based frame `f`
-at speed `s` is scheduled after `max(1, ceil(f * 256 / s))` ticks; completion is
-the first cursor wrap, `ceil(frames * 256 / s)`. The effective binary and codec
-schema are part of the immutable game-data generation. This keeps gameplay
-headless and deterministic while presentation consumes the same raw timing
-facts independently.
+24.8 frame cursor at the format's 25 Hz rate. For a Skills.txt behavior with
+`UseAttackRate`, the generic action policy first resolves authored `attackrate`
+and `item_fasterattackrate` sources, applies integer effective IAS and the rate
+bounds, and computes `effectiveSpeed = floor(baseSpeed * ratePercent / 100)`.
+A marker on zero-based frame `f` at that speed `s` is scheduled after
+`max(1, ceil(f * 256 / s))` ticks; completion is the first cursor wrap,
+`ceil(frames * 256 / s)`. The effective binary, tables, and codec schema are
+part of the immutable game-data generation. This keeps gameplay headless and
+deterministic while presentation consumes the same raw timing facts
+independently. Current actions snapshot their due ticks at admission; exact
+Expansion 1.14d retiming behavior after a mid-action stat change remains a
+probe boundary.
 
 ```text
 ScheduledEvent

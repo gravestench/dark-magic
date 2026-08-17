@@ -81,7 +81,13 @@ end
 local function create_passive_sources(player, sources)
     local seen = {}
     for index, source in ipairs(sources or {}) do
-        assert(source.stat == "attack_rating" or source.stat == "defense", "unsupported passive combat stat")
+        assert(
+            source.stat == "attack_rating"
+                or source.stat == "defense"
+                or source.stat == "attackrate"
+                or source.stat == "item_fasterattackrate",
+            "unsupported passive combat stat"
+        )
         assert(
             source.operation == nil or source.operation == "add" or source.operation == "percent",
             "unsupported passive stat operation"
@@ -139,6 +145,11 @@ function M.apply(command)
             attack_rating = player_stats.base_attack_rating(p.class, p.dexterity, p.base_attack_rating),
             defense = player_stats.base_defense(p.dexterity, p.defense),
         },
+        ["d2legacy.combat.action_rate"] = {
+            base_attack_rate = 100,
+            attack_rate = 100,
+            item_fasterattackrate = 0,
+        },
         ["d2legacy.combat.defense"] = {
             base_physical_resist = p.physical_resistance or 0,
             base_fire_resist = p.fire_resistance or 0,
@@ -161,7 +172,9 @@ function M.apply(command)
             physical_min = 256,
             physical_max = 512,
             primary_hand = "unarmed",
+            primary_weapon_attack_rate = 0,
             secondary_hand = "",
+            secondary_weapon_attack_rate = 0,
             dual_wield = false,
         },
         ["d2legacy.player.appearance"] = {

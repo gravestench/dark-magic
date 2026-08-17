@@ -131,3 +131,15 @@ func TestOpenPointNearCenterSkipsBlockedCenterDeterministically(t *testing.T) {
 		t.Fatalf("open point = %v,%v,%v; want first perimeter point 1,1", x, y, found)
 	}
 }
+
+func TestOpenPointNearSubtileForRadiusRejectsBlockedFootprint(t *testing.T) {
+	m := &Map{WidthSubtiles: 7, HeightSubtiles: 7, flags: make([]Flags, 49)}
+	m.flags[3*7+4].BlockPlayerWalk = true
+	x, y, found := m.OpenPointNearSubtileForRadius(3, 3, 1)
+	if !found || x != 2 || y != 2 {
+		t.Fatalf("footprint-safe point = %v,%v,%v; want 2,2,true", x, y, found)
+	}
+	if _, _, found := m.OpenPointNearSubtileForRadius(3, 3, -1); found {
+		t.Fatal("negative footprint radius was accepted")
+	}
+}

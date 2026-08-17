@@ -76,6 +76,7 @@ local function create_item(layout, item)
             physical_min = item.physical_min or 0,
             physical_max = item.physical_max or 0,
             attack_rating = item.attack_rating or 0,
+            attack_rate = item.attack_rate or 0,
             weapon_class = item.melee_weapon_class or "",
         },
         ["d2legacy.item.armor"] = {

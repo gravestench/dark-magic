@@ -223,6 +223,7 @@ func (app *application) sessionInitialData() map[string]any {
 		},
 		"d2legacy.interactions":      app.interactionBootstrapData(),
 		"d2legacy.world_transitions": app.transitionBootstrapData(),
+		"d2legacy.world_warps":       app.warpBootstrapData(),
 	}
 }
 
@@ -329,7 +330,7 @@ func (app *application) buildLoadingCoordinator() error {
 
 func fixtureNeedsSelection(scene string) bool {
 	switch scene {
-	case "game_world", "game_loading", "combat_lab", "inventory", "character", "skills", "vendor":
+	case "game_world", "game_loading", "combat_lab", "warp_lab", "inventory", "character", "skills", "vendor":
 		return true
 	default:
 		return false

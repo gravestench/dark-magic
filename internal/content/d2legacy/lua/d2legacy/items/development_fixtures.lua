@@ -87,6 +87,9 @@ local function weapon_items(items, weapons)
     inventory.melee_range = 1 + integer(row.rangeadder)
     inventory.physical_min = integer(row.mindam) * 256
     inventory.physical_max = integer(row.maxdam) * 256
+    -- Weapons.txt speed is a penalty: the runtime attackrate contribution has
+    -- the opposite sign (Phase Blade -30 => attackrate +30).
+    inventory.attack_rate = -integer(row.speed)
     inventory.melee_weapon_class = inventory.weapon_class
     append(items, inventory, {container = "inventory"})
 

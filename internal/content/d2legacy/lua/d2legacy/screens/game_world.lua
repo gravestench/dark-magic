@@ -27,6 +27,7 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
 local chunked_map = require("d2legacy.presentation.chunked_map")
 local tooltip = require("d2legacy.ui.tooltip")
@@ -75,6 +76,18 @@ local function destroy_missiles(self)
     self.missiles = {}
 end
 
+local function destroy_warps(self)
+    for _, warp in pairs(self.warps or {}) do
+        if warp.pending_job then
+            render.preload_release(warp.pending_job)
+        end
+        if warp.node and warp.node:exists() then
+            warp.node:destroy()
+        end
+    end
+    self.warps = {}
+end
+
 local function install_current_world(self)
     local world_capability = self.world_capability
     if not world_capability then
@@ -93,6 +106,7 @@ local function install_current_world(self)
     destroy_monsters(self)
     destroy_players(self)
     destroy_missiles(self)
+    destroy_warps(self)
     self.collision_node, self.collision_region_key = nil, nil
     self.tile_debug_node, self.tile_debug_region_key = nil, nil
     self.hero_origin = nil
@@ -233,11 +247,76 @@ local function update_debug_legend(self)
 end
 
 local function selectable_at(self, x, y)
-    local spawned = self.targeting and self.targeting.selectable_at(x, y) or nil
+    local spawned = self.targeting and self.targeting.selectable_at(x, y, self.world_level_id) or nil
     if spawned and spawned.owner ~= controlled_player_id() then
         return spawned
     end
     return self.world and self.world:selectable_at(x, y) or nil
+end
+
+local function warp_recipe(token)
+    return assert(screen.warps[token], "warp presentation is unavailable for " .. token)
+end
+
+local function update_warps(self)
+    if not self.map or not self.world then
+        return
+    end
+    self.warps = self.warps or {}
+    local seen = {}
+    for _, snapshot in ipairs(self.gameplay_world.warp_snapshots()) do
+        if snapshot.level_id == self.world_level_id then
+            local key = tostring(snapshot.entity_id)
+            seen[key] = true
+            local warp = self.warps[key]
+            if not warp then
+                local recipe = warp_recipe(snapshot.token)
+                warp = { node = render.create("world", self.map.root), recipe = recipe }
+                warp.node:set_visible(false)
+                warp.pending_job = render.preload({
+                    {
+                        kind = "cof_animation",
+                        path = recipe.cof,
+                        palette = recipe.palette,
+                        direction = 0,
+                        components = recipe.components,
+                    },
+                })
+                self.warps[key] = warp
+            end
+            if warp.pending_job then
+                local status = render.preload_status(warp.pending_job)
+                if status and status.done then
+                    render.preload_release(warp.pending_job)
+                    warp.pending_job = nil
+                    if status.failed == 0 then
+                        warp.node:set_cof_animation(
+                            warp.recipe.cof,
+                            warp.recipe.palette,
+                            0,
+                            warp.recipe.components,
+                            "loop",
+                            256
+                        )
+                        warp.node:set_blend("screen")
+                        warp.node:set_visible(true)
+                    end
+                end
+            end
+            local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+            warp.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
+            warp.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+        end
+    end
+    for key, warp in pairs(self.warps) do
+        if not seen[key] then
+            if warp.pending_job then
+                render.preload_release(warp.pending_job)
+            end
+            warp.node:destroy()
+            self.warps[key] = nil
+        end
+    end
 end
 
 local function retained_monster(self, key)
@@ -563,6 +642,7 @@ return {
             update_monsters(self, elapsed)
             update_players(self, elapsed)
             update_missiles(self)
+            update_warps(self)
             observe_semantic_cues(self)
         end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
@@ -871,14 +951,25 @@ return {
         end
         if self.pending_interaction then
             local selected = self.pending_interaction
-            local dx, dy = hero_x - selected.x, hero_y - selected.y
-            if dx * dx + dy * dy <= 16 and self.world:line_clear(hero_x, hero_y, selected.x, selected.y) then
-                self.interaction.open_at(selected.x, selected.y)
-                self.player.request_move(hero_x, hero_y)
-                self.pending_interaction = nil
-            elseif not self.player.movement_pending() then
-                -- Authority could not find a route. Do not leave a ghost interaction
-                -- that unexpectedly fires after some unrelated later movement.
+            local ready, finished = interaction_approach.resolve(
+                selected,
+                hero_x,
+                hero_y,
+                self.player.movement_pending(),
+                function(x1, y1, x2, y2)
+                    return self.world:line_clear(x1, y1, x2, y2)
+                end
+            )
+            if ready then
+                -- Route completion is sampled from the authoritative ECS,
+                -- unlike the locally predicted hero position above. Name the
+                -- selected entity so point overlap cannot actuate a different
+                -- object on the command's eventual apply tick.
+                self.interaction.open(selected.id)
+            end
+            if finished then
+                -- Completion or route rejection consumes this click. A stale
+                -- authoritative interaction attempt is itself a harmless no-op.
                 self.pending_interaction = nil
             end
         end
@@ -906,6 +997,7 @@ return {
         destroy_monsters(self)
         destroy_players(self)
         destroy_missiles(self)
+        destroy_warps(self)
         chunked_map.destroy(self.map)
     end,
 }

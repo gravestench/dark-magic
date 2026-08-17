@@ -21,6 +21,15 @@ const (
 	AnimationDataPath = "data/global/AnimData.d2"
 )
 
+// Some retail MPQs can open known hash-table members which their internal
+// (listfile) does not enumerate. Keep this list restricted to authoritative
+// paths consumed during application/server startup; discovered members still
+// enter the same immutable generation and provenance boundary.
+var requiredUnlistedPaths = []string{
+	"data/global/excel/MonPreset.txt",
+	"data/global/excel/SkillDesc.txt",
+}
+
 type generationSource interface {
 	fs.FS
 	List(root, suffix string) ([]string, error)
@@ -51,6 +60,21 @@ func Pin(source generationSource) (*Store, Generation, error) {
 	paths, err := source.List(AuthoritativeRoot, ".txt")
 	if err != nil {
 		return nil, Generation{}, fmt.Errorf("recordstore: list authoritative tables: %w", err)
+	}
+	listed := make(map[string]struct{}, len(paths))
+	for _, name := range paths {
+		listed[strings.ToLower(name)] = struct{}{}
+	}
+	for _, name := range requiredUnlistedPaths {
+		if _, found := listed[strings.ToLower(name)]; found {
+			continue
+		}
+		if _, statErr := fs.Stat(source, name); statErr == nil {
+			paths = append(paths, name)
+			listed[strings.ToLower(name)] = struct{}{}
+		} else if !errors.Is(statErr, fs.ErrNotExist) {
+			return nil, Generation{}, fmt.Errorf("recordstore: inspect required authoritative table %q: %w", name, statErr)
+		}
 	}
 	if len(paths) == 0 {
 		return nil, Generation{}, fmt.Errorf("%w below %q", ErrNoAuthoritativeTables, AuthoritativeRoot)
@@ -87,6 +111,11 @@ func Pin(source generationSource) (*Store, Generation, error) {
 	pinned.generationID = generation.ID
 	pinned.provenance = make(map[string]Provenance, len(generation.Files))
 	for _, file := range generation.Files {
+		folded := strings.ToLower(file.Path)
+		if existing := pinned.canonical[folded]; existing != "" && existing != file.Path {
+			return nil, Generation{}, fmt.Errorf("recordstore: authoritative paths differ only by case: %q and %q", existing, file.Path)
+		}
+		pinned.canonical[folded] = file.Path
 		pinned.provenance[file.Path] = Provenance{Layer: file.Source, Path: file.SourcePath}
 	}
 	return pinned, generation, nil

@@ -73,7 +73,11 @@ func (app *application) publishInput(frameContext context.Context) {
 	if captured {
 		owner = inputstate.FocusOwner{Domain: inputstate.FocusDebug, ID: "client-console"}
 	}
-	gameplayAllowed, worldView := app.navigator.InputPolicy("game_world")
+	gameplayScene := "game_world"
+	if focused, ok := app.navigator.Focused(); ok && developmentGameplayScene(focused) {
+		gameplayScene = focused
+	}
+	gameplayAllowed, worldView := app.navigator.InputPolicy(gameplayScene)
 	app.inputState.Publish(inputstate.Route(frame, owner, captured, gameplayAllowed, worldView))
 }
 

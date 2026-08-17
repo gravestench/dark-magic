@@ -111,6 +111,12 @@ The first explicitly synthetic room-density policy now proves this separation
 and records every suppression/fallback decision. Exact retail density, room
 eligibility, and pack-quality behavior remain verification work.
 
+The generic player action path now also derives `UseAttackRate` timing from
+named `attackrate`/`item_fasterattackrate` sources, equipped weapon speed, and
+the pinned AnimData record. Attack is only the first exact-ID fixture consuming
+that family; subsequent rate-using skills must reuse it and supply their own
+target-version action/sequence evidence.
+
 ### Completed: M21.11 monster death transaction
 
 Goal: replace the current minimal lethal consequence with one atomic semantic death transaction.

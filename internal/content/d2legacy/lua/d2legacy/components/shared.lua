@@ -81,6 +81,17 @@ function M.register()
         { name = "radius", type = "f64" },
         { name = "priority", type = "i64" },
     })
+    component("d2legacy.world.warp", {
+        { name = "pair_id", type = "string" },
+        { name = "destination_level", type = "i64" },
+        { name = "destination_x", type = "f64" },
+        { name = "destination_y", type = "f64" },
+        { name = "destination_width", type = "f64" },
+        { name = "destination_height", type = "f64" },
+    })
+    component("d2legacy.world.warp_appearance", {
+        { name = "token", type = "string" },
+    })
     component("d2legacy.monster.stats", {
         { name = "level", type = "i64" },
         { name = "spawn_player_count", type = "i64" },
@@ -147,6 +158,11 @@ function M.register()
         { name = "base_defense", type = "i64" },
         { name = "attack_rating", type = "i64" },
         { name = "defense", type = "i64" },
+    })
+    component("d2legacy.combat.action_rate", {
+        { name = "base_attack_rate", type = "i64" },
+        { name = "attack_rate", type = "i64" },
+        { name = "item_fasterattackrate", type = "i64" },
     })
     component("d2legacy.combat.defense", {
         { name = "base_physical_resist", type = "i64" },

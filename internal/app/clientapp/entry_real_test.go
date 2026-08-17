@@ -59,7 +59,11 @@ func realD2LegacyOptions(t *testing.T) Options {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Options{Content: assets, Mods: &mods.Resolved, Packages: mods.Packages}
+	assetSetID, err := content.AssetSetIdentityFromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return Options{Content: assets, Mods: &mods.Resolved, Packages: mods.Packages, AssetSetID: assetSetID}
 }
 
 // This is the complete offline admission seam exercised with production data:
@@ -325,5 +329,229 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.event")
 			t.Fatalf("Combat Lab basic attack left monster health unchanged at %v; player=(%.1f,%.1f) target=(%.1f,%.1f) approaches=%d animations=%d events=%d", afterHealth, playerX, playerY, targetX, targetY, approaches.Len(), animations.Len(), events.Len())
 		}
+	}
+}
+
+// Warp Lab must remain a thin instrument over the production client path. This
+// acceptance test starts it exactly as the CLI does, admits a real fixture,
+// drives the shared movement mailbox, crosses the generated Act I seam, and
+// observes the application swap its active world from authoritative location.
+func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
+	if os.Getenv("MPQ_DIRECTORY") == "" {
+		t.Skip("MPQ_DIRECTORY is not configured")
+	}
+	options := realD2LegacyOptions(t)
+	options.StartScene = "warp_lab"
+	options = applyDevelopmentSceneDefaults(options)
+	app := &application{
+		options:    options,
+		inputState: &inputstate.Store{},
+		locale:     localization.New(options.Content, "English"),
+		scripts:    modruntime.New(),
+	}
+	if err := app.loadGameCatalogs(); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.buildOfflineSession(); err != nil {
+		t.Fatal(err)
+	}
+	startTestD2LegacyAuthority(t, app)
+	t.Cleanup(func() {
+		app.loading.Close()
+		_ = app.offlineSession.Close()
+		_ = app.entitySimulation.Close()
+		_ = content.Close(options.Content)
+	})
+
+	if !shouldActivateDevelopmentSession(app.options) {
+		t.Fatal("Warp Lab direct start did not request offline-session activation")
+	}
+	if err := app.network.StartSelected(); err != nil {
+		t.Fatal(err)
+	}
+	for range 10 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	controls, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.player_control")
+	if !ok || controls.Len() != 1 {
+		t.Fatalf("Warp Lab admitted players = %d, want 1", controls.Len())
+	}
+	locations, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
+	if !ok {
+		t.Fatal("Warp Lab has no authoritative world locations")
+	}
+	player := controls.Entities()[0]
+	location, found := locations.Get(player)
+	if !found {
+		t.Fatal("Warp Lab player has no authoritative location")
+	}
+	level, _ := location.Get("level_id")
+	if level != int64(app.transitionSeam.Town.LevelID) {
+		t.Fatalf("Warp Lab entry level = %v, want town %d", level, app.transitionSeam.Town.LevelID)
+	}
+	warps, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.warp")
+	positions, positionsOK := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
+	selectables, selectablesOK := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.selectable")
+	if !ok || !positionsOK || !selectablesOK {
+		t.Fatal("Warp Lab is missing authoritative warp presentation stores")
+	}
+	if warps.Len() != 2 {
+		t.Fatalf("Warp Lab authoritative endpoints = %d, want paired production entities", warps.Len())
+	}
+	var portalID string
+	var portalX, portalY float64
+	for _, entity := range warps.Entities() {
+		portalLocation, present := locations.Get(entity)
+		if !present {
+			continue
+		}
+		portalLevel, _ := portalLocation.Get("level_id")
+		if portalLevel != int64(app.transitionSeam.Town.LevelID) {
+			continue
+		}
+		portalPosition, _ := positions.Get(entity)
+		portalXValue, _ := portalPosition.Get("x")
+		portalYValue, _ := portalPosition.Get("y")
+		portalX, portalY = portalXValue.(float64), portalYValue.(float64)
+		selectable, _ := selectables.Get(entity)
+		portalIDValue, _ := selectable.Get("id")
+		portalID = portalIDValue.(string)
+		break
+	}
+	if portalID == "" {
+		t.Fatal("Warp Lab created no town-side warp endpoint")
+	}
+	// A predicted client can briefly believe it is in range before authority.
+	// The real point-click command must reject that stale attempt without
+	// terminating the game session or moving the player through the warp.
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": portalX, "y": portalY,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.advanceGame(time.Second / 25); err != nil {
+		t.Fatalf("stale Warp Lab interaction terminated the session: %v", err)
+	}
+	level, _ = location.Get("level_id")
+	if level != int64(app.transitionSeam.Town.LevelID) {
+		t.Fatalf("out-of-range Warp Lab interaction changed level to %v", level)
+	}
+	if err := app.playerControl.SetMoveTargetWithRadius(portalX, portalY, 3.5); err != nil {
+		t.Fatal(err)
+	}
+	for range 250 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+		if !app.playerControl.HasMoveTarget() {
+			break
+		}
+	}
+	if app.playerControl.HasMoveTarget() {
+		t.Fatal("Warp Lab player never reached the town-side warp")
+	}
+	// Exercise the same point-based API used by presentation input after the
+	// authoritative movement mailbox reports route completion.
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": portalX, "y": portalY,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+	}
+	level, _ = location.Get("level_id")
+	if level != int64(app.transitionSeam.Wilderness.LevelID) {
+		t.Fatalf("Warp Lab player did not operate paired warp; final level = %v", level)
+	}
+	if app.activeWorldLevel != app.transitionSeam.Wilderness.LevelID {
+		t.Fatalf("active presentation world = %d, want %d", app.activeWorldLevel,
+			app.transitionSeam.Wilderness.LevelID)
+	}
+
+	var returnX, returnY float64
+	for _, entity := range warps.Entities() {
+		portalLocation, present := locations.Get(entity)
+		if !present {
+			continue
+		}
+		portalLevel, _ := portalLocation.Get("level_id")
+		if portalLevel != int64(app.transitionSeam.Wilderness.LevelID) {
+			continue
+		}
+		portalPosition, _ := positions.Get(entity)
+		returnXValue, _ := portalPosition.Get("x")
+		returnYValue, _ := portalPosition.Get("y")
+		returnX, returnY = returnXValue.(float64), returnYValue.(float64)
+		break
+	}
+	if returnX == 0 && returnY == 0 {
+		t.Fatal("Warp Lab created no wilderness-side warp endpoint")
+	}
+	if err := app.playerControl.SetMoveTargetWithRadius(returnX, returnY, 3.5); err != nil {
+		t.Fatal(err)
+	}
+	for range 250 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+		if !app.playerControl.HasMoveTarget() {
+			break
+		}
+	}
+	if app.playerControl.HasMoveTarget() {
+		t.Fatal("Warp Lab player never reached the wilderness-side warp")
+	}
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": returnX, "y": returnY,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+	}
+	level, _ = location.Get("level_id")
+	if level != int64(app.transitionSeam.Town.LevelID) || app.activeWorldLevel != app.transitionSeam.Town.LevelID {
+		t.Fatalf("Warp Lab return left authority/presentation at %v/%d", level, app.activeWorldLevel)
+	}
+
+	playerPosition, _ := positions.Get(player)
+	startXValue, _ := playerPosition.Get("x")
+	startYValue, _ := playerPosition.Get("y")
+	startX, startY := startXValue.(float64), startYValue.(float64)
+	town := app.gameWorlds[app.transitionSeam.Town.LevelID]
+	goalX, goalY, found := town.OpenPointNearSubtileForRadius(startX-6, startY, 1)
+	if !found {
+		t.Fatal("Warp Lab return has no footprint-safe locomotion target")
+	}
+	if _, err := town.FindPath(gameworld.PathRequest{
+		Start: gameworld.Point{X: startX, Y: startY}, Goal: gameworld.Point{X: goalX, Y: goalY}, Radius: 1,
+	}); err != nil {
+		t.Fatalf("Warp Lab return position cannot start production locomotion: %v", err)
+	}
+	if err := app.playerControl.SetMoveTarget(goalX, goalY); err != nil {
+		t.Fatal(err)
+	}
+	moved := false
+	for range 100 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+		xValue, _ := playerPosition.Get("x")
+		yValue, _ := playerPosition.Get("y")
+		if math.Hypot(xValue.(float64)-startX, yValue.(float64)-startY) > 0.5 {
+			moved = true
+			break
+		}
+	}
+	if !moved {
+		t.Fatal("Warp Lab locomotion did not resume after the return warp")
 	}
 }

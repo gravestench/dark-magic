@@ -305,9 +305,15 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	animationSource, _ = records.(interface {
 		Read(string) ([]byte, error)
 	})
+	// The interactive client installs a presentation-profile-aware data module
+	// before authority composition. Headless hosts need this policy-neutral
+	// fallback, but must not replace or duplicate the richer client capability.
+	if err := runtime.RegisterModuleDefault(modruntime.DataModule(source)); err != nil {
+		return err
+	}
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
-		modruntime.DataModule(source), modruntime.RecordsModule(records), modruntime.AnimDataModule(animationSource),
+		modruntime.RecordsModule(records), modruntime.AnimDataModule(animationSource),
 		modruntime.AuthorityRandomModule(random),
 		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(),
 	} {

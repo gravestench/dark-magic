@@ -30,14 +30,25 @@ function M.register()
     ecs.system({
         id = "d2legacy.combat.derived_stats",
         phase = "pre_simulation",
-        query = { any = { "d2legacy.combat.defense", "d2legacy.player.combat_stats", "d2legacy.stat.source" } },
-        read = { "d2legacy.combat.defense", "d2legacy.player.combat_stats", "d2legacy.stat.source" },
-        write = { "d2legacy.combat.defense", "d2legacy.player.combat_stats" },
+        query = { any = {
+            "d2legacy.combat.defense",
+            "d2legacy.player.combat_stats",
+            "d2legacy.combat.action_rate",
+            "d2legacy.stat.source",
+        } },
+        read = {
+            "d2legacy.combat.defense",
+            "d2legacy.player.combat_stats",
+            "d2legacy.combat.action_rate",
+            "d2legacy.stat.source",
+        },
+        write = { "d2legacy.combat.defense", "d2legacy.player.combat_stats", "d2legacy.combat.action_rate" },
         update = function(_, entities)
             for _, target in ipairs(entities) do
                 local defense = ecs.get(target, "d2legacy.combat.defense")
                 local combat = ecs.get(target, "d2legacy.player.combat_stats")
-                if defense or combat then
+                local action_rate = ecs.get(target, "d2legacy.combat.action_rate")
+                if defense or combat or action_rate then
                     local sources = sources_by_stat(entities, target)
                     if combat then
                         combat:set("attack_rating", resolve(combat:get("base_attack_rating"), sources, "attack_rating"))
@@ -51,6 +62,13 @@ function M.register()
                         defense:set("fire_resist", resolve(defense:get("base_fire_resist"), sources, "fire_resist"))
                         defense:set("max_fire_resist", resolve(75, sources, "max_fire_resist"))
                         defense:set("physical_reduction_raw", resolve(0, sources, "physical_reduction_raw"))
+                    end
+                    if action_rate then
+                        action_rate:set(
+                            "attack_rate",
+                            resolve(action_rate:get("base_attack_rate"), sources, "attackrate")
+                        )
+                        action_rate:set("item_fasterattackrate", resolve(0, sources, "item_fasterattackrate"))
                     end
                 end
             end

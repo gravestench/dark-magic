@@ -5,6 +5,7 @@ package world
 import (
 	"fmt"
 	"io/fs"
+	"math"
 	"sync"
 
 	"github.com/gravestench/ds1"
@@ -312,6 +313,17 @@ func (m *Map) OpenPointNearSubtile(x, y float64) (float64, float64, bool) {
 	return m.openPointNear(CollisionCell(x), CollisionCell(y), 0)
 }
 
+// OpenPointNearSubtileForRadius resolves an anchor whose complete circular
+// footprint is traversable. Relocation destinations must use this rather than
+// validating only their center cell, or a player can arrive unable to take the
+// first locomotion step.
+func (m *Map) OpenPointNearSubtileForRadius(x, y, radius float64) (float64, float64, bool) {
+	if radius < 0 || math.IsNaN(radius) || math.IsInf(radius, 0) {
+		return 0, 0, false
+	}
+	return m.openFootprintNear(CollisionCell(x), CollisionCell(y), 0, radius)
+}
+
 // OpenPointNear resolves a traversable point at or outside a caller-selected
 // radius. The caller owns why that inset is appropriate.
 func (m *Map) OpenPointNear(x, y float64, firstRadius int) (float64, float64, bool) {
@@ -322,6 +334,10 @@ func (m *Map) OpenPointNear(x, y float64, firstRadius int) (float64, float64, bo
 }
 
 func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64, bool) {
+	return m.openFootprintNear(centerX, centerY, firstRadius, 0)
+}
+
+func (m *Map) openFootprintNear(centerX, centerY, firstRadius int, footprintRadius float64) (float64, float64, bool) {
 	limit := max(m.WidthSubtiles, m.HeightSubtiles)
 	for radius := firstRadius; radius <= limit; radius++ {
 		for y := centerY - radius; y <= centerY+radius; y++ {
@@ -329,8 +345,7 @@ func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64
 				if radius > 0 && x != centerX-radius && x != centerX+radius && y != centerY-radius && y != centerY+radius {
 					continue
 				}
-				flags, inside := m.FlagsAt(x, y)
-				if inside && !flags.Blocked() {
+				if m.walkableCell(navCell{x: x, y: y}, footprintRadius) {
 					return float64(x), float64(y), true
 				}
 			}

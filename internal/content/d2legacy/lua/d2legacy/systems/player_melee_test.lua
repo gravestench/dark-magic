@@ -97,7 +97,7 @@ end
 
 -- Assert the three expected lifecycle events appeared for the right participants
 -- and in the correct temporal order: start, impact, completion.
-local function assert_attack_lifecycle_events(events)
+local function assert_attack_lifecycle_events(events, expected_impact_delay, expected_complete_delay)
     test.assert(#events == 3, [=[#events == 3]=])
 
     -- Map each event kind to its tick so we can prove ordering.
@@ -130,8 +130,8 @@ local function assert_attack_lifecycle_events(events)
     -- The synthetic AMA1HTH record has speed 128, its attack marker on frame
     -- three, and eight total frames: ceil(3*256/128)=6 ticks to impact and
     -- ceil(8*256/128)=16 ticks to completion.
-    test.expect(ticks.attack_impact - ticks.attack_started):equals(6)
-    test.expect(ticks.attack_completed - ticks.attack_started):equals(16)
+    test.expect(ticks.attack_impact - ticks.attack_started):equals(expected_impact_delay or 6)
+    test.expect(ticks.attack_completed - ticks.attack_started):equals(expected_complete_delay or 16)
 end
 
 return test.suite({
@@ -223,6 +223,36 @@ return test.suite({
                 local player = player_entity()
                 local vitals = ecs.get(player, "d2legacy.player.vitals")
                 test.assert(vitals:get("mana") == 20, [=[zero-cost Attack preserves mana]=])
+            end),
+        }),
+        test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    passive_stat_sources = {
+                        {
+                            id = "test-ias",
+                            stat = "item_fasterattackrate",
+                            operation = "add",
+                            value = 40,
+                            order = 1,
+                        },
+                    },
+                }),
+            }),
+            test.step(1),
+            test.run(function()
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(16),
+            test.run(function()
+                -- Synthetic AMA1HTH: EIAS(40)=30, effective speed is
+                -- floor(128*130/100)=166, so frame 3 lands on tick 5 and the
+                -- eight-frame action completes on tick 13.
+                assert_attack_lifecycle_events(collect_attack_events(), 5, 13)
             end),
         }),
         test.case("rejects_non_opponent_targets", {
