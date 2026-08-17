@@ -1,8 +1,8 @@
 # Dark Magic roadmap
 
 Status: fully refreshed through the G4 player-population/override correction,
-the target-locked party-XP probe contract, and the G9 straight-missile
-behavior-family refactor on 2026-08-16.
+the target-locked party-XP probe contract, and the G9 target-locked mounted-data
+behavior-family coverage baseline on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -57,7 +57,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows and 172 server behavior signatures with winning-layer provenance; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -320,9 +320,11 @@ Status: **partial**. Generic cast lifecycle, timed state, melee, and straight-
 missile behavior families plus supporting target/motion primitives exist. Fire
 Bolt is the first explicitly supported expansion 1.14d straight-missile
 configuration; it no longer owns a standalone component, command branch,
-system, damage function, or random stream.
+system, damage function, random stream, or private admission list. Exact skill
+admission now comes from one target-locked implementation manifest shared by
+runtime composition and the coverage report.
 
-- [ ] Generate a mounted-data report of server start/do behavior IDs, consuming
+- [x] Generate a mounted-data report of server start/do behavior IDs, consuming
   skills, implementation family, missing family, and evidence status.
 - [x] Replace the first skill-specific Fire Bolt authority with an explicitly
   configured, definition-driven straight-missile family dispatched by skill ID.
@@ -333,17 +335,31 @@ system, damage function, or random stream.
   summon, corpse, movement, missile, and trap families in dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
 
-`d2legacy.data.missile_skills` now validates explicitly supported Skills.txt and
-Missiles.txt rows into immutable `missile.straight` definitions. Generic command
-dispatch, mana/cast scheduling, projectile materialization, swept contact,
-channel mitigation, and purpose-named missile damage RNG consume those
-definitions. Adding a supported skill ID requires verified 1.14d launch and
-impact semantics, but never another skill-specific system file. Fire Bolt
-remains the end-to-end fixture because its owned 1.14d row is reviewed; Ice Bolt
-and other missiles are not enabled by visual similarity or older behavior. An
-opt-in owned-archive boot test validates the configured family against the
-target expansion 1.14d Skills.txt and Missiles.txt without committing those
-copyrighted tables.
+`skill_behavior_coverage` mounts owned archives, reads the winning Expansion
+1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
+and referenced missile server-do function IDs, and reports every consumer with
+its explicit family, missing-family flag, and evidence status. The current
+owned-data baseline is 357 skill rows, 172 signatures, 2 explicitly admitted
+configurations, and 355 missing configurations. The report fails if a declared
+skill or referenced server missile is absent, and its synthetic test proves a
+row with the same function signature is not admitted by resemblance. Generated
+reports remain local; copyrighted tables are never copied into Git.
+
+`manifests/skill-behavior-coverage.v1.json` is locked to
+`diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
+declarations as the report. `d2legacy.data.missile_skills` validates an admitted
+row pair into an immutable `missile.straight` definition; the earlier Frozen
+Armor name lookup is now the generic `state.self-timed` decoder selected by ID.
+Fire Bolt has owned-target record evidence. The provisional Frozen Armor slice
+is explicitly labeled `implementation-present-target-behavior-unverified` and
+must not be treated as fidelity-complete. Ice Bolt and other visually or
+structurally similar skills remain missing until their own Expansion 1.14d
+launch, motion, impact, state, and ordering semantics are verified.
+
+Next: use the report to select one high-leverage missing signature and implement
+the smallest reusable target/point/area family it requires. Evidence upgrades
+and exact-ID declarations land together; no declaration is added merely because
+another skill shares server function IDs.
 
 ### G10 — Item-source lifecycle
 

@@ -1,0 +1,17 @@
+{
+  "schema": "d2legacy.skill_behavior_coverage/v1",
+  "version": 1,
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "implementations": [
+    {
+      "skill_id": 36,
+      "family": "missile.straight",
+      "evidence_status": "owned-target-records-verified"
+    },
+    {
+      "skill_id": 40,
+      "family": "state.self-timed",
+      "evidence_status": "implementation-present-target-behavior-unverified"
+    }
+  ]
+}

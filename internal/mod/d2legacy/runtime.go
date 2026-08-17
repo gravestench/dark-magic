@@ -301,7 +301,7 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	}
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
-		modruntime.RecordsModule(records), modruntime.AuthorityRandomModule(random),
+		modruntime.DataModule(source), modruntime.RecordsModule(records), modruntime.AuthorityRandomModule(random),
 		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {

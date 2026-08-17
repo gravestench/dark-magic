@@ -7,7 +7,11 @@
 > policy migrates to authoritative Lua while justified generic scheduling,
 > collision, movement, and data-decoding mechanisms may remain in Go.
 
-Status: implementation-oriented research baseline. Runtime findings are primarily from D2MOO's Diablo II 1.10f reconstruction and are version-labeled accordingly. This document describes boundaries and evidence; it is not yet a complete skill-by-skill compatibility specification.
+Status: implementation-oriented research baseline plus a mounted Expansion
+1.14d coverage inventory. Older D2MOO 1.10f reconstruction findings remain
+version-labeled architecture clues only; they do not define target behavior.
+This document describes boundaries and evidence and is not yet a complete
+skill-by-skill implementation specification.
 
 This workstream builds directly on:
 
@@ -76,10 +80,27 @@ opt-in owned-archive test boots the authority against the target expansion
 1.14d records so the generic decoder's production contract is checked without
 placing copyrighted tables in Git.
 
+The target-locked `skill_behavior_coverage` tool now reads the winning mounted
+Skills.txt and Missiles.txt rows and groups every skill by its server start/do
+IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
+archives on 2026-08-16 it reports 357 skill rows, 172 distinct signatures, 2
+explicitly admitted configurations, and 355 missing configurations. Every
+consumer carries an implementation family or `missing_family: true` plus an
+evidence status. Exact declarations live in
+`manifests/skill-behavior-coverage.v1.json`, which runtime composition also
+consumes. Thus sharing Fire Bolt's function signature cannot silently enable
+Ice Bolt or any other row.
+
+The existing timed self-state fixture is now selected by exact ID through the
+same manifest rather than by the string `Frozen Armor`. Its evidence status is
+deliberately `implementation-present-target-behavior-unverified`; the current
+slice proves generic mechanics, not exact 1.14d Frozen Armor state/stat,
+duration, defense, chilling, or event behavior.
+
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-the mounted-data server-function coverage report, additional impact/motion
-families, richer state/stat-source effects, summons, corpse/item/object actions,
-and the rest of the behavior-family matrix below.
+classification and implementation of the 355 missing configurations,
+additional impact/motion families, richer state/stat-source effects, summons,
+corpse/item/object actions, and the rest of the behavior-family matrix below.
 
 ## Skills.txt dispatch is strongly data-driven
 

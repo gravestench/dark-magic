@@ -32,21 +32,28 @@ state lifetime, units, and ordering rather than restating Lua syntax.
 
 ## Straight-missile skill execution order
 
-1. Go admits `d2legacy.skill.cast` by identity, tick, sequence, and authority.
-2. `commands/cast.lua` validates its payload and creates a cast request.
-3. `data/missile_skills.lua` validates each explicitly supported 1.14d record
+1. `manifests/skill-behavior-coverage.v1.json` admits exact skill IDs to reviewed
+   reusable families for the Expansion 1.14d target.
+2. Go admits `d2legacy.skill.cast` by identity, tick, sequence, and authority.
+3. `commands/cast.lua` validates its payload and creates a cast request.
+4. `data/missile_skills.lua` validates each explicitly supported 1.14d record
    pair into one immutable `missile.straight` definition.
-4. `systems/cast.lua` validates learned skill, target, and mana against the
+5. `systems/cast.lua` validates learned skill, target, and mana against the
    selected definition, then schedules its effect and completion ticks.
-5. `systems/missile_skill.lua` creates the configured projectile when the
+6. `systems/missile_skill.lua` creates the configured projectile when the
    effect tick arrives.
-6. `systems/projectile.lua` moves it, finds first contact, and expires it.
-7. `policy/damage.lua` resolves its configured damage channel and consequences.
+7. `systems/projectile.lua` moves it, finds first contact, and expires it.
+8. `policy/damage.lua` resolves its configured damage channel and consequences.
 
 Fire Bolt is currently the first supported definition and integration fixture.
 It is not an authority boundary: new verified straight-missile configurations
 join the same modules, while missiles with different impact/motion behavior
 receive another reusable family rather than a per-skill system.
+
+Run `MPQ_DIRECTORY=/path/to/mpqs make skill-behavior-coverage` to print the
+target-locked server-function/missile linkage inventory. The report never
+infers support from matching row shapes: each supported consumer must have its
+own exact-ID declaration and evidence status. Generated reports stay local.
 
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
