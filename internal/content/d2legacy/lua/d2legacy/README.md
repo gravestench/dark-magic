@@ -58,6 +58,25 @@ own exact-ID declaration and evidence status. Generated reports stay local.
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
 
+## Timed self-state/stat execution order
+
+1. The target-locked behavior manifest admits one exact skill ID.
+2. `data/state_skills.lua` validates the owned server-function, state/stat, cost,
+   level, and hard-point-synergy fields into a `state.self-timed-stat` definition.
+3. The shared cast lifecycle validates the learned level and available mana;
+   funded casts pay exactly once, while underfunded requests have no effect and
+   preserve the partial balance.
+4. `systems/state_skill.lua` computes the authored duration/stat value and emits
+   one source-tagged state request at the effect tick.
+5. `systems/timed_state.lua` applies or refreshes the state and its named stat
+   source together; explicit removal or expiration removes that exact source.
+6. `systems/derived_stats.lua` deterministically rebuilds effective defense.
+
+Frozen Armor is the first configuration. Its defense and duration are backed by
+the owned Expansion 1.14d row and Blizzard's official table. Its melee-hit
+freeze response, difficulty/PvP cold-length handling, cold-armor exclusion, and
+exact cast animation timing remain explicitly incomplete.
+
 ## Player population and `/players X`
 
 `policy/game_rules.lua` checkpoints immutable expansion 1.14d session facts.

@@ -14,9 +14,67 @@ local function index(rows, column)
     return result
 end
 
+local function required_integer(row, column, label)
+    local value = tonumber(row[column])
+    assert(value and value >= 0 and value == math.floor(value), label .. " has invalid " .. column)
+    return value
+end
+
+local function shifted(row, value_column, shift_column, label)
+    return required_integer(row, value_column, label) * (2 ^ required_integer(row, shift_column, label))
+end
+
+local function synergy_ids(expression, skills_by_name, label)
+    local result = {}
+    for name in string.gmatch(expression or "", "skill%('([^']+)'%.blvl%)") do
+        local skill = assert(skills_by_name[string.lower(name)], label .. " has an unknown synergy " .. name)
+        result[#result + 1] = required_integer(skill, "Id", label)
+    end
+    assert(#result > 0 and string.find(expression, "ln34", 1, true), label .. " has an unsupported duration formula")
+    return result
+end
+
+local function decode(row, skills_by_name)
+    local id = required_integer(row, "Id", "self-state skill")
+    local label = row.skill or ("skill " .. id)
+    assert(row.srvstfunc == "" and row.srvdofunc == "18", label .. " has unsupported server functions")
+    assert(
+        row.aurastate and row.aurastate ~= "" and row.aurastat1 == "skill_armor_percent",
+        label .. " has an unsupported state or stat"
+    )
+    assert(row.aurastatcalc1 == "ln12", label .. " has an unsupported stat formula")
+    assert(string.find(row.auralencalc or "", "*par7", 1, true), label .. " has an unsupported synergy formula")
+    return {
+        behavior = "state.self-timed-stat",
+        skill_id = id,
+        mana_cost_raw = shifted(row, "mana", "manashift", label),
+        effect_delay = 1,
+        complete_delay = 2,
+        state_id = row.aurastate,
+        stat = "defense",
+        stat_operation = "percent",
+        stat_base = required_integer(row, "Param1", label),
+        stat_per_level = required_integer(row, "Param2", label),
+        duration_base = required_integer(row, "Param3", label),
+        duration_per_level = required_integer(row, "Param4", label),
+        duration_synergy_per_level = required_integer(row, "Param7", label),
+        duration_synergy_skill_ids = synergy_ids(row.auralencalc, skills_by_name, label),
+        -- The target row also declares damagedinmelee/event function 2 and
+        -- Param5/6 freeze length. Retaliation ordering remains a separate,
+        -- explicitly missing family extension; these values are not guessed.
+    }
+end
+
 function M.load(supported_ids)
     assert(type(supported_ids) == "table", "supported self-state skill IDs are required")
-    local skills = index(assert(records.load("data/global/excel/skills.txt")), "Id")
+    local rows = assert(records.load("data/global/excel/skills.txt"))
+    local skills = index(rows, "Id")
+    local skills_by_name = {}
+    for _, row in ipairs(rows) do
+        if row.skill and row.skill ~= "" then
+            skills_by_name[string.lower(row.skill)] = row
+        end
+    end
     local result = {}
     for _, skill_id in ipairs(supported_ids) do
         local row = skills[tostring(skill_id)]
@@ -24,16 +82,9 @@ function M.load(supported_ids)
         -- retail row. The mounted-data coverage report is the strict target
         -- completeness gate; any row present here is still decoded by ID.
         if row then
-            local id = assert(tonumber(row.Id), "self-state skill ID is required")
-            id = math.floor(id)
-            assert(not result[id], "duplicate self-state skill ID")
-            result[id] = {
-                behavior = "state.self-timed",
-                state_id = "skill." .. tostring(id),
-                -- Param1 is the base duration for this focused family. Exact
-                -- 1.14d state/stat semantics remain explicitly evidence-gated.
-                duration = math.max(1, math.floor(tonumber(row.Param1) or 600)),
-            }
+            local definition = decode(row, skills_by_name)
+            assert(not result[definition.skill_id], "duplicate self-state skill ID")
+            result[definition.skill_id] = definition
         end
     end
     return result

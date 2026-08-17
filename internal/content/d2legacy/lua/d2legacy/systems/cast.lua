@@ -1,8 +1,10 @@
 -- Turn one admitted skill request into a definition-driven timed cast.
 --
 -- Mana is stored in 8.8 fixed-point units: 256 means one visible mana point.
--- The cost is paid exactly once when the cast starts. The system then remembers
--- effect and completion ticks so replay does not depend on animation frames.
+-- The cost is paid exactly once when a cast starts. An underfunded request is
+-- rejected before the action exists and preserves the available mana. The
+-- system then remembers effect and completion ticks so replay does not depend
+-- on animation frames.
 
 local ecs = require("engine.ecs/v1")
 

@@ -77,35 +77,6 @@ function M.apply(command)
     local assignments =
         assert(ecs.get(player, "d2legacy.player.skill_assignment"), "cast player has no skill assignments")
     local skill_id = assignments:get(payload.side)
-    local state_definition = state_skills[skill_id]
-    if state_definition then
-        local learned = assert(learned_skill(player, skill_id), "skill is not learned")
-        ecs.create({
-            ["d2legacy.state.request"] = {
-                operation = "apply",
-                target = player,
-                state_id = state_definition.state_id,
-                source_id = "skill:" .. command.player .. ":" .. skill_id,
-                duration = state_definition.duration,
-                policy = "refresh_same_source",
-            },
-        })
-        ecs.create({
-            ["d2legacy.skill.cast_event"] = {
-                kind = "skill_effect",
-                tick = command.tick,
-                player = command.player,
-                skill_id = skill_id,
-                skill_level = learned:get("level"),
-                behavior = "state.self",
-                target_x = 0,
-                target_y = 0,
-                target_id = "",
-                reason = "",
-            },
-        })
-        return
-    end
     local values = {
         player = command.player,
         skill_id = skill_id,
@@ -117,8 +88,10 @@ function M.apply(command)
         target_id = payload.target_id or "",
         request_tick = command.tick,
     }
-    if missile_skills[skill_id] then
-        assert(finite(payload.target_x) and finite(payload.target_y), "missile cast target must be finite")
+    if state_skills[skill_id] or missile_skills[skill_id] then
+        if missile_skills[skill_id] then
+            assert(finite(payload.target_x) and finite(payload.target_y), "missile cast target must be finite")
+        end
         ecs.set(player, "d2legacy.skill.cast_request", values)
         return
     end

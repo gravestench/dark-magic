@@ -21,11 +21,49 @@ local function emit(structural,kind,tick,request,expires,reason)
         expires_tick=expires,reason=reason}})
 end
 
+local function stat_source(entities,target,source_id)
+    for _,entity in ipairs(entities) do
+        local source=ecs.get(entity,"d2legacy.stat.source")
+        if source and source:get("target"):id()==target:id() and source:get("source_id")==source_id then
+            return entity
+        end
+    end
+    return nil
+end
+
+local function reconcile_stat(structural,entities,request)
+    local existing=stat_source(entities,request:get("target"),request:get("source_id"))
+    if request:get("stat")=="" then
+        if existing then structural:destroy(existing) end
+        return
+    end
+    assert(request:get("stat_operation")=="add" or request:get("stat_operation")=="percent",
+        "invalid timed-state stat operation")
+    local values={target=request:get("target"),source_id=request:get("source_id"),stat=request:get("stat"),
+        operation=request:get("stat_operation"),value=request:get("stat_value"),order=request:get("stat_order")}
+    if existing then
+        local source=ecs.get(existing,"d2legacy.stat.source")
+        source:set("target",values.target)
+        source:set("source_id",values.source_id)
+        source:set("stat",values.stat)
+        source:set("operation",values.operation)
+        source:set("value",values.value)
+        source:set("order",values.order)
+    else
+        structural:create({["d2legacy.stat.source"]=values})
+    end
+end
+
+local function remove_stat(structural,entities,target,source_id)
+    local existing=stat_source(entities,target,source_id)
+    if existing then structural:destroy(existing) end
+end
+
 function M.register()
     ecs.system({id="d2legacy.state.timed_instances",phase="effects",
-        query={any={"d2legacy.state.request","d2legacy.state.instance"}},
-        read={"d2legacy.state.request","d2legacy.state.instance"},
-        write={"d2legacy.state.request","d2legacy.state.instance","d2legacy.state.event"},
+        query={any={"d2legacy.state.request","d2legacy.state.instance","d2legacy.stat.source"}},
+        read={"d2legacy.state.request","d2legacy.state.instance","d2legacy.stat.source"},
+        write={"d2legacy.state.request","d2legacy.state.instance","d2legacy.state.event","d2legacy.stat.source"},
         update=function(context,entities,structural)
             -- Stable entity order gives repeated same-tick requests a stable
             -- last-writer order without relying on Lua table iteration.
@@ -45,19 +83,28 @@ function M.register()
                         assert(request:get("duration")>0,"state duration must be positive")
                         local expires=context.tick+request:get("duration")
                         if match then
-                            ecs.get(match,"d2legacy.state.instance"):set("expires_tick",expires)
+                            local instance=ecs.get(match,"d2legacy.state.instance")
+                            instance:set("expires_tick",expires)
+                            instance:set("stat",request:get("stat"))
+                            instance:set("stat_operation",request:get("stat_operation"))
+                            instance:set("stat_value",request:get("stat_value"))
+                            instance:set("stat_order",request:get("stat_order"))
                             touched[match:id()]=true
                             emit(structural,"state_refreshed",context.tick,request,expires,"refresh")
                         else
                             structural:create({["d2legacy.state.instance"]={target=request:get("target"),
                                 state_id=request:get("state_id"),source_id=request:get("source_id"),
-                                applied_tick=context.tick,expires_tick=expires,policy=refresh_policy}})
+                                applied_tick=context.tick,expires_tick=expires,policy=refresh_policy,
+                                stat=request:get("stat"),stat_operation=request:get("stat_operation"),
+                                stat_value=request:get("stat_value"),stat_order=request:get("stat_order")}})
                             emit(structural,"state_applied",context.tick,request,expires,"apply")
                         end
+                        reconcile_stat(structural,entities,request)
                     elseif operation=="remove" then
                         if match then
                             local expires=ecs.get(match,"d2legacy.state.instance"):get("expires_tick")
                             touched[match:id()]=true; structural:destroy(match)
+                            remove_stat(structural,entities,request:get("target"),request:get("source_id"))
                             emit(structural,"state_removed",context.tick,request,expires,"explicit")
                         end
                     else error("unsupported timed-state operation") end
@@ -70,6 +117,7 @@ function M.register()
                     structural:create({["d2legacy.state.event"]={kind="state_removed",tick=context.tick,
                         target=instance:get("target"),state_id=instance:get("state_id"),
                         source_id=instance:get("source_id"),expires_tick=instance:get("expires_tick"),reason="expired"}})
+                    remove_stat(structural,entities,instance:get("target"),instance:get("source_id"))
                     structural:destroy(entity)
                 end
             end

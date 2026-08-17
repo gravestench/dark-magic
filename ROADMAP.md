@@ -2,7 +2,7 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G9 target-locked mounted-data
-behavior-family coverage baseline on 2026-08-16.
+coverage plus timed self-state/stat-source slice on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -331,6 +331,16 @@ runtime composition and the coverage report.
 - [x] Prove the definition decoder handles multiple authored configurations
   without skill-name/ID branches; keep the second configuration synthetic so it
   does not claim incomplete behavior for another retail skill.
+- [x] Replace the provisional name-selected self-state placeholder with a
+  definition-driven timed self-state/stat-source family: shared cast/mana,
+  level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
+  exact source removal.
+- [x] Make ordinary mana admission a shared cast-lifecycle invariant:
+  underfunded requests start no action or effect and preserve the partial mana
+  balance; lock the rejection path with deterministic executable coverage.
+- [ ] Complete Frozen Armor's target-verified melee-hit freeze transaction,
+  difficulty/PvP cold-length rules, animation action timing, and cold-armor
+  mutual-exclusion policy before upgrading it from partial behavior.
 - [ ] Implement reusable targeted, point, self, area/nova, buff/debuff/curse/aura,
   summon, corpse, movement, missile, and trap families in dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
@@ -349,17 +359,32 @@ reports remain local; copyrighted tables are never copied into Git.
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. `d2legacy.data.missile_skills` validates an admitted
 row pair into an immutable `missile.straight` definition; the earlier Frozen
-Armor name lookup is now the generic `state.self-timed` decoder selected by ID.
-Fire Bolt has owned-target record evidence. The provisional Frozen Armor slice
-is explicitly labeled `implementation-present-target-behavior-unverified` and
-must not be treated as fidelity-complete. Ice Bolt and other visually or
+Armor name lookup is now the generic `state.self-timed-stat` decoder selected
+by ID. It validates server function 18, `frozenarmor`,
+`skill_armor_percent`, `ln12`, and the `ln34 + hard-level synergies * par7`
+duration shape. The owned target row and official Blizzard table produce 7
+mana, 30% + 5% per level defense, 3000 + 300 frames per level duration, and
+250 frames per Shiver/Chilling Armor hard point. A source-tagged state and
+`defense` percentage source apply, refresh, survive checkpoint, expire, and are
+removed together. Frozen Armor remains partial because its authored
+`damagedinmelee` freeze response, difficulty/PvP cold-length rules, cold-armor
+exclusion, and exact cast action timing are not yet implemented.
+
+The shared lifecycle rejects a mana-costing skill before creating its cast when
+the authoritative 8.8 fixed-point balance is below the computed cost. It
+consumes the request, emits no effect, deals no damage, and leaves mana
+unchanged. This follows Blizzard's expansion documentation that a skill is
+unusable for lack of mana and that mana is consumed when a skill is used; exact
+cost formula/rounding and interruption/refund edges remain target probes.
+
+Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: use the report to select one high-leverage missing signature and implement
-the smallest reusable target/point/area family it requires. Evidence upgrades
-and exact-ID declarations land together; no declaration is added merely because
-another skill shares server function IDs.
+Next: finish the melee retaliation/state-conflict extension used by Frozen
+Armor, then use the report to select one high-leverage missing target/point/area
+signature. Evidence upgrades and exact-ID declarations land together; no
+declaration is added merely because another skill shares server function IDs.
 
 ### G10 — Item-source lifecycle
 

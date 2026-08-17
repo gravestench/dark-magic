@@ -8,7 +8,14 @@ return test.suite({
         test.case("applied_state_expires_at_the_authored_tick", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
-                local target = ecs.create()
+                local target = ecs.create({
+                    ["d2legacy.player.combat_stats"] = {
+                        base_attack_rating = 0,
+                        base_defense = 100,
+                        attack_rating = 0,
+                        defense = 100,
+                    },
+                })
                 ecs.create({
                     ["d2legacy.state.request"] = {
                         operation = "apply",
@@ -17,6 +24,10 @@ return test.suite({
                         source_id = "monster:fallen",
                         duration = 2,
                         policy = "refresh_same_source",
+                        stat = "defense",
+                        stat_operation = "percent",
+                        stat_value = 30,
+                        stat_order = 300,
                     },
                 })
             end),
@@ -29,7 +40,7 @@ return test.suite({
                 )
             end),
             test.restore_checkpoint(),
-            test.step(2),
+            test.step(3),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 test.assert(
@@ -40,6 +51,12 @@ return test.suite({
                     #ecs.query({ all = { "d2legacy.state.event" } }) == 2,
                     [=[#ecs.query({ all = { "d2legacy.state.event" } }) == 2]=]
                 )
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.stat.source" } }) == 0,
+                    [=[#ecs.query({ all = { "d2legacy.stat.source" } }) == 0]=]
+                )
+                local target = ecs.query({ all = { "d2legacy.player.combat_stats" } })[1]
+                test.expect(ecs.get(target, "d2legacy.player.combat_stats"):get("defense")):equals(100)
             end),
         }),
     },

@@ -171,6 +171,7 @@ cross-system handoff. Do not depend on incidental Lua module load order.
 | --- | --- | --- |
 | `cast` | `pre_simulation` | Advances admitted skill casts through start/effect/complete ticks. |
 | `missile_skill` | `pre_simulation` | Turns a definition-selected straight-missile effect into an authored projectile. |
+| `state_skill` | `pre_simulation` | Turns a definition-selected self-state effect into an authored timed state and removable stat source. |
 | `player_melee` | `pre_simulation` | Owns approach, swing timing, selected hand, and impact requests. |
 | `equipment` | `pre_simulation` | Projects the active equipment set into melee and named stat sources. |
 | `derived_stats` | `pre_simulation` | Rebuilds effective stats from durable bases and removable sources. |
