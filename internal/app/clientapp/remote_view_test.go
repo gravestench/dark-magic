@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,6 +30,11 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 			Class: "Assassin", Token: "AI", Mode: "NU",
 		}}},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 9},
+		Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: 9, Revision: 3, PartyID: "party:1",
+			Roster: []playeradapter.PartyRosterEntry{
+				{PlayerID: "player-2", Name: "Conan", Class: "Barbarian", Level: 1, Relationship: "self"},
+				{PlayerID: "player-1", Name: "Natalya", Class: "Assassin", Level: 2, Relationship: "party"},
+			}},
 	}
 	if err := app.installRemoteView(connected, true); err != nil {
 		t.Fatal(err)
@@ -55,6 +61,19 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 	if classes["player-1"] != "Assassin" || tokens["player-1"] != "AI" ||
 		classes["player-2"] != "Barbarian" || tokens["player-2"] != "BA" {
 		t.Fatalf("connected roster classes=%v tokens=%v", classes, tokens)
+	}
+	partyViews, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.party_view")
+	if partyViews.Len() != 1 {
+		t.Fatalf("owner-scoped party views = %d, want 1", partyViews.Len())
+	}
+	for _, entity := range partyViews.Entities() {
+		view, _ := partyViews.Get(entity)
+		partyID, _ := view.Get("party_id")
+		peer, _ := view.Get("player_2")
+		relationship, _ := view.Get("relationship_2")
+		if partyID != "party:1" || peer != "player-1" || relationship != "party" {
+			t.Fatalf("installed party view party=%v peer=%v relationship=%v", partyID, peer, relationship)
+		}
 	}
 }
 
@@ -211,6 +230,14 @@ func TestPrivateProjectionFingerprintChangesOnlyWithPrivateState(t *testing.T) {
 func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 	t.Helper()
 	field := func(name string, kind akara.FieldKind) akara.Field { return akara.Field{Name: name, Kind: kind} }
+	partyFields := []akara.Field{field("schema_version", akara.FieldInt64), field("revision", akara.FieldInt64), field("party_id", akara.FieldString), field("roster_count", akara.FieldInt64)}
+	for slot := 1; slot <= playeradapter.MaxPartyViewRoster; slot++ {
+		suffix := fmt.Sprintf("_%d", slot)
+		partyFields = append(partyFields,
+			field("player"+suffix, akara.FieldString), field("name"+suffix, akara.FieldString),
+			field("class"+suffix, akara.FieldString), field("level"+suffix, akara.FieldInt64),
+			field("relationship"+suffix, akara.FieldString))
+	}
 	schemas := []akara.Schema{
 		{Name: "d2legacy.player.identity", Fields: []akara.Field{field("character_id", akara.FieldString), field("player", akara.FieldString), field("name", akara.FieldString), field("class", akara.FieldString)}},
 		{Name: "d2legacy.player.vitals", Fields: []akara.Field{field("health", akara.FieldInt64), field("max_health", akara.FieldInt64), field("mana", akara.FieldInt64), field("max_mana", akara.FieldInt64), field("mana_raw", akara.FieldInt64), field("max_mana_raw", akara.FieldInt64)}},
@@ -223,6 +250,7 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 		{Name: "d2legacy.player.skill_assignment", Fields: []akara.Field{field("left", akara.FieldInt64), field("right", akara.FieldInt64)}},
 		{Name: "d2legacy.player.learned_skill", Fields: []akara.Field{field("owner", akara.FieldEntity), field("skill_id", akara.FieldInt64), field("level", akara.FieldInt64), field("list_row", akara.FieldInt64), field("left_allowed", akara.FieldBool), field("right_allowed", akara.FieldBool)}},
 		{Name: "d2legacy.player.belt", Fields: []akara.Field{field("capacity", akara.FieldInt64)}},
+		{Name: "d2legacy.player.party_view", Fields: partyFields},
 		{Name: "d2legacy.items.layout", Fields: []akara.Field{field("owner", akara.FieldString), field("inventory_width", akara.FieldInt64), field("inventory_height", akara.FieldInt64), field("stash_width", akara.FieldInt64), field("stash_height", akara.FieldInt64), field("cube_width", akara.FieldInt64), field("cube_height", akara.FieldInt64), field("belt_capacity", akara.FieldInt64), field("active_weapon_set", akara.FieldInt64), field("vendor_width", akara.FieldInt64), field("vendor_height", akara.FieldInt64), field("carried_gold", akara.FieldInt64), field("stashed_gold", akara.FieldInt64)}},
 		{Name: "d2legacy.item.identity", Fields: []akara.Field{field("owner", akara.FieldEntity), field("id", akara.FieldString), field("code", akara.FieldString), field("width", akara.FieldInt64), field("height", akara.FieldInt64), field("body_slots", akara.FieldString), field("belt_eligible", akara.FieldBool), field("base_cost", akara.FieldInt64), field("applied_services", akara.FieldString)}},
 		{Name: "d2legacy.item.placement", Fields: []akara.Field{field("container", akara.FieldString), field("x", akara.FieldInt64), field("y", akara.FieldInt64), field("slot", akara.FieldString), field("belt_slot", akara.FieldInt64), field("weapon_set", akara.FieldInt64), field("page", akara.FieldInt64)}},

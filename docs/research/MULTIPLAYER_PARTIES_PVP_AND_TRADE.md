@@ -7,7 +7,9 @@ replay/checkpoints, and a checkpointed `d2legacy.party/v1` authority for
 invite/cancel/accept/leave, stable membership identity, same-level living-member
 queries, game-departure cleanup, reconnect continuity, and the first shared
 reward hook through credited-owner same-level party NoDrop context. Party XP,
-quest/gold sharing, projection, hostility, and trade remain. This document
+quest/gold sharing, hostility, and trade remain. A bounded owner-scoped party
+projection now feeds both offline and connected presentation without exposing
+raw party state. This document
 defines those multiplayer gameplay systems without copying the legacy D2GS
 protocol.
 
@@ -79,6 +81,20 @@ D2MOO 1.10f reconstructs explicit game-owned party structures and helpers for:
 - resolve a unit owner's party ID.
 
 Party state therefore participates in gameplay, not merely UI roster grouping.
+
+Current Dark Magic implementation keeps that separation executable:
+
+- `d2legacy.party/v1` is the only membership/invitation authority;
+- a presentation-phase system derives one `d2legacy.player.party_view` per
+  present player;
+- `ClientView/v5` selects only the authenticated player's projection;
+- the projection includes public roster name/class/level and the owner's
+  relationship to each player, but omits other party IDs/membership lists,
+  invitation ticks, position, vitals, and the raw state archive;
+- the Lua party panel renders this view and never mutates membership directly.
+
+This projection shape is verified Dark Magic behavior. Exact expansion 1.14d
+roster fields and event timing remain owned-runtime probes.
 
 Recommended semantic model:
 

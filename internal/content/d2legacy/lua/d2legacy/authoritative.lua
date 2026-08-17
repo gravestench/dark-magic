@@ -41,6 +41,7 @@ local movement = require("d2legacy.gameplay.systems.movement")
 local game_rules = require("d2legacy.policy.game_rules")
 local party = require("d2legacy.policy.party")
 local party_commands = require("d2legacy.commands.party")
+local party_projection = require("d2legacy.systems.party_projection")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -83,6 +84,7 @@ function M.start()
     quest_commands.register()
     population.register()
     party_commands.register()
+    party_projection.register()
     move_player.register()
     movement.register()
     owned_units.register()

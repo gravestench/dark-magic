@@ -1,6 +1,7 @@
 # Dark Magic roadmap
 
-Status: refreshed after the realm/networking merge on 2026-08-16.
+Status: fully refreshed through the G4 authoritative party projection tranche on
+2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -58,7 +59,7 @@ policy**, and **unresolved**.
 | M15 asset knowledge | partial | Typed/recovered coverage is broad; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
-| M18 in-game shell | foundation complete | HUD and major overlay shells exist; authoritative semantic projections must replace remaining raw/ad hoc reads as gameplay domains mature. |
+| M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, and population foundations exist; dynamic occupancy, inactive units, object authority, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
@@ -161,8 +162,8 @@ they are not a substitute for one immutable game-wide semantic context.
 
 ### G4 — Multiplayer player-count and party context
 
-Status: **partial; party authority and party-aware NoDrop implemented; other
-reward consumers and UI pending**.
+Status: **partial; party authority, party-aware NoDrop, and party UI projection
+implemented; other reward consumers pending**.
 
 - [ ] Represent game player count, effective `/players X` count, nearby eligible
   count, and party reward eligibility as distinct contexts.
@@ -173,7 +174,7 @@ reward consumers and UI pending**.
   count into monster-death NoDrop policy.
 - [ ] Extend same-level living-member queries with verified proximity, then add
   party XP, kill/owned-unit credit, quest credit, and gold sharing.
-- [ ] Project party state to UI; do not make the UI roster authoritative.
+- [x] Project party state to UI; do not make the UI roster authoritative.
 
 Monster spawn now pins the effective player count and applies the expansion
 1.14d 50%-per-additional-player life and base-XP bonuses. NoDrop distinguishes
@@ -198,6 +199,17 @@ reward consumers, with NoDrop as the first integrated path. Checkpoint
 continuation and live QUIC reconnect tests cover the state boundary. Exact
 1.14d roster-event timing and NoDrop proximity details still require their
 owned-runtime probes and are not inferred from older protocol behavior.
+
+The authority now materializes a bounded `d2legacy.player.party_view` for each
+player after policy evaluation. `ClientView/v5` selects only the authenticated
+owner's versioned roster summary: player/name/class/level plus that owner's
+relationship to each present player and only their own party ID. Other party
+IDs and membership lists, invitation timestamps, coordinates, vitals, and raw
+authority state are not projected. Offline and connected presentation read the
+same component shape, and the party panel renders it without becoming a second
+membership authority. Exact expansion 1.14d roster-event timing, location/
+health visibility, and action-layout fidelity remain explicit UI probes rather
+than compatibility claims.
 
 ### G5 — Locomotion and motion-state foundation
 

@@ -162,6 +162,8 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 					Player: playeradapter.HUDIdentity{PlayerID: player}, Position: playeradapter.HUDPosition{X: float64(checkpoint.Tick)}},
 				World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: checkpoint.Tick, Entities: []playeradapter.WorldEntity{}},
 				Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: checkpoint.Tick},
+				Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: checkpoint.Tick,
+					Roster: []playeradapter.PartyRosterEntry{{PlayerID: player, Name: player, Class: "Amazon", Level: 1, Relationship: "self"}}},
 			}
 			return json.Marshal(view)
 		},
@@ -323,6 +325,8 @@ func TestSustainedMultiClientSessionSurvivesImpairmentAndActiveReconnect(t *test
 				World: playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: checkpoint.Tick, Entities: []playeradapter.WorldEntity{}},
 				Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: checkpoint.Tick,
 					Items: playeradapter.ItemView{Items: []playeradapter.ItemEntityView{}}},
+				Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: checkpoint.Tick,
+					Roster: []playeradapter.PartyRosterEntry{{PlayerID: player, Name: player, Class: "Amazon", Level: 1, Relationship: "self"}}},
 			}
 			return json.Marshal(view)
 		},
