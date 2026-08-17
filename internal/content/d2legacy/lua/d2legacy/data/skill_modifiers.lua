@@ -47,4 +47,25 @@ function M.hard_level_sum_percent(row, expression_column, parameter_column, skil
     return ids, required_integer(row, parameter_column, label)
 end
 
+function M.single_hard_level_percent_multiplier(
+    row,
+    expression_column,
+    base_token,
+    parameter_column,
+    skills_by_name,
+    label
+)
+    local expression = row[expression_column] or ""
+    local name = string.match(expression, "skill%('([^']+)'%.blvl%)")
+    assert(name, label .. " has an unsupported " .. expression_column)
+    local parameter_number = assert(string.match(parameter_column, "^Param(%d+)$"), "unsupported parameter column")
+    local supported = base_token .. " * (100 + skill('" .. name .. "'.blvl) * par" .. parameter_number .. ") / 100"
+    assert(
+        expression == supported,
+        label .. " has an unsupported " .. expression_column .. " shape " .. expression .. " != " .. supported
+    )
+    local synergy = assert(skills_by_name[string.lower(name)], label .. " has an unknown synergy " .. name)
+    return { required_integer(synergy, "Id", label) }, required_integer(row, parameter_column, label)
+end
+
 return M

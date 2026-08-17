@@ -78,6 +78,7 @@ local function decode(skill, missiles)
         destroy_on_contact = false,
         next_hit_delay = integer(missile, "NextDelay", label, 1),
         impact_radius = 0,
+        impact_radius_per_level = 0,
         impact_missile_id = "",
         impact_dcc = "",
         impact_palette = "",

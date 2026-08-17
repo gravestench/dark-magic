@@ -110,8 +110,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 6
-explicitly admitted configurations, and 351 missing configurations. Every
+archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 7
+explicitly admitted configurations, and 350 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -138,6 +138,11 @@ two owned Skills.txt expressions already decoded by the generic state family.
 Ice Blast resolves its Ice Bolt/Blizzard/Frozen Orb cold-damage references,
 Glacial Spike freeze-length reference, and localized direct-freeze claim; the
 owned parameters remain the arithmetic authority.
+Glacial Spike resolves Ice Bolt/Ice Blast/Frozen Orb cold-damage references and
+its Blizzard freeze-duration modifier. Its layered TBL records call it a
+magical ice comet that freezes or kills nearby enemies and provide radius and
+freeze labels; the exact Skills/Missiles formulas remain the arithmetic and
+event-shape authority.
 Attack resolves to the localized name `Attack` and description `normal attack`
 with no cross-skill modifier formula. Nova resolves to the localized name and
 descriptions "creates an electrically charged ring" and "to shock nearby
@@ -222,6 +227,26 @@ Exact resistance/immunity, monster-class cold effectiveness, cross-source
 replacement, PvP chill conversion, and animation/impact ordering remain partial
 until owned 1.14d runtime vectors resolve them.
 
+Glacial Spike is the first exact
+`missile.straight-impact-area-freeze` consumer. Its owned skill row supplies a
+4 + 0-per-level `ln12` radius, a 50 + 3-per-level `ln34` freeze length, 3% per
+Blizzard hard point for duration, and 5% cold damage per Ice Bolt, Ice Blast,
+and Frozen Orb hard point. The owned missile binds travel function 1 to hit
+function 13 with `frze`, HitFlags 2, and one-shot collision. Generic swept
+contact therefore reuses the stable area query and shared cold-damage result,
+then emits the same ordinary monster-cold state request for each surviving
+in-radius target. ECS timed-state/action filters own checkpoint, suppression,
+refresh, and expiration; no production branch recognizes Glacial Spike by name
+or ID.
+
+The first referenced `freezingarrowexp1` row supplies the current
+presentation-only center effect. The second `freezingarrowexp2` ejecta row is
+recorded as unresolved rather than silently treated as equivalent. Exact
+radius/footprint units, impact and percentage rounding, per-target RNG,
+resistance/immunity, monster-class effectiveness, cross-source replacement,
+PvP chill conversion, ejecta presentation, and action timing remain target
+1.14d probes.
+
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
 1/1, an A1 weapon action, attack-rate and target/search flags, weapon source
@@ -291,7 +316,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 351 missing configurations,
+classification and implementation of the 350 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

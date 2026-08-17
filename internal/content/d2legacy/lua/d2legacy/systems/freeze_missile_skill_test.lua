@@ -94,7 +94,7 @@ return test.suite({
         ["data/global/excel/skills.txt"] = {
             skill(39, "Ice Bolt", "icebolt", "icebolt", 1, 1),
             ice_blast,
-            skill(55, "Glacial Spike", "glacialspike", "glacialspike", 1, 1),
+            skill(55, "Glacial Spike", "glacialspike", "", 1, 1),
             skill(59, "Blizzard", "blizzard", "blizzard", 1, 1),
             skill(64, "Frozen Orb", "frozenorb", "frozenorb", 1, 1),
         },

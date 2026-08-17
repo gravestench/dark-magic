@@ -97,6 +97,7 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
     local synergy_ids, synergy_percent =
         skill_modifiers.hard_level_sum_percent(skill, "EDmgSymPerCalc", "Param8", skills_by_name, label)
     local impact_radius = 0
+    local impact_radius_per_level = 0
     local impact = nil
     local duration_base = 0
     local duration_per_level = 0
@@ -119,10 +120,35 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         )
         duration_synergy_ids, duration_synergy_percent =
             skill_modifiers.hard_level_sum_percent(skill, "ELenSymPerCalc", "Param7", skills_by_name, label)
+    elseif behavior == "missile.straight-impact-area-freeze" then
+        assert(
+            missile.pSrvHitFunc == "13" and missile.EType == "frze" and missile.HitFlags == "2",
+            label .. " has unsupported area-freeze functions"
+        )
+        assert(skill.aurarangecalc == "ln12", label .. " has unsupported area-radius formula")
+        impact_radius = required_integer(skill, "Param1", nil, label)
+        impact_radius_per_level = required_integer(skill, "Param2", nil, label)
+        assert(impact_radius > 0, label .. " has no impact radius")
+        duration_base = required_integer(skill, "Param3", nil, label)
+        duration_per_level = required_integer(skill, "Param4", nil, label)
+        assert(duration_base > 0 and duration_per_level > 0, label .. " has no freeze duration")
+        duration_synergy_ids, duration_synergy_percent = skill_modifiers.single_hard_level_percent_multiplier(
+            skill,
+            "auralencalc",
+            "ln34",
+            "Param7",
+            skills_by_name,
+            label
+        )
     end
-    if behavior == "missile.straight-impact-area" or behavior == "missile.straight-freeze" then
-        local impact_id =
-            assert(missile.ExplosionMissile ~= "" and missile.ExplosionMissile, label .. " has no impact missile")
+    if
+        behavior == "missile.straight-impact-area"
+        or behavior == "missile.straight-freeze"
+        or behavior == "missile.straight-impact-area-freeze"
+    then
+        local impact_id = behavior == "missile.straight-impact-area-freeze" and missile.CltHitSubMissile1
+            or missile.ExplosionMissile
+        assert(impact_id and impact_id ~= "", label .. " has no impact missile")
         impact = assert(missiles[impact_id], label .. " impact missile is missing")
         assert(impact.Explosion == "1", label .. " impact missile is not an explosion")
     end
@@ -149,6 +175,7 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         destroy_on_contact = true,
         next_hit_delay = 0,
         impact_radius = impact_radius,
+        impact_radius_per_level = impact_radius_per_level,
         impact_missile_id = impact and impact.Missile or "",
         impact_dcc = impact and "data/global/missiles/" .. impact.CelFile .. ".dcc" or "",
         impact_palette = impact and "data/global/palette/units/pal.dat" or "",
@@ -162,9 +189,16 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         effect_duration_per_level = duration_per_level,
         effect_duration_synergy_skill_ids = duration_synergy_ids,
         effect_duration_synergy_percent_per_level = duration_synergy_percent,
-        on_hit_state_id = behavior == "missile.straight-freeze" and "freeze" or "",
-        on_hit_state_duration_policy = behavior == "missile.straight-freeze" and "monster_cold" or "",
-        on_hit_state_action_disabled = behavior == "missile.straight-freeze",
+        on_hit_state_id = (behavior == "missile.straight-freeze" or behavior == "missile.straight-impact-area-freeze")
+                and "freeze"
+            or "",
+        on_hit_state_duration_policy = (
+            behavior == "missile.straight-freeze" or behavior == "missile.straight-impact-area-freeze"
+        )
+                and "monster_cold"
+            or "",
+        on_hit_state_action_disabled = behavior == "missile.straight-freeze"
+            or behavior == "missile.straight-impact-area-freeze",
         on_hit_state_exclusive_group = "",
         -- Preserve the target-authored byte without yet assigning binary-owned
         -- chance/result semantics to it.
@@ -190,7 +224,8 @@ function M.load(supported_ids, behavior)
     assert(
         behavior == "missile.straight"
             or behavior == "missile.straight-impact-area"
-            or behavior == "missile.straight-freeze",
+            or behavior == "missile.straight-freeze"
+            or behavior == "missile.straight-impact-area-freeze",
         "unsupported straight-missile behavior"
     )
     local skill_rows = assert(records.load("data/global/excel/skills.txt"))

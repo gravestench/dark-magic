@@ -55,7 +55,11 @@ local function projectile_components(caster, cast, definition, velocity_x, veloc
             collision_radius = definition.collision_radius,
             destroy_on_contact = definition.destroy_on_contact,
             next_hit_delay = definition.next_hit_delay,
-            impact_radius = definition.impact_radius or 0,
+            impact_radius = progression.linear(
+                definition.impact_radius or 0,
+                definition.impact_radius_per_level or 0,
+                cast:get("skill_level")
+            ),
             impact_missile_id = definition.impact_missile_id or "",
             impact_dcc = definition.impact_dcc or "",
             impact_palette = definition.impact_palette or "",
