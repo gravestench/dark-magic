@@ -203,6 +203,10 @@ function M.register()
         { name = "source_id", type = "string" },
         { name = "duration", type = "i64" },
         { name = "policy", type = "string" },
+        { name = "stat", type = "string" },
+        { name = "stat_operation", type = "string" },
+        { name = "stat_value", type = "i64" },
+        { name = "stat_order", type = "i64" },
     })
     component("d2legacy.state.instance", {
         { name = "target", type = "entity" },
@@ -211,6 +215,10 @@ function M.register()
         { name = "applied_tick", type = "i64" },
         { name = "expires_tick", type = "i64" },
         { name = "policy", type = "string" },
+        { name = "stat", type = "string" },
+        { name = "stat_operation", type = "string" },
+        { name = "stat_value", type = "i64" },
+        { name = "stat_order", type = "i64" },
     })
     component("d2legacy.state.event", {
         { name = "kind", type = "string" },

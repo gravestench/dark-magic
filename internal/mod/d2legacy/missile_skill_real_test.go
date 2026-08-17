@@ -10,10 +10,10 @@ import (
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 )
 
-// TestTargetArchivesBootStraightMissileFamily verifies the explicitly
-// supported definition against the user's owned expansion 1.14d tables. CI
-// uses synthetic rows because copyrighted archives never enter the repository.
-func TestTargetArchivesBootStraightMissileFamily(t *testing.T) {
+// TestTargetArchivesBootSkillBehaviorFamilies verifies every explicitly
+// admitted definition against the user's owned expansion 1.14d tables. CI uses
+// synthetic rows because copyrighted archives never enter the repository.
+func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")

@@ -91,11 +91,31 @@ evidence status. Exact declarations live in
 consumes. Thus sharing Fire Bolt's function signature cannot silently enable
 Ice Bolt or any other row.
 
-The existing timed self-state fixture is now selected by exact ID through the
-same manifest rather than by the string `Frozen Armor`. Its evidence status is
-deliberately `implementation-present-target-behavior-unverified`; the current
-slice proves generic mechanics, not exact 1.14d Frozen Armor state/stat,
-duration, defense, chilling, or event behavior.
+The timed self-state fixture is selected by exact ID through the same manifest
+rather than by the string `Frozen Armor`. The generic decoder validates the
+owned row's server function, state/stat names, linear defense formula, and
+linear-plus-hard-point-synergy duration shape. Its shared cast path pays 7 mana;
+level 1 applies `frozenarmor` for 3000 frames, attaches a 30% named defense
+source, adds 300 frames and 5 defense percentage points per skill level, and
+adds 250 frames per hard point in each of Shiver Armor and Chilling Armor.
+Refresh, checkpoint, expiration, and exact stat-source removal are executable.
+These values match Blizzard's official 120-second/30% level-1 table and
+10-second duration synergies.
+
+Mana admission is shared behavior, not a property of either fixture. Blizzard's
+Expansion skill guide says that lack of mana makes a skill unusable, while its
+character guide describes mana consumption when a skill is used. Dark Magic
+therefore rejects an underfunded request before creating a cast or effect and
+preserves the available mana; executable coverage locks that boundary. Exact
+cost formulas, rounding, successful-cast charge timing, and interruption/refund
+rules remain probe-gated by behavior family.
+
+Evidence remains deliberately partial. The owned row declares
+`damagedinmelee`, event function 2, and Param5/6 freeze length, while Blizzard
+states that a melee attacker that hits is frozen (chilled in PvP) and that cold
+length is reduced by difficulty. Melee-hit response ordering, PvP/difficulty
+conversion, cold-armor mutual exclusion, and exact animation action timing are
+still absent and must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
 classification and implementation of the 355 missing configurations,
@@ -192,7 +212,14 @@ The optional client `TargetID` is useful presentation context, but the server mu
 
 ## Mana and resource costs
 
-Costs should be committed as part of the cast transaction, not deducted by Lua.
+Costs should be committed once by the authoritative Lua cast transaction, not
+by an individual effect handler or presentation callback.
+
+For ordinary mana skills, insufficient mana prevents the cast from starting and
+does not consume the partial balance. This is a shared lifecycle rule rather
+than a skill-name branch. The current authoritative Lua cast transaction owns
+the check and exact 8.8 fixed-point payment; it consumes a rejected request so
+replay cannot turn it into a later cast after regeneration.
 
 Research/implementation needs to distinguish:
 
@@ -490,9 +517,20 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
 21. Summon limit/replacement policies by PetType.
 22. Teleport/charge/leap/whirlwind collision and path-type rules.
 
-## Primary sources inspected
+## Evidence sources inspected
 
-- D2MOO pinned 1.10f `source/D2Game/src/SKILLS/Skills.cpp` and class/monster skill files.
-- D2MOO `source/D2Game/src/MISSILES/Missiles.cpp`, `MissMode.cpp`, and missile/path structures.
-- D2MOO `D2States.cpp`, `D2StatList.cpp`, and combat state application paths.
-- Current Dark Magic `internal/game/session/skills.go`, movement/targeting code, and typed game-data catalog.
+- User-owned Expansion 1.14d `patch_d2.mpq` Skills.txt and States.txt rows are
+  the primary target data for the current self-state slice.
+- Blizzard's official [Sorceress Cold Spells](https://classic.battle.net/diablo2exp/skills/sorceress-cold.shtml)
+  table supplies the published Frozen Armor effect, level vectors, synergies,
+  PvP distinction, and difficulty cold-length warning.
+- Blizzard's official [Basic Skill Information](https://classic.battle.net/diablo2exp/skills/basics.shtml)
+  says a lack of mana makes an active skill unusable; its
+  [Character Information](https://classic.battle.net/diablo2exp/basics/characters.shtml)
+  page describes mana as consumed when a skill is used. Together they support
+  preserving mana when admission rejects an underfunded attempt.
+- D2MOO pinned 1.10f `source/D2Game/src/SKILLS/Skills.cpp`, class/monster skill
+  files, `Missiles.cpp`, `MissMode.cpp`, `D2States.cpp`, and `D2StatList.cpp`
+  remain older secondary architecture evidence only.
+- Current Dark Magic authority, movement/targeting code, and typed game-data
+  catalog define the implementation baseline, not Diablo behavior evidence.

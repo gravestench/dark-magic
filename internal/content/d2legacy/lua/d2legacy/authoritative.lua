@@ -10,6 +10,7 @@ local skill_behavior_coverage = require("d2legacy.data.skill_behavior_coverage")
 local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
 local missile_skill_system = require("d2legacy.systems.missile_skill")
+local state_skill_system = require("d2legacy.systems.state_skill")
 local projectile_system = require("d2legacy.systems.projectile")
 local melee_components = require("d2legacy.components.melee")
 local melee_system = require("d2legacy.systems.melee")
@@ -71,8 +72,17 @@ function M.start()
     M.progression = progression_data.load()
     M.state_skills = state_skill_data.load(M.skill_behavior_coverage.by_family["state.self-timed"] or {})
     cast_command.register(M.state_skills, M.missile_skills)
-    cast_system.register(M.missile_skills)
+    M.cast_skills = {}
+    for skill_id, definition in pairs(M.missile_skills) do
+        M.cast_skills[skill_id] = definition
+    end
+    for skill_id, definition in pairs(M.state_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
+    cast_system.register(M.cast_skills)
     missile_skill_system.register(M.missile_skills)
+    state_skill_system.register(M.state_skills)
     projectile_system.register()
     melee_system.register()
     monster_ai.register()
@@ -103,6 +113,7 @@ end
 function M.stop()
     M.missile_skills = nil
     M.state_skills = nil
+    M.cast_skills = nil
     M.skill_behavior_coverage = nil
     M.progression = nil
 end

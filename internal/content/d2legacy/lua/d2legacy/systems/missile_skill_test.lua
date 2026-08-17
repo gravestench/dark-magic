@@ -52,5 +52,73 @@ return test.suite({
                 )
             end),
         }),
+        test.case("underfunded_cast_has_no_effect_and_preserves_mana", {
+            test.submit_system(fixtures.command(
+                "system.player.enter",
+                fixtures.player_entry({
+                    level = 99,
+                    x = 0,
+                    y = 0,
+                    mana = 2,
+                    max_mana = 10,
+                    skills = {
+                        {
+                            id = 36,
+                            level = 1,
+                            list_row = 0,
+                            left_allowed = true,
+                            right_allowed = true,
+                        },
+                    },
+                }),
+                {
+                    tick = 1,
+                    sequence = 1,
+                }
+            )),
+            test.submit_system(fixtures.command("system.monster.spawn", monster, {
+                tick = 1,
+                sequence = 2,
+            })),
+            test.step(1),
+            test.submit(fixtures.command("player.use_skill", {
+                side = "left",
+                target_x = 8,
+                target_y = 0,
+            }, {
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+            })),
+            test.step(4),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local vitals = ecs.get(player, "d2legacy.player.vitals")
+                test.assert(
+                    vitals:get("mana_raw") == 512 and vitals:get("mana") == 2,
+                    [=[vitals:get("mana_raw") == 512 and vitals:get("mana") == 2]=]
+                )
+                test.assert(
+                    ecs.get(player, "d2legacy.skill.cast_request") == nil
+                        and ecs.get(player, "d2legacy.skill.cast") == nil,
+                    [=[cast request is consumed without starting a cast]=]
+                )
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.missile.projectile" } }) == 0,
+                    [=[#ecs.query({ all = { "d2legacy.missile.projectile" } }) == 0]=]
+                )
+                test.assert(
+                    #ecs.query({ all = { "d2legacy.skill.cast_event" } }) == 0,
+                    [=[#ecs.query({ all = { "d2legacy.skill.cast_event" } }) == 0]=]
+                )
+                local monsters = ecs.query({ all = { "d2legacy.monster.stats" } })
+                test.assert(#monsters == 1, [=[#monsters == 1]=])
+                test.assert(
+                    ecs.get(monsters[1], "d2legacy.monster.stats"):get("health") == 4096,
+                    [=[monster health remains 4096]=]
+                )
+            end),
+        }),
     },
 })
