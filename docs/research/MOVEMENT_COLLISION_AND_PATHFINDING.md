@@ -372,6 +372,15 @@ A render chunk becoming invisible must not define whether the authoritative room
 
 Likewise, inactive-room persistence belongs in session/game state and replay/checkpoints, not the VFS or renderer cache.
 
+Current implementation status: the population authority now evaluates one
+deterministic occupied-room-plus-immediate-neighbors set each tick. Its v2 room
+plan archives an ordinary generated monster as semantic component data, removes
+the live ECS entity, and recreates it on reactivation; a checkpoint made while
+inactive resumes to the same checksum. This establishes the first archive
+mechanism without claiming that the graph distance, phase ordering, healing,
+or corpse policy matches expansion 1.14d. Presentation residency remains
+independent and unimplemented at this boundary.
+
 ## Streaming policy should be deterministic
 
 Research still needs the exact original activation radius/call order. Whatever Dark Magic policy chooses, activation/inactivation must not depend on host scheduling races.
@@ -453,13 +462,18 @@ Add deterministic unit-footprint occupancy/contact resolution with synthetic mul
 
 Implement knockback through movement authority, then one movement skill such as Leap or Charge.
 
-### MV5 — room inactive archive
+### MV5 — room inactive archive (first vertical slice implemented)
 
-Prototype deactivation/restoration of one ordinary monster with deterministic state snapshot and no renderer dependency.
+One ordinary generated monster now deactivates/restores from a deterministic
+checkpointed state snapshot without renderer dependency. Cross-entity state,
+owned-unit, corpse, item, and object graphs remain.
 
-### MV6 — streaming policy
+### MV6 — streaming policy (synthetic foundation implemented)
 
-Activate/inactivate rooms around players through a deterministic graph policy and prove replay/checkpoint equality across activation boundaries.
+The current all-player occupied-room-plus-immediate-neighbors policy activates
+and inactivates rooms deterministically and proves replay/checkpoint equality
+across the first monster boundary. Its exact 1.14d radius and timing remain a
+probe rather than a compatibility claim.
 
 ## Verification backlog
 

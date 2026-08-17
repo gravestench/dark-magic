@@ -1,6 +1,6 @@
 # Dark Magic roadmap
 
-Status: fully refreshed through the G4 authoritative party projection tranche on
+Status: fully refreshed through the G7 inactive-monster archive tranche on
 2026-08-16.
 
 This file is the implementation-status authority. The documents under
@@ -61,7 +61,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, and population foundations exist; dynamic occupancy, inactive units, object authority, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, population, and the first inactive-monster archive/restore path exist; dynamic occupancy, complete inactive entity graphs, object authority, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -235,18 +235,35 @@ Status: **not started**.
 
 ### G7 — Active-room/inactive-unit vertical slice
 
-Status: **partial; deterministic room-graph activation foundation implemented**.
+Status: **partial; deterministic room activation and first ordinary-monster
+archive/restore implemented**.
 
 - [ ] Separate world existence, active simulation, inactive archive, and presentation residency.
-- [ ] Archive and restore one ordinary monster with stable identity and all behaviorally relevant state.
+- [x] Archive and restore one ordinary monster with stable semantic identity and
+  its current component-owned stats, combat profile, appearance, AI/action,
+  death, motion, location, collision, and selection state.
+- [ ] Extend the archive to cross-entity timed states/events, owned-unit graphs,
+  corpses, items, objects, and target references that cannot remain raw entity handles.
 - [x] Drive initial Blood Moor population activation from a deterministic
   all-player room graph.
 - [x] Reproduce first-activation transitions through replay/checkpoint.
+- [x] Reproduce deactivate -> checkpoint -> restore -> reactivate continuation
+  with the same authoritative checksum.
 
-The current slice stores a checkpointed room plan and materializes each room at
-most once when any player occupies it or an adjacent room. Full inactive-unit
-archival/reactivation, broader generated-level coverage, and presentation
-residency remain open.
+The checkpointed `d2legacy.population.plan/v2` stores a deterministic active
+flag and inactive archive per room. A generated monster carries a stable
+room-resident marker; leaving the occupied-room-plus-neighbors window removes
+its live ECS entity and archives an allowlisted scalar/semantic component map,
+while re-entry creates a new live entity with the same spawn/selectable IDs and
+behavioral state. The first acceptance fixture crosses a three-room graph,
+checkpoints while the monster is inactive, reconstructs a new Lua runtime, and
+proves identical reactivation continuation. This is Dark Magic semantic state,
+not a vanilla save/protocol compatibility structure.
+
+Exact expansion 1.14d activation distance/tick ordering, long-inactive healing,
+corpse lifetime, external target/state graph restoration, broader generated-
+level coverage, and presentation residency remain open and probe-gated. Older
+recovered inactive-unit code is architectural evidence only.
 
 ## P1: strengthen and complete the first multiplayer gameplay loop
 

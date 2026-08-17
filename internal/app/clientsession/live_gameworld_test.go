@@ -129,6 +129,13 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitForPartyInvite(t, ctx, host.Authority.State, "alice-1", "alice-2")
+	// Authority has committed the invite, but the invitee's local clock may
+	// still predate that tick under race-detector scheduling. Refresh before
+	// deriving acceptance so deterministic command order cannot put accept
+	// ahead of its prerequisite invite.
+	if _, err := second.Refresh(ctx); err != nil {
+		t.Fatal(err)
+	}
 	acceptPayload, _ := json.Marshal(map[string]any{"inviter": "alice-1"})
 	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: second.NextInputTick(time.Now()), Sequence: 1,
 		Kind: "party.accept", Payload: acceptPayload}); err != nil {
