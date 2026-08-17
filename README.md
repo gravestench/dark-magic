@@ -523,7 +523,10 @@ player-footprint-aware A*, velocity and collision integration, then the warp
 uses the same relocation transaction as authored level seams. The scene itself
 delegates to `game_world`, so facing, authoritative NU/WL animation state,
 camera, sparse tile residency, culling, depth ordering, and asynchronously
-prepared TP/PP composites are the production paths too.
+prepared TP/PP composites are the production paths too. Both arrivals are
+collision-checked for the player's complete footprint, and the owned-data
+acceptance crosses both directions before proving ordinary locomotion resumes
+after return.
 
 The lab adds only read-only level/position/velocity/mode/crossing diagnostics
 and a brief presentation mask after authority changes the level. It no longer

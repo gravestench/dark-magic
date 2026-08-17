@@ -473,4 +473,85 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 		t.Fatalf("active presentation world = %d, want %d", app.activeWorldLevel,
 			app.transitionSeam.Wilderness.LevelID)
 	}
+
+	var returnX, returnY float64
+	for _, entity := range warps.Entities() {
+		portalLocation, present := locations.Get(entity)
+		if !present {
+			continue
+		}
+		portalLevel, _ := portalLocation.Get("level_id")
+		if portalLevel != int64(app.transitionSeam.Wilderness.LevelID) {
+			continue
+		}
+		portalPosition, _ := positions.Get(entity)
+		returnXValue, _ := portalPosition.Get("x")
+		returnYValue, _ := portalPosition.Get("y")
+		returnX, returnY = returnXValue.(float64), returnYValue.(float64)
+		break
+	}
+	if returnX == 0 && returnY == 0 {
+		t.Fatal("Warp Lab created no wilderness-side warp endpoint")
+	}
+	if err := app.playerControl.SetMoveTargetWithRadius(returnX, returnY, 3.5); err != nil {
+		t.Fatal(err)
+	}
+	for range 250 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+		if !app.playerControl.HasMoveTarget() {
+			break
+		}
+	}
+	if app.playerControl.HasMoveTarget() {
+		t.Fatal("Warp Lab player never reached the wilderness-side warp")
+	}
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": returnX, "y": returnY,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+	}
+	level, _ = location.Get("level_id")
+	if level != int64(app.transitionSeam.Town.LevelID) || app.activeWorldLevel != app.transitionSeam.Town.LevelID {
+		t.Fatalf("Warp Lab return left authority/presentation at %v/%d", level, app.activeWorldLevel)
+	}
+
+	playerPosition, _ := positions.Get(player)
+	startXValue, _ := playerPosition.Get("x")
+	startYValue, _ := playerPosition.Get("y")
+	startX, startY := startXValue.(float64), startYValue.(float64)
+	town := app.gameWorlds[app.transitionSeam.Town.LevelID]
+	goalX, goalY, found := town.OpenPointNearSubtileForRadius(startX-6, startY, 1)
+	if !found {
+		t.Fatal("Warp Lab return has no footprint-safe locomotion target")
+	}
+	if _, err := town.FindPath(gameworld.PathRequest{
+		Start: gameworld.Point{X: startX, Y: startY}, Goal: gameworld.Point{X: goalX, Y: goalY}, Radius: 1,
+	}); err != nil {
+		t.Fatalf("Warp Lab return position cannot start production locomotion: %v", err)
+	}
+	if err := app.playerControl.SetMoveTarget(goalX, goalY); err != nil {
+		t.Fatal(err)
+	}
+	moved := false
+	for range 100 {
+		if err := app.advanceGame(time.Second / 25); err != nil {
+			t.Fatal(err)
+		}
+		xValue, _ := playerPosition.Get("x")
+		yValue, _ := playerPosition.Get("y")
+		if math.Hypot(xValue.(float64)-startX, yValue.(float64)-startY) > 0.5 {
+			moved = true
+			break
+		}
+	}
+	if !moved {
+		t.Fatal("Warp Lab locomotion did not resume after the return warp")
+	}
 }

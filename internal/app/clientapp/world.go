@@ -134,16 +134,16 @@ func (app *application) warpBootstrapData() map[string]any {
 		return map[string]any{"endpoints": []any{}}
 	}
 	townSpawn, wildernessSpawn := app.gameWorldSpawns[townLevel], app.gameWorldSpawns[wildernessLevel]
-	openNear := func(worldMap *gameworld.Map, spawn [2]float64, offset float64) [2]float64 {
-		if x, y, ok := worldMap.OpenPointNearSubtile(spawn[0]+offset, spawn[1]); ok {
+	openNear := func(worldMap *gameworld.Map, spawn [2]float64, offset, radius float64) [2]float64 {
+		if x, y, ok := worldMap.OpenPointNearSubtileForRadius(spawn[0]+offset, spawn[1], radius); ok {
 			return [2]float64{x, y}
 		}
 		return spawn
 	}
-	townPortal := openNear(town, townSpawn, 7)
-	wildernessPortal := openNear(wilderness, wildernessSpawn, 7)
-	townArrival := openNear(town, townPortal, -4)
-	wildernessArrival := openNear(wilderness, wildernessPortal, 4)
+	townPortal := openNear(town, townSpawn, 7, 0)
+	wildernessPortal := openNear(wilderness, wildernessSpawn, 7, 0)
+	townArrival := openNear(town, townPortal, -4, 1)
+	wildernessArrival := openNear(wilderness, wildernessPortal, 4, 1)
 	endpoint := func(id, pair, token, label string, level int, position, destination [2]float64,
 		destinationLevel int, destinationMap *gameworld.Map) map[string]any {
 		return map[string]any{

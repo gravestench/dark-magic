@@ -273,7 +273,9 @@ and monster chase exist. Still required:
 - [x] Replace Warp Lab's private actor, route state, locomotion system, and
   direct portal teleport with production game-world movement, collision,
   interaction admission, shared relocation, animation, camera, and world
-  presentation; retain only read-only diagnostics and masking in the lab.
+  presentation; retain only read-only diagnostics and masking in the lab. Pin
+  both arrival anchors against the full player footprint and prove round-trip
+  travel followed by fresh locomotion.
 - [x] Gate click-to-operate on authoritative route completion and treat stale
   mutable target/range observations as rejected actions rather than fatal
   session errors; cover the actual point-click ordering in the owned-data lab.
@@ -550,7 +552,8 @@ audio, and UI observe committed semantic state.
 - [x] Add component-dispatched world-object operation, paired warp endpoints,
   and one relocation transaction shared with authored level seams; prove the
   pair through interaction admission, production locomotion, checkpoint restore,
-  active-world switching, and the ordinary game renderer in Warp Lab.
+  bidirectional active-world switching, footprint-safe arrival, post-return
+  locomotion, and the ordinary game renderer in Warp Lab.
 - [ ] Pin and implement expansion 1.14d Town Portal creation, owner/party access,
   replacement, lifetime, origin/return placement, and teardown behavior before
   treating the development pair as the Town Portal gameplay feature.
