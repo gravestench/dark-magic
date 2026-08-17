@@ -1,4 +1,4 @@
--- Turn a one-tick input request into a timed Fire Bolt cast.
+-- Turn one admitted skill request into a definition-driven timed cast.
 --
 -- Mana is stored in 8.8 fixed-point units: 256 means one visible mana point.
 -- The cost is paid exactly once when the cast starts. The system then remembers
@@ -21,15 +21,18 @@ local function learned_levels(entities)
     return levels
 end
 
-local function begin_cast(context, player, request, definition, levels, commands)
+local function begin_cast(context, player, request, definitions, levels, commands)
     local vitals = ecs.get(player, "d2legacy.player.vitals")
     local available = vitals:get("mana_raw")
-    if available == 0 then available = vitals:get("mana") * 256 end
+    if available == 0 then
+        available = vitals:get("mana") * 256
+    end
 
     local player_levels = levels[player:id()] or {}
     local known_level = player_levels[request:get("skill_id")] or 0
+    local definition = definitions[request:get("skill_id")]
     local valid = request:get("request_tick") <= context.tick
-        and request:get("skill_id") == definition.skill_id
+        and definition ~= nil
         and known_level > 0
         and available >= definition.mana_cost_raw
 
@@ -51,20 +54,26 @@ local function begin_cast(context, player, request, definition, levels, commands
     commands:remove(player, "d2legacy.skill.cast_request")
 end
 
-function M.register(definition)
+function M.register(definitions)
     ecs.system({
         id = "d2legacy.skill.cast_lifecycle",
         phase = "pre_simulation",
-        query = { any = {
-            "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "d2legacy.player.learned_skill",
-        } },
+        query = {
+            any = {
+                "d2legacy.skill.cast_request",
+                "d2legacy.skill.cast",
+                "d2legacy.player.learned_skill",
+            },
+        },
         read = {
-            "d2legacy.skill.cast_request", "d2legacy.skill.cast",
-            "d2legacy.player.learned_skill", "d2legacy.player.vitals",
+            "d2legacy.skill.cast_request",
+            "d2legacy.skill.cast",
+            "d2legacy.player.learned_skill",
+            "d2legacy.player.vitals",
         },
         write = {
-            "d2legacy.skill.cast_request", "d2legacy.skill.cast",
+            "d2legacy.skill.cast_request",
+            "d2legacy.skill.cast",
             "d2legacy.player.vitals",
         },
         update = function(context, entities, structural)
@@ -73,7 +82,7 @@ function M.register(definition)
                 local request = ecs.get(player, "d2legacy.skill.cast_request")
                 local cast = ecs.get(player, "d2legacy.skill.cast")
                 if request and not cast then
-                    begin_cast(context, player, request, definition, levels, structural)
+                    begin_cast(context, player, request, definitions, levels, structural)
                 elseif cast and context.tick >= cast:get("complete_tick") then
                     structural:remove(player, "d2legacy.skill.cast")
                 end

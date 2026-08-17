@@ -10,6 +10,7 @@ local skills = require("d2legacy.data.skill")
 
 local M = {}
 local state_skills = {}
+local missile_skills = {}
 
 local function finite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
@@ -116,7 +117,7 @@ function M.apply(command)
         target_id = payload.target_id or "",
         request_tick = command.tick,
     }
-    if skill_id == 36 then
+    if missile_skills[skill_id] then
         assert(finite(payload.target_x) and finite(payload.target_y), "missile cast target must be finite")
         ecs.set(player, "d2legacy.skill.cast_request", values)
         return
@@ -143,8 +144,9 @@ function M.apply(command)
     })
 end
 
-function M.register(definitions)
-    state_skills = definitions or {}
+function M.register(state_definitions, missile_definitions)
+    state_skills = state_definitions or {}
+    missile_skills = missile_definitions or {}
     commands.register({
         kind = "player.assign_skills",
         authorities = { "player" },

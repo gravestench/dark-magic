@@ -1,6 +1,6 @@
 # Dark Magic roadmap
 
-Status: fully refreshed through the G7 inactive-monster archive tranche on
+Status: fully refreshed through the G9 straight-missile behavior-family refactor on
 2026-08-16.
 
 This file is the implementation-status authority. The documents under
@@ -140,8 +140,11 @@ Status: **partial; immutable authority and first consumers implemented**.
 
 - [x] Add one immutable `d2legacy`-owned session rules value covering difficulty,
   the fixed expansion/1.14d ruleset, Hardcore, Ladder eligibility where 1.14d
-  behavior distinguishes it, player-count context, content generation, and
-  explicit gameplay configuration.
+  behavior distinguishes it, content generation, and explicit gameplay
+  configuration.
+- [ ] Keep `maximum_players` as an admission-capacity fact only, and move the
+  optional `/players X` gameplay override out of immutable `GameRules` into
+  separate command-mutated checkpointed state.
 - [x] Validate expansion-only rules at game/worker creation and bind them into
   runtime identity plus checkpointed authoritative state.
 - [ ] Feed combat, monsters, loot/NoDrop, XP, quests, vendors, hirelings, states,
@@ -165,8 +168,10 @@ they are not a substitute for one immutable game-wide semantic context.
 Status: **partial; party authority, party-aware NoDrop, and party UI projection
 implemented; other reward consumers pending**.
 
-- [ ] Represent game player count, effective `/players X` count, nearby eligible
-  count, and party reward eligibility as distinct contexts.
+- [ ] Represent live present-player count, optional `/players X` override,
+  effective gameplay count, nearby eligible count, and party reward eligibility
+  as distinct contexts; joining/leaving updates the default live count while an
+  explicit command forces the override until changed/cleared.
 - [ ] Implement verified monster-life, monster-XP, NoDrop, and difficulty consumers.
 - [x] Implement authoritative invite, cancel, accept, leave, membership,
   identity, game-departure cleanup, and reconnect party state.
@@ -189,6 +194,14 @@ and passes that context into NoDrop while retaining the spawn-count cap. Durable
 death/event facts record each input and the final eligible count for replay
 diagnostics. Broader level population and any narrower target-version proximity
 rule remain open, so the combined consumer gate is not yet complete.
+
+Correction queued: `maximum_players` governs only how many players may join the
+served game instance and must never drive monster/reward behavior. The current
+immutable `GameRules.player_count` lower-bound model must be replaced. With no
+override, gameplay count follows present authoritative players as they join and
+leave; `/players X` is a separate mutable authority command that forces the
+gameplay count without changing admission capacity. Existing consumers and
+tests are provisional until that separation lands.
 
 Party relationships now live in one checkpointed `d2legacy.party/v1` state.
 Authenticated player commands can invite/cancel/accept/leave without supplying
@@ -281,14 +294,34 @@ semantics before Hardcore durable death or broad PvP.
 
 ### G9 — Skill/state/missile behavior-family coverage
 
-Status: **partial**. Cast, timed-state, melee, straight missile, Fire Bolt, and
-supporting target/motion primitives exist.
+Status: **partial**. Generic cast lifecycle, timed state, melee, and straight-
+missile behavior families plus supporting target/motion primitives exist. Fire
+Bolt is the first explicitly supported expansion 1.14d straight-missile
+configuration; it no longer owns a standalone component, command branch,
+system, damage function, or random stream.
 
 - [ ] Generate a mounted-data report of server start/do behavior IDs, consuming
   skills, implementation family, missing family, and evidence status.
+- [x] Replace the first skill-specific Fire Bolt authority with an explicitly
+  configured, definition-driven straight-missile family dispatched by skill ID.
+- [x] Prove the definition decoder handles multiple authored configurations
+  without skill-name/ID branches; keep the second configuration synthetic so it
+  does not claim incomplete behavior for another retail skill.
 - [ ] Implement reusable targeted, point, self, area/nova, buff/debuff/curse/aura,
   summon, corpse, movement, missile, and trap families in dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
+
+`d2legacy.data.missile_skills` now validates explicitly supported Skills.txt and
+Missiles.txt rows into immutable `missile.straight` definitions. Generic command
+dispatch, mana/cast scheduling, projectile materialization, swept contact,
+channel mitigation, and purpose-named missile damage RNG consume those
+definitions. Adding a supported skill ID requires verified 1.14d launch and
+impact semantics, but never another skill-specific system file. Fire Bolt
+remains the end-to-end fixture because its owned 1.14d row is reviewed; Ice Bolt
+and other missiles are not enabled by visual similarity or older behavior. An
+opt-in owned-archive boot test validates the configured family against the
+target expansion 1.14d Skills.txt and Missiles.txt without committing those
+copyrighted tables.
 
 ### G10 — Item-source lifecycle
 

@@ -132,7 +132,7 @@ func hashSource(source fs.FS, root string, include func(string) bool) (string, e
 func NewRandomStreams(seed uint64) (*simulation.RandomStreams, error) {
 	streams := simulation.NewRandomStreams(seed)
 	for _, name := range []string{
-		"d2legacy.combat.fire_bolt.damage",
+		"d2legacy.combat.missile.damage",
 		"d2legacy.combat.basic_melee.hit",
 		"d2legacy.combat.basic_melee.damage",
 		"d2legacy.monster.spawn.life",

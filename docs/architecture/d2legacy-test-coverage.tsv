@@ -1,7 +1,7 @@
 # retired Go policy family	new authoritative evidence	status	behavioral contract
-internal/game/combat	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua#cast_runs_headlessly_through_lua	covered	ordered damage resolution and Fire Bolt end-to-end
+internal/game/combat	internal/content/d2legacy/lua/d2legacy/systems/missile_skill_test.lua#configured_straight_missile_runs_headlessly	covered	ordered damage resolution through the straight-missile family
 internal/game/skill	internal/content/d2legacy/lua/d2legacy/systems/player_melee_test.lua#emits_animation_lifecycle_events	covered	assignment cast timing mana cost effect emission and pointer-to-melee admission with a real target
-internal/game/missile	internal/content/d2legacy/lua/d2legacy/systems/fire_bolt_test.lua#cast_runs_headlessly_through_lua	covered	projectile movement contact damage and removal
+internal/game/missile	internal/content/d2legacy/lua/d2legacy/systems/missile_skill_test.lua#configured_straight_missile_runs_headlessly	covered	projectile movement contact damage and removal
 internal/game/action	internal/content/d2legacy/lua/d2legacy/systems/player_melee_test.lua#emits_animation_lifecycle_events	covered	exclusive melee approach animation and impact lifecycle
 internal/game/stats	internal/content/d2legacy/lua/d2legacy/policy/melee_test.lua#hit_chance_preserves_recovered_integer_order	covered	attack-rating versus defense hit chance clamps and integer order
 internal/game/item	internal/content/d2legacy/lua/d2legacy/items/bootstrap_test.lua#moves_items_through_lua_owned_policy	covered	Lua suite owns bootstrap and movement policy; Go item acceptance retains reconnect corpse recovery equipment vendor service and reconstructed-runtime parity evidence
