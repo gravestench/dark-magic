@@ -7,8 +7,10 @@ import (
 )
 
 const (
-	ArrivalDistance = 0.2
-	diagonalScale   = 0.7071067811865476
+	ArrivalDistance         = 0.2
+	diagonalScale           = 0.7071067811865476
+	walkAnimationRate int64 = 213
+	runAnimationRate  int64 = 101
 )
 
 type ResolvedMovement struct {
@@ -118,16 +120,40 @@ func IsTownLevel(level int64) bool {
 }
 
 func EffectiveRates(base ClassRates, modifiers Modifiers) ClassRates {
-	item := modifiers.ItemFasterMoveVelocity
-	effectiveItem := int64(0)
-	if item != 0 && item+150 != 0 {
-		effectiveItem = item * 150 / (item + 150)
-	}
-	bonus := float64(effectiveItem+modifiers.VelocityPercent) / 100
-	walk := math.Max(base.Walk*.25, base.Walk*(1+bonus))
-	run := math.Max(base.Walk*.25, base.Run+base.Walk*bonus)
-	base.Walk, base.Run = walk, run
+	walkPercentage := EffectiveVelocityPercent(base, false, modifiers)
+	runPercentage := EffectiveVelocityPercent(base, true, modifiers)
+	walk := base.Walk
+	base.Walk = walk * float64(walkPercentage) / 100
+	base.Run = walk * float64(runPercentage) / 100
 	return base
+}
+
+// EffectiveVelocityPercent reproduces the Expansion movement ordering. Walk
+// starts at 100; run starts at the class RunSpeed/WalkSpeed ratio. Item FRW is
+// diminished before joining the additive velocitypercent stat channel, then
+// the final percentage is floored at 25.
+func EffectiveVelocityPercent(base ClassRates, running bool, modifiers Modifiers) int64 {
+	percentage := int64(100)
+	if running && base.Walk > 0 {
+		percentage = int64(100 * base.Run / base.Walk)
+	}
+	item := modifiers.ItemFasterMoveVelocity
+	if item != 0 && item+150 != 0 {
+		percentage += item * 150 / (item + 150)
+	}
+	percentage += modifiers.VelocityPercent
+	return max(int64(25), percentage)
+}
+
+// MovementAnimationRate is the runtime WL/RN override applied after the same
+// effective velocity percentage that drives path velocity. AnimData still owns
+// the frame count and events for these modes, but not their playback rate.
+func MovementAnimationRate(base ClassRates, running bool, modifiers Modifiers) int64 {
+	rate := walkAnimationRate
+	if running {
+		rate = runAnimationRate
+	}
+	return rate * EffectiveVelocityPercent(base, running, modifiers) / 100
 }
 
 // Resolve applies the production d2legacy input policy without touching ECS.

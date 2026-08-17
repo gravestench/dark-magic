@@ -257,7 +257,18 @@ running does not drain, and exhaustion changes the active movement to walking.
 The equipped-stat graph also exposes generic `velocitypercent`,
 `item_fastermovevelocity`, recovery, slower-drain, and armor-penalty sources.
 Item FRW uses the recovered 150-point diminishing-return conversion before it
-joins the velocity channel.
+joins the velocity channel. Walk begins at 100%; run begins at the integer
+`100 * RunVelocity / WalkVelocity` ratio; the diminished item term and additive
+skill/state/armor terms then join before the final 25% floor. This one integer
+rule is shared by authority, prediction, and player locomotion presentation.
+
+Owned Expansion 1.14d `Armor.txt` rows now pin representative zero/five/ten
+speed penalties for both torso armor and shields, and equipment coverage proves
+separate equipped pieces stack. A checkpointed generic timed `cold` source
+exercises the recovered player `velocitypercent = -50` contribution together
+with skill, armor, and item FRW sources and removes it exactly on expiry. This
+validates the generic mechanism; it does not yet claim the complete target
+runtime cold/freeze policy.
 
 Maximum stamina is now reconstructed in the same shared Go rule used by Lua
 authority. `CharStats.stamina` is shifted to 8.8, while per-level and allocated
@@ -278,24 +289,26 @@ HUD therefore observe the same authoritative raw values.
 
 The archive and declarative record identities are target-locked to Expansion
 1.14d. Arithmetic is corroborated by recovered executable structure and
-independent community measurements. Remaining target work is chill/slow
-ordering, armor/shield breadth, the environment-period evaluator for
+independent community measurements. Remaining target work is owned-runtime
+boundary vectors for chill/freeze classification and immunity/duration policy,
+the environment-period evaluator for
 `item_stamina_bytime`, and a direct base-Vitality allocation/max-callback
 ordering vector.
 
 The remaining player locomotion model needs:
 
 - time-of-day maximum-stamina item sources and base-Vitality allocation ordering;
-- verified slow/chill/freeze and skill velocity ordering;
-- complete armor/shield penalty activation;
-- state effects such as chill/freeze;
+- owned 1.14d extreme-modifier and cold/freeze target vectors;
+- cold/freeze resistance, immunity, duration, difficulty, and action-rate effects;
 - terrain/skill-specific movement modifiers if present.
 
 All of these are authoritative. HUD stamina is a snapshot of this system, not its owner.
 
 ## Movement action versus animation speed
 
-Gameplay distance per tick and sprite/3D animation playback speed are related presentation concerns but should not be the same variable.
+Gameplay distance per tick and sprite/3D animation playback are separate state,
+but Expansion locomotion derives both rates from the same effective velocity
+percentage. Integrated distance never advances the animation clock.
 
 Recommended split:
 
@@ -305,10 +318,14 @@ LocomotionState
 
 AnimationState
   logical mode WL/RN/etc.
-  animation timing derived/configured for presentation
+  AnimData frame count/events
+  WL/RN runtime base 213/101 scaled by effective velocity percentage
 ```
 
-An animation can be retimed visually without changing server movement distance unless compatibility requires a specific event coupling.
+The retained player playback integrates presentation/network time. A raw
+position correction or collision-shortened displacement does not retime it;
+FRW or chill does. Rate changes preserve current frame phase rather than
+retroactively applying the new rate to all time since mode start.
 
 ## Knockback
 
@@ -505,10 +522,12 @@ kind, direction/target, and requested run mode into class/stat-derived velocity,
 WL/RN mode, and stamina execution. Explicit locomotion replaces attack approach,
 exhaustion downgrades run intent, and relocation clears ownership. Raw velocity
 is now an execution output rather than the signal used to infer which player
-action owns movement. Player composite playback separately consumes the
-mode/weapon-class `AnimData.d2` rate and presentation/network time; velocity,
-Faster Run/Walk, and integrated distance cannot advance its frame clock. Extend
-the strategy vocabulary for forced motion in MV4.
+action owns movement. Player composite playback consumes `AnimData.d2`
+frame/event facts and presentation/network time, while WL/RN rate uses the
+recovered 213/101 base scaled by the same effective velocity percentage as path
+motion. Integrated displacement does not drive that clock; FRW/chill retime it
+without resetting phase. Extend the strategy vocabulary for forced motion in
+MV4.
 
 ### MV3 — dynamic occupancy
 

@@ -7,7 +7,9 @@ local function install_render_fixture()
     test.mock_module("engine.render/v1", {
         cof_info = function(path)
             test.assert(
-                path == "data/global/chars/AM/COF/AMWLHTH.cof" or path == "data/global/chars/AM/COF/AMWL1HS.cof"
+                path == "data/global/chars/AM/COF/AMWLHTH.cof"
+                    or path == "data/global/chars/AM/COF/AMWL1HS.cof"
+                    or path == "data/global/chars/AM/COF/AMRNHTH.cof"
             )
             return {
                 directions = 16,
@@ -23,7 +25,10 @@ local function install_render_fixture()
                 or path == "data/global/chars/AM/RA/AMRALITWLHTH.dcc"
         end,
         animdata_info = function(key)
-            test.assert(key == "AMWLHTH" or key == "AMWL1HS", [=[key == "AMWLHTH" or key == "AMWL1HS"]=])
+            test.assert(
+                key == "AMWLHTH" or key == "AMWL1HS" or key == "AMRNHTH",
+                [=[key == "AMWLHTH" or key == "AMWL1HS" or key == "AMRNHTH"]=]
+            )
             return { speed = 333, frames = 8, events = {} }
         end,
     }, { "cof_info", "asset_exists", "animdata_info" })
@@ -36,6 +41,9 @@ local function player_recipe(direction)
         weapon_class = "HTH",
         palette = palette,
         direction = direction,
+        class = "Amazon",
+        velocitypercent = 0,
+        item_fastermovevelocity = 0,
     }
 end
 
@@ -58,7 +66,7 @@ local function assert_unarmed_recipe(adapter)
         [=[composite.components.RA == "data/global/chars/AM/RA/AMRALITWLHTH.dcc"]=]
     )
     test.assert(composite.components.RH == nil, [=[composite.components.RH == nil]=])
-    test.assert(composite.rate == 333 and composite.frames == 8, [=[composite.rate == 333 and composite.frames == 8]=])
+    test.assert(composite.rate == 213 and composite.frames == 8, [=[composite.rate == 213 and composite.frames == 8]=])
     test.assert(
         adapter.unarmed(player_recipe(15)).direction == 15,
         [=[adapter.unarmed(player_recipe(15)).direction == 15]=]
@@ -126,7 +134,7 @@ local function resolves_cof_layer_weapon_classes()
     assert_network_synchronization(adapter)
 end
 
-local function movement_distance_does_not_drive_animation_playback()
+local function movement_stats_not_integrated_distance_drive_animation_playback()
     install_render_fixture()
     local adapter = require("d2legacy.gameplay.player_composite")
     local ordinary = player_recipe(3)
@@ -138,15 +146,39 @@ local function movement_distance_does_not_drive_animation_playback()
 
     local ordinary_composite = adapter.unarmed(ordinary)
     local faster_composite = adapter.unarmed(faster)
-    test.expect(ordinary_composite.rate):equals(333)
-    test.expect(faster_composite.rate):equals(333)
+    test.expect(ordinary_composite.rate):equals(213)
+    test.expect(faster_composite.rate):equals(340)
 
     local ordinary_playback = adapter.new_playback(ordinary_composite)
     local faster_playback = adapter.new_playback(faster_composite)
     adapter.advance(ordinary_playback, ordinary_composite, 0.1)
     adapter.advance(faster_playback, faster_composite, 0.1)
-    test.expect(ordinary_playback.frame):equals(faster_playback.frame)
+    test.assert(
+        ordinary_playback.frame ~= faster_playback.frame,
+        [=[ordinary_playback.frame ~= faster_playback.frame]=]
+    )
     test.expect(ordinary_playback.seconds):equals(faster_playback.seconds)
+
+    local displaced = player_recipe(3)
+    displaced.velocity_x = 999
+    test.expect(adapter.unarmed(displaced).rate):equals(ordinary_composite.rate)
+
+    local running = player_recipe(3)
+    running.mode = "RN"
+    test.expect(adapter.unarmed(running).rate):equals(151)
+
+    local retained = adapter.new_playback(ordinary_composite)
+    adapter.synchronize(retained, ordinary_composite, 0.02)
+    local previous_frame_seconds = 256 / (ordinary_composite.rate * 25)
+    local faster_frame_seconds = 256 / (faster_composite.rate * 25)
+    local expected_phase = 0.02 / previous_frame_seconds + 0.001 / faster_frame_seconds
+    adapter.synchronize(retained, faster_composite, 0.021)
+    test.assert(
+        math.abs(retained.remainder / faster_frame_seconds - expected_phase) < 0.0000001,
+        [=[math.abs(retained.remainder / faster_frame_seconds - expected_phase) < 0.0000001]=]
+    )
+    test.assert(math.abs(retained.seconds - expected_phase * faster_frame_seconds) < 0.0000001)
+    test.expect(retained.authority_seconds):equals(0.021)
 end
 
 return test.suite({
@@ -157,8 +189,8 @@ return test.suite({
         test.case("resolves_cof_layer_weapon_classes", {
             { run = resolves_cof_layer_weapon_classes },
         }),
-        test.case("movement_distance_does_not_drive_animation_playback", {
-            { run = movement_distance_does_not_drive_animation_playback },
+        test.case("movement_stats_not_integrated_distance_drive_animation_playback", {
+            { run = movement_stats_not_integrated_distance_drive_animation_playback },
         }),
     },
 })

@@ -82,6 +82,21 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 			t.Fatalf("owned stamina property %s = %#v", code, row)
 		}
 	}
+	armor, err := pinned.Load("data/global/excel/armor.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for code, want := range map[string]struct{ speed, itemType string }{
+		"hla": {speed: "0", itemType: "tors"},
+		"plt": {speed: "10", itemType: "tors"},
+		"lrg": {speed: "5", itemType: "shie"},
+		"tow": {speed: "10", itemType: "shie"},
+	} {
+		row := movementRowBy(armor, "code", code)
+		if row["speed"] != want.speed || row["type"] != want.itemType {
+			t.Fatalf("owned armor %s speed/type = %q/%q, want %q/%q", code, row["speed"], row["type"], want.speed, want.itemType)
+		}
+	}
 }
 
 func movementRowBy(rows []map[string]string, column, value string) map[string]string {

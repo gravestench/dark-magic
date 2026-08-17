@@ -41,6 +41,10 @@ return test.suite({
                             weapon_class = "HTH",
                         },
                         ["d2legacy.player.animation"] = { direction = 0, mode = "NU" },
+                        ["d2legacy.player.movement_stats"] = {
+                            velocitypercent = -5,
+                            item_fastermovevelocity = 20,
+                        },
                         ["d2legacy.world.position"] = { x = x, y = 10 },
                         ["d2legacy.world.facing"] = { direction = 0, directions = 16 },
                         ["d2legacy.world.location"] = { act = 1, level_id = 2 },
@@ -53,6 +57,11 @@ return test.suite({
                 local snapshots = world.player_snapshots("player-2", false)
                 test.assert(#snapshots == 1, [=[#snapshots == 1]=])
                 test.assert(snapshots[1].token == "AI", [=[snapshots[1].token == "AI"]=])
+                test.assert(snapshots[1].class == "Assassin", [=[snapshots[1].class == "Assassin"]=])
+                test.assert(
+                    snapshots[1].velocitypercent == -5 and snapshots[1].item_fastermovevelocity == 20,
+                    [=[snapshots[1].velocitypercent == -5 and snapshots[1].item_fastermovevelocity == 20]=]
+                )
                 test.assert(snapshots[1].x == 10, [=[snapshots[1].x == 10]=])
             end),
         }),

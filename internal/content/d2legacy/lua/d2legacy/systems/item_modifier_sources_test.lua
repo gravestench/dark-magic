@@ -139,6 +139,34 @@ local armor = {
     },
 }
 
+-- Armor.txt applies the same speed field to shields. Keep a separate equipped
+-- shield in this fixture so torso/head and shield penalties must stack through
+-- the generic velocitypercent source channel.
+local shield = {
+    id = "shield",
+    code = "tow",
+    width = 1.0,
+    height = 1.0,
+    body_slots = "larm",
+    belt_eligible = false,
+    base_cost = 100,
+    container = "inventory",
+    x = 6,
+    y = 0,
+    slot = "",
+    belt_slot = 0,
+    weapon_set = 0,
+    page = 0,
+    melee_range = 0,
+    physical_min = 0,
+    physical_max = 0,
+    melee_weapon_class = "",
+    defense = 0,
+    base_defense_max = 0,
+    speed_penalty = 10,
+    stat_modifiers = {},
+}
+
 -- Build the initial item database for Alice.
 -- Both items start in inventory so the test can equip them deliberately.
 local function initial_items()
@@ -156,7 +184,7 @@ local function initial_items()
         vendor_height = 10,
         carried_gold = 1000,
         stashed_gold = 0,
-        items = { weapon, armor },
+        items = { weapon, armor, shield },
     }
 end
 
@@ -190,6 +218,7 @@ local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:modifier:item_fasterattackrate:weapon:affix:40:alacrity", 40)
     expect_source(sources, "equipment:defense:armor", 61)
     expect_source(sources, "equipment:armor-velocity:armor", -5)
+    expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", 10)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
@@ -211,6 +240,7 @@ local function assert_unequipped_weapon_sources(sources)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", nil)
     expect_source(sources, "equipment:defense:armor", 61)
     expect_source(sources, "equipment:armor-velocity:armor", -5)
+    expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", 7)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", 3)
@@ -221,6 +251,7 @@ end
 local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:defense:armor", nil)
     expect_source(sources, "equipment:armor-velocity:armor", nil)
+    expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", nil)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", nil)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
@@ -241,7 +272,7 @@ local function assert_resolved_stats()
     test.expect(stats:get("defense")):equals(91)
     test.expect(rates:get("attack_rate")):equals(120)
     test.expect(rates:get("item_fasterattackrate")):equals(40)
-    test.expect(movement:get("velocitypercent")):equals(-5)
+    test.expect(movement:get("velocitypercent")):equals(-15)
     test.expect(movement:get("item_fastermovevelocity")):equals(30)
     test.expect(vitals:get("max_stamina_raw")):equals(94 * 256)
     test.expect(vitals:get("stamina_raw")):equals(94 * 256)
@@ -286,22 +317,30 @@ return test.suite({
             test.step(1),
             -- Equip the armor into the head slot.
             test.submit(move_item(4, 3, "armor", { container = "equipment", slot = "head", weapon_set = 0 })),
+            test.step(1),
+            -- Equip a shield and prove Armor.txt speed penalties stack by item.
+            test.submit(move_item(5, 4, "shield", { container = "equipment", slot = "larm", weapon_set = 0 })),
             test.step(2),
             test.run(function()
                 assert_equipped_sources(collect_sources())
                 assert_resolved_stats()
             end),
             -- Unequip the weapon back into inventory.
-            test.submit(move_item(6, 4, "weapon", { container = "inventory", x = 2, y = 0 })),
+            test.submit(move_item(7, 5, "weapon", { container = "inventory", x = 2, y = 0 })),
             test.step(2),
             test.run(function()
                 assert_unequipped_weapon_sources(collect_sources())
             end),
             -- Unequip the armor back into inventory.
-            test.submit(move_item(8, 5, "armor", { container = "inventory", x = 4, y = 0 })),
+            test.submit(move_item(9, 6, "armor", { container = "inventory", x = 4, y = 0 })),
             test.step(2),
             test.run(function()
                 assert_unequipped_armor_sources(collect_sources())
+            end),
+            test.submit(move_item(11, 7, "shield", { container = "inventory", x = 6, y = 0 })),
+            test.step(2),
+            test.run(function()
+                expect_source(collect_sources(), "equipment:armor-velocity:shield", nil)
                 local ecs = require("engine.ecs/v1")
                 local vitals = ecs.get(test.entities_with("d2legacy.player.vitals")[1], "d2legacy.player.vitals")
                 test.expect(vitals:get("max_stamina_raw")):equals(84 * 256)

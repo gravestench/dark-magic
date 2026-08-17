@@ -36,6 +36,25 @@ func TestEffectiveRatesUseD2ItemFRWDiminishingReturnsAndSharedVelocityChannel(t 
 	}
 }
 
+func TestEffectiveVelocityPercentAlsoOwnsWalkRunAnimationRate(t *testing.T) {
+	base := ClassRates{Walk: 6, Run: 9}
+	if got := EffectiveVelocityPercent(base, false, Modifiers{}); got != 100 {
+		t.Fatalf("walk percentage = %d", got)
+	}
+	if got := EffectiveVelocityPercent(base, true, Modifiers{}); got != 150 {
+		t.Fatalf("run percentage = %d", got)
+	}
+	if got := MovementAnimationRate(base, false, Modifiers{ItemFasterMoveVelocity: 100}); got != 340 {
+		t.Fatalf("100 item FRW walk animation = %d, want 340", got)
+	}
+	if got := MovementAnimationRate(base, true, Modifiers{}); got != 151 {
+		t.Fatalf("base run animation = %d, want 151", got)
+	}
+	if got := MovementAnimationRate(base, false, Modifiers{VelocityPercent: -90}); got != 53 {
+		t.Fatalf("floored walk animation = %d, want 53", got)
+	}
+}
+
 func TestAdvanceStaminaUsesFixedPointDrainRecoveryAndTownRules(t *testing.T) {
 	drained := AdvanceStamina(StaminaTick{CurrentRaw: 256, MaximumRaw: 256, RunDrain: 20, Running: true, Moving: true})
 	if drained.CurrentRaw != 216 || drained.ForceWalk {

@@ -420,6 +420,7 @@ func installPlayerMirror(world *akara.World, entity akara.Entity, player playera
 		"d2legacy.player.identity":              {"character_id": player.ID, "player": player.Owner, "name": player.Label, "class": player.Class},
 		"d2legacy.player.appearance":            {"cof": "", "token": player.Token, "palette": "data/global/Palette/units/pal.dat", "weapon_class": "HTH"},
 		"d2legacy.player.animation":             {"direction": player.Direction, "mode": player.Mode, "start_tick": int64(player.AnimationStartTick)},
+		"d2legacy.player.movement_stats":        {"velocitypercent": player.VelocityPercent, "item_fastermovevelocity": player.ItemFasterMoveVelocity},
 		"d2legacy.presentation.animation_clock": {"seconds": float64(0)},
 		"d2legacy.world.facing":                 {"direction": player.Direction, "directions": int64(16)},
 		"d2legacy.world.location":               {"act": worldLocation(player.Act, location.Act), "level_id": worldLocation(player.LevelID, location.LevelID)},

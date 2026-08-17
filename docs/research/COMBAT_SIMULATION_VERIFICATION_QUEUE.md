@@ -28,8 +28,8 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
   exhaustion, town recovery, item FRW, and equipment-source lifecycles. The
   level/Vitality/direct/skill/item-per-level maximum graph and proportional
   source transition are also implemented and target-record pinned. Time-of-day,
-  live base-Vitality allocation, and chill/slow ordering remain in the movement
-  queue.
+  live base-Vitality allocation, and owned-runtime cold/freeze classification,
+  immunity, duration, and action-rate boundaries remain in the movement queue.
 - Compare Dark Magic A* output with original path behavior for a small blocked room and identify where the original selects A*, IDA*, direct, or other path types.
 - Define canonical checkpoint state for one active monster, one missile, one timed state, one pending cast, and one owned unit.
 

@@ -390,7 +390,9 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// authored state groups and reaction states remain generation-pinned data,
 	// not presentation dependencies.
 	// The additional code-owned paths are Lua test fixtures colocated with the
-	// production modules; they are not new presentation asset dependencies.
+	// production modules; they are not new presentation asset dependencies. The
+	// AM RN HTH path joins the existing AM WL fixtures to cover the runtime
+	// movement-animation override against both locomotion modes.
 	// Realm presentation adds the archive-verified NarrowButtonBlank gateway
 	// strip, the dedicated compact confirmation and Cancel buttons, the verified
 	// 340x224 frontend popup, and the code-owned waiting-room background. Its Act I PL2 transform
@@ -407,7 +409,7 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// presentation-coverage verified both files in the mounted archive.
 	// The Create Game pane uses the archive-authored four-state numeric arrow
 	// sheet for its capacity and character-level restriction selectors.
-	const auditedFingerprint = "fb12769532c37cd91c175e4289287e2f60e159e62d5dff7f726a5c8e9b1484c5"
+	const auditedFingerprint = "9e4c4d422f267816d991786de1e828759b7d01ddfaf4f9dab9eeae2b2d2140be"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
