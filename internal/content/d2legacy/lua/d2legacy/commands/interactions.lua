@@ -142,7 +142,14 @@ end
 function M.open(command)
     local owner = command_owner(command)
     local entity, target = requested_target(owner, command.payload)
-    assert(entity and in_range(owner, entity, target), "interaction target is unavailable or out of range")
+    -- Target existence, location, and range are mutable gameplay facts. A
+    -- presentation prediction or queued network command can legitimately be
+    -- stale by the time this admitted command applies. Reject that attempt as
+    -- a no-op; malformed payloads remain validation errors, but ordinary
+    -- latency must never terminate the authoritative session.
+    if not entity or not in_range(owner, entity, target) then
+        return
+    end
     if operations.apply(owner, entity) then
         return
     end

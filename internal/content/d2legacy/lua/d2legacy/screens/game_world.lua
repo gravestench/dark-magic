@@ -27,6 +27,7 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
 local chunked_map = require("d2legacy.presentation.chunked_map")
 local tooltip = require("d2legacy.ui.tooltip")
@@ -950,14 +951,25 @@ return {
         end
         if self.pending_interaction then
             local selected = self.pending_interaction
-            local dx, dy = hero_x - selected.x, hero_y - selected.y
-            if dx * dx + dy * dy <= 16 and self.world:line_clear(hero_x, hero_y, selected.x, selected.y) then
-                self.interaction.open_at(selected.x, selected.y)
-                self.player.request_move(hero_x, hero_y)
-                self.pending_interaction = nil
-            elseif not self.player.movement_pending() then
-                -- Authority could not find a route. Do not leave a ghost interaction
-                -- that unexpectedly fires after some unrelated later movement.
+            local ready, finished = interaction_approach.resolve(
+                selected,
+                hero_x,
+                hero_y,
+                self.player.movement_pending(),
+                function(x1, y1, x2, y2)
+                    return self.world:line_clear(x1, y1, x2, y2)
+                end
+            )
+            if ready then
+                -- Route completion is sampled from the authoritative ECS,
+                -- unlike the locally predicted hero position above. Name the
+                -- selected entity so point overlap cannot actuate a different
+                -- object on the command's eventual apply tick.
+                self.interaction.open(selected.id)
+            end
+            if finished then
+                -- Completion or route rejection consumes this click. A stale
+                -- authoritative interaction attempt is itself a harmless no-op.
                 self.pending_interaction = nil
             end
         end

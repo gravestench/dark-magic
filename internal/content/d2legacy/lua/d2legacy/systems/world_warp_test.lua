@@ -91,5 +91,36 @@ return test.suite({
                 test.expect(ecs.get(player, "d2legacy.world.position"):get("y")):equals(12)
             end),
         }),
+        test.case("stale_out_of_range_warp_request_is_a_harmless_no_op", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
+                local position = ecs.get(player, "d2legacy.world.position")
+                position:set("x", 80)
+                position:set("y", 80)
+            end),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "interaction.open",
+                payload = { at = true, x = 12, y = 12 },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
+                test.expect(ecs.get(player, "d2legacy.world.location"):get("level_id")):equals(1)
+                local position = ecs.get(player, "d2legacy.world.position")
+                test.assert(position:get("x") > 70 and position:get("y") > 70, "stale request relocated player")
+            end),
+        }),
     },
 })

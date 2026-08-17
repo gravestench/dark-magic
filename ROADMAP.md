@@ -274,6 +274,9 @@ and monster chase exist. Still required:
   direct portal teleport with production game-world movement, collision,
   interaction admission, shared relocation, animation, camera, and world
   presentation; retain only read-only diagnostics and masking in the lab.
+- [x] Gate click-to-operate on authoritative route completion and treat stale
+  mutable target/range observations as rejected actions rather than fatal
+  session errors; cover the actual point-click ordering in the owned-data lab.
 
 - [ ] Replace placeholder walk/run rates with class/data-derived policy.
 - [ ] Add Faster Run/Walk, stamina amount/max, drain, recovery, cannot-run, and

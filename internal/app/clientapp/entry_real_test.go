@@ -424,6 +424,21 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	if portalID == "" {
 		t.Fatal("Warp Lab created no town-side warp endpoint")
 	}
+	// A predicted client can briefly believe it is in range before authority.
+	// The real point-click command must reject that stale attempt without
+	// terminating the game session or moving the player through the warp.
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": portalX, "y": portalY,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.advanceGame(time.Second / 25); err != nil {
+		t.Fatalf("stale Warp Lab interaction terminated the session: %v", err)
+	}
+	level, _ = location.Get("level_id")
+	if level != int64(app.transitionSeam.Town.LevelID) {
+		t.Fatalf("out-of-range Warp Lab interaction changed level to %v", level)
+	}
 	if err := app.playerControl.SetMoveTargetWithRadius(portalX, portalY, 3.5); err != nil {
 		t.Fatal(err)
 	}
@@ -438,7 +453,11 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	if app.playerControl.HasMoveTarget() {
 		t.Fatal("Warp Lab player never reached the town-side warp")
 	}
-	if err := app.commandIntents.Submit("interaction.open", map[string]any{"target": portalID}); err != nil {
+	// Exercise the same point-based API used by presentation input after the
+	// authoritative movement mailbox reports route completion.
+	if err := app.commandIntents.Submit("interaction.open", map[string]any{
+		"at": true, "x": portalX, "y": portalY,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	for range 5 {
