@@ -12,7 +12,16 @@ return test.suite({
                     load = function(path)
                         loads[path] = (loads[path] or 0) + 1
                         if string.find(path, "monstats2", 1, true) then
-                            return { { Id = "fallen", SizeX = "2", SizeY = "2", MeleeRng = "1" } }
+                            return {
+                                {
+                                    Id = "fallen",
+                                    SizeX = "2",
+                                    SizeY = "2",
+                                    MeleeRng = "1",
+                                    mKB = "1",
+                                    small = "1",
+                                },
+                            }
                         end
                         if string.find(path, "monlvl", 1, true) then
                             return { { Level = "1", HP = "100", AC = "100", TH = "100", DM = "100", XP = "100" } }
@@ -40,8 +49,11 @@ return test.suite({
                 }, { "difficulty" })
 
                 local monster = require("d2legacy.data.monster")
+                local definition = monster.load("fallen")
                 monster.load("fallen")
-                monster.load("fallen")
+
+                test.expect(definition.knockback_mode):equals(true)
+                test.expect(definition.knockback_size):equals("small")
 
                 test.expect(loads["data/global/excel/monstats.txt"]):equals(1)
                 test.expect(loads["data/global/excel/monstats2.txt"]):equals(1)

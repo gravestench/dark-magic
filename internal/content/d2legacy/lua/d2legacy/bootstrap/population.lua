@@ -41,6 +41,7 @@ local ARCHIVE_COMPONENTS = {
     "d2legacy.world.collider",
     "d2legacy.world.occupancy",
     "d2legacy.world.forced_motion",
+    "d2legacy.combat.knockback_target",
     "engine.world.velocity_mover",
     "d2legacy.world.selectable",
 }
@@ -360,6 +361,7 @@ function M.register()
             "d2legacy.world.collider",
             "d2legacy.world.occupancy",
             "d2legacy.world.forced_motion",
+            "d2legacy.combat.knockback_target",
             "engine.world.velocity_mover",
             "d2legacy.world.selectable",
         },
@@ -381,6 +383,7 @@ function M.register()
             "d2legacy.world.collider",
             "d2legacy.world.occupancy",
             "d2legacy.world.forced_motion",
+            "d2legacy.combat.knockback_target",
             "engine.world.velocity_mover",
             "d2legacy.world.selectable",
         },

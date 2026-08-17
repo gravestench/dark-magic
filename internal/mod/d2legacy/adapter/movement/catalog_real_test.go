@@ -8,7 +8,7 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
-func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
+func TestOwnedExpansion114dMovementAndKnockbackRecords(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
@@ -49,6 +49,7 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 	}
 	velocity, itemFRW := movementRowBy(stats, "Stat", "velocitypercent"), movementRowBy(stats, "Stat", "item_fastermovevelocity")
 	for stat, expected := range map[string]map[string]string{
+		"item_knockback":               {"ID": "81", "fCallback": "1", "itemevent1": "domeleedamage", "itemeventfunc1": "7", "itemevent2": "domissiledamage", "itemeventfunc2": "7"},
 		"maxstamina":                   {"ID": "11", "ValShift": "8", "fCallback": "1"},
 		"vitality":                     {"ID": "3", "op": "9", "op stat2": "maxstamina"},
 		"skill_staminapercent":         {"ID": "162", "op": "1", "op stat1": "maxstamina"},
@@ -87,6 +88,26 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 	if byTime == nil || byTime["func1"] != "18" || byTime["stat1"] != "item_stamina_bytime" ||
 		byTime["*param"] != "center period" || byTime["*notes"] != "max at center period, min at opposite period, linear progression" {
 		t.Fatalf("owned stamina bytime property = %#v", byTime)
+	}
+	knockback := movementRowBy(properties, "code", "knock")
+	if knockback == nil || knockback["func1"] != "1" || knockback["stat1"] != "item_knockback" {
+		t.Fatalf("owned knockback property = %#v", knockback)
+	}
+	monsters, err := pinned.Load("data/global/excel/monstats2.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, expected := range map[string]map[string]string{
+		"fallen1":  {"mKB": "1", "dKB": "8", "small": "1", "large": ""},
+		"bighead1": {"mKB": "1", "dKB": "8", "small": "", "large": "1"},
+		"gorgon1":  {"mKB": "", "dKB": "8", "small": "", "large": ""},
+	} {
+		row := movementRowBy(monsters, "Id", id)
+		for field, value := range expected {
+			if row == nil || row[field] != value {
+				t.Fatalf("owned knockback target %s field %s = %#v", id, field, row)
+			}
+		}
 	}
 	armor, err := pinned.Load("data/global/excel/armor.txt")
 	if err != nil {

@@ -376,6 +376,16 @@ Expansion 1.14d evidence still needs to define:
 - target mode/hit recovery interaction;
 - client interpolation/correction.
 
+Owned Expansion 1.14d records now pin the target facts which do not require
+binary inference. `MonStats2.mKB` declares whether a monster has a knockback
+mode, `dKB` declares its direction count, and `small`/`large` provide a distinct
+size category. Dark Magic joins those columns into a generic checkpointed
+monster knockback-target profile; representative small `fallen1`, large
+`bighead1`, and mode-incapable normal `gorgon1` rows are asserted directly from
+the mounted MPQs. `Properties.knock -> item_knockback` and its
+`ItemStatCost` melee/missile event hooks are also pinned. Their event-function
+chance arithmetic remains binary-owned and therefore unimplemented.
+
 Once those target rules are pinned, combat will emit the generic request;
 movement already owns spatial resolution.
 

@@ -86,6 +86,10 @@ function M.components(command, game_player_count)
             physical_min = definition.physical_min,
             physical_max = definition.physical_max,
         },
+        ["d2legacy.combat.knockback_target"] = {
+            mode_supported = definition.knockback_mode == true,
+            size_class = definition.knockback_size or "normal",
+        },
         ["d2legacy.monster.appearance"] = {
             token = definition.token,
             mode = "NU",

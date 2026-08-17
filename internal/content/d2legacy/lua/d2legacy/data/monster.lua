@@ -112,6 +112,18 @@ local function graphics_components(graphics)
     return result
 end
 
+local function knockback_size(graphics)
+    local small, large = truth(graphics, "small"), truth(graphics, "large")
+    assert(not (small and large), "monster cannot be both small and large")
+    if small then
+        return "small"
+    end
+    if large then
+        return "large"
+    end
+    return "normal"
+end
+
 local function raw_stats(stats, difficulty)
     return {
         life_min = difficulty_value(stats, columns("minHP"), difficulty),
@@ -193,6 +205,8 @@ local function runtime_definition(stats, graphics, values, difficulty)
         think_interval = math.max(integer(stats, "aidel", 1), 1),
         aggro_radius = aggro_radius(stats),
         attack_range = math.max(integer(graphics, "MeleeRng", 1), 1),
+        knockback_mode = truth(graphics, "mKB"),
+        knockback_size = knockback_size(graphics),
         min_group = math.max(integer(stats, "MinGrp", 1), 1),
         max_group = math.max(integer(stats, "MaxGrp", 1), 1),
         rarity = math.max(integer(stats, "Rarity", 1), 1),

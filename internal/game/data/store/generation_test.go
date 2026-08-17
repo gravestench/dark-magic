@@ -19,7 +19,9 @@ func (source incompleteListSource) List(root, suffix string) ([]string, error) {
 	}
 	result := paths[:0]
 	for _, path := range paths {
-		if path != "data/global/excel/MonPreset.txt" {
+		if path != "data/global/excel/MonPreset.txt" &&
+			path != "data/global/excel/MonStats2.txt" &&
+			path != "data/global/excel/SkillDesc.txt" {
 			result = append(result, path)
 		}
 	}
@@ -153,6 +155,7 @@ func TestPinnedStoreRetainsCaseInsensitiveMPQLookups(t *testing.T) {
 func TestPinDiscoversRequiredTableMissingFromMPQListfile(t *testing.T) {
 	layered, err := content.New(content.Layer{Name: "retail", FS: fstest.MapFS{
 		"data/global/excel/MonPreset.txt": &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
+		"data/global/excel/MonStats2.txt": &fstest.MapFile{Data: []byte("Id\tmKB\nfallen1\t1\n")},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -161,10 +164,14 @@ func TestPinDiscoversRequiredTableMissingFromMPQListfile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(generation.Files) != 1 || generation.Files[0].Path != "data/global/excel/MonPreset.txt" {
+	if len(generation.Files) != 2 || generation.Files[0].Path != "data/global/excel/MonPreset.txt" ||
+		generation.Files[1].Path != "data/global/excel/MonStats2.txt" {
 		t.Fatalf("generation files = %#v", generation.Files)
 	}
 	if _, err := pinned.Load("data/global/excel/monpreset.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pinned.Load("data/global/excel/monstats2.txt"); err != nil {
 		t.Fatal(err)
 	}
 }

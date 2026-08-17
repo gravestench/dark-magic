@@ -110,6 +110,10 @@ function M.register()
     })
     component("d2legacy.world.collider", { { name = "radius", type = "f64" } })
     component("d2legacy.world.occupancy", { { name = "blocks_movement", type = "bool" } })
+    component("d2legacy.combat.knockback_target", {
+        { name = "mode_supported", type = "bool" },
+        { name = "size_class", type = "string" },
+    })
     component("d2legacy.world.forced_motion_request", {
         { name = "kind", type = "string" },
         { name = "source_x", type = "f64" },
