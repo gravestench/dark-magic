@@ -305,6 +305,45 @@ return test.suite({
                 test.expect(ecs.get(resolved[1], "d2legacy.combat.event"):get("damage_channel")):equals("mixed")
             end),
         }),
+        test.case("weapon_attacks_consume_generic_outgoing_damage_percentage_sources", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
+                        source_id = "test:weapon:damagepercent",
+                        stat = "damagepercent",
+                        operation = "percent",
+                        value = -33,
+                        order = 300,
+                    },
+                })
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(10),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                test.assert(bundle ~= nil, [=[deterministic fixture hit produces a damage bundle]=])
+                -- Canonical equipment projection restores the unarmed 256-512
+                -- range before impact. Weaken's -33% source resolves that to
+                -- 171-343; the suite's fixed RNG seed rolls 321.
+                test.expect(bundle:get("physical_rolled_raw")):equals(321)
+                test.expect(bundle:get("physical_mitigated_raw")):equals(321)
+                test.expect(bundle:get("fire_rolled_raw")):equals(0)
+            end),
+        }),
         test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {
             test.submit_system({
                 tick = 1,

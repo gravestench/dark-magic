@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,5 +108,21 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		amplifyLocalized["desctexta2"].Text != "Duration: " ||
 		amplifyLocalized["desctexta3"].Text != "Radius: " {
 		t.Fatalf("Amplify Damage localization = %#v", amplify.Localization)
+	}
+	weaken := report.Skills[7]
+	if len(weaken.CrossSkillModifiers) != 0 {
+		t.Fatalf("Weaken modifiers = %#v", weaken.CrossSkillModifiers)
+	}
+	weakenLocalized := map[string]LocalizationReference{}
+	for _, evidence := range weaken.Localization {
+		weakenLocalized[evidence.Column] = evidence
+	}
+	if weakenLocalized["str name"].Text != "Weaken" ||
+		!strings.Contains(weakenLocalized["str long"].Text, "reducing the amount of damage") ||
+		weakenLocalized["dsc2texta1"].Text != "Target's Damage: " ||
+		weakenLocalized["desctexta2"].Text != "Duration: " ||
+		weakenLocalized["desctexta3"].Text != "Radius: " ||
+		weakenLocalized["dsc2textb1"].Text != " percent" {
+		t.Fatalf("Weaken localization = %#v", weaken.Localization)
 	}
 }

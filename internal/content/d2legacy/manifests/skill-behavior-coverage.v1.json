@@ -52,6 +52,11 @@
       "skill_id": 66,
       "family": "state.point-area-curse",
       "evidence_status": "owned-target-records-and-localized-physical-amplification-partial"
+    },
+    {
+      "skill_id": 72,
+      "family": "state.point-area-curse",
+      "evidence_status": "owned-target-records-and-localized-outgoing-damage-reduction-partial"
     }
   ]
 }
