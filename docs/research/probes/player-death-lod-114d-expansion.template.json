@@ -1,0 +1,122 @@
+{
+  "schema": "d2legacy.player_death_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "runtime": {
+    "patch": "1.14d",
+    "mode": "expansion",
+    "session": "single-player",
+    "character_mode": "softcore",
+    "character_origin": "probe-created",
+    "executable_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256",
+    "observation": "video-frame-log"
+  },
+  "cases": [
+    {
+      "id": "normal-single-recovery",
+      "scenario": "single_recovery",
+      "difficulty": "normal",
+      "class": "amazon",
+      "level": 1,
+      "killer_kind": "monster",
+      "observations": [
+        {
+          "phase": "before_death",
+          "death_index": 1,
+          "frame": 0,
+          "area": "REPLACE_WITH_AREA",
+          "controlled": true,
+          "health": 1,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 0,
+          "equipment": [],
+          "inventory": []
+        },
+        {
+          "phase": "death_started",
+          "death_index": 1,
+          "frame": 1,
+          "area": "REPLACE_WITH_AREA",
+          "controlled": false,
+          "health": 0,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 1,
+          "equipment": [],
+          "inventory": []
+        },
+        {
+          "phase": "death_animation_complete",
+          "death_index": 1,
+          "frame": 2,
+          "area": "REPLACE_WITH_AREA",
+          "controlled": false,
+          "health": 0,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 1,
+          "equipment": [],
+          "inventory": []
+        },
+        {
+          "phase": "respawn_input",
+          "death_index": 1,
+          "frame": 3,
+          "area": "REPLACE_WITH_AREA",
+          "controlled": false,
+          "health": 0,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 1,
+          "equipment": [],
+          "inventory": []
+        },
+        {
+          "phase": "town_control",
+          "death_index": 1,
+          "frame": 4,
+          "area": "rogue_encampment",
+          "controlled": true,
+          "health": 1,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 1,
+          "equipment": [],
+          "inventory": []
+        },
+        {
+          "phase": "corpse_recovered",
+          "death_index": 1,
+          "frame": 5,
+          "area": "REPLACE_WITH_AREA",
+          "controlled": true,
+          "health": 1,
+          "max_health": 1,
+          "experience": 0,
+          "carried_gold": 0,
+          "stashed_gold": 0,
+          "ground_gold": 0,
+          "corpse_count": 0,
+          "equipment": [],
+          "inventory": []
+        }
+      ]
+    }
+  ]
+}

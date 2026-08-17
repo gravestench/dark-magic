@@ -117,8 +117,13 @@ Hardcore rule without committing permanence, stops semantic/raw motion, removes
 in-flight action components, filters dead actors from action systems, and emits
 one value-only semantic event. Corpse/equipment transfer, gold and XP penalties,
 recovery/respawn, exact DT/DD timing, multiple-corpse rules, save boundaries, and
-Hardcore persistence remain explicitly unresolved Expansion 1.14d probes. G9
-remains current through
+Hardcore persistence remain explicitly unresolved Expansion 1.14d probes. A
+strict player-death capture/analyzer now accepts only visual observations from a
+probe-created softcore character in an owned, executable-fingerprinted Expansion
+1.14d single-player runtime. It normalizes death/respawn frame intervals and
+equipment/inventory/gold/XP/corpse transitions, rejects imported saves and every
+unsupported runtime/tool source, and promotes no behavior until its matrix is
+populated. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -752,6 +757,12 @@ record exist.
   live action capabilities. Record unresolved consequences as pending rather
   than inventing corpse, gold, XP, respawn, animation-timing, save, or Hardcore
   permanence policy.
+- [x] Add a strict softcore player-death capture/analyzer for a probe-created
+  character in an owned Expansion 1.14d single-player runtime. Fingerprint the
+  executable and sanitized visual timeline; normalize DT/DD, respawn-control,
+  corpse/equipment/inventory, carried/stashed/ground-gold, XP-loss/recovery,
+  multiple-death, and visual save/rejoin observations. Reject Classic, older
+  patches, servers, community/memory tools, and imported save data.
 - [ ] Populate standing/moving/attacking melee/missile shield-block and passive-
   avoidance matrices from that owned runtime, then promote only the ordering,
   eligibility, cap, and movement facts the observations resolve.
@@ -767,7 +778,8 @@ record exist.
   damage, and durability.
 - [ ] Complete remaining ordinary softcore corpse/equipment, gold, XP,
   recovery/respawn, multiple-corpse, exact animation-timing, and save semantics
-  before Hardcore durable death or broad PvP.
+  from populated owned-runtime observations before Hardcore durable death or
+  broad PvP.
 
 Implement one shared ordered transaction for chance-to-hit, block, avoidance,
 physical/elemental/magic mitigation, caps/negative resistance, pierce, absorb,
