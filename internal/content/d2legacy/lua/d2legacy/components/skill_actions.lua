@@ -25,7 +25,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.skill.cast",
-        version = 1,
+        version = 2,
         fields = {
             { name = "skill_id", type = "i64" },
             { name = "skill_level", type = "i64" },
@@ -34,6 +34,7 @@ function M.register()
             { name = "target_id", type = "string" },
             { name = "effect_tick", type = "i64" },
             { name = "complete_tick", type = "i64" },
+            { name = "elemental_damage_percent", type = "i64" },
             { name = "effect_emitted", type = "bool", default = false },
         },
     })

@@ -39,5 +39,19 @@ return test.suite({
                 test.expect(progression.mana_cost(decreasing, 30)):equals(5 * 256)
             end)
         end),
+        test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)
+            t:run(function()
+                local progression = require("d2legacy.policy.skill_progression")
+                local definition = {
+                    minimum_damage_raw = 768,
+                    maximum_damage_raw = 1536,
+                    minimum_damage_per_level_raw = { 0, 0, 0, 0, 0 },
+                    maximum_damage_per_level_raw = { 0, 0, 0, 0, 0 },
+                }
+                local minimum, maximum = progression.damage_range(definition, 1, 32)
+                test.expect(minimum):equals(1013)
+                test.expect(maximum):equals(2027)
+            end)
+        end),
     },
 })

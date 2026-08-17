@@ -32,13 +32,19 @@ local function missile(name, skill_name, velocity, knockback)
     }
 end
 
+local fire_bolt = skill(36, "Fire Bolt", "firebolt", "fire")
+fire_bolt.EDmgSymPerCalc = "(skill('Fire Ball'.blvl)+skill('Meteor'.blvl))*par8"
+fire_bolt.Param8 = "16"
+
 return test.suite({
     name = "straight missile skill definitions",
     profile = "module",
     tier = "fast",
     records = {
         ["data/global/excel/skills.txt"] = {
-            skill(36, "Fire Bolt", "firebolt", "fire"),
+            fire_bolt,
+            { Id = "47", skill = "Fire Ball" },
+            { Id = "56", skill = "Meteor" },
             -- Synthetic authored data proves family reuse; it is not shipped
             -- gameplay coverage or a claim about another Diablo II skill.
             skill(900, "Fixture Bolt", "fixturebolt", "magic"),
@@ -56,6 +62,9 @@ return test.suite({
                 test.expect(definitions[36].missile_id):equals("firebolt")
                 test.expect(definitions[36].damage_channel):equals("fire")
                 test.expect(definitions[36].knockback_value):equals(0)
+                test.expect(definitions[36].damage_synergy_skill_ids[1]):equals(47)
+                test.expect(definitions[36].damage_synergy_skill_ids[2]):equals(56)
+                test.expect(definitions[36].damage_synergy_percent_per_level):equals(16)
                 test.expect(definitions[900].behavior):equals("missile.straight")
                 test.expect(definitions[900].missile_id):equals("fixturebolt")
                 test.expect(definitions[900].damage_channel):equals("magic")

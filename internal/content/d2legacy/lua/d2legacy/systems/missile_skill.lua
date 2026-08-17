@@ -37,7 +37,8 @@ local function projectile_components(caster, cast, definition, velocity_x, veloc
     if definition.behavior == "missile.radial" then
         projectile_id = projectile_id .. ":instance:" .. instance
     end
-    local minimum_damage, maximum_damage = progression.damage_range(definition, cast:get("skill_level"))
+    local minimum_damage, maximum_damage =
+        progression.damage_range(definition, cast:get("skill_level"), cast:get("elemental_damage_percent"))
     local components = {
         ["d2legacy.world.position"] = { x = position:get("x"), y = position:get("y") },
         ["d2legacy.world.location"] = location:snapshot(),

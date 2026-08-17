@@ -24,6 +24,14 @@ local function learned_levels(entities)
     return levels
 end
 
+local function elemental_damage_percent(definition, levels)
+    local total_levels = 0
+    for _, skill_id in ipairs(definition.damage_synergy_skill_ids or {}) do
+        total_levels = total_levels + (levels[skill_id] or 0)
+    end
+    return total_levels * (definition.damage_synergy_percent_per_level or 0)
+end
+
 local function begin_cast(context, player, request, definitions, levels, commands)
     local vitals = ecs.get(player, "d2legacy.player.vitals")
     local available = vitals:get("mana_raw")
@@ -51,6 +59,7 @@ local function begin_cast(context, player, request, definitions, levels, command
             target_id = request:get("target_id"),
             effect_tick = context.tick + definition.effect_delay,
             complete_tick = context.tick + definition.complete_delay,
+            elemental_damage_percent = elemental_damage_percent(definition, player_levels),
             effect_emitted = false,
         })
     end
