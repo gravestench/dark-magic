@@ -303,7 +303,13 @@ and monster chase exist. Still required:
   velocity penalties, and movement-floor ordering against Expansion 1.14d
   runtime vectors. The generic source channel exists, but broad content is not
   enabled by structural resemblance.
-- [ ] Separate route planning from authoritative motion execution state.
+- [x] Separate route planning from authoritative motion execution state. The
+  client retains only replaceable world-scoped waypoints; admitted locomotion
+  and melee approach now claim one checkpointed `d2legacy.player.motion` fact,
+  and one ordered authority motion boundary derives player velocity, WL/RN mode,
+  class/stat speed, and exhaustion correction. Explicit locomotion
+  replaces attack approach, exhaustion downgrades the same fact, and relocation
+  clears ownership instead of relying on zero velocity as an implicit signal.
 - [ ] Keep presentation animation rate separate from authoritative distance.
 
 ### G6 — Dynamic occupancy and knockback

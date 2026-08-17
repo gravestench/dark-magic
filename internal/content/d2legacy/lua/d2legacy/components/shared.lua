@@ -48,6 +48,17 @@ function M.register()
         { name = "target_id", type = "string" },
     })
     component("d2legacy.player.movement_mode", { { name = "running", type = "bool" } })
+    component("d2legacy.player.motion", {
+        { name = "owner", type = "string" },
+        { name = "kind", type = "string" },
+        { name = "x", type = "f64" },
+        { name = "y", type = "f64" },
+        { name = "target_x", type = "f64" },
+        { name = "target_y", type = "f64" },
+        { name = "has_target", type = "bool" },
+        { name = "running", type = "bool" },
+        { name = "active", type = "bool" },
+    })
     component("d2legacy.player.movement_stats", {
         { name = "run_drain", type = "i64" },
         { name = "velocitypercent", type = "i64" },

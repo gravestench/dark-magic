@@ -1,6 +1,7 @@
 -- One relocation transaction shared by seams, warps, waypoints, and objects.
 
 local ecs = require("engine.ecs/v1")
+local player_motion = require("d2legacy.gameplay.player_motion")
 local M = {}
 
 local function finite(value)
@@ -30,6 +31,7 @@ function M.apply(entity, destination)
     bounds:set("height", destination.height)
     velocity:set("x", 0)
     velocity:set("y", 0)
+    player_motion.stop(entity)
 end
 
 return M

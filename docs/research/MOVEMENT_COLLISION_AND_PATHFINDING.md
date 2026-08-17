@@ -48,15 +48,17 @@ Its behavior includes:
 - goal acceptance within a configurable stopping radius;
 - explicit unreachable errors.
 
-`internal/mod/d2legacy/adapter/movement/movement.go` and the authoritative
-`d2legacy.commands.move_player` handler currently:
+`internal/mod/d2legacy/adapter/movement/movement.go`, the authoritative
+`d2legacy.commands.move_player` handler, and `d2legacy.player.resolve_motion`
+currently:
 
 - admits `player.move` commands through the fixed tick;
 - normalizes diagonal direct input;
 - maintains run/walk intent;
 - follows A* waypoints for click movement;
 - cancels an unreachable target;
-- derives authoritative facing/mode;
+- preserve semantic motion ownership through replay/checkpoint restore;
+- derive authoritative velocity and locomotion mode in one ordered resolver;
 - uses the player collider radius when planning.
 
 Route targets are scoped to the map that planned them. Cross-level relocation
@@ -474,13 +476,16 @@ runtime probes before widening modifier content.
 
 Keep existing A* unchanged.
 
-### MV2 — motion-state abstraction (next)
+### MV2 — motion-state abstraction (implemented player foundation)
 
-Separate route plan from authoritative velocity/progress/path strategy. Preserve
-current ordinary movement behavior as one strategy. Cross-level invalidation is
-already explicit at the navigation/presentation boundary; move that ownership
-rule into the semantic motion-state model rather than reconstructing it from raw
-velocity.
+Client A* owns only replaceable world-scoped waypoints. Admitted directional or
+waypoint locomotion and authoritative melee approach claim the checkpointed
+`d2legacy.player.motion` fact; one ordered resolver converts its semantic owner,
+kind, direction/target, and requested run mode into class/stat-derived velocity,
+WL/RN mode, and stamina execution. Explicit locomotion replaces attack approach,
+exhaustion downgrades run intent, and relocation clears ownership. Raw velocity
+is now an execution output rather than the signal used to infer which player
+action owns movement. Extend the strategy vocabulary for forced motion in MV4.
 
 ### MV3 — dynamic occupancy
 

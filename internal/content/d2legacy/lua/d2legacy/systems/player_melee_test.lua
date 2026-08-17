@@ -405,5 +405,55 @@ return test.suite({
                 test.assert(not event:get("hit"), [=[dead target cannot be hit at impact]=])
             end),
         }),
+        test.case("attack_approach_owns_motion_until_explicit_locomotion_replaces_it", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                collision_switch()
+                spawn_event_target_monster({ x = 30, y = 12 })
+            end),
+            submit_attack(),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                local motion = ecs.get(player, "d2legacy.player.motion")
+                local velocity = ecs.get(player, "d2legacy.world.velocity")
+                test.expect(motion:get("owner")):equals("attack_approach")
+                test.expect(motion:get("kind")):equals("target")
+                test.assert(motion:get("active"), [=[motion:get("active")]=])
+                test.assert(
+                    math.abs(velocity:get("x") - 6) < 0.000000001,
+                    "attack approach bypassed the Amazon's pinned walk rate"
+                )
+            end),
+            test.restore_checkpoint(),
+            test.submit({
+                tick = 5,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = -1, y = 0, running = false },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                local motion = ecs.get(player, "d2legacy.player.motion")
+                local velocity = ecs.get(player, "d2legacy.world.velocity")
+                test.expect(motion:get("owner")):equals("locomotion")
+                test.expect(motion:get("kind")):equals("direction")
+                test.assert(velocity:get("x") < 0, "explicit locomotion did not replace attack approach")
+                test.assert(
+                    ecs.get(player, "d2legacy.combat.attack_approach") == nil,
+                    "explicit locomotion retained attack approach ownership"
+                )
+            end),
+        }),
     },
 })

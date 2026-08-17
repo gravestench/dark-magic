@@ -46,6 +46,9 @@ return test.suite({
                     bounds:get("width") == 400 and bounds:get("height") == 400,
                     [=[bounds:get("width") == 400 and bounds:get("height") == 400]=]
                 )
+                local motion = ecs.get(player, "d2legacy.player.motion")
+                test.expect(motion:get("owner")):equals("none")
+                test.assert(not motion:get("active"), "level transition retained motion ownership")
             end),
         }),
     },

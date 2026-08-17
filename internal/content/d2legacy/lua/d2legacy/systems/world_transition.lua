@@ -68,6 +68,7 @@ function M.register()
         query = {
             all = {
                 "d2legacy.world.player_control",
+                "d2legacy.player.motion",
                 "d2legacy.world.location",
                 "d2legacy.world.position",
                 "d2legacy.world.bounds",
@@ -80,6 +81,7 @@ function M.register()
             "d2legacy.world.position",
             "d2legacy.world.bounds",
             "d2legacy.world.velocity",
+            "d2legacy.player.motion",
         },
         update = function(_, entities)
             for _, entity in ipairs(entities) do

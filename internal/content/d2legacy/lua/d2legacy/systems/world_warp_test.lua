@@ -73,6 +73,9 @@ return test.suite({
                 test.expect(bounds:get("height")):equals(160)
                 test.expect(velocity:get("x")):equals(0)
                 test.expect(velocity:get("y")):equals(0)
+                local motion = ecs.get(player, "d2legacy.player.motion")
+                test.expect(motion:get("owner")):equals("none")
+                test.assert(not motion:get("active"), "warp retained motion ownership")
             end),
             test.restore_checkpoint(),
             test.submit({
