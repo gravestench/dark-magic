@@ -241,10 +241,15 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	assertMonsterStateGraph(t, engine, graph)
 	residentStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.room_resident")
 	objectID := engine.World().MustCreateEntity()
-	if _, err := residentStore.Set(objectID, map[string]any{"id": "object:room-a", "room_id": "a"}); err != nil {
+	if _, err := residentStore.Set(objectID, map[string]any{"id": "object:room-a", "level_id": int64(2), "room_id": "a"}); err != nil {
+		t.Fatal(err)
+	}
+	townObjectID := engine.World().MustCreateEntity()
+	if _, err := residentStore.Set(townObjectID, map[string]any{"id": "object:town-a", "level_id": int64(1), "room_id": "a"}); err != nil {
 		t.Fatal(err)
 	}
 	assertResidentActivation(t, engine, objectID, true, false)
+	assertResidentActivation(t, engine, townObjectID, true, false)
 	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
 	for playerPositionX(t, engine, "alice") < 20 {
 		if err := session.Step(); err != nil {
@@ -264,6 +269,7 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	}
 	assertResidentActivation(t, engine, monsterID, false, true)
 	assertResidentActivation(t, engine, objectID, false, false)
+	assertResidentActivation(t, engine, townObjectID, true, false)
 	assertMonsterStateGraph(t, engine, graph)
 	assertInactiveRoom(t, authority, "a", spawnID, "object:room-a")
 	inactiveAI := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai")
@@ -289,6 +295,7 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	}
 	assertResidentActivation(t, restoredEngine, monsterID, false, true)
 	assertResidentActivation(t, restoredEngine, objectID, false, false)
+	assertResidentActivation(t, restoredEngine, townObjectID, true, false)
 	assertMonsterStateGraph(t, restoredEngine, graph)
 	assertInactiveRoom(t, restored, "a", spawnID, "object:room-a")
 
@@ -325,6 +332,8 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	assertResidentActivation(t, restoredEngine, monsterID, true, true)
 	assertResidentActivation(t, engine, objectID, true, false)
 	assertResidentActivation(t, restoredEngine, objectID, true, false)
+	assertResidentActivation(t, engine, townObjectID, true, false)
+	assertResidentActivation(t, restoredEngine, townObjectID, true, false)
 	assertMonsterStateGraph(t, engine, graph)
 	assertMonsterStateGraph(t, restoredEngine, graph)
 	assertRoomActiveWithoutInactiveResidents(t, authority, "a")

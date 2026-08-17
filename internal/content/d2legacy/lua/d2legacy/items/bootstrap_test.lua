@@ -5,6 +5,21 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/item" },
     initial_data = {
+        ["d2legacy.interactions"] = {
+            owner = "alice",
+            targets = {
+                {
+                    id = "room-object",
+                    npc = "Room Object",
+                    x = 4,
+                    y = 5,
+                    radius = 2,
+                    resident_id = "level:2:room-object",
+                    level_id = 2,
+                    room_id = "7",
+                },
+            },
+        },
         ["d2legacy.items"] = {
             owner = "alice",
             inventory_width = 10,
@@ -58,6 +73,17 @@ return test.suite({
                     #ecs.query({ all = { "d2legacy.item.identity" } }) == 1,
                     [=[#ecs.query({ all = { "d2legacy.item.identity" } }) == 1]=]
                 )
+            end),
+        }),
+        test.case("attaches_authored_world_targets_to_stable_room_residency", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local residents = ecs.query({ all = { "d2legacy.world.room_resident" } })
+                test.expect(#residents):equals(1)
+                local resident = ecs.get(residents[1], "d2legacy.world.room_resident")
+                test.expect(resident:get("id")):equals("level:2:room-object")
+                test.expect(resident:get("level_id")):equals(2)
+                test.expect(resident:get("room_id")):equals("7")
             end),
         }),
         test.case("moves_items_through_lua_owned_policy", {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -119,7 +120,7 @@ func (world *Prepared) InitialData(owner string, developmentItems bool) map[stri
 		"d2legacy.development_items": map[string]any{
 			"enabled": developmentItems, "create_empty_containers": !developmentItems,
 		},
-		"d2legacy.interactions":      InteractionData(world.Worlds, owner, ""),
+		"d2legacy.interactions":      InteractionData(world.Worlds, world.Zones, owner, ""),
 		"d2legacy.world_transitions": TransitionData(world.Seam),
 	}
 }
@@ -139,7 +140,7 @@ func TransitionData(seam gametransition.Seam) map[string]any {
 	}}
 }
 
-func InteractionData(worlds map[int]*gameworld.Map, owner, initial string) map[string]any {
+func InteractionData(worlds map[int]*gameworld.Map, zones map[int]*worldgen.Zone, owner, initial string) map[string]any {
 	targets := []any{map[string]any{"id": "act1-akara", "npc": "Akara", "vendor": "Akara", "categories": "armo,misc,weap", "services": "", "x": float64(4096), "y": float64(4096), "radius": float64(160)}}
 	levels := make([]int, 0, len(worlds))
 	for levelID := range worlds {
@@ -159,11 +160,32 @@ func InteractionData(worlds map[int]*gameworld.Map, owner, initial string) map[s
 				name = strings.TrimSpace(object.Class)
 			}
 			if name != "" {
-				targets = append(targets, map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)})
+				target := map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)}
+				if roomID, found := roomAt(zones[levelID], selected.X, selected.Y); found {
+					target["resident_id"] = fmt.Sprintf("level:%d:%s", levelID, selected.ID)
+					target["level_id"] = float64(levelID)
+					target["room_id"] = roomID
+				}
+				targets = append(targets, target)
 			}
 		}
 	}
 	return map[string]any{"owner": owner, "initial_target": initial, "targets": targets}
+}
+
+func roomAt(zone *worldgen.Zone, x, y float64) (string, bool) {
+	if zone == nil {
+		return "", false
+	}
+	for _, room := range zone.Rooms() {
+		left, top := float64(room.X*gameworld.SubtilesPerTile), float64(room.Y*gameworld.SubtilesPerTile)
+		right := left + float64(room.Width*gameworld.SubtilesPerTile)
+		bottom := top + float64(room.Height*gameworld.SubtilesPerTile)
+		if x >= left && x < right && y >= top && y < bottom {
+			return strconv.FormatUint(uint64(room.ID), 10), true
+		}
+	}
+	return "", false
 }
 
 func (world *Prepared) PopulationData(nearby int) map[string]any {
@@ -197,14 +219,17 @@ func (world *Prepared) PopulationData(nearby int) map[string]any {
 			}
 		}
 		rooms = append(rooms, map[string]any{
-			"id": float64(room.ID), "populate": populated[room.StampID], "points": points,
+			"id": strconv.FormatUint(uint64(room.ID), 10), "populate": populated[room.StampID], "points": points,
 			"x": float64(room.X * 5), "y": float64(room.Y * 5),
 			"width": float64(room.Width * 5), "height": float64(room.Height * 5),
 		})
 	}
 	links := make([]any, 0, len(zone.Links()))
 	for _, link := range zone.Links() {
-		links = append(links, map[string]any{"from": float64(link.From), "to": float64(link.To)})
+		links = append(links, map[string]any{
+			"from": strconv.FormatUint(uint64(link.From), 10),
+			"to":   strconv.FormatUint(uint64(link.To), 10),
+		})
 	}
 	return map[string]any{"seed": float64(request.Seed), "act": float64(request.Act), "level_id": float64(request.LevelID), "difficulty": float64(request.Difficulty), "rooms": rooms, "links": links}
 }

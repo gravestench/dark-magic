@@ -301,7 +301,7 @@ func (app *application) interactionBootstrapData() map[string]any {
 	if app.options.StartScene == "vendor" {
 		initial = "act1-akara"
 	}
-	return entryworld.InteractionData(app.gameWorlds, "local-player", initial)
+	return entryworld.InteractionData(app.gameWorlds, app.gameWorldZones, "local-player", initial)
 }
 
 func (app *application) preparedEntryWorld() *entryworld.Prepared {

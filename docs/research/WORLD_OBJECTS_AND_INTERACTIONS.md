@@ -1,6 +1,6 @@
 # World objects and environmental interaction research
 
-Status: implementation-oriented research baseline. Dark Magic already resolves authored DS1/object semantics, has semantic world selection/interaction authority, generated/preset map collision, fixed-tick commands, item service escrow, transition authority, and renderer-independent presentation state. This document defines the missing runtime object state/operation layer.
+Status: implementation-oriented research baseline. Dark Magic already resolves authored DS1/object semantics, has semantic world selection/interaction authority, generated/preset map collision, fixed-tick commands, item service escrow, transition authority, and renderer-independent presentation state. Resolved DS1 interaction targets now receive stable level/room residency from generated zone geometry and therefore participate in the generic inactive filter without object-specific serialization. This document defines the still-missing runtime object state/operation layer.
 
 ## Executive conclusion
 
@@ -353,7 +353,10 @@ Implement one object whose operation produces a quest event and/or trusted zone 
 
 ### WO6 — inactive room persistence
 
-Deactivate/restore used/open object state and scheduled object events deterministically.
+Partial foundation: production DS1 interaction targets now attach to stable,
+level-scoped room residency and checkpoint through the generic inactive marker.
+Implement authoritative object instance/mode/event components next, then prove
+used/open state and scheduled events deactivate/reactivate deterministically.
 
 ## Verification backlog
 
