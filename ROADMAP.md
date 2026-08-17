@@ -126,8 +126,15 @@ unsupported runtime/tool source, and promotes no behavior until its matrix is
 populated. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
-melee target revalidation, missile, timed-state, and reactive-state slices as
-of 2026-08-17. A matched frontend profile also removed the title-to-main-menu
+melee target revalidation, straight-missile, timed-state, reactive-state, and
+definition-driven radial-missile slices as of 2026-08-17. Nova is now the first
+exact-ID `missile.radial` configuration: one targetless cast creates a shared-
+identity ring of ordinary ECS projectile entities, level-scaled count/mana/
+five-band lightning damage, and separate cast-target contact-lock entities.
+The family is reusable and contains no Nova ID/name branch. Exact 1.14d radial
+angular phase, negative acceleration, animation action timing, and complete
+`LastCollide`/`NextHit` ordering remain explicitly partial. A matched frontend
+profile also removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
 bundles then reduced the settled main-menu heap from 487 MB to 216 MB without
@@ -189,7 +196,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 4 exact-ID implementations, 353 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -790,9 +797,9 @@ semantics before Hardcore durable death or broad PvP.
 
 ### G9 — Skill/state/missile behavior-family coverage
 
-Status: **partial**. Generic cast lifecycle, timed state, melee, and straight-
-missile behavior families plus supporting target/motion primitives exist. Fire
-Bolt is the first explicitly supported expansion 1.14d straight-missile
+Status: **partial**. Generic cast lifecycle, timed state, melee, straight-
+missile, and radial-missile behavior families plus supporting target/motion
+primitives exist. Fire Bolt is the first explicitly supported expansion 1.14d straight-missile
 configuration; it no longer owns a standalone component, command branch,
 system, damage function, random stream, or private admission list. Exact skill
 admission now comes from one target-locked implementation manifest shared by
@@ -820,6 +827,13 @@ runtime composition and the coverage report.
 - [x] Prove the definition decoder handles multiple authored configurations
   without skill-name/ID branches; keep the second configuration synthetic so it
   does not claim incomplete behavior for another retail skill.
+- [x] Add a definition-driven targetless radial-missile family and admit exact
+  Expansion 1.14d Nova by ID. Decode its Skills/Missiles count, mana, five
+  level-damage bands, lightning channel, motion/lifetime, presentation, and
+  repeat-contact records; materialize every ray as an ordinary ECS entity with
+  one shared cast ID and an independent cast-target contact-lock entity. Prove
+  reuse with a second synthetic record configuration and checkpoint the live
+  ring without a Nova-specific branch.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -842,8 +856,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 3 explicitly admitted
-configurations, and 354 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 4 explicitly admitted
+configurations, and 353 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -857,8 +871,11 @@ tooltip label through layered `string.tbl`, `expansionstring.tbl`, and
 keys and unknown skill references fail or remain explicit instead of silently
 dropping documentation. Fire Bolt now reports Fire Ball/Meteor hard-level fire-
 damage synergies; Frozen Armor reports Shiver/Chilling Armor hard-level duration
-and freeze-length modifiers in both gameplay and tooltip formulas. TBL wording
-establishes intended relationships and player-visible claims; Skills.txt calc/
+and freeze-length modifiers in both gameplay and tooltip formulas. Nova's
+locale records name it and describe an expanding electrically charged ring that
+shocks nearby enemies; its joined formulas contain no cross-skill references.
+TBL wording establishes intended relationships and player-visible claims;
+Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
 arithmetic, rounding, and ordering. The corrected version-1 TBL codec and a
 layer-precedence/source test make this evidence path executable.
@@ -885,6 +902,22 @@ in the same authored group removes the displaced instance and its exact stat
 source. Frozen Armor remains partial because PvP must chill rather than freeze;
 target cold resistance/immunity, monster-class modifiers, exact rounding/tick
 ordering, animation timing, and presentation are not yet implemented.
+
+`d2legacy.data.radial_missile_skills` validates Nova's exact Expansion 1.14d
+server/client function 22/25 shape, three matching `nova` server-missile slots,
+targetless SC cast policy, lightning channel, and missile function/collision
+contract. It decodes 12 base rays plus 4 per skill level, 15 base mana plus 1
+per level in authored 8.8 units, and the five authored elemental-damage growth
+bands. A cast creates one projectile entity per evenly spaced direction; all
+rays share a deterministic cast ID while retaining unique resident identities.
+An independent `d2legacy.missile.contact_lock` ECS entity applies the authored
+four-tick cast/target repeat delay without making the projectile or damage
+system know Nova. Headless coverage proves one target is damaged once during
+that lock, the ring survives checkpoint reconstruction, and all projectiles and
+locks expire. The current evenly spaced phase is deterministic Dark Magic
+policy: exact initial phase, the missile row's `Accel=-1000`, action timing,
+and the complete meaning/order of `LastCollide=1`, `NextHit=1`, and
+`NextDelay=4` still require owned 1.14d vectors, so Nova remains partial.
 
 Ordinary Attack is now the first `action.melee` configuration rather than an
 exception outside the skill system. Its exact Expansion 1.14d Skills.txt row
@@ -950,7 +983,7 @@ unchanged. This follows Blizzard's expansion documentation that a skill is
 unusable for lack of mana and that mana is consumed when a skill is used; exact
 cost formula/rounding and interruption/refund edges remain target probes.
 
-Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
+Fire Bolt and Nova have owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
@@ -958,8 +991,9 @@ Next: probe and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
-cold-duration/PvP rules. Then use the report to select one high-leverage missing
-target/point/area signature. Evidence upgrades and exact-ID declarations land
+cold-duration/PvP rules and Nova's radial phase/acceleration/repeat-contact
+ordering. Then use the report to select one high-leverage missing targeted or
+point behavior signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
 function IDs. Synergy and every skill-that-modifies-another-skill investigation
 must begin with the joined locale TBL keys/text/replacement-token evidence,
