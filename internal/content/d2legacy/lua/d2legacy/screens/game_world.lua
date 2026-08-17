@@ -75,6 +75,18 @@ local function destroy_missiles(self)
     self.missiles = {}
 end
 
+local function destroy_warps(self)
+    for _, warp in pairs(self.warps or {}) do
+        if warp.pending_job then
+            render.preload_release(warp.pending_job)
+        end
+        if warp.node and warp.node:exists() then
+            warp.node:destroy()
+        end
+    end
+    self.warps = {}
+end
+
 local function install_current_world(self)
     local world_capability = self.world_capability
     if not world_capability then
@@ -93,6 +105,7 @@ local function install_current_world(self)
     destroy_monsters(self)
     destroy_players(self)
     destroy_missiles(self)
+    destroy_warps(self)
     self.collision_node, self.collision_region_key = nil, nil
     self.tile_debug_node, self.tile_debug_region_key = nil, nil
     self.hero_origin = nil
@@ -233,11 +246,76 @@ local function update_debug_legend(self)
 end
 
 local function selectable_at(self, x, y)
-    local spawned = self.targeting and self.targeting.selectable_at(x, y) or nil
+    local spawned = self.targeting and self.targeting.selectable_at(x, y, self.world_level_id) or nil
     if spawned and spawned.owner ~= controlled_player_id() then
         return spawned
     end
     return self.world and self.world:selectable_at(x, y) or nil
+end
+
+local function warp_recipe(token)
+    return assert(screen.warps[token], "warp presentation is unavailable for " .. token)
+end
+
+local function update_warps(self)
+    if not self.map or not self.world then
+        return
+    end
+    self.warps = self.warps or {}
+    local seen = {}
+    for _, snapshot in ipairs(self.gameplay_world.warp_snapshots()) do
+        if snapshot.level_id == self.world_level_id then
+            local key = tostring(snapshot.entity_id)
+            seen[key] = true
+            local warp = self.warps[key]
+            if not warp then
+                local recipe = warp_recipe(snapshot.token)
+                warp = { node = render.create("world", self.map.root), recipe = recipe }
+                warp.node:set_visible(false)
+                warp.pending_job = render.preload({
+                    {
+                        kind = "cof_animation",
+                        path = recipe.cof,
+                        palette = recipe.palette,
+                        direction = 0,
+                        components = recipe.components,
+                    },
+                })
+                self.warps[key] = warp
+            end
+            if warp.pending_job then
+                local status = render.preload_status(warp.pending_job)
+                if status and status.done then
+                    render.preload_release(warp.pending_job)
+                    warp.pending_job = nil
+                    if status.failed == 0 then
+                        warp.node:set_cof_animation(
+                            warp.recipe.cof,
+                            warp.recipe.palette,
+                            0,
+                            warp.recipe.components,
+                            "loop",
+                            256
+                        )
+                        warp.node:set_blend("screen")
+                        warp.node:set_visible(true)
+                    end
+                end
+            end
+            local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+            warp.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
+            warp.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+        end
+    end
+    for key, warp in pairs(self.warps) do
+        if not seen[key] then
+            if warp.pending_job then
+                render.preload_release(warp.pending_job)
+            end
+            warp.node:destroy()
+            self.warps[key] = nil
+        end
+    end
 end
 
 local function retained_monster(self, key)
@@ -563,6 +641,7 @@ return {
             update_monsters(self, elapsed)
             update_players(self, elapsed)
             update_missiles(self)
+            update_warps(self)
             observe_semantic_cues(self)
         end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel
@@ -906,6 +985,7 @@ return {
         destroy_monsters(self)
         destroy_players(self)
         destroy_missiles(self)
+        destroy_warps(self)
         chunked_map.destroy(self.map)
     end,
 }

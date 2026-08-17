@@ -127,8 +127,20 @@ session-pinned AnimData binary; the record's 24.8 speed advances at 25 ticks per
 second, its first attack marker schedules impact, and cursor wrap schedules
 completion. Owned 1.14d `AMA1HTH` is 13 frames at rate 256 with an attack marker
 on frame 8, so the target fixture resolves to +8 impact and +13 completion.
-Those are base record timings; the `UseAttackRate` modifier formula/breakpoints
-still require target evidence. Attack now re-resolves current PvE alignment,
+The generic action-rate policy now combines that record with resolved
+`attackrate`, `item_fasterattackrate`, and primary/secondary weapon-rate facts.
+It uses integer effective IAS `120*IAS/(IAS+120)`, applies the dual-weapon base-
+rate average and 15%-175% bounds, then multiplies the AnimData speed and
+truncates before scheduling marker/wrap ticks. The owned target generation pins
+the table side of that contract: ItemStatCost signed IDs 68/93, the
+`UpdateAnimRate` flag on `attackrate`, Properties `swing1/2/3` mapping directly
+to `item_fasterattackrate`, and Expansion weapon speeds including Phase Blade
+-30 and War Pike +20. Weapon speed enters `attackrate` with the inverse sign.
+Equipped affix/socket sources and passive/skill sources share the same named
+provenance path; no skill ID owns the formula. Exact 1.14d breakpoint,
+dual-wield edge, sequence, shapeshift, slow/chill, and mid-action update vectors
+remain target-runtime probes rather than older-version compatibility promises.
+Attack now re-resolves current PvE alignment,
 life, act/level, footprint reach, and melee-barrier collision before animation
 and again at impact. Exact 1.14d distance arithmetic, dynamic-door collision,
 special-unit exceptions, PvP hostility, and path-to-range behavior remain
@@ -586,28 +598,34 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
 4. Interrupt rules from hit recovery, stun, block, knockback, death, movement.
 5. Complete target policy flags in Skills.txt, including exact melee distance,
    dynamic barriers, special units, PvP hostility, and path-to-range behavior.
-6. Formula evaluator opcode/parameter semantics and overflow/rounding.
-7. Synergy ordering and soft-point/hard-point distinctions.
-8. Weapon contribution and alternate-weapon snapshot behavior.
-9. Aura update cadence, range metric, stacking, and source removal.
-10. Curse overwrite/priority behavior.
-11. Passive skill/stat source lifetime.
-12. State persistence through death, level transition, save, shapeshift, and dispel.
-13. Missile velocity/range fixed-point stepping and exact lifetime boundaries.
-14. Missile collision-type table and collision-mask semantics.
-15. Pierce count and hit-memory behavior.
-16. Splash/explosion area queries and multi-hit prevention.
-17. Homing/guided missile target loss behavior.
-18. Missile damage snapshot versus dynamic owner lookup by family.
-19. Trap/minion ownership and kill/proc attribution.
-20. Corpse skill eligibility and corpse-consumption transaction ordering.
-21. Summon limit/replacement policies by PetType.
-22. Teleport/charge/leap/whirlwind collision and path-type rules.
+6. Confirm 1.14d attack-rate breakpoints, dual-wield odd rounding, sequence and
+   shapeshift bases, slow/chill inputs, and whether a rate change retimes an
+   action already in progress.
+7. Formula evaluator opcode/parameter semantics and overflow/rounding.
+8. Synergy ordering and soft-point/hard-point distinctions.
+9. Weapon contribution and alternate-weapon snapshot behavior.
+10. Aura update cadence, range metric, stacking, and source removal.
+11. Curse overwrite/priority behavior.
+12. Passive skill/stat source lifetime.
+13. State persistence through death, level transition, save, shapeshift, and dispel.
+14. Missile velocity/range fixed-point stepping and exact lifetime boundaries.
+15. Missile collision-type table and collision-mask semantics.
+16. Pierce count and hit-memory behavior.
+17. Splash/explosion area queries and multi-hit prevention.
+18. Homing/guided missile target loss behavior.
+19. Missile damage snapshot versus dynamic owner lookup by family.
+20. Trap/minion ownership and kill/proc attribution.
+21. Corpse skill eligibility and corpse-consumption transaction ordering.
+22. Summon limit/replacement policies by PetType.
+23. Teleport/charge/leap/whirlwind collision and path-type rules.
 
 ## Evidence sources inspected
 
 - User-owned Expansion 1.14d `patch_d2.mpq` Skills.txt and States.txt rows are
   the primary target data for the current self-state slice.
+- User-owned Expansion 1.14d ItemStatCost.txt, Properties.txt, Weapons.txt, and
+  `AnimData.d2` rows/records are the primary target data for action-rate names,
+  mappings, weapon inputs, and base animation timing.
 - Blizzard's official [Sorceress Cold Spells](https://classic.battle.net/diablo2exp/skills/sorceress-cold.shtml)
   table supplies the published Frozen Armor effect, level vectors, synergies,
   PvP distinction, cold-armor exclusion, and difficulty cold-length warning.
@@ -618,10 +636,11 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
   preserving mana when admission rejects an underfunded attempt.
 - D2MOO pinned 1.10f `source/D2Game/src/SKILLS/Skills.cpp`,
   `source/D2Common/src/Units/Units.cpp`, `D2Collision.h`, class/monster skill
-  files, `Missiles.cpp`, `MissMode.cpp`, `D2States.cpp`, and `D2StatList.cpp`
+  files, `Items.cpp`, `Missiles.cpp`, `MissMode.cpp`, `D2States.cpp`, and `D2StatList.cpp`
   remain older secondary architecture evidence only. For melee they expose
-  re-fetch-at-impact, alignment/alive filters, integer unit-distance, and the
-  door/missile-barrier trace; none is treated as a supported older ruleset or
-  a substitute for owned Expansion 1.14d vectors.
+  re-fetch-at-impact, alignment/alive filters, integer unit-distance, the
+  door/missile-barrier trace, weapon-speed sign, and effective-rate arithmetic;
+  none is treated as a supported older ruleset or a substitute for owned
+  Expansion 1.14d vectors.
 - Current Dark Magic authority, movement/targeting code, and typed game-data
   catalog define the implementation baseline, not Diablo behavior evidence.

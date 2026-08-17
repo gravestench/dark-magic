@@ -18,7 +18,7 @@ import (
 
 func TestConfigureRuntimePreservesClientCatalogOverrides(t *testing.T) {
 	runtime := modruntime.New()
-	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+	for _, name := range []string{"engine.data/v1", "d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
 		if err := runtime.RegisterModule(modruntime.Module{
 			Name: name,
 			Help: modruntime.ModuleHelp{Summary: "client override"},
@@ -41,7 +41,7 @@ func TestConfigureRuntimePreservesClientCatalogOverrides(t *testing.T) {
 		simulation.NewStateStore(), simulation.NewRandomStreams(1), nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+	for _, name := range []string{"engine.data/v1", "d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
 		if got := runtime.ModuleHelp()[name].Summary; got != "client override" {
 			t.Fatalf("%s summary = %q, want client override", name, got)
 		}
@@ -70,7 +70,7 @@ func TestClientCatalogsReplaceDefaultsAfterConfigureRuntime(t *testing.T) {
 		simulation.NewStateStore(), simulation.NewRandomStreams(1), nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
+	for _, name := range []string{"engine.data/v1", "d2legacy.quest_catalog/v1", "d2legacy.map_catalog/v1"} {
 		if err := runtime.RegisterModuleOverride(modruntime.Module{
 			Name: name,
 			Help: modruntime.ModuleHelp{Summary: "late client override"},

@@ -537,6 +537,24 @@
         "z": -100
       },
       "hero": {"scale":1.0,"screen_x":400,"screen_y":330},
+      "warps": {
+        "TP": {
+          "cof":"data/global/objects/TP/COF/TPONHTH.cof",
+          "palette":"data/global/palette/units/pal.dat",
+          "components":{
+            "HD":"data/global/objects/TP/HD/tphdlitonhth.dcc",
+            "TR":"data/global/objects/TP/TR/tptrlitonhth.dcc"
+          }
+        },
+        "PP": {
+          "cof":"data/global/objects/PP/COF/PPONHTH.cof",
+          "palette":"data/global/palette/units/pal.dat",
+          "components":{
+            "HD":"data/global/objects/PP/HD/pphdlitonhth.dcc",
+            "TR":"data/global/objects/PP/TR/pptrlitonhth.dcc"
+          }
+        }
+      },
       "hud": {
         "palette": "sky",
         "panel_sheet": "data/global/ui/PANEL/800ctrlpnl7.dc6",

@@ -68,6 +68,7 @@ local function register_item_views()
         { name = "physical_min", type = "i64" },
         { name = "physical_max", type = "i64" },
         { name = "attack_rating", type = "i64" },
+        { name = "attack_rate", type = "i64" },
         { name = "weapon_class", type = "string" },
     })
     register("d2legacy.item.armor", {

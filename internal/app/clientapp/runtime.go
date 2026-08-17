@@ -39,6 +39,7 @@ func (app *application) registerLuaRuntime() error {
 
 func (app *application) hostOverrideLuaModules() []modruntime.Module {
 	return []modruntime.Module{
+		modruntime.DataModule(app.options.Content, d2presentation.ManifestTransforms(app.profile.ID)),
 		d2catalog.QuestModule(app.questCatalog, app.locale),
 		d2catalog.MapModule(app.questCatalog),
 	}
@@ -51,7 +52,6 @@ func (app *application) baseLuaModules() []modruntime.Module {
 		modruntime.AppModule(BuildVersion(), app.stop),
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
-		modruntime.DataModule(app.options.Content, d2presentation.ManifestTransforms(app.profile.ID)),
 		modruntime.SessionWorldModule(app.options.Content, app.currentWorld, app.worldObjectResolver),
 		modruntime.InputModule(app.inputState),
 		modruntime.DevModule(map[string]any{

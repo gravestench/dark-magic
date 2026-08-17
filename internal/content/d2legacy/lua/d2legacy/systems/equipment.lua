@@ -230,11 +230,16 @@ function M.register()
                         profile:set("physical_min", weapon and weapon:get("physical_min") or 256)
                         profile:set("physical_max", weapon and weapon:get("physical_max") or 512)
                         profile:set("primary_attack_rating", weapon and weapon:get("attack_rating") or 0)
+                        profile:set("primary_weapon_attack_rate", weapon and weapon:get("attack_rate") or 0)
                         profile:set("primary_hand", weapons.rarm and "rarm" or weapons.larm and "larm" or "unarmed")
                         profile:set("secondary_range", secondary and secondary.melee:get("range") or 0)
                         profile:set("secondary_physical_min", secondary and secondary.melee:get("physical_min") or 0)
                         profile:set("secondary_physical_max", secondary and secondary.melee:get("physical_max") or 0)
                         profile:set("secondary_attack_rating", secondary and secondary.melee:get("attack_rating") or 0)
+                        profile:set(
+                            "secondary_weapon_attack_rate",
+                            secondary and secondary.melee:get("attack_rate") or 0
+                        )
                         profile:set("secondary_hand", secondary and "larm" or "")
                         profile:set("dual_wield", secondary ~= nil)
                         appearance:set("weapon_class", weapon and weapon:get("weapon_class") or "HTH")
@@ -247,6 +252,15 @@ function M.register()
                             }
                         end
                         sync_sources(entities, structural, player, "equipment:attack:", "attack_rating", attack)
+                        local attackrate = {}
+                        if weapon and weapon:get("attack_rate") ~= 0 then
+                            attackrate["equipment:attackrate:" .. item:get("id")] = {
+                                value = weapon:get("attack_rate"),
+                                operation = "add",
+                                order = 10,
+                            }
+                        end
+                        sync_sources(entities, structural, player, "equipment:attackrate:", "attackrate", attackrate)
                         if layout_entity then
                             sync_sources(
                                 entities,
@@ -272,6 +286,22 @@ function M.register()
                                 "defense",
                                 modifier_sources(entities, layout_entity, active_set, "defense")
                             )
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:modifier:attackrate:",
+                                "attackrate",
+                                modifier_sources(entities, layout_entity, active_set, "attackrate")
+                            )
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:modifier:item_fasterattackrate:",
+                                "item_fasterattackrate",
+                                modifier_sources(entities, layout_entity, active_set, "item_fasterattackrate")
+                            )
                         else
                             sync_sources(entities, structural, player, "equipment:defense:", "defense", {})
                             sync_sources(
@@ -283,6 +313,15 @@ function M.register()
                                 {}
                             )
                             sync_sources(entities, structural, player, "equipment:modifier:defense:", "defense", {})
+                            sync_sources(entities, structural, player, "equipment:modifier:attackrate:", "attackrate", {})
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:modifier:item_fasterattackrate:",
+                                "item_fasterattackrate",
+                                {}
+                            )
                         end
                     end
                 end

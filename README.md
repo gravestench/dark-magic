@@ -514,27 +514,24 @@ to produce another deterministic zone; DS1 Lab remains the separate, lazy
 materialization tool. The `engine.mapgen/v1` capability also retains the earlier
 typed Act I Tristram preset proof.
 
-`--start-scene=warp_lab` opens an argument-free spatial transition proof using
-two visibly different mounted Act I DS1 stamps placed more than one viewport apart.
-The player starts beside the western portal. Click ordinary ground to publish
-a traversal intent, or click the portal to publish an interaction intent;
-fixed-tick ECS authority walks into range, resolves the
-portal's explicit paired entity, teleports to the eastern endpoint, and moves
-the camera to the second stamp. This is not a special lab-only map renderer:
-both destinations use the game world's sparse tile residency, viewport culling,
-camera clamping, depth ordering, and subtile projection adapter. Player ground
-movement and portal approach also select the ordinary NU/WL composite modes and
-preserve animation playback through facing and destination changes. Pointer
-targets are planned by the same deterministic, player-footprint-aware A* over
-the decoded DT1 collision map; unreachable clicks are rejected instead of
-letting the lab actor pass through scenery. A completed
-warp immediately applies the legacy-style full-screen black mask and fades it
-away over roughly 100 ms, hiding the destination camera/residency handoff. The
-endpoints use the shipped animated blue
-town-portal and red permanent-portal COF/DCC composites with luminous screen
-composition over the world. Run it with `make play-warp-lab`, or create a
-local production-asset image with `make capture-warp-lab`. Blizzard-owned
-capture output remains ignored by Git.
+`--start-scene=warp_lab` opens an argument-free paired-warp proof inside the
+production Act I world. It selects a disposable development character and adds
+one blue town-side endpoint plus one red Blood Moor endpoint as authoritative
+world entities. Clicking a warp uses the ordinary selectable and interaction
+admission path; the player walks into range through the shared command source,
+player-footprint-aware A*, velocity and collision integration, then the warp
+uses the same relocation transaction as authored level seams. The scene itself
+delegates to `game_world`, so facing, authoritative NU/WL animation state,
+camera, sparse tile residency, culling, depth ordering, and asynchronously
+prepared TP/PP composites are the production paths too.
+
+The lab adds only read-only level/position/velocity/mode/crossing diagnostics
+and a brief presentation mask after authority changes the level. It no longer
+owns a synthetic actor, private locomotion resolver, or direct teleport. The
+configured pair proves the reusable warp mechanism, not the still-unverified
+Town Portal owner, party-access, replacement, lifetime, and return policies.
+Run it with `make play-warp-lab`, or create a local production-asset image with
+`make capture-warp-lab`. Blizzard-owned capture output remains ignored by Git.
 
 Generated zone recipes are decoded one stamp at a time by the renderer-neutral
 world materializer. It reuses DT1 catalogs across matching rooms, reports safe

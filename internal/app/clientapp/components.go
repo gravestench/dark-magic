@@ -159,6 +159,14 @@ func (app *application) activateComponents() error {
 			return err
 		}
 	}
+	// Direct development entry skips the ordinary roster -> loading flow where
+	// Lua calls network.start_selected. Activate the already-selected fixture so
+	// gameplay labs advance the same offline Session as ordinary local play.
+	if shouldActivateDevelopmentSession(app.options) {
+		if err := app.network.StartSelected(); err != nil {
+			return wrap("activate direct-start development session", err)
+		}
+	}
 	if err := app.scenes.Flush(context.Background()); err != nil {
 		return wrap("flush initial scene requests", err)
 	}

@@ -25,6 +25,7 @@ local weapon = {
     physical_max = 1024,
     melee_weapon_class = "1HS",
     attack_rating = 900,
+    attack_rate = 20,
     stat_modifiers = {
         {
             source_id = "precision",
@@ -41,6 +42,14 @@ local weapon = {
             operation = "add",
             value = 25,
             order = 20,
+        },
+        {
+            source_id = "alacrity",
+            source_kind = "affix",
+            stat = "item_fasterattackrate",
+            operation = "add",
+            value = 40,
+            order = 40,
         },
         {
             source_id = "mastery",
@@ -160,6 +169,8 @@ end
 -- After equipping the weapon and armor, all base and modifier sources should exist.
 local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:attack:weapon", 900)
+    expect_source(sources, "equipment:attackrate:weapon", 20)
+    expect_source(sources, "equipment:modifier:item_fasterattackrate:weapon:affix:40:alacrity", 40)
     expect_source(sources, "equipment:defense:armor", 61)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
@@ -173,6 +184,8 @@ end
 -- while the armor's sources should remain untouched.
 local function assert_unequipped_weapon_sources(sources)
     expect_source(sources, "equipment:attack:weapon", nil)
+    expect_source(sources, "equipment:attackrate:weapon", nil)
+    expect_source(sources, "equipment:modifier:item_fasterattackrate:weapon:affix:40:alacrity", nil)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", nil)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", nil)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", nil)
@@ -194,10 +207,13 @@ local function assert_resolved_stats()
     local ecs = require("engine.ecs/v1")
     local players = test.entities_with("d2legacy.player.combat_stats")
     local stats = ecs.get(players[1], "d2legacy.player.combat_stats")
+    local rates = ecs.get(players[1], "d2legacy.combat.action_rate")
     -- AR: (5 * (20 - 7)) + 900 + 75 + 25, then +20%.
     test.expect(stats:get("attack_rating")):equals(1278)
     -- Defense: Dex/4 + enhanced armor 61 + flat 10, then +20%.
     test.expect(stats:get("defense")):equals(91)
+    test.expect(rates:get("attack_rate")):equals(120)
+    test.expect(rates:get("item_fasterattackrate")):equals(40)
 end
 
 -- Move an item from one container to another.

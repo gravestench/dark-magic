@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local animdata = require("engine.animdata/v1")
+local action_rate = require("d2legacy.policy.action_rate")
 local combat_target = require("d2legacy.gameplay.combat_target")
 local direction = require("d2legacy.policy.direction")
 local weapon_selection = require("d2legacy.policy.weapon_selection")
@@ -74,15 +75,17 @@ local function action_timing(attacker, mode)
     local key = string.upper(appearance:get("token") .. mode .. appearance:get("weapon_class"))
     local timing, err = animdata.record(key)
     assert(timing, err or ("missing authoritative AnimData record " .. key))
-    local impact_delay
-    for _, event in ipairs(timing.events) do
-        if event.kind == "attack" then
-            impact_delay = impact_delay and math.min(impact_delay, event.delay) or event.delay
-        end
-    end
-    assert(impact_delay, "AnimData record " .. key .. " has no attack event")
-    assert(impact_delay < timing.complete_delay, "AnimData attack event must precede completion for " .. key)
-    return impact_delay, timing.complete_delay
+    local rate = assert(ecs.get(attacker, "d2legacy.combat.action_rate"), "player has no action-rate facts")
+    local profile = assert(ecs.get(attacker, "d2legacy.combat.melee_profile"), "player has no melee profile")
+    local schedule = action_rate.schedule(timing, {
+        attack_rate = rate:get("attack_rate"),
+        item_fasterattackrate = rate:get("item_fasterattackrate"),
+        primary_weapon_attack_rate = profile:get("primary_weapon_attack_rate"),
+        secondary_weapon_attack_rate = profile:get("secondary_weapon_attack_rate"),
+        dual_wield = profile:get("dual_wield"),
+        sequence = false,
+    })
+    return schedule.attack_delay, schedule.complete_delay
 end
 
 local function start_swing(context, attacker, skill_id, target_id, dx, dy, selector, mode, structural)
@@ -164,6 +167,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.player.appearance",
+            "d2legacy.combat.action_rate",
         },
         write = {
             "d2legacy.combat.attack_approach",

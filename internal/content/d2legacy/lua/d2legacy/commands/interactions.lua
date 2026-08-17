@@ -6,6 +6,7 @@
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
+local operations = require("d2legacy.interactions.operations")
 
 local M = {}
 
@@ -62,7 +63,7 @@ local function target_by_id(id)
     return nil, nil
 end
 
-local function player_position(owner)
+local function player_entity(owner)
     for _, entity in
         ipairs(ecs.query({
             all = {
@@ -73,7 +74,7 @@ local function player_position(owner)
     do
         local identity = ecs.get(entity, "d2legacy.player.identity")
         if identity:get("player") == owner then
-            return ecs.get(entity, "d2legacy.world.position")
+            return entity
         end
     end
     return nil
@@ -85,16 +86,22 @@ local function squared_distance(x1, y1, x2, y2)
     return x * x + y * y
 end
 
-local function in_range(owner, target)
-    local position = player_position(owner)
-    if not position then
+local function in_range(owner, entity, target)
+    local player = player_entity(owner)
+    if not player then
         return true
+    end
+    local position = ecs.get(player, "d2legacy.world.position")
+    local player_location = ecs.get(player, "d2legacy.world.location")
+    local target_location = ecs.get(entity, "d2legacy.world.location")
+    if player_location and target_location and player_location:get("level_id") ~= target_location:get("level_id") then
+        return false
     end
     local distance = squared_distance(position:get("x"), position:get("y"), target:get("x"), target:get("y"))
     return distance <= target:get("radius") * target:get("radius")
 end
 
-local function target_at(x, y)
+local function target_at(owner, x, y)
     local best_entity
     local best_target
     local best_distance
@@ -106,7 +113,11 @@ local function target_at(x, y)
     do
         local target = ecs.get(entity, "d2legacy.interaction.target")
         local distance = squared_distance(x, y, target:get("x"), target:get("y"))
-        if distance <= POINTER_RADIUS_SQUARED and (not best_distance or distance < best_distance) then
+        if
+            distance <= POINTER_RADIUS_SQUARED
+            and in_range(owner, entity, target)
+            and (not best_distance or distance < best_distance)
+        then
             best_entity = entity
             best_target = target
             best_distance = distance
@@ -115,9 +126,9 @@ local function target_at(x, y)
     return best_entity, best_target
 end
 
-local function requested_target(payload)
+local function requested_target(owner, payload)
     if payload.at then
-        return target_at(payload.x, payload.y)
+        return target_at(owner, payload.x, payload.y)
     end
     return target_by_id(assert(payload.target, "target is required"))
 end
@@ -130,8 +141,11 @@ end
 
 function M.open(command)
     local owner = command_owner(command)
-    local entity, target = requested_target(command.payload)
-    assert(entity and in_range(owner, target), "interaction target is unavailable or out of range")
+    local entity, target = requested_target(owner, command.payload)
+    assert(entity and in_range(owner, entity, target), "interaction target is unavailable or out of range")
+    if operations.apply(owner, entity) then
+        return
+    end
     local context = interaction_context(owner)
     destroy_null_target(context)
     context:set("target", entity)

@@ -1,11 +1,36 @@
 package recordstore
 
 import (
+	"io/fs"
 	"testing"
 	"testing/fstest"
 
 	"github.com/gravestench/dark-magic/internal/content"
 )
+
+type incompleteListSource struct {
+	*content.FS
+}
+
+func (source incompleteListSource) List(root, suffix string) ([]string, error) {
+	paths, err := source.FS.List(root, suffix)
+	if err != nil {
+		return nil, err
+	}
+	result := paths[:0]
+	for _, path := range paths {
+		if path != "data/global/excel/MonPreset.txt" {
+			result = append(result, path)
+		}
+	}
+	return result, nil
+}
+
+var _ interface {
+	fs.FS
+	List(string, string) ([]string, error)
+	ResolveSource(string) (string, string, error)
+} = incompleteListSource{}
 
 func TestPinHashesEffectiveTablesAndFreezesTheirBytes(t *testing.T) {
 	base := fstest.MapFS{
@@ -94,5 +119,52 @@ func TestPinIncludesWinningSourceProvenance(t *testing.T) {
 	}
 	if firstGeneration.ID == secondGeneration.ID {
 		t.Fatal("different winning provenance produced the same generation")
+	}
+}
+
+func TestPinnedStoreRetainsCaseInsensitiveMPQLookups(t *testing.T) {
+	source, err := content.New(content.Layer{Name: "patch", FS: fstest.MapFS{
+		"data/global/excel/MonPreset.txt": &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned, _, err := Pin(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := pinned.Load("data/global/excel/monpreset.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0]["Place"] != "zombie" {
+		t.Fatalf("rows = %#v", rows)
+	}
+	provenance, found := pinned.Source("DATA/GLOBAL/EXCEL/MONPRESET.TXT")
+	if !found || provenance.Layer != "patch" || provenance.Path != "data/global/excel/MonPreset.txt" {
+		t.Fatalf("provenance = %#v, %v", provenance, found)
+	}
+	pinned.Invalidate("DATA/GLOBAL/EXCEL/MONPRESET.TXT")
+	if pinned.Loaded("data/global/excel/monpreset.txt") {
+		t.Fatal("case-insensitive invalidation left the canonical table cached")
+	}
+}
+
+func TestPinDiscoversRequiredTableMissingFromMPQListfile(t *testing.T) {
+	layered, err := content.New(content.Layer{Name: "retail", FS: fstest.MapFS{
+		"data/global/excel/MonPreset.txt": &fstest.MapFile{Data: []byte("Act\tPlace\n1\tzombie\n")},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned, generation, err := Pin(incompleteListSource{FS: layered})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generation.Files) != 1 || generation.Files[0].Path != "data/global/excel/MonPreset.txt" {
+		t.Fatalf("generation files = %#v", generation.Files)
+	}
+	if _, err := pinned.Load("data/global/excel/monpreset.txt"); err != nil {
+		t.Fatal(err)
 	}
 }

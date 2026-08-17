@@ -18,8 +18,22 @@ type Store struct {
 	logger       *slog.Logger
 	mu           sync.RWMutex
 	cache        map[string][]map[string]string
+	canonical    map[string]string
 	generationID string
 	provenance   map[string]Provenance
+}
+
+func (s *Store) canonicalPath(path string) string {
+	if s == nil {
+		return path
+	}
+	s.mu.RLock()
+	canonical := s.canonical[strings.ToLower(path)]
+	s.mu.RUnlock()
+	if canonical != "" {
+		return canonical
+	}
+	return path
 }
 
 type Provenance struct {
@@ -34,8 +48,15 @@ func (s *Store) Source(path string) (Provenance, bool) {
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	value, found := s.provenance[path]
+	value, found := s.provenance[s.canonicalPathLocked(path)]
 	return value, found
+}
+
+func (s *Store) canonicalPathLocked(path string) string {
+	if canonical := s.canonical[strings.ToLower(path)]; canonical != "" {
+		return canonical
+	}
+	return path
 }
 
 // GenerationID identifies an immutable pinned authoritative view. Ordinary
@@ -51,7 +72,7 @@ func (s *Store) GenerationID() string {
 
 // New constructs a record store over source.
 func New(source fs.FS) *Store {
-	return &Store{source: source, logger: slog.Default(), cache: make(map[string][]map[string]string)}
+	return &Store{source: source, logger: slog.Default(), cache: make(map[string][]map[string]string), canonical: make(map[string]string)}
 }
 
 // SetLogger configures record-load diagnostics. A nil logger disables them.
@@ -67,9 +88,11 @@ func (s *Store) Read(path string) ([]byte, error) {
 	if s == nil || s.source == nil {
 		return nil, fmt.Errorf("recordstore: no content source")
 	}
+	requested := path
+	path = s.canonicalPath(path)
 	data, err := fs.ReadFile(s.source, path)
 	if err != nil {
-		return nil, fmt.Errorf("recordstore: read %q: %w", path, err)
+		return nil, fmt.Errorf("recordstore: read %q: %w", requested, err)
 	}
 	return bytes.Clone(data), nil
 }
@@ -80,15 +103,19 @@ func (s *Store) Open(path string) (fs.File, error) {
 	if s == nil || s.source == nil {
 		return nil, fmt.Errorf("recordstore: no content source")
 	}
+	requested := path
+	path = s.canonicalPath(path)
 	file, err := s.source.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("recordstore: open %q: %w", path, err)
+		return nil, fmt.Errorf("recordstore: open %q: %w", requested, err)
 	}
 	return file, nil
 }
 
 // Load returns a defensive copy of a TSV table.
 func (s *Store) Load(path string) ([]map[string]string, error) {
+	requested := path
+	path = s.canonicalPath(path)
 	s.mu.RLock()
 	cached, exists := s.cache[path]
 	s.mu.RUnlock()
@@ -97,7 +124,7 @@ func (s *Store) Load(path string) ([]map[string]string, error) {
 	}
 	file, err := s.source.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("recordstore: open %q: %w", path, err)
+		return nil, fmt.Errorf("recordstore: open %q: %w", requested, err)
 	}
 	defer file.Close()
 	rows, err := parseTSV(file)
@@ -137,6 +164,7 @@ func (s *Store) resolveSource(path string) (string, string) {
 
 // Invalidate removes one cached table so its next access reloads layered content.
 func (s *Store) Invalidate(path string) {
+	path = s.canonicalPath(path)
 	s.mu.Lock()
 	delete(s.cache, path)
 	s.mu.Unlock()
@@ -152,6 +180,7 @@ func (s *Store) InvalidateAll() {
 
 // Loaded reports whether path is cached.
 func (s *Store) Loaded(path string) bool {
+	path = s.canonicalPath(path)
 	s.mu.RLock()
 	_, exists := s.cache[path]
 	s.mu.RUnlock()

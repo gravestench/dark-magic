@@ -13,12 +13,14 @@ The deterministic JSON report joins three sources:
 - curated hypotheses in `asset-catalog.v1.json`;
 - structural fingerprints in `asset-fixture.v1.json`.
 
-The M15.5 baseline contains 139 manifest-owned paths: 73 have verified catalog
-and fixture coverage and 66 remain explicitly unverified. Seventeen older
-catalog paths are not currently selected by the presentation manifest. The Lua
-scan also identifies 47 static paths still owned directly by compatibility or
-overlay code and one dynamic skill-icon prefix. These are migration inventory,
-not proof that an asset is absent from a supplied installation.
+The current baseline contains 173 manifest-owned paths: 99 have verified catalog
+and fixture coverage and 74 remain explicitly unverified. Fourteen older catalog
+paths are not currently selected by the presentation manifest. The Lua scan also
+identifies 84 static paths still owned directly by compatibility or overlay code
+and eight dynamic record/content prefixes. These are migration inventory, not
+proof that an asset is absent from a supplied installation. The game-world
+manifest now owns the exact blue/red warp COF and component paths; authoritative
+warp state selects only the declared appearance token.
 
 `catalog_fixture_gaps` must always be empty. CI also pins the complete sorted-set
 fingerprint, so adding, removing, or moving a static path requires running the
@@ -27,8 +29,8 @@ case-insensitive to match Diablo archive lookup behavior.
 
 The remaining M15 catalog work is therefore measurable:
 
-1. move the 47 code-owned static paths into versioned manifest data;
-2. verify the 66 manifest paths against supported archive profiles and add their
+1. move the 84 code-owned static paths into versioned manifest data;
+2. verify the 74 manifest paths against supported archive profiles and add their
    redistributable structural fixtures;
 3. retain dynamic prefixes only where record-driven lookup makes enumeration
    inappropriate;

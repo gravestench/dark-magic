@@ -14,18 +14,21 @@ local ecs = require("engine.ecs/v1")
 local M = {}
 
 local function finite(value)
-    return type(value) == "number"
-        and value == value
-        and value ~= math.huge
-        and value ~= -math.huge
+    return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
 end
 
-local function copy_candidate(entity, pointer_x, pointer_y)
+local function copy_candidate(entity, pointer_x, pointer_y, level_id)
     local selectable = ecs.get(entity, "d2legacy.world.selectable")
     local position = ecs.get(entity, "d2legacy.world.position")
-    if not selectable or not position then return nil end
+    if not selectable or not position then
+        return nil
+    end
 
     local radius = selectable:get("radius")
+    local location = ecs.get(entity, "d2legacy.world.location")
+    if level_id and location and location:get("level_id") ~= level_id then
+        return nil
+    end
     local x, y = position:get("x"), position:get("y")
     if not finite(radius) or radius <= 0 or not finite(x) or not finite(y) then
         return nil
@@ -33,7 +36,9 @@ local function copy_candidate(entity, pointer_x, pointer_y)
 
     local dx, dy = pointer_x - x, pointer_y - y
     local distance = (dx * dx + dy * dy) / (radius * radius)
-    if distance > 1 then return nil end
+    if distance > 1 then
+        return nil
+    end
 
     return {
         id = selectable:get("id"),
@@ -58,20 +63,26 @@ local function comes_before(left, right)
     return left.id < right.id
 end
 
-function M.selectable_at(pointer_x, pointer_y)
-    if not finite(pointer_x) or not finite(pointer_y) then return nil end
+function M.selectable_at(pointer_x, pointer_y, level_id)
+    if not finite(pointer_x) or not finite(pointer_y) then
+        return nil
+    end
 
     local best
-    for _, entity in ipairs(ecs.query({
-        all = { "d2legacy.world.selectable", "d2legacy.world.position" },
-    })) do
-        local candidate = copy_candidate(entity, pointer_x, pointer_y)
+    for _, entity in
+        ipairs(ecs.query({
+            all = { "d2legacy.world.selectable", "d2legacy.world.position" },
+        }))
+    do
+        local candidate = copy_candidate(entity, pointer_x, pointer_y, level_id)
         if candidate and (not best or comes_before(candidate, best)) then
             best = candidate
         end
     end
 
-    if best then best.distance = nil end
+    if best then
+        best.distance = nil
+    end
     return best
 end
 
