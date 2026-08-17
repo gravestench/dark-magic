@@ -2,12 +2,14 @@ local test = require("d2legacy.tests/v1")
 
 -- Reusable fixtures keep test data in one place and explain what each value means.
 local fixtures = require("d2legacy.tests.support.fixtures")
+local active_barrier, active_target
 
 -- Spawn a stationary hostile monster exactly where the player can target it.
 -- This helper explains each component so the test case itself stays readable.
-local function spawn_event_target_monster()
+local function spawn_event_target_monster(overrides)
+    overrides = overrides or {}
     local ecs = require("engine.ecs/v1")
-    ecs.create({
+    return ecs.create({
         -- A stable monster identity lets us select it deterministically.
         ["d2legacy.monster.identity"] = {
             spawn_id = "event-target",
@@ -30,21 +32,57 @@ local function spawn_event_target_monster()
             experience = 0,
         },
         -- Position the monster at a fixed world coordinate the player will target.
-        ["d2legacy.world.position"] = { x = 12, y = 12 },
+        ["d2legacy.world.position"] = { x = overrides.x or 12, y = overrides.y or 12 },
         -- Act 1, level 1 matches the default player entry fixture.
-        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.location"] = { act = 1, level_id = overrides.level_id or 1 },
         -- A small collider makes targeting feel natural without movement logic.
         ["d2legacy.world.collider"] = { radius = 1 },
         -- Selectable and hostile so player targeting can find this monster.
         ["d2legacy.world.selectable"] = {
-            id = "monster:event-target",
-            kind = "hostile",
+            id = overrides.id or "monster:event-target",
+            kind = overrides.kind or "hostile",
             label = "Target",
             owner = "",
             radius = 1,
             priority = 1,
         },
     })
+end
+
+local function collision_switch()
+    local state = { blocked = false }
+    require("d2legacy.gameplay.collision").set({
+        barrier_clear = function()
+            return not state.blocked
+        end,
+        integrate_velocity = function(_, x, y, velocity_x, velocity_y, _, _, _, elapsed)
+            return x + velocity_x * elapsed, y + velocity_y * elapsed
+        end,
+    })
+    return state
+end
+
+local function submit_attack(target_id)
+    return test.submit({
+        tick = 2,
+        sequence = 1,
+        player = "alice",
+        kind = "player.use_skill",
+        payload = {
+            side = "left",
+            target_x = 12,
+            target_y = 12,
+            target_id = target_id or "monster:event-target",
+        },
+    })
+end
+
+local function player_entity()
+    return require("engine.ecs/v1").query({ all = { "d2legacy.player.identity" } })[1]
+end
+
+local function resolved_melee_events()
+    return require("engine.ecs/v1").query({ all = { "d2legacy.combat.melee_event" } })
 end
 
 -- Collect all attack animation lifecycle events emitted during the scenario.
@@ -175,27 +213,166 @@ return test.suite({
             -- Issue a left-skill attack toward the monster's exact position.
             -- The payload uses target_x/target_y so the runtime can path to range
             -- before admitting the attack animation.
-            test.submit({
-                tick = 2,
-                sequence = 1,
-                player = "alice",
-                kind = "player.use_skill",
-                payload = {
-                    side = "left",
-                    target_x = 12,
-                    target_y = 12,
-                    target_id = "monster:event-target",
-                },
-            }),
+            submit_attack(),
             -- Advance through enough ticks for approach, attack, and completion.
             test.step(19),
             test.run(function()
                 local events = collect_attack_events()
                 assert_attack_lifecycle_events(events)
                 local ecs = require("engine.ecs/v1")
-                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local player = player_entity()
                 local vitals = ecs.get(player, "d2legacy.player.vitals")
                 test.assert(vitals:get("mana") == 20, [=[zero-cost Attack preserves mana]=])
+            end),
+        }),
+        test.case("rejects_non_opponent_targets", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                spawn_event_target_monster({ kind = "friendly" })
+            end),
+            submit_attack(),
+            test.step(4),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(0)
+                local ecs = require("engine.ecs/v1")
+                test.assert(
+                    ecs.get(player_entity(), "d2legacy.combat.attack_approach") == nil,
+                    [=[invalid alignment does not leave an approach]=]
+                )
+            end),
+        }),
+        test.case("rejects_targets_in_another_level", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                spawn_event_target_monster({ level_id = 2 })
+            end),
+            submit_attack(),
+            test.step(4),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(0)
+                local ecs = require("engine.ecs/v1")
+                test.assert(
+                    ecs.get(player_entity(), "d2legacy.combat.attack_approach") == nil,
+                    [=[other-level target does not leave an approach]=]
+                )
+            end),
+        }),
+        test.case("rejects_melee_barrier_before_animation", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local barrier = collision_switch()
+                barrier.blocked = true
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(4),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(0)
+                local ecs = require("engine.ecs/v1")
+                test.assert(
+                    ecs.get(player_entity(), "d2legacy.combat.attack_animation") == nil,
+                    [=[barrier-blocked Attack starts no animation]=]
+                )
+            end),
+        }),
+        test.case("revalidates_melee_barrier_at_impact", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                active_barrier = collision_switch()
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(3),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(1)
+                active_barrier.blocked = true
+            end),
+            test.step(7),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local events = resolved_melee_events()
+                test.expect(#events):equals(1)
+                local event = ecs.get(events[1], "d2legacy.combat.melee_event")
+                test.expect(event:get("target_id")):equals("")
+                test.assert(not event:get("hit"), [=[barrier appearing before impact prevents the hit]=])
+            end),
+        }),
+        test.case("revalidates_range_at_impact", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                active_target = spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(3),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(1)
+                require("engine.ecs/v1").get(active_target, "d2legacy.world.position"):set("x", 30)
+            end),
+            test.step(7),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local events = resolved_melee_events()
+                test.expect(#events):equals(1)
+                local event = ecs.get(events[1], "d2legacy.combat.melee_event")
+                test.expect(event:get("target_id")):equals("")
+                test.assert(not event:get("hit"), [=[target leaving range before impact prevents the hit]=])
+            end),
+        }),
+        test.case("revalidates_living_target_at_impact", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                active_target = spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(3),
+            test.run(function()
+                test.expect(#collect_attack_events()):equals(1)
+                require("engine.ecs/v1").get(active_target, "d2legacy.monster.stats"):set("health", 0)
+            end),
+            test.step(7),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local events = resolved_melee_events()
+                test.expect(#events):equals(1)
+                local event = ecs.get(events[1], "d2legacy.combat.melee_event")
+                test.expect(event:get("target_id")):equals("")
+                test.assert(not event:get("hit"), [=[dead target cannot be hit at impact]=])
             end),
         }),
     },

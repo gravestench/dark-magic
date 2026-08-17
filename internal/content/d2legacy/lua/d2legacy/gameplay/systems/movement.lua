@@ -5,10 +5,9 @@
 -- every entity with Position + Velocity + Bounds.
 
 local ecs = require("engine.ecs/v1")
+local collision_registry = require("d2legacy.gameplay.collision")
 
 local M = {}
-local collisions = {}
-local default_collision = nil
 
 local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
@@ -61,9 +60,9 @@ end
 local function collision_for(entity)
     local location = ecs.get(entity, "d2legacy.world.location")
     if location then
-        return collisions[location:get("level_id")] or default_collision
+        return collision_registry.for_level(location:get("level_id"))
     end
-    return default_collision
+    return collision_registry.for_level(nil)
 end
 
 local function update_entity(entity, elapsed)
@@ -94,7 +93,7 @@ local function update_entity(entity, elapsed)
 end
 
 function M.register(collision)
-    default_collision = collision
+    collision_registry.set(collision)
     ecs.system({
         id = "d2legacy.world.integrate",
         phase = "movement",
@@ -122,12 +121,7 @@ function M.register(collision)
 end
 
 function M.set_collision(level_id, collision)
-    if collision == nil then
-        default_collision = level_id
-        return
-    end
-    assert(type(level_id) == "number" and level_id > 0, "collision level ID is required")
-    collisions[level_id] = collision
+    collision_registry.set(level_id, collision)
 end
 
 return M

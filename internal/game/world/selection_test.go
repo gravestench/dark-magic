@@ -36,6 +36,21 @@ func TestMapLineClearUsesLOSCollision(t *testing.T) {
 	}
 }
 
+func TestMapBarrierClearUsesJumpCollisionIndependentlyFromLOS(t *testing.T) {
+	world := &Map{WidthSubtiles: 8, HeightSubtiles: 8, flags: make([]Flags, 64)}
+	world.flags[3*8+3] = Flags{BlockLOS: true}
+	if !world.BarrierClear(1, 1, 6, 6) {
+		t.Fatal("visual LOS blocker should not become a melee barrier")
+	}
+	world.flags[3*8+3] = Flags{BlockJump: true}
+	if world.BarrierClear(1, 1, 6, 6) {
+		t.Fatal("flying/melee barrier was ignored")
+	}
+	if !world.LineClear(1, 1, 6, 6) {
+		t.Fatal("melee barrier should not become a visual LOS blocker")
+	}
+}
+
 func TestMapObjectsBecomeStableSelectables(t *testing.T) {
 	world := &Map{Objects: []Object{{Type: ObjectTypeStatic, ID: 7, X: 10, Y: 20, Resolved: true}, {Type: ObjectTypeDynamic, ID: 2, X: 4, Y: 5, Resolved: true}}}
 	got := world.Selectables()

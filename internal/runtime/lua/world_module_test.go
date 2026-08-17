@@ -43,6 +43,8 @@ func TestSessionWorldModuleReturnsCurrentMapAndCopiedRecipe(t *testing.T) {
 local world = require("engine.world/v1")
 local map, recipe = world.current()
 assert(map:dimensions().width_tiles == 56)
+assert(map:line_clear(1, 1, 2, 2))
+assert(map:barrier_clear(1, 1, 2, 2))
 assert(recipe.ds1 == "town.ds1" and recipe.dt1[1] == "floor.dt1")
 assert(recipe.level_id == 7 and world.current_level() == 7)
 recipe.dt1[1] = "changed"

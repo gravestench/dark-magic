@@ -6,8 +6,8 @@
 
 local ecs = require("engine.ecs/v1")
 local animdata = require("engine.animdata/v1")
+local combat_target = require("d2legacy.gameplay.combat_target")
 local direction = require("d2legacy.policy.direction")
-local melee = require("d2legacy.policy.melee")
 local weapon_selection = require("d2legacy.policy.weapon_selection")
 local M = {}
 
@@ -15,15 +15,6 @@ local function controlled(entities, player)
     for _, entity in ipairs(entities) do
         local control = ecs.get(entity, "d2legacy.world.player_control")
         if control and control:get("player") == player then
-            return entity
-        end
-    end
-end
-
-local function selected(entities, wanted)
-    for _, entity in ipairs(entities) do
-        local selectable = ecs.get(entity, "d2legacy.world.selectable")
-        if selectable and selectable:get("id") == wanted then
             return entity
         end
     end
@@ -170,6 +161,8 @@ function M.register()
             "d2legacy.world.location",
             "d2legacy.world.collider",
             "d2legacy.combat.melee_profile",
+            "d2legacy.monster.stats",
+            "d2legacy.player.vitals",
             "d2legacy.player.appearance",
         },
         write = {
@@ -188,7 +181,10 @@ function M.register()
                     ecs.get(attacker, "d2legacy.combat.melee_profile")
                 if approach and profile then
                     local target_id = approach:get("target_id")
-                    local target = target_id ~= "" and selected(entities, target_id) or nil
+                    local target, facts = nil, nil
+                    if target_id ~= "" then
+                        target, facts = combat_target.named(attacker, target_id, entities)
+                    end
                     local position = ecs.get(attacker, "d2legacy.world.position")
                     if target_id == "" then
                         structural:remove(attacker, "d2legacy.combat.attack_approach")
@@ -207,16 +203,8 @@ function M.register()
                         stop(attacker, nil, context.tick)
                         structural:remove(attacker, "d2legacy.combat.attack_approach")
                     else
-                        local target_position = ecs.get(target, "d2legacy.world.position")
-                        local dx, dy =
-                            target_position:get("x") - position:get("x"), target_position:get("y") - position:get("y")
-                        local length = math.sqrt(dx * dx + dy * dy)
-                        local range = melee.reach(
-                            profile:get("range"),
-                            ecs.get(attacker, "d2legacy.world.collider"):get("radius"),
-                            ecs.get(target, "d2legacy.world.collider"):get("radius")
-                        )
-                        if length <= range then
+                        local dx, dy, length = facts.dx, facts.dy, facts.distance
+                        if combat_target.in_melee_range(facts, profile:get("range")) then
                             structural:remove(attacker, "d2legacy.combat.attack_approach")
                             start_swing(
                                 context,
@@ -229,6 +217,13 @@ function M.register()
                                 approach:get("animation_mode"),
                                 structural
                             )
+                        elseif combat_target.within_reach(facts, profile:get("range")) then
+                            -- In footprint range but separated by a melee
+                            -- barrier. The current direct-motion approach has
+                            -- no route ownership, so reject instead of swinging
+                            -- through it or leaving a permanently stuck action.
+                            stop(attacker, nil, context.tick)
+                            structural:remove(attacker, "d2legacy.combat.attack_approach")
                         elseif length > 0 then
                             local velocity = ecs.get(attacker, "d2legacy.world.velocity")
                             velocity:set("x", dx / length * 10)
