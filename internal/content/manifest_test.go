@@ -381,8 +381,9 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// and HD/TR components recovered from OpenDiablo2 and visually checked against
 	// mounted production assets. Random map/tile paths remain dynamic VFS
 	// discoveries and therefore do not pretend every mounted asset is manifest-owned.
-	// The d2legacy Fire Bolt slice now declares its immutable Skills.txt and
-	// Missiles.txt inputs directly. They are code-owned data rather than
+	// The d2legacy straight-missile family declares its immutable Skills.txt and
+	// Missiles.txt inputs directly. Fire Bolt is its first configuration, not a
+	// standalone authority. These are code-owned data rather than
 	// presentation assets; missile art remains covered by the audited dynamic
 	// data/global/missiles prefix.
 	// The additional code-owned paths are Lua test fixtures colocated with the

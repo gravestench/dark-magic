@@ -353,7 +353,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := authority.Random.Uint64n("d2legacy.combat.fire_bolt.damage", 100); err != nil {
+	if _, err := authority.Random.Uint64n("d2legacy.combat.missile.damage", 100); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Step(); err != nil {
@@ -464,12 +464,12 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 	}
 }
 
-// TestFireBoltCheckpointRestoreParity covers the complete migrated vertical
+// TestStraightMissileCheckpointRestoreParity covers the complete migrated vertical
 // path rather than a synthetic state mutation: Lua admits the player command,
 // pays mana, advances cast timing, creates and moves a missile, resolves swept
 // contact, applies damage, and emits the combat result. A newly constructed Lua
 // runtime must continue the in-flight cast to the identical session checksum.
-func TestFireBoltCheckpointRestoreParity(t *testing.T) {
+func TestStraightMissileCheckpointRestoreParity(t *testing.T) {
 	ctx := context.Background()
 	engine := gameecs.New()
 	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
@@ -490,7 +490,7 @@ func TestFireBoltCheckpointRestoreParity(t *testing.T) {
 		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
 	})
 	monsterPayload, _ := json.Marshal(map[string]any{
-		"spawn_id": "fallen-firebolt", "seed": 9, "x": 4, "y": 0, "act": 1, "level_id": 1,
+		"spawn_id": "fallen-missile", "seed": 9, "x": 4, "y": 0, "act": 1, "level_id": 1,
 		"definition": map[string]any{
 			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
 			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
@@ -568,7 +568,7 @@ func TestFireBoltCheckpointRestoreParity(t *testing.T) {
 	}
 	continued := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1]
 	if continued.Checksum != original.Checksum {
-		t.Fatalf("Fire Bolt continuation checksum = %s, want %s", continued.Checksum, original.Checksum)
+		t.Fatalf("straight-missile continuation checksum = %s, want %s", continued.Checksum, original.Checksum)
 	}
 }
 

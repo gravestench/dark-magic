@@ -1,8 +1,8 @@
--- Data shapes used by the first migrated skill.
+-- Shared cast, missile, and combat-event state for migrated skill families.
 --
--- A component is only a named box of values. It does not contain behavior.
--- Keeping schemas here lets readers inspect saved state without reading the
--- cast, movement, collision, or damage rules.
+-- Components contain checkpointed facts, never skill-specific behavior. A
+-- definition selected by skill_id tells the lifecycle and missile systems how
+-- to interpret these generic action records.
 
 local ecs = require("engine.ecs/v1")
 

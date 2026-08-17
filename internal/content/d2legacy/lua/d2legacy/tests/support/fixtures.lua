@@ -149,7 +149,7 @@ end
 
 M.amazon_entry = M.player_entry()
 M.amazon_level_up_entry = M.player_entry({ experience = 5 })
-M.fire_bolt_entry = M.player_entry({
+M.straight_missile_entry = M.player_entry({
     level = 99,
     x = 0,
     y = 0,

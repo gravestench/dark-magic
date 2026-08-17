@@ -77,6 +77,8 @@ Each migrated domain must include a short README or module-level guide showing:
 1. Make the inventory exhaustive and enforce its dependency direction.
 2. Extract the authoritative Lua runtime/state contract without moving D2 rules.
 3. Pin mod identity in session/replay/checkpoint and headless server composition.
-4. Move the complete Fire Bolt path as the first proof.
+4. Use Fire Bolt as the first proof of the reusable cast/straight-missile
+   behavior family; never retain a skill-specific subsystem after the boundary
+   is proven.
 5. Move tightly coupled domains in coherent groups rather than maintaining two
    authorities during a prolonged file-by-file port.

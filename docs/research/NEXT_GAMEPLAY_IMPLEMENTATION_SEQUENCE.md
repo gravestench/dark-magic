@@ -84,7 +84,9 @@ Creation should freeze enough information that later changes to the caster do no
 
 The first synthetic single-hit policy now proves this contract through
 checkpointed cast, motion, swept unit collision, combat impact, and removal.
-Retail missile definitions and additional movement/contact policies remain
+That proof has since been refactored into a definition-driven straight-missile
+family: Fire Bolt is configuration/fixture coverage, not a standalone system.
+Additional retail definitions and movement/contact/impact families remain
 implementation-driven verification work.
 
 ### Completed: M21.10 Blood Moor population slice
@@ -171,10 +173,12 @@ value queue, and the death cue resolves the authored MonSounds/Sounds record.
 Missile definitions now also carry deliberately joined Missiles.txt DCC,
 direction, timing, offset, and Sounds.txt keys; retained projectiles consume
 copied live positions and observe-once spawn/hit audio cues. The first
-production path is registered: reviewed Fire Bolt rows normalize their
-fixed-point mana and fire damage, straight-missile movement/contact facts, and
-presentation/audio recipe into trusted definitions. Unknown server behavior
-does not enter that family merely because its row also references a missile.
+production configuration is registered: reviewed Fire Bolt rows normalize
+their fixed-point mana and fire damage, straight-missile movement/contact facts,
+and presentation/audio recipe into a generic trusted definition. Command
+admission, lifecycle, spawning, contact, and damage contain no Fire Bolt branch.
+Unknown server behavior does not enter that family merely because its row also
+references a missile.
 
 ## Breadth queue after the first simulation loop
 

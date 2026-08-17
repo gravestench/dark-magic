@@ -14,9 +14,9 @@ function M.register()
         version = 1,
         fields = {
             { name = "character_id", type = "string" }, -- Durable save identity.
-            { name = "player", type = "string" },       -- Session/connection owner.
-            { name = "name", type = "string" },         -- Player-facing character name.
-            { name = "class", type = "string" },        -- Amazon, Sorceress, and so on.
+            { name = "player", type = "string" }, -- Session/connection owner.
+            { name = "name", type = "string" }, -- Player-facing character name.
+            { name = "class", type = "string" }, -- Amazon, Sorceress, and so on.
         },
     })
 
@@ -39,7 +39,7 @@ function M.register()
             { name = "mana", type = "i64" },
             { name = "max_mana", type = "i64" },
             -- Simulation keeps mana in Diablo's 8.8 fixed-point unit so costs
-            -- such as Fire Bolt's 2.5 mana are never rounded away. The whole
+            -- such as fractional skill costs are never rounded away. The whole
             -- fields above remain convenient display values for Lua and UI.
             { name = "mana_raw", type = "i64" },
             { name = "max_mana_raw", type = "i64" },

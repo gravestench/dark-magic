@@ -55,29 +55,31 @@ Do not make each skill a bespoke UI callback. Do not require the renderer's curr
 
 ## Current Dark Magic state
 
-`internal/game/session/skills.go` currently provides:
+The renderer-independent `d2legacy` Lua authority now owns:
 
-- `player.assign_skills`;
-- `player.use_skill`;
-- semantic left/right assignment validation;
-- learned-skill/side validation;
-- point target `(x,y)` plus optional semantic target ID;
-- an authoritative `d2legacy.player.skill_intent` ECS record.
+- `player.assign_skills` and `player.use_skill` admission;
+- learned-skill and left/right assignment validation;
+- point targets plus optional semantic target IDs;
+- definition-driven mana payment and fixed-tick cast lifecycle;
+- a reusable `missile.straight` family covering projectile construction,
+  movement, swept contact, channel mitigation, damage, removal, replay, and
+  checkpoint continuation;
+- a reusable self-state family and timed state-instance lifecycle; and
+- the shared melee action path.
 
-This is a good admission boundary, but the intent currently stops before:
+Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
+fixture. It is decoded from Skills.txt/Missiles.txt by generic family code and
+does not own a command branch, component schema, system, damage function, or RNG
+stream. A second synthetic record-pair test proves decoder reuse without
+claiming incomplete retail behavior for Ice Bolt or another named skill. An
+opt-in owned-archive test boots the authority against the target expansion
+1.14d records so the generic decoder's production contract is checked without
+placing copyrighted tables in Git.
 
-- mana/resource cost;
-- target/range/LOS validation;
-- cast/action timing;
-- cooldown/delay;
-- server behavior dispatch;
-- missile creation;
-- state application;
-- damage resolution;
-- summoning;
-- item/corpse/world-object operations.
-
-The next milestone should consume the existing intent rather than replacing `player.use_skill`.
+Still open are complete skill-level formulas, target/range/LOS and delay policy,
+the mounted-data server-function coverage report, additional impact/motion
+families, richer state/stat-source effects, summons, corpse/item/object actions,
+and the rest of the behavior-family matrix below.
 
 ## Skills.txt dispatch is strongly data-driven
 

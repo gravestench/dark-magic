@@ -30,15 +30,23 @@ A new reader should be able to open one file and learn one idea. Functions stay
 short, module dependencies are explicit, and comments explain legacy meaning,
 state lifetime, units, and ordering rather than restating Lua syntax.
 
-## Fire Bolt execution order
+## Straight-missile skill execution order
 
 1. Go admits `d2legacy.skill.cast` by identity, tick, sequence, and authority.
 2. `commands/cast.lua` validates its payload and creates a cast request.
-3. `systems/cast.lua` validates learned skill, target, and mana, then schedules
-   the effect and completion ticks.
-4. `systems/fire_bolt.lua` creates a projectile when the effect tick arrives.
-5. `systems/projectile.lua` moves it, finds first contact, and expires it.
-6. `policy/damage.lua` resolves Fire damage and death consequences.
+3. `data/missile_skills.lua` validates each explicitly supported 1.14d record
+   pair into one immutable `missile.straight` definition.
+4. `systems/cast.lua` validates learned skill, target, and mana against the
+   selected definition, then schedules its effect and completion ticks.
+5. `systems/missile_skill.lua` creates the configured projectile when the
+   effect tick arrives.
+6. `systems/projectile.lua` moves it, finds first contact, and expires it.
+7. `policy/damage.lua` resolves its configured damage channel and consequences.
+
+Fire Bolt is currently the first supported definition and integration fixture.
+It is not an authority boundary: new verified straight-missile configurations
+join the same modules, while missiles with different impact/motion behavior
+receive another reusable family rather than a per-skill system.
 
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.

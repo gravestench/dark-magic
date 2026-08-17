@@ -129,8 +129,8 @@ Component design rules:
   representing an active action are checkpointed state.
 
 Schema files divide that catalog further: `shared.lua` owns player, monster,
-world, defense, state, and generic stat-source facts; `fire_bolt.lua` owns cast
-and projectile facts; `melee.lua` owns approach, animation, impact requests, and
+world, defense, state, and generic stat-source facts; `skill_actions.lua` owns
+generic cast and projectile facts; `melee.lua` owns approach, animation, impact requests, and
 outcome events; `items.lua` owns layouts, item identity/placement/presentation,
 equipment facts, modifiers, and vendor/service state; `owned_unit.lua` owns
 explicit summon/hireling relations; and `quests.lua` owns quest definitions,
@@ -164,7 +164,7 @@ cross-system handoff. Do not depend on incidental Lua module load order.
 | System module | Phase(s) | Individual responsibility |
 | --- | --- | --- |
 | `cast` | `pre_simulation` | Advances admitted skill casts through start/effect/complete ticks. |
-| `fire_bolt` | `pre_simulation` | Turns the Fire Bolt effect into an authored projectile. |
+| `missile_skill` | `pre_simulation` | Turns a definition-selected straight-missile effect into an authored projectile. |
 | `player_melee` | `pre_simulation` | Owns approach, swing timing, selected hand, and impact requests. |
 | `equipment` | `pre_simulation` | Projects the active equipment set into melee and named stat sources. |
 | `derived_stats` | `pre_simulation` | Rebuilds effective stats from durable bases and removable sources. |

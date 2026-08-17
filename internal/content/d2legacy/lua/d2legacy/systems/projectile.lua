@@ -27,15 +27,20 @@ local function target_snapshot(entity)
     local selectable = ecs.get(entity, "d2legacy.world.selectable")
     local position = ecs.get(entity, "d2legacy.world.position")
     local location = ecs.get(entity, "d2legacy.world.location")
-    if not selectable or not position or not location then return nil end
-    if not ecs.get(entity, "d2legacy.monster.stats")
-        and not ecs.get(entity, "d2legacy.player.vitals") then return nil end
+    if not selectable or not position or not location then
+        return nil
+    end
+    if not ecs.get(entity, "d2legacy.monster.stats") and not ecs.get(entity, "d2legacy.player.vitals") then
+        return nil
+    end
     local collider = ecs.get(entity, "d2legacy.world.collider")
     return {
         entity = entity,
         id = selectable:get("id"),
-        x = position:get("x"), y = position:get("y"),
-        act = location:get("act"), level_id = location:get("level_id"),
+        x = position:get("x"),
+        y = position:get("y"),
+        act = location:get("act"),
+        level_id = location:get("level_id"),
         radius = collider and collider:get("radius") or selectable:get("radius"),
     }
 end
@@ -43,16 +48,22 @@ end
 local function first_contact(projectile_entity, projectile, position, location, targets)
     local best, best_along
     for _, target in ipairs(targets) do
-        if target.entity:id() ~= projectile_entity:id()
+        if
+            target.entity:id() ~= projectile_entity:id()
             and target.id ~= projectile:get("owner_id")
             and target.act == location:get("act")
-            and target.level_id == location:get("level_id") then
+            and target.level_id == location:get("level_id")
+        then
             local distance, along = geometry.segment_distance(
-                projectile:get("previous_x"), projectile:get("previous_y"),
-                position:get("x"), position:get("y"), target.x, target.y)
+                projectile:get("previous_x"),
+                projectile:get("previous_y"),
+                position:get("x"),
+                position:get("y"),
+                target.x,
+                target.y
+            )
             local touching = distance <= projectile:get("collision_radius") + target.radius
-            if touching and (not best or along < best_along
-                or (along == best_along and target.id < best.id)) then
+            if touching and (not best or along < best_along or (along == best_along and target.id < best.id)) then
                 best, best_along = target, along
             end
         end
@@ -61,24 +72,30 @@ local function first_contact(projectile_entity, projectile, position, location, 
 end
 
 local function emit_hit(context, projectile, target, damage_raw, remaining, structural)
-    structural:create({["d2legacy.combat.event"] = {
-        kind = remaining == 0 and "unit_died" or "damage_applied",
-        tick = context.tick,
-        attacker_id = projectile:get("owner_id"),
-        target_id = target.id,
-        damage_channel = projectile:get("damage_channel"),
-        damage_raw = damage_raw,
-        remaining_health_raw = remaining,
-    }})
+    structural:create({
+        ["d2legacy.combat.event"] = {
+            kind = remaining == 0 and "unit_died" or "damage_applied",
+            tick = context.tick,
+            attacker_id = projectile:get("owner_id"),
+            target_id = target.id,
+            damage_channel = projectile:get("damage_channel"),
+            damage_raw = damage_raw,
+            remaining_health_raw = remaining,
+        },
+    })
 end
 
 local function resolve_contacts(context, entities, structural)
     local targets = {}
     for _, entity in ipairs(entities) do
         local target = target_snapshot(entity)
-        if target then targets[#targets + 1] = target end
+        if target then
+            targets[#targets + 1] = target
+        end
     end
-    table.sort(targets, function(a, b) return a.id < b.id end)
+    table.sort(targets, function(a, b)
+        return a.id < b.id
+    end)
 
     for _, entity in ipairs(entities) do
         local projectile = ecs.get(entity, "d2legacy.missile.projectile")
@@ -87,11 +104,8 @@ local function resolve_contacts(context, entities, structural)
             local location = ecs.get(entity, "d2legacy.world.location")
             local target = first_contact(entity, projectile, position, location, targets)
             if target then
-                local amount = damage.roll_fire(
-                    projectile:get("minimum_damage_raw"),
-                    projectile:get("maximum_damage_raw"))
-                local remaining, _, applied = damage.apply(target.entity, amount, ecs,
-                    projectile:get("damage_channel"))
+                local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
+                local remaining, _, applied = damage.apply(target.entity, amount, ecs, projectile:get("damage_channel"))
                 emit_hit(context, projectile, target, applied, remaining, structural)
                 structural:destroy(entity)
             elseif projectile:get("remaining_ticks") <= 0 then
@@ -108,7 +122,9 @@ function M.register()
         query = { all = { "d2legacy.missile.projectile", "d2legacy.world.position" } },
         read = { "d2legacy.missile.projectile", "d2legacy.world.position" },
         write = { "d2legacy.missile.projectile", "d2legacy.world.position" },
-        update = function(_, entities) move_projectiles(entities) end,
+        update = function(_, entities)
+            move_projectiles(entities)
+        end,
     })
 
     ecs.system({
@@ -116,12 +132,19 @@ function M.register()
         phase = "combat",
         query = { any = { "d2legacy.missile.projectile", "d2legacy.world.selectable" } },
         read = {
-            "d2legacy.missile.projectile", "d2legacy.world.position", "d2legacy.world.location",
-            "d2legacy.world.selectable", "d2legacy.world.collider", "d2legacy.monster.stats",
-            "d2legacy.player.vitals", "d2legacy.combat.defense",
+            "d2legacy.missile.projectile",
+            "d2legacy.world.position",
+            "d2legacy.world.location",
+            "d2legacy.world.selectable",
+            "d2legacy.world.collider",
+            "d2legacy.monster.stats",
+            "d2legacy.player.vitals",
+            "d2legacy.combat.defense",
         },
         write = {
-            "d2legacy.monster.stats", "d2legacy.player.vitals", "d2legacy.combat.event",
+            "d2legacy.monster.stats",
+            "d2legacy.player.vitals",
+            "d2legacy.combat.event",
         },
         update = resolve_contacts,
     })

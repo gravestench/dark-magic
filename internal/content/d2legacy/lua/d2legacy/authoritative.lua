@@ -3,12 +3,12 @@
 -- This file deliberately contains no formulas or mutations. Its only job is to
 -- show which small modules make up the mod and register them in readable order.
 
-local components = require("d2legacy.components.fire_bolt")
+local components = require("d2legacy.components.skill_actions")
 local shared_components = require("d2legacy.components.shared")
-local fire_bolt_data = require("d2legacy.data.fire_bolt")
+local missile_skill_data = require("d2legacy.data.missile_skills")
 local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
-local fire_bolt_system = require("d2legacy.systems.fire_bolt")
+local missile_skill_system = require("d2legacy.systems.missile_skill")
 local projectile_system = require("d2legacy.systems.projectile")
 local melee_components = require("d2legacy.components.melee")
 local melee_system = require("d2legacy.systems.melee")
@@ -60,12 +60,15 @@ function M.start()
 
     -- Record interpretation happens once during composition. Systems receive a
     -- small immutable definition instead of repeatedly parsing legacy strings.
-    M.fire_bolt = fire_bolt_data.load()
+    -- Coverage is explicit. Skill 36 is the first owned 1.14d row admitted to
+    -- the straight-missile family; adding another ID requires its own impact
+    -- semantics and evidence, but never another skill-specific system.
+    M.missile_skills = missile_skill_data.load({ 36 })
     M.progression = progression_data.load()
     M.state_skills = state_skill_data.load()
-    cast_command.register(M.state_skills)
-    cast_system.register(M.fire_bolt)
-    fire_bolt_system.register(M.fire_bolt)
+    cast_command.register(M.state_skills, M.missile_skills)
+    cast_system.register(M.missile_skills)
+    missile_skill_system.register(M.missile_skills)
     projectile_system.register()
     melee_system.register()
     monster_ai.register()
@@ -93,7 +96,7 @@ function M.start()
 end
 
 function M.stop()
-    M.fire_bolt = nil
+    M.missile_skills = nil
     M.state_skills = nil
     M.progression = nil
 end

@@ -7,8 +7,8 @@ return test.suite({
     tier = "integration",
     covers = { "internal/game/combat", "internal/game/skill", "internal/game/missile" },
     cases = {
-        test.case("cast_runs_headlessly_through_lua", {
-            test.submit_system(fixtures.command("system.player.enter", fixtures.fire_bolt_entry, {
+        test.case("configured_straight_missile_runs_headlessly", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.straight_missile_entry, {
                 tick = 1,
                 sequence = 1,
             })),
