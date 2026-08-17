@@ -154,10 +154,18 @@ func TestGameRulesCheckpointRestoreAndIdentityDrift(t *testing.T) {
 	initial := map[string]any{
 		"engine.game_data_generation_id": "sha256:test-generation",
 		"d2legacy.game_rules": map[string]any{"target": "lod-1.14d", "expansion": true,
-			"difficulty": 1, "hardcore": true, "player_count": 2, "maximum_players": 8},
+			"difficulty": 1, "hardcore": true, "maximum_players": 2},
 	}
 	authority, engine, session, err := start(initial, nil)
 	if err != nil {
+		t.Fatal(err)
+	}
+	override, _ := json.Marshal(map[string]any{"count": 8})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "host", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "game.player_count.override", Payload: override}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
 	checkpoint, err := session.CanonicalCheckpoint()
@@ -183,14 +191,42 @@ func TestGameRulesCheckpointRestoreAndIdentityDrift(t *testing.T) {
 	if err := json.Unmarshal(value.Data, &rules); err != nil {
 		t.Fatal(err)
 	}
-	if rules["difficulty"] != float64(1) || rules["hardcore"] != true || rules["player_count"] != float64(2) {
+	if rules["schema"] != "d2legacy.game_rules/v2" || rules["difficulty"] != float64(1) ||
+		rules["hardcore"] != true || rules["maximum_players"] != float64(2) || rules["player_count"] != nil {
 		t.Fatalf("restored rules = %#v", rules)
+	}
+	countValue, found := restored.State.Read("d2legacy.player_count")
+	if !found {
+		t.Fatal("restored player-count authority state is missing")
+	}
+	var count map[string]any
+	if err := json.Unmarshal(countValue.Data, &count); err != nil {
+		t.Fatal(err)
+	}
+	if count["schema"] != "d2legacy.player_count/v1" || count["override"] != float64(8) {
+		t.Fatalf("restored player-count state = %#v", count)
+	}
+	clear, _ := json.Marshal(map[string]any{})
+	if err := restoredSession.Submit(simulation.Command{Tick: 1, Player: "host", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "game.player_count.follow_population", Payload: clear}); err != nil {
+		t.Fatal(err)
+	}
+	if err := restoredSession.Step(); err != nil {
+		t.Fatal(err)
+	}
+	countValue, _ = restored.State.Read("d2legacy.player_count")
+	count = nil
+	if err := json.Unmarshal(countValue.Data, &count); err != nil {
+		t.Fatal(err)
+	}
+	if count["override"] != nil || count["revision"] != float64(2) {
+		t.Fatalf("cleared player-count state = %#v", count)
 	}
 
 	drifted := map[string]any{
 		"engine.game_data_generation_id": "sha256:test-generation",
 		"d2legacy.game_rules": map[string]any{"target": "lod-1.14d", "expansion": true,
-			"difficulty": 2, "hardcore": true, "player_count": 2, "maximum_players": 8},
+			"difficulty": 2, "hardcore": true, "maximum_players": 2},
 	}
 	if _, driftEngine, driftSession, driftErr := start(drifted, checkpoint.Participants); driftErr == nil {
 		_ = driftSession.Close()

@@ -143,7 +143,7 @@ func main() {
 	initialData := preparedWorld.InitialData("", false)
 	initialData["d2legacy.game_rules"] = map[string]any{
 		"target": "lod-1.14d", "expansion": true, "difficulty": difficultyValue,
-		"hardcore": *gameHardcore, "ladder": *gameLadder, "player_count": 1, "maximum_players": *gameMaximumPlayers,
+		"hardcore": *gameHardcore, "ladder": *gameLadder, "maximum_players": *gameMaximumPlayers,
 	}
 	host, err := gameserver.Start(ctx, d2legacySource, records, gameserver.Config{
 		Mode: mode, SessionID: *sessionID, Prediction: gamesession.PredictionLimited, Packages: mods.Packages,

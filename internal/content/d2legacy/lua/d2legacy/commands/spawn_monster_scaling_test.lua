@@ -49,7 +49,7 @@ return test.suite({
                 require("d2legacy.commands.spawn_monster").materialize({ tick = 7, payload = spawn })
 
                 local stats = created["d2legacy.monster.stats"]
-                test.expect(stats.player_count):equals(2)
+                test.expect(stats.spawn_player_count):equals(2)
                 test.expect(stats.health):equals(24 * 256)
                 test.expect(stats.max_health):equals(24 * 256)
                 test.expect(stats.experience):equals(150)

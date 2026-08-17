@@ -27,22 +27,20 @@ local function build()
     local configured = initial.get("d2legacy.game_rules") or {}
     local generation = initial.get("engine.game_data_generation_id") or "synthetic"
     local result = {
-        schema = "d2legacy.game_rules/v1",
+        schema = "d2legacy.game_rules/v2",
         target = configured.target or "lod-1.14d",
         expansion = configured.expansion ~= false,
         difficulty = configured.difficulty or 0,
         hardcore = configured.hardcore == true,
         ladder = configured.ladder == true,
-        player_count = configured.player_count or 1,
         maximum_players = configured.maximum_players or 8,
         game_data_generation_id = generation,
     }
     assert(result.target == "lod-1.14d", "only expansion 1.14d rules are supported")
     assert(result.expansion, "Classic rules are unsupported")
     integer(result.difficulty, "difficulty", 0, 2)
-    integer(result.player_count, "player count", 1, 8)
+    assert(configured.player_count == nil, "player count is mutable authority state, not an immutable game rule")
     integer(result.maximum_players, "maximum players", 1, 8)
-    assert(result.player_count <= result.maximum_players, "player count exceeds game capacity")
     assert(
         type(result.game_data_generation_id) == "string" and result.game_data_generation_id ~= "",
         "game-data generation is required"
@@ -64,12 +62,6 @@ end
 function M.difficulty()
     assert(rules, "game rules are not initialized")
     return rules.difficulty
-end
-
-function M.effective_player_count(game_player_count)
-    assert(rules, "game rules are not initialized")
-    integer(game_player_count, "game player count", 1, rules.maximum_players)
-    return math.max(game_player_count, rules.player_count)
 end
 
 return M

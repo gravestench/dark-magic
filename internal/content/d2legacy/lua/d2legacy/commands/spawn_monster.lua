@@ -72,7 +72,7 @@ function M.components(command, game_player_count)
         },
         ["d2legacy.monster.stats"] = {
             level = definition.level,
-            player_count = scaling.effective_player_count,
+            spawn_player_count = scaling.effective_player_count,
             health = health,
             max_health = health,
             defense = definition.defense,

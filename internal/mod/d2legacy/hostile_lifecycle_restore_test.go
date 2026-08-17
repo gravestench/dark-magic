@@ -547,7 +547,7 @@ func assertMonsterPlayerCount(t *testing.T, engine *gameecs.Engine, spawnID stri
 		if !present {
 			t.Fatalf("monster %s has no stats", spawnID)
 		}
-		count, _ := values.Get("player_count")
+		count, _ := values.Get("spawn_player_count")
 		if count != want {
 			t.Fatalf("monster %s player count = %v, want %d", spawnID, count, want)
 		}

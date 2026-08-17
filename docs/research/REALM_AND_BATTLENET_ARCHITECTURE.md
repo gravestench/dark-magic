@@ -487,8 +487,8 @@ vocabulary, but they do not share one authority. Realm channel membership,
 friends, whispers, presence, ignore policy, and moderation belong to the realm
 social service. In-game public/party messages belong to the active game routing
 context. Local diagnostics remain client presentation state, while a command
-such as an allowed single-player `/players` change becomes a typed authoritative
-game-rules request. See
+such as a host-authorized `/players` change becomes a typed authoritative
+gameplay-policy request backed by separate mutable state. See
 [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md) for the
 command matrix, alias policy, and verification queue.
 

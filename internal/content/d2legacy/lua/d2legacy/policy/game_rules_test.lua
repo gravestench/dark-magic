@@ -10,7 +10,6 @@ return test.suite({
             difficulty = 1,
             hardcore = true,
             ladder = false,
-            player_count = 2,
             maximum_players = 8,
         },
         ["engine.game_data_generation_id"] = "sha256:test-generation",
@@ -23,13 +22,13 @@ return test.suite({
                 test.assert(value.target == "lod-1.14d", [=[value.target == "lod-1.14d"]=])
                 test.assert(value.expansion and value.difficulty == 1, [=[value.expansion and value.difficulty == 1]=])
                 test.assert(
-                    value.hardcore and value.player_count == 2,
-                    [=[value.hardcore and value.player_count == 2]=]
+                    value.hardcore and value.maximum_players == 8,
+                    [=[value.hardcore and value.maximum_players == 8]=]
                 )
+                test.assert(value.schema == "d2legacy.game_rules/v2", [=[value.schema == "d2legacy.game_rules/v2"]=])
+                test.assert(value.player_count == nil, [=[value.player_count == nil]=])
                 value.difficulty = 2
                 test.assert(rules.difficulty() == 1, [=[rules.difficulty() == 1]=])
-                test.assert(rules.effective_player_count(1) == 2, [=[rules.effective_player_count(1) == 2]=])
-                test.assert(rules.effective_player_count(3) == 3, [=[rules.effective_player_count(3) == 3]=])
                 local state = require("engine.authority_state/v1").read("d2legacy.game_rules")
                 test.assert(state.difficulty == 1, [=[state.difficulty == 1]=])
                 test.assert(

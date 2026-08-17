@@ -75,6 +75,12 @@ Registration order makes dependencies readable, while simulation phases and
 declared system access determine execution. The composition root must not hide
 formulas or gameplay mutations.
 
+Immutable `d2legacy.game_rules/v2` contains session facts such as difficulty,
+target, mode, and admission capacity. Mutable `/players X` policy is not a game
+rule: `d2legacy.player_count/v1` checkpoints its optional override separately,
+while consumers count present player entities by default. `maximum_players`
+can reject entry but cannot become a monster or reward multiplier.
+
 ## Directory ownership
 
 | Path | Responsibility |
