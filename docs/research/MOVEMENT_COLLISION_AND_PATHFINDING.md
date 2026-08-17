@@ -401,6 +401,38 @@ value as a boolean or percentage and does not emit forced motion: recovered
 older code shows a random-threshold/result-flag structure, but only a 1.14d
 binary probe may promote that structure into current gameplay policy.
 
+The older recovered source hypotheses are now recorded precisely rather than
+as folklore. In D2MOO's 1.10f/1.13c reconstruction, item event function 7 rolls
+an attacker-seeded value masked to 0..127 against 128/64/32 thresholds for
+small/normal/large targets; the missile path rolls its own seed modulo 100
+against the raw `Missiles.KnockBack` byte. The damage-mode path prioritizes
+death before knockback, gives players and monsters dedicated KB modes, converts
+a monster result to GH when its `MonStats2` record lacks KB, and uses a recovered
+five-unit path distance for ordinary players/monsters (with a sand-leaper
+exception). Knockback mode installs a dedicated 4096 path velocity. These are
+**older recovered hypotheses only**, not Expansion 1.14d implementation values.
+
+`internal/dev/tools/knockback_probe` turns the remaining target-runtime work
+into a strict capture contract. It accepts only
+`diablo-ii-lod-1.14d-expansion` observations from an owned runtime, requires a
+matched neutral control, records target category/record/size/KB-mode support,
+separates missed, blocked, lethal, and uninterruptible trials, and normalizes
+reaction, displacement, blocked-motion, observed-rate, and Wilson-interval
+facts. Older size-weighted and raw-byte-percent rules are emitted only as
+explicitly labeled candidates beside an always/nonzero alternative. Cases
+without an observable KB mode receive no chance inference. Start from
+`docs/research/probes/knockback-lod-114d-expansion.template.json` and run:
+
+```shell
+go run ./internal/dev/tools/knockback_probe -input /path/to/sanitized-capture.json
+```
+
+The required matrix includes players, KB-capable small/normal/large monsters,
+mode-incapable monsters, hirelings, summons, NPCs, and corpses; open-space and
+collision-limited pairs; item and representative missile bytes; and
+nonlethal/lethal plus interruptible/uninterruptible pairs. Combat emission
+remains disabled until owned observations resolve those distinctions.
+
 Once those target rules are pinned, combat will emit the generic request;
 movement already owns spatial resolution.
 
@@ -651,7 +683,12 @@ probe rather than a compatibility claim.
 
 ## Primary sources inspected
 
-- D2MOO pinned 1.10f `source/D2Common/include/Path/Path.h` and path algorithm files (`AStar`, `IDAStar`, `PathWF`, `Path`, `PathMisc`, `Step`) as secondary recovered evidence, not the 1.14d target authority.
+- D2MOO revision `3b21043b99e987bad41cf0f7b49f1f246db52d5c`
+  `source/D2Common/include/Path/Path.h`, `PathMisc.cpp`, `Units.cpp`,
+  `D2Game/src/UNIT/SUnitDmg.cpp`, `SKILLS/SkillItem.cpp`,
+  `MISSILES/MissMode.cpp`, `PLAYER/PlrModes.cpp`, and
+  `MONSTER/MonsterMode.cpp` as secondary recovered 1.10f/1.13c evidence, not
+  the 1.14d target authority.
 - D2MOO missile creation/path configuration.
 - D2MOO `source/D2Game/src/UNIT/SUnitInactive.cpp` for room/inactive monster restoration.
 - Owned Expansion 1.14d `CharStats.txt`, `ItemStatCost.txt`, and `Properties.txt`

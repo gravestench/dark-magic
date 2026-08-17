@@ -43,7 +43,12 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 - Crushing Blow scaling by target type, difficulty, ranged/melee, and PvP.
 - Open Wounds damage/duration/refresh.
 - Hit recovery trigger and Faster Hit Recovery timing.
-- Knockback distance, collision, and failure semantics.
+- [ ] Knockback chance, target categories/mode fallback, distance, collision,
+  and failure semantics. The Expansion-1.14d-only owned-runtime capture
+  contract and normalized older-source hypotheses now live in
+  `internal/dev/tools/knockback_probe` and
+  `docs/research/probes/knockback-lod-114d-expansion.template.json`; no gameplay
+  constant is promoted until that matrix is populated.
 - Life/mana leech difficulty divisors and monster drain effectiveness.
 - Damage-to-mana and reflection/thorns attribution/order.
 - Poison source combination, duration, overwrite, and per-tick rounding.

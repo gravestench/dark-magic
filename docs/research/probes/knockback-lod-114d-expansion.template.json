@@ -1,0 +1,52 @@
+{
+  "schema": "d2legacy.knockback_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "cases": [
+    {
+      "id": "small-monster-control",
+      "mechanism": "control",
+      "difficulty": "normal",
+      "attacker_kind": "player",
+      "target": {
+        "kind": "monster",
+        "record": "fallen1",
+        "size_class": "small",
+        "mode_supported": true
+      },
+      "open_distance_subtiles": 10,
+      "trials": []
+    },
+    {
+      "id": "small-monster-item-knockback",
+      "control_id": "small-monster-control",
+      "mechanism": "item_knockback",
+      "difficulty": "normal",
+      "attacker_kind": "player",
+      "target": {
+        "kind": "monster",
+        "record": "fallen1",
+        "size_class": "small",
+        "mode_supported": true
+      },
+      "open_distance_subtiles": 10,
+      "trials": []
+    },
+    {
+      "id": "small-monster-missile-33",
+      "control_id": "small-monster-control",
+      "mechanism": "missile_knockback",
+      "difficulty": "normal",
+      "attacker_kind": "player",
+      "target": {
+        "kind": "monster",
+        "record": "fallen1",
+        "size_class": "small",
+        "mode_supported": true
+      },
+      "missile_knockback_value": 33,
+      "open_distance_subtiles": 10,
+      "trials": []
+    }
+  ]
+}
