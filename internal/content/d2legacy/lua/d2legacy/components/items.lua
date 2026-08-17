@@ -125,6 +125,29 @@ local function register_interactions()
     -- Marking it makes lifecycle cleanup exact; untyped empty entities are
     -- otherwise indistinguishable and leak across close/disconnect cycles.
     register("d2legacy.interaction.null_target", {})
+    register("d2legacy.object.state", {
+        { name = "id", type = "string" },
+        { name = "definition_id", type = "string" },
+        { name = "mode", type = "string" },
+        { name = "used", type = "bool" },
+        { name = "locked", type = "bool" },
+        { name = "disabled", type = "bool" },
+        { name = "seed", type = "i64" },
+        { name = "revision", type = "i64" },
+    })
+    -- Synthetic fixture family proving data-selected operation dispatch. No
+    -- retail object is admitted to this family without target-version evidence.
+    register("d2legacy.object.once_operation", {
+        { name = "result_mode", type = "string" },
+    })
+    register("d2legacy.object.pending_action", {
+        { name = "id", type = "string" },
+        { name = "target", type = "entity" },
+        { name = "kind", type = "string" },
+        { name = "due_tick", type = "i64" },
+        { name = "sequence", type = "i64" },
+        { name = "active", type = "bool" },
+    })
 end
 
 function M.register()

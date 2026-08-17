@@ -172,7 +172,56 @@ local function create_target(target)
             room_id = tostring(target.room_id),
         }
     end
-    return ecs.create(components)
+    if target.object_state then
+        local state = target.object_state
+        assert(type(state) == "table", "object state must be a table")
+        components["d2legacy.object.state"] = {
+            id = target.id,
+            definition_id = state.definition_id or "",
+            mode = state.mode or "",
+            used = state.used or false,
+            locked = state.locked or false,
+            disabled = state.disabled or false,
+            seed = state.seed or 0,
+            revision = state.revision or 0,
+        }
+        if state.once_result_mode then
+            assert(
+                type(state.once_result_mode) == "string" and state.once_result_mode ~= "",
+                "one-shot object result mode is required"
+            )
+            components["d2legacy.object.once_operation"] = {
+                result_mode = state.once_result_mode,
+            }
+        end
+    end
+    local entity = ecs.create(components)
+    local action_ids = {}
+    for index, action in ipairs(target.pending_actions or {}) do
+        local action_id = action.id
+        assert(type(action_id) == "string" and action_id ~= "", "object pending-action ID is required")
+        assert(not action_ids[action_id], "duplicate object pending-action ID " .. action_id)
+        action_ids[action_id] = true
+        local action_components = {
+            ["d2legacy.object.pending_action"] = {
+                id = action_id,
+                target = entity,
+                kind = action.kind or "",
+                due_tick = action.due_tick or 0,
+                sequence = action.sequence or index,
+                active = action.active ~= false,
+            },
+        }
+        if target.room_id ~= nil then
+            action_components["d2legacy.world.room_resident"] = {
+                id = "object-action:" .. target.id .. ":" .. action_id,
+                level_id = target.level_id,
+                room_id = tostring(target.room_id),
+            }
+        end
+        ecs.create(action_components)
+    end
+    return entity
 end
 
 local function create_interactions(data, default_owner)

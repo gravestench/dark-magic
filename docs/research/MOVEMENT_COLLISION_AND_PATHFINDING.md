@@ -576,6 +576,14 @@ and preserves the original entity across checkpoint/reactivation. The fixture
 does not establish public ground ownership, legal drop/pickup policy, or target
 1.14d item lifetime.
 
+A synthetic stateful interaction object and its pending-action relationship now
+close the first mechanism matrix. Object mode/used/seed/revision facts remain on
+the target entity, while the pending action carries a raw ECS target reference
+and its own stable room resident ID. Both deactivate/checkpoint/reactivate
+together without inferring relationship lifetime or creating an object archive.
+The action's due tick is preserved but not executed; target Expansion 1.14d
+event timing and inactive aging remain unresolved.
+
 ## Streaming policy should be deterministic
 
 Research still needs the exact original activation radius/call order. Whatever Dark Magic policy chooses, activation/inactivation must not depend on host scheduling races.
@@ -695,9 +703,10 @@ lifecycle filter also cross it without a second archive. An ordinary corpse
 retains its semantic entity while all live movement surfaces remain absent;
 a straight projectile attaches at materialization and suspends movement and
 lifetime under the same inactive marker without a missile archive. Stateful
-objects and pending-action residency remain. A synthetic imported ground item
-now proves generic pre-plan attachment plus pickup/re-drop spatial transitions;
-the public generated-loot lifecycle remains separate.
+object state and a separately resident pending-action relationship now preserve
+their graph across the same path. A synthetic imported ground item proves
+generic pre-plan attachment plus pickup/re-drop spatial transitions; the public
+generated-loot lifecycle and exact target streaming policies remain separate.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

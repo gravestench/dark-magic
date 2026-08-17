@@ -1,6 +1,6 @@
 # World objects and environmental interaction research
 
-Status: implementation-oriented research baseline. Dark Magic already resolves authored DS1/object semantics, has semantic world selection/interaction authority, generated/preset map collision, fixed-tick commands, item service escrow, transition authority, and renderer-independent presentation state. Resolved DS1 interaction targets now receive stable level/room residency from generated zone geometry and therefore participate in the generic inactive filter without object-specific serialization. This document defines the still-missing runtime object state/operation layer.
+Status: implementation-oriented research baseline. Dark Magic already resolves authored DS1/object semantics, has semantic world selection/interaction authority, generated/preset map collision, fixed-tick commands, item service escrow, transition authority, and renderer-independent presentation state. Resolved DS1 interaction targets receive stable level/room residency from generated zone geometry. A synthetic data-selected one-shot family now proves ECS object instance state and a separately resident pending-action relationship survive inactive checkpoint/reactivation. Retail runtime object families remain evidence-gated.
 
 ## Executive conclusion
 
@@ -54,7 +54,20 @@ Dark Magic already has important pieces:
 - world collision and diagnostics;
 - presentation/audio layers separated from authority.
 
-The next object work should extend these boundaries rather than add a Lua-owned object game state.
+The next object work should extend these Lua/ECS policy boundaries rather than
+add a parallel Go, renderer, or map-decoration object authority.
+
+Current executable mechanism: `d2legacy.object.state` owns stable semantic ID,
+definition ID, mode, used/locked/disabled flags, seed, and revision on the same
+ECS entity as an interaction target. A synthetic-only
+`d2legacy.object.once_operation` component opts into the existing sorted
+component-family dispatcher and commits mode/used/revision authoritatively. A
+separate `d2legacy.object.pending_action` entity carries ID, raw target entity,
+kind, due tick, sequence, and active state plus its own stable room residency.
+Both entities checkpoint across the shared inactive marker and reactivate with
+checksum parity. No owned Expansion 1.14d object is mapped to this synthetic
+family, and the pending action is not executed; retail operation/event IDs,
+mode/collision timing, and inactive event aging remain unresolved.
 
 ## Original behavior-family evidence
 
@@ -333,7 +346,9 @@ Object state transitions emit semantic audio cue roles to [GAMEPLAY_AUDIO_BEHAVI
 
 ### WO1 — generic authoritative object instance
 
-Materialize one synthetic object with stable ID, mode, collision/selectability and interaction behavior independent of Lua/presentation.
+Implemented as mechanism evidence: one synthetic data-selected object owns
+stable ECS identity, mode/flags/seed/revision and reusable interaction dispatch.
+Collision/selectability transitions and retail family admission remain.
 
 ### WO2 — door vertical slice
 
@@ -353,10 +368,12 @@ Implement one object whose operation produces a quest event and/or trusted zone 
 
 ### WO6 — inactive room persistence
 
-Partial foundation: production DS1 interaction targets now attach to stable,
-level-scoped room residency and checkpoint through the generic inactive marker.
-Implement authoritative object instance/mode/event components next, then prove
-used/open state and scheduled events deactivate/reactivate deterministically.
+Mechanism implemented: production DS1 interaction targets already attach to
+stable level-scoped room residency; a synthetic stateful object now preserves
+committed used/open state, and a separately resident pending-action entity
+preserves its raw target reference and scheduling facts through inactive
+checkpoint/reactivation. Retail scheduled-event execution and exact inactive
+timing remain probe-gated.
 
 ## Verification backlog
 
