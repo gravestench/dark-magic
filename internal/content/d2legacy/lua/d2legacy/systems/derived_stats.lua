@@ -38,6 +38,7 @@ function M.register()
                 "d2legacy.player.movement_stats",
                 "d2legacy.stat.source",
             },
+            none = { "d2legacy.world.inactive" },
         },
         read = {
             "d2legacy.combat.defense",

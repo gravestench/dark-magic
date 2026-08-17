@@ -90,6 +90,7 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	if !found {
 		return json.Marshal(WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}})
 	}
+	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
 	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
 	players, _ := findComponent(snapshot, "d2legacy.player.identity")
 	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
@@ -100,6 +101,9 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	seen := make(map[string]struct{})
 	for _, instance := range selectables.Instances {
 		if instance.Entity == playerEntity {
+			continue
+		}
+		if _, dormant := findInstance(inactive, instance.Entity); dormant {
 			continue
 		}
 		public, ok := findInstance(selectables, instance.Entity)

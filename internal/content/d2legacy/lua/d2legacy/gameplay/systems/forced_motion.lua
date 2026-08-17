@@ -93,6 +93,7 @@ function M.register()
                 "d2legacy.world.collider",
                 "d2legacy.world.occupancy",
             },
+            none = { "d2legacy.world.inactive" },
         },
         read = {
             "d2legacy.world.forced_motion_request",

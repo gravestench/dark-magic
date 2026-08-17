@@ -17,6 +17,7 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	position := registerProjectionStore(t, engine, "d2legacy.world.position", []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}})
 	location := registerProjectionStore(t, engine, "d2legacy.world.location", []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}})
 	selectable := registerProjectionStore(t, engine, "d2legacy.world.selectable", []akara.Field{{Name: "id", Kind: akara.FieldString}, {Name: "kind", Kind: akara.FieldString}, {Name: "label", Kind: akara.FieldString}, {Name: "owner", Kind: akara.FieldString}, {Name: "radius", Kind: akara.FieldFloat64}, {Name: "priority", Kind: akara.FieldInt64}})
+	inactive := registerProjectionStore(t, engine, "d2legacy.world.inactive", nil)
 	monster := registerProjectionStore(t, engine, "d2legacy.monster.stats", []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "hidden_damage", Kind: akara.FieldInt64}})
 	secret := registerProjectionStore(t, engine, "d2legacy.monster.ai", []akara.Field{{Name: "target_id", Kind: akara.FieldString}})
 	player := engine.World().MustCreateEntity()
@@ -34,6 +35,7 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		_, _ = secret.Set(entity, map[string]any{"target_id": "alice-secret"})
 	}
 	setPublic(nearB, "monster:b", 12, 10)
+	_, _ = inactive.Set(nearB, nil)
 	setPublic(nearA, "monster:a", 8, 10)
 	setPublic(far, "monster:far", 500, 500)
 	snapshot, err := engine.Snapshot()
@@ -48,10 +50,10 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	if err := json.Unmarshal(payload, &view); err != nil {
 		t.Fatal(err)
 	}
-	if len(view.Entities) != 2 || view.Entities[0].ID != "monster:a" || view.Entities[1].ID != "monster:b" || view.Entities[0].Health == nil || *view.Entities[0].Health != 8 {
+	if len(view.Entities) != 1 || view.Entities[0].ID != "monster:a" || view.Entities[0].Health == nil || *view.Entities[0].Health != 8 {
 		t.Fatalf("world view = %#v", view)
 	}
-	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "monster:far") {
+	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
 		t.Fatalf("world view leaked hidden/far state: %s", payload)
 	}
 }

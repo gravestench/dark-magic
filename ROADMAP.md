@@ -9,7 +9,12 @@ stamina plus environment-period source slices, G6 deterministic dynamic
 occupancy, a generic checkpointed forced-motion transaction, and target-pinned
 monster knockback capability/size profiles plus authored missile knockback
 values, deterministic forced-motion replacement/locomotion ownership, and
-stable semantic motion-event identities. G9 remains current through
+stable semantic motion-event identities. G7 now separates authoritative world
+existence from active simulation with an empty ECS inactive tag: room residents
+retain their entity IDs, full component state, and timed-state/stat-source/event
+references across deactivate, checkpoint, restore, and reactivate, while
+simulation and both local/remote presentation projections exclude them. G9
+remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -80,7 +85,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, population, and the first inactive-monster archive/restore path exist; dynamic occupancy, complete inactive entity graphs, object authority, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and persistent-identity inactive monsters exist. Timed-state/stat-source/event references now survive room inactivation without scalar graph copies; owned-unit/corpse/item/object activation policy, object authority, exact 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -390,8 +395,8 @@ Status: **partial**.
 
 - [x] Separate unit footprint radius from an explicit `blocks_movement`
   occupancy policy. Players and living monsters opt in; monster death already
-  removes the collider, and inactive-monster archive/restore now carries the
-  policy with the rest of the unit graph.
+  removes the collider, and inactive room residents retain the policy with the
+  rest of their checkpointed ECS graph while active-system queries exclude it.
 - [x] Resolve same-level multi-unit motion contention in stable ECS order using
   current plus already-committed positions. Axis-separated static collision and
   dynamic circle footprints compose without renderer geometry; simultaneous
@@ -402,7 +407,7 @@ Status: **partial**.
   decisions.
 - [x] Pin owned Expansion 1.14d `MonStats2` knockback-mode and small/normal/large
   target facts, including representative capable small/large monsters and a
-  mode-incapable normal monster. Spawned and inactive-archived monsters carry
+  mode-incapable normal monster. Spawned and inactive monsters retain
   the resulting generic target profile; the owned `knock` property and
   `item_knockback` melee/missile event hooks are pinned without guessing their
   binary-owned chance arithmetic.
@@ -442,34 +447,46 @@ Status: **partial**.
 
 ### G7 — Active-room/inactive-unit vertical slice
 
-Status: **partial; deterministic room activation and first ordinary-monster
-archive/restore implemented**.
+Status: **partial; deterministic room activation and persistent-identity
+ordinary-monster inactivation/reactivation implemented**.
 
-- [ ] Separate world existence, active simulation, inactive archive, and presentation residency.
-- [x] Archive and restore one ordinary monster with stable semantic identity and
-  its current component-owned stats, combat profile, appearance, AI/action,
-  death, motion, location, collision, and selection state.
-- [ ] Extend the archive to cross-entity timed states/events, owned-unit graphs,
-  corpses, items, objects, and target references that cannot remain raw entity handles.
+- [x] Separate authoritative world existence from active simulation and
+  presentation residency for one ordinary monster. An empty ECS inactive tag
+  filters Lua systems and local/remote projections; the engine movement opt-in
+  tag is removed only while inactive.
+- [x] Preserve one ordinary monster's stable ECS/semantic identity and current
+  component-owned stats, combat profile, appearance, AI/action, death, motion,
+  location, collision, and selection state without an allowlisted scalar copy.
+- [x] Preserve cross-entity timed-state instance, stat-source, and state-event
+  target references through deactivate -> checkpoint -> restore -> reactivate.
+  The referenced monster entity ID does not change.
+- [ ] Extend the same explicit activation policy to owned-unit graphs, corpses,
+  items, objects, projectiles/pending actions, and any relationship entity whose
+  simulation residency cannot be inferred from its target.
 - [x] Drive initial Blood Moor population activation from a deterministic
   all-player room graph.
 - [x] Reproduce first-activation transitions through replay/checkpoint.
 - [x] Reproduce deactivate -> checkpoint -> restore -> reactivate continuation
   with the same authoritative checksum.
 
-The checkpointed `d2legacy.population.plan/v2` stores a deterministic active
-flag and inactive archive per room. A generated monster carries a stable
-room-resident marker; leaving the occupied-room-plus-neighbors window removes
-its live ECS entity and archives an allowlisted scalar/semantic component map,
-while re-entry creates a new live entity with the same spawn/selectable IDs and
-behavioral state. The first acceptance fixture crosses a three-room graph,
-checkpoints while the monster is inactive, reconstructs a new Lua runtime, and
-proves identical reactivation continuation. This is Dark Magic semantic state,
-not a vanilla save/protocol compatibility structure.
+The checkpointed `d2legacy.population.plan/v3` stores a deterministic active
+flag and stable inactive resident IDs per room. A generated monster carries a
+semantic room-resident component; leaving the occupied-room-plus-neighbors
+window adds `d2legacy.world.inactive` and removes the generic velocity-mover
+opt-in without destroying the entity. Simulation queries, local monster
+snapshots, and revisioned remote world views exclude the inactive tag. Re-entry
+removes it and restores movement opt-in on the same entity, so ECS checkpointing
+retains every component and raw relationship reference without a second archive
+schema. The acceptance fixture crosses a three-room graph, proves AI does not
+advance while inactive, checkpoints/reconstructs the Lua runtime, preserves a
+timed-state/stat-source/event graph and its entity IDs, and reaches identical
+reactivation checksums. This is Dark Magic semantic state, not a vanilla save/
+protocol compatibility structure.
 
 Exact expansion 1.14d activation distance/tick ordering, long-inactive healing,
-corpse lifetime, external target/state graph restoration, broader generated-
-level coverage, and presentation residency remain open and probe-gated. Older
+timer aging while inactive, corpse lifetime, owned-unit/item/object/projectile
+activation graphs, broader generated-level coverage, and independent visible-
+but-not-simulated presentation residency remain open and probe-gated. Older
 recovered inactive-unit code is architectural evidence only.
 
 ## P1: strengthen and complete the first multiplayer gameplay loop

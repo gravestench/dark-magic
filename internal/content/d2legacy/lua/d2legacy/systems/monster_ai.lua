@@ -61,7 +61,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.monster.basic_ai",
         phase = "intent",
-        query = { any = { "d2legacy.monster.ai", "d2legacy.world.selectable", "d2legacy.state.instance" } },
+        query = {
+            any = { "d2legacy.monster.ai", "d2legacy.world.selectable", "d2legacy.state.instance" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = {
             "d2legacy.world.selectable",
             "d2legacy.world.position",

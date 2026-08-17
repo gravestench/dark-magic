@@ -524,14 +524,17 @@ A render chunk becoming invisible must not define whether the authoritative room
 
 Likewise, inactive-room persistence belongs in session/game state and replay/checkpoints, not the VFS or renderer cache.
 
-Current implementation status: the population authority now evaluates one
-deterministic occupied-room-plus-immediate-neighbors set each tick. Its v2 room
-plan archives an ordinary generated monster as semantic component data, removes
-the live ECS entity, and recreates it on reactivation; a checkpoint made while
-inactive resumes to the same checksum. This establishes the first archive
-mechanism without claiming that the graph distance, phase ordering, healing,
-or corpse policy matches expansion 1.14d. Presentation residency remains
-independent and unimplemented at this boundary.
+Current implementation status: the population authority evaluates one
+deterministic occupied-room-plus-immediate-neighbors set each tick. Its v3 room
+plan records stable inactive resident IDs while an empty ECS marker excludes the
+same retained entity from simulation and presentation; the generic velocity-
+movement opt-in is removed and restored at the activation boundary. The full
+component state plus timed-state/stat-source/event references therefore use the
+ordinary ECS checkpoint instead of a parallel scalar archive. A checkpoint made
+while inactive resumes to the same entity IDs and checksum. This establishes
+the first persistent-identity mechanism without claiming that graph distance,
+phase ordering, timer aging, healing, corpse policy, or separate presentation-
+only residency matches expansion 1.14d.
 
 ## Streaming policy should be deterministic
 
@@ -638,11 +641,13 @@ outcomes. Recover the Expansion 1.14d knockback policy that emits it, then exten
 the same strategy vocabulary for movement skills without implementing a skill
 as a standalone special case.
 
-### MV5 — room inactive archive (first vertical slice implemented)
+### MV5 — room inactive residency (persistent-identity slice implemented)
 
-One ordinary generated monster now deactivates/restores from a deterministic
-checkpointed state snapshot without renderer dependency. Cross-entity state,
-owned-unit, corpse, item, and object graphs remain.
+One ordinary generated monster now deactivates/reactivates through an empty ECS
+filter tag without losing entity identity, component state, or timed-state/stat-
+source/event target references. The path is deterministic, checkpointed, and
+renderer-independent. Owned-unit, corpse, item, object, projectile, and pending-
+action activation graphs remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

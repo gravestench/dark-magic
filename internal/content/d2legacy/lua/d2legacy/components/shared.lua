@@ -100,6 +100,11 @@ function M.register()
     component("d2legacy.presentation.animation_clock", { { name = "seconds", type = "f64" } })
     component("d2legacy.world.bounds", { { name = "width", type = "f64" }, { name = "height", type = "f64" } })
     component("d2legacy.world.location", { { name = "act", type = "i64" }, { name = "level_id", type = "i64" } })
+    -- Authoritative existence is independent from active-room simulation.
+    -- Systems which can operate on room residents exclude this empty tag;
+    -- checkpointing therefore retains the whole entity/relationship graph
+    -- without copying an ever-growing component allowlist into room state.
+    component("d2legacy.world.inactive", {})
     component("d2legacy.world.environment", {
         { name = "act", type = "i64" },
         { name = "cycle_index", type = "i64" },

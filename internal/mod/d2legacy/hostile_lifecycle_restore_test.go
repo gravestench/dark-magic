@@ -198,7 +198,7 @@ func TestPopulationActivatesAdjacentRoomsAndPinsCurrentPlayerCount(t *testing.T)
 	assertMonsterPlayerCount(t, engine, "level:2:room:c:monster:1", 2)
 }
 
-func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing.T) {
+func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	ctx := context.Background()
 	authority, engine, session := startPartyFixture(t, nil)
 	t.Cleanup(func() {
@@ -236,7 +236,10 @@ func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing
 
 	const spawnID = "level:2:room:a:monster:1"
 	assertMonsterPlayerCount(t, engine, spawnID, 1)
-	submitMoveCommand(t, session, 3, "alice", 1, 1)
+	monsterID := monsterEntity(t, engine, spawnID)
+	graph := installMonsterTimedState(t, session, engine, monsterID)
+	assertMonsterStateGraph(t, engine, graph)
+	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
 	for playerPositionX(t, engine, "alice") < 20 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
@@ -245,19 +248,23 @@ func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing
 			t.Fatal("player did not reach the remote room")
 		}
 	}
-	beforeArchive := monsterArchiveSnapshot(t, engine, spawnID)
-	beforeAI := beforeArchive["d2legacy.monster.ai"]
-	delete(beforeArchive, "d2legacy.monster.ai")
 	archiveTick := engine.Tick() + 1
 	submitMoveCommand(t, session, archiveTick, "alice", 2, 0)
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	if got := monsterCount(engine); got != 0 {
-		t.Fatalf("monster count after room deactivation = %d, want 0", got)
+	if got := monsterCount(engine); got != 1 {
+		t.Fatalf("monster existence count after room deactivation = %d, want 1", got)
 	}
-	assertArchivedMonster(t, authority, "a", spawnID, beforeArchive)
-	assertArchivedMonsterAI(t, authority, "a", beforeAI)
+	assertMonsterActivation(t, engine, monsterID, false)
+	assertMonsterStateGraph(t, engine, graph)
+	assertInactiveRoom(t, authority, "a", spawnID)
+	inactiveAI := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai")
+	stepSession(t, session, 5)
+	if got := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai"); !reflect.DeepEqual(got, inactiveAI) {
+		t.Fatalf("inactive monster AI advanced: got %#v, want %#v", got, inactiveAI)
+	}
+	assertMonsterStateGraph(t, engine, graph)
 
 	replay, err := session.Replay()
 	if err != nil {
@@ -270,11 +277,12 @@ func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing
 		_ = restoredSession.Close()
 		_ = restoredEngine.Close()
 	})
-	if got := monsterCount(restoredEngine); got != 0 {
-		t.Fatalf("restored inactive monster count = %d, want 0", got)
+	if got := monsterCount(restoredEngine); got != 1 {
+		t.Fatalf("restored inactive monster existence count = %d, want 1", got)
 	}
-	assertArchivedMonster(t, restored, "a", spawnID, beforeArchive)
-	assertArchivedMonsterAI(t, restored, "a", beforeAI)
+	assertMonsterActivation(t, restoredEngine, monsterID, false)
+	assertMonsterStateGraph(t, restoredEngine, graph)
+	assertInactiveRoom(t, restored, "a", spawnID)
 
 	returnTick := checkpoint.Tick + 1
 	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
@@ -300,16 +308,20 @@ func TestPopulationArchivesInactiveMonsterAndRestoresCheckpointParity(t *testing
 	if restoredCheckpoint.Checksum != originalCheckpoint.Checksum {
 		t.Fatalf("inactive monster restore checksum = %s, want %s", restoredCheckpoint.Checksum, originalCheckpoint.Checksum)
 	}
-	originalMonster := monsterArchiveSnapshot(t, engine, spawnID)
-	restoredMonster := monsterArchiveSnapshot(t, restoredEngine, spawnID)
+	originalMonster := monsterComponentSnapshot(t, engine, spawnID)
+	restoredMonster := monsterComponentSnapshot(t, restoredEngine, spawnID)
 	if !reflect.DeepEqual(restoredMonster, originalMonster) {
 		t.Fatalf("restored monster components = %#v, want %#v", restoredMonster, originalMonster)
 	}
+	assertMonsterActivation(t, engine, monsterID, true)
+	assertMonsterActivation(t, restoredEngine, monsterID, true)
+	assertMonsterStateGraph(t, engine, graph)
+	assertMonsterStateGraph(t, restoredEngine, graph)
 	assertRoomActiveWithoutArchive(t, authority, "a")
 	assertRoomActiveWithoutArchive(t, restored, "a")
 }
 
-var archivedMonsterComponents = []string{
+var retainedMonsterComponents = []string{
 	"d2legacy.population.room_resident",
 	"d2legacy.monster.identity",
 	"d2legacy.monster.stats",
@@ -330,15 +342,14 @@ type populationPlanFixture struct {
 }
 
 type populationRoomFixture struct {
-	ID        string          `json:"id"`
-	Active    bool            `json:"active"`
-	Activated bool            `json:"activated"`
-	Archived  json.RawMessage `json:"archived"`
+	ID                string          `json:"id"`
+	Active            bool            `json:"active"`
+	Activated         bool            `json:"activated"`
+	InactiveResidents json.RawMessage `json:"inactive_residents"`
 }
 
-type archivedMonsterFixture struct {
-	SpawnID    string                     `json:"spawn_id"`
-	Components map[string]json.RawMessage `json:"components"`
+type inactiveMonsterFixture struct {
+	SpawnID string `json:"spawn_id"`
 }
 
 func submitMoveCommand(t *testing.T, session *gamesession.Session, tick uint64, player string, sequence uint64, x int) {
@@ -374,7 +385,7 @@ func playerPositionX(t *testing.T, engine *gameecs.Engine, player string) float6
 	return 0
 }
 
-func monsterArchiveSnapshot(t *testing.T, engine *gameecs.Engine, spawnID string) map[string]map[string]any {
+func monsterComponentSnapshot(t *testing.T, engine *gameecs.Engine, spawnID string) map[string]map[string]any {
 	t.Helper()
 	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
 	var monster akara.Entity
@@ -390,8 +401,8 @@ func monsterArchiveSnapshot(t *testing.T, engine *gameecs.Engine, spawnID string
 	if !found {
 		t.Fatalf("monster %s was not found", spawnID)
 	}
-	result := make(map[string]map[string]any, len(archivedMonsterComponents))
-	for _, name := range archivedMonsterComponents {
+	result := make(map[string]map[string]any, len(retainedMonsterComponents))
+	for _, name := range retainedMonsterComponents {
 		store, _ := akara.GetDynamicStore(engine.World(), name)
 		component, present := store.Get(monster)
 		if !present {
@@ -419,33 +430,15 @@ func readPopulationPlan(t *testing.T, authority *Authority) populationPlanFixtur
 	return plan
 }
 
-func assertArchivedMonster(t *testing.T, authority *Authority, roomID, spawnID string, before map[string]map[string]any) {
+func assertInactiveRoom(t *testing.T, authority *Authority, roomID, spawnID string) {
 	t.Helper()
 	for _, room := range readPopulationPlan(t, authority).Rooms {
 		if room.ID != roomID {
 			continue
 		}
-		archived := decodeArchivedMonsters(t, room.Archived)
-		if room.Active || !room.Activated || len(archived) != 1 || archived[0].SpawnID != spawnID {
-			t.Fatalf("inactive room archive = %#v", room)
-		}
-		for name, want := range before {
-			encoded, present := archived[0].Components[name]
-			if !present {
-				t.Fatalf("archived monster has no %s", name)
-			}
-			var got map[string]any
-			if err := json.Unmarshal(encoded, &got); err != nil {
-				t.Fatal(err)
-			}
-			wantJSON, _ := json.Marshal(want)
-			var normalizedWant map[string]any
-			if err := json.Unmarshal(wantJSON, &normalizedWant); err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(got, normalizedWant) {
-				t.Fatalf("archived %s = %#v, want %#v", name, got, normalizedWant)
-			}
+		residents := decodeInactiveMonsters(t, room.InactiveResidents)
+		if room.Active || !room.Activated || len(residents) != 1 || residents[0].SpawnID != spawnID {
+			t.Fatalf("inactive room residents = %#v", room)
 		}
 		return
 	}
@@ -456,7 +449,7 @@ func assertRoomActiveWithoutArchive(t *testing.T, authority *Authority, roomID s
 	t.Helper()
 	for _, room := range readPopulationPlan(t, authority).Rooms {
 		if room.ID == roomID {
-			if !room.Active || !room.Activated || len(decodeArchivedMonsters(t, room.Archived)) != 0 {
+			if !room.Active || !room.Activated || len(decodeInactiveMonsters(t, room.InactiveResidents)) != 0 {
 				t.Fatalf("restored room state = %#v", room)
 			}
 			return
@@ -465,52 +458,16 @@ func assertRoomActiveWithoutArchive(t *testing.T, authority *Authority, roomID s
 	t.Fatalf("population room %s was not found", roomID)
 }
 
-func assertArchivedMonsterAI(t *testing.T, authority *Authority, roomID string, before map[string]any) {
-	t.Helper()
-	for _, room := range readPopulationPlan(t, authority).Rooms {
-		if room.ID != roomID {
-			continue
-		}
-		archived := decodeArchivedMonsters(t, room.Archived)
-		if len(archived) != 1 {
-			t.Fatalf("room %s archived monsters = %d, want 1", roomID, len(archived))
-		}
-		encoded, present := archived[0].Components["d2legacy.monster.ai"]
-		if !present {
-			t.Fatal("archived monster has no AI state")
-		}
-		var got map[string]any
-		if err := json.Unmarshal(encoded, &got); err != nil {
-			t.Fatal(err)
-		}
-		for _, field := range []string{"behavior", "state", "target_id", "think_interval", "aggro_radius", "attack_range", "speed"} {
-			wantJSON, _ := json.Marshal(before[field])
-			var want any
-			if err := json.Unmarshal(wantJSON, &want); err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(got[field], want) {
-				t.Fatalf("archived monster AI %s = %#v, want %#v", field, got[field], want)
-			}
-		}
-		if got["next_think_tick"].(float64) < float64(before["next_think_tick"].(int64)) {
-			t.Fatalf("archived next think tick = %v, before %v", got["next_think_tick"], before["next_think_tick"])
-		}
-		return
-	}
-	t.Fatalf("population room %s was not found", roomID)
-}
-
-func decodeArchivedMonsters(t *testing.T, encoded json.RawMessage) []archivedMonsterFixture {
+func decodeInactiveMonsters(t *testing.T, encoded json.RawMessage) []inactiveMonsterFixture {
 	t.Helper()
 	if len(encoded) == 0 || string(encoded) == "{}" {
 		return nil
 	}
-	var archived []archivedMonsterFixture
-	if err := json.Unmarshal(encoded, &archived); err != nil {
+	var residents []inactiveMonsterFixture
+	if err := json.Unmarshal(encoded, &residents); err != nil {
 		t.Fatal(err)
 	}
-	return archived
+	return residents
 }
 
 func generatedPlayerPayload(t *testing.T, characterID, player string, x, y float64) json.RawMessage {
@@ -533,6 +490,132 @@ func generatedPlayerPayload(t *testing.T, characterID, player string, x, y float
 func monsterCount(engine *gameecs.Engine) int {
 	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
 	return identities.Len()
+}
+
+func monsterEntity(t *testing.T, engine *gameecs.Engine, spawnID string) akara.Entity {
+	t.Helper()
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		current, _ := identity.Get("spawn_id")
+		if current == spawnID {
+			return entity
+		}
+	}
+	t.Fatalf("monster %s was not found", spawnID)
+	return 0
+}
+
+func componentSnapshot(t *testing.T, engine *gameecs.Engine, entity akara.Entity, name string) map[string]any {
+	t.Helper()
+	store, found := akara.GetDynamicStore(engine.World(), name)
+	if !found {
+		t.Fatalf("component store %s was not found", name)
+	}
+	component, present := store.Get(entity)
+	if !present {
+		t.Fatalf("entity %d has no %s", entity, name)
+	}
+	values, err := component.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return values
+}
+
+func assertMonsterActivation(t *testing.T, engine *gameecs.Engine, monster akara.Entity, active bool) {
+	t.Helper()
+	inactive, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.inactive")
+	movers, _ := akara.GetDynamicStore(engine.World(), "engine.world.velocity_mover")
+	_, dormant := inactive.Get(monster)
+	_, moving := movers.Get(monster)
+	if active && (dormant || !moving) {
+		t.Fatalf("active monster %d inactive/mover = %v/%v", monster, dormant, moving)
+	}
+	if !active && (!dormant || moving) {
+		t.Fatalf("inactive monster %d inactive/mover = %v/%v", monster, dormant, moving)
+	}
+}
+
+type monsterStateGraph struct {
+	Monster  akara.Entity
+	Instance akara.Entity
+	Source   akara.Entity
+	Event    akara.Entity
+	Expires  int64
+}
+
+func installMonsterTimedState(t *testing.T, session *gamesession.Session, engine *gameecs.Engine, monster akara.Entity) monsterStateGraph {
+	t.Helper()
+	requests, _ := akara.GetDynamicStore(engine.World(), "d2legacy.state.request")
+	request := engine.World().MustCreateEntity()
+	if _, err := requests.Set(request, map[string]any{
+		"operation": "apply", "target": monster, "state_id": "probe-state", "source_id": "probe-source",
+		"duration": int64(10000), "policy": "refresh_same_source", "stat": "physical_resist",
+		"stat_operation": "add", "stat_value": int64(7), "stat_order": int64(1),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	graph := monsterStateGraph{Monster: monster}
+	instances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.state.instance")
+	for _, entity := range instances.Entities() {
+		instance, _ := instances.Get(entity)
+		target, _ := instance.Get("target")
+		source, _ := instance.Get("source_id")
+		if target == monster && source == "probe-source" {
+			graph.Instance = entity
+			value, _ := instance.Get("expires_tick")
+			graph.Expires = value.(int64)
+		}
+	}
+	sources, _ := akara.GetDynamicStore(engine.World(), "d2legacy.stat.source")
+	for _, entity := range sources.Entities() {
+		source, _ := sources.Get(entity)
+		target, _ := source.Get("target")
+		id, _ := source.Get("source_id")
+		if target == monster && id == "probe-source" {
+			graph.Source = entity
+		}
+	}
+	events, _ := akara.GetDynamicStore(engine.World(), "d2legacy.state.event")
+	for _, entity := range events.Entities() {
+		event, _ := events.Get(entity)
+		target, _ := event.Get("target")
+		source, _ := event.Get("source_id")
+		if target == monster && source == "probe-source" {
+			graph.Event = entity
+		}
+	}
+	if graph.Instance == 0 || graph.Source == 0 || graph.Event == 0 {
+		t.Fatalf("incomplete timed-state graph: %#v", graph)
+	}
+	return graph
+}
+
+func assertMonsterStateGraph(t *testing.T, engine *gameecs.Engine, graph monsterStateGraph) {
+	t.Helper()
+	for name, entity := range map[string]akara.Entity{
+		"d2legacy.state.instance": graph.Instance,
+		"d2legacy.stat.source":    graph.Source,
+		"d2legacy.state.event":    graph.Event,
+	} {
+		store, _ := akara.GetDynamicStore(engine.World(), name)
+		component, present := store.Get(entity)
+		if !present {
+			t.Fatalf("state graph entity %d lost %s", entity, name)
+		}
+		target, _ := component.Get("target")
+		if target != graph.Monster {
+			t.Fatalf("%s target = %v, want monster %d", name, target, graph.Monster)
+		}
+	}
+	instance := componentSnapshot(t, engine, graph.Instance, "d2legacy.state.instance")
+	if instance["expires_tick"] != graph.Expires {
+		t.Fatalf("timed state expiration = %v, want %d", instance["expires_tick"], graph.Expires)
+	}
 }
 
 func assertMonsterPlayerCount(t *testing.T, engine *gameecs.Engine, spawnID string, want int64) {
