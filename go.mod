@@ -21,6 +21,7 @@ require (
 	github.com/gravestench/pl2 v0.2.0
 	github.com/gravestench/tbl_text v0.2.1-0.20260817040431-98316da86804
 	github.com/gravestench/tsv v0.2.1
+	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/quic-go/quic-go v0.61.0
 	github.com/yuin/gopher-lua v1.1.0
@@ -38,11 +39,14 @@ require (
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/ebitengine/gomobile v0.0.0-20250923094054-ea854a63cce1 // indirect
+	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/jupiterrider/ffi v0.7.0 // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

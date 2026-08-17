@@ -31,6 +31,9 @@ local function validate(endpoint)
     assert(finite(endpoint.x) and finite(endpoint.y), "warp position must be finite")
     assert(finite(endpoint.level_id) and endpoint.level_id > 0, "warp level is invalid")
     assert(finite(endpoint.radius) and endpoint.radius > 0, "warp radius is invalid")
+    if endpoint.room_id ~= nil then
+        assert(type(endpoint.resident_id) == "string" and endpoint.resident_id ~= "", "warp resident ID is required")
+    end
     transition.validate({
         level_id = endpoint.destination_level,
         x = endpoint.destination_x,
@@ -43,16 +46,18 @@ end
 local function create(endpoint)
     validate(endpoint)
     for _, entity in
-        ipairs(ecs.query({ all = {
-            "d2legacy.world.warp",
-            "d2legacy.world.selectable",
-        } }))
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.world.warp",
+                "d2legacy.world.selectable",
+            },
+        }))
     do
         if ecs.get(entity, "d2legacy.world.selectable"):get("id") == endpoint.id then
             return
         end
     end
-    ecs.create({
+    local components = {
         ["d2legacy.world.position"] = { x = endpoint.x, y = endpoint.y },
         ["d2legacy.world.location"] = { act = 1, level_id = endpoint.level_id },
         ["d2legacy.world.selectable"] = {
@@ -82,7 +87,15 @@ local function create(endpoint)
             destination_height = endpoint.destination_height,
         },
         ["d2legacy.world.warp_appearance"] = { token = endpoint.token },
-    })
+    }
+    if endpoint.room_id ~= nil then
+        components["d2legacy.world.room_resident"] = {
+            id = endpoint.resident_id,
+            level_id = endpoint.level_id,
+            room_id = tostring(endpoint.room_id),
+        }
+    end
+    ecs.create(components)
 end
 
 function M.register()

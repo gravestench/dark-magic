@@ -102,6 +102,20 @@ export MPQ_DIRECTORY=/path/to/diablo-ii
 make play-game-world
 ```
 
+Raylib is the default native client backend. An experimental Ebitengine build
+uses the same gameplay, Lua scenes, retained composer, logical input, and
+capture path:
+
+```sh
+go run -tags ebitengine ./cmd/client --start-scene ui_lab
+```
+
+Use `make build-client-backends` to compile both choices and
+`MPQ_DIRECTORY=/path/to/diablo-ii make profile-render-backends` for a matched,
+audio-muted A/B capture. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for the
+current compile/runtime measurements, known Ebitengine parity gaps, and artifact
+layout.
+
 The development labs are intentionally small entry points into production
 systems. They are useful both for contributors and for exploring what the engine
 can already do.
@@ -134,7 +148,7 @@ live with the documents and packages that own them.
 | Engine boundaries and package ownership | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Diablo gameplay rules | [`internal/content/d2legacy`](internal/content/d2legacy) and its Lua modules |
 | Deterministic game/session mechanisms | [`internal/game`](internal/game) |
-| Client presentation and native rendering | [`internal/presentation`](internal/presentation) and [`internal/platform/raylib`](internal/platform/raylib) |
+| Client presentation and native rendering | [`internal/presentation`](internal/presentation) and [`internal/platform/desktop`](internal/platform/desktop) |
 | Realm, accounts, sessions, persistence, and deployment | [docs/realm/README.md](docs/realm/README.md) |
 | Mod architecture and authoring | [docs/MODS.md](docs/MODS.md), [docs/MODDING_API.md](docs/MODDING_API.md), and the [`mod_template`](internal/content/mod_template/README.md) |
 | Game-system research and fidelity evidence | [docs/research/GAME_SYSTEMS_INDEX.md](docs/research/GAME_SYSTEMS_INDEX.md) |

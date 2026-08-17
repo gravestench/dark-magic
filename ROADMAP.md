@@ -9,7 +9,24 @@ stamina plus environment-period source slices, G6 deterministic dynamic
 occupancy, a generic checkpointed forced-motion transaction, and target-pinned
 monster knockback capability/size profiles plus authored missile knockback
 values, deterministic forced-motion replacement/locomotion ownership, and
-stable semantic motion-event identities. G7 now separates authoritative world
+stable semantic motion-event identities. The client now also has a compile-time
+desktop boundary: Raylib remains the production/default backend, while an
+experimental `ebitengine` tag drives the same client, Lua scenes, retained
+composer, input actions, captures, and profiler diagnostics through Ebitengine.
+Both binaries compile in CI, and a matched, audio-muted A/B workflow produces
+backend-tagged real-asset profiles, captures, and a Markdown comparison. The
+first corrected Blood Moor run measured Raylib/Ebitengine frame p95 at
+17.277/16.811 ms and final native rendering at 0.505/0.399 ms with 150/149 draw
+submissions; this establishes competitiveness, not a production-default change.
+Fresh full-client compilation from separate empty Go build caches took
+33.87 seconds for Raylib and 22.68 seconds for Ebitengine; immediate rebuilds
+took 0.51 and 0.39 seconds respectively on the same machine.
+The authored-button parity defect found during review was an incorrect draw-
+mode-4 destination blend factor; its focused UI Lab crop is now pixel-identical
+between backends. The
+Ebitengine adapter is not release-equivalent yet: native audio is muted, the
+developer-console overlay is headless, final display-palette quantization is
+rejected, and node-palette quantization is CPU-cached. G7 now separates authoritative world
 existence from active simulation with an empty ECS inactive tag: room residents
 retain their entity IDs, full component state, and timed-state/stat-source/event
 references across deactivate, checkpoint, restore, and reactivate, while
@@ -18,7 +35,12 @@ residency now has a world-owned stable resident ID rather than depending on
 monster identity, and the activation record preserves each resident's generic
 velocity-mover opt-in. Residency is scoped by canonical level/room IDs, and
 production DS1 interaction targets now acquire it from generated zone geometry
-without turning map/presentation data into authority. G9 remains current through
+without turning map/presentation data into authority. Warp Lab's paired
+authoritative endpoints use the same geometry join and the real-asset lab test
+pins both endpoint residents. Active moving residents now synchronize their
+room membership from authoritative level/position before the next activation
+decision, so crossing a generated boundary does not leave them owned by their
+spawn room. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -85,16 +107,16 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies; a non-monster fixture proves the mechanism has no monster/mover assumption, and production DS1 interaction targets now attach through generated room geometry. Stateful object authority, ground-item/owned-unit/projectile attachment, exact 1.14d streaming behavior, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies; non-monster fixtures prove the mechanism has no monster/mover assumption and follows authoritative movement across room boundaries, while production DS1 interaction targets attach through generated room geometry. Stateful object authority, ground-item/owned-unit/projectile attachment, exact 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
-| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. Staged frontend bundles then reduced settled main-menu heap from 487 MB to 216 MB, preloader-retained heap from 357 MB to 112 MB, and decoded-cache weight from 339 MB to 59 MB with zero pending preloads. Other tasks are folded into projections, presentation, cleanup, and gameplay consumers below. |
+| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. Staged frontend bundles then reduced settled main-menu heap from 487 MB to 216 MB, preloader-retained heap from 357 MB to 112 MB, and decoded-cache weight from 339 MB to 59 MB with zero pending preloads. A new compile-time Raylib/Ebitengine experiment keeps simulation and composition identical, compiles both clients in CI, and owns a matched capture/profile/summary command rather than relying on subjective window feel. Measured backend results and Ebitengine feature parity remain open. |
 | M31-M43 creature authoring | deferred | Generated creature representation is independent work and must not displace the gameplay critical path. |
 | M44 Realm cloud operations | deferred | Local topology-neutral Realm is the prerequisite. Existing deployment groundwork does not make cloud operations a gameplay gate. |
 
@@ -121,6 +143,25 @@ in which networking followed the first gameplay loop.
   487 MB to 216 MB, the preloader subtree from 357 MB to 112 MB, and decoded-
   cache weight from 339 MB to 59 MB. Main-menu update p95 remained below one
   millisecond and improved from 0.794 ms to 0.344 ms.
+- [x] Move client assembly behind one compile-time desktop contract without
+  leaking either native API into gameplay, Lua presentation, or the retained
+  composer; preserve Raylib as the untagged default and add an explicit
+  `ebitengine` build.
+- [x] Prove the experimental Ebitengine path with a real-asset `ui_lab`
+  lifecycle/capture smoke run and compile both backend binaries in CI.
+- [x] Add a matched A/B profiler that builds once, disables native audio in
+  both clients, runs identical scene/fixture/settle inputs, preserves raw CPU/
+  heap/diagnostic/capture artifacts, and writes a compact Markdown comparison.
+- [x] Record the first corrected simple/UI Lab and Blood Moor decision inputs:
+  authored-button crops are pixel-identical, world captures align, draw counts
+  are 150/149, frame p95 is 17.277/16.811 ms, and final native rendering is
+  0.505/0.399 ms for Raylib/Ebitengine on the initial Apple Silicon run.
+- [ ] Repeat the matched runs and add representative dense-combat and palette-
+  heavy profiles before changing the production default.
+- [ ] If Ebitengine remains competitive, replace its muted audio, headless
+  console, rejected final-palette transform, and CPU node-palette fallback with
+  native adapters and visual/performance parity evidence. Otherwise remove the
+  experiment rather than carrying two indefinite renderer products.
 
 ## P0: post-networking gameplay foundations
 
@@ -472,6 +513,12 @@ ordinary-monster inactivation/reactivation implemented**.
   plus room, and attach production DS1 interaction targets by testing their
   authoritative subtile point against generated room bounds. Same-named rooms
   in another level remain active; missing room geometry does not invent a link.
+- [x] Attach Warp Lab's paired authoritative warp entities to generated rooms
+  through the same entry-world point resolver. The endpoint stays one ordinary
+  interaction/transition entity; residency adds no warp-specific lifecycle.
+- [x] Synchronize every active positioned resident to its current generated
+  room before activation decisions. A moving non-monster crosses from room A to
+  B, then remains active when A leaves the player window and B remains active.
 - [ ] Extend the same explicit activation policy to owned-unit graphs, corpses,
   items, objects, projectiles/pending actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
@@ -495,7 +542,11 @@ advance while inactive, checkpoints/reconstructs the Lua runtime, preserves a
 timed-state/stat-source/event graph and its entity IDs, preserves a second non-
 monster/non-moving resident, proves an equal room ID in another level is not
 affected, and reaches identical reactivation checksums. Entry-world preparation
-joins resolved DS1 interaction points to the same canonical residency contract.
+joins resolved DS1 interaction points and synthetic paired Warp Lab endpoints to
+the same canonical residency contract; the mounted-asset lab proves both warps
+materialize with resident components. Before each activation decision, active
+positioned residents resolve against the same authoritative room bounds; an
+entity crossing a boundary is no longer inactivated with its spawn room.
 This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 

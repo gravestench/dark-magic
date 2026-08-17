@@ -33,6 +33,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Compile native client backends
+        run: make build-client-backends
       - name: Unit and integration tests
         run: make test
       - name: Install Lua quality tools

@@ -323,7 +323,10 @@ continuation preserves timed-state, stat-source, and state-event target
 references and proves deactivate/restore/reactivate parity; a non-monster,
 non-moving fixture proves reactivation does not invent movement capability or
 cross levels when room IDs repeat. Production DS1 interaction targets now join
-generated room bounds through canonical string IDs. Owned-unit/corpse/ground-
+generated room bounds through canonical string IDs. Active positioned residents
+also refresh that membership before each activation decision, so movement
+across a room boundary does not leave an entity attached to its spawn room.
+Owned-unit/corpse/ground-
 item/projectile residency and stateful object operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.

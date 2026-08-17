@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
-	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/platform/desktop"
 )
 
 // assembleModless starts only the engine-owned native shell. A mod profile may
@@ -14,13 +14,16 @@ import (
 // broken or disabled game mod can never make the client itself unstartable.
 func (app *application) assembleModless() error {
 	slog.Info("starting client with no enabled mods")
-	app.renderer = &raylibrenderer.Service{}
-	app.renderer.SetLogger(slog.Default().With("component", "renderer"))
-	app.rendererConfig = raylibrenderer.DefaultConfig()
-	app.rendererConfig.Resolution.Fit = app.options.ViewportFit
-	app.rendererConfig.Window.Borderless = app.options.BorderlessFullscreen
-	app.rendererConfig.Window.ShowSystemCursor = true
-	app.renderer.Configure(app.rendererConfig)
+	options := desktop.DefaultOptions()
+	options.ViewportFit = app.options.ViewportFit
+	options.BorderlessFullscreen = app.options.BorderlessFullscreen
+	options.ShowSystemCursor = true
+	options.Logger = slog.Default().With("component", "renderer")
+	bundle, err := desktop.New(options)
+	if err != nil {
+		return fmt.Errorf("construct mod-neutral renderer: %w", err)
+	}
+	app.renderer = bundle.Renderer
 
 	app.engineHost = host.New()
 	if err := app.engineHost.Register(host.Definition{ID: "engine.renderer", Component: app.renderer}); err != nil {

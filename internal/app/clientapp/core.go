@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -26,8 +27,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/worldobjects"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	raylibinput "github.com/gravestench/dark-magic/internal/platform/raylib/input"
-	raylibrenderer "github.com/gravestench/dark-magic/internal/platform/raylib/renderer"
+	"github.com/gravestench/dark-magic/internal/platform/desktop"
 	"github.com/gravestench/dark-magic/internal/preferences"
 	"github.com/gravestench/dark-magic/internal/presentation/navigation"
 	"github.com/gravestench/dark-magic/internal/presentation/render"
@@ -68,21 +68,23 @@ func (app *application) buildPresentationCore() error {
 	}
 
 	// The renderer is the window. Input reads that window. Everything else talks
-	// to backend-neutral stores so game code never needs to know about Raylib.
-	app.renderer = &raylibrenderer.Service{}
-	app.renderer.SetLogger(slog.Default().With("component", "renderer"))
-	app.rendererConfig = raylibrenderer.DefaultConfig()
-	app.rendererConfig.Resolution.Width = profile.Width
-	app.rendererConfig.Resolution.Height = profile.Height
-	app.rendererConfig.Resolution.Fit = app.options.ViewportFit
-	app.rendererConfig.Window.Borderless = app.options.BorderlessFullscreen
-	app.renderer.Configure(app.rendererConfig)
-	if err := app.renderer.ConfigurePaletteQuantization(app.options.Content, app.options.OutputPalette); err != nil {
+	// to backend-neutral stores so game code never knows which native backend
+	// the binary selected at compile time.
+	backendOptions := desktop.DefaultOptions()
+	backendOptions.Content = app.options.Content
+	backendOptions.PalettePath = app.options.OutputPalette
+	backendOptions.LogicalWidth = profile.Width
+	backendOptions.LogicalHeight = profile.Height
+	backendOptions.ViewportFit = app.options.ViewportFit
+	backendOptions.BorderlessFullscreen = app.options.BorderlessFullscreen
+	backendOptions.NativeAudio = !app.options.DisableNativeAudio
+	backendOptions.Logger = slog.Default().With("component", "renderer")
+	bundle, err := desktop.New(backendOptions)
+	if err != nil {
 		return err
 	}
-
-	app.input = raylibinput.New(app.renderer)
-	app.input.SetLogger(slog.Default().With("component", "input"))
+	app.renderer, app.input = bundle.Renderer, bundle.Input
+	app.renderWindow = image.Pt(backendOptions.WindowWidth, backendOptions.WindowHeight)
 	app.inputState = &inputstate.Store{}
 	app.locale = localization.New(app.options.Content, "English")
 	app.scripts = modruntime.New()
