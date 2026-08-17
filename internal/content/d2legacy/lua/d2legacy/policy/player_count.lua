@@ -26,9 +26,9 @@ function M.monster_spawn(game_player_count, evil)
     }
 end
 
--- nearby_party_member_count excludes the credited player. Party authority will
--- populate it once proximity and same-level membership are implemented; zero
--- is the only valid pre-party value and must remain explicit at call sites.
+-- nearby_party_member_count excludes the credited player. The current recovered
+-- consumer supplies living party members in the same level; narrower spatial
+-- eligibility remains target-version probe work for consumers that require it.
 -- monster_player_count is pinned when that monster is spawned and caps later
 -- NoDrop benefits even if additional players enter the game before its death.
 function M.no_drop(game_player_count, nearby_party_member_count, monster_player_count)

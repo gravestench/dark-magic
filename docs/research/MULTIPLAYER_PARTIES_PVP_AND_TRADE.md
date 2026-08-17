@@ -5,9 +5,11 @@ transport-independent authoritative fixed-tick session, stable item
 identity/containers, trusted player/item/world commands, deterministic
 replay/checkpoints, and a checkpointed `d2legacy.party/v1` authority for
 invite/cancel/accept/leave, stable membership identity, same-level living-member
-queries, game-departure cleanup, and reconnect continuity. Reward integration,
-party projection, hostility, and trade remain. This document defines those
-multiplayer gameplay systems without copying the legacy D2GS protocol.
+queries, game-departure cleanup, reconnect continuity, and the first shared
+reward hook through credited-owner same-level party NoDrop context. Party XP,
+quest/gold sharing, projection, hostility, and trade remain. This document
+defines those multiplayer gameplay systems without copying the legacy D2GS
+protocol.
 
 ## Executive conclusion
 
@@ -403,6 +405,9 @@ Implement invite/accept/leave plus deterministic party membership snapshots and 
 ### MP3 — shared reward hook
 
 Use party state for one real policy such as NoDrop count or synthetic XP/gold sharing.
+
+Implemented for monster-death NoDrop using ultimate owned-unit attribution and
+living same-level party membership. Exact 1.14d proximity remains queued.
 
 ### MP4 — hostility relationship
 
