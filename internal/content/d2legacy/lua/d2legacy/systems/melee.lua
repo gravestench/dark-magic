@@ -9,6 +9,7 @@ local ecs = require("engine.ecs/v1")
 local combat_target = require("d2legacy.gameplay.combat_target")
 local policy = require("d2legacy.policy.melee")
 local damage_policy = require("d2legacy.policy.damage")
+local damage_bundle = require("d2legacy.policy.damage_bundle")
 local M = {}
 
 local function identity(entity)
@@ -49,6 +50,7 @@ local function event(structural, values, damage)
             damage_raw = damage.damage_raw,
             remaining_health_raw = damage.remaining_health_raw,
         }
+        components["d2legacy.combat.damage_bundle"] = damage_bundle.stage_component(damage.rolled, damage.mitigated)
     end
     structural:create(components)
 end
@@ -97,6 +99,7 @@ function M.register()
             "d2legacy.player.vitals",
             "d2legacy.combat.melee_event",
             "d2legacy.combat.event",
+            "d2legacy.combat.damage_bundle",
         },
         update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
@@ -131,7 +134,7 @@ function M.register()
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
                             local minimum, maximum = damage_range(profile, request:get("hand"))
                             local rolled = policy.damage(minimum, maximum)
-                            result = damage_policy.resolve(target, rolled, ecs, "physical")
+                            result = damage_policy.resolve(target, damage_bundle.single("physical", rolled), ecs)
                             base.hit = true
                             base.remaining_health_raw = result.remaining_health_raw
                             base.damage_raw = result.damage_raw

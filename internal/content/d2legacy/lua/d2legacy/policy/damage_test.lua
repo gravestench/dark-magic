@@ -52,6 +52,7 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 local mitigation = require("d2legacy.policy.mitigation")
                 local damage = require("d2legacy.policy.damage")
+                local bundle = require("d2legacy.policy.damage_bundle")
                 local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
                 local defense = ecs.get(player, "d2legacy.combat.defense")
                 test.assert(defense:get("fire_resist") == 50, [=[defense:get("fire_resist") == 50]=])
@@ -64,7 +65,50 @@ return test.suite({
                     mitigation.apply(1000, "physical", defense) == 730,
                     [=[mitigation.apply(1000, "physical", defense) == 730]=]
                 )
-                local result = damage.resolve(player, 255, ecs, "fire")
+                local mixed_target = ecs.create({
+                    ["d2legacy.monster.stats"] = {
+                        level = 1,
+                        health = 5000,
+                        max_health = 5000,
+                    },
+                    ["d2legacy.combat.defense"] = {
+                        physical_resist = 25,
+                        fire_resist = 50,
+                        max_fire_resist = 75,
+                        physical_reduction_raw = 20,
+                    },
+                })
+                local mixed = damage.resolve(mixed_target, { physical = 1000, fire = 1000 }, ecs)
+                test.assert(
+                    mixed.channel == "mixed"
+                        and mixed.rolled.physical == 1000
+                        and mixed.rolled.fire == 1000
+                        and mixed.mitigated.physical == 730
+                        and mixed.mitigated.fire == 500
+                        and mixed.damage_raw == 1230
+                        and mixed.remaining_health_raw == 3770,
+                    [=[typed channels remain independent through mitigation and join only at health commit]=]
+                )
+                local poison_target = ecs.create({
+                    ["d2legacy.monster.stats"] = {
+                        level = 1,
+                        health = 5000,
+                        max_health = 5000,
+                    },
+                    ["d2legacy.combat.defense"] = {
+                        fire_resist = 50,
+                        max_fire_resist = 75,
+                    },
+                })
+                local poison = damage.resolve(poison_target, { fire = 1000, poison = 1000 }, ecs)
+                test.assert(
+                    poison.mitigated.fire == 500
+                        and poison.mitigated.poison == 1000
+                        and poison.damage_raw == 500
+                        and poison.remaining_health_raw == 4500,
+                    [=[poison stays typed but cannot become immediate damage before duration policy exists]=]
+                )
+                local result = damage.resolve(player, bundle.single("fire", 255), ecs)
                 test.assert(
                     result.rolled_damage_raw == 255
                         and result.damage_raw == 0
@@ -72,7 +116,7 @@ return test.suite({
                         and not result.lethal,
                     [=[whole-health storage reports only damage actually committed]=]
                 )
-                result = damage.resolve(player, 4096, ecs, "fire")
+                result = damage.resolve(player, bundle.single("fire", 4096), ecs)
                 test.assert(
                     result.channel == "fire"
                         and result.rolled_damage_raw == 4096
@@ -81,7 +125,7 @@ return test.suite({
                         and not result.lethal,
                     [=[shared result records rolled, mitigated, and remaining damage in order]=]
                 )
-                result = damage.resolve(player, 1024, ecs, "fire")
+                result = damage.resolve(player, bundle.single("fire", 1024), ecs)
                 test.assert(
                     result.rolled_damage_raw == 1024
                         and result.damage_raw == 512

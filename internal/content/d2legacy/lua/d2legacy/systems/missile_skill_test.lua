@@ -53,6 +53,13 @@ return test.suite({
                         and event:get("rolled_damage_raw") >= event:get("damage_raw"),
                     [=[missile contact emits the shared ordered damage result]=]
                 )
+                local bundle = ecs.get(events[1], "d2legacy.combat.damage_bundle")
+                test.assert(
+                    bundle:get("fire_rolled_raw") == event:get("rolled_damage_raw")
+                        and bundle:get("fire_mitigated_raw") == event:get("damage_raw")
+                        and bundle:get("physical_rolled_raw") == 0,
+                    [=[missile result preserves fire separately from other channels]=]
+                )
             end),
         }),
         test.case("underfunded_cast_has_no_effect_and_preserves_mana", {

@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local damage = require("d2legacy.policy.damage")
+local damage_bundle = require("d2legacy.policy.damage_bundle")
 local geometry = require("d2legacy.policy.geometry")
 
 local M = {}
@@ -84,6 +85,7 @@ local function emit_hit(context, projectile, target, result, structural)
             damage_raw = result.damage_raw,
             remaining_health_raw = result.remaining_health_raw,
         },
+        ["d2legacy.combat.damage_bundle"] = damage_bundle.stage_component(result.rolled, result.mitigated),
     })
 end
 
@@ -107,7 +109,8 @@ local function resolve_contacts(context, entities, structural)
             local target = first_contact(entity, projectile, position, location, targets)
             if target then
                 local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
-                local result = damage.resolve(target.entity, amount, ecs, projectile:get("damage_channel"))
+                local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
+                local result = damage.resolve(target.entity, bundle, ecs)
                 emit_hit(context, projectile, target, result, structural)
                 structural:destroy(entity)
             elseif projectile:get("remaining_ticks") <= 0 then
@@ -153,6 +156,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.combat.event",
+            "d2legacy.combat.damage_bundle",
         },
         update = resolve_contacts,
     })

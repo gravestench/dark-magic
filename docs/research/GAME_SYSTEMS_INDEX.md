@@ -18,7 +18,7 @@ Current implementation sequence: [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT
 | 3 | Item stats, affixes, and property evaluation | [ITEM_STATS_AND_AFFIXES.md](ITEM_STATS_AND_AFFIXES.md) | baseline | M21.1 `engine.stats/v1` provenance/source authority implemented; ItemStatCost-derived operations remain gated by probes | data linkage, items, skills/states | 12 |
 | 1 | Base items, equipment, and inventory | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | baseline | authoritative containers exist; an imported world placement now resolves generic room residency, survives inactive checkpoint/reactivation, and removes/reacquires spatial state on pickup/re-drop, while public loot ownership and richer item behavior remain | data linkage, item stats, persistence | 11 |
 | 13 | Character creation, stats, levels, and progression | [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) | baseline | authoritative player entry/progression/vitals/skill assignment exist; full progression/difficulty/save synchronization remains | data linkage, timing, persistence, item stats, quests | 12 |
-| 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | G8 now shares one explicit ordered direct-damage commit/result across melee and missile contact; composed ECS events preserve generic and melee-specific consumers, while exact Expansion 1.14d arithmetic and remaining combat/death stages stay probe-gated | stats, timing, skills, items | 17 |
+| 12 | Combat, damage, defense, and death | [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md) | baseline | G8 now shares one explicit ordered direct-damage commit/result across melee and missile contact; its composed ECS bundle preserves six rolled/mitigated channels independently, while exact Expansion 1.14d arithmetic, drain/durations, and remaining combat/death stages stay probe-gated | stats, timing, skills, items | 17 |
 | 11 | Skills, missiles, states, and combat actions | [SKILLS_STATES_AND_MISSILES.md](SKILLS_STATES_AND_MISSILES.md) | baseline | M21.6 immutable cast requests and M21.7 checkpointed cast lifecycle are implemented; the generic straight-missile family now joins canonical room residency and suspends movement/lifetime under the shared inactive ECS tag | timing, stats, combat, missiles/states | 22 |
 | 8 | Monsters, spawning, AI, and lifecycle | [MONSTERS_SPAWNING_AND_AI.md](MONSTERS_SPAWNING_AND_AI.md) | baseline | ordinary-hostile materialization, scheduled acquire/chase/attack AI, population, death, and world-owned persistent room identity now preserve live state graphs, owned-unit relationships, ordinary corpses, and straight projectiles without parallel inactive archives; quality and broader activation graphs remain | timing, combat, world/pathfinding | 22 |
 | 18 | Hirelings, mercenaries, pets, and owned units | [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md) | baseline | generic ownership, deterministic limits/replacement, kill attribution, expiration, and owned-resident checkpoint/reactivation continuity exist; summon skills and broad pet/hireling behavior remain | monsters, items, skills, persistence | 24 |
@@ -53,8 +53,9 @@ The research program now has a baseline for every indexed workstream. Implementa
 - M21.6 assigned skill-intent consumption into immutable cast requests: implemented.
 - M21.7 generic skill cast lifecycle: implemented.
 - M21.8 timed state engine: implemented.
-- G8 combat fidelity tranche 1: active; shared direct-damage commit/result
-  implemented, ordered combat-family breadth and player death remain.
+- G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
+  typed six-channel ECS stage facts implemented, ordered combat-family breadth,
+  drain/durations, and player death remain.
 
 Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for the reconciled dependency queue and post-first-loop ordering across combat fidelity, items, world interactions, economy, audio, UI, networking, and realm persistence. `ROADMAP.md` remains authoritative for checkbox completion and the current G8 cursor.
 

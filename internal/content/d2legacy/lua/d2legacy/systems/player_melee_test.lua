@@ -237,6 +237,13 @@ return test.suite({
                         and damage:get("remaining_health_raw") == melee:get("remaining_health_raw"),
                     [=[melee and generic consumers observe one ordered damage result]=]
                 )
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                test.assert(
+                    bundle:get("physical_rolled_raw") == damage:get("rolled_damage_raw")
+                        and bundle:get("physical_mitigated_raw") == damage:get("damage_raw")
+                        and bundle:get("fire_rolled_raw") == 0,
+                    [=[melee result preserves physical separately from other channels]=]
+                )
             end),
         }),
         test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {

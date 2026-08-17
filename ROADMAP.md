@@ -81,7 +81,14 @@ event and melee-specific reaction event, so death, reactive-state, replay, and
 future effect consumers do not need parallel attacks or inferred joins. The
 current whole-health player component quantizes applied raw damage at that
 boundary; exact Expansion 1.14d fractional player-life storage/rounding remains
-probe-gated rather than inherited from older recovered code. G9 remains current through
+probe-gated rather than inherited from older recovered code. The next G8 layer
+composes a typed damage-bundle component on that same result entity. Physical,
+fire, lightning, cold, magic, and poison rolled/mitigated values stay separate
+through channel mitigation; only the immediate channels join at the health-
+commit boundary. Poison remains recorded but cannot mutate health until its
+rate/duration transaction exists. Current melee and missile families merely
+populate their authored single channel. Drain and duration semantics remain
+unimplemented and no unsupported channel arithmetic is implied. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -682,9 +689,15 @@ explicit shared direct-damage result record exist.
 - [x] Quantize committed player damage once at the current whole-health
   component boundary so event output matches durable ECS state. This is an
   internal-consistency rule, not a verified Expansion 1.14d rounding claim.
-- [ ] Replace the scalar result with a typed multi-channel bundle as verified
-  families require it; preserve independent physical, fire, lightning, cold,
-  magic, poison, drain, and duration facts rather than prematurely summing.
+- [x] Compose a typed ECS damage-bundle fact on each successful result. Preserve
+  physical, fire, lightning, cold, magic, and poison rolled/mitigated values
+  independently through per-channel mitigation, summing only immediate channels
+  at the health commit. Poison is retained but explicitly excluded until its
+  periodic rate/duration transaction exists. Existing scalar totals remain a
+  convenient generic event summary.
+- [ ] Extend the bundle and ordered transaction with verified drain, cold/
+  freeze, poison-duration, conversion, and periodic-application facts without
+  treating them as immediate health damage.
 - [ ] Add target-locked Expansion 1.14d evidence and ordered stages for block,
   avoidance, resistance caps/negative values, pierce, absorb, critical/deadly/
   mastery, Crushing Blow, Open Wounds, leech, hit recovery, poison/periodic
