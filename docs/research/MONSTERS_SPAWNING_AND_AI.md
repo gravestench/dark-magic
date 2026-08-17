@@ -332,7 +332,11 @@ durable identity, and attribution fields through inactive checkpoint restore.
 The owned-unit lifetime system now excludes the empty inactive marker and
 checks its unchanged absolute expiration when the unit next becomes active;
 that deterministic scaffolding does not resolve legacy inactive timer aging.
-Corpse/ground-item/projectile residency and stateful object operation/event attachment,
+An ordinary corpse now crosses the same inactive room boundary on its original
+entity with death/loot, identity, appearance, and spatial facts intact. Death
+removes the generic velocity-mover opt-in in addition to AI, collider, and
+selection, so the inactive record cannot restore a stale live simulation
+capability. Ground-item/projectile residency and stateful object operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.
 
@@ -357,6 +361,15 @@ alive monster
 ```
 
 The corpse must retain enough source identity for skills/quests/loot rules without keeping the entire live AI object active.
+
+Current Dark Magic executable evidence now preserves one ordinary corpse on the
+same ECS entity across room deactivate -> checkpoint -> restore -> reactivate.
+Its death/loot facts, monster identity and stats, death-mode appearance,
+position/location, occupancy, and room identity remain unchanged. AI, collider,
+selection, and the engine velocity-mover opt-in are absent before deactivation
+and remain absent after reactivation. Exact Expansion 1.14d corpse lifetime,
+consumption/search/revival eligibility, and long-inactive mutations remain
+unresolved.
 
 D2MOO's spawn code also derives a resurrection mode from `MonStats2` and may select a configured resurrection skill/mode. This is evidence that resurrection behavior is data-related and not simply `dead=false`.
 
@@ -452,11 +465,11 @@ Add explicit leader/minion relationships and one command-sharing/group behavior.
 
 ### M-AI5 — quality and lifecycle (partial)
 
-Death/corpse and XP/loot event integration plus the first persistent-identity
-ordinary-monster room inactivation/resume path are implemented. Timed-state,
+Death/corpse and XP/loot event integration plus persistent-identity live-monster
+and ordinary-corpse room inactivation/resume paths are implemented. Timed-state,
 stat-source, and state-event references survive that path. Champion/unique
-modifier composition, owned-unit/item/object/projectile activation graphs,
-specialized corpses, and broader inactive-unit kinds remain.
+modifier composition, item/object/projectile activation graphs, specialized
+corpse policy, and broader inactive-unit kinds remain.
 
 ## Verification backlog
 

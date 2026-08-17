@@ -424,6 +424,124 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	}
 }
 
+func TestPopulationInactivatesCorpseAndRestoresCheckpointParity(t *testing.T) {
+	ctx := context.Background()
+	authority, engine, session := startPartyFixture(t, nil)
+	t.Cleanup(func() {
+		_ = authority.Stop(ctx)
+		_ = session.Close()
+		_ = engine.Close()
+	})
+
+	population, _ := json.Marshal(map[string]any{
+		"act": 1, "level_id": 2, "difficulty": 0,
+		"links": []map[string]any{{"from": "a", "to": "b"}, {"from": "b", "to": "c"}},
+		"rooms": []map[string]any{
+			{"id": "a", "populate": true, "x": 0, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{{"x": 8, "y": 1}}},
+			{"id": "b", "populate": false, "x": 10, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{}},
+			{"id": "c", "populate": false, "x": 20, "y": 0, "width": 10, "height": 10,
+				"points": []map[string]any{}},
+		},
+	})
+	if err := session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.population.bootstrap", Payload: population}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, "hero", "alice", 1, 1)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+
+	const spawnID = "level:2:room:a:monster:1"
+	monsterID := monsterEntity(t, engine, spawnID)
+	setMonsterHealth(t, engine, monsterID, 0)
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertCorpseActivation(t, engine, monsterID, true)
+	corpse := corpseComponentSnapshot(t, engine, monsterID)
+
+	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
+	for playerPositionX(t, engine, "alice") < 20 {
+		if err := session.Step(); err != nil {
+			t.Fatal(err)
+		}
+		if engine.Tick() > 100 {
+			t.Fatal("player did not leave the corpse room")
+		}
+	}
+	stopTick := engine.Tick() + 1
+	submitMoveCommand(t, session, stopTick, "alice", 2, 0)
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertCorpseActivation(t, engine, monsterID, false)
+	if got := corpseComponentSnapshot(t, engine, monsterID); !reflect.DeepEqual(got, corpse) {
+		t.Fatalf("inactive corpse components = %#v, want %#v", got, corpse)
+	}
+	assertInactiveRoom(t, authority, "a", spawnID)
+	assertInactiveResidentMover(t, authority, "a", spawnID, false)
+
+	replay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	restored, restoredEngine, restoredSession := startPartyFixture(t, &checkpoint)
+	t.Cleanup(func() {
+		_ = restored.Stop(ctx)
+		_ = restoredSession.Close()
+		_ = restoredEngine.Close()
+	})
+	assertCorpseActivation(t, restoredEngine, monsterID, false)
+	if got := corpseComponentSnapshot(t, restoredEngine, monsterID); !reflect.DeepEqual(got, corpse) {
+		t.Fatalf("restored inactive corpse components = %#v, want %#v", got, corpse)
+	}
+	assertInactiveRoom(t, restored, "a", spawnID)
+	assertInactiveResidentMover(t, restored, "a", spawnID, false)
+
+	returnTick := checkpoint.Tick + 1
+	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
+	submitMoveCommand(t, restoredSession, returnTick, "alice", 1, -1)
+	stepSession(t, session, 55)
+	stepSession(t, restoredSession, 55)
+	stopTick = returnTick + 55
+	submitMoveCommand(t, session, stopTick, "alice", 4, 0)
+	submitMoveCommand(t, restoredSession, stopTick, "alice", 2, 0)
+	stepSession(t, session, 2)
+	stepSession(t, restoredSession, 2)
+
+	originalReplay, err := session.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoredReplay, err := restoredSession.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalCheckpoint := originalReplay.Checkpoints[len(originalReplay.Checkpoints)-1]
+	restoredCheckpoint := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1]
+	if restoredCheckpoint.Checksum != originalCheckpoint.Checksum {
+		t.Fatalf("inactive corpse restore checksum = %s, want %s", restoredCheckpoint.Checksum, originalCheckpoint.Checksum)
+	}
+	assertCorpseActivation(t, engine, monsterID, true)
+	assertCorpseActivation(t, restoredEngine, monsterID, true)
+	if got := corpseComponentSnapshot(t, engine, monsterID); !reflect.DeepEqual(got, corpse) {
+		t.Fatalf("reactivated corpse components = %#v, want %#v", got, corpse)
+	}
+	if got := corpseComponentSnapshot(t, restoredEngine, monsterID); !reflect.DeepEqual(got, corpse) {
+		t.Fatalf("restored reactivated corpse components = %#v, want %#v", got, corpse)
+	}
+}
+
 var retainedMonsterComponents = []string{
 	"d2legacy.world.room_resident",
 	"d2legacy.monster.identity",
@@ -439,6 +557,20 @@ var retainedMonsterComponents = []string{
 	"engine.world.velocity_mover",
 	"d2legacy.world.selectable",
 	"d2legacy.owned_unit",
+}
+
+var retainedCorpseComponents = []string{
+	"d2legacy.world.room_resident",
+	"d2legacy.monster.identity",
+	"d2legacy.monster.stats",
+	"d2legacy.combat.melee_profile",
+	"d2legacy.monster.appearance",
+	"d2legacy.monster.death",
+	"d2legacy.world.position",
+	"d2legacy.world.velocity",
+	"d2legacy.world.facing",
+	"d2legacy.world.location",
+	"d2legacy.world.occupancy",
 }
 
 type populationPlanFixture struct {
@@ -623,6 +755,25 @@ func assertInactiveRoom(t *testing.T, authority *Authority, roomID string, resid
 	t.Fatalf("population room %s was not found", roomID)
 }
 
+func assertInactiveResidentMover(t *testing.T, authority *Authority, roomID, residentID string, want bool) {
+	t.Helper()
+	for _, room := range readPopulationPlan(t, authority).Rooms {
+		if room.ID != roomID {
+			continue
+		}
+		for _, resident := range decodeInactiveResidents(t, room.InactiveResidents) {
+			if resident.ID == residentID {
+				if resident.VelocityMover != want {
+					t.Fatalf("inactive resident %s velocity mover = %v, want %v", residentID, resident.VelocityMover, want)
+				}
+				return
+			}
+		}
+		t.Fatalf("inactive resident %s was not found in room %s", residentID, roomID)
+	}
+	t.Fatalf("population room %s was not found", roomID)
+}
+
 func assertRoomActiveWithoutInactiveResidents(t *testing.T, authority *Authority, roomID string) {
 	t.Helper()
 	for _, room := range readPopulationPlan(t, authority).Rooms {
@@ -699,6 +850,50 @@ func componentSnapshot(t *testing.T, engine *gameecs.Engine, entity akara.Entity
 		t.Fatal(err)
 	}
 	return values
+}
+
+func setMonsterHealth(t *testing.T, engine *gameecs.Engine, monster akara.Entity, health int64) {
+	t.Helper()
+	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+	component, present := stats.Get(monster)
+	if !present {
+		t.Fatalf("monster %d has no stats", monster)
+	}
+	if err := component.Set("health", health); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func corpseComponentSnapshot(t *testing.T, engine *gameecs.Engine, corpse akara.Entity) map[string]map[string]any {
+	t.Helper()
+	result := make(map[string]map[string]any, len(retainedCorpseComponents))
+	for _, name := range retainedCorpseComponents {
+		result[name] = componentSnapshot(t, engine, corpse, name)
+	}
+	return result
+}
+
+func assertCorpseActivation(t *testing.T, engine *gameecs.Engine, corpse akara.Entity, active bool) {
+	t.Helper()
+	assertResidentActivation(t, engine, corpse, active, false)
+	for _, name := range []string{
+		"d2legacy.monster.ai",
+		"d2legacy.world.collider",
+		"d2legacy.world.selectable",
+		"engine.world.velocity_mover",
+	} {
+		store, _ := akara.GetDynamicStore(engine.World(), name)
+		if _, present := store.Get(corpse); present {
+			t.Fatalf("corpse %d retained %s", corpse, name)
+		}
+	}
+	death := componentSnapshot(t, engine, corpse, "d2legacy.monster.death")
+	appearance := componentSnapshot(t, engine, corpse, "d2legacy.monster.appearance")
+	velocity := componentSnapshot(t, engine, corpse, "d2legacy.world.velocity")
+	if death["active"] != false || death["corpse_usable"] != true || appearance["mode"] != "DT" ||
+		velocity["x"] != float64(0) || velocity["y"] != float64(0) {
+		t.Fatalf("corpse semantic state = death %#v appearance %#v velocity %#v", death, appearance, velocity)
+	}
 }
 
 func assertOwnedUnitRelation(t *testing.T, engine *gameecs.Engine, unit, owner akara.Entity) map[string]any {
@@ -847,6 +1042,7 @@ func assertCompletedHostileLifecycle(t *testing.T, engine *gameecs.Engine) {
 	events, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.death_event")
 	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
 	brains, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.ai")
+	movers, _ := akara.GetDynamicStore(engine.World(), "engine.world.velocity_mover")
 	progress, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.progress")
 	if identities.Len() != 1 || deaths.Len() != 1 {
 		t.Fatalf("monster identities/deaths = %d/%d, want 1/1", identities.Len(), deaths.Len())
@@ -872,6 +1068,9 @@ func assertCompletedHostileLifecycle(t *testing.T, engine *gameecs.Engine) {
 	}
 	if _, present := brains.Get(monster); present {
 		t.Fatal("dead monster retained active AI")
+	}
+	if _, present := movers.Get(monster); present {
+		t.Fatal("dead monster retained velocity-mover opt-in")
 	}
 	for _, entity := range selectables.Entities() {
 		value, _ := selectables.Get(entity)
