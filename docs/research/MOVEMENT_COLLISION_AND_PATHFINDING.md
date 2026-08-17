@@ -540,7 +540,11 @@ canonical strings, and production DS1 interaction points acquire residency from
 zone room bounds. An active positioned resident resolves those bounds again
 before every activation decision; a non-monster regression crosses from one
 room to the next and stays active with its current room after the origin room
-deactivates. This does not claim that graph distance,
+deactivates. A synthetic owned resident now proves that its direct ECS owner
+reference plus category, limit, lifetime, durable identity, and attribution
+survive the same inactive checkpoint/reactivation path. Owned-unit lifetime
+updates exclude the empty inactive marker and apply an unchanged absolute
+expiration on the first active tick. This does not claim that graph distance,
 phase ordering, timer aging, healing, corpse policy, or separate presentation-
 only residency matches expansion 1.14d.
 
@@ -658,8 +662,9 @@ independent; a non-monster/non-moving resident proves conditional activation-
 surface restoration, while a moving non-monster proves current-room membership
 replaces spawn-room membership before activation. The path is deterministic,
 checkpointed, and renderer-independent. Production resolved DS1 interaction
-targets now attach to this boundary; stateful objects, owned units, corpses,
-ground items, projectiles, and pending-action residency remain.
+targets now attach to this boundary. An owned resident's relationship graph and
+lifecycle filter also cross it without a second archive; stateful objects,
+corpses, ground items, projectiles, and pending-action residency remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

@@ -326,8 +326,13 @@ cross levels when room IDs repeat. Production DS1 interaction targets now join
 generated room bounds through canonical string IDs. Active positioned residents
 also refresh that membership before each activation decision, so movement
 across a room boundary does not leave an entity attached to its spawn room.
-Owned-unit/corpse/ground-
-item/projectile residency and stateful object operation/event attachment,
+The first owned-unit graph fixture attaches the generated resident directly to
+the player's stable ECS entity and preserves its category, limit, lifetime,
+durable identity, and attribution fields through inactive checkpoint restore.
+The owned-unit lifetime system now excludes the empty inactive marker and
+checks its unchanged absolute expiration when the unit next becomes active;
+that deterministic scaffolding does not resolve legacy inactive timer aging.
+Corpse/ground-item/projectile residency and stateful object operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.
 

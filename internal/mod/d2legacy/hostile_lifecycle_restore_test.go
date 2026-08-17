@@ -300,6 +300,12 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	const spawnID = "level:2:room:a:monster:1"
 	assertMonsterPlayerCount(t, engine, spawnID, 1)
 	monsterID := monsterEntity(t, engine, spawnID)
+	ownerID := playerEntity(t, engine, "alice")
+	submitOwnedUnitAttach(t, session, engine.Tick()+1, spawnID, "alice")
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	ownedRelation := assertOwnedUnitRelation(t, engine, monsterID, ownerID)
 	graph := installMonsterTimedState(t, session, engine, monsterID)
 	assertMonsterStateGraph(t, engine, graph)
 	residentStore, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.room_resident")
@@ -334,6 +340,9 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	assertResidentActivation(t, engine, objectID, false, false)
 	assertResidentActivation(t, engine, townObjectID, true, false)
 	assertMonsterStateGraph(t, engine, graph)
+	if got := assertOwnedUnitRelation(t, engine, monsterID, ownerID); !reflect.DeepEqual(got, ownedRelation) {
+		t.Fatalf("inactive owned-unit relation = %#v, want %#v", got, ownedRelation)
+	}
 	assertInactiveRoom(t, authority, "a", spawnID, "object:room-a")
 	inactiveAI := componentSnapshot(t, engine, monsterID, "d2legacy.monster.ai")
 	stepSession(t, session, 5)
@@ -360,6 +369,12 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	assertResidentActivation(t, restoredEngine, objectID, false, false)
 	assertResidentActivation(t, restoredEngine, townObjectID, true, false)
 	assertMonsterStateGraph(t, restoredEngine, graph)
+	if restoredOwner := playerEntity(t, restoredEngine, "alice"); restoredOwner != ownerID {
+		t.Fatalf("restored owned-unit owner entity = %d, want %d", restoredOwner, ownerID)
+	}
+	if got := assertOwnedUnitRelation(t, restoredEngine, monsterID, ownerID); !reflect.DeepEqual(got, ownedRelation) {
+		t.Fatalf("restored owned-unit relation = %#v, want %#v", got, ownedRelation)
+	}
 	assertInactiveRoom(t, restored, "a", spawnID, "object:room-a")
 
 	returnTick := checkpoint.Tick + 1
@@ -401,6 +416,12 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 	assertMonsterStateGraph(t, restoredEngine, graph)
 	assertRoomActiveWithoutInactiveResidents(t, authority, "a")
 	assertRoomActiveWithoutInactiveResidents(t, restored, "a")
+	if got := assertOwnedUnitRelation(t, engine, monsterID, ownerID); !reflect.DeepEqual(got, ownedRelation) {
+		t.Fatalf("reactivated owned-unit relation = %#v, want %#v", got, ownedRelation)
+	}
+	if got := assertOwnedUnitRelation(t, restoredEngine, monsterID, ownerID); !reflect.DeepEqual(got, ownedRelation) {
+		t.Fatalf("restored reactivated owned-unit relation = %#v, want %#v", got, ownedRelation)
+	}
 }
 
 var retainedMonsterComponents = []string{
@@ -417,6 +438,7 @@ var retainedMonsterComponents = []string{
 	"d2legacy.world.collider",
 	"engine.world.velocity_mover",
 	"d2legacy.world.selectable",
+	"d2legacy.owned_unit",
 }
 
 type populationPlanFixture struct {
@@ -443,6 +465,29 @@ func submitMoveCommand(t *testing.T, session *gamesession.Session, tick uint64, 
 	}
 	if err := session.Submit(simulation.Command{Tick: tick, Player: player, Authority: simulation.AuthorityPlayer,
 		Sequence: sequence, Kind: "player.move", Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func submitOwnedUnitAttach(t *testing.T, session *gamesession.Session, tick uint64, spawnID, owner string) {
+	t.Helper()
+	payload, err := json.Marshal(map[string]any{
+		"unit_id":           "monster:" + spawnID,
+		"owner_id":          "player:" + owner,
+		"ultimate_owner_id": "player:" + owner,
+		"durable_id":        "companion:" + spawnID,
+		"category": map[string]any{
+			"id": "synthetic-room-companion", "group": 1, "base_max": 1,
+			"replacement": "replace_oldest", "durable": true, "warp_with_owner": true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(simulation.Command{
+		Tick: tick, Player: "owned-unit-fixture", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.owned_unit.attach", Payload: payload,
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -654,6 +699,18 @@ func componentSnapshot(t *testing.T, engine *gameecs.Engine, entity akara.Entity
 		t.Fatal(err)
 	}
 	return values
+}
+
+func assertOwnedUnitRelation(t *testing.T, engine *gameecs.Engine, unit, owner akara.Entity) map[string]any {
+	t.Helper()
+	relation := componentSnapshot(t, engine, unit, "d2legacy.owned_unit")
+	if relation["owner"] != owner || relation["owner_id"] != "player:alice" ||
+		relation["ultimate_owner_id"] != "player:alice" || relation["category"] != "synthetic-room-companion" ||
+		relation["durable_id"] != "companion:level:2:room:a:monster:1" || relation["durable"] != true ||
+		relation["warp_with_owner"] != true || relation["active"] != true {
+		t.Fatalf("owned-unit relation = %#v", relation)
+	}
+	return relation
 }
 
 func assertResidentActivation(t *testing.T, engine *gameecs.Engine, entity akara.Entity, active, velocityMover bool) {
