@@ -46,6 +46,17 @@ The engine also already has:
 - deterministic movement/targeting foundations;
 - pending monster/AI/combat work described by adjacent research docs.
 
+The Lua authority now has one generic `d2legacy.owned_unit` ECS relationship
+with deterministic limit/replacement policy, immediate and ultimate owner IDs,
+optional durable identity, absolute lifetime, checkpoint/replay support, and
+kill attribution. A synthetic resident proves that the raw owner entity
+reference and all relationship fields survive room deactivate -> checkpoint ->
+restore -> reactivate on the same unit and player entity IDs. The lifecycle
+system uses the ordinary empty `d2legacy.world.inactive` query filter instead
+of copying the summon into a private archive. It evaluates an already-passed
+absolute expiration on the first active tick; exact Expansion 1.14d inactive
+timer aging remains unresolved.
+
 The hireling system should extend those owners rather than invent a second inventory, second combat calculator, or separate renderer-driven actor model.
 
 ## PetType is an ownership/lifetime category

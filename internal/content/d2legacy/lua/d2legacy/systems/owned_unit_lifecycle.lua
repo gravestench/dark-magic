@@ -6,7 +6,14 @@ local M = {}
 function M.register()
     ecs.system({
         id="d2legacy.owned_unit.lifecycle", phase="effects",
-        query={all={"d2legacy.owned_unit"}},
+        -- Room inactivity retains the authoritative entity and excludes its
+        -- simulation. The absolute expiration remains unchanged, so an
+        -- already-expired unit is removed on its first active tick. Exact
+        -- Expansion 1.14d inactive timer aging remains probe-gated.
+        query={
+            all={"d2legacy.owned_unit"},
+            none={"d2legacy.world.inactive"},
+        },
         read={"d2legacy.owned_unit"}, write={"d2legacy.owned_unit"},
         update=function(context, entities, structural)
             for _, entity in ipairs(entities) do
