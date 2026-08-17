@@ -175,7 +175,16 @@ trace, then atomically relocates the existing player entity, stops semantic and
 raw motion, cancels forced motion, and emits one generic ECS relocation fact.
 Exact viewport/visibility range, policy-2 meaning, invalid-target mana behavior,
 nearest-free fallback, room-edge timing, owned-unit following, and SC/presentation
-timing remain explicit 1.14d probes. A matched frontend profile also
+timing remain explicit 1.14d probes. The first friendly-target timed multi-stat
+family now admits exact-ID Enchant. Its owned Skills/States/SkillDesc/skillcalc
+and layered TBL evidence drives target-or-self resolution, one checkpointed
+state owning three independent ECS stat sources, level-band fire damage, Warmth
+hard-point synergy, duration, and attack-rating percentage. Shared melee
+consumes the resulting fire and to-hit sources without recognizing Enchant.
+Ranged-weapon one-third fire damage, party/PvP target distinctions, target
+range/LOS, replacement across casters, animation/overlay timing, and exact
+modifier/rounding order remain explicit Expansion 1.14d probes. A matched
+frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
@@ -238,7 +247,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 8 exact-ID implementations, 349 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 9 exact-ID implementations, 348 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -911,6 +920,13 @@ runtime composition and the coverage report.
   existing ECS player while stopping competing motion, and emit a generic
   relocation-result entity. Keep viewport/range, limited-level meaning,
   invalid-target payment/fallback, owned-unit, and presentation timing partial.
+- [x] Add the first reusable friendly-target timed multi-stat family and admit
+  exact Expansion 1.14d Enchant by ID. Decode its target flags, duration,
+  level-band fire range, `toht` attack bonus, and Warmth hard-point modifier;
+  let one timed state own three provenance-preserving ECS stat sources and make
+  shared melee consume the resulting to-hit and fire facts without a
+  skill-specific branch. Keep ranged one-third fire damage and remaining
+  targeting/ordering/presentation edges partial.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -925,16 +941,17 @@ runtime composition and the coverage report.
 - [ ] Complete Frozen Armor's PvP chill conversion, target resistance/immunity
   and monster-class duration modifiers, exact integer/tick ordering, animation
   action timing, and presentation before upgrading it from partial behavior.
-- [ ] Implement reusable targeted, point, self, area/nova, buff/debuff/curse/aura,
-  summon, corpse, movement, missile, and trap families in dependency order.
+- [ ] Extend the now-present targeted, point, self, area/nova, buff, movement,
+  and missile primitives into missing debuff/curse/aura, summon, corpse, trap,
+  and ranged-weapon families in dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
 
 `skill_behavior_coverage` mounts owned archives, reads the winning Expansion
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 8 explicitly admitted
-configurations, and 349 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 9 explicitly admitted
+configurations, and 348 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -964,6 +981,14 @@ within line of sight, while the exact owned skill row contains no cross-skill
 formula. That intent is joined to the server-do, signed mana, assignment, and
 Levels policy facts; it does not by itself invent a numeric visibility range or
 invalid-destination sequence.
+Enchant's layered `skillld52` record states that it enchants the equipped
+weapon of a targeted character or minion, adds fire damage to melee and ranged
+weapons, and gives ranged weapons one-third fire damage. Its SkillDesc joins
+the Attack Bonus and Duration labels plus the `%s` synergy heading from
+`patchstring.tbl`; the Skills formula resolves Warmth ID 37 as a 9%-per-hard-
+point fire modifier. The owned `skillcalc.txt` row at special-parameter index
+20 maps `toht` to to-hit, while the owned Enchant row supplies `ToHit=20`,
+`LevToHit=9`, and no `ToHitCalc` override.
 TBL wording establishes intended relationships and player-visible claims;
 Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
@@ -1044,9 +1069,30 @@ visibility range, type-2 meaning, payment on invalid destinations, nearest-free
 fallback, player room-edge sequencing, owned-unit following, and action/
 presentation timing remain owned 1.14d probes.
 
+Enchant is the first `state.targeted-timed` configuration. Its exact row binds
+server-do function 25, friendly/pet targeting, SC action, 25 base mana plus one
+per level, the `enchant` state, duration `3600 + (level-1)*600` frames, and
+three aura stats. A generic friendly-target resolver accepts living same-level
+players/friendly units and conservatively falls back to the caster for missing
+or invalid requests. One source-tagged timed state owns independently keyed
+`firemindam`, `firemaxdam`, and `item_tohit_percent` ECS sources; refresh,
+replacement, expiration, and checkpoint reconstruction remove or restore the
+whole owned set. Fire damage uses the same five-band 8.8 progression and
+hard-level modifier machinery as other skills, while `toht` resolves to 20% at
+level 1 plus 9 percentage points per additional level. Generic derived stats
+consume the attack bonus and generic weapon-melee damage consumes the fire
+range, so neither boundary knows Enchant's ID or name. Ranged weapon attacks do
+not yet exist, so the localized one-third ranged-fire rule is recorded but not
+claimed. Exact party/PvP ally policy, target range/LOS, state replacement among
+different casters, animation/overlay timing, and ordering against mastery,
+equipment fire damage, and other percentage sources remain owned 1.14d probes.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
-declarations as the report. `d2legacy.data.missile_skills` validates admitted
+declarations as the report. The targeted-state decoder independently validates
+Enchant's function, flags, state, formulas, damage bands, and Warmth reference;
+the manifest alone cannot make another server-do-25 row executable.
+`d2legacy.data.missile_skills` validates admitted
 row graphs into immutable straight-trajectory, area-impact, on-hit-state, or
 composed area-impact/on-hit-state
 definitions; the earlier Frozen
@@ -1161,8 +1207,11 @@ dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
 cold-duration/PvP rules and Nova's radial phase/acceleration/repeat-contact
 ordering. Populate Teleport's viewport/range, limited-level, invalid-target,
-fallback, owned-unit, and timing vectors, then use the report to select one
-high-leverage missing targeted behavior signature. Evidence upgrades and exact-ID declarations land
+fallback, owned-unit, and timing vectors. Populate Enchant's ally/PvP target,
+range/LOS, multi-caster replacement, animation, overlay, modifier-order, and
+ranged one-third-fire vectors; the ranged half first requires a reusable
+weapon-projectile attack family. Then use the report to select the next
+high-leverage missing debuff/curse/aura signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
 function IDs. Synergy and every skill-that-modifies-another-skill investigation
 must begin with the joined locale TBL keys/text/replacement-token evidence,

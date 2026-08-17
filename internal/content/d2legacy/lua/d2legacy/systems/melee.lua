@@ -10,6 +10,7 @@ local combat_target = require("d2legacy.gameplay.combat_target")
 local policy = require("d2legacy.policy.melee")
 local damage_policy = require("d2legacy.policy.damage")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
+local stat_sources = require("d2legacy.gameplay.stat_sources")
 local M = {}
 
 local function identity(entity)
@@ -26,10 +27,12 @@ local function target_for(attacker, wanted, hand, candidates)
     return combat_target.select_melee(attacker, wanted, attack_range, candidates)
 end
 
-local function combat_values(entity)
+local function combat_values(entity, entities)
     local monster = ecs.get(entity, "d2legacy.monster.stats")
     if monster then
-        return monster:get("level"), monster:get("attack_rating"), monster:get("defense")
+        return monster:get("level"),
+            stat_sources.resolve(entities, entity, "item_tohit_percent", monster:get("attack_rating")),
+            monster:get("defense")
     end
     local progress = assert(ecs.get(entity, "d2legacy.player.progress"), "player has no progress")
     local stats = assert(ecs.get(entity, "d2legacy.player.combat_stats"), "player has no combat stats")
@@ -74,6 +77,18 @@ local function damage_range(profile, hand)
     return profile:get("physical_min"), profile:get("physical_max")
 end
 
+local function weapon_damage(attacker, profile, hand, entities)
+    local minimum, maximum = damage_range(profile, hand)
+    local result = { physical = policy.damage(minimum, maximum) }
+    local fire_minimum = stat_sources.resolve(entities, attacker, "firemindam", 0)
+    local fire_maximum = stat_sources.resolve(entities, attacker, "firemaxdam", 0)
+    assert(fire_minimum >= 0 and fire_maximum >= fire_minimum, "invalid weapon fire-damage range")
+    if fire_maximum > 0 then
+        result.fire = policy.damage(fire_minimum, fire_maximum)
+    end
+    return damage_bundle.normalize(result)
+end
+
 local function hand_attack_rating(profile, total, hand)
     if hand == "larm" and profile:get("dual_wield") then
         return total - profile:get("primary_attack_rating") + profile:get("secondary_attack_rating")
@@ -89,7 +104,7 @@ function M.register()
         -- targets. Systems may not perform a hidden second ECS query while a
         -- tick is running.
         query = {
-            any = { "d2legacy.combat.basic_attack_request", "d2legacy.world.selectable" },
+            any = { "d2legacy.combat.basic_attack_request", "d2legacy.world.selectable", "d2legacy.stat.source" },
             none = { "d2legacy.world.inactive" },
         },
         read = {
@@ -104,6 +119,7 @@ function M.register()
             "d2legacy.player.progress",
             "d2legacy.player.combat_stats",
             "d2legacy.combat.defense",
+            "d2legacy.stat.source",
         },
         write = {
             "d2legacy.combat.basic_attack_request",
@@ -139,17 +155,19 @@ function M.register()
                     }
                     local result
                     if target then
-                        local attacker_level, attack_rating = combat_values(attacker)
-                        local defender_level, _, defense = combat_values(target)
+                        local attacker_level, attack_rating = combat_values(attacker, entities)
+                        local defender_level, _, defense = combat_values(target, entities)
                         attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
                         base.attack_rating = attack_rating
                         base.defense = defense
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)
                         base.outcome = "miss"
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
-                            local minimum, maximum = damage_range(profile, request:get("hand"))
-                            local rolled = policy.damage(minimum, maximum)
-                            result = damage_policy.resolve(target, damage_bundle.single("physical", rolled), ecs)
+                            result = damage_policy.resolve(
+                                target,
+                                weapon_damage(attacker, profile, request:get("hand"), entities),
+                                ecs
+                            )
                             base.hit = true
                             base.outcome = "hit"
                             base.remaining_health_raw = result.remaining_health_raw

@@ -259,6 +259,52 @@ return test.suite({
                 )
             end),
         }),
+        test.case("weapon_attacks_consume_generic_attack_bonus_and_elemental_sources", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                for _, source in ipairs({
+                    { stat = "item_tohit_percent", operation = "percent", value = 20 },
+                    { stat = "firemindam", operation = "add", value = 2048 },
+                    { stat = "firemaxdam", operation = "add", value = 2048 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.stat.source"] = {
+                            target = player,
+                            source_id = "test:weapon:" .. source.stat,
+                            stat = source.stat,
+                            operation = source.operation,
+                            value = source.value,
+                            order = 300,
+                        },
+                    })
+                end
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(10),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                local combat = ecs.get(player, "d2legacy.player.combat_stats")
+                test.expect(combat:get("attack_rating"))
+                    :equals(math.floor(combat:get("base_attack_rating") * 120 / 100))
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                test.assert(bundle ~= nil, [=[deterministic fixture hit produces a damage bundle]=])
+                test.expect(bundle:get("fire_rolled_raw")):equals(2048)
+                test.expect(bundle:get("fire_mitigated_raw")):equals(2048)
+                test.expect(ecs.get(resolved[1], "d2legacy.combat.event"):get("damage_channel")):equals("mixed")
+            end),
+        }),
         test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {
             test.submit_system({
                 tick = 1,

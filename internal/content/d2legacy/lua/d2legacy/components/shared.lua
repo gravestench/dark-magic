@@ -289,6 +289,9 @@ function M.register()
     component("d2legacy.stat.source", {
         { name = "target", type = "entity" },
         { name = "source_id", type = "string" },
+        -- Optional lifecycle owner. Independent sources leave this empty;
+        -- timed states use it to own any number of stat-source entities.
+        { name = "owner_source_id", type = "string" },
         { name = "stat", type = "string" },
         { name = "operation", type = "string" },
         { name = "value", type = "i64" },
@@ -342,6 +345,15 @@ function M.register()
         { name = "on_melee_hit_duration", type = "i64" },
         { name = "on_melee_hit_disables_action", type = "bool" },
         { name = "action_disabled", type = "bool" },
+    })
+    component("d2legacy.state.stat_request", {
+        { name = "target", type = "entity" },
+        { name = "owner_source_id", type = "string" },
+        { name = "source_id", type = "string" },
+        { name = "stat", type = "string" },
+        { name = "operation", type = "string" },
+        { name = "value", type = "i64" },
+        { name = "order", type = "i64" },
     })
     component("d2legacy.state.instance", {
         { name = "target", type = "entity" },

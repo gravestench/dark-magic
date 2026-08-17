@@ -1,30 +1,8 @@
 -- Rebuild effective combat defenses from durable base facts and named sources.
 
 local ecs = require("engine.ecs/v1")
-local resolution = require("d2legacy.policy.stat_resolution")
+local stat_sources = require("d2legacy.gameplay.stat_sources")
 local M = {}
-
-local function sources_by_stat(entities, target)
-    local result = {}
-    for _, entity in ipairs(entities) do
-        local source = ecs.get(entity, "d2legacy.stat.source")
-        if source and source:get("target"):id() == target:id() then
-            local stat = source:get("stat")
-            result[stat] = result[stat] or {}
-            result[stat][#result[stat] + 1] = {
-                id = source:get("source_id"),
-                operation = source:get("operation") ~= "" and source:get("operation") or "add",
-                value = source:get("value"),
-                order = source:get("order"),
-            }
-        end
-    end
-    return result
-end
-
-local function resolve(base, sources, stat)
-    return resolution.resolve(base, sources[stat] or {})
-end
 
 function M.register()
     ecs.system({
@@ -60,33 +38,63 @@ function M.register()
                 local action_rate = ecs.get(target, "d2legacy.combat.action_rate")
                 local movement = ecs.get(target, "d2legacy.player.movement_stats")
                 if defense or combat or action_rate or movement then
-                    local sources = sources_by_stat(entities, target)
                     if combat then
-                        combat:set("attack_rating", resolve(combat:get("base_attack_rating"), sources, "attack_rating"))
-                        combat:set("defense", resolve(combat:get("base_defense"), sources, "defense"))
+                        local attack_rating =
+                            stat_sources.resolve(entities, target, "attack_rating", combat:get("base_attack_rating"))
+                        combat:set(
+                            "attack_rating",
+                            stat_sources.resolve(entities, target, "item_tohit_percent", attack_rating)
+                        )
+                        combat:set(
+                            "defense",
+                            stat_sources.resolve(entities, target, "defense", combat:get("base_defense"))
+                        )
                     end
                     if defense then
                         defense:set(
                             "physical_resist",
-                            resolve(defense:get("base_physical_resist"), sources, "physical_resist")
+                            stat_sources.resolve(
+                                entities,
+                                target,
+                                "physical_resist",
+                                defense:get("base_physical_resist")
+                            )
                         )
-                        defense:set("fire_resist", resolve(defense:get("base_fire_resist"), sources, "fire_resist"))
-                        defense:set("max_fire_resist", resolve(75, sources, "max_fire_resist"))
-                        defense:set("physical_reduction_raw", resolve(0, sources, "physical_reduction_raw"))
+                        defense:set(
+                            "fire_resist",
+                            stat_sources.resolve(entities, target, "fire_resist", defense:get("base_fire_resist"))
+                        )
+                        defense:set("max_fire_resist", stat_sources.resolve(entities, target, "max_fire_resist", 75))
+                        defense:set(
+                            "physical_reduction_raw",
+                            stat_sources.resolve(entities, target, "physical_reduction_raw", 0)
+                        )
                     end
                     if action_rate then
                         action_rate:set(
                             "attack_rate",
-                            resolve(action_rate:get("base_attack_rate"), sources, "attackrate")
+                            stat_sources.resolve(entities, target, "attackrate", action_rate:get("base_attack_rate"))
                         )
-                        action_rate:set("item_fasterattackrate", resolve(0, sources, "item_fasterattackrate"))
+                        action_rate:set(
+                            "item_fasterattackrate",
+                            stat_sources.resolve(entities, target, "item_fasterattackrate", 0)
+                        )
                     end
                     if movement then
-                        movement:set("velocitypercent", resolve(0, sources, "velocitypercent"))
-                        movement:set("item_fastermovevelocity", resolve(0, sources, "item_fastermovevelocity"))
-                        movement:set("staminarecoverybonus", resolve(0, sources, "staminarecoverybonus"))
-                        movement:set("item_staminadrainpct", resolve(0, sources, "item_staminadrainpct"))
-                        movement:set("armor_run_drain", resolve(0, sources, "armor_run_drain"))
+                        movement:set("velocitypercent", stat_sources.resolve(entities, target, "velocitypercent", 0))
+                        movement:set(
+                            "item_fastermovevelocity",
+                            stat_sources.resolve(entities, target, "item_fastermovevelocity", 0)
+                        )
+                        movement:set(
+                            "staminarecoverybonus",
+                            stat_sources.resolve(entities, target, "staminarecoverybonus", 0)
+                        )
+                        movement:set(
+                            "item_staminadrainpct",
+                            stat_sources.resolve(entities, target, "item_staminadrainpct", 0)
+                        )
+                        movement:set("armor_run_drain", stat_sources.resolve(entities, target, "armor_run_drain", 0))
                     end
                 end
             end
