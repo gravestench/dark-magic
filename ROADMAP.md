@@ -17,7 +17,10 @@ of 2026-08-17. A matched frontend profile also removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
 bundles then reduced the settled main-menu heap from 487 MB to 216 MB without
-leaving background work pending.
+leaving background work pending. G6 research now also has an Expansion-1.14d-
+only owned-runtime knockback probe contract that rejects Classic, earlier-
+version, community-tool, and unmatched-control observations before any older
+recovered chance/distance hypothesis can become gameplay policy.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -420,6 +423,12 @@ Status: **partial**.
 - [x] Emit stable selectable `player:`/`monster:` target IDs for invalid,
   replaced, blocked, partial, and completed forced-motion events, retaining an
   `entity:` fallback only for internal non-selectable movers.
+- [x] Add a strict `diablo-ii-lod-1.14d-expansion` owned-runtime knockback probe
+  contract covering target category/record/size/KB mode, matched controls,
+  item/missile mechanisms, open/collision-limited displacement, lethal/block/
+  uninterruptible exclusions, reactions, and confidence intervals. Older
+  recovered size-weighted, raw-byte-percent, five-unit, mode-fallback, and
+  velocity findings remain labeled candidates and do not drive combat.
 - [ ] Recover and pin remaining Expansion 1.14d knockback chance, distance,
   speed, player/owned-unit eligibility, interruption, and GH/KB mode rules
   before combat emits the generic request. Older recovered server/client path
