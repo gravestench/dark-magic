@@ -46,6 +46,14 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 		t.Fatal(err)
 	}
 	runtime := modruntime.New()
+	// This broad navigation acceptance validates the assembled shell and
+	// resource lifetime, not the default one-second Lua watchdog. Race
+	// instrumentation can make the initial all-screen module graph exceed that
+	// budget even with serialized tests, so keep a bounded but proportional
+	// startup allowance for this fixture.
+	if err := runtime.SetExecutionBudget(5 * time.Second); err != nil {
+		t.Fatal(err)
+	}
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
 	var composer render.Composer

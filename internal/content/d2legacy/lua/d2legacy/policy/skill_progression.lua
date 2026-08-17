@@ -25,12 +25,13 @@ function M.mana_cost(definition, level)
     return math.max(cost, definition.minimum_mana_cost_raw or 0)
 end
 
-function M.damage_range(definition, level)
+function M.damage_range(definition, level, damage_percent)
     local minimum =
         M.damage(definition.minimum_damage_raw, definition.minimum_damage_per_level_raw or { 0, 0, 0, 0, 0 }, level)
     local maximum =
         M.damage(definition.maximum_damage_raw, definition.maximum_damage_per_level_raw or { 0, 0, 0, 0, 0 }, level)
-    return minimum, maximum
+    local multiplier = 100 + (damage_percent or 0)
+    return math.floor(minimum * multiplier / 100), math.floor(maximum * multiplier / 100)
 end
 
 return M

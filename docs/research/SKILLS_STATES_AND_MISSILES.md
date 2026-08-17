@@ -65,6 +65,8 @@ The renderer-independent `d2legacy` Lua authority now owns:
 - learned-skill and left/right assignment validation;
 - point targets plus optional semantic target IDs;
 - definition-driven mana payment and fixed-tick cast lifecycle;
+- generic cast-snapshotted hard-point damage modifiers resolved from exact
+  `EDmgSymPerCalc` skill references;
 - an exact-ID `action.melee` family whose zero-cost Attack configuration uses
   that same lifecycle before reusable approach, hand, animation, and impact;
 - a reusable `missile.straight` family covering projectile construction,
@@ -156,6 +158,25 @@ Magic policy pending an owned-runtime initial-phase vector. The target missile's
 `Accel=-1000` is not yet applied, and the exact action timing and complete
 ordering of `LastCollide=1`, `NextHit=1`, and `NextDelay=4` remain probes. No
 other nova-like skill is admitted by function or visual resemblance.
+
+The first executable cross-skill damage modifier consumes that joined Fire Bolt
+evidence. The fail-closed `d2legacy.data.skill_modifiers` decoder accepts the exact reusable
+`(skill('…'.blvl)+…)*par8` shape, resolves every named hard-level reference to a
+numeric skill ID, and preserves the owned `Param8=16`. At cast admission, the
+shared lifecycle sums the authoritative learned Fire Ball and Meteor hard
+levels and snapshots their percentage on the generic cast component. Generic
+projectile construction applies the snapshot after the five authored skill-
+level damage bands; neither projectile contact nor damage resolution recognizes
+Fire Bolt. A two-level-one-synergy fixture therefore snapshots 32% and turns the
+owned level-one raw 768-1536 range into the current floor-rounded 1013-2027
+range across checkpoint reconstruction.
+
+The formula structure and 16% relationship are owned-record facts and match the
+localized tooltip. Floor-after-percentage is high-confidence implementation
+policy, not yet a measured 1.14d rounding vector. Ordering against Fire Mastery,
+items, PvP conversion, resistance, and other modifier families remains open;
+the decoder rejects unreviewed formula shapes rather than treating this as a
+general-purpose legacy expression evaluator.
 
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions

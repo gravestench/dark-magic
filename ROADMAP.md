@@ -133,8 +133,14 @@ identity ring of ordinary ECS projectile entities, level-scaled count/mana/
 five-band lightning damage, and separate cast-target contact-lock entities.
 The family is reusable and contains no Nova ID/name branch. Exact 1.14d radial
 angular phase, negative acceleration, animation action timing, and complete
-`LastCollide`/`NextHit` ordering remain explicitly partial. A matched frontend
-profile also removed the title-to-main-menu
+`LastCollide`/`NextHit` ordering remain explicitly partial. The first reusable
+cross-skill damage-modifier slice now resolves Fire Bolt's exact
+`EDmgSymPerCalc` hard-point references by skill name to Fire Ball/Meteor IDs,
+snapshots their combined level-derived percentage on the generic cast, and
+applies it to the generic level-scaled damage range. Joined localized TBL text
+confirms both player-visible relationships and the `%s` heading token. Exact
+1.14d percentage rounding and modifier ordering remain probe-gated. A matched
+frontend profile also removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
 bundles then reduced the settled main-menu heap from 487 MB to 216 MB without
@@ -834,6 +840,14 @@ runtime composition and the coverage report.
   one shared cast ID and an independent cast-target contact-lock entity. Prove
   reuse with a second synthetic record configuration and checkpoint the live
   ring without a Nova-specific branch.
+- [x] Add a reusable hard-point elemental-damage modifier shape for exact
+  `EDmgSymPerCalc=(skill('…'.blvl)+…)*par8` records. Resolve referenced skill
+  names to exact IDs, snapshot the authoritative learned levels as a generic
+  cast percentage, and apply it after the five authored damage bands. Fire
+  Bolt now receives 16% per Fire Ball and Meteor hard point from its owned row;
+  checkpoint coverage proves the resulting damage bounds without a skill-ID
+  branch. Keep exact percentage rounding and broader modifier ordering partial
+  pending owned 1.14d vectors.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -879,6 +893,19 @@ Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
 arithmetic, rounding, and ordering. The corrected version-1 TBL codec and a
 layer-precedence/source test make this evidence path executable.
+
+The reusable `d2legacy.data.skill_modifiers` decoder now exposes the same
+evidence-backed hard-point modifier shape rather than merely reporting it; the
+straight-missile family is its first consumer. Fire Bolt's owned row resolves
+Fire Ball ID 47 and Meteor ID 56, validates `Param8=16`, and stores those facts
+in its immutable family definition. The shared cast lifecycle sums the current
+authoritative hard levels and snapshots the resulting percentage on
+`d2legacy.skill.cast`; generic projectile construction applies that snapshot to
+the level-band damage range. This keeps later equipment/source and modifier
+families composable without making the missile or damage systems recognize Fire
+Bolt. Integer floor-after-percentage is current high-confidence policy; exact
+1.14d rounding and ordering against mastery, resistance, PvP, and other source
+families remain an owned-runtime probe.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
@@ -983,7 +1010,9 @@ unchanged. This follows Blizzard's expansion documentation that a skill is
 unusable for lack of mana and that mana is consumed when a skill is used; exact
 cost formula/rounding and interruption/refund edges remain target probes.
 
-Fire Bolt and Nova have owned-target record evidence. Ice Bolt and other visually or
+Fire Bolt and Nova have owned-target record evidence. Fire Bolt's hard-point
+synergy structure and localized relationships are implemented, while exact
+percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 

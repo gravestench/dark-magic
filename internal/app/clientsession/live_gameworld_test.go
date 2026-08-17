@@ -28,7 +28,11 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	host, err := gameserver.Start(ctx, content.D2Legacy(), liveGameworldRecords{}, gameserver.Config{
 		Mode: gameserver.ModeStandalone, SessionID: "live-gameworld", Seed: 314,
 		Prediction: gamesession.PredictionLimited,
-		Session:    gamesession.Config{Step: 40 * time.Millisecond, CheckpointInterval: 1},
+		// This acceptance exercises live QUIC, projection, party, reconnect, and
+		// movement—not rollback-window rejection. Race instrumentation can delay a
+		// transport round trip by more than the production-default eight ticks, so
+		// retain enough history for the intentionally live test command.
+		Session: gamesession.Config{Step: 40 * time.Millisecond, CheckpointInterval: 1, RollbackWindow: 64},
 	})
 	if err != nil {
 		t.Fatal(err)

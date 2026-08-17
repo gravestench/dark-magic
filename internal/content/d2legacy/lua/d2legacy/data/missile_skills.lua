@@ -5,6 +5,7 @@
 -- contract. Unknown function/flag combinations fail instead of being guessed.
 
 local records = require("engine.records/v1")
+local skill_modifiers = require("d2legacy.data.skill_modifiers")
 
 local M = {}
 
@@ -73,7 +74,7 @@ local function byte_or(row, column, fallback, label)
     return value
 end
 
-local function decode(skill, missile)
+local function decode(skill, missile, skills_by_name)
     local skill_id = assert(tonumber(skill.Id), "straight-missile skill has no numeric ID")
     local label = skill.skill or ("skill " .. skill_id)
     local missile_id =
@@ -93,6 +94,8 @@ local function decode(skill, missile)
     local animation_speed = integer_or(missile, "AnimSpeed", 16)
     local cel =
         assert(missile.CelFile and missile.CelFile ~= "" and missile.CelFile, label .. " missile has no CelFile")
+    local synergy_ids, synergy_percent =
+        skill_modifiers.hard_level_sum_percent(skill, "EDmgSymPerCalc", "Param8", skills_by_name, label)
     return {
         behavior = "missile.straight",
         skill_id = math.floor(skill_id),
@@ -103,6 +106,8 @@ local function decode(skill, missile)
         maximum_damage_raw = shifted(skill, "EMax", "HitShift", "emax", label),
         minimum_damage_per_level_raw = damage_gains(skill, "EMinLev", label),
         maximum_damage_per_level_raw = damage_gains(skill, "EMaxLev", label),
+        damage_synergy_skill_ids = synergy_ids,
+        damage_synergy_percent_per_level = synergy_percent,
         effect_delay = 1,
         complete_delay = 2,
         requires_point_target = true,
@@ -132,7 +137,9 @@ end
 
 function M.load(supported_ids)
     assert(type(supported_ids) == "table", "supported straight-missile skill IDs are required")
-    local skills = index(assert(records.load("data/global/excel/skills.txt")), "Id")
+    local skill_rows = assert(records.load("data/global/excel/skills.txt"))
+    local skills = index(skill_rows, "Id")
+    local skills_by_name = skill_modifiers.by_name(skill_rows)
     local missiles = index(assert(records.load("data/global/excel/Missiles.txt")), "Missile")
     local definitions = {}
     for _, skill_id in ipairs(supported_ids) do
@@ -141,7 +148,7 @@ function M.load(supported_ids)
         -- completeness gates; any row present here is still decoded by ID.
         local skill = skills[tostring(skill_id)]
         if skill then
-            local definition = decode(skill, missiles[skill.srvmissile])
+            local definition = decode(skill, missiles[skill.srvmissile], skills_by_name)
             assert(not definitions[definition.skill_id], "duplicate straight-missile skill ID")
             definitions[definition.skill_id] = definition
         end
