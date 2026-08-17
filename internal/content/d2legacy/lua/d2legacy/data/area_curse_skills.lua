@@ -29,7 +29,14 @@ local function decode(row, states_by_name)
         label .. " has unsupported target policy"
     )
     assert(row.aurarangecalc == "ln12" and row.auralencalc == "ln34", label .. " has unsupported area formula")
-    assert(row.aurastat1 == "damageresist" and row.aurastatcalc1 == "-par5", label .. " has unsupported stat formula")
+    local stat, operation, immune_divisor
+    if row.aurastat1 == "damageresist" and row.aurastatcalc1 == "-par5" then
+        stat, operation, immune_divisor = "physical_resist", "add", 5
+    elseif row.aurastat1 == "damagepercent" and row.aurastatcalc1 == "-par5" then
+        stat, operation, immune_divisor = "damagepercent", "percent", 0
+    else
+        error(label .. " has unsupported stat formula")
+    end
     assert(row.interrupt == "1" and row.InGame == "1", label .. " has unsupported action flags")
     local state = assert(states_by_name[row.auratargetstate], label .. " has an unknown target state")
     assert(state.curse == "1", label .. " target state is not a curse")
@@ -49,10 +56,10 @@ local function decode(row, states_by_name)
         radius_per_level = required_integer(row, "Param2", label),
         duration_base = required_integer(row, "Param3", label),
         duration_per_level = required_integer(row, "Param4", label),
-        stat = "physical_resist",
-        stat_operation = "add",
+        stat = stat,
+        stat_operation = operation,
         stat_value = -required_integer(row, "Param5", label),
-        immune_divisor = 5,
+        immune_divisor = immune_divisor,
     }
 end
 

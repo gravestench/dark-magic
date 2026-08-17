@@ -79,6 +79,9 @@ end
 
 local function weapon_damage(attacker, profile, hand, entities)
     local minimum, maximum = damage_range(profile, hand)
+    minimum = stat_sources.resolve(entities, attacker, "damagepercent", minimum)
+    maximum = stat_sources.resolve(entities, attacker, "damagepercent", maximum)
+    assert(minimum >= 0 and maximum >= minimum, "invalid resolved weapon physical-damage range")
     local result = { physical = policy.damage(minimum, maximum) }
     local fire_minimum = stat_sources.resolve(entities, attacker, "firemindam", 0)
     local fire_maximum = stat_sources.resolve(entities, attacker, "firemaxdam", 0)

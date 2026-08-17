@@ -28,6 +28,33 @@ local amplify = {
     InGame = "1",
 }
 
+local weaken = {
+    Id = "72",
+    skill = "Weaken",
+    skilldesc = "weaken",
+    srvstfunc = "",
+    srvdofunc = "30",
+    aurafilter = "3",
+    auratargetstate = "weaken",
+    auralencalc = "ln34",
+    aurarangecalc = "ln12",
+    aurastat1 = "damagepercent",
+    aurastatcalc1 = "-par5",
+    range = "none",
+    LineOfSight = "4",
+    mana = "4",
+    lvlmana = "0",
+    minmana = "1",
+    manashift = "8",
+    interrupt = "1",
+    Param1 = "9",
+    Param2 = "1",
+    Param3 = "350",
+    Param4 = "60",
+    Param5 = "33",
+    InGame = "1",
+}
+
 local function monster(id, x, base_physical_resist)
     local ecs = require("engine.ecs/v1")
     return ecs.create({
@@ -58,12 +85,14 @@ return test.suite({
     tier = "integration",
     covers = { "internal/game/skill", "internal/game/state", "internal/game/combat" },
     records = {
-        ["data/global/excel/skills.txt"] = { amplify },
+        ["data/global/excel/skills.txt"] = { amplify, weaken },
         ["data/global/excel/skilldesc.txt"] = {
             { skilldesc = "amplify damage", ListRow = "1", IconCel = "0" },
+            { skilldesc = "weaken", ListRow = "2", IconCel = "1" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "amplifydamage", id = "9", curse = "1" },
+            { state = "weaken", id = "19", curse = "1" },
         },
     },
     cases = {
@@ -131,6 +160,55 @@ return test.suite({
                 test.expect(event:get("behavior")):equals("state.point-area-curse")
                 test.expect(event:get("target_x")):equals(12)
                 test.expect(event:get("target_y")):equals(12)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
+        test.case("same_family_publishes_outgoing_damage_percentage", {
+            test.submit_system(
+                fixtures.command("system.player.enter", fixtures.player_entry({ mana = 20, max_mana = 20 }), {
+                    tick = 1,
+                    sequence = 1,
+                })
+            ),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = player,
+                        skill_id = 72,
+                        level = 1,
+                        list_row = 2,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                monster("monster:weakened", 12, 0)
+            end),
+            test.submit(fixtures.command("player.assign_skills", { right = 72 }, {
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+            })),
+            test.step(1),
+            test.submit(fixtures.command("player.use_skill", { side = "right", target_x = 12, target_y = 12 }, {
+                tick = 3,
+                sequence = 2,
+                player = "alice",
+            })),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local state = ecs.get(ecs.query({ all = { "d2legacy.state.instance" } })[1], "d2legacy.state.instance")
+                test.expect(state:get("state_id")):equals("weaken")
+                test.expect(state:get("expires_tick") - state:get("applied_tick")):equals(350)
+                local sources = ecs.query({ all = { "d2legacy.stat.source" } })
+                test.expect(#sources):equals(1)
+                local source = ecs.get(sources[1], "d2legacy.stat.source")
+                test.expect(source:get("stat")):equals("damagepercent")
+                test.expect(source:get("operation")):equals("percent")
+                test.expect(source:get("value")):equals(-33)
             end),
             test.expect_checkpoint_parity(1),
         }),

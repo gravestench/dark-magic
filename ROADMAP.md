@@ -191,7 +191,14 @@ reduction when attempting to break a monster's physical immunity. Shared
 physical mitigation consumes the resulting source without recognizing the
 skill. Exact LineOfSight-4/radius units, curse resistance, target-class
 eligibility, PvP, equal-level cross-caster ownership, animation/overlay timing,
-and ordering against other resistance sources remain explicit 1.14d probes. A
+and ordering against other resistance sources remain explicit 1.14d probes.
+The same family now admits exact-ID Weaken from its distinct owned record/TBL
+shape. It emits a generic negative outgoing-physical-damage percentage source;
+ordinary melee consumes that source without recognizing Weaken, while shared
+curse exclusivity and ranked replacement remain owned by the timed-state
+mechanism. Exact outgoing modifier ordering, non-weapon monster attacks,
+hirelings/summons, target eligibility, PvP, and presentation remain explicit
+1.14d probes. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -255,7 +262,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 10 exact-ID implementations, 347 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -940,6 +947,11 @@ runtime composition and the coverage report.
   state/filter, physical-resistance source, mana, and target-version one-fifth
   immune-breaking rule; apply in stable semantic order and add ranked
   exclusive-state replacement so weaker curses cannot displace stronger ones.
+- [x] Reuse the point-centered area-curse family for exact Expansion 1.14d
+  Weaken by decoding its distinct radius, duration, target state, and negative
+  `damagepercent` stat recipe. Make ordinary melee consume that generic
+  outgoing-physical-damage source without a skill ID/name branch, while the
+  shared timed-state mechanism owns curse exclusivity and replacement.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -963,8 +975,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 10 explicitly admitted
-configurations, and 347 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 11 explicitly admitted
+configurations, and 346 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -1008,6 +1020,12 @@ Taken, Duration, Radius, and percent labels to `par5`, `ln34`, and `ln12`; the
 owned row supplies server-do 30, `damageresist=-par5`, and no cross-skill
 modifier. The evidence therefore supports a physical-resistance curse rather
 than a second damage transaction or an all-channel multiplier.
+Weaken's layered `skillld72` record says it curses a group of enemies and
+reduces the amount of damage they inflict. Its SkillDesc joins Target's Damage,
+Duration, Radius, and percent labels to `-par5`, `ln34`, and `ln12`; the owned
+row supplies server-do 30, `damagepercent=-par5`, and no cross-skill modifier.
+That evidence supports a source on each cursed attacker's outgoing physical
+weapon damage, not a target-defense or incoming-damage multiplier.
 TBL wording establishes intended relationships and player-visible claims;
 Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
@@ -1125,15 +1143,32 @@ and PvP targets, Attract precedence, equal-level same-skill cross-caster source
 ownership, presentation timing, and ordering with other resistance sources
 remain owned 1.14d probes.
 
+Weaken is the second `state.point-area-curse` configuration. Its exact row
+binds the same server-do/filter/LOS shape to point-centered radius
+`9 + (level-1)`, duration `350 + (level-1)*60` frames, four mana, the `weaken`
+curse state, and `damagepercent=-33`. The record-shape decoder selects a generic
+percentage stat recipe rather than identifying Weaken, and each selected
+hostile receives an ordinary timed state owning that stat source. Shared weapon
+melee resolves the source against both ends of its physical damage range before
+rolling; the deterministic unarmed fixture proves the `-33` source changes its
+256-512 raw range to 171-343 before the roll. The existing curse slot makes
+Amplify Damage and Weaken mutually exclusive and uses learned level as
+replacement priority. Exact
+ordering with equipment/skill enhanced damage and strength, monster non-weapon
+attacks, hireling/summon attacks, curse resistance, eligibility, PvP, animation,
+and overlays remain owned 1.14d probes.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. The targeted-state decoder independently validates
 Enchant's function, flags, state, formulas, damage bands, and Warmth reference;
 the manifest alone cannot make another server-do-25 row executable.
-The area-curse decoder independently validates Amplify Damage's function,
-filter, state curse flag, area formulas, and physical-resistance formula; the
-other server-do-30 rows remain missing until their own stat/event/AI behavior
-is implemented.
+The area-curse decoder independently validates each admitted row's function,
+filter, state curse flag, area formulas, and supported stat recipe. Amplify
+Damage selects additive physical resistance with the recovered one-fifth
+immune-breaking boundary; Weaken selects outgoing damage percentage with no
+immunity transform. The other server-do-30 rows remain missing until their own
+stat/event/AI behavior is implemented.
 `d2legacy.data.missile_skills` validates admitted
 row graphs into immutable straight-trajectory, area-impact, on-hit-state, or
 composed area-impact/on-hit-state
@@ -1252,10 +1287,12 @@ ordering. Populate Teleport's viewport/range, limited-level, invalid-target,
 fallback, owned-unit, and timing vectors. Populate Enchant's ally/PvP target,
 range/LOS, multi-caster replacement, animation, overlay, modifier-order, and
 ranged one-third-fire vectors; the ranged half first requires a reusable
-weapon-projectile attack family. Populate Amplify Damage's radius/LOS, curse
-resistance, eligibility, PvP, replacement-ownership, and presentation vectors,
-then continue the same server-do-30 family only where a shared consumer exists;
-Weaken's outgoing `damagepercent` boundary is the next high-leverage candidate.
+weapon-projectile attack family. Populate Amplify Damage and Weaken radius/LOS,
+curse resistance, eligibility, PvP, replacement-ownership, presentation, and
+modifier-order vectors. Continue the same server-do-30 family only where its
+complete stat/event consumers exist; Decrepify is the next high-leverage
+composition candidate after its velocity, outgoing damage, physical-resistance,
+and immunity-breaking interactions are pinned together.
 Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
 function IDs. Synergy and every skill-that-modifies-another-skill investigation

@@ -8,7 +8,7 @@ local M = {}
 local function target_stat_value(definition, target)
     local value = definition.stat_value
     local defense = ecs.get(target, "d2legacy.combat.defense")
-    if defense and value < 0 and defense:get("base_physical_resist") >= 100 then
+    if defense and definition.immune_divisor > 0 and value < 0 and defense:get("base_physical_resist") >= 100 then
         return math.ceil(value / definition.immune_divisor)
     end
     return value
