@@ -5,13 +5,8 @@
 -- desired velocity, and the movement phase validates the resulting position.
 
 local ecs = require("engine.ecs/v1")
-local melee = require("d2legacy.policy.melee")
+local combat_target = require("d2legacy.gameplay.combat_target")
 local M = {}
-
-local function distance(a, b)
-    local dx, dy = b:get("x") - a:get("x"), b:get("y") - a:get("y")
-    return math.sqrt(dx * dx + dy * dy), dx, dy
-end
 
 local function player_targets(entities)
     local result = {}
@@ -27,27 +22,23 @@ local function player_targets(entities)
     return result
 end
 
-local function same_zone(a, b)
-    local left, right = ecs.get(a, "d2legacy.world.location"), ecs.get(b, "d2legacy.world.location")
-    return left and right and left:get("act") == right:get("act") and left:get("level_id") == right:get("level_id")
-end
-
 local function choose(monster, brain, targets)
-    local origin, remembered = ecs.get(monster, "d2legacy.world.position"), brain:get("target_id")
+    local remembered = brain:get("target_id")
     local best, best_distance = nil, math.huge
     for _, target in ipairs(targets) do
-        if same_zone(monster, target) then
-            local current = distance(origin, ecs.get(target, "d2legacy.world.position"))
+        local facts = combat_target.unit(monster, target)
+        if facts then
+            local current = facts.distance
             local id = ecs.get(target, "d2legacy.world.selectable"):get("id")
             if current <= brain:get("aggro_radius") and (id == remembered or current < best_distance) then
                 best, best_distance = target, current
                 if id == remembered then
-                    return best
+                    return best, facts
                 end
             end
         end
     end
-    return best
+    return best, best and combat_target.unit(monster, best) or nil
 end
 
 local function stop(velocity)
@@ -77,6 +68,8 @@ function M.register()
             "d2legacy.world.location",
             "d2legacy.world.collider",
             "d2legacy.monster.ai",
+            "d2legacy.monster.stats",
+            "d2legacy.player.vitals",
             "d2legacy.state.instance",
         },
         write = { "d2legacy.monster.ai", "d2legacy.world.velocity", "d2legacy.combat.basic_attack_request" },
@@ -92,7 +85,7 @@ function M.register()
                     structural:remove(monster, "d2legacy.combat.basic_attack_request")
                 elseif brain and velocity and brain:get("next_think_tick") <= context.tick then
                     brain:set("next_think_tick", context.tick + brain:get("think_interval"))
-                    local target = choose(monster, brain, targets)
+                    local target, facts = choose(monster, brain, targets)
                     if not target then
                         brain:set("state", "idle")
                         brain:set("target_id", "")
@@ -101,17 +94,9 @@ function M.register()
                     else
                         local selected = ecs.get(target, "d2legacy.world.selectable")
                         local id = selected:get("id")
-                        local range = melee.reach(
-                            brain:get("attack_range"),
-                            ecs.get(monster, "d2legacy.world.collider"):get("radius"),
-                            ecs.get(target, "d2legacy.world.collider"):get("radius")
-                        )
-                        local length, dx, dy = distance(
-                            ecs.get(monster, "d2legacy.world.position"),
-                            ecs.get(target, "d2legacy.world.position")
-                        )
+                        local length, dx, dy = facts.distance, facts.dx, facts.dy
                         brain:set("target_id", id)
-                        if length <= range then
+                        if combat_target.in_melee_range(facts, brain:get("attack_range")) then
                             brain:set("state", "attack")
                             stop(velocity)
                             structural:set(

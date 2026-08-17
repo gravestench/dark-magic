@@ -6,6 +6,7 @@
 -- that distinction lets presentation animate without becoming game authority.
 
 local ecs = require("engine.ecs/v1")
+local combat_target = require("d2legacy.gameplay.combat_target")
 local policy = require("d2legacy.policy.melee")
 local mitigation = require("d2legacy.policy.mitigation")
 local M = {}
@@ -16,40 +17,12 @@ local function identity(entity)
 end
 
 local function target_for(attacker, wanted, hand, candidates)
-    local ap = ecs.get(attacker, "d2legacy.world.position")
-    local al = ecs.get(attacker, "d2legacy.world.location")
-    local ac = ecs.get(attacker, "d2legacy.world.collider")
     local profile = ecs.get(attacker, "d2legacy.combat.melee_profile")
-    local best, best_distance, best_id = nil, math.huge, ""
-    -- A named target wins when it remains valid. Shift-attacking supplies no
-    -- target, so the nearest hostile inside melee reach is selected instead.
-    for _, candidate in ipairs(candidates) do
-        if candidate:id() ~= attacker:id() then
-            local selectable = ecs.get(candidate, "d2legacy.world.selectable")
-            local collider = ecs.get(candidate, "d2legacy.world.collider")
-            local id, kind = selectable:get("id"), selectable:get("kind")
-            if (wanted ~= "" and id == wanted) or (wanted == "" and kind == "hostile") then
-                local cp, cl =
-                    ecs.get(candidate, "d2legacy.world.position"), ecs.get(candidate, "d2legacy.world.location")
-                local dx, dy = cp:get("x") - ap:get("x"), cp:get("y") - ap:get("y")
-                local distance = math.sqrt(dx * dx + dy * dy)
-                if
-                    cl:get("act") == al:get("act")
-                    and cl:get("level_id") == al:get("level_id")
-                    and distance <= policy.reach(
-                        hand == "larm" and profile:get("dual_wield") and profile:get("secondary_range")
-                            or profile:get("range"),
-                        ac:get("radius"),
-                        collider:get("radius")
-                    )
-                    and (distance < best_distance or distance == best_distance and id < best_id)
-                then
-                    best, best_distance, best_id = candidate, distance, id
-                end
-            end
-        end
-    end
-    return best, best_id
+    local attack_range = hand == "larm" and profile:get("dual_wield") and profile:get("secondary_range")
+        or profile:get("range")
+    -- Named attacks and targetless Shift-Attacks both revalidate current
+    -- alignment, life, location, range, and barrier state at impact.
+    return combat_target.select_melee(attacker, wanted, attack_range, candidates)
 end
 
 local function hurt(target, damage)

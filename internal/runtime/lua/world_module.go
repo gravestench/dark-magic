@@ -100,6 +100,7 @@ func worldModule(source fs.FS, current CurrentWorldProvider, resolvers ...gamewo
 		"screen_to_subtile":  commandHelp("map:screen_to_subtile(x, y, camera_x, camera_y, anchor_x, anchor_y)", "Convert a screen pointer position to a world subtile."),
 		"selectable_at":      commandHelp("map:selectable_at(x, y)", "Return the best resolved authored object under a world-subtile point."),
 		"line_clear":         commandHelp("map:line_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 line-of-sight collision."),
+		"barrier_clear":      commandHelp("map:barrier_clear(from_x, from_y, to_x, to_y)", "Test authoritative DT1 flying/melee-barrier collision."),
 		"find_path":          commandHelp("map:find_path(from_x, from_y, to_x, to_y [, radius, stop_radius])", "Find a deterministic collision-aware subtile route, or return nil and an explanation."),
 	}}}), Loader: func(state *lua.LState) int {
 		registerWorldMapType(state)
@@ -277,6 +278,11 @@ func registerWorldMapType(state *lua.LState) {
 		},
 		"line_clear": func(state *lua.LState) int {
 			clear := checkWorldMap(state, 1).LineClear(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)), float64(state.CheckNumber(4)), float64(state.CheckNumber(5)))
+			state.Push(lua.LBool(clear))
+			return 1
+		},
+		"barrier_clear": func(state *lua.LState) int {
+			clear := checkWorldMap(state, 1).BarrierClear(float64(state.CheckNumber(2)), float64(state.CheckNumber(3)), float64(state.CheckNumber(4)), float64(state.CheckNumber(5)))
 			state.Push(lua.LBool(clear))
 			return 1
 		},

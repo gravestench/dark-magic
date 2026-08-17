@@ -190,7 +190,10 @@ Optional trace records should include tick, stream ID, pre-state/counter, operat
 
 ## Versioning
 
-RNG algorithm and event-order policy are replay-format concerns. Legacy streams should identify the target, e.g. `d2-seed/1.10f`, rather than vague `legacy`.
+RNG algorithm and event-order policy are replay-format concerns. Any admitted
+Diablo stream must identify the sole product target explicitly, for example
+`d2-lod-1.14d`, rather than vague `legacy`; older-version streams are not a
+compatibility target.
 
 ## Implementation slices
 

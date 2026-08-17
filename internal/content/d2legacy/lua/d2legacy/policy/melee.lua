@@ -1,4 +1,6 @@
--- Diablo II 1.10f melee hit policy, preserving the recovered integer order.
+-- Recovered Diablo II melee arithmetic, preserving the observed integer order.
+-- Expansion 1.14d is the only product target; owned-runtime vectors still gate
+-- an exact-version claim for this formula.
 
 local random = require("engine.authority_random/v1")
 local M = {}

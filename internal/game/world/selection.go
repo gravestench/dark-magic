@@ -126,9 +126,21 @@ func (m *Map) SelectableAt(x, y float64) (Selectable, bool) {
 	return m.selector.Hit(x, y)
 }
 
-// LineClear samples the same subtile facts used by movement. Endpoints are not
+// LineClear samples authoritative authored subtile facts. Endpoints are not
 // treated as occluders because the actor and selected target may occupy them.
 func (m *Map) LineClear(fromX, fromY, toX, toY float64) bool {
+	return m.traceClear(fromX, fromY, toX, toY, func(flags Flags) bool { return flags.BlockLOS })
+}
+
+// BarrierClear tests the authored barrier bit used by flying units and melee
+// reach traces. It is deliberately distinct from visual line of sight: DT1 can
+// mark an opaque subtile that does not stop a melee interaction, or a barrier
+// that stops one without blocking sight.
+func (m *Map) BarrierClear(fromX, fromY, toX, toY float64) bool {
+	return m.traceClear(fromX, fromY, toX, toY, func(flags Flags) bool { return flags.BlockJump })
+}
+
+func (m *Map) traceClear(fromX, fromY, toX, toY float64, blocked func(Flags) bool) bool {
 	x0, y0 := CollisionCell(fromX), CollisionCell(fromY)
 	x1, y1 := CollisionCell(toX), CollisionCell(toY)
 	dx, dy := absInt(x1-x0), absInt(y1-y0)
@@ -143,7 +155,7 @@ func (m *Map) LineClear(fromX, fromY, toX, toY float64) bool {
 	for {
 		if (x0 != CollisionCell(fromX) || y0 != CollisionCell(fromY)) && (x0 != x1 || y0 != y1) {
 			flags, inside := m.FlagsAt(x0, y0)
-			if !inside || flags.BlockLOS {
+			if !inside || blocked(flags) {
 				return false
 			}
 		}

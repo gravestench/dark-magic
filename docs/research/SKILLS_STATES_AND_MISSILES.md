@@ -128,7 +128,10 @@ second, its first attack marker schedules impact, and cursor wrap schedules
 completion. Owned 1.14d `AMA1HTH` is 13 frames at rate 256 with an attack marker
 on frame 8, so the target fixture resolves to +8 impact and +13 completion.
 Those are base record timings; the `UseAttackRate` modifier formula/breakpoints
-still require target evidence. Exact target/range/LOS policy also remains
+still require target evidence. Attack now re-resolves current PvE alignment,
+life, act/level, footprint reach, and melee-barrier collision before animation
+and again at impact. Exact 1.14d distance arithmetic, dynamic-door collision,
+special-unit exceptions, PvP hostility, and path-to-range behavior remain
 unresolved; other melee skills are not admitted by resemblance.
 
 The timed self-state fixture is selected by exact ID through the same manifest
@@ -228,7 +231,7 @@ A headless server must be able to cast every supported skill.
 
 ## Target policies
 
-The original runtime contains numerous target checks in shared skills and monster-spawn helpers. A future normalized target policy should distinguish at least:
+The original runtime contains numerous target checks in shared skills and monster-spawn helpers. The first normalized policy now owns current PvE melee unit targets; broader policies must distinguish at least:
 
 - self;
 - unit;
@@ -258,6 +261,34 @@ Target validation may additionally need:
 - skill-specific exceptions.
 
 The optional client `TargetID` is useful presentation context, but the server must re-resolve or validate targets from authoritative world state just as current interaction code already does.
+
+### Current melee target boundary
+
+`d2legacy.gameplay.combat_target` is the single current authority for melee
+unit legality. It resolves the semantic ID against the current ECS snapshot,
+accepts only player-to-hostile or hostile-to-player alignment, rejects dead or
+cross-act/level targets, and evaluates the selected hand's footprint reach plus
+the current level's barrier trace. Player Attack applies it before the
+AnimData-backed animation; the combat resolver applies it again at the impact
+tick, so movement, death, transitions, or collision changes during the swing
+cannot preserve a stale hit. Targetless Shift-Attack still swings toward its
+point and may choose the nearest currently eligible opponent only at impact.
+
+The collision vocabulary matters. Reconstructed `UNITS_IsInMeleeRange` uses
+`COLLIDE_MASK_PLAYER_FLYING`, composed of door and missile-barrier bits, rather
+than the visual collision bit. Dark Magic therefore leaves
+`map:line_clear(...)` tied to DT1 `BlockLOS` and exposes a separate
+`map:barrier_clear(...)` tied to DT1 `BlockJump`. The latter covers immutable
+authored terrain now. Dynamic door footprints are not yet authoritative and
+remain a blocker for an exact claim.
+
+The current center-distance/continuous-radius reach calculation predates this
+slice. Older reconstructed code instead uses an integer unit-size distance
+table, range bonus, special tentacle exception, and a footprint-adjusted
+barrier trace. That is valuable architecture evidence but cannot establish
+Expansion 1.14d identity. Owned 1.14d probes must decide the exact metric,
+rounding, unit sizes, exceptions, path-to-range behavior, and dynamic mask
+before the remaining range boundary is marked verified.
 
 ## Mana and resource costs
 
@@ -553,7 +584,8 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
 2. Exact skill-delay/cooldown semantics and shared delay groups.
 3. Cast-speed/action-frame relationship versus server effect timing.
 4. Interrupt rules from hit recovery, stun, block, knockback, death, movement.
-5. Complete target policy flags in Skills.txt.
+5. Complete target policy flags in Skills.txt, including exact melee distance,
+   dynamic barriers, special units, PvP hostility, and path-to-range behavior.
 6. Formula evaluator opcode/parameter semantics and overflow/rounding.
 7. Synergy ordering and soft-point/hard-point distinctions.
 8. Weapon contribution and alternate-weapon snapshot behavior.
@@ -584,8 +616,12 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
   [Character Information](https://classic.battle.net/diablo2exp/basics/characters.shtml)
   page describes mana as consumed when a skill is used. Together they support
   preserving mana when admission rejects an underfunded attempt.
-- D2MOO pinned 1.10f `source/D2Game/src/SKILLS/Skills.cpp`, class/monster skill
+- D2MOO pinned 1.10f `source/D2Game/src/SKILLS/Skills.cpp`,
+  `source/D2Common/src/Units/Units.cpp`, `D2Collision.h`, class/monster skill
   files, `Missiles.cpp`, `MissMode.cpp`, `D2States.cpp`, and `D2StatList.cpp`
-  remain older secondary architecture evidence only.
+  remain older secondary architecture evidence only. For melee they expose
+  re-fetch-at-impact, alignment/alive filters, integer unit-distance, and the
+  door/missile-barrier trace; none is treated as a supported older ruleset or
+  a substitute for owned Expansion 1.14d vectors.
 - Current Dark Magic authority, movement/targeting code, and typed game-data
   catalog define the implementation baseline, not Diablo behavior evidence.

@@ -2,8 +2,9 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G9 target-locked mounted-data,
-localized skill evidence, AnimData-timed generic melee action, missile, timed-
-state, and reactive-state slices on 2026-08-16.
+localized skill evidence, AnimData-timed generic melee action, current-state
+melee target revalidation, missile, timed-state, and reactive-state slices on
+2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -340,6 +341,9 @@ runtime composition and the coverage report.
 - [x] Replace fallback base melee impact/completion ticks with the definition's
   animation mode plus the actor/weapon composite's pinned AnimData fixed-point
   attack event and cursor-wrap schedule.
+- [x] Centralize current PvE melee target legality and revalidate semantic ID,
+  player/hostile alignment, living state, act/level, footprint reach, and the
+  authored melee-barrier trace both before Attack animation and at impact.
 - [x] Prove the definition decoder handles multiple authored configurations
   without skill-name/ID branches; keep the second configuration synthetic so it
   does not claim incomplete behavior for another retail skill.
@@ -426,9 +430,23 @@ shared lifecycle verifies the authoritative learned level and accepts the
 literal zero cost, then a family adapter emits the reusable approach, selected-
 hand, animation, and impact action. No command, component, or system branches
 on Attack's ID or name, and a synthetic second-row decoder test proves family
-reuse without claiming another retail melee skill. Exact 1.14d target/range/LOS
-checks remain incomplete, so this does not admit Bash, Jab, or any other
-superficially similar row.
+reuse without claiming another retail melee skill.
+
+The generic melee target service now treats command target IDs as untrusted
+requests and re-resolves current ECS facts. Player attacks require a living
+`hostile` target; monster attacks require a living `player`; both require the
+same act and level. Named Attack rechecks those facts before beginning its
+animation, while named and targetless Shift-Attack resolution rechecks them,
+the selected hand's reach, and the current level collision at the AnimData
+impact tick. Movement and combat share one per-level immutable collision-map
+registry. The engine exposes visual `BlockLOS` and the distinct DT1
+flying/melee-barrier (`BlockJump`) ray trace separately, avoiding a policy bug
+where opaque tiles would automatically become melee walls. This is a
+high-confidence structural recovery, not an exact 1.14d completion claim:
+current continuous footprint-distance arithmetic, dynamic door collision,
+PvP hostility, special unit range exceptions, and path-to-range behavior still
+need owned target-version probes. Therefore this does not admit Bash, Jab, or
+any other superficially similar row.
 
 The shared lifecycle rejects a mana-costing skill before creating its cast when
 the authoritative 8.8 fixed-point balance is below the computed cost. It
@@ -441,13 +459,16 @@ Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: complete Attack's target/range/LOS admission boundary and probe/admit its
-attack-rate modifier formula; in evidence order, finish Frozen Armor's remaining target-sensitive cold-
-duration/PvP rules. Then use the report to select one high-leverage missing
+Next: probe and replace Attack's remaining inferred distance, dynamic-door,
+special-unit, and path-to-range edges, then admit its attack-rate modifier
+formula. In evidence order, finish Frozen Armor's remaining target-sensitive
+cold-duration/PvP rules. Then use the report to select one high-leverage missing
 target/point/area signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
-function IDs, and synergy/cross-skill work begins with the joined TBL evidence
-report rather than formula inspection in isolation.
+function IDs. Synergy and every skill-that-modifies-another-skill investigation
+must begin with the joined locale TBL keys/text/replacement-token evidence,
+then bind those player-visible relationships to Skills.txt formulas and owned
+1.14d runtime vectors before implementation.
 
 ### G10 — Item-source lifecycle
 
