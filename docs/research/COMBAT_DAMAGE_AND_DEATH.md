@@ -557,6 +557,26 @@ reports Wilson intervals without comparing against an older recovered formula.
 It is observation tooling, not server/save interoperability and not permission
 to promote a policy before the matrix is populated.
 
+The softcore player-death capture boundary is separately executable:
+
+```text
+go run ./internal/dev/tools/player_death_probe \
+  -input /path/to/sanitized-player-death-observations.json
+```
+
+Start from
+`docs/research/probes/player-death-lod-114d-expansion.template.json`. This
+contract requires a probe-created character rather than imported save data and
+accepts only visual frame logs from an executable-fingerprinted, owned Expansion
+1.14d single-player runtime. It records ordered `before_death`, `death_started`,
+`death_animation_complete`, `respawn_input`, `town_control`, optional
+`corpse_recovered`, and visual `save_exit`/`rejoined` snapshots. The normalized
+report preserves observed animation/respawn intervals plus equipment,
+inventory, carried/stashed/ground-gold, XP, and corpse-count transitions across
+single, multiple-corpse, and save/rejoin scenarios. The tool never reads or
+writes retail save bytes and is neither vanilla-save interoperability nor a
+formula source; populate and review the matrix before implementing consequences.
+
 ## Open verification backlog
 
 1. Exact 1.10f chance-to-hit formula, clamps, and integer rounding.
