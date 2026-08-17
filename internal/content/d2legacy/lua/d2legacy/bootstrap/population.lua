@@ -183,6 +183,33 @@ function M.apply(command)
     zone.installed = true
     zone.schema = PLAN_SCHEMA
     state.replace(PLAN_ID, PLAN_SCHEMA, zone)
+
+    -- Some authoritative entities (notably imported ground items) exist
+    -- before this generated-room plan is admitted. Resolve their generic ECS
+    -- attachment requests now; entity-specific bootstrap code does not need
+    -- to know room IDs or keep a parallel pending archive.
+    for _, entity in ipairs(ecs.query({
+        all = {
+            "d2legacy.world.room_attach",
+            "d2legacy.world.position",
+            "d2legacy.world.location",
+        },
+        none = { "d2legacy.world.room_resident" },
+    })) do
+        local request = ecs.get(entity, "d2legacy.world.room_attach")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        local position = ecs.get(entity, "d2legacy.world.position")
+        local resident = M.resident_at(
+            request:get("id"),
+            location:get("level_id"),
+            position:get("x"),
+            position:get("y")
+        )
+        if resident then
+            ecs.set(entity, "d2legacy.world.room_resident", resident)
+            ecs.remove(entity, "d2legacy.world.room_attach")
+        end
+    end
 end
 
 local function room_at(plan, x, y)

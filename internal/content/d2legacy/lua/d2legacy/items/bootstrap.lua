@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local development_fixtures = require("d2legacy.items.development_fixtures")
+local world = require("d2legacy.items.world")
 local M = {}
 local interaction_data = {}
 
@@ -43,7 +44,7 @@ local function create_layout(data)
 end
 
 local function create_item(layout, item)
-    local item_entity = ecs.create({
+    local components = {
         ["d2legacy.item.identity"] = {
             owner = layout,
             id = item.id,
@@ -84,7 +85,12 @@ local function create_item(layout, item)
             base_defense_max = item.base_defense_max or 0,
             speed_penalty = item.speed_penalty or 0,
         },
-    })
+    }
+    local layout_value = assert(ecs.get(layout, "d2legacy.items.layout"))
+    for name, values in pairs(world.initial_components(layout_value:get("owner"), item)) do
+        components[name] = values
+    end
+    local item_entity = ecs.create(components)
 
     -- Property generation and stat activation are separate layers. Import the
     -- already-normalized modifiers with their stable source identity intact;

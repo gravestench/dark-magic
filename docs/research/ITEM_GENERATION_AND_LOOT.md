@@ -338,6 +338,15 @@ The original drop path searches for free coordinates near the source unit using 
 
 Dark Magic should integrate generated item instances with `ContainerWorld` and semantic world targeting. A loot roll is not complete merely because it returned an item code.
 
+Current executable boundary: an imported, player-layout-owned `world` item can
+now carry authoritative act/level/subtile state, resolve generated-room
+residency after the plan arrives, deactivate/checkpoint/reactivate on the same
+ECS entity, and remove/reacquire spatial components through pickup/re-drop
+placement transitions. This is mechanism evidence only. The death/loot result
+still does not materialize a public item instance, search a legal drop point,
+apply allocation/reservation, validate pickup range/path, or enforce the target
+1.14d ground lifetime described below.
+
 Needed transaction:
 
 ```text

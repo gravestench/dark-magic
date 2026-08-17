@@ -128,10 +128,14 @@ func projectItems(snapshot gameecs.Snapshot, layoutEntity uint64) []ItemEntityVi
 	}
 	placements, _ := findComponent(snapshot, "d2legacy.item.placement")
 	presentations, _ := findComponent(snapshot, "d2legacy.item.presentation")
+	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
 	items := []ItemEntityView{}
 	for _, instance := range identities.Instances {
 		identity, present := findInstance(identities, instance.Entity)
 		if !present || entityField(identity, "owner") != layoutEntity {
+			continue
+		}
+		if _, hidden := findInstance(inactive, instance.Entity); hidden {
 			continue
 		}
 		placement, _ := findInstance(placements, instance.Entity)

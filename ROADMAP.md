@@ -58,7 +58,15 @@ marker, so an in-flight entity keeps its authoritative position, projectile
 state, and room identity across deactivate, checkpoint, restore, and reactivate
 without a projectile archive. The long synthetic lifetime used to exercise
 that boundary is test scaffolding; exact Expansion 1.14d missile lifetime and
-inactive-room timing remain unresolved. G9 remains current through
+inactive-room timing remain unresolved. The first ground-item residency slice
+now gives an imported `world` placement authoritative position/location and a
+generic ECS room-attachment request. Plan admission resolves that request into
+the same stable resident contract; inactive items disappear from local/private
+item projections, survive checkpoint reconstruction on the original entity,
+and reuse ordinary placement commands to remove spatial state on pickup and
+reacquire it on re-drop. This proves residency and placement transitions, not
+public loot ownership, legal drop-point search, pickup range, or exact 1.14d
+ground lifetime. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -129,7 +137,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, the first owned-unit owner/category/lifetime graph, an ordinary corpse, and a production-cast straight projectile survive inactivation without scalar graph copies; death removes every live movement/AI/collision/selection opt-in before the corpse crosses the room checkpoint, while the inactive ECS tag suspends projectile movement/lifetime. Non-monster fixtures prove the mechanism follows authoritative movement across room boundaries, production DS1 interaction targets attach through generated room geometry, and straight-missile materialization uses the same point-to-room resolver. Stateful object authority, ground-item/pending-action attachment, exact corpse/projectile lifetime and 1.14d streaming behavior, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, the first owned-unit owner/category/lifetime graph, an ordinary corpse, a production-cast straight projectile, and an imported ground-item placement survive inactivation without scalar graph copies. Death removes every live movement/AI/collision/selection opt-in before the corpse crosses the room checkpoint, while the inactive ECS tag suspends projectile movement/lifetime and filters ground-item projections. Generic pre-plan attachment lets world items resolve through generated geometry; pickup/re-drop removes and reacquires the same spatial/residency state. Stateful object and pending-action attachment, public loot ownership/drop/pickup/lifetime policy, exact corpse/projectile timing, 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -511,7 +519,8 @@ Status: **partial**.
 ### G7 — Active-room/inactive-unit vertical slice
 
 Status: **partial; deterministic room activation plus persistent-identity
-monster, owned-unit, corpse, and straight-projectile residency implemented**.
+monster, owned-unit, corpse, straight-projectile, and first ground-item
+residency implemented**.
 
 - [x] Separate authoritative world existence from active simulation and
   presentation residency for one ordinary monster. An empty ECS inactive tag
@@ -550,8 +559,12 @@ monster, owned-unit, corpse, and straight-projectile residency implemented**.
   with a deterministic world-owned resident ID. The common inactive ECS tag
   suspends its movement and lifetime fields, and the same entity/component
   state survives deactivate -> checkpoint -> restore -> reactivate.
-- [ ] Extend the same explicit activation policy to items, stateful
-  objects, pending actions, and any relationship entity whose
+- [x] Attach an imported ground-item placement through a generic pre-plan ECS
+  room request. Inactivation filters local/private item projections; the item
+  survives checkpoint/reactivation on the same entity, pickup removes world
+  components, and re-drop resolves residency without an item archive.
+- [ ] Extend the same explicit activation policy to stateful objects, pending
+  actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
 - [x] Drive initial Blood Moor population activation from a deterministic
   all-player room graph.
@@ -592,19 +605,31 @@ position or remaining lifetime. Checkpoint reconstruction and reactivation
 preserve the original entity and component state with checksum parity, without
 introducing a missile-specific dormant record. The test's extended lifetime is
 synthetic scaffolding and does not assert exact target timing. Entry-world
-preparation
-joins resolved DS1 interaction points and synthetic paired Warp Lab endpoints to
+preparation joins resolved DS1 interaction points and synthetic paired Warp
+Lab endpoints to
 the same canonical residency contract; the mounted-asset lab proves both warps
 materialize with resident components. Before each activation decision, active
 positioned residents resolve against the same authoritative room bounds; an
 entity crossing a boundary is no longer inactivated with its spawn room.
+An imported item whose authoritative placement is `world` starts with generic
+position/location plus `d2legacy.world.room_attach`; population-plan admission
+resolves its stable `item:<owner>:<id>` identity through the same room geometry
+and removes the transient request. The ordinary inactive marker then filters
+both Lua and revisioned private item projections. Checkpoint reconstruction
+preserves identity, placement, presentation, spatial, and residency components;
+reactivation reaches checksum parity. Existing item movement owns the inverse
+transition: pickup removes all world/inactive components, while a re-drop at an
+authoritative player level/point resolves residency again. The fixture remains
+player-layout-owned and synthetic, so it does not claim the unresolved public
+ground-item ownership, loot materialization, legal-position search, pickup
+range/path, reservation, allocation, or lifetime policies.
 This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 
 Exact expansion 1.14d activation distance/tick ordering, long-inactive healing,
 timer aging while inactive, corpse lifetime/usability, projectile lifetime,
-item/object/pending-action
-activation graphs, stateful object operation/events, ground item drops, broader
+object/pending-action activation graphs, stateful object operation/events,
+public ground-item generation/ownership/drop/pickup/lifetime, broader
 generated-level coverage, and independent visible-
 but-not-simulated presentation residency remain open and probe-gated. Older
 recovered inactive-unit code is architectural evidence only.

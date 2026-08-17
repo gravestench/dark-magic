@@ -20,6 +20,18 @@ The current `internal/game/item.Item` intentionally contains only placement-rele
 
 Current container identities include world, inventory, stash, cube, player equipment, hireling equipment, belt, held/in-hand, vendor stock, and quest/service sockets. Placement includes grid coordinates, named slot, belt slot, weapon set, and vendor page. State construction validates unique IDs and placements deterministically. Held placement can atomically displace one legal occupant into the hand. Weapon-set changes selection without moving both equipped pairs. Vendor buy/sell and service completion are separate authoritative commands.
 
+The first world-placement residency slice is also executable. An imported item
+with explicit act/level/subtile coordinates receives generic world position and
+location plus a pre-plan ECS room-attachment request. Generated population-plan
+admission resolves that request to the ordinary stable room resident; the
+shared inactive marker then checkpoints the same item entity and filters local
+and owner-private item projections. Existing placement commands remove spatial
+and residency components on pickup and reacquire them on re-drop. This is a
+synthetic player-layout-owned fixture proving state transitions. Public ground
+ownership, generated-loot materialization, legal drop coordinates, pickup
+range/path, reservation/allocation, and target 1.14d ground lifetime remain
+unimplemented and must not be inferred from it.
+
 This is a strong foundation and should be extended rather than replaced.
 
 ## Original item-instance evidence

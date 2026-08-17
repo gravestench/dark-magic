@@ -566,6 +566,16 @@ through deactivate, restore, and reactivate. Its deliberately long lifetime is
 synthetic test scaffolding, not evidence for Expansion 1.14d inactive missile
 aging or expiry rules.
 
+An imported world-container item is now a fourth residency kind and the first
+entity that can predate the room plan. It carries generic position/location and
+a transient `d2legacy.world.room_attach` ECS request rather than an authored
+room ID. Plan admission resolves the point and replaces that request with the
+ordinary stable resident; pickup removes the spatial/residency components and
+re-drop resolves them again. The same inactive marker filters item projections
+and preserves the original entity across checkpoint/reactivation. The fixture
+does not establish public ground ownership, legal drop/pickup policy, or target
+1.14d item lifetime.
+
 ## Streaming policy should be deterministic
 
 Research still needs the exact original activation radius/call order. Whatever Dark Magic policy chooses, activation/inactivation must not depend on host scheduling races.
@@ -685,7 +695,9 @@ lifecycle filter also cross it without a second archive. An ordinary corpse
 retains its semantic entity while all live movement surfaces remain absent;
 a straight projectile attaches at materialization and suspends movement and
 lifetime under the same inactive marker without a missile archive. Stateful
-objects, ground items, and pending-action residency remain.
+objects and pending-action residency remain. A synthetic imported ground item
+now proves generic pre-plan attachment plus pickup/re-drop spatial transitions;
+the public generated-loot lifecycle remains separate.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 
