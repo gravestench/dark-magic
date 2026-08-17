@@ -103,6 +103,15 @@ function M.register()
             { name = "poison_mitigated_raw", type = "i64" },
         },
     })
+
+    -- Empty consumer marker: death attribution has observed this generic
+    -- combat result. Other effect systems may compose their own independent
+    -- markers without centralizing all proc policy in one event dispatcher.
+    ecs.component({
+        name = "d2legacy.combat.death_observed",
+        version = 1,
+        fields = {},
+    })
 end
 
 return M

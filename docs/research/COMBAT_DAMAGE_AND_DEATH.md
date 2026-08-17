@@ -248,6 +248,16 @@ CombatResolution
 
 Do not have Lua scan ECS after the fact to infer that a hit occurred.
 
+Current G8 consumer boundary: monster death attribution reads only the generic
+`d2legacy.combat.event` component and trusts its explicit `unit_died` kind. It
+does not fall back to `d2legacy.combat.melee_event`; that component remains for
+melee-only reaction semantics. After observing a generic result, death policy
+composes an empty `d2legacy.combat.death_observed` marker onto the event entity.
+The marker filters future death passes and checkpoints with the event, while
+leaving the entity available to independent proc, quest, audio, or presentation
+consumers. Those consumers should own separate marker components; final event
+retirement waits for that complete contract instead of one central dispatcher.
+
 ## Hit chance, block, dodge, and avoidance
 
 D2MOO's pinned 1.10f `SUNITDMG_IsHitSuccessful` now provides the exact final

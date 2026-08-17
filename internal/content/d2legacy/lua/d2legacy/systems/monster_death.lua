@@ -21,12 +21,15 @@ local function selectable_by_id(entities, wanted)
     return nil
 end
 
-local function collect_killers(entities)
+local function collect_killers(entities, structural)
     local killers = {}
     for _, entity in ipairs(entities) do
-        local event = ecs.get(entity, "d2legacy.combat.melee_event") or ecs.get(entity, "d2legacy.combat.event")
-        if event and event:get("remaining_health_raw") == 0 then
-            killers[event:get("target_id")] = event:get("attacker_id")
+        local event = ecs.get(entity, "d2legacy.combat.event")
+        if event then
+            structural:set(entity, "d2legacy.combat.death_observed", {})
+            if event:get("kind") == "unit_died" then
+                killers[event:get("target_id")] = event:get("attacker_id")
+            end
         end
     end
     return killers
@@ -169,7 +172,7 @@ local function commit_death(context, entities, structural, monster, killers)
 end
 
 local function update(context, entities, structural)
-    local killers = collect_killers(entities)
+    local killers = collect_killers(entities, structural)
     for _, monster in ipairs(entities) do
         commit_death(context, entities, structural, monster, killers)
     end
@@ -182,7 +185,6 @@ function M.register()
         query = {
             any = {
                 "d2legacy.monster.stats",
-                "d2legacy.combat.melee_event",
                 "d2legacy.combat.event",
                 -- Player entities carry the selectable ID used for kill
                 -- credit, but no monster/event component. Include them in the
@@ -190,13 +192,12 @@ function M.register()
                 "d2legacy.world.selectable",
                 "d2legacy.player.identity",
             },
-            none = { "d2legacy.world.inactive" },
+            none = { "d2legacy.world.inactive", "d2legacy.combat.death_observed" },
         },
         read = {
             "d2legacy.monster.stats",
             "d2legacy.monster.identity",
             "d2legacy.monster.death",
-            "d2legacy.combat.melee_event",
             "d2legacy.combat.event",
             "d2legacy.world.selectable",
             "d2legacy.player.identity",
@@ -205,6 +206,7 @@ function M.register()
             "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
+            "d2legacy.combat.death_observed",
         },
         write = {
             "d2legacy.monster.death",
@@ -216,6 +218,7 @@ function M.register()
             "engine.world.velocity_mover",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
+            "d2legacy.combat.death_observed",
         },
         update = update,
     })

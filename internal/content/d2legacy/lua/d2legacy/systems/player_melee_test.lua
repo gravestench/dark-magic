@@ -244,6 +244,10 @@ return test.suite({
                         and bundle:get("fire_rolled_raw") == 0,
                     [=[melee result preserves physical separately from other channels]=]
                 )
+                test.assert(
+                    ecs.get(resolved[1], "d2legacy.combat.death_observed") ~= nil,
+                    [=[generic death consumer marks the composed result exactly once]=]
+                )
             end),
         }),
         test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {

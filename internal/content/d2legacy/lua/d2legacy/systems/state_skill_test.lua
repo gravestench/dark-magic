@@ -230,6 +230,10 @@ return test.suite({
                 local events = ecs.query({ all = { "d2legacy.combat.melee_event" } })
                 test.assert(#events == 1, [=[#events == 1]=])
                 test.assert(ecs.get(events[1], "d2legacy.combat.melee_event"):get("defender_effects_processed"))
+                test.assert(
+                    ecs.get(events[1], "d2legacy.combat.death_observed") == nil,
+                    [=[melee-only reactions are not inferred as generic damage results]=]
+                )
             end),
         }),
     },

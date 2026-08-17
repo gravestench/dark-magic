@@ -88,7 +88,13 @@ through channel mitigation; only the immediate channels join at the health-
 commit boundary. Poison remains recorded but cannot mutate health until its
 rate/duration transaction exists. Current melee and missile families merely
 populate their authored single channel. Drain and duration semantics remain
-unimplemented and no unsupported channel arithmetic is implied. G9 remains current through
+unimplemented and no unsupported channel arithmetic is implied. The first
+generic consumer now reads only `d2legacy.combat.event`, never the
+co-composed melee detail by fallback. An empty ECS `death_observed` component
+marks each result after death attribution sees it, filtering it from later
+death passes without destroying facts that independent proc/reaction consumers
+may still require. Melee-only reaction fixtures remain invisible to generic
+damage/death policy. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -695,6 +701,13 @@ explicit shared direct-damage result record exist.
   at the health commit. Poison is retained but explicitly excluded until its
   periodic rate/duration transaction exists. Existing scalar totals remain a
   convenient generic event summary.
+- [x] Make monster death attribution consume only the generic damage result,
+  not a source-specific melee fallback. Compose an empty `death_observed` ECS
+  marker after the pass so checkpoint/replay and later ticks cannot reconsume
+  the result, while independent effect consumers retain the event entity.
+- [ ] Define the complete independent consumer-marker/retirement contract as
+  attacker, defender, proc, quest, audio, and presentation event families land;
+  do not centralize their policy or retain completed event entities forever.
 - [ ] Extend the bundle and ordered transaction with verified drain, cold/
   freeze, poison-duration, conversion, and periodic-application facts without
   treating them as immediate health damage.
