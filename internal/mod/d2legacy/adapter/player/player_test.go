@@ -11,7 +11,7 @@ import (
 
 func TestAdmissionCommandCarriesDurableFactsWithoutInterpretingD2Policy(t *testing.T) {
 	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 3, Expansion: true,
-		Stats: &d2save.Stats{Dexterity: 20, Defense: 7, Experience: 100, Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15}}
+		Stats: &d2save.Stats{Dexterity: 20, Defense: 7, Experience: 100, Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15, Stamina: 42, MaxStamina: 84}}
 	destination, err := NewDestination(5, 7, 100, 80, 1, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestAdmissionCommandCarriesDurableFactsWithoutInterpretingD2Policy(t *testi
 	if err := json.Unmarshal(command.Payload, &entry); err != nil {
 		t.Fatal(err)
 	}
-	if entry.Dexterity != 20 || entry.Defense != 7 || entry.Class != "Amazon" {
+	if entry.Dexterity != 20 || entry.Defense != 7 || entry.Class != "Amazon" || entry.Stamina != 42 || entry.MaxStamina != 84 {
 		t.Fatalf("durable facts = %#v", entry)
 	}
 	encoded := string(command.Payload)

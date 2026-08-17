@@ -86,6 +86,7 @@ local armor = {
     melee_weapon_class = "",
     defense = 40,
     base_defense_max = 40,
+    speed_penalty = 5,
     stat_modifiers = {
         {
             source_id = "sturdy",
@@ -118,6 +119,14 @@ local armor = {
             operation = "percent",
             value = 20,
             order = 40,
+        },
+        {
+            source_id = "haste",
+            source_kind = "affix",
+            stat = "item_fastermovevelocity",
+            operation = "add",
+            value = 30,
+            order = 50,
         },
     },
 }
@@ -172,6 +181,8 @@ local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:attackrate:weapon", 20)
     expect_source(sources, "equipment:modifier:item_fasterattackrate:weapon:affix:40:alacrity", 40)
     expect_source(sources, "equipment:defense:armor", 61)
+    expect_source(sources, "equipment:armor-velocity:armor", -5)
+    expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", 20)
@@ -190,6 +201,8 @@ local function assert_unequipped_weapon_sources(sources)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", nil)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", nil)
     expect_source(sources, "equipment:defense:armor", 61)
+    expect_source(sources, "equipment:armor-velocity:armor", -5)
+    expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", 7)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", 3)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", 20)
@@ -198,6 +211,8 @@ end
 -- After unequipping the armor, its sources should vanish too.
 local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:defense:armor", nil)
+    expect_source(sources, "equipment:armor-velocity:armor", nil)
+    expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", nil)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", nil)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", nil)
@@ -208,12 +223,15 @@ local function assert_resolved_stats()
     local players = test.entities_with("d2legacy.player.combat_stats")
     local stats = ecs.get(players[1], "d2legacy.player.combat_stats")
     local rates = ecs.get(players[1], "d2legacy.combat.action_rate")
+    local movement = ecs.get(players[1], "d2legacy.player.movement_stats")
     -- AR: (5 * (20 - 7)) + 900 + 75 + 25, then +20%.
     test.expect(stats:get("attack_rating")):equals(1278)
     -- Defense: Dex/4 + enhanced armor 61 + flat 10, then +20%.
     test.expect(stats:get("defense")):equals(91)
     test.expect(rates:get("attack_rate")):equals(120)
     test.expect(rates:get("item_fasterattackrate")):equals(40)
+    test.expect(movement:get("velocitypercent")):equals(-5)
+    test.expect(movement:get("item_fastermovevelocity")):equals(30)
 end
 
 -- Move an item from one container to another.

@@ -75,7 +75,7 @@ func (app *application) installRemoteProjection(hud playeradapter.HUD, private p
 	}
 	updates := map[string]map[string]any{
 		"d2legacy.player.identity":              {"character_id": hud.Player.CharacterID, "player": hud.Player.PlayerID, "name": hud.Player.Name, "class": hud.Player.Class},
-		"d2legacy.player.vitals":                {"health": hud.Vitals.Health, "max_health": hud.Vitals.MaxHealth, "mana": hud.Vitals.Mana, "max_mana": hud.Vitals.MaxMana, "mana_raw": hud.Vitals.Mana * 256, "max_mana_raw": hud.Vitals.MaxMana * 256},
+		"d2legacy.player.vitals":                {"health": hud.Vitals.Health, "max_health": hud.Vitals.MaxHealth, "mana": hud.Vitals.Mana, "max_mana": hud.Vitals.MaxMana, "mana_raw": hud.Vitals.Mana * 256, "max_mana_raw": hud.Vitals.MaxMana * 256, "stamina": hud.Vitals.Stamina, "max_stamina": hud.Vitals.MaxStamina, "stamina_raw": hud.Vitals.StaminaRaw, "max_stamina_raw": hud.Vitals.MaxStaminaRaw},
 		"d2legacy.player.progress":              {"level": hud.Progress.Level, "experience": hud.Progress.Experience, "unspent_skill_points": hud.Progress.UnspentSkillPoints},
 		"d2legacy.player.combat_stats":          {"attack_rating": hud.Combat.AttackRating, "defense": hud.Combat.Defense},
 		"d2legacy.player.animation":             {"direction": hud.Animation.Direction, "mode": hud.Animation.Mode, "start_tick": int64(hud.Animation.StartTick)},
@@ -88,6 +88,7 @@ func (app *application) installRemoteProjection(hud playeradapter.HUD, private p
 		"d2legacy.world.bounds":                 {"width": movementBound(hud.Movement.Bounds.X), "height": movementBound(hud.Movement.Bounds.Y)},
 		"d2legacy.world.collider":               {"radius": movementRadius(hud.Movement.Radius)},
 		"d2legacy.player.movement_mode":         {"running": hud.Movement.Running},
+		"d2legacy.player.movement_stats":        {"run_drain": hud.Movement.RunDrain, "velocitypercent": hud.Movement.VelocityPercent, "item_fastermovevelocity": hud.Movement.ItemFasterMoveVelocity, "staminarecoverybonus": hud.Movement.StaminaRecoveryBonus, "item_staminadrainpct": hud.Movement.StaminaDrainPercent, "armor_run_drain": hud.Movement.ArmorRunDrain},
 		"d2legacy.player.skill_assignment":      {"left": hud.Skills.Left, "right": hud.Skills.Right},
 		"d2legacy.player.belt":                  beltFields(world, hud.Belt),
 		"d2legacy.player.party_view":            partyViewFields(party),

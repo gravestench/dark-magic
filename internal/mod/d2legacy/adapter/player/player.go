@@ -36,6 +36,8 @@ type Entry struct {
 	MaxHealth   int64   `json:"max_health"`
 	Mana        int64   `json:"mana"`
 	MaxMana     int64   `json:"max_mana"`
+	Stamina     int64   `json:"stamina"`
+	MaxStamina  int64   `json:"max_stamina"`
 	Expansion   bool    `json:"expansion"`
 	Hardcore    bool    `json:"hardcore"`
 	COF         string  `json:"cof"`
@@ -194,6 +196,7 @@ func EntryFromCharacter(character d2save.Character, player string, x, y, width, 
 		entry.Dexterity, entry.Defense = int64(character.Stats.Dexterity), int64(character.Stats.Defense)
 		entry.Health, entry.MaxHealth = int64(character.Stats.Health), int64(character.Stats.MaxHealth)
 		entry.Mana, entry.MaxMana = int64(character.Stats.Mana), int64(character.Stats.MaxMana)
+		entry.Stamina, entry.MaxStamina = int64(character.Stats.Stamina), int64(character.Stats.MaxStamina)
 	}
 	if character.Appearance != nil {
 		direction := int64(character.Appearance.Direction)

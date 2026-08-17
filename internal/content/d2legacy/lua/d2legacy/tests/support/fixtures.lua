@@ -29,6 +29,8 @@ function M.player_entry(overrides)
         max_health = 50,
         mana = 20,
         max_mana = 20,
+        stamina = 84,
+        max_stamina = 84,
         expansion = true,
         hardcore = false,
         cof = "",

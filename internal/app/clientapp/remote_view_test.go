@@ -240,13 +240,14 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 	}
 	schemas := []akara.Schema{
 		{Name: "d2legacy.player.identity", Fields: []akara.Field{field("character_id", akara.FieldString), field("player", akara.FieldString), field("name", akara.FieldString), field("class", akara.FieldString)}},
-		{Name: "d2legacy.player.vitals", Fields: []akara.Field{field("health", akara.FieldInt64), field("max_health", akara.FieldInt64), field("mana", akara.FieldInt64), field("max_mana", akara.FieldInt64), field("mana_raw", akara.FieldInt64), field("max_mana_raw", akara.FieldInt64)}},
+		{Name: "d2legacy.player.vitals", Fields: []akara.Field{field("health", akara.FieldInt64), field("max_health", akara.FieldInt64), field("mana", akara.FieldInt64), field("max_mana", akara.FieldInt64), field("mana_raw", akara.FieldInt64), field("max_mana_raw", akara.FieldInt64), field("stamina", akara.FieldInt64), field("max_stamina", akara.FieldInt64), field("stamina_raw", akara.FieldInt64), field("max_stamina_raw", akara.FieldInt64)}},
 		{Name: "d2legacy.player.progress", Fields: []akara.Field{field("level", akara.FieldInt64), field("experience", akara.FieldInt64), field("unspent_skill_points", akara.FieldInt64)}},
 		{Name: "d2legacy.player.combat_stats", Fields: []akara.Field{field("attack_rating", akara.FieldInt64), field("defense", akara.FieldInt64)}},
 		{Name: "d2legacy.player.animation", Fields: []akara.Field{field("direction", akara.FieldInt64), field("mode", akara.FieldString), field("start_tick", akara.FieldInt64)}},
 		{Name: "d2legacy.presentation.animation_clock", Fields: []akara.Field{field("seconds", akara.FieldFloat64)}},
 		{Name: "d2legacy.player.appearance", Fields: []akara.Field{field("cof", akara.FieldString), field("token", akara.FieldString), field("palette", akara.FieldString), field("weapon_class", akara.FieldString)}},
 		{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{field("running", akara.FieldBool)}},
+		{Name: "d2legacy.player.movement_stats", Fields: []akara.Field{field("run_drain", akara.FieldInt64), field("velocitypercent", akara.FieldInt64), field("item_fastermovevelocity", akara.FieldInt64), field("staminarecoverybonus", akara.FieldInt64), field("item_staminadrainpct", akara.FieldInt64), field("armor_run_drain", akara.FieldInt64)}},
 		{Name: "d2legacy.player.skill_assignment", Fields: []akara.Field{field("left", akara.FieldInt64), field("right", akara.FieldInt64)}},
 		{Name: "d2legacy.player.learned_skill", Fields: []akara.Field{field("owner", akara.FieldEntity), field("skill_id", akara.FieldInt64), field("level", akara.FieldInt64), field("list_row", akara.FieldInt64), field("left_allowed", akara.FieldBool), field("right_allowed", akara.FieldBool)}},
 		{Name: "d2legacy.player.belt", Fields: []akara.Field{field("capacity", akara.FieldInt64)}},

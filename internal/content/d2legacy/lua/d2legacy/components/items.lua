@@ -74,6 +74,7 @@ local function register_item_views()
     register("d2legacy.item.armor", {
         { name = "defense", type = "i64" },
         { name = "base_defense_max", type = "i64" },
+        { name = "speed_penalty", type = "i64" },
     })
     -- Generated properties remain immutable item facts until location policy
     -- activates them. Keep the original source identity/kind and ordering so a

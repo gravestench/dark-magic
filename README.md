@@ -95,13 +95,22 @@ expose their facts to Lua, which alone decides their gameplay meaning.
 
 Dark Magic always runs its embedded `d2legacy` game package. Mod installation is
 distinct from activation: the content-addressed cache and user profile contain
-extensions only, and an empty profile means vanilla Diablo II. Network sessions
+extensions only, and an empty profile means the unextended Dark Magic
+`d2legacy` ruleset. It does not mean protocol, server, save, or tooling
+interoperability with Blizzard's executable. Network sessions
 pin the built-in base plus their complete ordered extension recipe; direct hosts
 can stream missing redistributable extensions into bounded, verified quarantine
 before character admission. See [mod loading and distribution](docs/MODS.md).
 Extension authors should begin with the
 [Modding API Guide](docs/MODDING_API.md) and copyable
 [`mod_template`](internal/content/mod_template/README.md).
+
+Authoritative player locomotion now consumes the pinned Expansion 1.14d
+`CharStats.txt` class movement/stamina facts. Walk/run input, item Faster
+Run/Walk diminishing returns, armor velocity penalties, 8.8 stamina drain and
+recovery, exhaustion fallback, owner-private HUD projection, and connected
+prediction share the same rule boundary. Chill/slow ordering and max-stamina
+recalculation from progression and active sources remain separately gated.
 
 ### Product binaries
 

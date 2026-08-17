@@ -43,6 +43,10 @@ function M.register()
             -- fields above remain convenient display values for Lua and UI.
             { name = "mana_raw", type = "i64" },
             { name = "max_mana_raw", type = "i64" },
+            { name = "stamina", type = "i64" },
+            { name = "max_stamina", type = "i64" },
+            { name = "stamina_raw", type = "i64" },
+            { name = "max_stamina_raw", type = "i64" },
         },
     })
 end

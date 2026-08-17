@@ -104,9 +104,20 @@ High-value observations include 8-bit fractional damage/life arithmetic, attacke
 - `source/D2Common/src/Path/Path.cpp`
 - `source/D2Common/src/Path/PathMisc.cpp`
 - `source/D2Common/src/Path/Step.cpp`
+- `source/D2Common/src/Units/Units.cpp`
+- `source/D2Common/src/Drlg/DrlgDrlg.cpp`
+- `source/D2Game/src/PLAYER/PlrModes.cpp`
 - `source/D2Game/src/UNIT/SUnitInactive.cpp`
 
 `Path.h` exposes 18 semantic path types, separate footprint/move-test collision masks, 16-bit fractional coordinates, velocity/acceleration state, target-unit state, collision patterns, and saved steps. `SUnitInactive.cpp` supports a real inactive-room unit archive with enough information to reconstruct monster identity, quality/modifiers, alignment, AI/minion state, XP, HP and special parameters rather than tying simulation existence to render residency.
+
+`Units.cpp` supports the separate item-FRW diminishing-return conversion and
+additive `velocitypercent` path-speed channel. `PlrModes.cpp` supports the 25 Hz
+8.8 RunDrain, torso-armor/slower-drain, idle/walk/town recovery, and exhaustion
+fallback structure. `DrlgDrlg.cpp` identifies the five town level IDs used by
+that exception. These are reconstructed earlier-runtime evidence; mounted
+Expansion 1.14d CharStats/ItemStatCost/Properties rows and future owned-runtime
+holdouts remain the target authority.
 
 ## D2MOO paths inspected for item/economy research
 

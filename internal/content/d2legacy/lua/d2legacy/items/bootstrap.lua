@@ -82,6 +82,7 @@ local function create_item(layout, item)
         ["d2legacy.item.armor"] = {
             defense = item.defense or 0,
             base_defense_max = item.base_defense_max or 0,
+            speed_penalty = item.speed_penalty or 0,
         },
     })
 

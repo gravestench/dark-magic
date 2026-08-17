@@ -376,8 +376,8 @@ func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{
-			{"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9"},
-			{"class": "Barbarian", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9"},
+			{"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
+			{"class": "Barbarian", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "92", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
 		}, nil
 	case "data/global/excel/levels.txt":
 		return []map[string]string{{"Id": "2", "MonDen": "100000", "NumMon": "1", "mon1": "fallen"}}, nil

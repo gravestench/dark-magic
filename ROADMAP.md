@@ -2,7 +2,8 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, the G5 production Warp Lab
-realignment and pinned class movement rates, and the G9 target-locked mounted-data, localized skill evidence,
+realignment, pinned class movement/stamina facts, authoritative stamina and
+generic Faster Run/Walk slice, and the G9 target-locked mounted-data, localized skill evidence,
 case-stable pinned MPQ tables, AnimData/effective-attack-rate generic melee
 action, current-state melee target revalidation, missile, timed-state, and
 reactive-state slices on 2026-08-16.
@@ -283,8 +284,21 @@ and monster chase exist. Still required:
 - [x] Replace placeholder walk/run rates with one immutable, case-insensitive
   `CharStats.txt` class catalog shared by authority and client prediction; pin
   all seven Expansion 1.14d classes to the owned-data 6/9 walk/run records.
-- [ ] Add Faster Run/Walk, stamina amount/max, drain, recovery, cannot-run, and
-  verified chill/slow interactions.
+- [x] Make current/max stamina live authoritative 8.8 state admitted from the
+  durable character, project and persist it through the owner-private HUD, and
+  share the same exact raw values with connected prediction.
+- [x] Implement the pinned `CharStats.txt` RunDrain cadence, wilderness-only
+  running drain, torso-armor drain multiplier, slower-drain and recovery stat
+  channels, idle/walking/town recovery, zero-stamina walk fallback, and generic
+  `item_fastermovevelocity` diminishing returns. The owned Expansion 1.14d
+  archive pins every class's starting stamina, RunDrain, per-level/per-Vitality
+  terms, ItemStatCost identities, and `move1`/`move2`/`move3` Properties links.
+- [ ] Recompute maximum stamina from level, Vitality, skills, and item sources;
+  define proportional current-resource adjustment when max changes.
+- [ ] Verify and implement chill/freeze, skill `velocitypercent`, armor/shield
+  velocity penalties, and movement-floor ordering against Expansion 1.14d
+  runtime vectors. The generic source channel exists, but broad content is not
+  enabled by structural resemblance.
 - [ ] Separate route planning from authoritative motion execution state.
 - [ ] Keep presentation animation rate separate from authoritative distance.
 
@@ -635,7 +649,7 @@ probes remain:
 - combat/motion: block, avoidance, mitigation, absorb, critical/deadly/mastery,
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
   attack-rate breakpoints/dual wield/mid-action changes, cast timing, path
-  types, stamina, and inactive rooms;
+  types, remaining stamina/max-resource and chill/slow ordering, and inactive rooms;
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;

@@ -10,6 +10,7 @@ local skills = require("d2legacy.data.skill")
 local player_stats = require("d2legacy.data.player_stats")
 local item_bootstrap = require("d2legacy.items.bootstrap")
 local game_rules = require("d2legacy.policy.game_rules")
+local movement_rules = require("d2legacy.movement_rules/v1")
 local M = {}
 
 local function finite(value)
@@ -37,6 +38,7 @@ function M.validate(command)
     end
     assert(p.level >= 1 and p.health >= 0 and p.max_health >= p.health, "player entry progression or health is invalid")
     assert(p.mana >= 0 and p.max_mana >= p.mana, "player entry mana is invalid")
+    assert(p.stamina >= 0 and p.max_stamina >= p.stamina, "player entry stamina is invalid")
     assert(
         finite(p.x) and finite(p.y) and finite(p.world_width) and finite(p.world_height),
         "player entry world values must be finite"
@@ -85,7 +87,11 @@ local function create_passive_sources(player, sources)
             source.stat == "attack_rating"
                 or source.stat == "defense"
                 or source.stat == "attackrate"
-                or source.stat == "item_fasterattackrate",
+                or source.stat == "item_fasterattackrate"
+                or source.stat == "velocitypercent"
+                or source.stat == "item_fastermovevelocity"
+                or source.stat == "staminarecoverybonus"
+                or source.stat == "item_staminadrainpct",
             "unsupported passive combat stat"
         )
         assert(
@@ -122,6 +128,7 @@ function M.apply(command)
         "player entry difficulty differs from immutable game rules"
     )
     local learned = skills.starting_for_class(p.class)
+    local _, run_drain = movement_rules.class_facts(p.class)
     local left, right = initial_skills(learned)
     local player = ecs.create({
         ["d2legacy.player.identity"] = {
@@ -165,6 +172,18 @@ function M.apply(command)
             max_mana = p.max_mana,
             mana_raw = p.mana * 256,
             max_mana_raw = p.max_mana * 256,
+            stamina = p.stamina,
+            max_stamina = p.max_stamina,
+            stamina_raw = p.stamina * 256,
+            max_stamina_raw = p.max_stamina * 256,
+        },
+        ["d2legacy.player.movement_stats"] = {
+            run_drain = run_drain,
+            velocitypercent = 0,
+            item_fastermovevelocity = 0,
+            staminarecoverybonus = 0,
+            item_staminadrainpct = 0,
+            armor_run_drain = 0,
         },
         -- D2 synthesizes an unarmed profile when no weapon contributes one.
         ["d2legacy.combat.melee_profile"] = {

@@ -143,6 +143,37 @@ local function equipped_defense(entities, layout_entity, set)
     return wanted
 end
 
+local function equipped_movement(entities, layout_entity, set)
+    local velocity, drain = {}, {}
+    for _, entity in ipairs(entities) do
+        local item = ecs.get(entity, "d2legacy.item.identity")
+        local placement = ecs.get(entity, "d2legacy.item.placement")
+        local armor = ecs.get(entity, "d2legacy.item.armor")
+        if
+            item
+            and placement
+            and armor
+            and item:get("owner"):id() == layout_entity:id()
+            and placement_is_active(placement, set)
+            and armor:get("speed_penalty") ~= 0
+        then
+            velocity["equipment:armor-velocity:" .. item:get("id")] = {
+                value = -armor:get("speed_penalty"),
+                operation = "add",
+                order = 10,
+            }
+            if placement:get("slot") == "tors" then
+                drain["equipment:armor-run-drain:" .. item:get("id")] = {
+                    value = armor:get("speed_penalty"),
+                    operation = "add",
+                    order = 10,
+                }
+            end
+        end
+    end
+    return velocity, drain
+end
+
 local function modifier_sources(entities, layout_entity, set, stat)
     local wanted = {}
     for _, entity in ipairs(entities) do
@@ -262,6 +293,8 @@ function M.register()
                         end
                         sync_sources(entities, structural, player, "equipment:attackrate:", "attackrate", attackrate)
                         if layout_entity then
+                            local armor_velocity, armor_run_drain =
+                                equipped_movement(entities, layout_entity, active_set)
                             sync_sources(
                                 entities,
                                 structural,
@@ -269,6 +302,22 @@ function M.register()
                                 "equipment:defense:",
                                 "defense",
                                 equipped_defense(entities, layout_entity, active_set)
+                            )
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:armor-velocity:",
+                                "velocitypercent",
+                                armor_velocity
+                            )
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:armor-run-drain:",
+                                "armor_run_drain",
+                                armor_run_drain
                             )
                             sync_sources(
                                 entities,
@@ -302,8 +351,39 @@ function M.register()
                                 "item_fasterattackrate",
                                 modifier_sources(entities, layout_entity, active_set, "item_fasterattackrate")
                             )
+                            for _, stat in ipairs({
+                                "velocitypercent",
+                                "item_fastermovevelocity",
+                                "staminarecoverybonus",
+                                "item_staminadrainpct",
+                            }) do
+                                sync_sources(
+                                    entities,
+                                    structural,
+                                    player,
+                                    "equipment:modifier:" .. stat .. ":",
+                                    stat,
+                                    modifier_sources(entities, layout_entity, active_set, stat)
+                                )
+                            end
                         else
                             sync_sources(entities, structural, player, "equipment:defense:", "defense", {})
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:armor-velocity:",
+                                "velocitypercent",
+                                {}
+                            )
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:armor-run-drain:",
+                                "armor_run_drain",
+                                {}
+                            )
                             sync_sources(
                                 entities,
                                 structural,
@@ -312,8 +392,30 @@ function M.register()
                                 "attack_rating",
                                 {}
                             )
+                            for _, stat in ipairs({
+                                "velocitypercent",
+                                "item_fastermovevelocity",
+                                "staminarecoverybonus",
+                                "item_staminadrainpct",
+                            }) do
+                                sync_sources(
+                                    entities,
+                                    structural,
+                                    player,
+                                    "equipment:modifier:" .. stat .. ":",
+                                    stat,
+                                    {}
+                                )
+                            end
                             sync_sources(entities, structural, player, "equipment:modifier:defense:", "defense", {})
-                            sync_sources(entities, structural, player, "equipment:modifier:attackrate:", "attackrate", {})
+                            sync_sources(
+                                entities,
+                                structural,
+                                player,
+                                "equipment:modifier:attackrate:",
+                                "attackrate",
+                                {}
+                            )
                             sync_sources(
                                 entities,
                                 structural,

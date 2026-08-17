@@ -14,7 +14,11 @@ func RulesModule(catalog Catalog) modruntime.Module {
 		Help: modruntime.ModuleHelp{
 			Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 			Commands: map[string]modruntime.CommandHelp{
-				"velocity": {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload)", Summary: "Return authoritative x/y velocity and whether movement is active."},
+				"velocity":    {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
+				"rates":       {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
+				"class_facts": {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, and stamina progression terms."},
+				"is_town":     {Usage: "d2legacy.movement_rules.is_town(level_id)", Summary: "Report whether a level is one of the five target act towns."},
+				"stamina":     {Usage: "d2legacy.movement_rules.stamina(current, maximum, run_drain, armor, slower_drain, recovery, running, moving, town, can_recover)", Summary: "Advance one authoritative 25 Hz 8.8 stamina tick."},
 			},
 		},
 		Loader: func(state *lua.LState) int {
@@ -38,11 +42,55 @@ func RulesModule(catalog Catalog) modruntime.Module {
 							StopRadius: luaOptionalNumber(target.RawGetString("stop_radius")),
 						}
 					}
-					resolved := Resolve(gameworld.Point{X: float64(state.CheckNumber(1)), Y: float64(state.CheckNumber(2))}, move, rates)
+					modifiers := Modifiers{
+						VelocityPercent:        int64(state.OptInt(5, 0)),
+						ItemFasterMoveVelocity: int64(state.OptInt(6, 0)),
+					}
+					resolved := Resolve(gameworld.Point{X: float64(state.CheckNumber(1)), Y: float64(state.CheckNumber(2))}, move, rates, modifiers)
 					state.Push(lua.LNumber(resolved.Velocity.X))
 					state.Push(lua.LNumber(resolved.Velocity.Y))
 					state.Push(lua.LBool(resolved.Moving))
 					return 3
+				},
+				"rates": func(state *lua.LState) int {
+					rates, found := catalog.Rates(state.CheckString(1))
+					if !found {
+						state.RaiseError("d2legacy movement: class has no pinned CharStats movement facts")
+					}
+					effective := EffectiveRates(rates, Modifiers{
+						VelocityPercent:        int64(state.OptInt(2, 0)),
+						ItemFasterMoveVelocity: int64(state.OptInt(3, 0)),
+					})
+					state.Push(lua.LNumber(effective.Walk))
+					state.Push(lua.LNumber(effective.Run))
+					return 2
+				},
+				"class_facts": func(state *lua.LState) int {
+					rates, found := catalog.Rates(state.CheckString(1))
+					if !found {
+						state.RaiseError("d2legacy movement: class has no pinned CharStats movement facts")
+					}
+					state.Push(lua.LNumber(rates.StartingStamina))
+					state.Push(lua.LNumber(rates.RunDrain))
+					state.Push(lua.LNumber(rates.StaminaPerLevel))
+					state.Push(lua.LNumber(rates.StaminaPerVitality))
+					return 4
+				},
+				"is_town": func(state *lua.LState) int {
+					state.Push(lua.LBool(IsTownLevel(int64(state.CheckInt(1)))))
+					return 1
+				},
+				"stamina": func(state *lua.LState) int {
+					resolved := AdvanceStamina(StaminaTick{
+						CurrentRaw: int64(state.CheckInt(1)), MaximumRaw: int64(state.CheckInt(2)),
+						RunDrain: int64(state.CheckInt(3)), ArmorRunDrain: int64(state.CheckInt(4)),
+						StaminaDrainPercent: int64(state.CheckInt(5)), RecoveryBonus: int64(state.CheckInt(6)),
+						Running: lua.LVAsBool(state.Get(7)), Moving: lua.LVAsBool(state.Get(8)),
+						InTown: lua.LVAsBool(state.Get(9)), CanRecover: lua.LVAsBool(state.Get(10)),
+					})
+					state.Push(lua.LNumber(resolved.CurrentRaw))
+					state.Push(lua.LBool(resolved.ForceWalk))
+					return 2
 				},
 			})
 			state.Push(module)

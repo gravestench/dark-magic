@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const HUDVersion uint32 = 5
+const HUDVersion uint32 = 6
 
 var ErrHUDPlayer = errors.New("player HUD: authenticated player is absent")
 
@@ -41,10 +41,14 @@ type HUDIdentity struct {
 }
 
 type HUDVitals struct {
-	Health    int64 `json:"health"`
-	MaxHealth int64 `json:"max_health"`
-	Mana      int64 `json:"mana"`
-	MaxMana   int64 `json:"max_mana"`
+	Health        int64 `json:"health"`
+	MaxHealth     int64 `json:"max_health"`
+	Mana          int64 `json:"mana"`
+	MaxMana       int64 `json:"max_mana"`
+	Stamina       int64 `json:"stamina"`
+	MaxStamina    int64 `json:"max_stamina"`
+	StaminaRaw    int64 `json:"stamina_raw"`
+	MaxStaminaRaw int64 `json:"max_stamina_raw"`
 }
 
 type HUDProgress struct {
@@ -75,10 +79,16 @@ type HUDAnimation struct {
 }
 
 type HUDMovement struct {
-	Running  bool        `json:"running"`
-	Velocity HUDPosition `json:"velocity"`
-	Bounds   HUDPosition `json:"bounds"`
-	Radius   float64     `json:"radius"`
+	Running                bool        `json:"running"`
+	Velocity               HUDPosition `json:"velocity"`
+	Bounds                 HUDPosition `json:"bounds"`
+	Radius                 float64     `json:"radius"`
+	VelocityPercent        int64       `json:"velocity_percent"`
+	ItemFasterMoveVelocity int64       `json:"item_faster_move_velocity"`
+	RunDrain               int64       `json:"run_drain"`
+	StaminaRecoveryBonus   int64       `json:"stamina_recovery_bonus"`
+	StaminaDrainPercent    int64       `json:"stamina_drain_percent"`
+	ArmorRunDrain          int64       `json:"armor_run_drain"`
 }
 
 type HUDSkills struct {
@@ -139,7 +149,12 @@ func fillHUD(snapshot gameecs.Snapshot, entity uint64, view *HUD) error {
 	if err != nil {
 		return err
 	}
-	view.Vitals = HUDVitals{Health: intField(vitals, "health"), MaxHealth: intField(vitals, "max_health"), Mana: intField(vitals, "mana"), MaxMana: intField(vitals, "max_mana")}
+	view.Vitals = HUDVitals{
+		Health: intField(vitals, "health"), MaxHealth: intField(vitals, "max_health"),
+		Mana: intField(vitals, "mana"), MaxMana: intField(vitals, "max_mana"),
+		Stamina: intField(vitals, "stamina"), MaxStamina: intField(vitals, "max_stamina"),
+		StaminaRaw: intField(vitals, "stamina_raw"), MaxStaminaRaw: intField(vitals, "max_stamina_raw"),
+	}
 	progress, err := read("d2legacy.player.progress")
 	if err != nil {
 		return err
@@ -174,6 +189,16 @@ func fillHUD(snapshot gameecs.Snapshot, entity uint64, view *HUD) error {
 	if movement, found := findComponent(snapshot, "d2legacy.player.movement_mode"); found {
 		if fields, present := findInstance(movement, entity); present {
 			view.Movement.Running = boolField(fields, "running")
+		}
+	}
+	if movement, found := findComponent(snapshot, "d2legacy.player.movement_stats"); found {
+		if fields, present := findInstance(movement, entity); present {
+			view.Movement.VelocityPercent = intField(fields, "velocitypercent")
+			view.Movement.ItemFasterMoveVelocity = intField(fields, "item_fastermovevelocity")
+			view.Movement.RunDrain = intField(fields, "run_drain")
+			view.Movement.StaminaRecoveryBonus = intField(fields, "staminarecoverybonus")
+			view.Movement.StaminaDrainPercent = intField(fields, "item_staminadrainpct")
+			view.Movement.ArmorRunDrain = intField(fields, "armor_run_drain")
 		}
 	}
 	if velocity, found := findComponent(snapshot, "d2legacy.world.velocity"); found {

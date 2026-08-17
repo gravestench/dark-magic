@@ -53,7 +53,8 @@ func TestEmbeddedD2LegacyNavigationAndResourceLifetime(t *testing.T) {
 	scenes.SetInputStore(&input)
 	var mixer audio.Mixer
 	network := &shellNetworkController{}
-	saves := d2save.New(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
+	saves := d2save.New(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1,
+		Stats: &d2save.Stats{Health: 50, MaxHealth: 50, Mana: 15, MaxMana: 15, Stamina: 84, MaxStamina: 84}})
 	entitySimulation := gameecs.New()
 	authority, err := gamesession.New(entitySimulation, gamesession.Config{Step: time.Second})
 	if err != nil {
@@ -580,6 +581,7 @@ func (shellD2Records) Load(path string) ([]map[string]string, error) {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
 			"class": "Amazon", "StartSkill": "Test Skill", "WalkVelocity": "6", "RunVelocity": "9",
+			"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 		}}, nil
 	case "data/global/excel/skilldesc.txt":
 		return []map[string]string{

@@ -7,7 +7,16 @@ return test.suite({
     tier = "fast",
     records = {
         ["data/global/excel/charstats.txt"] = {
-            { class = "Amazon", StartSkill = "Frozen Armor", WalkVelocity = "6", RunVelocity = "9" },
+            {
+                class = "Amazon",
+                StartSkill = "Frozen Armor",
+                WalkVelocity = "6",
+                RunVelocity = "9",
+                stamina = "84",
+                RunDrain = "20",
+                StaminaPerLevel = "4",
+                StaminaPerVitality = "4",
+            },
         },
         ["data/global/excel/skills.txt"] = {
             {

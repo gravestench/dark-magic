@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/clientsession"
@@ -142,6 +143,8 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 func predictPosition(hud playeradapter.HUD, pending []gameserver.CommandIntent, moment networkclock.Moment, collision *gameworld.Map, step time.Duration, catalog movement.Catalog) playeradapter.HUDPosition {
 	position := gameworld.Point{X: hud.Position.X, Y: hud.Position.Y}
 	velocity := gameworld.Point{X: hud.Movement.Velocity.X, Y: hud.Movement.Velocity.Y}
+	running := hud.Movement.Running
+	staminaRaw := hud.Vitals.StaminaRaw
 	bounds := gameworld.Point{X: movementBound(hud.Movement.Bounds.X), Y: movementBound(hud.Movement.Bounds.Y)}
 	radius := movementRadius(hud.Movement.Radius)
 	if collision != nil {
@@ -159,13 +162,43 @@ func predictPosition(hud playeradapter.HUD, pending []gameserver.CommandIntent, 
 			}
 			var payload movement.MovePayload
 			if json.Unmarshal(intent.Payload, &payload) == nil && classKnown {
-				velocity = movement.Resolve(position, payload, rates).Velocity
+				payload.Running = payload.Running && staminaRaw > 0
+				velocity = movement.Resolve(position, payload, rates, movement.Modifiers{
+					VelocityPercent:        hud.Movement.VelocityPercent,
+					ItemFasterMoveVelocity: hud.Movement.ItemFasterMoveVelocity,
+				}).Velocity
+				running = payload.Running
 			}
 			applied[intent.Sequence] = true
 		}
 	}
+	advanceStamina := func() {
+		moving := velocity.X != 0 || velocity.Y != 0
+		inTown := movement.IsTownLevel(hud.Location.LevelID)
+		canRecover := hud.Animation.Mode == "NU" || (moving && !running) || (inTown && moving) || hud.Movement.StaminaRecoveryBonus >= 1000
+		resolved := movement.AdvanceStamina(movement.StaminaTick{
+			CurrentRaw: staminaRaw, MaximumRaw: hud.Vitals.MaxStaminaRaw,
+			RunDrain: hud.Movement.RunDrain, ArmorRunDrain: hud.Movement.ArmorRunDrain,
+			StaminaDrainPercent: hud.Movement.StaminaDrainPercent,
+			RecoveryBonus:       hud.Movement.StaminaRecoveryBonus,
+			Running:             running, Moving: moving, InTown: inTown, CanRecover: canRecover,
+		})
+		staminaRaw = resolved.CurrentRaw
+		if resolved.ForceWalk {
+			running = false
+			effective := movement.EffectiveRates(rates, movement.Modifiers{
+				VelocityPercent:        hud.Movement.VelocityPercent,
+				ItemFasterMoveVelocity: hud.Movement.ItemFasterMoveVelocity,
+			})
+			magnitude := math.Hypot(velocity.X, velocity.Y)
+			if magnitude > 0 {
+				velocity.X, velocity.Y = velocity.X/magnitude*effective.Walk, velocity.Y/magnitude*effective.Walk
+			}
+		}
+	}
 	for tick := hud.Tick + 1; tick <= moment.Tick; tick++ {
 		applyInputs(tick)
+		advanceStamina()
 		position = gameworld.IntegrateVelocity(collision, position, velocity, bounds, radius, step.Seconds())
 	}
 	if moment.Fraction > 0 {

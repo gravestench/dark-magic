@@ -30,25 +30,35 @@ function M.register()
     ecs.system({
         id = "d2legacy.combat.derived_stats",
         phase = "pre_simulation",
-        query = { any = {
-            "d2legacy.combat.defense",
-            "d2legacy.player.combat_stats",
-            "d2legacy.combat.action_rate",
-            "d2legacy.stat.source",
-        } },
+        query = {
+            any = {
+                "d2legacy.combat.defense",
+                "d2legacy.player.combat_stats",
+                "d2legacy.combat.action_rate",
+                "d2legacy.player.movement_stats",
+                "d2legacy.stat.source",
+            },
+        },
         read = {
             "d2legacy.combat.defense",
             "d2legacy.player.combat_stats",
             "d2legacy.combat.action_rate",
+            "d2legacy.player.movement_stats",
             "d2legacy.stat.source",
         },
-        write = { "d2legacy.combat.defense", "d2legacy.player.combat_stats", "d2legacy.combat.action_rate" },
+        write = {
+            "d2legacy.combat.defense",
+            "d2legacy.player.combat_stats",
+            "d2legacy.combat.action_rate",
+            "d2legacy.player.movement_stats",
+        },
         update = function(_, entities)
             for _, target in ipairs(entities) do
                 local defense = ecs.get(target, "d2legacy.combat.defense")
                 local combat = ecs.get(target, "d2legacy.player.combat_stats")
                 local action_rate = ecs.get(target, "d2legacy.combat.action_rate")
-                if defense or combat or action_rate then
+                local movement = ecs.get(target, "d2legacy.player.movement_stats")
+                if defense or combat or action_rate or movement then
                     local sources = sources_by_stat(entities, target)
                     if combat then
                         combat:set("attack_rating", resolve(combat:get("base_attack_rating"), sources, "attack_rating"))
@@ -69,6 +79,13 @@ function M.register()
                             resolve(action_rate:get("base_attack_rate"), sources, "attackrate")
                         )
                         action_rate:set("item_fasterattackrate", resolve(0, sources, "item_fasterattackrate"))
+                    end
+                    if movement then
+                        movement:set("velocitypercent", resolve(0, sources, "velocitypercent"))
+                        movement:set("item_fastermovevelocity", resolve(0, sources, "item_fastermovevelocity"))
+                        movement:set("staminarecoverybonus", resolve(0, sources, "staminarecoverybonus"))
+                        movement:set("item_staminadrainpct", resolve(0, sources, "item_staminadrainpct"))
+                        movement:set("armor_run_drain", resolve(0, sources, "armor_run_drain"))
                     end
                 end
             end
