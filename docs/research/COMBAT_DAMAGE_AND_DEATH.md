@@ -258,6 +258,20 @@ leaving the entity available to independent proc, quest, audio, or presentation
 consumers. Those consumers should own separate marker components; final event
 retirement waits for that complete contract instead of one central dispatcher.
 
+Basic melee now also composes `d2legacy.combat.attack_result` on every resolved
+impact. Current outcomes are `hit`, RNG `miss`, and `invalidated` when target
+legality/range/life/barrier revalidation fails at impact. Attack rating, defense,
+and hit chance remain explicit facts. Only `hit` may compose a damage event and
+typed bundle. This provides a stable home for future verified block/avoidance
+outcomes without pretending the current boolean already models their ordering
+or eligibility; no Expansion 1.14d block/avoid arithmetic is claimed yet.
+
+Combat Lab consumes the same composition boundary for diagnostics. Its snapshot
+coalesces attack result, damage event, typed bundle, melee detail, and animation
+components by ECS entity, so a successful melee impact is one displayed fact
+rather than duplicate rows. Formatting uses the current raw damage, channel,
+remaining-health, and explicit-outcome fields; a module test pins that join.
+
 ## Hit chance, block, dodge, and avoidance
 
 D2MOO's pinned 1.10f `SUNITDMG_IsHitSuccessful` now provides the exact final

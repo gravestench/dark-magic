@@ -8,19 +8,26 @@ local M = {}
 
 local function optional(entity, name)
     local ok, component = pcall(ecs.get, entity, name)
-    if not ok or not component then return nil end
+    if not ok or not component then
+        return nil
+    end
     return component:snapshot()
 end
 
 local function first(query)
     local ok, entities = pcall(ecs.query, query)
-    if not ok then return nil end
+    if not ok then
+        return nil
+    end
     return entities[1]
 end
 
 local function copy_player()
-    local entity = first({all={"d2legacy.world.player_control", "d2legacy.world.position", "d2legacy.world.location"}})
-    if not entity then return nil end
+    local entity =
+        first({ all = { "d2legacy.world.player_control", "d2legacy.world.position", "d2legacy.world.location" } })
+    if not entity then
+        return nil
+    end
     local result = {
         entity_id = entity:id(),
         position = optional(entity, "d2legacy.world.position"),
@@ -40,11 +47,21 @@ end
 
 local function copy_monsters(level_id)
     local result = {}
-    local ok, entities = pcall(ecs.query, {all={
-        "d2legacy.monster.identity", "d2legacy.monster.stats", "d2legacy.world.position",
-        "d2legacy.world.location", "d2legacy.world.selectable",
-    }})
-    if not ok then return result end
+    local ok, entities = pcall(
+        ecs.query,
+        {
+            all = {
+                "d2legacy.monster.identity",
+                "d2legacy.monster.stats",
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+                "d2legacy.world.selectable",
+            },
+        }
+    )
+    if not ok then
+        return result
+    end
     for _, entity in ipairs(entities) do
         local location = optional(entity, "d2legacy.world.location")
         if location and location.level_id == level_id then
@@ -71,27 +88,48 @@ local function copy_monsters(level_id)
             }
         end
     end
-    table.sort(result, function(left, right) return left.id < right.id end)
+    table.sort(result, function(left, right)
+        return left.id < right.id
+    end)
     return result
 end
 
 local function copy_events()
-    local result = {}
-    for _, component in ipairs({"d2legacy.combat.event", "d2legacy.combat.melee_event",
-        "d2legacy.combat.attack_animation_event"}) do
-        local ok, entities = pcall(ecs.query, {all={component}})
+    local by_entity = {}
+    local components = {
+        { name = "d2legacy.combat.attack_result", key = "attack" },
+        { name = "d2legacy.combat.event", key = "damage" },
+        { name = "d2legacy.combat.damage_bundle", key = "bundle" },
+        { name = "d2legacy.combat.melee_event", key = "melee" },
+        { name = "d2legacy.combat.attack_animation_event", key = "animation" },
+    }
+    for _, definition in ipairs(components) do
+        local component = definition.name
+        local ok, entities = pcall(ecs.query, { all = { component } })
         if ok then
             for _, entity in ipairs(entities) do
-                local event = optional(entity, component)
-                if event then
-                    event.entity_id = entity:id()
-                    result[#result + 1] = event
+                local values = optional(entity, component)
+                if values then
+                    local id = entity:id()
+                    local event = by_entity[id]
+                    if not event then
+                        event = { entity_id = id, tick = values.tick or 0 }
+                        by_entity[id] = event
+                    end
+                    event[definition.key] = values
+                    event.tick = math.max(event.tick, values.tick or 0)
                 end
             end
         end
     end
+    local result = {}
+    for _, event in pairs(by_entity) do
+        result[#result + 1] = event
+    end
     table.sort(result, function(left, right)
-        if left.tick ~= right.tick then return left.tick < right.tick end
+        if left.tick ~= right.tick then
+            return left.tick < right.tick
+        end
         return left.entity_id < right.entity_id
     end)
     return result

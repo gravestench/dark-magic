@@ -37,7 +37,19 @@ local function combat_values(entity)
 end
 
 local function event(structural, values, damage)
-    local components = { ["d2legacy.combat.melee_event"] = values }
+    local components = {
+        ["d2legacy.combat.melee_event"] = values,
+        ["d2legacy.combat.attack_result"] = {
+            tick = values.tick,
+            attacker_id = values.attacker_id,
+            target_id = values.target_id,
+            source_kind = "melee",
+            outcome = values.outcome,
+            attack_rating = values.attack_rating,
+            defense = values.defense,
+            hit_chance = values.hit_chance,
+        },
+    }
     if damage then
         components["d2legacy.combat.event"] = {
             kind = damage.lethal and "unit_died" or "damage_applied",
@@ -98,6 +110,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.combat.melee_event",
+            "d2legacy.combat.attack_result",
             "d2legacy.combat.event",
             "d2legacy.combat.damage_bundle",
         },
@@ -122,6 +135,7 @@ function M.register()
                         attack_rating = 0,
                         defense = 0,
                         hit_chance = 0,
+                        outcome = "invalidated",
                     }
                     local result
                     if target then
@@ -131,11 +145,13 @@ function M.register()
                         base.attack_rating = attack_rating
                         base.defense = defense
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)
+                        base.outcome = "miss"
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
                             local minimum, maximum = damage_range(profile, request:get("hand"))
                             local rolled = policy.damage(minimum, maximum)
                             result = damage_policy.resolve(target, damage_bundle.single("physical", rolled), ecs)
                             base.hit = true
+                            base.outcome = "hit"
                             base.remaining_health_raw = result.remaining_health_raw
                             base.damage_raw = result.damage_raw
                         end

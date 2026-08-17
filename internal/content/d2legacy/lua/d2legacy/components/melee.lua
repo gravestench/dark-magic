@@ -90,6 +90,7 @@ function M.register()
     })
     ecs.component({
         name = "d2legacy.combat.melee_event",
+        version = 2,
         fields = {
             { name = "kind", type = "string" },
             { name = "tick", type = "i64" },
@@ -102,6 +103,7 @@ function M.register()
             { name = "attack_rating", type = "i64" },
             { name = "defense", type = "i64" },
             { name = "hit_chance", type = "i64" },
+            { name = "outcome", type = "string" },
             { name = "defender_effects_processed", type = "bool", default = false },
         },
     })
