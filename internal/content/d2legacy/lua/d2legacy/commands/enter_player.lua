@@ -98,7 +98,8 @@ local function create_passive_sources(player, sources)
                 or source.stat == "maxstamina"
                 or source.stat == "skill_staminapercent"
                 or source.stat == "skill_passive_staminapercent"
-                or source.stat == "item_stamina_perlevel",
+                or source.stat == "item_stamina_perlevel"
+                or source.stat == "item_stamina_bytime",
             "unsupported passive combat stat"
         )
         assert(
@@ -111,6 +112,7 @@ local function create_passive_sources(player, sources)
             or source.stat == "skill_staminapercent"
             or source.stat == "skill_passive_staminapercent"
             or source.stat == "item_stamina_perlevel"
+            or source.stat == "item_stamina_bytime"
         then
             assert(source.operation == nil or source.operation == "add", "stamina operand must be additive")
         end

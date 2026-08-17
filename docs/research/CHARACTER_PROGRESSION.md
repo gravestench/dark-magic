@@ -195,8 +195,11 @@ Research Akara reward, token respec, patch applicability, exactly which stats/sk
 `CharStats` walk/run velocity, run drain, stamina drain/recovery, and the core
 level/Vitality/source-derived maximum are implemented. Movement owns integration;
 progression owns the base class/resource terms. Remaining work here is the
-environment-period `item_stamina_bytime` operand, live base-Vitality allocation
-ordering, and verified armor/shield/chill/freeze modifier ordering.
+live base-Vitality allocation ordering and owned-runtime cold/freeze boundaries.
+The checkpointed per-act environment cycle now evaluates packed
+`item_stamina_bytime` min/max values through the pinned op-6 dependency; the Act
+II Tainted Sun quest still needs an owned transition vector before it may switch
+that cycle into eclipse mode.
 
 ## Blocking and breakpoints
 
