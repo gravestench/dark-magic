@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"sort"
 )
@@ -65,6 +66,7 @@ type caseReport struct {
 	PoolRatioDenominator uint64            `json:"pool_ratio_denominator,omitempty"`
 	PenaltyFreeMatrix    bool              `json:"penalty_free_matrix"`
 	PoolCandidates       []poolCandidate   `json:"pool_candidates,omitempty"`
+	ShareCandidates      []shareCandidate  `json:"share_candidates,omitempty"`
 }
 
 type poolCandidate struct {
@@ -74,6 +76,19 @@ type poolCandidate struct {
 	Nearest     uint64 `json:"nearest"`
 	Ceiling     uint64 `json:"ceiling"`
 	ObservedFit string `json:"observed_fit"`
+}
+
+type shareCandidate struct {
+	Name        string                     `json:"name"`
+	Members     map[string]sharePrediction `json:"members"`
+	ObservedFit string                     `json:"observed_fit"`
+}
+
+type sharePrediction struct {
+	Observed uint64 `json:"observed"`
+	Floor    uint64 `json:"floor"`
+	Nearest  uint64 `json:"nearest"`
+	Ceiling  uint64 `json:"ceiling"`
 }
 
 func main() {
@@ -131,6 +146,7 @@ func analyze(input io.Reader) (report, error) {
 					normalized.TotalDelta,
 					normalized.SameAreaMembers,
 				)
+				normalized.ShareCandidates = shareCandidates(observed, normalized.TotalDelta)
 			}
 		}
 		result.Cases = append(result.Cases, normalized)
@@ -306,6 +322,93 @@ func poolCandidates(baseline, observed uint64, sameAreaMembers int) []poolCandid
 		})
 	}
 	return result
+}
+
+func shareCandidates(observed probeCase, pool uint64) []shareCandidate {
+	type weightedMember struct {
+		player member
+		weight *big.Rat
+	}
+	eligible := make([]member, 0, len(observed.Members))
+	for _, player := range observed.Members {
+		if player.ExperienceAfter > player.ExperienceBefore {
+			eligible = append(eligible, player)
+		}
+	}
+	hypotheses := []struct {
+		name   string
+		weight func(member) *big.Rat
+	}{
+		{name: "direct_character_level", weight: func(player member) *big.Rat {
+			return new(big.Rat).SetInt64(int64(player.Level))
+		}},
+		{name: "inverse_character_level", weight: func(player member) *big.Rat {
+			return new(big.Rat).SetFrac64(1, int64(player.Level))
+		}},
+		{name: "equal_shares", weight: func(member) *big.Rat {
+			return new(big.Rat).SetInt64(1)
+		}},
+	}
+	result := make([]shareCandidate, 0, len(hypotheses))
+	for _, hypothesis := range hypotheses {
+		weighted := make([]weightedMember, 0, len(eligible))
+		totalWeight := new(big.Rat)
+		for _, player := range eligible {
+			weight := hypothesis.weight(player)
+			weighted = append(weighted, weightedMember{player: player, weight: weight})
+			totalWeight.Add(totalWeight, weight)
+		}
+		candidate := shareCandidate{Name: hypothesis.name, Members: map[string]sharePrediction{}}
+		for _, item := range weighted {
+			exact := new(big.Rat).Mul(new(big.Rat).SetInt(new(big.Int).SetUint64(pool)), item.weight)
+			exact.Quo(exact, totalWeight)
+			floor, nearest, ceiling := roundRat(exact)
+			candidate.Members[item.player.ID] = sharePrediction{
+				Observed: item.player.ExperienceAfter - item.player.ExperienceBefore,
+				Floor:    floor, Nearest: nearest, Ceiling: ceiling,
+			}
+		}
+		candidate.ObservedFit = shareFit(candidate.Members)
+		result = append(result, candidate)
+	}
+	return result
+}
+
+func roundRat(value *big.Rat) (uint64, uint64, uint64) {
+	numerator, denominator := value.Num(), value.Denom()
+	floorValue := new(big.Int).Quo(new(big.Int).Set(numerator), denominator)
+	ceilingValue := new(big.Int).Quo(
+		new(big.Int).Add(new(big.Int).Set(numerator), new(big.Int).Sub(new(big.Int).Set(denominator), big.NewInt(1))),
+		denominator,
+	)
+	nearestValue := new(big.Int).Quo(
+		new(big.Int).Add(new(big.Int).Mul(new(big.Int).Set(numerator), big.NewInt(2)), denominator),
+		new(big.Int).Mul(new(big.Int).Set(denominator), big.NewInt(2)),
+	)
+	return floorValue.Uint64(), nearestValue.Uint64(), ceilingValue.Uint64()
+}
+
+func shareFit(predictions map[string]sharePrediction) string {
+	for _, rounding := range []struct {
+		name  string
+		value func(sharePrediction) uint64
+	}{
+		{name: "floor", value: func(value sharePrediction) uint64 { return value.Floor }},
+		{name: "nearest", value: func(value sharePrediction) uint64 { return value.Nearest }},
+		{name: "ceiling", value: func(value sharePrediction) uint64 { return value.Ceiling }},
+	} {
+		matches := true
+		for _, prediction := range predictions {
+			if prediction.Observed != rounding.value(prediction) {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			return rounding.name
+		}
+	}
+	return "none"
 }
 
 func abs(value int) int {

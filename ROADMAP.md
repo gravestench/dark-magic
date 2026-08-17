@@ -237,11 +237,13 @@ than compatibility claims.
 
 Party XP remains probe-gated. Blizzard's expansion documentation establishes
 same-area and roughly two-screen eligibility, a 35% party-pool increase,
-level-weighted shares, and a subsequent player/monster-level penalty, but does
+raw shares directly weighted by character level, and a subsequent player/
+monster-level penalty, but does
 not specify the exact expansion 1.14d distance threshold or integer rounding.
 `party_xp_probe` now rejects non-1.14d/community captures, validates paired
 neutral/party observations with identical rosters and monster context, and
-normalizes deltas plus candidate pool rounding. No party-XP gameplay formula
+normalizes deltas plus direct/inverse/equal share hypotheses and candidate pool
+rounding. No party-XP gameplay formula
 lands until sanitized owned-runtime vectors resolve those remaining choices.
 
 ### G5 — Locomotion and motion-state foundation

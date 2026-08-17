@@ -190,17 +190,22 @@ Blizzard's official expansion party guide provides stronger behavioral bounds:
 - eligible party members must be in the same named automap area and about two
   screens from the monster death;
 - the party XP pool increases by 35% when another party member participates;
-- each member's share is weighted by their level over the sum of eligible
-  member levels;
+- each member's raw share is directly proportional to character level: their
+  level divided by the sum of eligible member levels;
 - the ordinary player-level versus monster-level sliding penalty applies after
   the share is computed.
 
-The wording does not establish the exact 1.14d spatial threshold, whether the
+This means a higher-level character receives a larger raw pool share, not a
+smaller one. The following player-level versus monster-level penalty can reverse
+the final award when that character is too high for the killed monster, which
+likely explains reports of inverse allocation. The wording does not establish
+the exact 1.14d spatial threshold, whether the
 35% increase repeats for every additional member, or integer rounding/order.
 Those facts remain owned-runtime probes. The version-locked analyzer at
 `internal/dev/tools/party_xp_probe` accepts sanitized paired neutral/party
 captures, rejects Classic/other targets and community sources, and reports
-observed deltas plus candidate pool rounding without selecting gameplay policy.
+observed deltas plus direct-level, inverse-level, and equal-share hypotheses as
+well as candidate pool rounding without selecting gameplay policy.
 Start from `docs/research/probes/party-xp-lod-114d.template.json` and run:
 
 ```text
