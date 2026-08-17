@@ -110,12 +110,21 @@ preserves the available mana; executable coverage locks that boundary. Exact
 cost formulas, rounding, successful-cast charge timing, and interruption/refund
 rules remain probe-gated by behavior family.
 
-Evidence remains deliberately partial. The owned row declares
-`damagedinmelee`, event function 2, and Param5/6 freeze length, while Blizzard
-states that a melee attacker that hits is frozen (chilled in PvP) and that cold
-length is reduced by difficulty. Melee-hit response ordering, PvP/difficulty
-conversion, cold-armor mutual exclusion, and exact animation action timing are
-still absent and must not be inferred from the older reconstruction.
+The generic decoder now also validates the owned row's `damagedinmelee` event
+function 2, Param5/6 freeze formula, Param8 hard-point synergy percentage, the
+target `freeze` state, and the armor state's States.txt group. A factual
+successful melee hit applies a source-tagged freeze state to a monster attacker;
+the row produces 30 + 3 frames per skill level and +5% per hard point in each
+named synergy. The immutable Normal/Nightmare/Hell rule applies the official
+full/half/quarter cold-length relationship. While active, the generic disabled-
+action fact stops the monster AI and motion; expiration restores eligibility.
+The same state engine replaces another active state in the owned exclusive group
+and removes the displaced stat source exactly.
+
+Evidence remains deliberately partial. PvP must chill instead of freeze, and
+target cold resistance/immunity, champion/boss modifiers, exact integer/tick
+ordering, presentation, and animation action timing remain absent. These edges
+must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
 classification and implementation of the 355 missing configurations,
@@ -401,6 +410,12 @@ Other states may stack, replace, keep the strongest source, keep the longest dur
 
 The state engine should therefore support a policy layer instead of hard-coding "latest wins" globally.
 
+The first target-backed replacement policy is now executable: States.txt group
+1 and Blizzard's statement that only one cold armor can be active cause a newly
+applied armor state to replace another member of that group. Replacement emits
+an explicit reason and removes the displaced source-tagged stat contribution.
+Other groups and same-state/multiple-source policies remain family-specific.
+
 ## Auras and continuously applied states
 
 Auras are better modeled as **owned periodic/proximity sources** than as permanent edits to every nearby entity.
@@ -523,7 +538,7 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
   the primary target data for the current self-state slice.
 - Blizzard's official [Sorceress Cold Spells](https://classic.battle.net/diablo2exp/skills/sorceress-cold.shtml)
   table supplies the published Frozen Armor effect, level vectors, synergies,
-  PvP distinction, and difficulty cold-length warning.
+  PvP distinction, cold-armor exclusion, and difficulty cold-length warning.
 - Blizzard's official [Basic Skill Information](https://classic.battle.net/diablo2exp/skills/basics.shtml)
   says a lack of mana makes an active skill unusable; its
   [Character Information](https://classic.battle.net/diablo2exp/basics/characters.shtml)

@@ -2,7 +2,7 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G9 target-locked mounted-data
-coverage plus timed self-state/stat-source slice on 2026-08-16.
+coverage plus timed and reactive self-state/stat-source slices on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -338,9 +338,13 @@ runtime composition and the coverage report.
 - [x] Make ordinary mana admission a shared cast-lifecycle invariant:
   underfunded requests start no action or effect and preserve the partial mana
   balance; lock the rejection path with deterministic executable coverage.
-- [ ] Complete Frozen Armor's target-verified melee-hit freeze transaction,
-  difficulty/PvP cold-length rules, animation action timing, and cold-armor
-  mutual-exclusion policy before upgrading it from partial behavior.
+- [x] Add the generic state-group replacement and successful-melee-hit reaction
+  mechanisms used by Frozen Armor, including exact source removal, row-derived
+  freeze length/synergies, expansion difficulty divisors, checkpointing, and
+  monster action suppression.
+- [ ] Complete Frozen Armor's PvP chill conversion, target resistance/immunity
+  and monster-class duration modifiers, exact integer/tick ordering, animation
+  action timing, and presentation before upgrading it from partial behavior.
 - [ ] Implement reusable targeted, point, self, area/nova, buff/debuff/curse/aura,
   summon, corpse, movement, missile, and trap families in dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
@@ -366,9 +370,17 @@ duration shape. The owned target row and official Blizzard table produce 7
 mana, 30% + 5% per level defense, 3000 + 300 frames per level duration, and
 250 frames per Shiver/Chilling Armor hard point. A source-tagged state and
 `defense` percentage source apply, refresh, survive checkpoint, expire, and are
-removed together. Frozen Armor remains partial because its authored
-`damagedinmelee` freeze response, difficulty/PvP cold-length rules, cold-armor
-exclusion, and exact cast action timing are not yet implemented.
+removed together. The decoder now also validates `damagedinmelee` event function
+2, the Param5/6 freeze-length formula, Param8 hard-point synergies, the target
+`freeze` state, and the armor state's owned States.txt group. A successful melee
+hit applies that source-tagged freeze to a monster attacker for the row-derived
+duration (30 + 3 frames per skill level, then +5% per Shiver/Chilling Armor hard
+point) and suppresses its actions until expiration. Normal/Nightmare/Hell use
+the official full/half/quarter cold-length relationship. Applying another state
+in the same authored group removes the displaced instance and its exact stat
+source. Frozen Armor remains partial because PvP must chill rather than freeze;
+target cold resistance/immunity, monster-class modifiers, exact rounding/tick
+ordering, animation timing, and presentation are not yet implemented.
 
 The shared lifecycle rejects a mana-costing skill before creating its cast when
 the authoritative 8.8 fixed-point balance is below the computed cost. It
@@ -381,10 +393,11 @@ Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: finish the melee retaliation/state-conflict extension used by Frozen
-Armor, then use the report to select one high-leverage missing target/point/area
-signature. Evidence upgrades and exact-ID declarations land together; no
-declaration is added merely because another skill shares server function IDs.
+Next: finish the remaining target-sensitive cold-duration/PvP and action-timing
+boundaries for this family, then use the report to select one high-leverage
+missing target/point/area signature. Evidence upgrades and exact-ID declarations
+land together; no declaration is added merely because another skill shares
+server function IDs.
 
 ### G10 — Item-source lifecycle
 

@@ -386,6 +386,9 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// standalone authority. These are code-owned data rather than
 	// presentation assets; missile art remains covered by the audited dynamic
 	// data/global/missiles prefix.
+	// The timed/reactive state-skill family additionally declares States.txt so
+	// authored state groups and reaction states remain generation-pinned data,
+	// not presentation dependencies.
 	// The additional code-owned paths are Lua test fixtures colocated with the
 	// production modules; they are not new presentation asset dependencies.
 	// Realm presentation adds the archive-verified NarrowButtonBlank gateway
@@ -404,7 +407,7 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// presentation-coverage verified both files in the mounted archive.
 	// The Create Game pane uses the archive-authored four-state numeric arrow
 	// sheet for its capacity and character-level restriction selectors.
-	const auditedFingerprint = "4aa15491b158ed2e06e62b6975e4959f2bda0d94e917b35e348aca27233a5a63"
+	const auditedFingerprint = "ae5553b8f162cfd41bf40fff28199a6ff55a39b14f152808cae4b3146a835aea"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
