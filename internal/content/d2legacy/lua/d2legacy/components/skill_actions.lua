@@ -84,6 +84,25 @@ function M.register()
             { name = "remaining_health_raw", type = "i64" },
         },
     })
+
+    ecs.component({
+        name = "d2legacy.combat.damage_bundle",
+        version = 1,
+        fields = {
+            { name = "physical_rolled_raw", type = "i64" },
+            { name = "physical_mitigated_raw", type = "i64" },
+            { name = "fire_rolled_raw", type = "i64" },
+            { name = "fire_mitigated_raw", type = "i64" },
+            { name = "lightning_rolled_raw", type = "i64" },
+            { name = "lightning_mitigated_raw", type = "i64" },
+            { name = "cold_rolled_raw", type = "i64" },
+            { name = "cold_mitigated_raw", type = "i64" },
+            { name = "magic_rolled_raw", type = "i64" },
+            { name = "magic_mitigated_raw", type = "i64" },
+            { name = "poison_rolled_raw", type = "i64" },
+            { name = "poison_mitigated_raw", type = "i64" },
+        },
+    })
 end
 
 return M

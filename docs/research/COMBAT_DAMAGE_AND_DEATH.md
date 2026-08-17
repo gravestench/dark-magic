@@ -79,6 +79,19 @@ future proc consumers and melee-specific reaction consumers share one fact
 without a parallel event graph. Misses remain melee-resolution facts and carry
 no generic damage component.
 
+The next G8 layer adds `d2legacy.combat.damage_bundle` to the same result entity.
+It records rolled and post-mitigation values independently for physical, fire,
+lightning, cold, magic, and poison. The resolver normalizes a typed Lua bundle,
+applies mitigation per channel in a stable order, and sums only immediate
+channels at the health-commit boundary. Poison is preserved in the bundle but
+cannot mutate health until its rate/duration transaction is implemented.
+Current melee and straight-missile definitions still populate one channel; a
+deterministic mixed physical/fire vector proves the resolver does not collapse
+them before mitigation, and a fire/poison vector proves poison is not silently
+promoted to immediate damage. The generic event retains scalar immediate totals
+for simple consumers. Drain and duration fields are deliberately absent until
+their non-health semantics and Expansion 1.14d ordering are pinned.
+
 Player vitals currently store whole health while monster health is raw 8.8.
 The shared boundary therefore quantizes player damage once and reports only the
 amount represented by committed ECS state. This is a Dark Magic consistency
@@ -433,6 +446,12 @@ Keep criticals, elemental damage, states, leech, and advanced modifiers deferred
 ### C3 — typed mitigation
 
 Add elemental/magic/physical resistance and verified cap/pierce ordering using table-driven vectors.
+
+Current implementation note: the typed bundle now preserves six direct-damage
+channels and applies the already-supported physical/fire mitigation per channel;
+unsupported channel mitigation remains passthrough. Resistance breadth, caps,
+pierce, absorb, conversion, drain, and durations are still future verified
+stages rather than implied compatibility.
 
 ### C4 — secondary damage effects
 
