@@ -1,9 +1,9 @@
 package clientapp
 
 import (
+	"github.com/gravestench/dark-magic/internal/platform/desktop"
 	"github.com/gravestench/dark-magic/internal/shell"
 	"github.com/gravestench/dark-magic/internal/shell/luashell"
-	raylibshell "github.com/gravestench/dark-magic/internal/shell/raylib"
 )
 
 // startDeveloperConsole builds the little terminal drawn over the game.
@@ -24,6 +24,6 @@ func (app *application) startDeveloperConsole() error {
 	}
 	app.shellSession.AttachLogs(app.options.Logs)
 	app.shellSession.AttachSettings(app.shellSettings)
-	app.console = raylibshell.New(app.shellSession, app.shellSettings)
+	app.console = desktop.NewConsole(desktop.ConsoleOptions{Session: app.shellSession, Settings: app.shellSettings})
 	return wrap("load developer console font", app.console.LoadFont())
 }
