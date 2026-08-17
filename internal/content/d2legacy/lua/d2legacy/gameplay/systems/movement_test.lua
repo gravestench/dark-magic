@@ -33,6 +33,15 @@ local function forced_event()
     return ecs.get(events[1], "d2legacy.world.forced_motion_event")
 end
 
+local function forced_events()
+    local ecs = require("engine.ecs/v1")
+    local result = {}
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.world.forced_motion_event" } })) do
+        result[#result + 1] = ecs.get(entity, "d2legacy.world.forced_motion_event")
+    end
+    return result
+end
+
 return test.suite({
     profile = "authority",
     tier = "fast",
@@ -187,6 +196,76 @@ return test.suite({
                 test.expect(event:get("applied_distance")):equals(1)
             end),
             test.expect_checkpoint_parity(2),
+        }),
+        test.case("a_new_forced_request_replaces_and_audits_active_progress", {
+            test.run(function()
+                unit(4, 0, true, {
+                    kind = "knockback",
+                    source_x = 2,
+                    source_y = 10,
+                    distance = 3,
+                    speed = 25,
+                    request_tick = 0,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.query({ all = { "d2legacy.world.forced_motion" } })[1]
+                test.expect(ecs.get(target, "d2legacy.world.position"):get("x")):equals(5)
+                ecs.set(target, "d2legacy.world.forced_motion_request", {
+                    kind = "knockback",
+                    source_x = 8,
+                    source_y = 10,
+                    distance = 2,
+                    speed = 25,
+                    request_tick = 1,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.query({ all = { "d2legacy.world.forced_motion" } })[1]
+                test.expect(ecs.get(target, "d2legacy.world.position"):get("x")):equals(4)
+                local events = forced_events()
+                test.expect(#events):equals(1)
+                test.expect(events[1]:get("outcome")):equals("replaced")
+                test.expect(events[1]:get("requested_distance")):equals(3)
+                test.expect(events[1]:get("applied_distance")):equals(1)
+                test.expect(events[1]:get("end_x")):equals(5)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
+        test.case("forced_motion_owns_velocity_until_fresh_locomotion", {
+            test.run(function()
+                unit(4, 0, true, {
+                    kind = "knockback",
+                    source_x = 2,
+                    source_y = 10,
+                    distance = 2,
+                    speed = 25,
+                    request_tick = 0,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.query({ all = { "d2legacy.world.forced_motion" } })[1]
+                ecs.get(target, "d2legacy.world.velocity"):set("x", -25)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.query({ all = { "d2legacy.world.occupancy" } })[1]
+                test.expect(ecs.get(target, "d2legacy.world.position"):get("x")):equals(6)
+                test.expect(ecs.get(target, "d2legacy.world.velocity"):get("x")):equals(0)
+                ecs.get(target, "d2legacy.world.velocity"):set("x", -25)
+            end),
+            test.step(1),
+            test.run(function()
+                test.expect(positions()[1]):equals(5)
+            end),
+            test.expect_checkpoint_parity(1),
         }),
     },
 })

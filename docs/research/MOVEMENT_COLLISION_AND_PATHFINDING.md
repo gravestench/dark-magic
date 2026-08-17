@@ -359,8 +359,12 @@ policy-owned distance, speed, and request tick. The pre-simulation admission
 system derives a destination away from the source; the movement phase advances
 that destination through the same static collision, dynamic occupancy, bounds,
 and stable entity ordering as ordinary locomotion. Durable events distinguish
-completed, partial, blocked, and invalid outcomes. Active progress survives a
-checkpoint, and presentation may observe the event without authoring position.
+completed, partial, blocked, invalid, and replaced outcomes. A newer admitted
+request deterministically replaces one active transaction only after recording
+the displaced request's exact progress. Forced motion owns velocity while
+active, clears it on completion, and ordinary locomotion resumes only from
+fresh input. Active progress survives a checkpoint, and presentation may
+observe the event without authoring position.
 
 D2MOO's recovered 1.10f/1.13c server path is useful structural evidence: it
 selects a dedicated server knockback path, derives its ray away from the target
