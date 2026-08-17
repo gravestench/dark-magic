@@ -8,6 +8,8 @@ local endpoints = {
         token = "TP",
         label = "BLUE TEST WARP",
         level_id = 1,
+        resident_id = "warp:test-town",
+        room_id = "town-room",
         x = 12,
         y = 12,
         radius = 4,
@@ -23,6 +25,8 @@ local endpoints = {
         token = "PP",
         label = "RED TEST WARP",
         level_id = 2,
+        resident_id = "warp:test-field",
+        room_id = "field-room",
         x = 22,
         y = 20,
         radius = 4,
@@ -66,6 +70,8 @@ return test.suite({
                 local bounds = ecs.get(player, "d2legacy.world.bounds")
                 local velocity = ecs.get(player, "d2legacy.world.velocity")
                 test.expect(#ecs.query({ all = { "d2legacy.world.warp" } })):equals(2)
+                local residents = ecs.query({ all = { "d2legacy.world.warp", "d2legacy.world.room_resident" } })
+                test.expect(#residents):equals(2)
                 test.expect(location:get("level_id")):equals(2)
                 test.expect(position:get("x")):equals(20)
                 test.expect(position:get("y")):equals(20)

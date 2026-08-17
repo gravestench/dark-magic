@@ -161,7 +161,7 @@ func InteractionData(worlds map[int]*gameworld.Map, zones map[int]*worldgen.Zone
 			}
 			if name != "" {
 				target := map[string]any{"id": selected.ID, "npc": name, "vendor": "", "categories": "", "services": "", "x": selected.X, "y": selected.Y, "radius": float64(4)}
-				if roomID, found := roomAt(zones[levelID], selected.X, selected.Y); found {
+				if roomID, found := RoomIDAt(zones[levelID], selected.X, selected.Y); found {
 					target["resident_id"] = fmt.Sprintf("level:%d:%s", levelID, selected.ID)
 					target["level_id"] = float64(levelID)
 					target["room_id"] = roomID
@@ -173,7 +173,9 @@ func InteractionData(worlds map[int]*gameworld.Map, zones map[int]*worldgen.Zone
 	return map[string]any{"owner": owner, "initial_target": initial, "targets": targets}
 }
 
-func roomAt(zone *worldgen.Zone, x, y float64) (string, bool) {
+// RoomIDAt resolves one authoritative subtile point against a generated zone.
+// The canonical string ID is shared by population and every resident kind.
+func RoomIDAt(zone *worldgen.Zone, x, y float64) (string, bool) {
 	if zone == nil {
 		return "", false
 	}

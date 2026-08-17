@@ -1,6 +1,6 @@
 # Warps, portals, waypoints, teleportation, and level-transition research
 
-Status: implementation-oriented research baseline. Dark Magic already has a trusted `internal/game/transition` authority for the Act I town/Blood Moor seam, semantic map seams/warps, fixed-tick commands, persistent player location, and generated world boundaries. This document generalizes that boundary to the full Diablo II transition vocabulary.
+Status: implementation-oriented research baseline. Dark Magic already has a trusted `internal/game/transition` authority for the Act I town/Blood Moor seam, semantic map seams/warps, fixed-tick commands, persistent player location, and generated world boundaries. Warp Lab materializes a paired authoritative interaction/transition entity set; both endpoints now acquire stable level/room residency from generated geometry and are pinned by the mounted-asset lab. This document generalizes that boundary to the full Diablo II transition vocabulary.
 
 ## Executive conclusion
 
@@ -343,6 +343,10 @@ Replace the hard-coded Act I seam endpoint switch with immutable endpoint/link d
 ### T2 — authored stair/warp
 
 Materialize one preset stair/exit object and route it through generic transition authority.
+
+Current foundation: synthetic paired Warp Lab endpoints already use that
+production path and the generic room-resident component. Room inactivation does
+not need a warp-specific archive or recreated entity identity.
 
 ### T3 — waypoint unlock/travel
 

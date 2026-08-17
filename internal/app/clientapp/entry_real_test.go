@@ -393,17 +393,24 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 		t.Fatalf("Warp Lab entry level = %v, want town %d", level, app.transitionSeam.Town.LevelID)
 	}
 	warps, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.warp")
+	residents, residentsOK := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.room_resident")
 	positions, positionsOK := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
 	selectables, selectablesOK := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.selectable")
-	if !ok || !positionsOK || !selectablesOK {
+	if !ok || !residentsOK || !positionsOK || !selectablesOK {
 		t.Fatal("Warp Lab is missing authoritative warp presentation stores")
 	}
 	if warps.Len() != 2 {
 		t.Fatalf("Warp Lab authoritative endpoints = %d, want paired production entities", warps.Len())
 	}
+	if residents.Len() < 2 {
+		t.Fatalf("Warp Lab room residents = %d, want both endpoints", residents.Len())
+	}
 	var portalID string
 	var portalX, portalY float64
 	for _, entity := range warps.Entities() {
+		if _, present := residents.Get(entity); !present {
+			t.Fatalf("Warp Lab endpoint %d has no room residency", entity)
+		}
 		portalLocation, present := locations.Get(entity)
 		if !present {
 			continue

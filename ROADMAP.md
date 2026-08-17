@@ -18,7 +18,9 @@ residency now has a world-owned stable resident ID rather than depending on
 monster identity, and the activation record preserves each resident's generic
 velocity-mover opt-in. Residency is scoped by canonical level/room IDs, and
 production DS1 interaction targets now acquire it from generated zone geometry
-without turning map/presentation data into authority. G9 remains current through
+without turning map/presentation data into authority. Warp Lab's paired
+authoritative endpoints use the same geometry join and the real-asset lab test
+pins both endpoint residents. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -472,6 +474,9 @@ ordinary-monster inactivation/reactivation implemented**.
   plus room, and attach production DS1 interaction targets by testing their
   authoritative subtile point against generated room bounds. Same-named rooms
   in another level remain active; missing room geometry does not invent a link.
+- [x] Attach Warp Lab's paired authoritative warp entities to generated rooms
+  through the same entry-world point resolver. The endpoint stays one ordinary
+  interaction/transition entity; residency adds no warp-specific lifecycle.
 - [ ] Extend the same explicit activation policy to owned-unit graphs, corpses,
   items, objects, projectiles/pending actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
@@ -495,7 +500,9 @@ advance while inactive, checkpoints/reconstructs the Lua runtime, preserves a
 timed-state/stat-source/event graph and its entity IDs, preserves a second non-
 monster/non-moving resident, proves an equal room ID in another level is not
 affected, and reaches identical reactivation checksums. Entry-world preparation
-joins resolved DS1 interaction points to the same canonical residency contract.
+joins resolved DS1 interaction points and synthetic paired Warp Lab endpoints to
+the same canonical residency contract; the mounted-asset lab proves both warps
+materialize with resident components.
 This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 
