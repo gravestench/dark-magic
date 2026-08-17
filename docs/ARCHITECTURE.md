@@ -452,7 +452,8 @@ Diablo TSV bytes and generic rows are owned by `internal/game/data/store`.
 `internal/game/data/typed` can bind one caller-selected table to a lossless
 schema from `internal/game/data/model`; it does not declare which tables exist,
 which are mandatory, or how records join into gameplay. The authoritative
-`d2legacy` mod requests immutable rows through `engine.records/v1` and owns
+`d2legacy` mod requests immutable rows through `engine.records/v1`, loads its
+package-owned target declarations through read-only `engine.data/v1`, and owns
 those choices and interpretations. A narrow Go adapter may decode a schema when
 the boundary genuinely requires a native value, but it must not rebuild a
 global Diablo catalog. Consult `docs/GAME_DATA_RECORDS.md` and the bundled Data

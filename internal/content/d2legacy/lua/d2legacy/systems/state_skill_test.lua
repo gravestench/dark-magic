@@ -68,7 +68,7 @@ return test.suite({
                 local state = ecs.get(instances[1], "d2legacy.state.instance")
                 test.assert(
                     state:get("target"):id() == player:id()
-                        and state:get("state_id") == "frozen_armor"
+                        and state:get("state_id") == "skill.40"
                         and state:get("source_id") == "skill:alice:40"
                 )
                 local events = ecs.query({ all = { "d2legacy.skill.cast_event" } })
