@@ -40,9 +40,10 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 2,
+        version = 3,
         fields = {
             { name = "owner_id", type = "string" },
+            { name = "cast_id", type = "string" },
             { name = "target_x", type = "f64" },
             { name = "target_y", type = "f64" },
             { name = "velocity_x", type = "f64" },
@@ -51,6 +52,8 @@ function M.register()
             { name = "previous_y", type = "f64" },
             { name = "remaining_ticks", type = "i64" },
             { name = "collision_radius", type = "f64" },
+            { name = "destroy_on_contact", type = "bool" },
+            { name = "next_hit_delay", type = "i64" },
             { name = "knockback_value", type = "i64" },
             { name = "minimum_damage_raw", type = "i64" },
             { name = "maximum_damage_raw", type = "i64" },
@@ -66,6 +69,18 @@ function M.register()
             { name = "offset_x", type = "f64" },
             { name = "offset_y", type = "f64" },
             { name = "offset_z", type = "f64" },
+        },
+    })
+
+    -- One cast/target contact lock is its own ECS entity. Radial rays share a
+    -- cast ID, so overlap policy composes without a Nova-specific hit path.
+    ecs.component({
+        name = "d2legacy.missile.contact_lock",
+        version = 1,
+        fields = {
+            { name = "cast_id", type = "string" },
+            { name = "target_id", type = "string" },
+            { name = "expires_tick", type = "i64" },
         },
     })
 

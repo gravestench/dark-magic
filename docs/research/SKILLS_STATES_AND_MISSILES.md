@@ -70,6 +70,9 @@ The renderer-independent `d2legacy` Lua authority now owns:
 - a reusable `missile.straight` family covering projectile construction,
   movement, swept contact, channel mitigation, damage, removal, replay, and
   checkpoint continuation;
+- a reusable `missile.radial` family that composes one targetless cast into
+  ordinary projectile entities sharing a cast identity plus independent ECS
+  cast-target contact locks;
 - a reusable self-state family and timed state-instance lifecycle; and
 - the shared melee action path.
 
@@ -101,8 +104,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-16 it reports 357 skill rows, 172 distinct signatures, 3
-explicitly admitted configurations, and 354 missing configurations. Every
+archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 4
+explicitly admitted configurations, and 353 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -127,7 +130,32 @@ Frozen Armor receives hard-level modifiers from Shiver Armor and Chilling Armor
 for both seconds-per-level duration and freeze-length-per-level, matching the
 two owned Skills.txt expressions already decoded by the generic state family.
 Attack resolves to the localized name `Attack` and description `normal attack`
-with no cross-skill modifier formula.
+with no cross-skill modifier formula. Nova resolves to the localized name and
+descriptions "creates an electrically charged ring" and "to shock nearby
+enemies / creates an expanding ring of lightning," with no replacement tokens
+or cross-skill modifier formula. This provides target/area intent, not exact
+angular, acceleration, collision, or timing arithmetic.
+
+Nova is the first exact Expansion 1.14d `missile.radial` configuration. Its
+decoder requires the owned server/client function 22/25 shape, three identical
+`nova` missile slots, targetless SC casting, lightning element, and the missile
+function/collision/repeat-contact fields. It preserves 12 base rays plus 4 per
+level, 15 base mana plus 1 per level, all five elemental damage growth bands,
+24 velocity, 13-tick lifetime, presentation fields, and four-tick next-hit
+delay in a reusable immutable definition. The generic materializer creates one
+ECS projectile per direction with a shared deterministic cast ID. The contact
+system represents each cast/target suppression window as its own checkpointed
+`d2legacy.missile.contact_lock` entity, so radial repeat policy composes with
+the shared direct-damage path rather than becoming a Nova special case. A
+synthetic second record fixture proves family reuse, and authority coverage
+checks level-one mana, twelve rays, one lightning result during the lock,
+checkpoint parity, and lifetime cleanup.
+
+This is partial target behavior. Even angular spacing is a deterministic Dark
+Magic policy pending an owned-runtime initial-phase vector. The target missile's
+`Accel=-1000` is not yet applied, and the exact action timing and complete
+ordering of `LastCollide=1`, `NextHit=1`, and `NextDelay=4` remain probes. No
+other nova-like skill is admitted by function or visual resemblance.
 
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
@@ -198,7 +226,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 354 missing configurations,
+classification and implementation of the 353 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

@@ -6,6 +6,7 @@
 local components = require("d2legacy.components.skill_actions")
 local shared_components = require("d2legacy.components.shared")
 local missile_skill_data = require("d2legacy.data.missile_skills")
+local radial_missile_skill_data = require("d2legacy.data.radial_missile_skills")
 local melee_skill_data = require("d2legacy.data.melee_skills")
 local skill_behavior_coverage = require("d2legacy.data.skill_behavior_coverage")
 local cast_command = require("d2legacy.commands.cast")
@@ -80,11 +81,17 @@ function M.start()
     -- record function IDs never enables another skill by resemblance.
     M.skill_behavior_coverage = skill_behavior_coverage.load()
     M.missile_skills = missile_skill_data.load(M.skill_behavior_coverage.by_family["missile.straight"] or {})
+    M.radial_missile_skills =
+        radial_missile_skill_data.load(M.skill_behavior_coverage.by_family["missile.radial"] or {})
     M.melee_skills = melee_skill_data.load(M.skill_behavior_coverage.by_family["action.melee"] or {})
     M.progression = progression_data.load()
     M.state_skills = state_skill_data.load(M.skill_behavior_coverage.by_family["state.self-timed"] or {})
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
+        M.cast_skills[skill_id] = definition
+    end
+    for skill_id, definition in pairs(M.radial_missile_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
     for skill_id, definition in pairs(M.state_skills) do
@@ -98,7 +105,7 @@ function M.start()
     cast_command.register(M.cast_skills)
     cast_system.register(M.cast_skills)
     melee_skill_system.register(M.melee_skills)
-    missile_skill_system.register(M.missile_skills)
+    missile_skill_system.register(M.cast_skills)
     state_skill_system.register(M.state_skills)
     projectile_system.register()
     melee_system.register()
@@ -138,6 +145,7 @@ end
 
 function M.stop()
     M.missile_skills = nil
+    M.radial_missile_skills = nil
     M.melee_skills = nil
     M.state_skills = nil
     M.cast_skills = nil

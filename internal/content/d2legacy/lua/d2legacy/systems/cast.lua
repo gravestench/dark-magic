@@ -7,6 +7,7 @@
 -- on animation frames.
 
 local ecs = require("engine.ecs/v1")
+local skill_progression = require("d2legacy.policy.skill_progression")
 
 local M = {}
 
@@ -36,10 +37,10 @@ local function begin_cast(context, player, request, definitions, levels, command
     local valid = request:get("request_tick") <= context.tick
         and definition ~= nil
         and known_level > 0
-        and available >= definition.mana_cost_raw
+        and available >= skill_progression.mana_cost(definition, known_level)
 
     if valid then
-        local remaining = available - definition.mana_cost_raw
+        local remaining = available - skill_progression.mana_cost(definition, known_level)
         vitals:set("mana_raw", remaining)
         vitals:set("mana", math.floor(remaining / 256))
         commands:set(player, "d2legacy.skill.cast", {

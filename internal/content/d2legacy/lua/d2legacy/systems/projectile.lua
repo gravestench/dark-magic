@@ -46,7 +46,11 @@ local function target_snapshot(entity)
     }
 end
 
-local function first_contact(projectile_entity, projectile, position, location, targets)
+local function contact_key(projectile, target_id)
+    return projectile:get("cast_id") .. "\0" .. target_id
+end
+
+local function first_contact(projectile_entity, projectile, position, location, targets, locks)
     local best, best_along
     for _, target in ipairs(targets) do
         if
@@ -54,6 +58,7 @@ local function first_contact(projectile_entity, projectile, position, location, 
             and target.id ~= projectile:get("owner_id")
             and target.act == location:get("act")
             and target.level_id == location:get("level_id")
+            and not locks[contact_key(projectile, target.id)]
         then
             local distance, along = geometry.segment_distance(
                 projectile:get("previous_x"),
@@ -91,10 +96,19 @@ end
 
 local function resolve_contacts(context, entities, structural)
     local targets = {}
+    local locks = {}
     for _, entity in ipairs(entities) do
         local target = target_snapshot(entity)
         if target then
             targets[#targets + 1] = target
+        end
+        local lock = ecs.get(entity, "d2legacy.missile.contact_lock")
+        if lock then
+            if context.tick >= lock:get("expires_tick") then
+                structural:destroy(entity)
+            else
+                locks[lock:get("cast_id") .. "\0" .. lock:get("target_id")] = true
+            end
         end
     end
     table.sort(targets, function(a, b)
@@ -106,13 +120,27 @@ local function resolve_contacts(context, entities, structural)
         if projectile then
             local position = ecs.get(entity, "d2legacy.world.position")
             local location = ecs.get(entity, "d2legacy.world.location")
-            local target = first_contact(entity, projectile, position, location, targets)
+            local target = first_contact(entity, projectile, position, location, targets, locks)
             if target then
                 local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
                 local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
                 local result = damage.resolve(target.entity, bundle, ecs)
                 emit_hit(context, projectile, target, result, structural)
-                structural:destroy(entity)
+                local delay = projectile:get("next_hit_delay")
+                if delay > 0 then
+                    local key = contact_key(projectile, target.id)
+                    locks[key] = true
+                    structural:create({
+                        ["d2legacy.missile.contact_lock"] = {
+                            cast_id = projectile:get("cast_id"),
+                            target_id = target.id,
+                            expires_tick = context.tick + delay,
+                        },
+                    })
+                end
+                if projectile:get("destroy_on_contact") then
+                    structural:destroy(entity)
+                end
             elseif projectile:get("remaining_ticks") <= 0 then
                 structural:destroy(entity)
             end
@@ -139,7 +167,11 @@ function M.register()
         id = "d2legacy.missile.contact",
         phase = "combat",
         query = {
-            any = { "d2legacy.missile.projectile", "d2legacy.world.selectable" },
+            any = {
+                "d2legacy.missile.projectile",
+                "d2legacy.missile.contact_lock",
+                "d2legacy.world.selectable",
+            },
             none = { "d2legacy.world.inactive" },
         },
         read = {
@@ -151,12 +183,14 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.combat.defense",
+            "d2legacy.missile.contact_lock",
         },
         write = {
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.combat.event",
             "d2legacy.combat.damage_bundle",
+            "d2legacy.missile.contact_lock",
         },
         update = resolve_contacts,
     })
