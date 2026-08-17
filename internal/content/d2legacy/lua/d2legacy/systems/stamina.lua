@@ -7,34 +7,14 @@
 
 local ecs = require("engine.ecs/v1")
 local movement_rules = require("d2legacy.movement_rules/v1")
+local player_motion = require("d2legacy.gameplay.player_motion")
 local M = {}
 
 local function moving(velocity)
     return velocity:get("x") ~= 0 or velocity:get("y") ~= 0
 end
 
-local function fall_back_to_walk(entity, tick, identity, stats, velocity)
-    local walk =
-        movement_rules.rates(identity:get("class"), stats:get("velocitypercent"), stats:get("item_fastermovevelocity"))
-    local x, y = velocity:get("x"), velocity:get("y")
-    local magnitude = math.sqrt(x * x + y * y)
-    if magnitude > 0 then
-        velocity:set("x", x / magnitude * walk)
-        velocity:set("y", y / magnitude * walk)
-    end
-    local mode = ecs.get(entity, "d2legacy.player.movement_mode")
-    if mode then
-        mode:set("running", false)
-    end
-    local animation = ecs.get(entity, "d2legacy.player.animation")
-    if animation and animation:get("mode") == "RN" then
-        animation:set("mode", "WL")
-        animation:set("start_tick", tick)
-    end
-end
-
 local function update(entity, context)
-    local identity = ecs.get(entity, "d2legacy.player.identity")
     local vitals = ecs.get(entity, "d2legacy.player.vitals")
     local stats = ecs.get(entity, "d2legacy.player.movement_stats")
     local mode = ecs.get(entity, "d2legacy.player.movement_mode")
@@ -62,7 +42,7 @@ local function update(entity, context)
     )
     vitals:set("stamina_raw", current)
     if force_walk then
-        fall_back_to_walk(entity, context.tick, identity, stats, velocity)
+        player_motion.force_walk(entity, context.tick)
     end
 
     vitals:set("stamina", math.floor(vitals:get("stamina_raw") / 256))
@@ -73,12 +53,14 @@ function M.register()
     ecs.system({
         id = "d2legacy.player.stamina",
         phase = "pre_simulation",
+        after = { "d2legacy.player.resolve_motion" },
         query = {
             all = {
                 "d2legacy.player.identity",
                 "d2legacy.player.vitals",
                 "d2legacy.player.movement_stats",
                 "d2legacy.player.movement_mode",
+                "d2legacy.player.motion",
                 "d2legacy.world.velocity",
                 "d2legacy.world.location",
             },
@@ -88,10 +70,12 @@ function M.register()
             "d2legacy.player.movement_stats",
             "d2legacy.world.location",
             "d2legacy.player.animation",
+            "d2legacy.player.motion",
         },
         write = {
             "d2legacy.player.vitals",
             "d2legacy.player.movement_mode",
+            "d2legacy.player.motion",
             "d2legacy.world.velocity",
             "d2legacy.player.animation",
         },

@@ -109,8 +109,11 @@ Authoritative player locomotion now consumes the pinned Expansion 1.14d
 `CharStats.txt` class movement/stamina facts. Walk/run input, item Faster
 Run/Walk diminishing returns, armor velocity penalties, 8.8 stamina drain and
 recovery, exhaustion fallback, owner-private HUD projection, and connected
-prediction share the same rule boundary. Chill/slow ordering and max-stamina
-recalculation from progression and active sources remain separately gated.
+prediction share the same rule boundary. Client routes are world-scoped input
+plans; admitted locomotion and melee approaches claim an explicit checkpointed
+motion owner, and one authoritative resolver derives player velocity and WL/RN
+mode. Chill/slow ordering and max-stamina recalculation from progression and
+active sources remain separately gated.
 
 ### Product binaries
 
@@ -290,7 +293,8 @@ camera-culled texture chunks whose placement follows authoritative ECS camera
 coordinates; it does not allocate a full-map GPU texture. Player movement is
 fixed-tick and command-driven, with pinned `CharStats.txt` class walk/run
 velocity shared by authority and client prediction, normalized diagonal speed,
-and a subtile collision footprint rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
+an explicit authority-side motion owner, and a subtile collision footprint
+rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
 authoritative networking, and end-to-end gameplay remain in progress.
 
 See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and

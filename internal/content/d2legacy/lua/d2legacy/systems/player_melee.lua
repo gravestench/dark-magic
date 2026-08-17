@@ -8,6 +8,7 @@ local ecs = require("engine.ecs/v1")
 local animdata = require("engine.animdata/v1")
 local action_rate = require("d2legacy.policy.action_rate")
 local combat_target = require("d2legacy.gameplay.combat_target")
+local player_motion = require("d2legacy.gameplay.player_motion")
 local direction = require("d2legacy.policy.direction")
 local weapon_selection = require("d2legacy.policy.weapon_selection")
 local M = {}
@@ -22,11 +23,8 @@ local function controlled(entities, player)
 end
 
 local function stop(entity, mode, tick)
-    local velocity, animation = ecs.get(entity, "d2legacy.world.velocity"), ecs.get(entity, "d2legacy.player.animation")
-    if velocity then
-        velocity:set("x", 0)
-        velocity:set("y", 0)
-    end
+    player_motion.stop(entity)
+    local animation = ecs.get(entity, "d2legacy.player.animation")
     if animation then
         local next_mode = mode or "NU"
         if animation:get("mode") ~= next_mode then
@@ -168,11 +166,12 @@ function M.register()
             "d2legacy.player.vitals",
             "d2legacy.player.appearance",
             "d2legacy.combat.action_rate",
+            "d2legacy.player.motion",
         },
         write = {
             "d2legacy.combat.attack_approach",
             "d2legacy.combat.attack_animation",
-            "d2legacy.world.velocity",
+            "d2legacy.player.motion",
             "d2legacy.world.facing",
             "d2legacy.player.animation",
             "d2legacy.combat.attack_animation_event",
@@ -229,16 +228,7 @@ function M.register()
                             stop(attacker, nil, context.tick)
                             structural:remove(attacker, "d2legacy.combat.attack_approach")
                         elseif length > 0 then
-                            local velocity = ecs.get(attacker, "d2legacy.world.velocity")
-                            velocity:set("x", dx / length * 10)
-                            velocity:set("y", dy / length * 10)
-                            local animation = ecs.get(attacker, "d2legacy.player.animation")
-                            if animation then
-                                if animation:get("mode") ~= "WL" then
-                                    animation:set("mode", "WL")
-                                    animation:set("start_tick", context.tick)
-                                end
-                            end
+                            player_motion.approach(attacker, facts.target_x, facts.target_y)
                         end
                     end
                 end
@@ -252,14 +242,14 @@ function M.register()
         query = { all = { "d2legacy.combat.attack_animation" } },
         read = {
             "d2legacy.combat.attack_animation",
-            "d2legacy.world.velocity",
+            "d2legacy.player.motion",
             "d2legacy.player.animation",
             "d2legacy.world.selectable",
         },
         write = {
             "d2legacy.combat.attack_animation",
             "d2legacy.combat.basic_attack_request",
-            "d2legacy.world.velocity",
+            "d2legacy.player.motion",
             "d2legacy.player.animation",
             "d2legacy.combat.attack_animation_event",
         },

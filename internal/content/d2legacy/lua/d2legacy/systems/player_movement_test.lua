@@ -38,6 +38,7 @@ return test.suite({
                 local animation = ecs.get(players[1], "d2legacy.player.animation")
                 local facing = ecs.get(players[1], "d2legacy.world.facing")
                 local mode = ecs.get(players[1], "d2legacy.player.movement_mode")
+                local motion = ecs.get(players[1], "d2legacy.player.motion")
                 local expected = 9 * 0.7071067811865476
                 test.assert(
                     math.abs(velocity:get("x") - expected) < 0.000000001,
@@ -51,6 +52,10 @@ return test.suite({
                 test.assert(animation:get("start_tick") == 2, [=[animation:get("start_tick") == 2]=])
                 test.assert(facing:get("direction") == 4, [=[facing:get("direction") == 4]=])
                 test.assert(mode:get("running") == true, [=[mode:get("running") == true]=])
+                test.assert(
+                    motion:get("owner") == "locomotion" and motion:get("kind") == "direction" and motion:get("active"),
+                    "directional command did not own explicit player motion"
+                )
                 test.assert(
                     position:get("x") > fixtures.amazon_entry.x,
                     [=[position:get("x") > fixtures.amazon_entry.x]=]
@@ -73,9 +78,16 @@ return test.suite({
                 local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
                 local animation = ecs.get(player, "d2legacy.player.animation")
                 local facing = ecs.get(player, "d2legacy.world.facing")
+                local motion = ecs.get(player, "d2legacy.player.motion")
                 test.assert(animation:get("mode") == "WL", [=[animation:get("mode") == "WL"]=])
                 test.assert(animation:get("start_tick") == 3, [=[animation:get("start_tick") == 3]=])
                 test.assert(facing:get("direction") == 15, [=[facing:get("direction") == 15]=])
+                test.assert(
+                    motion:get("owner") == "locomotion"
+                        and motion:get("kind") == "waypoint"
+                        and motion:get("has_target"),
+                    "waypoint command did not become explicit player motion"
+                )
             end),
         }),
     },
