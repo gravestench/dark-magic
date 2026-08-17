@@ -1,7 +1,8 @@
 # Dark Magic roadmap
 
-Status: fully refreshed through the G4 player-population/override correction and
-the G9 straight-missile behavior-family refactor on 2026-08-16.
+Status: fully refreshed through the G4 player-population/override correction,
+the target-locked party-XP probe contract, and the G9 straight-missile
+behavior-family refactor on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -234,6 +235,17 @@ membership authority. Exact expansion 1.14d roster-event timing, location/
 health visibility, and action-layout fidelity remain explicit UI probes rather
 than compatibility claims.
 
+Party XP remains probe-gated. Blizzard's expansion documentation establishes
+same-area and roughly two-screen eligibility, a 35% party-pool increase,
+raw shares directly weighted by character level, and a subsequent player/
+monster-level penalty, but does
+not specify the exact expansion 1.14d distance threshold or integer rounding.
+`party_xp_probe` now rejects non-1.14d/community captures, validates paired
+neutral/party observations with identical rosters and monster context, and
+normalizes deltas plus direct/inverse/equal share hypotheses and candidate pool
+rounding. No party-XP gameplay formula
+lands until sanitized owned-runtime vectors resolve those remaining choices.
+
 ### G5 — Locomotion and motion-state foundation
 
 Status: **partial**.
@@ -439,8 +451,9 @@ probes remain:
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;
-- multiplayer: party XP/quest credit, hostility, trade, interest management,
-  reconnect, and PvP.
+- multiplayer: execute the version-locked party-XP distance/rounding matrix,
+  then party XP/quest credit, hostility, trade, interest management, reconnect,
+  and PvP.
 
 Every probe targets expansion 1.14d and records owned-data/runtime setup, action
 sequence, normalized observations, timing/RNG context, confidence upgrade, and

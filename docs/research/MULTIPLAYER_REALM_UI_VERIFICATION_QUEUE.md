@@ -36,6 +36,17 @@ queued expansion 1.14d roster-field, event-timing, or action-layout probes.
   [REALM_AND_GAME_CHAT_COMMANDS.md](REALM_AND_GAME_CHAT_COMMANDS.md);
 - disconnect/reconnect party state.
 
+Party XP capture tooling is ready at `internal/dev/tools/party_xp_probe` with a
+version-locked template under `docs/research/probes/`. Required paired cases:
+equal-level neutral/party baseline; two, three, and eight same-area members;
+distance brackets around the observed cutoff; unequal member levels that
+distinguish Blizzard's documented direct raw share from an inverse final award; player/
+monster level differences 5, 6, 9, and 10; odd XP pools that distinguish floor,
+nearest, and ceiling; killer-owned summon attribution; dead member; different
+named area; join/leave before spawn versus before death. Keep the monster,
+difficulty, connected roster, and character levels identical within each
+baseline pair.
+
 ## P1: hostility and PvP
 
 - expansion 1.14d minimum level/town restrictions;
