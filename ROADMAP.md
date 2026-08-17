@@ -8,8 +8,8 @@ armor/shield/cold-source ordering, and progression/source-derived maximum-
 stamina plus environment-period source slices, G6 deterministic dynamic
 occupancy, a generic checkpointed forced-motion transaction, and target-pinned
 monster knockback capability/size profiles plus authored missile knockback
-values and deterministic forced-motion replacement/locomotion ownership. G9
-remains current through
+values, deterministic forced-motion replacement/locomotion ownership, and
+stable semantic motion-event identities. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -393,6 +393,9 @@ Status: **partial**.
   checkpointed, and durable semantic outcomes distinguish completed, partial,
   blocked, and invalid transactions. Presentation can observe the event but
   cannot move the target.
+- [x] Emit stable selectable `player:`/`monster:` target IDs for invalid,
+  replaced, blocked, partial, and completed forced-motion events, retaining an
+  `entity:` fallback only for internal non-selectable movers.
 - [ ] Recover and pin remaining Expansion 1.14d knockback chance, distance,
   speed, player/owned-unit eligibility, interruption, and GH/KB mode rules
   before combat emits the generic request. Older recovered server/client path

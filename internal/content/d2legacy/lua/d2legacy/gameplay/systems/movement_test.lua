@@ -1,6 +1,6 @@
 local test = require("d2legacy.tests/v1")
 
-local function unit(x, velocity, blocks, request)
+local function unit(x, velocity, blocks, request, semantic_id)
     local ecs = require("engine.ecs/v1")
     local components = {
         ["d2legacy.world.position"] = { x = x, y = 10 },
@@ -12,6 +12,14 @@ local function unit(x, velocity, blocks, request)
     }
     if request then
         components["d2legacy.world.forced_motion_request"] = request
+    end
+    if semantic_id then
+        components["d2legacy.world.selectable"] = {
+            id = semantic_id,
+            kind = "hostile",
+            label = semantic_id,
+            radius = 1,
+        }
     end
     return ecs.create(components)
 end
@@ -94,7 +102,7 @@ return test.suite({
                     distance = 2,
                     speed = 25,
                     request_tick = 0,
-                })
+                }, "monster:fallen")
             end),
             test.step(1),
             test.run(function()
@@ -109,6 +117,7 @@ return test.suite({
                 test.expect(positions()[1]):equals(6)
                 local event = forced_event()
                 test.expect(event:get("kind")):equals("knockback")
+                test.expect(event:get("target_id")):equals("monster:fallen")
                 test.expect(event:get("outcome")):equals("completed")
                 test.expect(event:get("applied_distance")):equals(2)
             end),
