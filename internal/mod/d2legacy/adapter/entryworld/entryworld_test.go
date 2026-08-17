@@ -73,8 +73,37 @@ func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 		t.Fatalf("first population room = %#v", first)
 	}
 	links := population["links"].([]any)
-	if len(links) != 1 || links[0].(map[string]any)["from"] != float64(1) || links[0].(map[string]any)["to"] != float64(2) {
+	if first["id"] != "1" || len(links) != 1 || links[0].(map[string]any)["from"] != "1" || links[0].(map[string]any)["to"] != "2" {
 		t.Fatalf("population links = %#v", links)
+	}
+}
+
+func TestInteractionDataAttachesDS1TargetsToGeneratedRooms(t *testing.T) {
+	zone, err := worldgen.NewZone(worldgen.Definition{
+		Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: 2},
+		Kind:    "test", Bounds: worldgen.Bounds{Width: 20, Height: 10},
+		Rooms: []worldgen.Room{{ID: 7, X: 2, Y: 3, Width: 4, Height: 5}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gameMap, err := gameworld.NewOpenMap(100, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gameMap.Objects = []gameworld.Object{{
+		Type: gameworld.ObjectTypeStatic, ID: 12, X: 11, Y: 16,
+		Description: "Chest", Resolved: true,
+	}}
+	data := InteractionData(map[int]*gameworld.Map{2: gameMap}, map[int]*worldgen.Zone{2: zone}, "alice", "")
+	targets := data["targets"].([]any)
+	if len(targets) != 2 {
+		t.Fatalf("interaction targets = %#v", targets)
+	}
+	got := targets[1].(map[string]any)
+	if got["id"] != "ds1-object:2:12:0" || got["resident_id"] != "level:2:ds1-object:2:12:0" ||
+		got["level_id"] != float64(2) || got["room_id"] != "7" {
+		t.Fatalf("resident interaction target = %#v", got)
 	}
 }
 

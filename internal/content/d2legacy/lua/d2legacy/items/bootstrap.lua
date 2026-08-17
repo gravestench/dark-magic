@@ -145,7 +145,7 @@ local function create_target(target)
             return entity
         end
     end
-    return ecs.create({
+    local components = {
         ["d2legacy.interaction.target"] = {
             id = wanted,
             npc = target.npc,
@@ -156,7 +156,17 @@ local function create_target(target)
             y = target.y,
             radius = target.radius,
         },
-    })
+    }
+    if target.room_id ~= nil then
+        assert(type(target.resident_id) == "string" and target.resident_id ~= "", "resident ID is required")
+        assert(type(target.level_id) == "number" and target.level_id > 0, "resident level is required")
+        components["d2legacy.world.room_resident"] = {
+            id = target.resident_id,
+            level_id = target.level_id,
+            room_id = tostring(target.room_id),
+        }
+    end
+    return ecs.create(components)
 end
 
 local function create_interactions(data, default_owner)

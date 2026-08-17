@@ -18,7 +18,7 @@ local M = {}
 local MAX_LEVEL_MONSTERS = 25
 local DENSITY_SCALE = 100000
 local PLAN_ID = "d2legacy.population.plan"
-local PLAN_SCHEMA = "d2legacy.population.plan/v4"
+local PLAN_SCHEMA = "d2legacy.population.plan/v5"
 
 local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
@@ -116,6 +116,7 @@ local function materialize_group(context, zone, room, definition, game_player_co
         local components = spawn.components(command, game_player_count)
         components["d2legacy.world.room_resident"] = {
             id = command.payload.spawn_id,
+            level_id = zone.level_id,
             room_id = room.id,
         }
         structural:create(components)
@@ -141,7 +142,7 @@ function M.validate(command)
     assert(type(zone.links) == "table", "population room links are required")
     local room_ids = {}
     for _, room in ipairs(zone.rooms) do
-        assert(room.id ~= nil, "population room ID is required")
+        assert(type(room.id) == "string" and room.id ~= "", "population room ID is required")
         assert(not room_ids[room.id], "population room IDs must be unique")
         room_ids[room.id] = true
         assert(type(room.x) == "number" and type(room.y) == "number", "population room origin is required")
@@ -150,7 +151,10 @@ function M.validate(command)
         assert(type(room.points) == "table", "population room points are required")
     end
     for _, link in ipairs(zone.links) do
-        assert(link.from ~= nil and link.to ~= nil, "population room link endpoints are required")
+        assert(
+            type(link.from) == "string" and link.from ~= "" and type(link.to) == "string" and link.to ~= "",
+            "population room link endpoints are required"
+        )
         assert(link.from ~= link.to, "population room links cannot be self-referential")
         assert(room_ids[link.from] and room_ids[link.to], "population room link references an unknown room")
     end
@@ -170,6 +174,7 @@ function M.apply(command)
     assert(not state.read(PLAN_ID).installed, "population plan is already installed")
 
     for _, room in ipairs(zone.rooms) do
+        room.level_id = zone.level_id
         room.activated = false
         room.active = false
         room.inactive_residents = {}
@@ -230,7 +235,12 @@ local function deactivate_room(room, entities, structural)
     for _, entity in ipairs(entities) do
         local resident = ecs.get(entity, "d2legacy.world.room_resident")
         local inactive = ecs.get(entity, "d2legacy.world.inactive")
-        if resident and not inactive and resident:get("room_id") == room.id then
+        if
+            resident
+            and not inactive
+            and resident:get("level_id") == room.level_id
+            and resident:get("room_id") == room.id
+        then
             local id = resident:get("id")
             assert(id ~= "", "room resident ID is required")
             assert(not seen[id], "room resident IDs must be unique")
@@ -263,7 +273,13 @@ local function restore_room(room, entities, structural)
         local inactive = ecs.get(entity, "d2legacy.world.inactive")
         local id = resident and resident:get("id") or ""
         local record = wanted[id]
-        if resident and inactive and resident:get("room_id") == room.id and record then
+        if
+            resident
+            and inactive
+            and resident:get("level_id") == room.level_id
+            and resident:get("room_id") == room.id
+            and record
+        then
             structural:remove(entity, "d2legacy.world.inactive")
             if record.velocity_mover then
                 structural:set(entity, "engine.world.velocity_mover", {})

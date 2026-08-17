@@ -525,7 +525,7 @@ A render chunk becoming invisible must not define whether the authoritative room
 Likewise, inactive-room persistence belongs in session/game state and replay/checkpoints, not the VFS or renderer cache.
 
 Current implementation status: the population authority evaluates one
-deterministic occupied-room-plus-immediate-neighbors set each tick. Its v4 room
+deterministic occupied-room-plus-immediate-neighbors set each tick. Its v5 room
 plan records world-owned stable resident IDs plus each entity's existing
 velocity-mover opt-in while an empty ECS marker excludes the same retained
 entity from simulation and presentation. The generic velocity-movement opt-in
@@ -534,8 +534,10 @@ component state plus timed-state/stat-source/event references therefore use the
 ordinary ECS checkpoint instead of a parallel scalar archive. A checkpoint made
 while inactive resumes to the same entity IDs and checksum. This establishes
 the first type-independent persistent-identity mechanism; a non-monster resident
-without movement opt-in crosses the same checkpoint/reactivation path. This
-does not claim that graph distance,
+without movement opt-in crosses the same checkpoint/reactivation path, while an
+equal room ID in another level remains active. Generated room/link IDs are
+canonical strings, and production DS1 interaction points acquire residency from
+zone room bounds. This does not claim that graph distance,
 phase ordering, timer aging, healing, corpse policy, or separate presentation-
 only residency matches expansion 1.14d.
 
@@ -651,8 +653,9 @@ filter tag without losing entity identity, component state, or timed-state/stat-
 source/event target references. Room identity itself is world-owned and type-
 independent; a non-monster/non-moving resident proves conditional activation-
 surface restoration. The path is deterministic, checkpointed, and renderer-
-independent. Production owned-unit, corpse, item, object, projectile, and
-pending-action residency attachment remains.
+independent. Production resolved DS1 interaction targets now attach to this
+boundary; stateful objects, owned units, corpses, ground items, projectiles, and
+pending-action residency remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 

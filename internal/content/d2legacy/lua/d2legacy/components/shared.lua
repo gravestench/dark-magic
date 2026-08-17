@@ -200,6 +200,7 @@ function M.register()
     })
     component("d2legacy.world.room_resident", {
         { name = "id", type = "string" },
+        { name = "level_id", type = "i64" },
         { name = "room_id", type = "string" },
     })
     component("d2legacy.monster.appearance", {

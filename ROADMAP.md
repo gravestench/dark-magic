@@ -16,7 +16,9 @@ references across deactivate, checkpoint, restore, and reactivate, while
 simulation and both local/remote presentation projections exclude them. Room
 residency now has a world-owned stable resident ID rather than depending on
 monster identity, and the activation record preserves each resident's generic
-velocity-mover opt-in. G9 remains current through
+velocity-mover opt-in. Residency is scoped by canonical level/room IDs, and
+production DS1 interaction targets now acquire it from generated zone geometry
+without turning map/presentation data into authority. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -87,7 +89,7 @@ policy**, and **unresolved**.
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
-| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and world-owned persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies, and a non-monster fixture proves the room mechanism has no monster-identity or velocity-mover assumption; production owned-unit/corpse/item/object attachment, object authority, exact 1.14d streaming behavior, and campaign breadth remain. |
+| M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references survive monster inactivation without scalar graph copies; a non-monster fixture proves the mechanism has no monster/mover assumption, and production DS1 interaction targets now attach through generated room geometry. Stateful object authority, ground-item/owned-unit/projectile attachment, exact 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Combat, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
@@ -463,9 +465,13 @@ ordinary-monster inactivation/reactivation implemented**.
   target references through deactivate -> checkpoint -> restore -> reactivate.
   The referenced monster entity ID does not change.
 - [x] Replace the population-specific room marker with
-  `d2legacy.world.room_resident {id, room_id}`. Plan records use the stable
+  `d2legacy.world.room_resident {id, level_id, room_id}`. Plan records use the stable
   resident ID and remember whether the engine velocity-mover opt-in existed;
   a non-monster resident checkpoints/reactivates without acquiring movement.
+- [x] Canonicalize generated room/link IDs as strings, scope activation by level
+  plus room, and attach production DS1 interaction targets by testing their
+  authoritative subtile point against generated room bounds. Same-named rooms
+  in another level remain active; missing room geometry does not invent a link.
 - [ ] Extend the same explicit activation policy to owned-unit graphs, corpses,
   items, objects, projectiles/pending actions, and any relationship entity whose
   simulation residency cannot be inferred from its target.
@@ -475,7 +481,7 @@ ordinary-monster inactivation/reactivation implemented**.
 - [x] Reproduce deactivate -> checkpoint -> restore -> reactivate continuation
   with the same authoritative checksum.
 
-The checkpointed `d2legacy.population.plan/v4` stores a deterministic active
+The checkpointed `d2legacy.population.plan/v5` stores a deterministic active
 flag and stable inactive resident records per room. A generated monster carries
 the world-owned semantic room-resident component; leaving the occupied-room-
 plus-neighbors window adds `d2legacy.world.inactive` and removes the generic
@@ -487,13 +493,16 @@ retains every component and raw relationship reference without a second archive
 schema. The acceptance fixture crosses a three-room graph, proves AI does not
 advance while inactive, checkpoints/reconstructs the Lua runtime, preserves a
 timed-state/stat-source/event graph and its entity IDs, preserves a second non-
-monster/non-moving resident, and reaches identical reactivation checksums. This
-is Dark Magic semantic state, not a vanilla save/protocol compatibility
+monster/non-moving resident, proves an equal room ID in another level is not
+affected, and reaches identical reactivation checksums. Entry-world preparation
+joins resolved DS1 interaction points to the same canonical residency contract.
+This is Dark Magic semantic state, not a vanilla save/protocol compatibility
 structure.
 
 Exact expansion 1.14d activation distance/tick ordering, long-inactive healing,
 timer aging while inactive, corpse lifetime, owned-unit/item/object/projectile
-activation graphs, broader generated-level coverage, and independent visible-
+activation graphs, stateful object operation/events, ground item drops, broader
+generated-level coverage, and independent visible-
 but-not-simulated presentation residency remain open and probe-gated. Older
 recovered inactive-unit code is architectural evidence only.
 
