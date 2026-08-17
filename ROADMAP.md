@@ -8,7 +8,8 @@ armor/shield/cold-source ordering, and progression/source-derived maximum-
 stamina plus environment-period source slices, G6 deterministic dynamic
 occupancy, a generic checkpointed forced-motion transaction, and target-pinned
 monster knockback capability/size profiles plus authored missile knockback
-values. G9 remains current through
+values and deterministic forced-motion replacement/locomotion ownership. G9
+remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -397,8 +398,11 @@ Status: **partial**.
   before combat emits the generic request. Older recovered server/client path
   code is structural evidence only, not permission to copy its constants into
   the target policy.
-- [ ] Cover competing forced-motion requests and target-runtime interaction with
-  ordinary locomotion, active skills, hit recovery, death, and client playback.
+- [ ] Cover remaining competing forced-motion requests and target-runtime
+  interaction with active skills, hit recovery, death, and client playback. A
+  newer admitted request now deterministically replaces one active transaction,
+  emits the displaced transaction's exact `replaced` progress outcome, and owns
+  velocity until completion; only fresh subsequent locomotion moves the target.
 
 ### G7 — Active-room/inactive-unit vertical slice
 
