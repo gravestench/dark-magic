@@ -364,7 +364,9 @@ request deterministically replaces one active transaction only after recording
 the displaced request's exact progress. Forced motion owns velocity while
 active, clears it on completion, and ordinary locomotion resumes only from
 fresh input. Active progress survives a checkpoint, and presentation may
-observe the event without authoring position.
+observe the event without authoring position. Every outcome uses the target's
+stable selectable `player:` or `monster:` identity when one exists, so client
+playback and replay consumers do not need to correlate transient ECS IDs.
 
 D2MOO's recovered 1.10f/1.13c server path is useful structural evidence: it
 selects a dedicated server knockback path, derives its ray away from the target

@@ -5,6 +5,7 @@
 -- every entity with Position + Velocity + Bounds.
 
 local ecs = require("engine.ecs/v1")
+local entity_identity = require("d2legacy.policy.entity_identity")
 local collision_registry = require("d2legacy.gameplay.collision")
 
 local M = {}
@@ -133,7 +134,7 @@ local function finish_forced(context, entity, position, velocity, forced, outcom
             kind = forced:get("kind"),
             outcome = outcome,
             tick = context.tick,
-            target_id = "entity:" .. entity:id(),
+            target_id = entity_identity.semantic_id(entity),
             start_x = forced:get("start_x"),
             start_y = forced:get("start_y"),
             end_x = position:get("x"),
@@ -244,6 +245,7 @@ function M.register(collision)
             "d2legacy.world.location",
             "d2legacy.world.occupancy",
             "d2legacy.world.forced_motion",
+            "d2legacy.world.selectable",
         },
         write = {
             "d2legacy.world.position",

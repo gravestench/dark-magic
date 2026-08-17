@@ -6,6 +6,7 @@
 -- decides whether the request completes, stops short, or is fully blocked.
 
 local ecs = require("engine.ecs/v1")
+local entity_identity = require("d2legacy.policy.entity_identity")
 
 local M = {}
 
@@ -15,7 +16,7 @@ local function emit_rejection(context, entity, request, position, outcome, struc
             kind = request:get("kind"),
             outcome = outcome,
             tick = context.tick,
-            target_id = "entity:" .. entity:id(),
+            target_id = entity_identity.semantic_id(entity),
             start_x = position:get("x"),
             start_y = position:get("y"),
             end_x = position:get("x"),
@@ -32,7 +33,7 @@ local function emit_replacement(context, entity, active, position, structural)
             kind = active:get("kind"),
             outcome = "replaced",
             tick = context.tick,
-            target_id = "entity:" .. entity:id(),
+            target_id = entity_identity.semantic_id(entity),
             start_x = active:get("start_x"),
             start_y = active:get("start_y"),
             end_x = position:get("x"),
@@ -101,6 +102,7 @@ function M.register()
             "d2legacy.world.collider",
             "d2legacy.world.occupancy",
             "d2legacy.world.forced_motion",
+            "d2legacy.world.selectable",
         },
         write = {
             "d2legacy.world.forced_motion_request",
