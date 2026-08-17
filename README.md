@@ -1,698 +1,204 @@
 <h1 align="center">Dark Magic</h1>
-<h3 align="center">An Open-Source Diablo 2 Engine Rewrite</h3>
+<h3 align="center">An open-source Diablo II: Lord of Destruction engine rewrite</h3>
 
-The maintenance policy for the standalone OpenDiablo2-derived format
-libraries is documented in [CODECS.md](CODECS.md).
+Dark Magic is a clean-room engine rewrite targeting **Diablo II: Lord of
+Destruction 1.14d**. The project aims to reproduce the game's authored behavior
+and presentation on a modern, deterministic, scriptable engine while making the
+systems underneath it easier to inspect, test, extend, and mod.
 
-## About
+Dark Magic is under active development and is **not yet a complete Diablo II
+replacement**. It does not distribute Blizzard assets; running the real-asset
+client and tools requires legally obtained Diablo II game data.
 
-Dark Magic is a clean-room, open-source Diablo II engine rewrite. It aims to
-preserve the original game's authored mechanics and presentation while replacing
-the abandoned OpenDiablo2 architecture with deterministic simulation,
-data-driven rules, scriptable gameplay, and explicit native-resource ownership.
+## How Dark Magic is developed
 
-Dark Magic does not distribute Blizzard assets. Running the client or real-asset
-tools requires a legally obtained Diablo II installation or MPQ set.
+Most of Dark Magic has been implemented with repository-aware LLM coding agents
+under active maintainer direction. Agents are used for codebase analysis,
+research synthesis, implementation, tests, documentation, and repeated review
+passes. The maintainer sets the target, curates evidence, decides architecture,
+and remains accountable for every merged change.
 
-## Research and community acknowledgements
+This is not a bulk-generated “ship whatever the model wrote” codebase. Work is
+scoped to explicit roadmap and acceptance boundaries, checked against existing
+ownership rules, exercised by tests and real-asset tooling where appropriate,
+and revised or discarded when it does not hold up. Review focuses on the
+resulting evidence and maintainability, not whether every line was typed by
+hand.
 
-Dark Magic exists because decades of Diablo II modders, preservationists,
-reverse engineers, tool authors, and independent engine developers documented
-behavior that the original executable kept implicit. Thank you to the entire
-Diablo II community—and especially to the people who published their findings,
-test cases, tools, and source so later projects could verify rather than guess.
+Performance is handled deliberately. Egregious problems—unbounded work,
+repeated asset I/O, accidental quadratic paths, runaway allocation, or long
+owner-thread stalls—are corrected when discovered. Broader profiling and
+optimization passes normally follow coherent foundations, completed acceptance
+work, or milestone closure, when the code is stable enough to measure and worth
+tuning. Contributors are encouraged to use the same workflow described in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-Our principal research and corroboration sources include:
+> **TODO: gameplay GIF** — short loop showing real-asset `game_world` movement,
+> combat, drops, UI, and world presentation.
+>
+> **TODO: labs GIF** — short montage of Composite Lab, DT1/DS1 Lab, Monster Lab,
+> Missile Lab, Mapgen Lab, Combat Lab, and Warp Lab.
 
-* [Paul Siramy's historical research and tools](http://paul.siramy.free.fr/)
-  and the wider [Phrozen Keep community](https://d2mods.info/), particularly for
-  DS1, DT1, map editing/generation, animation formats, and engine behavior.
-* [ThePhrozenKeep/D2MOO](https://github.com/ThePhrozenKeep/D2MOO), the pinned
-  reverse-engineered Diablo II 1.10f runtime baseline used throughout the
-  gameplay and map research.
-* [jaenster/libd2](https://github.com/jaenster/libd2), both for independent
-  1.14d implementation evidence and its unusually strong retail-capture,
-  holdout, save-round-trip, item-roll, and pathfinding verification discipline.
-* [Riiablo](https://github.com/collinsmith/riiablo), including its format,
-  composite, rendering, UI, and recovered declarative quest/dialogue/object
-  work.
-* [OpenDiablo2](https://github.com/OpenDiablo2/OpenDiablo2), from which this
-  project descends, and [OpenD2](https://github.com/eezstreet/OpenD2) and
-  [AbyssEngine](https://github.com/AbyssEngine/AbyssEngine) as independent
-  behavioral and presentation references.
-* [nokka/d2s](https://github.com/nokka/d2s) for independent save-format
-  documentation, the historical Diablo II Data File Guide bundled for research,
-  and the many community-authored manuals, patch notes, forum posts, and tools
-  cited in the individual research ledgers.
+## Project direction
 
-These projects are evidence, not code-generation templates. Dark Magic restates
-behavior independently, respects source licenses, labels version conflicts and
-uncertainty, and prefers repeatable observations of lawfully owned game data.
-The detailed provenance, inspected versions, confidence rules, and source paths
-live in the [format source matrix](docs/formats/SOURCE_MATRIX.md) and
-[gameplay-systems source matrix](docs/research/SYSTEMS_SOURCE_MATRIX.md). The
-[research index](docs/research/GAME_SYSTEMS_INDEX.md) distinguishes a documented
-baseline from behavior that has actually been validated.
+Dark Magic has one authoritative, renderer-independent game simulation shared by
+offline play, listen servers, dedicated servers, and Realm-managed games. The
+current focus is completing Diablo II gameplay on that foundation rather than
+building parallel implementations for each mode.
 
-## Directory structure
+The project deliberately targets:
 
-* `cmd` contains the client, game-session server, and realm composition roots.
-  Commands perform wiring and process configuration, not gameplay.
-* `internal/game` contains generic deterministic ECS/session/world mechanisms
-  and typed Diablo record boundaries. Production Diablo gameplay policy lives
-  in the first-party `d2legacy` Lua mod, with narrow Go adapters under
-  `internal/mod/d2legacy` where host integration is unavoidable.
-* `internal/content` owns the layered directory/MPQ/ZIP VFS and the embedded,
-  immutable `d2legacy` base package.
-* `internal/modcache` owns immutable extension blobs, extension enablement
-  profiles, dependency resolution, quarantine, and exact locks;
-  `internal/distribution` composes those extensions above built-in `d2legacy`.
-* `internal/runtime/lua` adapts explicit, versioned capabilities into serialized
-  Lua runtimes with disposable resource scopes.
-* `internal/presentation` defines backend-neutral retained rendering and scene
-  navigation; `internal/platform/raylib` owns native Raylib integration.
-* `internal/dev/tools` and `internal/dev/testapps` contain repository-private
-  diagnostics and harnesses. They are not product binaries.
+- **Expansion 1.14d only.** Classic mode and earlier patch behavior are not
+  product targets.
+- **Faithful, evidence-driven behavior.** Mechanics are reconstructed from game
+  data, repeatable observation, reverse-engineering research, and independent
+  implementations rather than guessed where evidence exists.
+- **One authoritative simulation.** Networking, replay, checkpointing, offline
+  play, and Realm play share the same gameplay boundaries.
+- **Lua-owned Diablo policy, Go-owned engine mechanisms.** The first-party
+  `d2legacy` package defines Diablo rules; Go owns reusable simulation,
+  rendering, transport, storage, audio, and lifecycle infrastructure.
+- **First-class modding.** Versioned capabilities, deterministic content
+  layering, and extension packages are part of the architecture rather than an
+  afterthought.
 
-There is intentionally no public Go API under `pkg`. Standalone Diablo file
-codecs remain independently versioned repositories; see [CODECS.md](CODECS.md).
+For the canonical implementation status and ordered gameplay work, see
+[ROADMAP.md](ROADMAP.md). For package ownership and dependency rules, see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Architecture
+## Client, server, and Realm
 
-The executable uses an explicit internal application host for native lifecycle,
-a dynamic manager for native and Lua-defined components, a layered content VFS,
-and versioned Lua capabilities. The Raylib backend remains isolated beneath
-`internal/platform/raylib`; scripts author scenes and overlays through retained rendering,
-input, audio, records, locale, save, simulation, and navigation capabilities.
-The `engine.ecs/v1` capability additionally lets trusted scripts define validated
-component schemas and deterministic, scope-owned systems over the shared Akara
-world. Systems declare their query and read/write access; structural mutations
-are applied at phase barriers rather than during query iteration.
-The `d2legacy` mod also preserves Riiablo's recovered quest hierarchy,
-speech-to-string relationships, DS1 definitions, and act-local object mappings.
-Go validates these immutable recovered catalogs; narrow `d2legacy` adapters
-expose their facts to Lua, which alone decides their gameplay meaning.
+Dark Magic has three cooperating process roles. They share versioned content and
+session contracts, but each owns a different boundary.
 
-Dark Magic always runs its embedded `d2legacy` game package. Mod installation is
-distinct from activation: the content-addressed cache and user profile contain
-extensions only, and an empty profile means the unextended Dark Magic
-`d2legacy` ruleset. It does not mean protocol, server, save, or tooling
-interoperability with Blizzard's executable. Network sessions
-pin the built-in base plus their complete ordered extension recipe; direct hosts
-can stream missing redistributable extensions into bounded, verified quarantine
-before character admission. See [mod loading and distribution](docs/MODS.md).
-Extension authors should begin with the
-[Modding API Guide](docs/MODDING_API.md) and copyable
-[`mod_template`](internal/content/mod_template/README.md).
+| Process | Responsibility |
+| --- | --- |
+| [`client`](cmd/client) | Native player-facing application. It owns input, windowing, audio, UI, rendering, local profiles, and asset/mod mounting. Offline and listen-server play can compose the same authority locally; remote play consumes authenticated, player-scoped views from a server. |
+| [`server`](cmd/server) | Headless authoritative game-session process. It runs one deterministic simulation, validates player commands, owns canonical world state, and produces checkpoints and bounded per-player projections. It can run standalone for self-hosted play or as a Realm-supervised worker. |
+| [`realm`](cmd/realm) | Account and session control plane. It owns verified accounts, trusted Realm characters, channels and named games, worker allocation, admission, leases, checkpoints, durable commits, recovery, and audit. It allocates and supervises server workers but never executes gameplay ticks. |
 
-Authoritative player locomotion now consumes the pinned Expansion 1.14d
-`CharStats.txt` class movement/stamina facts. Walk/run input, item Faster
-Run/Walk diminishing returns, armor velocity penalties, 8.8 stamina drain and
-recovery, exhaustion fallback, owner-private HUD projection, and connected
-prediction share the same rule boundary. Client routes are world-scoped input
-plans; admitted locomotion and melee approaches claim an explicit checkpointed
-motion owner, and one authoritative resolver derives player velocity and WL/RN
-mode. Composite playback independently consumes `AnimData.d2` timing plus
-presentation/network time; displacement never advances animation frames.
-Chill/slow ordering and max-stamina recalculation from progression and
-active sources remain separately gated.
+Realm is deliberately topology-neutral. Its first deployment contract uses
+PostgreSQL and ordinary `server` worker processes on one machine. The deferred
+cloud target adapts that same contract to a Cloudflare/HTTPS edge, Kubernetes
+ingress, managed PostgreSQL, and an Agones warm fleet of one-game server
+workers. Protected game assets remain outside container images and public
+storage and are mounted read-only only by game workers; native gameplay
+continues over QUIC/UDP. Cloudflare, Kubernetes, Agones, and the chosen cloud
+provider are deployment adapters rather than dependencies of Realm's domain
+logic.
 
-### Product binaries
+Cloud deployment is a target, not a claim that production manifests or hosted
+infrastructure already exist. See the [Realm overview](docs/realm/README.md),
+[cloud deployment contract](docs/realm/CLOUD_DEPLOYMENT.md), and
+[networking architecture](docs/NETWORKING.md).
 
-Dark Magic targets two primary executables under `cmd`:
+## Run the game and labs
 
-* **Client** — runs presentation and input for offline single-player,
-  self-hosted multiplayer, and realm-connected games. Offline play may host the
-  same authoritative simulation in-process, but client code must not become the
-  authority for a remote realm character.
-* **Realm** — provides the account and session control plane: authentication,
-  accounts, trusted character persistence, game creation and discovery, and
-  assignment to authoritative game sessions. It publishes the exact mod
-  manifest required by a game and serves or identifies the corresponding
-  redistributable payloads. User-supplied Diablo II data is never distributed.
+Set `MPQ_DIRECTORY` to a legally obtained Diablo II installation or MPQ
+directory. The repository currently uses Go 1.25.
 
-  Realm behavior is independent of deployment topology. A supported Realm can
-  run with PostgreSQL and ordinary game-worker processes on one machine or use
-  a cluster allocator later; Kubernetes and cloud-edge services do not define
-  account, character, admission, or gameplay semantics. See the
-  [Realm documentation](docs/realm/README.md).
-
-The deterministic game-session server is shared infrastructure. It can run
-in-process for offline play, as a client-created listen server, as a standalone
-self-hosted server, or under realm orchestration. These modes must share
-simulation commands, snapshots, validation, and persistence contracts rather
-than grow separate gameplay implementations.
-
-The client also includes an in-game Lua console. It targets an explicitly
-selected Lua runtime rather than a process-global VM. Console evaluation is
-serialized through that runtime's owner, uses a dedicated disposable resource
-scope, and sees only the capabilities permitted for that runtime. Offline and
-development sessions may enable mutation/debug capabilities; realm-connected
-clients cannot use the console to bypass authoritative simulation or obtain
-server-only capabilities.
-
-Press the grave/backtick key (`` ` ``) to open or close the in-game shell.
-F1 selects the Lua editor and F2 selects structured application logs. In Lua,
-Enter evaluates, Shift+Enter inserts a newline, Tab completes names, and the
-arrow/Home/End keys edit or browse history. In Logs, arrows and Page Up/Down
-control independent scrollback.
-Lua `print(...)`, `printregs()`/`_printregs()`, and the bounded structured
-application-log tail appear in their respective modal views; normal process
-log output remains available outside the game window as well. Every Lua view
-opens with a target- and policy-specific message of the day. The `d2legacy`
-root provides discoverable, policy-filtered capability access: use
-`d2legacy.help()` and `d2legacy.capabilities()`, friendly names such as
-`d2legacy.app`, or `d2legacy.modules["engine.app/v1"]` for an exact versioned module ID.
-Pass a module, command, or path to help for progressively more detail—for
-example `d2legacy.help(d2legacy.audio)`, `d2legacy.help(engine.audio.play)`, or
-`d2legacy.help("engine.audio.play")`. Lua module registrations own the summaries, usage,
-parameters, returns, and examples used by both help and completion. Existing
-commands without authored metadata are still listed with fallback help.
-
-Shell presentation settings are live Lua runtime values. For example:
-
-```lua
-engine.shell.values()                  -- current native-resolution shell settings
-engine.shell.set("font_size", 22)     -- apply immediately for this process
-engine.shell.set_many({                -- validate and apply atomically
-    console_height = 0.7,
-    opacity = 0.85,
-    transcript_limit = 4000,
-    animation_speed = 1.5,
-})
-engine.shell.defaults()                -- inspect built-in values
-engine.shell.reset()                   -- restore defaults in memory
-engine.shell.reload()                  -- discard edits and reload the saved file
-engine.shell.save()                    -- persist the active values
-engine.shell.status()                  -- persistence path and dirty state
+```sh
+export MPQ_DIRECTORY=/path/to/diablo-ii
+make play-game-world
 ```
 
-Settings default to `shell.json` under the platform user-configuration
-directory. `DARK_MAGIC_SHELL_CONFIG` selects another host path and supports
-home-directory aliases. Multiline Lua values retain line breaks, indentation,
-and tabular spacing in both graphical and terminal shell views.
+The development labs are intentionally small entry points into production
+systems. They are useful both for contributors and for exploring what the engine
+can already do.
 
-Game preferences are separate from developer-shell presentation. The authored
-in-game sound and music sliders update mixer buses immediately through
-`engine.settings/v1` and save to `preferences.json` under the platform
-user-configuration directory when the overlay closes. Set
-`DARK_MAGIC_PREFERENCES` to use another file.
+| Entry point | What it exercises | Run it |
+| --- | --- | --- |
+| Game World | Authored world, player movement, camera, collision, UI | `make play-game-world` |
+| Combat Lab | Production world + authoritative combat diagnostics | `make play-combat-lab` |
+| Monster Lab | Typed monster records and composites | `make play-monster-lab` |
+| Missile Lab | Typed missile records and presentation | `make play-missile-lab` |
+| Warp Lab | Production movement, interaction, and level transitions | `make play-warp-lab` |
+| Composite Lab | Player composite animation assembly | `go run ./cmd/client --start-scene=composite_lab` |
+| DT1 Lab | Tileset decoding and inspection | `go run ./cmd/client --start-scene=dt1_lab` |
+| DS1 Lab | Map stamps, authored tiles, objects, and collision | `go run ./cmd/client --start-scene=ds1_lab` |
+| Mapgen Lab | Deterministic level-generation topology and decisions | `go run ./cmd/client --start-scene=mapgen_lab` |
 
-Player-profile characters used by single-player, listen-server, and self-hosted
-dedicated-server play default to `player-profile.json` under the platform
-user-configuration directory. Set `DARK_MAGIC_PLAYER_PROFILE` to use another
-file. A missing file starts with an empty roster and is created on clean
-shutdown. Development character fixtures are always ephemeral and cannot
-overwrite this file. Realm characters remain account-owned and never load from
-this player-controlled profile.
+Most visual scenes can also be captured locally through the Makefile capture
+targets. Captures remain outside the repository so original game imagery is not
+committed.
 
-A self-hosted dedicated server may explicitly admit the selected character from
-such a profile with `--player-profile`, `--profile-player`, and the authoritative
-`--profile-x`, `--profile-y`, `--profile-world-width`,
-`--profile-world-height`, `--profile-act`, and `--profile-level` destination
-flags. The host queues the same system-authority entry command used elsewhere
-and writes canonical character state back to that profile on clean shutdown.
-This is player-controlled self-host policy, never realm character authority.
-For a remote player-controlled character, configure the dedicated server with
-the same destination flags plus `--profile-player` and a protected
-`--remote-profile-key` file (at least 32 bytes, mode `0600`). The client-side
-transport submits only the selected bounded character offer, receives a
-short-lived one-use session ticket, and then performs the normal authenticated
-join. Realm servers do not enable this operation.
+## Where to look
 
-Renderer residency diagnostics use the same persistent preference path and can
-be controlled directly from the Lua shell:
+The README is intentionally only an orientation guide. Detailed design,
+implementation notes, evidence, acceptance criteria, configuration, and tooling
+live with the documents and packages that own them.
 
-```lua
-engine.settings.set("debug_texture_residency", true) -- native-resolution cache overlay
-engine.settings.set("texture_upload_budget_mb", 16)  -- optional warm uploads per frame
-engine.settings.set("texture_cache_budget_mb", 512)   -- retained native texture capacity
-engine.settings.set("camera_follow_strategy", "instant") -- default: no smoothing
-engine.settings.set("camera_follow_duration", 0.0)        -- tween seconds per target update
-engine.settings.set("camera_follow_param_1", 0.0)         -- strategy-specific value
-engine.settings.save()                               -- retain these across launches
+| If you are interested in... | Start here |
+| --- | --- |
+| Current progress and next work | [ROADMAP.md](ROADMAP.md) |
+| Engine boundaries and package ownership | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Diablo gameplay rules | [`internal/content/d2legacy`](internal/content/d2legacy) and its Lua modules |
+| Deterministic game/session mechanisms | [`internal/game`](internal/game) |
+| Client presentation and native rendering | [`internal/presentation`](internal/presentation) and [`internal/platform/raylib`](internal/platform/raylib) |
+| Realm, accounts, sessions, persistence, and deployment | [docs/realm/README.md](docs/realm/README.md) |
+| Mod architecture and authoring | [docs/MODS.md](docs/MODS.md), [docs/MODDING_API.md](docs/MODDING_API.md), and the [`mod_template`](internal/content/mod_template/README.md) |
+| Game-system research and fidelity evidence | [docs/research/GAME_SYSTEMS_INDEX.md](docs/research/GAME_SYSTEMS_INDEX.md) |
+| File-format provenance and codec policy | [docs/formats/SOURCE_MATRIX.md](docs/formats/SOURCE_MATRIX.md) and [CODECS.md](CODECS.md) |
+| Developer inspection/capture tools | [`internal/dev/tools`](internal/dev/tools) and the Makefile |
+| Process configuration | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
 
-engine.render.diagnostics() -- decoded cache plus pending CPU/GPU warm work
-```
-
-Camera follow strategies are `instant`, `linear`, `quad_in`, `quad_out`,
-`quad_in_out`, `cubic_in`, `cubic_out`, `cubic_in_out`, `exponential_out`, and
-`back_out`. `exponential_out` uses parameter 1 as its exponent (default 10),
-while `back_out` uses it as overshoot (default 1.70158). Parameters 2 and 3 are
-persisted for strategies that need additional tuning values. Changes apply to
-the live game-world camera and remain presentation-only.
-
-Texture creation remains on the graphics-owner thread. Asset reads and bitmap
-preparation run in bounded workers; immutable textures are then uploaded within
-the configured frame budget and retained by content identity across scenes.
-
-Use `d2legacy.apropos("music")` to search the permitted module and command
-descriptions. `d2legacy.docs()` renders Markdown for the session's complete permitted
-Lua API from the same registration metadata used by help and completion.
-Built-in capability conformance tests reject public module functions that do
-not provide an authored summary and usage signature. Audio, video, and render
-userdata methods are documented and checked the same way. Lua tables render as
-stable, indented structures with bounded depth and cycle detection. Page Up and
-Page Down navigate retained Lua output in the graphical console; the terminal
-viewport provides matching scrollback and basic semantic highlighting.
-
-The game always renders into its configured logical-resolution target while
-the console renders afterward in native window pixels. Consequently, resizing
-the window never makes shell glyphs inherit the game's low-resolution scaling.
-Game presentation defaults to aspect-preserving centered letterboxing:
-
-```shell
-go run -tags ffmpeg ./cmd/client --viewport-fit contain
-```
-
-Use `--viewport-fit stretch` to fill the entire window without preserving the
-game aspect ratio. `DARK_MAGIC_VIEWPORT_FIT` provides the equivalent environment
-setting. Mouse input is mapped back into logical game coordinates; input in
-letterbox regions is excluded from the game viewport.
-
-Use `--fullscreen` for a maximized borderless window that retains desktop
-window semantics instead of switching the monitor into an exclusive video
-mode. Set `DARK_MAGIC_FULLSCREEN=true` for the environment equivalent.
-
-## Join the Quest
-
-Are you ready to embark on a journey into the heart of darkness? Unite with 
-fellow adventurers and follow development on the
-[community Discord server](https://discord.gg/gT9vTKfV8G).
-
-Gather your courage, for a new era of sanctuary awaits. 
-Embrace the magic, rewrite the destiny - with Dark Magic.
-
-
-## Project status
-
-The project is under active architectural reconstruction and is not yet a
-playable Diablo II replacement. The application host, layered content system,
-retained renderer boundary, typed data catalog, deterministic loot foundation,
-Lua-defined Akara ECS, DS1/DT1 world decoding, and developer inspection tools
-are operational. The playable world presents DS1 maps through sparse,
-camera-culled texture chunks whose placement follows authoritative ECS camera
-coordinates; it does not allocate a full-map GPU texture. Player movement is
-fixed-tick and command-driven, with pinned `CharStats.txt` class walk/run
-velocity shared by authority and client prediction, normalized diagonal speed,
-an explicit authority-side motion owner, and a subtile collision footprint
-rather than a presentation-sprite hit test. Full world generation, Diablo combat and progression,
-authoritative networking, and end-to-end gameplay remain in progress.
-
-See [ROADMAP.md](ROADMAP.md) for the canonical milestone backlog and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package ownership, dependency
-direction, and guidance on where new work belongs. Realm architecture,
-security, persistence, local operation, and the deferred cloud plan are indexed
-under [docs/realm](docs/realm/README.md). Client, server, and Realm process
-settings can be kept in private per-role files described in
-[process configuration](docs/CONFIGURATION.md).
-
-For the focused playable-character acceptance loop, point `MPQ_DIRECTORY` at
-legally obtained game data and run `make play-game-world`. The command selects
-one deterministic character fixture and enters the real world scene; pointer
-movement exercises screen-to-world targeting, fixed-tick authority, run/walk
-mode, composite facing, camera chunks, and DT1 collision together. Keyboard
-input remains available for hotkeys, modifiers, text, and cancellation.
-`make capture-game-world` records a
-fully settled initial frame under `CAPTURE_DIR` (default `captures/frontend`).
-These targets intentionally do not bundle or guess a game-data location.
-
-## How to contribute
-We welcome contributions from developers, artists, designers, and Diablo 
-enthusiasts of all levels of expertise. If you want to be part of this journey, 
-check out our [CONTRIBUTING.md](https://github.com/gravestench/dark-magic/blob/main/CONTRIBUTING.md) guide to get started.
-
-Follow the lifecycle and dependency rules in
-[the architecture guide](docs/ARCHITECTURE.md) when adding a long-lived engine
-component.
+At a high level, `cmd` contains composition roots, `internal/game` contains
+generic deterministic game mechanisms, and `internal/content/d2legacy` contains
+the first-party Diablo II rules/content package. There is intentionally no
+public Go API under `pkg`; independently versioned Diablo file codecs live in
+separate repositories.
 
 ## Development
 
-Run the complete test suite with:
+Run the main test suites with:
 
-```shell
+```sh
 make test
 make test-race
 ```
 
-Client logging defaults to `info`. Select `debug`, `info`, `warn`, or `error`
-with either the command-line flag or its environment equivalent:
-
-```shell
-go run -tags ffmpeg ./cmd/client --log-level debug
-DARK_MAGIC_LOG_LEVEL=warn go run -tags ffmpeg ./cmd/client
-```
-
-Quantize the final composed display with an optional GPU post-process. The
-lookup cube emits only colors from the selected palette while preserving source
-alpha:
-
-```shell
-go run -tags ffmpeg ./cmd/client \
-  --output-palette data/global/Palette/fechar/pal.dat
-```
-
-The equivalent environment variable is `DARK_MAGIC_OUTPUT_PALETTE`.
-
-Lua can apply the same effect to one retained texture or animation instead of
-the whole screen:
-
-```lua
-node:set_palette_quantization("palettes/black-white.json")
-node:clear_palette_quantization()
-```
-
-Palette files may be normal Diablo `pal.dat` files, GIMP `.gpl` files, or any
-non-empty sequence of packed BGR triples. Tiny palettes are intentional: three
-bytes force one color, while six bytes can define black and white. JSON palettes
-are also supported as either `["#000000", "#ffffff"]` or
-`{"colors":["#000000","#ffffff"]}`.
-
-Capture CPU activity for the full client run and a live-heap snapshot at clean
-shutdown with:
-
-```shell
-MPQ_DIRECTORY=/path/to/diablo-ii \
-  go run -tags ffmpeg ./cmd/client --profile-dir ./profiles/menu-review
-```
-
-Exit the client normally after exercising the behavior of interest. The output
-directory contains `cpu.pprof`, `heap.pprof`, `cpu.pdf`, and `heap.pdf`. Raw
-profiles can also be opened interactively with `go tool pprof`. PDF generation
-requires Graphviz (`dot`) on `PATH`; if it is unavailable, Dark Magic preserves
-the raw profiles and reports the rendering error. `DARK_MAGIC_PROFILE_DIR`
-provides the same opt-in configuration for launchers that cannot pass flags.
-Profile output under `profiles/` is intentionally ignored by Git.
-
-Add `--profile-scenes title,main_menu,character_create` (or
-`DARK_MAGIC_PROFILE_SCENES`) to generate filtered CPU reports and retained-heap
-snapshots for individual scenes. Use `all` to capture every visited scene:
-
-```shell
-go run -tags ffmpeg ./cmd/client \
-  --profile-dir ./profiles/frontend-review \
-  --profile-scenes all
-```
-
-Scene artifacts are written beneath `scenes/<scene-id>/`. `cpu.pdf` combines
-all visits to that scene using pprof labels. Each visit gets a numbered
-`heap-NNN.pprof` and `heap-NNN.pdf` snapshot taken immediately before the
-scene's owned resources are released.
-
-Every scene snapshot also receives `diagnostics-NNN.json`, containing decoded
-cache residency and hit/miss/eviction counts, cumulative decode time, retained
-render resources and estimated RGBA bytes, texture upload volume, and bounded
-per-scene p50/p95/p99 frame-interval and update-work timing. A
-repeatable frontend acceptance run is available with:
-
-```shell
-MPQ_DIRECTORY=/path/to/diablo-ii make profile
-make profile-check
-```
-
-`make profile-acceptance` runs every budgeted scene deterministically and exits
-through capture completion. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for
-the measured baseline, benchmark commands, and interpretation rules.
-
-`profile-check` requires every scene listed in `docs/profile-budgets.json` to
-have been visited and rejects snapshots exceeding the tracked budgets. Override
-`PROFILE_DIR` or `PROFILE_BUDGETS` to compare another run or budget set.
-
-Capture locally reviewable scene screenshots after ten stable presented frames:
-
-```shell
-MPQ_DIRECTORY=/path/to/diablo-ii make capture
-```
-
-The default captures `loading` and `title`; override `CAPTURE_SCENES` with a
-comma-separated list or pass `--capture-scenes` directly. `--capture-settle-frames`
-controls stabilization. Use `START_SCENE=character_create make capture` or
-`--start-scene character_create` to enter a registered scene directly for local
-development review. Passing `--capture-scenes` without `--capture-dir` writes to
-`./captures/frontend`, so a single overlay can be captured with
-`--start-scene=death --capture-scenes=death`. Capture exits automatically once every requested scene has
-been recorded. The capture directory contains numbered PNGs plus a
-`report.json` recording scene names, dimensions, and SHA-256 hashes. Capture
-output under `captures/` is ignored by Git so Blizzard imagery remains local.
-Saved-character presentation can be reviewed without modifying a real save
-directory by combining `START_SCENE=character_select`,
-`CAPTURE_SCENES=character_select`, and `FIXTURE_CHARACTERS=10`. The equivalent
-development-only CLI option is `--fixture-characters 10`; its deterministic
-in-memory records exercise both columns, paging, and expansion/hardcore labels.
-The default presentation profile remains `lod-english-800x600`. The scoped
-`lod-english-640x480-gameplay` profile selects the original 640-wide in-game
-control panel and logical viewport across gameplay, side/full overlays, pause,
-options, death, and loading transitions. It deliberately does not claim the
-800x600 expansion frontend screens have been converted. Select it with
-`--presentation-profile lod-english-640x480-gameplay` or
-`PRESENTATION_PROFILE=lod-english-640x480-gameplay make capture`.
-When starting directly in a gameplay scene such as `game_world`, `inventory`,
-`character`, `stash`, or `help`, the first fixture is selected automatically so
-asset-backed presentation can be captured in isolation.
-Character sources may also attach an immutable appearance snapshot containing
-the resolved COF, palette, direction, and component DCC paths. Character
-selection renders that equipment-aware composite when available and falls back
-to the class presentation for legacy metadata-only records.
-
-Open the integrated composite animation laboratory against mounted MPQs with:
-
-```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
-  --start-scene=composite_lab
-```
-
-Use Left/Right to increment or decrement the logical `0..15` player direction,
-Up/Down for NU/WL/RN mode, Page Up/Down
-for player class, Space to pause/play, Home/End to step frames, and Enter to cycle deterministic coherent
-recipes. Press F to open the shared type-to-filter fuzzy recipe picker. The lab owns its defaults and selection state; no composite-specific
-arguments leak through the production client composition root.
-
-Browse a DT1 tileset through the engine's lazy tile decoder with:
-
-```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
-  --start-scene=dt1_lab
-```
-
-The lab incrementally lays out every tile as a centered, labeled gallery cell
-and initially fits the complete grid. Tab toggles between that grid and a
-readable 1x view centered on the selected tile. Arrow keys or pointer dragging pan
-the current view, scroll and Home/End zoom it, Space returns to and recenters
-the fitted grid, Page Up/Down cycles Act palettes, and Enter selects another mounted DT1
-through a deterministic random sequence. Hovering a tile shows an unscaled,
-75%-opaque pointer tooltip reporting its index,
-semantic orientation/type, main/style index, sub/sequence index, matching
-variant count, direction, rarity, block count, and source dimensions. Cells
-with the same orientation/main/sub lookup key share a subtle background color.
-Press F to select an exact mounted DT1 through the shared fuzzy picker. Files
-using the archived preliminary `4.1` layout remain discoverable but produce an
-explicit unsupported-layout diagnostic; they are never decoded with `7.6`
-offsets.
-
-Open a DS1 stamp with its authored DT1 sources using:
-
-```shell
-MPQ_DIRECTORY=~/d2_english_mpq go run ./cmd/client \
-  --start-scene=ds1_lab
-```
-
-Arrow keys pan, Home/End zooms, Space fits the complete stamp, Page Up/Down
-cycles Act palettes, and Enter selects a mounted DS1 plus exactly the DT1
-libraries declared by that stamp (including historical `.tg1` name mapping).
-Both map labs discover their mounted assets themselves and open with
-a useful selection. The scenes can be captured as `dt1_lab` and `ds1_lab`
-through the ordinary capture flags.
-Press F to find a specific mounted DS1 by any subsequence of its path. Monster
-and missile labs expose the same picker for their typed record IDs.
-
-`--start-scene=combat_lab` is a production-world combat instrument, not a
-second miniature combat implementation. `make play-combat-lab` selects a
-development character, enters the generated Act I Blood Moor, admits its typed
-hostile population, and then delegates the complete scene lifecycle to
-`game_world`. The lab relocates up to three members of that real population to
-reachable open subtiles within the initial viewport, and admission keeps the
-data-backed general Attack (skill ID 0) on the left mouse button. Pointer
-traversal and hostile selection therefore exercise the
-same fixed-tick intents, collision-aware A*, sparse tile residency and culling,
-camera, entity depth ordering, player/monster composites, missiles, HUD,
-damage, death, and loot cues used by ordinary play. F3 toggles decoded
-collision, F4 tile geometry, F5 entity origins, and F6 the lab-only read-only
-combat panel and hostile markers. The panel reports authoritative positions,
-animation/attack phase, equipment-derived melee range and damage, nearest
-hostile health/AI, and the latest semantic combat event. Run
-`make capture-combat-lab` for a local MPQ-backed review image; game assets and
-captures remain outside the repository.
-
-`--start-scene=mapgen_lab` opens the pointer-driven generation proof. It shows
-the typed Act I Cave Level 1 room topology, chamber recipe, checksum, and
-decision trace without materializing renderer assets. Click its seed controls
-to produce another deterministic zone; DS1 Lab remains the separate, lazy
-materialization tool. The `engine.mapgen/v1` capability also retains the earlier
-typed Act I Tristram preset proof.
-
-`--start-scene=warp_lab` opens an argument-free paired-warp proof inside the
-production Act I world. It selects a disposable development character and adds
-one blue town-side endpoint plus one red Blood Moor endpoint as authoritative
-world entities. Clicking a warp uses the ordinary selectable and interaction
-admission path; the player walks into range through the shared command source,
-player-footprint-aware A*, velocity and collision integration, then the warp
-uses the same relocation transaction as authored level seams. The scene itself
-delegates to `game_world`, so facing, authoritative NU/WL animation state,
-camera, sparse tile residency, culling, depth ordering, and asynchronously
-prepared TP/PP composites are the production paths too. Both arrivals are
-collision-checked for the player's complete footprint, and the owned-data
-acceptance crosses both directions before proving ordinary locomotion resumes
-after return.
-
-The lab adds only read-only level/position/velocity/mode/crossing diagnostics
-and a brief presentation mask after authority changes the level. It no longer
-owns a synthetic actor, private locomotion resolver, or direct teleport. The
-configured pair proves the reusable warp mechanism, not the still-unverified
-Town Portal owner, party-access, replacement, lifetime, and return policies.
-Run it with `make play-warp-lab`, or create a local production-asset image with
-`make capture-warp-lab`. Blizzard-owned capture output remains ignored by Git.
-
-Generated zone recipes are decoded one stamp at a time by the renderer-neutral
-world materializer. It reuses DT1 catalogs across matching rooms, reports safe
-loading progress, and only publishes the completed tile/object/collision map.
-The extra shared terminal edge present in production DS1 room stamps is clipped
-to the generated room footprint during composition.
-
-DS1 Lab composes sparse 512x512 CPU chunks split into floor, lower-wall,
-shadow, upper-wall, and roof passes. Tab isolates those passes, including the
-paired north-corner records required by legacy stamps. The lab admits at most
-two newly visible native textures per frame and releases retained chunk nodes
-outside a viewport margin. Its status line reports logical dimensions,
-demand-resident/total chunks, and authored object placements. Objects remain
-simulation facts rather than pixels baked into a tile chunk. The command-line
-PNG inspector intentionally retains its full-image path.
-Press F3 in DS1 Lab to lazily overlay the authoritative DT1 subtile collision
-grid: red is walk blocking, orange player-only blocking, blue line-of-sight,
-magenta jump, and yellow light blocking. This diagnostic uses the same
-bottom-to-top DT1 row transform consumed by simulation.
-
-Inspect a legally obtained Diablo II asset without starting the renderer:
-
-```shell
-go run ./internal/dev/tools/asset_inspect \
-  -source /path/to/d2data.mpq \
-  -asset data/global/ui/Loading/loadingscreen.dc6 \
-  -preview ./loading.png
-```
-
-Verify the curated screen-asset knowledge against a complete MPQ directory and
-generate a JSON report plus palette-applied DC6 contact sheets:
-
-```shell
-go run ./internal/dev/tools/asset_catalog \
-  -mpq-dir /path/to/diablo-ii \
-  -out ./asset-catalog
-```
-
-Validate the installation against the redistributable structural fixture
-without extracting or committing any Blizzard-owned pixels:
-
-```shell
-go run ./internal/dev/tools/asset_catalog \
-  -mpq-dir /path/to/diablo-ii \
-  -no-sheets \
-  -fixture internal/content/d2legacy/manifests/asset-fixture.v1.json
-```
-
-View a Bink cinematic directly from an MPQ directory (FFmpeg/`ffplay` is
-required, and the temporary extracted file is removed when playback exits):
-
-```sh
-go run ./internal/dev/tools/bik_view \
-  -source ~/d2_english_mpq \
-  -asset data/local/video/New_Bliz640x480.bik
-```
-
-Standalone files are supported with `-file movie.bik`. The equivalent Make
-target accepts `MPQ_DIRECTORY` and `BIK_ASSET` environment variables.
-
-Build the client with `-tags ffmpeg` and link FFmpeg development libraries via
-`pkg-config` to decode Bink video and audio in-process inside the Dark Magic
-window:
-
-```sh
-MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/client
-```
-
-Portable client builds never launch a separate media-player window. Without the
-embedded FFmpeg backend, startup follows the manifest's failure policy and skips
-video without preventing the client from loading. The standalone `bik_view`
-developer tool retains `ffplay` for explicit diagnostic playback.
-
-The report records missing and disputed paths, the archive layer that supplied
-each asset, hashes, direction/frame counts, dimensions, and stored offsets. Use
-`-manifest custom.json` to verify additional hypotheses or `-no-sheets` for a
-metadata-only pass. The command is read-only with respect to the MPQs.
-
-The optional community discovery index can be audited independently:
-
-```shell
-go run ./internal/dev/tools/asset_catalog \
-  -mpq-dir /path/to/diablo-ii \
-  -listfile ./docs/Diablo2UberListfile.txt \
-  -no-sheets \
-  -out ./asset-catalog
-```
-
-Its `listfile-report.json` deliberately distinguishes paths merely listed by
-community research from paths actually resolvable in the selected MPQ set.
-
-Host filesystem paths accepted by Dark Magic consistently expand `~`, `~/`,
-`~\`, `$NAME`, `${NAME}`, and `%NAME%` forms on every supported platform.
-This applies to environment configuration and command input/output paths. MPQ
-asset paths are virtual paths and are intentionally not expanded.
-
-When the debug web server is running, the same metadata and selected DC6/DCC
-frames are available through the asset routes:
-
-```text
-GET /asset/inspect/data/global/ui/Loading/loadingscreen.dc6
-GET /asset/preview/data/global/ui/Loading/loadingscreen.dc6?direction=0&frame=0
-```
-
-Run the standalone interactive scene slice:
-
-```shell
-go run ./internal/dev/testapps/scene_demo
-```
-
-The main engine also starts the integrated scene service. Set `MPQ_DIRECTORY`
-to one or more comma-separated content directories. Each directory is mounted
-for ordinary filesystem assets and scanned for the supported Diablo MPQs. The
-listed paths are ordered from highest to lowest priority and support
-cross-platform aliases:
-
-```shell
-MPQ_DIRECTORY="~/my-mod,~/d2_english_mpq" go run ./cmd/client
-```
-
-To explore a real DS1 layout from an MPQ:
-
-```shell
-go run ./internal/dev/testapps/scene_demo \
-  -source /path/to/d2data.mpq \
-  -map data/global/tiles/Act1/BARRACKS/barE.ds1 \
-  -dt1 data/global/tiles/Act1/BARRACKS/floor.dt1,data/global/tiles/Act1/BARRACKS/basewall.dt1,data/global/tiles/Act1/BARRACKS/barset.dt1 \
-  -palette data/global/palette/ACT1/pal.pl2
-```
-
-Use WASD or the arrow keys to move, F5 to save, and F9 to load. See
-[ROADMAP.md](ROADMAP.md) for restart progress and the next integration work.
-
-## License
-
-This project is licensed under the MIT License - see the 
-[LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-* [Open Diablo 2](https://github.com/opendiablo2/opendiablo2)
-* [Gin](https://github.com/gin-gonic/gin)
-* [Gopher LUA](https://github.com/yuin/gopher-lua)
-
----
-*Dark Magic is not affiliated with or endorsed by Blizzard Entertainment, Inc. Diablo is a registered trademark of Blizzard Entertainment, Inc. All in-game content, imagery, and lore are the property of Blizzard Entertainment, Inc.*
+Before adding a long-lived engine component, read the
+[architecture guide](docs/ARCHITECTURE.md). Contribution expectations are kept
+in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Research, lineage, and community
+
+Dark Magic exists because decades of Diablo II modders, preservationists,
+reverse engineers, tool authors, and independent engine developers documented
+behavior that the original executable kept implicit. The project descends from
+[OpenDiablo2](https://github.com/OpenDiablo2/OpenDiablo2), but its current
+architecture and gameplay implementation are being rebuilt around Dark Magic's
+own boundaries and evidence requirements.
+
+Principal research and corroboration sources include:
+
+- [Paul Siramy's research and tools](http://paul.siramy.free.fr/) and the wider
+  [Phrozen Keep](https://d2mods.info/) community, especially for maps, formats,
+  editing/generation, animations, and engine behavior.
+- [ThePhrozenKeep/D2MOO](https://github.com/ThePhrozenKeep/D2MOO), a major
+  reverse-engineered Diablo II 1.10f runtime reference.
+- [jaenster/libd2](https://github.com/jaenster/libd2), including independent
+  1.14d implementation evidence and strong retail-capture/holdout verification.
+- [Riiablo](https://github.com/collinsmith/riiablo), including format,
+  composite, rendering, UI, quest, dialogue, and object research.
+- [OpenD2](https://github.com/eezstreet/OpenD2) and
+  [AbyssEngine](https://github.com/AbyssEngine/AbyssEngine) as independent
+  behavioral and presentation references.
+- [nokka/d2s](https://github.com/nokka/d2s), community data-format guides,
+  historical patch notes, forum research, and the many tools and references
+  cited in the repository's research ledgers.
+
+These sources are **evidence, not code-generation templates**. Dark Magic
+restates behavior independently, respects source licenses, records version
+conflicts and uncertainty, and prefers repeatable observations of lawfully owned
+game data. Detailed provenance and confidence tracking live in the
+[format source matrix](docs/formats/SOURCE_MATRIX.md),
+[gameplay-systems source matrix](docs/research/SYSTEMS_SOURCE_MATRIX.md), and
+[research index](docs/research/GAME_SYSTEMS_INDEX.md).
+
+If you have contributed research, tools, code, testing, documentation, or
+knowledge to the Diablo II community: thank you. Dark Magic is built on that
+shared body of work.
+
+Join development and discussion on the
+[Dark Magic Discord](https://discord.gg/gT9vTKfV8G).
