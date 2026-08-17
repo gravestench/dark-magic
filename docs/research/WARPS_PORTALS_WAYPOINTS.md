@@ -253,6 +253,15 @@ Later patch features such as Uber portal operations must be version-gated and ar
 
 Sorceress/monster teleport is normally same-level relocation, not a level transition. It should reuse coordinate/destination validation primitives but not necessarily tear down/rebuild zone residency.
 
+The implemented exact-ID Sorceress Teleport slice now keeps the same durable ECS
+entity and level/location component, atomically changes position after static
+and dynamic destination checks, stops competing motion, and emits a generic
+relocation fact. This is deliberately separate from the level-transition
+transaction. Owned Levels.txt supplies policies 0/1/2; the current policy-2
+BlockLOS interpretation remains conservative pending target-runtime vectors,
+alongside exact visibility range, invalid-target mana/fallback, room-edge
+ordering, owned-unit following, and presentation timing.
+
 Separate:
 
 ```text

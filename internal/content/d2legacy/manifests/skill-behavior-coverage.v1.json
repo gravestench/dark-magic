@@ -29,6 +29,11 @@
       "evidence_status": "owned-target-records-and-localized-impact-intent-partial"
     },
     {
+      "skill_id": 54,
+      "family": "movement.point-relocate",
+      "evidence_status": "owned-target-records-and-localized-relocation-intent-partial"
+    },
+    {
       "skill_id": 55,
       "family": "missile.straight-impact-area-freeze",
       "evidence_status": "owned-target-records-and-localized-area-freeze-intent-partial"

@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 55}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 54, 55}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,21 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		modifiers[0].ReferencedID != 50 || modifiers[1].ReferencedID != 60 {
 		t.Fatalf("Frozen Armor modifiers = %#v", modifiers)
 	}
-	glacial := report.Skills[3]
+	teleport := report.Skills[3]
+	if len(teleport.CrossSkillModifiers) != 0 {
+		t.Fatalf("Teleport modifiers = %#v", teleport.CrossSkillModifiers)
+	}
+	teleportLocalized := map[string]LocalizationReference{}
+	for _, evidence := range teleport.Localization {
+		teleportLocalized[evidence.Column] = evidence
+	}
+	if teleportLocalized["str name"].Text != "Teleport" ||
+		teleportLocalized["str long"].Key != "skillld54" ||
+		teleportLocalized["str long"].Text != "instantly moves to a destination within your line of sight" ||
+		teleportLocalized["str long"].Source != "data/local/lng/eng/string.tbl" {
+		t.Fatalf("Teleport localization = %#v", teleport.Localization)
+	}
+	glacial := report.Skills[4]
 	if modifiers := glacial.CrossSkillModifiers; len(modifiers) != 5 ||
 		modifiers[0].ReferencedID != 39 || modifiers[1].ReferencedID != 45 ||
 		modifiers[2].ReferencedID != 64 || modifiers[3].ReferencedID != 59 ||

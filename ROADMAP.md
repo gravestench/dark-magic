@@ -164,7 +164,18 @@ state systems contain no Glacial Spike branch. Its referenced center explosion
 is presentation-only; the second ejecta sub-missile, exact radius/footprint and
 rounding, resistance/immunity and monster-class effectiveness, cross-source
 replacement, PvP chill conversion, and action timing remain explicit probes.
-A matched frontend profile also
+Teleport now opens the first exact-ID point-movement family. Its owned 1.14d
+Skills row supplies server-do 27, right-skill-only assignment, warp intent, SC
+action, signed 24-minus-1-per-level mana with an authored 1-mana floor, and no
+cross-skill modifier. Owned Levels rows supply policy 0/1/2, with only Duriel's
+Lair carrying 2; layered TBL text says the action instantly moves to a
+destination within line of sight. The generic effect validates bounds, static
+footprint, dynamic ECS occupancy, and the conservative limited-level line
+trace, then atomically relocates the existing player entity, stops semantic and
+raw motion, cancels forced motion, and emits one generic ECS relocation fact.
+Exact viewport/visibility range, policy-2 meaning, invalid-target mana behavior,
+nearest-free fallback, room-edge timing, owned-unit following, and SC/presentation
+timing remain explicit 1.14d probes. A matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
@@ -227,7 +238,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 7 exact-ID implementations, 350 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 8 exact-ID implementations, 349 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -894,6 +905,12 @@ runtime composition and the coverage report.
   apply independently rolled shared cold results in stable target order and
   emit an ordinary freeze request for each nonlethal in-radius result without a
   Glacial-Spike-specific command, component, or system branch.
+- [x] Add the first reusable point-movement family and admit exact Expansion
+  1.14d Teleport by ID. Decode signed mana progression and authored Levels
+  policy, validate static/dynamic destination occupancy, atomically relocate the
+  existing ECS player while stopping competing motion, and emit a generic
+  relocation-result entity. Keep viewport/range, limited-level meaning,
+  invalid-target payment/fallback, owned-unit, and presentation timing partial.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -916,8 +933,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 7 explicitly admitted
-configurations, and 350 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 8 explicitly admitted
+configurations, and 349 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -942,6 +959,11 @@ Bolt, Ice Blast, and Frozen Orb hard levels for cold damage plus Blizzard hard
 levels for freeze duration. The decoder binds those player-visible
 relationships to the exact owned Skills/Missiles rows rather than inferring
 behavior from text alone.
+Teleport's layered `skillld54` record says it instantly moves to a destination
+within line of sight, while the exact owned skill row contains no cross-skill
+formula. That intent is joined to the server-do, signed mana, assignment, and
+Levels policy facts; it does not by itself invent a numeric visibility range or
+invalid-destination sequence.
 TBL wording establishes intended relationships and player-visible claims;
 Skills.txt calc/
 parameter fields and owned 1.14d runtime probes remain authoritative for exact
@@ -1004,6 +1026,23 @@ single-effect presentation recipe. Exact radius/footprint units, impact and
 percentage rounding, per-target RNG, resistance/immunity, monster-class cold
 effectiveness, cross-source replacement, PvP chill conversion, secondary
 ejecta presentation, and action timing remain owned-runtime probes.
+
+Teleport is the first `movement.point-relocate` configuration. Its exact row
+requires server-do function 27, `warp=1`, SC action, right-skill-only assignment,
+`range=none`, interruptibility, 24 base mana, -1 mana per level in authored 8.8
+units, and a 1-mana floor. The decoder also pins every owned Levels.txt
+`Teleport` value: null level 0 is disabled, ordinary target levels are 1, and
+Duriel's Lair ID 73 is the sole policy-2 exception. On the cast effect tick, a
+generic system validates the same-level target against world bounds, static
+footprint collision, and blocking ECS occupancies; policy 2 additionally uses
+the distinct BlockLOS trace. Success mutates the existing position atomically,
+stops semantic/raw/forced motion, and composes a checkpointed value-only
+`d2legacy.world.relocation_event`. Failure leaves position unchanged and records
+an explicit outcome. The current 2-to-line-trace interpretation is conservative
+secondary evidence, not a completed target-runtime claim. Exact viewport/
+visibility range, type-2 meaning, payment on invalid destinations, nearest-free
+fallback, player room-edge sequencing, owned-unit following, and action/
+presentation timing remain owned 1.14d probes.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
@@ -1121,8 +1160,9 @@ special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
 cold-duration/PvP rules and Nova's radial phase/acceleration/repeat-contact
-ordering. Then use the report to select one high-leverage missing targeted or
-point behavior signature. Evidence upgrades and exact-ID declarations land
+ordering. Populate Teleport's viewport/range, limited-level, invalid-target,
+fallback, owned-unit, and timing vectors, then use the report to select one
+high-leverage missing targeted behavior signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server
 function IDs. Synergy and every skill-that-modifies-another-skill investigation
 must begin with the joined locale TBL keys/text/replacement-token evidence,

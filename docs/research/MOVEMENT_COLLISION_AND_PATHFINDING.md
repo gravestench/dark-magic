@@ -462,6 +462,16 @@ Needs continuous/path-following combat contact policy and must not simply telepo
 
 Should perform authoritative destination validation and then atomically relocate the unit/room relationship. It should not consume an ordinary walking path.
 
+The first exact-ID family now does that for Teleport ID 54: a shared
+point-relocation system checks current-level bounds, static footprint collision,
+and blocking ECS occupancies, then mutates the existing position while stopping
+semantic/raw/forced motion. One generic relocation-result ECS entity records
+success or the rejected outcome. Owned Levels.txt values are decoded as 0/1/2;
+the sole policy-2 level receives a conservative BlockLOS trace. Exact
+viewport/range, policy-2 meaning, invalid-target payment and nearest-free
+fallback, room-edge order, owned-unit following, and animation timing remain
+target-1.14d probes.
+
 These strategies belong above generic world collision APIs.
 
 ## Missile movement
