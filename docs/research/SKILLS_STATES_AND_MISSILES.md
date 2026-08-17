@@ -77,6 +77,8 @@ The renderer-independent `d2legacy` Lua authority now owns:
   cast-target contact locks;
 - a reusable straight-missile area-impact family that separates the damaging
   radius transaction from a presentation-only ECS aftermath entity;
+- a reusable straight-missile on-hit state family that snapshots duration and
+  emits ordinary timed-state requests after nonlethal contact;
 - a reusable self-state family and timed state-instance lifecycle; and
 - the shared melee action path.
 
@@ -108,8 +110,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 5
-explicitly admitted configurations, and 352 missing configurations. Every
+archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 6
+explicitly admitted configurations, and 351 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -133,6 +135,9 @@ level fire-damage bonuses from Fire Ball and Meteor. It separately confirms
 Frozen Armor receives hard-level modifiers from Shiver Armor and Chilling Armor
 for both seconds-per-level duration and freeze-length-per-level, matching the
 two owned Skills.txt expressions already decoded by the generic state family.
+Ice Blast resolves its Ice Bolt/Blizzard/Frozen Orb cold-damage references,
+Glacial Spike freeze-length reference, and localized direct-freeze claim; the
+owned parameters remain the arithmetic authority.
 Attack resolves to the localized name `Attack` and description `normal attack`
 with no cross-skill modifier formula. Nova resolves to the localized name and
 descriptions "creates an electrically charged ring" and "to shock nearby
@@ -198,6 +203,24 @@ The area behavior remains partial. Radius 4 is preserved directly from the
 owned server-hit parameter, but exact 1.14d conversion against unit footprints,
 impact-point rounding, per-target RNG sequencing, and ordering against mastery,
 resistance, PvP conversion, and secondary effects require owned-runtime vectors.
+
+Ice Blast is the first exact `missile.straight-freeze` consumer. Its owned skill
+row supplies 75 base freeze frames plus 5 per level; `ELenSymPerCalc` resolves
+10% per Glacial Spike hard point, while `EDmgSymPerCalc` resolves 8% cold damage
+per Ice Bolt, Blizzard, and Frozen Orb hard point. Its missile binds travel
+function 1 and damage function 4 to a single-hit collision and references the
+16-tick `freezingarrowexp1` presentation explosion. Joined TBL text explicitly
+says the projectile freezes its enemy and exposes both cold-damage and freeze-
+length synergies.
+
+The generic cast snapshots the resolved effect duration beside the damage
+modifier. On nonlethal contact, the projectile emits a `d2legacy.state.request`
+with a stable caster/skill source. Existing monster cold-duration divisors,
+timed-state instances, action-disable filters, checkpointing, refresh, and
+expiration own the result; the missile system contains no Ice Blast branch.
+Exact resistance/immunity, monster-class cold effectiveness, cross-source
+replacement, PvP chill conversion, and animation/impact ordering remain partial
+until owned 1.14d runtime vectors resolve them.
 
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
@@ -268,7 +291,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 352 missing configurations,
+classification and implementation of the 351 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

@@ -38,6 +38,15 @@ fire_bolt.Param8 = "16"
 local fire_ball = skill(47, "Fire Ball", "fireball", "fire")
 fire_ball.EDmgSymPerCalc = "(skill('Fire Bolt'.blvl)+skill('Meteor'.blvl))*par8"
 fire_ball.Param8 = "14"
+local ice_blast = skill(45, "Ice Blast", "iceblast", "cold")
+ice_blast.EDmgSymPerCalc = "(skill('Ice Bolt'.blvl)+skill('Blizzard'.blvl)+skill('Frozen Orb'.blvl))*par8"
+ice_blast.Param8 = "8"
+ice_blast.ELen = "75"
+ice_blast.ELevLen1 = "5"
+ice_blast.ELevLen2 = "5"
+ice_blast.ELevLen3 = "5"
+ice_blast.ELenSymPerCalc = "(skill('Glacial Spike'.blvl))*par7"
+ice_blast.Param7 = "10"
 local fixture_burst = skill(901, "Fixture Burst", "fixtureburst", "magic")
 
 local function impact_missile(name, skill_name, explosion, radius)
@@ -68,7 +77,12 @@ return test.suite({
         ["data/global/excel/skills.txt"] = {
             fire_bolt,
             fire_ball,
+            ice_blast,
+            { Id = "39", skill = "Ice Bolt" },
+            { Id = "55", skill = "Glacial Spike" },
             { Id = "56", skill = "Meteor" },
+            { Id = "59", skill = "Blizzard" },
+            { Id = "64", skill = "Frozen Orb" },
             -- Synthetic authored data proves family reuse; it is not shipped
             -- gameplay coverage or a claim about another Diablo II skill.
             skill(900, "Fixture Bolt", "fixturebolt", "magic"),
@@ -79,8 +93,15 @@ return test.suite({
             missile("fixturebolt", "Fixture Bolt", 25, 75),
             impact_missile("fireball", "Fire Ball", "fireexplosion", 4),
             impact_missile("fixtureburst", "Fixture Burst", "fixtureexplosion", 6),
+            (function()
+                local result = missile("iceblast", "Ice Blast", 12)
+                result.pSrvDmgFunc = "4"
+                result.ExplosionMissile = "freezingarrowexp1"
+                return result
+            end)(),
             explosion("fireexplosion", 16),
             explosion("fixtureexplosion", 12),
+            explosion("freezingarrowexp1", 16),
         },
     },
     cases = {
@@ -115,6 +136,23 @@ return test.suite({
                 test.expect(definitions[901].impact_radius):equals(6)
                 test.expect(definitions[901].impact_missile_id):equals("fixtureexplosion")
                 test.expect(definitions[901].impact_lifetime_ticks):equals(12)
+            end)
+        end),
+        test.case("decodes_record_driven_freeze_state_without_a_skill_branch", function(t)
+            t:run(function()
+                local definition = require("d2legacy.data.missile_skills").load({ 45 }, "missile.straight-freeze")[45]
+                test.expect(definition.trajectory):equals("straight")
+                test.expect(definition.on_hit_state_id):equals("freeze")
+                test.expect(definition.on_hit_state_duration_policy):equals("monster_cold")
+                test.expect(definition.effect_duration_base):equals(75)
+                test.expect(definition.effect_duration_per_level):equals(5)
+                test.expect(definition.effect_duration_synergy_skill_ids[1]):equals(55)
+                test.expect(definition.effect_duration_synergy_percent_per_level):equals(10)
+                test.expect(definition.damage_synergy_skill_ids[1]):equals(39)
+                test.expect(definition.damage_synergy_skill_ids[2]):equals(59)
+                test.expect(definition.damage_synergy_skill_ids[3]):equals(64)
+                test.expect(definition.damage_synergy_percent_per_level):equals(8)
+                test.expect(definition.impact_missile_id):equals("freezingarrowexp1")
             end)
         end),
     },

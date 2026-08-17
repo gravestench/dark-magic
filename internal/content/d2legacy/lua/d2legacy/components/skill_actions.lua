@@ -25,7 +25,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.skill.cast",
-        version = 2,
+        version = 3,
         fields = {
             { name = "skill_id", type = "i64" },
             { name = "skill_level", type = "i64" },
@@ -35,13 +35,14 @@ function M.register()
             { name = "effect_tick", type = "i64" },
             { name = "complete_tick", type = "i64" },
             { name = "elemental_damage_percent", type = "i64" },
+            { name = "effect_duration_ticks", type = "i64" },
             { name = "effect_emitted", type = "bool", default = false },
         },
     })
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 4,
+        version = 5,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "cast_id", type = "string" },
@@ -64,6 +65,12 @@ function M.register()
             { name = "impact_frames_per_second", type = "i64" },
             { name = "impact_loop", type = "bool" },
             { name = "impact_sound", type = "string" },
+            { name = "on_hit_state_id", type = "string" },
+            { name = "on_hit_state_source_id", type = "string" },
+            { name = "on_hit_state_duration", type = "i64" },
+            { name = "on_hit_state_duration_policy", type = "string" },
+            { name = "on_hit_state_action_disabled", type = "bool" },
+            { name = "on_hit_state_exclusive_group", type = "string" },
             { name = "knockback_value", type = "i64" },
             { name = "minimum_damage_raw", type = "i64" },
             { name = "maximum_damage_raw", type = "i64" },
