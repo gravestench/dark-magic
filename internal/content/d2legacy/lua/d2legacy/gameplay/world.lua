@@ -266,6 +266,7 @@ function M.semantic_cues(observed)
         "d2legacy.combat.attack_animation_event",
         "d2legacy.combat.melee_event",
         "d2legacy.combat.event",
+        "d2legacy.world.forced_motion_event",
     }) do
         local ok, matches = pcall(ecs.query, { all = { component } })
         if ok then
@@ -299,6 +300,10 @@ function M.semantic_cues(observed)
         local combat = optional_component(entity, "d2legacy.combat.event")
         if combat then
             kind, values = "combat", combat:snapshot()
+        end
+        local forced_motion = optional_component(entity, "d2legacy.world.forced_motion_event")
+        if forced_motion then
+            kind, values = "movement", forced_motion:snapshot()
         end
         if values then
             -- Dynamic entity fields are checked ECS handles. Collapse the
