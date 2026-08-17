@@ -23,6 +23,10 @@ function M.register()
         { name = "max_mana", type = "i64" },
         { name = "mana_raw", type = "i64" },
         { name = "max_mana_raw", type = "i64" },
+        { name = "stamina", type = "i64" },
+        { name = "max_stamina", type = "i64" },
+        { name = "stamina_raw", type = "i64" },
+        { name = "max_stamina_raw", type = "i64" },
     })
     component("d2legacy.player.learned_skill", {
         { name = "owner", type = "entity" },
@@ -44,6 +48,14 @@ function M.register()
         { name = "target_id", type = "string" },
     })
     component("d2legacy.player.movement_mode", { { name = "running", type = "bool" } })
+    component("d2legacy.player.movement_stats", {
+        { name = "run_drain", type = "i64" },
+        { name = "velocitypercent", type = "i64" },
+        { name = "item_fastermovevelocity", type = "i64" },
+        { name = "staminarecoverybonus", type = "i64" },
+        { name = "item_staminadrainpct", type = "i64" },
+        { name = "armor_run_drain", type = "i64" },
+    })
     component("d2legacy.player.appearance", {
         { name = "cof", type = "string" },
         { name = "token", type = "string" },

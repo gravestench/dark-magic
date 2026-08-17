@@ -21,6 +21,7 @@ func (fixtureRecords) Load(path string) ([]map[string]string, error) {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
 			"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9",
+			"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 		}}, nil
 	case "data/global/excel/skilldesc.txt":
 		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil

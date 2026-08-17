@@ -23,3 +23,51 @@ func TestResolveUsesProductionMovementRules(t *testing.T) {
 		t.Fatalf("target velocity = %+v, want {3.6 4.8}", target.Velocity)
 	}
 }
+
+func TestEffectiveRatesUseD2ItemFRWDiminishingReturnsAndSharedVelocityChannel(t *testing.T) {
+	base := ClassRates{Walk: 6, Run: 9}
+	effective := EffectiveRates(base, Modifiers{ItemFasterMoveVelocity: 30})
+	if effective.Walk != 7.5 || effective.Run != 10.5 {
+		t.Fatalf("30 item FRW rates = %+v, want 7.5/10.5", effective)
+	}
+	slowed := EffectiveRates(base, Modifiers{VelocityPercent: -90})
+	if math.Abs(slowed.Walk-1.5) > 1e-12 || math.Abs(slowed.Run-3.6) > 1e-12 {
+		t.Fatalf("minimum velocity rates = %+v, want walk floor 1.5 and run 3.6", slowed)
+	}
+}
+
+func TestAdvanceStaminaUsesFixedPointDrainRecoveryAndTownRules(t *testing.T) {
+	drained := AdvanceStamina(StaminaTick{CurrentRaw: 256, MaximumRaw: 256, RunDrain: 20, Running: true, Moving: true})
+	if drained.CurrentRaw != 216 || drained.ForceWalk {
+		t.Fatalf("ordinary run tick = %+v, want 216 raw", drained)
+	}
+	heavy := AdvanceStamina(StaminaTick{CurrentRaw: 100, MaximumRaw: 256, RunDrain: 20, ArmorRunDrain: 10, StaminaDrainPercent: 25, Running: true, Moving: true})
+	if heavy.CurrentRaw != 40 {
+		t.Fatalf("heavy 25%% slower-drain tick = %+v, want 40 raw", heavy)
+	}
+	stopped := AdvanceStamina(StaminaTick{CurrentRaw: 20, MaximumRaw: 256, RunDrain: 20, Running: true, Moving: true})
+	if stopped.CurrentRaw != 0 || !stopped.ForceWalk {
+		t.Fatalf("exhaustion tick = %+v", stopped)
+	}
+	idle := AdvanceStamina(StaminaTick{CurrentRaw: 2560, MaximumRaw: 84 * 256, CanRecover: true})
+	if idle.CurrentRaw != 2644 {
+		t.Fatalf("idle recovery = %+v, want 2644 raw", idle)
+	}
+	town := AdvanceStamina(StaminaTick{CurrentRaw: 2560, MaximumRaw: 84 * 256, Running: true, Moving: true, InTown: true, CanRecover: true})
+	if town.CurrentRaw != 2602 {
+		t.Fatalf("town motion recovery = %+v, want 2602 raw", town)
+	}
+}
+
+func TestTownLevelsAreTheFiveExpansion114dActTowns(t *testing.T) {
+	for _, level := range []int64{1, 45, 80, 108, 114} {
+		if !IsTownLevel(level) {
+			t.Fatalf("level %d was not recognized as town", level)
+		}
+	}
+	for _, level := range []int64{0, 2, 44, 79, 107, 115} {
+		if IsTownLevel(level) {
+			t.Fatalf("level %d was recognized as town", level)
+		}
+	}
+}

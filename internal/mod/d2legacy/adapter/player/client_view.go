@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ClientViewVersion    uint32 = 5
+	ClientViewVersion    uint32 = 6
 	MaxHUDLearnedSkills         = 256
 	MaxHUDBeltSlots             = 16
 	MaxPrivateItems             = 1024
@@ -103,6 +103,9 @@ func validateHUDView(hud HUD) error {
 		!boundedRequired(identity.Name, maxViewLabelBytes) || !boundedRequired(identity.Class, maxWorldKindBytes) ||
 		hud.Vitals.MaxHealth < 0 || hud.Vitals.Health < 0 || hud.Vitals.Health > hud.Vitals.MaxHealth ||
 		hud.Vitals.MaxMana < 0 || hud.Vitals.Mana < 0 || hud.Vitals.Mana > hud.Vitals.MaxMana ||
+		hud.Vitals.MaxStamina < 0 || hud.Vitals.Stamina < 0 || hud.Vitals.Stamina > hud.Vitals.MaxStamina ||
+		hud.Vitals.MaxStaminaRaw < 0 || hud.Vitals.StaminaRaw < 0 || hud.Vitals.StaminaRaw > hud.Vitals.MaxStaminaRaw ||
+		hud.Vitals.Stamina != hud.Vitals.StaminaRaw/256 || hud.Vitals.MaxStamina != hud.Vitals.MaxStaminaRaw/256 ||
 		!finiteView(hud.Position.X, hud.Position.Y, hud.Movement.Velocity.X, hud.Movement.Velocity.Y,
 			hud.Movement.Bounds.X, hud.Movement.Bounds.Y, hud.Movement.Radius) ||
 		hud.Movement.Bounds.X < 0 || hud.Movement.Bounds.Y < 0 || hud.Movement.Radius < 0 ||

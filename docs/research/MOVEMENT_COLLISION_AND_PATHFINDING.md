@@ -235,17 +235,32 @@ Do not make a visual door animation itself toggle collision.
 
 ## Player walk/run and stamina
 
-`CharStats.txt` already provides class walk/run velocity and run-drain facts. These should eventually replace current hard-coded movement speed policy.
+The production locomotion catalog now pins `WalkVelocity`, `RunVelocity`,
+starting stamina, `RunDrain`, `StaminaPerLevel`, and `StaminaPerVitality` from
+the mounted Expansion 1.14d `CharStats.txt` generation for all seven classes.
+There is no longer a hard-coded player walk/run rate.
 
-The full player locomotion model needs:
+Current/max stamina is authoritative 8.8 ECS state. One shared pure rule drives
+the Lua authority and connected prediction: wilderness running drains twice the
+class RunDrain value per 25 Hz tick before the torso and slower-drain channels;
+idle recovery adds max/256 raw units, movement recovery adds max/512, town
+running does not drain, and exhaustion changes the active movement to walking.
+The equipped-stat graph also exposes generic `velocitypercent`,
+`item_fastermovevelocity`, recovery, slower-drain, and armor-penalty sources.
+Item FRW uses the recovered 150-point diminishing-return conversion before it
+joins the velocity channel.
 
-- base class velocity;
-- walk/run mode;
-- faster run/walk and slow effects;
-- stamina amount/max;
-- run drain;
-- stamina recovery;
-- cannot-run fallback when stamina reaches its threshold;
+The archive and declarative record identities are target-locked to Expansion
+1.14d. Arithmetic is corroborated by recovered executable structure and
+independent community measurements, but the remaining chill/slow ordering,
+armor/shield breadth, progression-derived maximum, and boundary rounding still
+require owned 1.14d runtime vectors before they become verified completion.
+
+The remaining player locomotion model needs:
+
+- progression/source-derived maximum stamina;
+- verified slow/chill/freeze and skill velocity ordering;
+- complete armor/shield penalty activation;
 - state effects such as chill/freeze;
 - terrain/skill-specific movement modifiers if present.
 
@@ -444,9 +459,11 @@ Package names are suggestions. Keep generic map facts in `world`; do not turn `w
 
 ## Suggested implementation slices
 
-### MV1 — locomotion data policy
+### MV1 — locomotion data policy (implemented foundation)
 
-Replace hard-coded player walk/run speed with verified `CharStats`/stat-driven movement and authoritative stamina drain/recovery.
+Pinned `CharStats`/stat-driven movement and authoritative stamina drain/recovery
+now replace the hard-coded rate. Finish the explicitly listed Expansion 1.14d
+runtime probes before widening modifier content.
 
 Keep existing A* unchanged.
 
@@ -482,8 +499,10 @@ probe rather than a compatibility claim.
 3. Straight/toward/wall-follow algorithms and fallback rules.
 4. 16-bit fractional position stepping and exact rounding.
 5. Velocity/acceleration update cadence and unit conversion.
-6. `CharStats` walk/run velocity conversion to world distance per game frame.
-7. Run stamina drain/recovery cadence and threshold behavior.
+6. Remaining fixed-point path-velocity rounding after the pinned `CharStats`
+   class conversion.
+7. Expansion 1.14d holdout vectors for the implemented drain/recovery cadence,
+   town exception, torso multiplier, and exhaustion tick.
 8. Faster Run/Walk, slows, chill and state ordering.
 9. Collision mask meanings for players, monsters, missiles, doors and objects.
 10. Collision-pattern/size mapping from `MonStats2` versus radius approximation.

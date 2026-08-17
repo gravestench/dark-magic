@@ -83,17 +83,25 @@ function M.apply(command)
 
     local position = assert(ecs.get(entity, "d2legacy.world.position"))
     local identity = assert(ecs.get(entity, "d2legacy.player.identity"))
+    local stats = assert(ecs.get(entity, "d2legacy.player.movement_stats"))
+    local vitals = assert(ecs.get(entity, "d2legacy.player.vitals"))
+    local running = payload.running and vitals:get("stamina_raw") > 0
     local velocity_x, velocity_y, moving =
-        movement_rules.velocity(position:get("x"), position:get("y"), identity:get("class"), payload)
+        movement_rules.velocity(position:get("x"), position:get("y"), identity:get("class"), {
+            x = payload.x,
+            y = payload.y,
+            target = payload.target,
+            running = running,
+        }, stats:get("velocitypercent"), stats:get("item_fastermovevelocity"))
     local velocity = assert(ecs.get(entity, "d2legacy.world.velocity"))
     velocity:set("x", velocity_x)
     velocity:set("y", velocity_y)
 
     local mode = ecs.get(entity, "d2legacy.player.movement_mode")
     if mode then
-        mode:set("running", payload.running)
+        mode:set("running", running)
     end
-    update_animation(entity, moving and velocity_x or 0, moving and velocity_y or 0, payload.running, command.tick)
+    update_animation(entity, moving and velocity_x or 0, moving and velocity_y or 0, running, command.tick)
 end
 
 function M.register()

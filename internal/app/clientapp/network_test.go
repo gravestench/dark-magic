@@ -72,7 +72,8 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	hud := playeradapter.HUD{
 		Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
 		Player:   playeradapter.HUDIdentity{Class: "Amazon"},
-		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1},
+		Vitals:   playeradapter.HUDVitals{Stamina: 84, MaxStamina: 84, StaminaRaw: 84 * 256, MaxStaminaRaw: 84 * 256},
+		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1, RunDrain: 20},
 	}
 	got := predictPosition(hud, []gameserver.CommandIntent{
 		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
@@ -86,7 +87,10 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 type predictionMovementRecords struct{}
 
 func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
-	return []map[string]string{{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9"}}, nil
+	return []map[string]string{{
+		"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9",
+		"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
+	}}, nil
 }
 
 func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {

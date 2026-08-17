@@ -23,7 +23,11 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 - Capture one straight missile's spawn position, fixed-point velocity, lifetime/range, collision, damage snapshot, and removal boundary.
 - Extract one ordinary Blood Moor monster from MonStats/MonLvl into a complete expected effective-stat vector for each difficulty.
 - Trace one monster's AI-think cadence from activation through target acquisition and attack, including RNG consumption.
-- Pin player walk/run velocity conversion and stamina drain/recovery from `CharStats.txt` into original game-frame movement.
+- [x] Pin all seven Expansion 1.14d `CharStats.txt` walk/run and stamina fields,
+  implement shared 25 Hz 8.8 stamina/FRW policy, and cover authority/prediction,
+  exhaustion, town recovery, item FRW, and equipment-source lifecycles. Direct
+  1.14d holdout vectors for arithmetic/rounding and chill/slow ordering remain
+  in the movement queue.
 - Compare Dark Magic A* output with original path behavior for a small blocked room and identify where the original selects A*, IDA*, direct, or other path types.
 - Define canonical checkpoint state for one active monster, one missile, one timed state, one pending cast, and one owned unit.
 

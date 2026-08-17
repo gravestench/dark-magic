@@ -17,7 +17,8 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 		stringsComponent("d2legacy.player.identity", []string{"character_id", "player", "name", "class"},
 			[]any{uint64(1), "character:a", "alice", "Alice", "Amazon"},
 			[]any{uint64(2), "character:b", "bob", "Bob", "Barbarian"}),
-		intsComponent("d2legacy.player.vitals", []string{"health", "max_health", "mana", "max_mana"}, 1, 25, 30, 12, 15),
+		intsComponent("d2legacy.player.vitals", []string{"health", "max_health", "mana", "max_mana", "stamina", "max_stamina", "stamina_raw", "max_stamina_raw"}, 1, 25, 30, 12, 15, 42, 84, 42*256+7, 84*256),
+		intsComponent("d2legacy.player.movement_stats", []string{"run_drain", "velocitypercent", "item_fastermovevelocity", "staminarecoverybonus", "item_staminadrainpct", "armor_run_drain"}, 1, 20, -5, 30, 10, 25, 5),
 		intsComponent("d2legacy.player.progress", []string{"level", "experience", "unspent_skill_points"}, 1, 7, 1234, 2),
 		intsComponent("d2legacy.player.combat_stats", []string{"attack_rating", "defense"}, 1, 44, 21),
 		floatsComponent("d2legacy.world.position", []string{"x", "y"}, 1, 10.5, 20.25),
@@ -32,7 +33,7 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 	if err := json.Unmarshal(payload, &view); err != nil {
 		t.Fatal(err)
 	}
-	if view.Player.CharacterID != "character:a" || view.Player.Name != "Alice" || view.Vitals.Health != 25 || view.Position.Y != 20.25 {
+	if view.Player.CharacterID != "character:a" || view.Player.Name != "Alice" || view.Vitals.Health != 25 || view.Vitals.StaminaRaw != 42*256+7 || view.Movement.ItemFasterMoveVelocity != 30 || view.Movement.RunDrain != 20 || view.Position.Y != 20.25 {
 		t.Fatalf("HUD = %#v", view)
 	}
 	if view.Belt.Slots[0] != "secret-item" {

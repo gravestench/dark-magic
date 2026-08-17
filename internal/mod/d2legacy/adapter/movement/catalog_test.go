@@ -16,17 +16,17 @@ func (records catalogRecords) Load(string) ([]map[string]string, error) {
 
 func TestLoadCatalogUsesCaseInsensitivePinnedClassVelocities(t *testing.T) {
 	catalog, err := LoadCatalog(catalogRecords{rows: []map[string]string{
-		{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9"},
-		{"class": "Assassin", "WalkVelocity": "7", "RunVelocity": "10"},
+		{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
+		{"class": "Assassin", "WalkVelocity": "7", "RunVelocity": "10", "stamina": "95", "RunDrain": "15", "StaminaPerLevel": "5", "StaminaPerVitality": "5"},
 		{"class": "Expansion"},
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rates, ok := catalog.Rates("amazon"); !ok || rates != (ClassRates{Walk: 6, Run: 9}) {
+	if rates, ok := catalog.Rates("amazon"); !ok || rates != (ClassRates{Walk: 6, Run: 9, StartingStamina: 84, RunDrain: 20, StaminaPerLevel: 4, StaminaPerVitality: 4}) {
 		t.Fatalf("Amazon rates = %+v, %v", rates, ok)
 	}
-	if rates, ok := catalog.Rates(" ASSASSIN "); !ok || rates != (ClassRates{Walk: 7, Run: 10}) {
+	if rates, ok := catalog.Rates(" ASSASSIN "); !ok || rates != (ClassRates{Walk: 7, Run: 10, StartingStamina: 95, RunDrain: 15, StaminaPerLevel: 5, StaminaPerVitality: 5}) {
 		t.Fatalf("Assassin rates = %+v, %v", rates, ok)
 	}
 }
@@ -35,13 +35,13 @@ func TestLoadCatalogRejectsMissingMalformedAndDuplicateRates(t *testing.T) {
 	for name, records := range map[string]catalogRecords{
 		"read":      {err: errors.New("missing")},
 		"empty":     {},
-		"malformed": {rows: []map[string]string{{"class": "Amazon", "WalkVelocity": "", "RunVelocity": "9"}}},
+		"malformed": {rows: []map[string]string{{"class": "Amazon", "WalkVelocity": "", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"}}},
 		"slower run": {rows: []map[string]string{{
-			"class": "Amazon", "WalkVelocity": "9", "RunVelocity": "6",
+			"class": "Amazon", "WalkVelocity": "9", "RunVelocity": "6", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 		}}},
 		"duplicate": {rows: []map[string]string{
-			{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9"},
-			{"class": "amazon", "WalkVelocity": "6", "RunVelocity": "9"},
+			{"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
+			{"class": "amazon", "WalkVelocity": "6", "RunVelocity": "9", "stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4"},
 		}},
 	} {
 		t.Run(name, func(t *testing.T) {

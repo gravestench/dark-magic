@@ -32,7 +32,7 @@ func TestDecodedQuestRewardAndDifficultyRestoreIdentically(t *testing.T) {
 	}
 	enter := []byte(`{"character_id":"hero","player":"alice","name":"Hero","class":"Amazon",` +
 		`"level":1,"experience":0,"dexterity":20,"defense":0,"health":50,"max_health":50,` +
-		`"mana":20,"max_mana":20,"expansion":true,"hardcore":false,"cof":"","palette":"units",` +
+		`"mana":20,"max_mana":20,"stamina":84,"max_stamina":84,"expansion":true,"hardcore":false,"cof":"","palette":"units",` +
 		`"direction":0,"mode":"NU","x":10,"y":12,"world_width":100,"world_height":80,` +
 		`"act":1,"level_id":1,"skills":[]}`)
 	commands := []simulation.Command{

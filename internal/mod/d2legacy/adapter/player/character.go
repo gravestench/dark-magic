@@ -34,13 +34,15 @@ func MergeCharacter(baseline d2save.Character, view HUD) (d2save.Character, erro
 		return d2save.Character{}, fmt.Errorf("%w: checkpoint character differs", ErrHUDPlayer)
 	}
 	values := []int64{view.Progress.Level, view.Progress.Experience, view.Vitals.Health,
-		view.Vitals.MaxHealth, view.Vitals.Mana, view.Vitals.MaxMana, view.Combat.Defense}
+		view.Vitals.MaxHealth, view.Vitals.Mana, view.Vitals.MaxMana,
+		view.Vitals.Stamina, view.Vitals.MaxStamina, view.Combat.Defense}
 	for _, value := range values {
 		if value < 0 || (strconv.IntSize == 32 && value > math.MaxInt32) {
 			return d2save.Character{}, fmt.Errorf("%w: durable numeric value is out of range", ErrHUDPlayer)
 		}
 	}
-	if view.Vitals.Health > view.Vitals.MaxHealth || view.Vitals.Mana > view.Vitals.MaxMana {
+	if view.Vitals.Health > view.Vitals.MaxHealth || view.Vitals.Mana > view.Vitals.MaxMana ||
+		view.Vitals.Stamina > view.Vitals.MaxStamina {
 		return d2save.Character{}, fmt.Errorf("%w: durable vitals are inconsistent", ErrHUDPlayer)
 	}
 	result := cloneDurableCharacter(baseline)
@@ -51,6 +53,7 @@ func MergeCharacter(baseline d2save.Character, view HUD) (d2save.Character, erro
 	result.Stats.Experience = int(view.Progress.Experience)
 	result.Stats.Health, result.Stats.MaxHealth = int(view.Vitals.Health), int(view.Vitals.MaxHealth)
 	result.Stats.Mana, result.Stats.MaxMana = int(view.Vitals.Mana), int(view.Vitals.MaxMana)
+	result.Stats.Stamina, result.Stats.MaxStamina = int(view.Vitals.Stamina), int(view.Vitals.MaxStamina)
 	result.Stats.Defense = int(view.Combat.Defense)
 	return result, nil
 }

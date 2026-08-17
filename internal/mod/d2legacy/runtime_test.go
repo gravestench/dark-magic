@@ -105,6 +105,7 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
 		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
 		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "",
 		"palette": "data/global/Palette/units/pal.dat", "direction": 0, "mode": "NU",
 		"x": 10, "y": 20, "world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
@@ -304,6 +305,7 @@ func TestMonsterMeleeReachIncludesBothActorFootprints(t *testing.T) {
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
 		"level": 1, "experience": 0, "dexterity": 20, "defense": 20,
 		"health": 500, "max_health": 500, "mana": 20, "max_mana": 20,
+		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
 		"direction": 0, "mode": "NU", "x": 10, "y": 10,
 		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
@@ -369,6 +371,7 @@ func (runtimeFixtureRecords) Load(path string) ([]map[string]string, error) {
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
 			"class": "Amazon", "StartSkill": "Fire Bolt", "WalkVelocity": "6", "RunVelocity": "9",
+			"stamina": "84", "RunDrain": "20", "StaminaPerLevel": "4", "StaminaPerVitality": "4",
 		}}, nil
 	case "data/global/excel/skilldesc.txt":
 		return []map[string]string{{"skilldesc": "firebolt", "ListRow": "0", "IconCel": "0"}}, nil
@@ -523,6 +526,7 @@ func TestStraightMissileCheckpointRestoreParity(t *testing.T) {
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
 		"level": 1, "experience": 0, "dexterity": 20, "defense": 0,
 		"health": 50, "max_health": 50, "mana": 20, "max_mana": 20,
+		"stamina": 84, "max_stamina": 84,
 		"expansion": true, "hardcore": false, "cof": "", "palette": "units",
 		"direction": 0, "mode": "NU", "x": 0, "y": 0,
 		"world_width": 100, "world_height": 100, "act": 1, "level_id": 1,
