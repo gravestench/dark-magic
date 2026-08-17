@@ -42,4 +42,13 @@ func TestOwnedTargetArchivesPinAttackAnimationTiming(t *testing.T) {
 		t.Fatalf("generation=%s AMA1HTH frames=%d speed=%d events=%v", generation.ID,
 			record.FramesPerDirection(), record.Speed(), events)
 	}
+	for _, key := range []string{"AMWLHTH", "AMRNHTH"} {
+		movement := catalog.GetRecord(key)
+		if movement == nil {
+			t.Fatalf("owned target is missing %s", key)
+		}
+		if frames, speed, events := movement.FramesPerDirection(), movement.Speed(), movement.Events(); frames != 8 || speed != 256 || len(events) != 0 {
+			t.Fatalf("generation=%s %s frames=%d speed=%d events=%v", generation.ID, key, frames, speed, events)
+		}
+	}
 }

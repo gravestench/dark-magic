@@ -145,12 +145,17 @@ function M.set_collision(state, collision, level_id)
 end
 
 function M.composite_snapshot(entity)
+    local identity = assert(ecs.get(entity, "d2legacy.player.identity"))
     local appearance = assert(ecs.get(entity, "d2legacy.player.appearance"))
     local animation = assert(ecs.get(entity, "d2legacy.player.animation"))
     local facing = assert(ecs.get(entity, "d2legacy.world.facing"))
+    local movement = assert(ecs.get(entity, "d2legacy.player.movement_stats"))
     local snapshot = appearance:snapshot()
+    snapshot.class = identity:get("class")
     snapshot.direction = facing:get("direction")
     snapshot.mode = animation:get("mode")
+    snapshot.velocitypercent = movement:get("velocitypercent")
+    snapshot.item_fastermovevelocity = movement:get("item_fastermovevelocity")
     snapshot.animation_start_tick = animation:get("start_tick")
     local clock = ecs.get(entity, "d2legacy.presentation.animation_clock")
     snapshot.animation_seconds = clock and clock:get("seconds") or nil
@@ -216,6 +221,7 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
                 "d2legacy.player.identity",
                 "d2legacy.player.appearance",
                 "d2legacy.player.animation",
+                "d2legacy.player.movement_stats",
                 "d2legacy.world.position",
                 "d2legacy.world.facing",
                 "d2legacy.world.location",
@@ -228,11 +234,15 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
             local position = ecs.get(entity, "d2legacy.world.position")
             local facing = ecs.get(entity, "d2legacy.world.facing")
             local animation = ecs.get(entity, "d2legacy.player.animation")
+            local movement = ecs.get(entity, "d2legacy.player.movement_stats")
             local location = ecs.get(entity, "d2legacy.world.location")
             snapshot.entity_id = entity:id()
             snapshot.name = identity:get("name")
+            snapshot.class = identity:get("class")
             snapshot.direction = facing:get("direction")
             snapshot.mode = animation:get("mode")
+            snapshot.velocitypercent = movement:get("velocitypercent")
+            snapshot.item_fastermovevelocity = movement:get("item_fastermovevelocity")
             snapshot.animation_start_tick = animation:get("start_tick")
             local clock = ecs.get(entity, "d2legacy.presentation.animation_clock")
             snapshot.animation_seconds = clock and clock:get("seconds") or nil

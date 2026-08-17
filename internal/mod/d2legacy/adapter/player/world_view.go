@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	WorldViewVersion     uint32 = 1
+	WorldViewVersion     uint32 = 2
 	WorldViewRadius             = 80.0
 	MaxWorldViewEntities        = 256
 	maxWorldIDBytes             = 128
@@ -31,23 +31,25 @@ type WorldView struct {
 }
 
 type WorldEntity struct {
-	ID                 string      `json:"id"`
-	Kind               string      `json:"kind"`
-	Label              string      `json:"label,omitempty"`
-	Owner              string      `json:"owner,omitempty"`
-	Position           HUDPosition `json:"position"`
-	Radius             float64     `json:"radius"`
-	Priority           int64       `json:"priority"`
-	Health             *int64      `json:"health,omitempty"`
-	MaxHealth          *int64      `json:"max_health,omitempty"`
-	Class              string      `json:"class,omitempty"`
-	Token              string      `json:"token,omitempty"`
-	Mode               string      `json:"mode,omitempty"`
-	Direction          int64       `json:"direction,omitempty"`
-	AnimationStartTick uint64      `json:"animation_start_tick,omitempty"`
-	Act                int64       `json:"act,omitempty"`
-	LevelID            int64       `json:"level_id,omitempty"`
-	distance2          float64
+	ID                     string      `json:"id"`
+	Kind                   string      `json:"kind"`
+	Label                  string      `json:"label,omitempty"`
+	Owner                  string      `json:"owner,omitempty"`
+	Position               HUDPosition `json:"position"`
+	Radius                 float64     `json:"radius"`
+	Priority               int64       `json:"priority"`
+	Health                 *int64      `json:"health,omitempty"`
+	MaxHealth              *int64      `json:"max_health,omitempty"`
+	Class                  string      `json:"class,omitempty"`
+	Token                  string      `json:"token,omitempty"`
+	Mode                   string      `json:"mode,omitempty"`
+	Direction              int64       `json:"direction,omitempty"`
+	AnimationStartTick     uint64      `json:"animation_start_tick,omitempty"`
+	VelocityPercent        int64       `json:"velocitypercent,omitempty"`
+	ItemFasterMoveVelocity int64       `json:"item_fastermovevelocity,omitempty"`
+	Act                    int64       `json:"act,omitempty"`
+	LevelID                int64       `json:"level_id,omitempty"`
+	distance2              float64
 }
 
 // ProjectWorldView exposes only nearby entities carrying the mod's explicit
@@ -92,6 +94,7 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	players, _ := findComponent(snapshot, "d2legacy.player.identity")
 	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
 	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
+	movementStats, _ := findComponent(snapshot, "d2legacy.player.movement_stats")
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
 	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}}
 	seen := make(map[string]struct{})
@@ -141,6 +144,10 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 			}
 			if facing, ok := findInstance(facings, instance.Entity); ok {
 				entity.Direction = intField(facing, "direction")
+			}
+			if movement, ok := findInstance(movementStats, instance.Entity); ok {
+				entity.VelocityPercent = intField(movement, "velocitypercent")
+				entity.ItemFasterMoveVelocity = intField(movement, "item_fastermovevelocity")
 			}
 		}
 		view.Entities = append(view.Entities, entity)

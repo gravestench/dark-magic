@@ -82,6 +82,46 @@ func TestProjectWorldViewRejectsDuplicatePublicIDs(t *testing.T) {
 	}
 }
 
+func TestProjectWorldViewPublishesPlayerMovementAnimationInputs(t *testing.T) {
+	engine := gameecs.New()
+	t.Cleanup(func() { _ = engine.Close() })
+	identity := registerProjectionStore(t, engine, "d2legacy.player.identity", []akara.Field{{Name: "player", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}})
+	position := registerProjectionStore(t, engine, "d2legacy.world.position", []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}})
+	location := registerProjectionStore(t, engine, "d2legacy.world.location", []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}})
+	selectable := registerProjectionStore(t, engine, "d2legacy.world.selectable", []akara.Field{{Name: "id", Kind: akara.FieldString}, {Name: "kind", Kind: akara.FieldString}, {Name: "label", Kind: akara.FieldString}, {Name: "owner", Kind: akara.FieldString}, {Name: "radius", Kind: akara.FieldFloat64}, {Name: "priority", Kind: akara.FieldInt64}})
+	appearance := registerProjectionStore(t, engine, "d2legacy.player.appearance", []akara.Field{{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString}})
+	animation := registerProjectionStore(t, engine, "d2legacy.player.animation", []akara.Field{{Name: "mode", Kind: akara.FieldString}, {Name: "start_tick", Kind: akara.FieldInt64}})
+	facing := registerProjectionStore(t, engine, "d2legacy.world.facing", []akara.Field{{Name: "direction", Kind: akara.FieldInt64}})
+	movement := registerProjectionStore(t, engine, "d2legacy.player.movement_stats", []akara.Field{{Name: "velocitypercent", Kind: akara.FieldInt64}, {Name: "item_fastermovevelocity", Kind: akara.FieldInt64}})
+	owner, peer := engine.World().MustCreateEntity(), engine.World().MustCreateEntity()
+	for entity, player := range map[akara.Entity]string{owner: "owner", peer: "peer"} {
+		_, _ = identity.Set(entity, map[string]any{"player": player, "class": "Amazon"})
+		_, _ = position.Set(entity, map[string]any{"x": float64(0), "y": float64(0)})
+		_, _ = location.Set(entity, map[string]any{"act": int64(1), "level_id": int64(1)})
+	}
+	_, _ = selectable.Set(peer, map[string]any{"id": "player:peer", "kind": "player", "label": "Peer", "owner": "peer", "radius": .75, "priority": int64(10)})
+	_, _ = appearance.Set(peer, map[string]any{"token": "AM", "mode": "NU"})
+	_, _ = animation.Set(peer, map[string]any{"mode": "WL", "start_tick": int64(7)})
+	_, _ = facing.Set(peer, map[string]any{"direction": int64(3)})
+	_, _ = movement.Set(peer, map[string]any{"velocitypercent": int64(-50), "item_fastermovevelocity": int64(100)})
+	snapshot, _ := engine.Snapshot()
+	payload, err := ProjectWorldView("owner", simulation.Checkpoint{Tick: snapshot.Tick, Snapshot: &snapshot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var view WorldView
+	if err := json.Unmarshal(payload, &view); err != nil {
+		t.Fatal(err)
+	}
+	if view.Version != WorldViewVersion || len(view.Entities) != 1 {
+		t.Fatalf("world view = %#v", view)
+	}
+	got := view.Entities[0]
+	if got.Class != "Amazon" || got.Token != "AM" || got.Mode != "WL" || got.Direction != 3 || got.AnimationStartTick != 7 || got.VelocityPercent != -50 || got.ItemFasterMoveVelocity != 100 {
+		t.Fatalf("player projection = %#v", got)
+	}
+}
+
 func TestProjectWorldViewExcludesEntitiesInAnotherLevel(t *testing.T) {
 	engine := gameecs.New()
 	t.Cleanup(func() { _ = engine.Close() })

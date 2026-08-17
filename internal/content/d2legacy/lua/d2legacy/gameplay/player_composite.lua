@@ -115,31 +115,45 @@ local function resolve_appearance(authority, equipped, equipped_weapon_class)
 
     local direction = cof_direction(authority.direction, info.directions, authority.direction_space)
 
+    -- Expansion player locomotion overrides AnimData speed with fixed WL/RN
+    -- bases scaled by the same effective velocity percentage as path motion.
+    -- AnimData remains authoritative for frame count and frame events.
+    local rate = timing and timing.speed or (mode == "WL" and 320 or (mode == "RN" and 240 or 128))
+    if authority.class and (mode == "WL" or mode == "RN") then
+        local movement_rules = require("d2legacy.movement_rules/v1")
+        rate = movement_rules.animation_rate(
+            authority.class,
+            mode == "RN",
+            authority.velocitypercent or 0,
+            authority.item_fastermovevelocity or 0
+        )
+    end
+
     return {
         cof = cof,
         palette = authority.palette,
         direction = direction,
         dcc_direction = dcc_directions[info.directions] and dcc_directions[info.directions][direction + 1] or direction,
         components = components,
-        -- AnimData.d2, not the COF header, owns player timing and frame events.
-        -- The fallback only keeps modded archives with a missing record usable.
-        rate = timing and timing.speed or (mode == "WL" and 320 or (mode == "RN" and 240 or 128)),
+        rate = rate,
         frames = timing and timing.frames or info.frames,
         events = timing and timing.events or info.events,
         mode = mode,
         -- A value-only change key prevents rebuilding the retained animation on
         -- every presentation frame. Position updates remain independent.
-        key = table.concat({ token, mode, weapon_class, tostring(direction), cof }, ":") .. ":" .. table.concat(
-            (function()
-                local values = {}
-                for component, path in pairs(components) do
-                    values[#values + 1] = component .. "=" .. path
-                end
-                table.sort(values)
-                return values
-            end)(),
-            ":"
-        ),
+        key = table.concat({ token, mode, weapon_class, tostring(direction), cof, tostring(rate) }, ":")
+            .. ":"
+            .. table.concat(
+                (function()
+                    local values = {}
+                    for component, path in pairs(components) do
+                        values[#values + 1] = component .. "=" .. path
+                    end
+                    table.sort(values)
+                    return values
+                end)(),
+                ":"
+            ),
     }
 end
 
@@ -177,7 +191,28 @@ end
 -- Create presentation playback state for one authoritative animation mode.
 -- Facing and equipment changes reuse this object, so they do not restart time.
 function M.new_playback(composite)
-    return { mode = composite.mode, frame = 1, remainder = 0, seconds = 0 }
+    return {
+        mode = composite.mode,
+        frame = 1,
+        remainder = 0,
+        seconds = 0,
+        authority_seconds = 0,
+        rate = composite.rate,
+    }
+end
+
+local function preserve_frame_phase(playback, composite)
+    if playback.rate and playback.rate > 0 and playback.rate ~= composite.rate and playback.remainder > 0 then
+        local previous_frame_seconds = 256 / (playback.rate * 25)
+        local next_frame_seconds = 256 / (composite.rate * 25)
+        local phase = playback.remainder / previous_frame_seconds
+        playback.remainder = phase * next_frame_seconds
+        -- The renderer seeks by elapsed seconds at the new rate. Convert to an
+        -- equivalent time within the retained loop so it observes the same
+        -- frame/phase rather than applying the new rate to the mode's history.
+        playback.seconds = ((playback.frame - 1) + phase) * next_frame_seconds
+    end
+    playback.rate = composite.rate
 end
 
 -- Advance across every crossed frame, not merely the final one. A long frame
@@ -189,8 +224,10 @@ function M.advance(playback, composite, elapsed)
     if elapsed <= 0 or composite.rate <= 0 or composite.frames <= 0 then
         return crossed
     end
+    preserve_frame_phase(playback, composite)
     local frame_seconds = 256 / (composite.rate * 25)
     playback.seconds = playback.seconds + elapsed
+    playback.authority_seconds = (playback.authority_seconds or 0) + elapsed
     playback.remainder = playback.remainder + elapsed
     while playback.remainder >= frame_seconds do
         playback.remainder = playback.remainder - frame_seconds
@@ -203,31 +240,26 @@ function M.advance(playback, composite, elapsed)
     return crossed
 end
 
--- Seek network presentation from authoritative mode start plus network time.
--- This is absolute rather than accumulated, so a delayed/dropped frame cannot
--- slow the animation or make two clients permanently disagree on phase.
+-- The first network sample seeks from mode start. Later samples integrate the
+-- authoritative time delta at the currently projected rate, preserving phase
+-- when FRW/chill changes without pretending the latest rate applied to the
+-- mode's entire history.
 function M.synchronize(playback, composite, seconds)
     local crossed = {}
     if composite.rate <= 0 or composite.frames <= 0 then
         return crossed
     end
     seconds = math.max(0, seconds or 0)
-    local frame_seconds = 256 / (composite.rate * 25)
-    local previous = playback.synchronized and math.floor(playback.seconds / frame_seconds) or nil
-    local current = math.floor(seconds / frame_seconds)
-    if previous and current >= previous then
-        -- Normal network updates cross only a few frames. Bound the initial or
-        -- post-stall event scan to one loop; old visual cues are not gameplay.
-        local first = math.max(previous + 1, current - composite.frames + 1)
-        for index = first, current do
-            local frame = (index % composite.frames) + 1
-            local event = composite.events[frame]
-            if event and event ~= 0 then
-                crossed[#crossed + 1] = { frame = frame, event = event }
-            end
-        end
+    if playback.synchronized and seconds >= playback.authority_seconds then
+        local result = M.advance(playback, composite, seconds - playback.authority_seconds)
+        playback.authority_seconds = seconds
+        return result
     end
+    preserve_frame_phase(playback, composite)
+    local frame_seconds = 256 / (composite.rate * 25)
+    local current = math.floor(seconds / frame_seconds)
     playback.seconds = seconds
+    playback.authority_seconds = seconds
     playback.remainder = seconds - current * frame_seconds
     playback.frame = (current % composite.frames) + 1
     playback.synchronized = true

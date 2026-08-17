@@ -2,9 +2,10 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G5 production Warp Lab,
-post-warp route invalidation, semantic motion ownership, AnimData-independent
-playback, pinned class movement/stamina, authoritative drain/recovery/FRW, and
-progression/source-derived maximum-stamina slices. G9 remains current through
+post-warp route invalidation, semantic motion ownership, stat-derived locomotion
+playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
+armor/shield/cold-source ordering, and progression/source-derived maximum-
+stamina slices. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -312,10 +313,21 @@ and monster chase exist. Still required:
   and pin stat-allocation/max-callback ordering before exposing a live base-
   Vitality allocation command. These are explicit maximum-stamina holdouts,
   not permission to trust admitted redundant max-resource fields.
-- [ ] Verify and implement chill/freeze, skill `velocitypercent`, armor/shield
-  velocity penalties, and movement-floor ordering against Expansion 1.14d
-  runtime vectors. The generic source channel exists, but broad content is not
-  enabled by structural resemblance.
+- [x] Centralize the high-confidence recovered movement order: item Faster
+  Run/Walk receives its 150-point diminishing conversion, then joins skill,
+  state, and equipped armor/shield `velocitypercent` sources before the final
+  25% floor. Authority and prediction consume the same integer percentage.
+  Owned Expansion 1.14d records pin representative zero/five/ten Armor.txt
+  penalties across torso armor and shields; equipment tests prove independent
+  pieces stack. A generic timed `cold` source proves the recovered player
+  `-50` movement effect orders with skill/armor/item sources, checkpoints, and
+  expires without introducing skill-specific policy.
+- [ ] Capture owned Expansion 1.14d runtime vectors for extreme negative and
+  positive movement modifiers, cold/freeze target conversion, resistance,
+  Cannot Be Frozen, Half Freeze Duration, difficulty divisors, and the paired
+  `attackrate`/`other_animrate` effects before enabling broad cold/freeze
+  content. Recovered executable structure is high-confidence evidence, not a
+  substitute for those target-runtime boundaries.
 - [x] Separate route planning from authoritative motion execution state. The
   client retains only replaceable world-scoped waypoints; admitted locomotion
   and melee approach now claim one checkpointed `d2legacy.player.motion` fact,
@@ -323,11 +335,14 @@ and monster chase exist. Still required:
   class/stat speed, and exhaustion correction. Explicit locomotion
   replaces attack approach, exhaustion downgrades the same fact, and relocation
   clears ownership instead of relying on zero velocity as an implicit signal.
-- [x] Keep presentation animation rate separate from authoritative distance.
-  Simulation integrates only committed velocity; player composite cadence comes
-  from the mode/weapon-class `AnimData.d2` record and presentation/network time.
-  A focused regression proves Faster Run/Walk and different displacement cannot
-  change the WL/RN playback clock or frame selection.
+- [x] Keep presentation playback state separate from authoritative distance
+  integration while sharing the stat-derived effective velocity percentage.
+  Expansion WL/RN runtime bases 213/101 are scaled by the same walk/run
+  percentage that drives path velocity; `AnimData.d2` still owns frame count
+  and events. Local and revisioned public player projections carry class,
+  `velocitypercent`, and item FRW, and retained playback preserves frame phase
+  across mid-mode rate changes. Regressions prove raw displacement cannot alter
+  cadence, while FRW/chill can, without restarting the animation.
 
 ### G6 — Dynamic occupancy and knockback
 
@@ -678,7 +693,7 @@ probes remain:
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
   attack-rate breakpoints/dual wield/mid-action changes, cast timing, path
   types, time-of-day stamina sources, base-Vitality allocation/max-callback
-  ordering, chill/slow ordering, and inactive rooms;
+  ordering, owned-runtime cold/freeze boundaries, and inactive rooms;
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;

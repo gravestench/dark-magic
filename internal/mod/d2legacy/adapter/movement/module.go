@@ -14,6 +14,7 @@ func RulesModule(catalog Catalog) modruntime.Module {
 		Help: modruntime.ModuleHelp{
 			Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 			Commands: map[string]modruntime.CommandHelp{
+				"animation_rate":  {Usage: "d2legacy.movement_rules.animation_rate(class, running, velocitypercent?, item_frw?)", Summary: "Return the Expansion walk/run animation rate after the shared velocity ordering."},
 				"velocity":        {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
 				"rates":           {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
 				"class_facts":     {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, stamina progression terms, and starting Vitality."},
@@ -25,6 +26,16 @@ func RulesModule(catalog Catalog) modruntime.Module {
 		},
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"animation_rate": func(state *lua.LState) int {
+					rates, found := catalog.Rates(state.CheckString(1))
+					if !found {
+						state.RaiseError("d2legacy movement: class has no pinned CharStats movement facts")
+					}
+					state.Push(lua.LNumber(MovementAnimationRate(rates, lua.LVAsBool(state.Get(2)), Modifiers{
+						VelocityPercent: int64(state.OptInt(3, 0)), ItemFasterMoveVelocity: int64(state.OptInt(4, 0)),
+					})))
+					return 1
+				},
 				"velocity": func(state *lua.LState) int {
 					class := state.CheckString(3)
 					rates, found := catalog.Rates(class)

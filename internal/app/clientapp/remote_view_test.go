@@ -85,11 +85,19 @@ func TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles(t *testi
 	initial := playeradapter.WorldEntity{
 		ID: "player:peer", Kind: "player", Label: "Peer", Owner: "peer",
 		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Class: "Amazon", Token: "AM", Mode: "NU",
+		VelocityPercent: -50, ItemFasterMoveVelocity: 100,
 	}
 	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{initial}, location); err != nil {
 		t.Fatal(err)
 	}
 	entity := app.remoteMirrors[initial.ID]
+	movement, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.movement_stats")
+	projected, _ := movement.Get(entity)
+	velocityPercent, _ := projected.Get("velocitypercent")
+	itemFRW, _ := projected.Get("item_fastermovevelocity")
+	if velocityPercent != int64(-50) || itemFRW != int64(100) {
+		t.Fatalf("remote movement animation inputs = %v/%v", velocityPercent, itemFRW)
+	}
 	updated := initial
 	updated.Position = playeradapter.HUDPosition{X: 100, Y: 200}
 	updated.Mode = "WL"

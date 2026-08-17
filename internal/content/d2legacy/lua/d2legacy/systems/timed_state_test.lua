@@ -125,5 +125,73 @@ return test.suite({
                 test.assert(replaced, [=[replaced]=])
             end),
         }),
+        test.case("cold_velocity_orders_with_skill_armor_and_item_frw_then_expires", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = require("d2legacy.tests.support.fixtures").player_entry(),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = test.entities_with("d2legacy.player.identity")[1]
+                for _, source in ipairs({
+                    { source_id = "skill:velocity", stat = "velocitypercent", value = 20, order = 100 },
+                    { source_id = "test:armor-velocity", stat = "velocitypercent", value = -10, order = 200 },
+                    { source_id = "test:item-frw", stat = "item_fastermovevelocity", value = 100, order = 200 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.stat.source"] = {
+                            target = target,
+                            source_id = source.source_id,
+                            stat = source.stat,
+                            operation = "add",
+                            value = source.value,
+                            order = source.order,
+                        },
+                    })
+                end
+                ecs.create({
+                    ["d2legacy.state.request"] = {
+                        operation = "apply",
+                        target = target,
+                        state_id = "cold",
+                        source_id = "state:cold:test",
+                        duration = 4,
+                        policy = "refresh_same_source",
+                        stat = "velocitypercent",
+                        stat_operation = "add",
+                        stat_value = -50,
+                        stat_order = 300,
+                    },
+                })
+            end),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local movement =
+                    ecs.get(test.entities_with("d2legacy.player.identity")[1], "d2legacy.player.movement_stats")
+                test.expect(movement:get("velocitypercent")):equals(-40)
+                test.expect(movement:get("item_fastermovevelocity")):equals(100)
+                local rules = require("d2legacy.movement_rules/v1")
+                test.expect(rules.animation_rate("Amazon", false, -40, 100)):equals(255)
+            end),
+            test.restore_checkpoint(),
+            test.step(4),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = test.entities_with("d2legacy.player.identity")[1]
+                local movement = ecs.get(target, "d2legacy.player.movement_stats")
+                test.expect(movement:get("velocitypercent")):equals(10)
+                test.expect(require("d2legacy.movement_rules/v1").animation_rate("Amazon", false, 10, 100)):equals(362)
+                for _, entity in ipairs(test.entities_with("d2legacy.stat.source")) do
+                    test.assert(
+                        ecs.get(entity, "d2legacy.stat.source"):get("source_id") ~= "state:cold:test",
+                        [=[ecs.get(entity, "d2legacy.stat.source"):get("source_id") ~= "state:cold:test"]=]
+                    )
+                end
+            end),
+        }),
     },
 })
