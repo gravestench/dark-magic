@@ -227,6 +227,15 @@ return test.suite({
                 test.expect(#resolved):equals(1)
                 local melee = ecs.get(resolved[1], "d2legacy.combat.melee_event")
                 test.assert(melee:get("hit"), [=[deterministic fixture resolves the basic attack as a hit]=])
+                local attack = ecs.get(resolved[1], "d2legacy.combat.attack_result")
+                test.assert(
+                    attack:get("outcome") == "hit"
+                        and attack:get("source_kind") == "melee"
+                        and attack:get("attacker_id") == melee:get("attacker_id")
+                        and attack:get("target_id") == melee:get("target_id")
+                        and attack:get("hit_chance") == melee:get("hit_chance"),
+                    [=[generic attack resolution composes with the melee detail on one entity]=]
+                )
                 local damage = ecs.get(resolved[1], "d2legacy.combat.event")
                 test.assert(damage ~= nil, [=[successful melee composes a shared damage event on the same entity]=])
                 test.assert(
@@ -374,6 +383,12 @@ return test.suite({
                 local event = ecs.get(events[1], "d2legacy.combat.melee_event")
                 test.expect(event:get("target_id")):equals("")
                 test.assert(not event:get("hit"), [=[barrier appearing before impact prevents the hit]=])
+                local result = ecs.get(events[1], "d2legacy.combat.attack_result")
+                test.expect(result:get("outcome")):equals("invalidated")
+                test.assert(
+                    ecs.get(events[1], "d2legacy.combat.event") == nil,
+                    [=[invalidated attacks do not fabricate damage results]=]
+                )
             end),
         }),
         test.case("revalidates_range_at_impact", {
@@ -401,6 +416,7 @@ return test.suite({
                 local event = ecs.get(events[1], "d2legacy.combat.melee_event")
                 test.expect(event:get("target_id")):equals("")
                 test.assert(not event:get("hit"), [=[target leaving range before impact prevents the hit]=])
+                test.expect(ecs.get(events[1], "d2legacy.combat.attack_result"):get("outcome")):equals("invalidated")
             end),
         }),
         test.case("revalidates_living_target_at_impact", {
@@ -428,6 +444,7 @@ return test.suite({
                 local event = ecs.get(events[1], "d2legacy.combat.melee_event")
                 test.expect(event:get("target_id")):equals("")
                 test.assert(not event:get("hit"), [=[dead target cannot be hit at impact]=])
+                test.expect(ecs.get(events[1], "d2legacy.combat.attack_result"):get("outcome")):equals("invalidated")
             end),
         }),
         test.case("attack_approach_owns_motion_until_explicit_locomotion_replaces_it", {

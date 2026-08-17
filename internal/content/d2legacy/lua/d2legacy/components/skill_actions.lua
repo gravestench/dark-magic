@@ -85,6 +85,24 @@ function M.register()
         },
     })
 
+    -- Generic attack resolution is distinct from damage commitment. Current
+    -- melee produces hit/miss/invalidated outcomes; verified block/avoidance
+    -- families can extend this vocabulary without inventing damage events.
+    ecs.component({
+        name = "d2legacy.combat.attack_result",
+        version = 1,
+        fields = {
+            { name = "tick", type = "i64" },
+            { name = "attacker_id", type = "string" },
+            { name = "target_id", type = "string" },
+            { name = "source_kind", type = "string" },
+            { name = "outcome", type = "string" },
+            { name = "attack_rating", type = "i64" },
+            { name = "defense", type = "i64" },
+            { name = "hit_chance", type = "i64" },
+        },
+    })
+
     ecs.component({
         name = "d2legacy.combat.damage_bundle",
         version = 1,

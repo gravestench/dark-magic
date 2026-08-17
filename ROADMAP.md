@@ -94,7 +94,17 @@ co-composed melee detail by fallback. An empty ECS `death_observed` component
 marks each result after death attribution sees it, filtering it from later
 death passes without destroying facts that independent proc/reaction consumers
 may still require. Melee-only reaction fixtures remain invisible to generic
-damage/death policy. G9 remains current through
+damage/death policy. Basic melee now also composes a generic `attack_result`
+component on every
+resolved impact. Its explicit `hit`, `miss`, or `invalidated` outcome separates
+attack resolution from damage commitment: hits may additionally carry damage,
+while misses and targets invalidated at impact cannot fabricate a combat-damage
+event. Attack rating, defense, and chance remain inspectable ECS facts; block
+and avoidance vocabulary/arithmetic stay probe-gated. Combat Lab now
+coalesces those co-composed ECS facts by entity instead of
+showing duplicate rows, and formats current raw damage/channel/remaining-health
+fields rather than the retired scalar names that could fault after a hit.
+G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -705,6 +715,16 @@ explicit shared direct-damage result record exist.
   not a source-specific melee fallback. Compose an empty `death_observed` ECS
   marker after the pass so checkpoint/replay and later ticks cannot reconsume
   the result, while independent effect consumers retain the event entity.
+- [x] Compose a generic attack-result ECS fact with every basic-melee impact.
+  Represent current `hit`, `miss`, and target `invalidated` outcomes separately
+  from damage commitment, retaining attack rating, defense, and hit chance for
+  later consumers and diagnostics. Only a hit may carry a damage result.
+- [x] Update Combat Lab to coalesce attack, damage, typed-bundle, melee-detail,
+  and animation components by ECS entity. Render explicit outcome/channel/raw
+  health fields and lock the composed snapshot boundary with a module test.
+- [ ] Extend the generic outcome vocabulary with target-locked Expansion 1.14d
+  block and avoidance families; do not infer their order or eligibility from
+  the current hit boolean.
 - [ ] Define the complete independent consumer-marker/retirement contract as
   attacker, defender, proc, quest, audio, and presentation event families land;
   do not centralize their policy or retain completed event entities forever.
