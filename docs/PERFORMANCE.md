@@ -5,6 +5,33 @@ The checked budgets cover decoded and native residency, resource counts, decode
 time, and rolling per-scene frame/update percentiles. Frame timing uses the most
 recent 512 samples so long sessions remain bounded.
 
+## August 2026 frontend localization pass
+
+A matched real-asset capture reproduced the trademark/title-to-main-menu hitch
+with per-scene profiling enabled. The before capture spent 3.77 seconds of CPU
+time in `tbl_text.UnmarshalReaderAt` and 4.24 seconds in file syscalls. The three
+English TBL files total only about 602 KiB, but the decoder's fine-grained hash
+and key reads became thousands of random reads when forwarded directly to the
+compressed MPQ filesystem.
+
+Localization now reads each TBL sequentially once and decodes the buffered
+bytes. A regression filesystem intentionally advertises `io.ReaderAt` and
+asserts that locale loading never invokes it, preserving the archive boundary
+independently of the concrete mounted filesystem.
+
+| Slice | Before | After | Result |
+| --- | ---: | ---: | ---: |
+| Title-scene maximum update | 4,134.026 ms | 152.096 ms | 96.3% lower |
+| TBL `UnmarshalReaderAt` CPU | 3.77 s | absent from profile | compressed-archive random-read path removed |
+| Main-menu update p50 | 0.146 ms | 0.159 ms | effectively unchanged |
+| Main-menu update p95 | 0.699 ms | 0.794 ms | remains sub-millisecond |
+
+The after heap profile still retained about 357 MB under eager frontend asset
+preloading (about 73% of the 487 MB profiled Go heap). That is a separate,
+measured residency problem and is not claimed as fixed by the localization
+change. Per-scene profiling forces collection at scene boundaries, so the
+remaining 152 ms maximum is instrumentation-inclusive.
+
 ## August 2026 gameplay pass
 
 Measurements below were captured on an Apple M1 with Go 1.25.12. Microbenchmark
@@ -43,6 +70,16 @@ native uploads in total, or about 2.13 ms per presented update. Pending frames
 are coalesced and contiguous NRGBA upload avoids the former per-pixel conversion.
 
 ## Reproduction
+
+Capture the frontend transition with real assets:
+
+```shell
+MPQ_DIRECTORY=/path/to/diablo-ii go run -tags ffmpeg ./cmd/client \
+  --profile-dir profiles/live-menu-transition --profile-scenes all
+```
+
+Skip the trademark screen, wait for the main menu to settle, and quit normally
+so the CPU, heap, diagnostics, and per-scene artifacts are finalized.
 
 Run the microbenchmarks:
 

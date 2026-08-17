@@ -101,21 +101,15 @@ func (l *Locale) load() {
 			l.err = fmt.Errorf("localization: read %q: %w", path, err)
 			return
 		}
+		// Diablo's string tables are small, while ReaderAt over a compressed MPQ
+		// can turn the decoder's fine-grained hash/key reads into thousands of
+		// archive reads. Buffer each table once so decoding stays memory-local.
+		data, readErr := io.ReadAll(file)
 		var table tbl.TextTable
-		if reader, ok := file.(io.ReaderAt); ok {
-			info, statErr := file.Stat()
-			if statErr == nil {
-				table, err = tbl.UnmarshalReaderAt(reader, info.Size())
-			} else {
-				err = statErr
-			}
+		if readErr != nil {
+			err = readErr
 		} else {
-			data, readErr := io.ReadAll(file)
-			if readErr != nil {
-				err = readErr
-			} else {
-				table, err = tbl.Unmarshal(data)
-			}
+			table, err = tbl.Unmarshal(data)
 		}
 		closeErr := file.Close()
 		if err != nil {

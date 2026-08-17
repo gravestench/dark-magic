@@ -13,7 +13,10 @@ stable semantic motion-event identities. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
-of 2026-08-17.
+of 2026-08-17. A matched frontend profile also removed the title-to-main-menu
+localization stall by buffering each small MPQ-backed TBL once before decoding;
+the remaining eager frontend asset residency is now an explicit performance
+follow-up rather than an unexplained transition hitch.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -70,7 +73,7 @@ policy**, and **unresolved**.
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
-| M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
+| M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Remaining work is UI fidelity and measured eager-asset residency, not the former multi-second menu transition stall. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, population, and the first inactive-monster archive/restore path exist; dynamic occupancy, complete inactive entity graphs, object authority, and campaign breadth remain. |
@@ -78,13 +81,30 @@ policy**, and **unresolved**.
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
-| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. Remaining tasks are folded into projections, presentation, cleanup, and gameplay consumers below. |
+| M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. The after-capture still retained about 357 MB beneath eager frontend asset preloading, so that footprint remains a measured follow-up; other tasks are folded into projections, presentation, cleanup, and gameplay consumers below. |
 | M31-M43 creature authoring | deferred | Generated creature representation is independent work and must not displace the gameplay critical path. |
 | M44 Realm cloud operations | deferred | Local topology-neutral Realm is the prerequisite. Existing deployment groundwork does not make cloud operations a gameplay gate. |
 
 The old milestone numbering is retained only as historical orientation. New work
 uses the ordered gameplay gates below. This avoids preserving an obsolete plan
 in which networking followed the first gameplay loop.
+
+### Active frontend performance follow-up
+
+- [x] Capture a real-asset, per-scene CPU/heap profile across trademark, title,
+  loading, and main-menu navigation rather than attributing the hitch to host
+  memory pressure alone.
+- [x] Replace decoder-granularity `ReaderAt` access to compressed MPQ TBL files
+  with one bounded sequential read per table, and lock the boundary with a
+  filesystem that would expose any regression back to random reads.
+- [x] Repeat the same instrumented navigation: the title scene's worst update
+  fell from 4.134 s to 152 ms (96.3%), while the former 3.77 s TBL decoder
+  hotspot disappeared and steady main-menu updates remained sub-millisecond at
+  p95.
+- [ ] Reduce eager frontend decoded-asset residency from the measured ~357 MB
+  preloader subtree without regressing transition smoothness or introducing a
+  second cache/lifetime authority. Re-profile the same navigation before
+  accepting that follow-up.
 
 ## P0: post-networking gameplay foundations
 

@@ -1,7 +1,10 @@
 package localization
 
 import (
+	"bytes"
 	"encoding/binary"
+	"io"
+	"io/fs"
 	"sort"
 	"strings"
 	"testing"
@@ -9,6 +12,34 @@ import (
 
 	"github.com/gravestench/dark-magic/internal/content"
 )
+
+type countingReaderAtFS struct {
+	fstest.MapFS
+	readAtCalls int
+}
+
+type countingReaderAtFile struct {
+	fs.File
+	readerAt io.ReaderAt
+	calls    *int
+}
+
+func (source *countingReaderAtFS) Open(name string) (fs.File, error) {
+	file, err := source.MapFS.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return &countingReaderAtFile{
+		File:     file,
+		readerAt: bytes.NewReader(source.MapFS[name].Data),
+		calls:    &source.readAtCalls,
+	}, nil
+}
+
+func (file *countingReaderAtFile) ReadAt(data []byte, offset int64) (int, error) {
+	*file.calls = *file.calls + 1
+	return file.readerAt.ReadAt(data, offset)
+}
 
 func stringTable(entries map[string]string) []byte {
 	const headerBytes, hashEntryBytes = 21, 17
@@ -71,5 +102,20 @@ func TestLocaleLoadsVersionOneTablesAndReportsWinningPatchSource(t *testing.T) {
 	value, path, err := locale.Resolve("skill")
 	if err != nil || value != "patch %+d" || path != "data/local/lng/eng/patchstring.tbl" {
 		t.Fatalf("Resolve = %q/%q/%v", value, path, err)
+	}
+}
+
+func TestLocaleBuffersReaderAtTablesBeforeDecoding(t *testing.T) {
+	t.Parallel()
+	source := &countingReaderAtFS{MapFS: fstest.MapFS{
+		"data/local/lng/eng/string.tbl": {Data: stringTable(map[string]string{"skill": "buffered"})},
+	}}
+	locale := New(source, "English")
+	value, path, err := locale.Resolve("skill")
+	if err != nil || value != "buffered" || path != "data/local/lng/eng/string.tbl" {
+		t.Fatalf("Resolve = %q/%q/%v", value, path, err)
+	}
+	if source.readAtCalls != 0 {
+		t.Fatalf("ReaderAt calls = %d, want 0", source.readAtCalls)
 	}
 }
