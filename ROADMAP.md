@@ -1,8 +1,9 @@
 # Dark Magic roadmap
 
 Status: fully refreshed through the G4 player-population/override correction,
-the target-locked party-XP probe contract, and the G9 target-locked mounted-data
-coverage plus timed and reactive self-state/stat-source slices on 2026-08-16.
+the target-locked party-XP probe contract, and the G9 target-locked mounted-data,
+generic melee action, missile, timed-state, and reactive-state slices on
+2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -57,7 +58,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows and 172 server behavior signatures with winning-layer provenance; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 3 exact-ID implementations, and winning-layer provenance; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist; remaining breadth is presentation fidelity, not a gameplay blocker. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. Remaining polish belongs to UI fidelity. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -328,6 +329,9 @@ runtime composition and the coverage report.
   skills, implementation family, missing family, and evidence status.
 - [x] Replace the first skill-specific Fire Bolt authority with an explicitly
   configured, definition-driven straight-missile family dispatched by skill ID.
+- [x] Replace Attack's skill-ID-zero command branch with an exact-ID,
+  definition-driven `action.melee` family routed through the same learned-skill,
+  resource, cast, effect, and completion lifecycle as mana-costing skills.
 - [x] Prove the definition decoder handles multiple authored configurations
   without skill-name/ID branches; keep the second configuration synthetic so it
   does not claim incomplete behavior for another retail skill.
@@ -353,8 +357,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 2 explicitly admitted
-configurations, and 355 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 3 explicitly admitted
+configurations, and 354 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -382,6 +386,20 @@ source. Frozen Armor remains partial because PvP must chill rather than freeze;
 target cold resistance/immunity, monster-class modifiers, exact rounding/tick
 ordering, animation timing, and presentation are not yet implemented.
 
+Ordinary Attack is now the first `action.melee` configuration rather than an
+exception outside the skill system. Its exact Expansion 1.14d Skills.txt row
+must declare ID 0, server/client start and do functions 1/1, the A1 weapon
+action, attack-rate and target/search flags, weapon source damage, and zero mana
+before the decoder constructs its immutable definition. `player.use_skill`
+creates the same generic cast request used by Fire Bolt and Frozen Armor; the
+shared lifecycle verifies the authoritative learned level and accepts the
+literal zero cost, then a family adapter emits the reusable approach, selected-
+hand, animation, and impact action. No command, component, or system branches
+on Attack's ID or name, and a synthetic second-row decoder test proves family
+reuse without claiming another retail melee skill. Exact 1.14d target/range/LOS
+checks and AnimData-derived action timing remain incomplete, so this does not
+admit Bash, Jab, or any other superficially similar row.
+
 The shared lifecycle rejects a mana-costing skill before creating its cast when
 the authoritative 8.8 fixed-point balance is below the computed cost. It
 consumes the request, emits no effect, deals no damage, and leaves mana
@@ -393,11 +411,13 @@ Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: finish the remaining target-sensitive cold-duration/PvP and action-timing
-boundaries for this family, then use the report to select one high-leverage
-missing target/point/area signature. Evidence upgrades and exact-ID declarations
-land together; no declaration is added merely because another skill shares
-server function IDs.
+Next: replace Attack's reviewed fallback animation ticks with target-derived
+AnimData action timing and complete its target/range/LOS admission boundary;
+in evidence order, finish Frozen Armor's remaining target-sensitive cold-
+duration/PvP rules. Then use the report to select one high-leverage missing
+target/point/area signature. Evidence upgrades and exact-ID declarations land
+together; no declaration is added merely because another skill shares server
+function IDs.
 
 ### G10 — Item-source lifecycle
 

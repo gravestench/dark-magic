@@ -197,12 +197,20 @@ state for a system to finish later.
 
 ```text
 UI submits player.use_skill
-  -> commands/cast.lua validates assignment and emits skill.cast_event
+  -> commands/cast.lua validates assignment and writes skill.cast_request
+  -> systems/cast.lua admits exact skill ID 0 at its row-derived zero mana cost
+  -> systems/melee_skill.lua emits the generic action.melee effect
   -> systems/player_melee.lua owns approach and attack-animation state
   -> impact creates combat.basic_attack_request
   -> systems/melee.lua resolves range, AR/defense, hit, damage, and health
   -> combat.melee_event records the outcome for presentation/diagnostics
 ```
+
+Attack is a configuration of the shared skill transaction, not a command-level
+exception. Its exact target row is admitted by the same target-locked behavior
+manifest as missile and state skills. Approach, weapon-hand selection, action
+timing, and melee resolution remain reusable mechanisms selected by the
+definition's behavior family.
 
 Equipment does not special-case the melee resolver. `systems/equipment.lua`
 projects active item facts into the melee profile and named stat sources;

@@ -65,6 +65,8 @@ The renderer-independent `d2legacy` Lua authority now owns:
 - learned-skill and left/right assignment validation;
 - point targets plus optional semantic target IDs;
 - definition-driven mana payment and fixed-tick cast lifecycle;
+- an exact-ID `action.melee` family whose zero-cost Attack configuration uses
+  that same lifecycle before reusable approach, hand, animation, and impact;
 - a reusable `missile.straight` family covering projectile construction,
   movement, swept contact, channel mitigation, damage, removal, replay, and
   checkpoint continuation;
@@ -83,13 +85,24 @@ placing copyrighted tables in Git.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-16 it reports 357 skill rows, 172 distinct signatures, 2
-explicitly admitted configurations, and 355 missing configurations. Every
+archives on 2026-08-16 it reports 357 skill rows, 172 distinct signatures, 3
+explicitly admitted configurations, and 354 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
 consumes. Thus sharing Fire Bolt's function signature cannot silently enable
 Ice Bolt or any other row.
+
+Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
+not a non-skill command. Its row supplies server/client start and do functions
+1/1, an A1 weapon action, attack-rate and target/search flags, weapon source
+damage, and a literal zero mana cost. The `action.melee` decoder validates that
+contract and creates the same definition shape consumed by shared cast
+admission. A generic family system then emits the reusable approach, selected-
+hand, animation, and impact mechanism. The command no longer contains an ID-0
+branch, and the family decoder accepts a second synthetic ID without branching
+on name or ID. Exact target/range/LOS policy and AnimData-derived action timing
+remain unresolved; other melee skills are not admitted by resemblance.
 
 The timed self-state fixture is selected by exact ID through the same manifest
 rather than by the string `Frozen Armor`. The generic decoder validates the
@@ -127,7 +140,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 355 missing configurations,
+classification and implementation of the 354 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

@@ -106,6 +106,23 @@ return test.suite({
                 leftskill = "1",
                 general = "1",
                 passive = "0",
+                srvstfunc = "1",
+                srvdofunc = "1",
+                cltstfunc = "1",
+                cltdofunc = "1",
+                range = "both",
+                itypea1 = "weap",
+                anim = "A1",
+                UseAttackRate = "1",
+                TargetableOnly = "1",
+                SearchEnemyXY = "1",
+                AttackNoMana = "1",
+                interrupt = "1",
+                InGame = "1",
+                mana = "0",
+                minmana = "0",
+                SrcDam = "128",
+                weapsel = "0",
             },
             {
                 Id = "36",
@@ -170,6 +187,10 @@ return test.suite({
             test.run(function()
                 local events = collect_attack_events()
                 assert_attack_lifecycle_events(events)
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local vitals = ecs.get(player, "d2legacy.player.vitals")
+                test.assert(vitals:get("mana") == 20, [=[zero-cost Attack preserves mana]=])
             end),
         }),
     },

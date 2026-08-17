@@ -77,7 +77,7 @@ local function attack_hand(attacker, selector, sequence_frame)
     )
 end
 
-local function start_swing(context, attacker, target_id, dx, dy, selector, structural)
+local function start_swing(context, attacker, skill_id, target_id, dx, dy, selector, structural)
     stop(attacker, "A1", context.tick)
     local facing = ecs.get(attacker, "d2legacy.world.facing")
     if facing and (dx ~= 0 or dy ~= 0) then
@@ -86,7 +86,7 @@ local function start_swing(context, attacker, target_id, dx, dy, selector, struc
     -- These reviewed fallback ticks keep simulation independent of renderer
     -- frames. Typed AnimData timing will replace the defaults through mod data.
     local attack = {
-        skill_id = 0,
+        skill_id = skill_id,
         target_id = target_id,
         start_tick = context.tick,
         impact_tick = context.tick + 3,
@@ -103,6 +103,7 @@ function M.register()
     ecs.system({
         id = "d2legacy.combat.accept_player_melee",
         phase = "pre_simulation",
+        after = { "d2legacy.skill.emit_melee_action" },
         query = { any = { "d2legacy.skill.cast_event", "d2legacy.world.player_control" } },
         read = {
             "d2legacy.skill.cast_event",
@@ -114,7 +115,7 @@ function M.register()
         update = function(_, entities, structural)
             for _, event_entity in ipairs(entities) do
                 local event = ecs.get(event_entity, "d2legacy.skill.cast_event")
-                if event and event:get("behavior") == "basic.melee" then
+                if event and event:get("behavior") == "action.melee" then
                     local player = controlled(entities, event:get("player"))
                     if player then
                         local target_id = event:get("target_id")
@@ -125,7 +126,7 @@ function M.register()
                         if not same then
                             structural:remove(player, "d2legacy.combat.attack_animation")
                             structural:set(player, "d2legacy.combat.attack_approach", {
-                                skill_id = 0,
+                                skill_id = event:get("skill_id"),
                                 target_id = target_id,
                                 request_tick = event:get("tick"),
                                 target_x = event:get("target_x"),
@@ -175,6 +176,7 @@ function M.register()
                         start_swing(
                             context,
                             attacker,
+                            approach:get("skill_id"),
                             "",
                             approach:get("target_x") - position:get("x"),
                             approach:get("target_y") - position:get("y"),
@@ -199,6 +201,7 @@ function M.register()
                             start_swing(
                                 context,
                                 attacker,
+                                approach:get("skill_id"),
                                 target_id,
                                 dx,
                                 dy,
