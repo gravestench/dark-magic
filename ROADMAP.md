@@ -198,7 +198,18 @@ ordinary melee consumes that source without recognizing Weaken, while shared
 curse exclusivity and ranked replacement remain owned by the timed-state
 mechanism. Exact outgoing modifier ordering, non-weapon monster attacks,
 hirelings/summons, target eligibility, PvP, and presentation remain explicit
-1.14d probes. A
+1.14d probes. Spell Lab now wraps the production Blood Moor scene instead of
+maintaining a parallel spell simulator. Its ephemeral level-30 Sorceress fixture
+learns all 11 exact-ID configurations at level 20 through the owned
+Skills/SkillDesc records, begins with Fire Bolt and Amplify Damage assigned, and
+uses the ordinary HUD, command admission, mana, cast, projectile, state, damage,
+monster, and renderer paths. A real-MPQ acceptance casts Fire Bolt and proves
+its record-derived three-mana payment and projectile damage. This makes current
+presentation omissions directly observable without giving the lab or renderer
+skill-specific policy. The same acceptance exposed `MonLvl.txt` as another
+retail hash-table member absent from incomplete MPQ listfiles; it is now pinned
+inside the immutable game-data generation, and production population fails with
+record-level context instead of silently admitting an empty encounter. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -262,7 +273,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -366,7 +377,8 @@ Still required:
   different store and generation for a future authority.
 - [x] Preserve MPQ case-insensitive table lookup after pinning while retaining
   the authored winning path/case in generation provenance.
-- [x] Discover startup-critical `MonPreset.txt` and `SkillDesc.txt` hash-table
+- [x] Discover startup-critical `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`,
+  and `SkillDesc.txt` hash-table
   members when a retail MPQ's incomplete `(listfile)` omits them, and pin them
   normally rather than letting labs, character admission, or servers bypass
   the immutable record generation.
@@ -952,6 +964,11 @@ runtime composition and the coverage report.
   `damagepercent` stat recipe. Make ordinary melee consume that generic
   outgoing-physical-damage source without a skill ID/name branch, while the
   shared timed-state mechanism owns curse exclusivity and replacement.
+- [x] Add a production-backed Spell Lab scene that grants only the exact-ID
+  manifest through owned Skills/SkillDesc records, delegates world/HUD/input/
+  authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
+  through record-derived mana payment and projectile damage. Keep its overlay
+  diagnostic-only and renderer-neutral.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -980,6 +997,31 @@ configurations, and 346 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
+
+Spell Lab is an acceptance instrument, not a second implementation surface.
+The scene delegates production `game_world` creation, update, and destruction;
+its only authored presentation is a read-only legend reporting the admitted
+exact-ID count, current left/right assignments, and mana. Immutable initial
+data enables a development-only learned-skill fixture whose IDs are resolved
+through the normal owned Skills/SkillDesc records and rejected if unknown,
+passive, or unassignable. It currently grants the 11 manifest-backed Expansion
+1.14d configurations at level 20, assigns Fire Bolt left and Amplify Damage
+right, places three production hostiles in Blood Moor, and supplies a deep mana
+pool for repeated inspection. Ordinary HUD selection and world clicks still
+create the same semantic commands used by offline, listen, dedicated, and Realm
+sessions. The owned-asset acceptance asserts the learned set and assignments,
+then observes Fire Bolt's three-mana payment and damage after shared projectile
+contact. No lab, client, renderer, or presentation system branches on Fire Bolt
+or any other skill ID.
+
+That test also closed an asset-generation blind spot: retail `MonLvl.txt` can
+be addressable by hash while absent from an MPQ `(listfile)`, just like the
+already pinned `MonPreset.txt`, `MonStats2.txt`, and `SkillDesc.txt` members.
+The immutable generation now requests it explicitly and proves case-insensitive
+record loading from the pinned store. Monster data loading preserves the
+underlying record error, and a nonempty Levels candidate set that resolves to
+zero valid monsters is now fatal rather than silently producing a lab or served
+game with no hostiles.
 
 `skill_evidence` is the required companion investigation report for skill-tree
 synergies and skills that modify other skills. It accepts exact IDs and a locale,
@@ -1278,7 +1320,10 @@ percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: probe and replace Attack's remaining inferred distance, dynamic-door,
+Next: use Spell Lab to close the shared presentation gaps that are now visible:
+resolve cast/action cues, missile travel/impact graphics and sounds from the
+pinned Skills/Missiles graph, and state overlays from States without adding
+skill-specific renderer branches. Then probe and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive

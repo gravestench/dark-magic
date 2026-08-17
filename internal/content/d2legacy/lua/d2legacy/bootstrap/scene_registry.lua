@@ -67,6 +67,7 @@ local function register_screens(manifest)
 		monster_lab={module="d2legacy.screens.monster_lab"},
 		missile_lab={module="d2legacy.screens.missile_lab"},
 		combat_lab={module="d2legacy.screens.combat_lab"},
+		spell_lab={module="d2legacy.screens.spell_lab"},
 		dt1_lab={module="d2legacy.screens.dt1_lab"},
 		ds1_lab={module="d2legacy.screens.ds1_lab"},
 		mapgen_lab={module="d2legacy.screens.mapgen_lab"},

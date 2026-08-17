@@ -121,4 +121,35 @@ function M.starting_for_class(class)
     return result
 end
 
+-- learned_for_ids resolves an explicit development/evidence fixture through
+-- the same owned Skills/SkillDesc records as ordinary starting skills. It does
+-- not make an unknown, passive, or unassignable row executable.
+function M.learned_for_ids(ids, level)
+    assert(type(ids) == "table", "skill IDs must be a table")
+    level = level or 1
+    assert(level >= 1 and level == math.floor(level), "skill level must be a positive integer")
+    local skills_by_id = {}
+    for _, skill in ipairs(records.load("data/global/excel/skills.txt")) do
+        local id = tonumber(skill.Id)
+        if id then
+            skills_by_id[id] = skill
+        end
+    end
+    local descriptions = descriptions_by_name()
+    local result, seen = {}, {}
+    for _, id in ipairs(ids) do
+        assert(type(id) == "number" and id >= 0 and id == math.floor(id), "skill ID must be a non-negative integer")
+        assert(not seen[id], "duplicate skill ID " .. id)
+        seen[id] = true
+        local skill = assert(skills_by_id[id], "unknown skill ID " .. id)
+        local learned = assert(learned_skill(skill, descriptions[skill.skilldesc]), "skill ID is not learnable " .. id)
+        learned.level = level
+        result[#result + 1] = learned
+    end
+    table.sort(result, function(left, right)
+        return left.id < right.id
+    end)
+    return result
+end
+
 return M

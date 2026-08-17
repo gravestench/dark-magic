@@ -52,6 +52,7 @@ end
 
 local function candidate_monsters(level, difficulty)
     local result = {}
+    local failures = {}
     local count = math.max(integer(level, "NumMon"), 0)
     local prefix = monster_prefix(difficulty)
 
@@ -63,9 +64,12 @@ local function candidate_monsters(level, difficulty)
             local valid, definition = pcall(monster.load, id)
             if valid then
                 result[#result + 1] = definition
+            else
+                failures[#failures + 1] = id .. ": " .. tostring(definition)
             end
         end
     end
+    assert(#result > 0 or count == 0, "population has no valid monster candidates: " .. table.concat(failures, "; "))
     return result
 end
 
