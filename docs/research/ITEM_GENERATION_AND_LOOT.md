@@ -139,7 +139,10 @@ Dark Magic needs authoritative access to:
 - credited source owner;
 - monster player-count override/stat.
 
-Do not accept a client-supplied `/players X` value as a trusted drop result. It must be part of server/session state.
+Do not accept a client-supplied `/players X` value as a trusted drop result. A
+host-authorized command must commit it to checkpointed server/session state.
+`maximum_players` is only admission capacity and never substitutes for this
+effective count.
 
 ## TC variant selection by level
 

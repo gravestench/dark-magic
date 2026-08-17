@@ -41,6 +41,10 @@ The first simulation architecture is no longer hypothetical. Current `main` alre
   and ultimate owner identity, category/group/limit/replacement policy,
   lifecycle facts, deterministic excess handling, stable queries, and death
   credit propagation to the ultimate player owner.
+- the post-networking G4 correction separates immutable admission capacity from
+  mutable gameplay population: join/leave drives scaling by default, a
+  checkpointed host command supplies `/players X`, and monsters pin the
+  effective count at spawn without a skill/subsystem-specific branch.
 
 Do not create parallel stat, combat, monster, AI, skill, item, session, targeting, or transition authorities to implement the remaining work.
 

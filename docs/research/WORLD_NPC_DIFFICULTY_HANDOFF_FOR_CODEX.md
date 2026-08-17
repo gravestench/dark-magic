@@ -96,7 +96,10 @@ Implement one real/synthetic dialogue choice whose availability and result are q
 
 ### 12. Immutable GameRules
 
-Introduce one session rules object containing at minimum difficulty, expansion/classic, hardcore, ladder/content-era, effective player-count policy and content/rules fingerprint.
+Introduce one session rules object containing at minimum difficulty, the fixed
+expansion target, hardcore, ladder/content-era, admission capacity, and the
+content/rules fingerprint. Keep the mutable effective player-count override in
+separate checkpointed authority state.
 
 ### 13. Difficulty vertical slices
 
@@ -166,7 +169,8 @@ Every cross-level transition should:
 
 ## GameRules invariants
 
-`GameRules` should be immutable after game/session creation except for explicitly mutable game population/event facts kept elsewhere.
+`GameRules` is immutable after game/session creation. Mutable game population,
+`/players X`, and event facts are separately registered authority state.
 
 It should participate in replay/content/network fingerprints.
 

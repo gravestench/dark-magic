@@ -1,7 +1,7 @@
 # Dark Magic roadmap
 
-Status: fully refreshed through the G9 straight-missile behavior-family refactor on
-2026-08-16.
+Status: fully refreshed through the G4 player-population/override correction and
+the G9 straight-missile behavior-family refactor on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -25,7 +25,7 @@ The acceptance loop for this era is:
 ```text
 Realm allocates one pinned game
   -> multiple authenticated players join one Session
-  -> immutable content and GameRules govern the game
+  -> immutable content/GameRules plus checkpointed mutable policies govern the game
   -> world activation, locomotion, occupancy, combat, party context, and loot run authoritatively
   -> a real item reaches the ground, inventory, equipment, and gameplay stats
   -> quest/object state advances
@@ -142,7 +142,7 @@ Status: **partial; immutable authority and first consumers implemented**.
   the fixed expansion/1.14d ruleset, Hardcore, Ladder eligibility where 1.14d
   behavior distinguishes it, content generation, and explicit gameplay
   configuration.
-- [ ] Keep `maximum_players` as an admission-capacity fact only, and move the
+- [x] Keep `maximum_players` as an admission-capacity fact only, and move the
   optional `/players X` gameplay override out of immutable `GameRules` into
   separate command-mutated checkpointed state.
 - [x] Validate expansion-only rules at game/worker creation and bind them into
@@ -160,6 +160,12 @@ Dedicated and Realm workers now generate their initial town and wilderness
 from the same pinned difficulty later installed as `GameRules`. Remaining
 domains migrate in their own evidence-backed slices.
 
+`d2legacy.game_rules/v2` rejects the superseded immutable `player_count`
+configuration. `maximum_players` is consulted when admitting a player but is
+not a monster, reward, party-projection, or `/players X` scaling input. The
+mutable gameplay override lives in separately revisioned and checkpointed
+`d2legacy.player_count/v1` authority state.
+
 Per-player durable difficulty/quest facts and initial-data fields already exist;
 they are not a substitute for one immutable game-wide semantic context.
 
@@ -168,7 +174,7 @@ they are not a substitute for one immutable game-wide semantic context.
 Status: **partial; party authority, party-aware NoDrop, and party UI projection
 implemented; other reward consumers pending**.
 
-- [ ] Represent live present-player count, optional `/players X` override,
+- [x] Represent live present-player count, optional `/players X` override,
   effective gameplay count, nearby eligible count, and party reward eligibility
   as distinct contexts; joining/leaving updates the default live count while an
   explicit command forces the override until changed/cleared.
@@ -181,10 +187,11 @@ implemented; other reward consumers pending**.
   party XP, kill/owned-unit credit, quest credit, and gold sharing.
 - [x] Project party state to UI; do not make the UI roster authoritative.
 
-Monster spawn now pins the effective player count and applies the expansion
-1.14d 50%-per-additional-player life and base-XP bonuses. NoDrop distinguishes
-actual game population, effective configured count, additional nearby party
-members, and the monster's spawn count; the latter caps later drop benefits.
+Monster spawn now pins `spawn_player_count` from the effective gameplay count
+and applies the expansion 1.14d 50%-per-additional-player life and base-XP
+bonuses. NoDrop distinguishes actual game population, effective gameplay
+count, additional nearby party members, and the monster's spawn count; the
+latter caps later drop benefits.
 Blood Moor population is no longer created eagerly at startup: the authority
 checkpoints the generated room plan, activates the room containing a player plus
 its immediate graph neighbors, and pins the current all-player count when each
@@ -195,13 +202,16 @@ death/event facts record each input and the final eligible count for replay
 diagnostics. Broader level population and any narrower target-version proximity
 rule remain open, so the combined consumer gate is not yet complete.
 
-Correction queued: `maximum_players` governs only how many players may join the
-served game instance and must never drive monster/reward behavior. The current
-immutable `GameRules.player_count` lower-bound model must be replaced. With no
-override, gameplay count follows present authoritative players as they join and
-leave; `/players X` is a separate mutable authority command that forces the
-gameplay count without changing admission capacity. Existing consumers and
-tests are provisional until that separation lands.
+The population/override separation is now executable. With no override,
+monster and NoDrop consumers count present authoritative player entities, so
+entry and departure change subsequent behavior without mutating a setting.
+Host-authorized `game.player_count.override` implements `/players X` semantics
+from 1 through 8; `game.player_count.follow_population` clears it. The override
+may be above or below live population and remains independent of a lower
+admission cap. Both commands are deterministic and the separate state survives
+checkpoint reconstruction. Integration coverage proves one -> two -> one live
+players, an override of eight in a two-slot game, clearing back to live count,
+and admission rejection at capacity.
 
 Party relationships now live in one checkpointed `d2legacy.party/v1` state.
 Authenticated player commands can invite/cancel/accept/leave without supplying

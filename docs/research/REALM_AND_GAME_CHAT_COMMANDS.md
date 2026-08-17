@@ -114,13 +114,16 @@ probe establishes its exact grammar.
 | `/fps` | local presentation | Toggle frame rate and network-latency diagnostics without entering deterministic state. |
 | `/framerate` | local presentation | Toggle the expanded performance/memory diagnostic overlay. Exact fields vary by renderer/platform and compatibility target. |
 | `/nopickup` | player preference + authoritative input policy | Toggle automatic ground-item pickup behavior while preserving explicit show-item pickup. Persist only if verified or deliberately adopted as a Dark Magic preference. |
-| `/players <1..8>` | authoritative local/self-hosted session | Change effective player-count difficulty/drop policy only where the game rules allow it. Reject it for realm-owned games. |
+| `/players <1..8>` | host-authorized served game | Force effective player-count difficulty/drop policy without changing the game's admission cap. Raw remote players cannot mutate it directly. |
 | `/soundchaosdebug` | local development/presentation | Debug-only sound sweep; it must not be accepted as an untrusted remote gameplay command. |
 | `/time` | local/connected presentation | Display local and connected server time as available. |
 
-`/players` must become a typed, validated authority request rather than mutating
-Lua globals. It affects gameplay and therefore needs deterministic event/checkpoint
-coverage if Dark Magic supports changing it during a running session.
+`/players` is a typed, validated authority request backed by revisioned
+`d2legacy.player_count/v1` state rather than a Lua global. In the absence of an
+override, gameplay follows present server players and changes as they join or
+leave. The override survives checkpoints until another value replaces it or
+the host returns the game to population-following behavior. `maximum_players`
+remains only an admission cap.
 
 ## Keyboard and editor behavior
 

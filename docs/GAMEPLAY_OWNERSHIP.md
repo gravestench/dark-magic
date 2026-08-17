@@ -24,6 +24,12 @@ CI until their ownership is intentional.
 classification therefore does not imply arbitrary Lua globals: migrated state
 must use ECS or registered, versioned engine stores.
 
+Session facts and mutable policies also remain distinct. Immutable
+`GameRules.maximum_players` caps admission; checkpointed
+`d2legacy.player_count/v1` follows present players or stores a host-authorized
+`/players X` override. Neither the UI nor a client-provided loot result may
+substitute one for the other.
+
 ## Current domain disposition
 
 | Current area | Current contents | Intended result |

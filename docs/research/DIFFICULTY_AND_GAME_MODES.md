@@ -1,6 +1,9 @@
 # Difficulty progression and game-mode research
 
-Status: implementation-oriented research baseline. Dark Magic already loads a rich `DifficultyLevels.txt` model and persists character status/progression facts. The missing layer is one immutable game/session ruleset that makes difficulty, expansion/classic mode, hardcore/softcore, ladder/season and related game parameters explicit inputs to every authoritative subsystem that needs them.
+Status: implementation-oriented research baseline. Dark Magic loads a rich
+`DifficultyLevels.txt` model, persists character status/progression facts, and
+checkpoints immutable expansion 1.14d `GameRules`. Remaining work is migrating
+every relevant authoritative consumer and verifying unresolved formulas.
 
 ## Executive conclusion
 
@@ -14,7 +17,7 @@ GameRules
   expansion/classic
   hardcore/softcore
   ladder/season/content-era
-  player-count setting / multiplayer population
+  admission capacity (not gameplay scaling)
   game type / realm/offline policy
   content generation fingerprint
 ```
@@ -294,9 +297,14 @@ Offline mods may choose to enable ladder content; that is policy separate from r
 
 ## Player-count setting
 
-Single-player `/players X` or multiplayer population influences monster scaling/loot NoDrop and possibly other systems.
+The served game's live authoritative population influences monster scaling,
+loot NoDrop, and possibly other systems. A host-authorized `/players X` command
+forces the gameplay count independently of that live population.
 
-Represent an authoritative effective-player-count policy in `GameRules`/game state. Keep it independent from actual network client count when a single-player override is supported.
+Keep the admission capacity in immutable `GameRules`, but represent the
+optional effective-player-count override in separate mutable, checkpointed game
+state. With no override, consumers read live join/leave population. Neither the
+admission cap nor a client-supplied drop result is a gameplay multiplier.
 
 Subsystems should receive the effective count they need from one service, not parse chat/UI commands themselves.
 
@@ -317,11 +325,13 @@ difficulty
 expansion/classic
 hardcore/softcore
 ladder/season flags
-player-count override
 modded rule parameters
 ```
 
 Two peers with different difficulty rows or ladder content must not share a deterministic simulation unnoticed.
+The mutable player-count override is checkpoint/replay authority state and may
+change during a session, so it is not part of the immutable admission
+fingerprint.
 
 ## Suggested implementation slices
 

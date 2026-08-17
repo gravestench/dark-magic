@@ -70,7 +70,7 @@ local function no_drop_context(entities, credited_id, monster_player_count)
 end
 
 local function roll_loot(entities, identity, stats, credited_id)
-    local monster_player_count = math.max(stats:get("player_count"), 1)
+    local monster_player_count = math.max(stats:get("spawn_player_count"), 1)
     local context = no_drop_context(entities, credited_id, monster_player_count)
     local drops = loot.roll(identity:get("treasure_class"), {
         version = 100,

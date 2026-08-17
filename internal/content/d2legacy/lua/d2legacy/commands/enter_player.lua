@@ -109,9 +109,12 @@ end
 function M.apply(command)
     local p = command.payload
     assert(not already_entered(p.player), "player already entered")
+    assert(#ecs.query({ all = { "d2legacy.player.identity" } }) < game_rules.get().maximum_players, "game is full")
     local difficulty = game_rules.difficulty()
-    assert(p.difficulty == nil or p.difficulty == difficulty,
-        "player entry difficulty differs from immutable game rules")
+    assert(
+        p.difficulty == nil or p.difficulty == difficulty,
+        "player entry difficulty differs from immutable game rules"
+    )
     local learned = skills.starting_for_class(p.class)
     local left, right = initial_skills(learned)
     local player = ecs.create({

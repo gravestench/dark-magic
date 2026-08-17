@@ -7,7 +7,6 @@
 
 local ecs = require("engine.ecs/v1")
 local state = require("engine.authority_state/v1")
-local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 local STATE_ID = "d2legacy.party"
@@ -145,7 +144,7 @@ function M.accept(target, inviter)
         value.parties[party_id] = party
         value.membership[inviter] = party_id
     end
-    assert(#party.members < game_rules.get().maximum_players, "party is full")
+    assert(#party.members < 8, "party is full")
     table.insert(party.members, target)
     value.membership[target] = party_id
     value.invites[target] = nil
@@ -255,11 +254,15 @@ function M.project(viewer, entities)
         end
     end
     table.sort(roster, function(left, right)
-        if left.player == viewer then return true end
-        if right.player == viewer then return false end
+        if left.player == viewer then
+            return true
+        end
+        if right.player == viewer then
+            return false
+        end
         return left.player < right.player
     end)
-    assert(#roster <= game_rules.get().maximum_players, "party projection exceeds the game player limit")
+    assert(#roster <= 8, "party projection exceeds the expansion player limit")
 
     local projected = {
         schema_version = 1,
@@ -267,7 +270,7 @@ function M.project(viewer, entities)
         party_id = value.membership[viewer] or "",
         roster_count = #roster,
     }
-    for slot = 1, game_rules.get().maximum_players do
+    for slot = 1, 8 do
         local player = roster[slot]
         projected["player_" .. slot] = player and player.player or ""
         projected["name_" .. slot] = player and player.name or ""

@@ -83,7 +83,7 @@ function M.register()
     })
     component("d2legacy.monster.stats", {
         { name = "level", type = "i64" },
-        { name = "player_count", type = "i64" },
+        { name = "spawn_player_count", type = "i64" },
         { name = "health", type = "i64" },
         { name = "max_health", type = "i64" },
         { name = "defense", type = "i64" },

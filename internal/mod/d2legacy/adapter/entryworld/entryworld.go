@@ -114,7 +114,7 @@ func (world *Prepared) InitialData(owner string, developmentItems bool) map[stri
 	return map[string]any{
 		"d2legacy.game_rules": map[string]any{
 			"target": "lod-1.14d", "expansion": true, "difficulty": world.Difficulty,
-			"hardcore": false, "ladder": false, "player_count": 1, "maximum_players": 8,
+			"hardcore": false, "ladder": false, "maximum_players": 8,
 		},
 		"d2legacy.development_items": map[string]any{
 			"enabled": developmentItems, "create_empty_containers": !developmentItems,
