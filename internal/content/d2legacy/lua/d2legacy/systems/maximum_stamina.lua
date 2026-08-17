@@ -14,9 +14,10 @@ local stamina_stats = {
     skill_staminapercent = true,
     skill_passive_staminapercent = true,
     item_stamina_perlevel = true,
+    item_stamina_bytime = true,
 }
 
-local function totals_for(entities, target)
+local function totals_for(entities, target, base_time)
     local totals = {}
     for _, entity in ipairs(entities) do
         local source = ecs.get(entity, "d2legacy.stat.source")
@@ -24,10 +25,25 @@ local function totals_for(entities, target)
             local operation = source:get("operation") ~= "" and source:get("operation") or "add"
             assert(operation == "add", "stamina ItemStatCost operands must be additive source stats")
             local stat = source:get("stat")
-            totals[stat] = (totals[stat] or 0) + source:get("value")
+            if stat == "item_stamina_bytime" then
+                totals[stat] = (totals[stat] or 0) + movement_rules.by_time_adjustment(source:get("value"), base_time)
+            else
+                totals[stat] = (totals[stat] or 0) + source:get("value")
+            end
         end
     end
     return totals
+end
+
+local function base_time_for(entities, act)
+    for _, entity in ipairs(entities) do
+        local environment = ecs.get(entity, "d2legacy.world.environment")
+        if environment and environment:get("act") == act then
+            local rate = environment:get("time_rate")
+            return rate > 0 and math.floor(environment:get("ticks") / rate) or 0
+        end
+    end
+    return 0
 end
 
 function M.register()
@@ -39,6 +55,7 @@ function M.register()
             any = {
                 "d2legacy.player.stamina_progression",
                 "d2legacy.stat.source",
+                "d2legacy.world.environment",
             },
         },
         read = {
@@ -46,6 +63,8 @@ function M.register()
             "d2legacy.player.progress",
             "d2legacy.player.stamina_progression",
             "d2legacy.player.vitals",
+            "d2legacy.world.location",
+            "d2legacy.world.environment",
             "d2legacy.stat.source",
         },
         write = {
@@ -59,7 +78,8 @@ function M.register()
                 local basis = ecs.get(player, "d2legacy.player.stamina_progression")
                 local vitals = ecs.get(player, "d2legacy.player.vitals")
                 if identity and progress and basis and vitals then
-                    local totals = totals_for(entities, player)
+                    local location = ecs.get(player, "d2legacy.world.location")
+                    local totals = totals_for(entities, player, base_time_for(entities, location:get("act")))
                     local level = progress:get("level")
                     local base_vitality = basis:get("base_vitality")
                     local bonus_vitality = totals.vitality or 0
@@ -71,7 +91,8 @@ function M.register()
                         totals.maxstamina or 0,
                         totals.skill_staminapercent or 0,
                         totals.skill_passive_staminapercent or 0,
-                        totals.item_stamina_perlevel or 0
+                        totals.item_stamina_perlevel or 0,
+                        totals.item_stamina_bytime or 0
                     )
                     local previous = vitals:get("max_stamina_raw")
                     local current = vitals:get("stamina_raw")

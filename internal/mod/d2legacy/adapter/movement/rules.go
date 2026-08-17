@@ -46,20 +46,22 @@ type ResolvedStamina struct {
 }
 
 // StaminaMaximumSources are normalized ItemStatCost operands. Whole-point
-// maxstamina is shifted to 8.8 here; per-level remains in the record's eighths
-// encoding and the two skill percentages remain separate op-1 families.
+// maxstamina and the evaluated by-time operand are shifted to 8.8 here;
+// per-level remains in the record's eighths encoding and the two skill
+// percentages remain separate op-1 families.
 type StaminaMaximumSources struct {
 	BonusVitality              int64
 	FlatMaximum                int64
 	SkillStaminaPercent        int64
 	SkillPassiveStaminaPercent int64
 	ItemStaminaPerLevel        int64
+	ItemStaminaByTime          int64
 }
 
 // MaximumStamina reproduces the Expansion 1.14d maxstamina dependency graph.
 // CharStats level/vitality terms are quarters (hence << 6), while maxstamina
 // itself is 8.8. Op-1 percentages use the direct value before op-derived
-// vitality/per-level contributions, matching ItemStatCost evaluation.
+// vitality/per-level/by-time contributions, matching ItemStatCost evaluation.
 func MaximumStamina(rates ClassRates, level, baseVitality int64, sources StaminaMaximumSources) int64 {
 	level = max(int64(1), level)
 	baseVitality = max(rates.StartingVitality, baseVitality)
@@ -71,7 +73,28 @@ func MaximumStamina(rates ClassRates, level, baseVitality int64, sources Stamina
 	result += direct * sources.SkillStaminaPercent / 100
 	result += direct * sources.SkillPassiveStaminaPercent / 100
 	result += level * sources.ItemStaminaPerLevel >> 3
+	result += sources.ItemStaminaByTime * 256
 	return max(int64(256), result)
+}
+
+// ByTimeAdjustment decodes Properties func 18's signed 10-bit min/max values
+// and linearly interpolates them around a 360-unit environment cycle. The
+// period argument accepted by the recovered runtime is informational; the
+// packed center period and base time determine the result.
+func ByTimeAdjustment(packed, baseTime int64) int64 {
+	center := packed & 3
+	minimum := ((packed >> 2) & 0x3ff) - 0x100
+	maximum := ((packed >> 12) & 0x3ff) - 0x100
+	difference := baseTime - center*90
+	if difference < 0 {
+		difference = -difference
+	}
+	rounded := ((difference + 7) / 15) * 15
+	rounded = max(int64(0), min(int64(359), rounded))
+	if rounded > 180 {
+		rounded = 360 - rounded
+	}
+	return maximum - (maximum-minimum)*rounded/180
 }
 
 // RescaleCurrentStamina is the maxstamina value-change callback: positive

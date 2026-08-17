@@ -279,6 +279,15 @@ direct `maxstamina` is a whole-point property shifted to 8.8. Op-derived skill
 percentages use the direct max value, while bonus Vitality and per-level item
 terms remain separate graph contributions.
 
+The world also retains one checkpointed environment cycle per active act.
+Normal time advances one tick, Act III night advances eleven, and Act IV
+advances sixteen; the recovered cycle boundaries produce the base time consumed
+by Properties func 18. Its packed period and signed 10-bit min/max values use
+15-unit rounding over a wrapped 360-unit cycle and linear interpolation from the
+center maximum to the opposite minimum. Owned Expansion 1.14d tables pin
+`item_stamina_bytime` ID 295/op 6 and `stam/time` func 18. The dormant eclipse
+facts are not activated until an owned Tainted Sun transition vector exists.
+
 When an active max source changes, positive current stamina is multiplied by
 new/old maximum through the recovered double calculation, truncated, and
 clamped to `[1,newMax]`; zero remains zero. Level-up is a distinct transaction
@@ -291,13 +300,12 @@ The archive and declarative record identities are target-locked to Expansion
 1.14d. Arithmetic is corroborated by recovered executable structure and
 independent community measurements. Remaining target work is owned-runtime
 boundary vectors for chill/freeze classification and immunity/duration policy,
-the environment-period evaluator for
-`item_stamina_bytime`, and a direct base-Vitality allocation/max-callback
-ordering vector.
+the Tainted Sun environment transition, and a direct base-Vitality allocation/
+max-callback ordering vector.
 
 The remaining player locomotion model needs:
 
-- time-of-day maximum-stamina item sources and base-Vitality allocation ordering;
+- base-Vitality allocation ordering and the Tainted Sun eclipse transition;
 - owned 1.14d extreme-modifier and cold/freeze target vectors;
 - cold/freeze resistance, immunity, duration, difficulty, and action-rate effects;
 - terrain/skill-specific movement modifiers if present.

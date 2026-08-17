@@ -100,6 +100,14 @@ function M.register()
     component("d2legacy.presentation.animation_clock", { { name = "seconds", type = "f64" } })
     component("d2legacy.world.bounds", { { name = "width", type = "f64" }, { name = "height", type = "f64" } })
     component("d2legacy.world.location", { { name = "act", type = "i64" }, { name = "level_id", type = "i64" } })
+    component("d2legacy.world.environment", {
+        { name = "act", type = "i64" },
+        { name = "cycle_index", type = "i64" },
+        { name = "period_of_day", type = "i64" },
+        { name = "ticks", type = "i64" },
+        { name = "time_rate", type = "i64" },
+        { name = "eclipse", type = "bool" },
+    })
     component("d2legacy.world.collider", { { name = "radius", type = "f64" } })
     component("d2legacy.world.selectable", {
         { name = "id", type = "string" },

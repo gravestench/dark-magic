@@ -77,6 +77,31 @@ return test.suite({
                 test.expect(vitals:get("stamina_raw")):equals(47 * 256)
             end),
         }),
+        test.case("packed_stamina_bytime_uses_the_checkpointed_act_cycle", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    stamina = 0,
+                    max_stamina = 84,
+                    passive_stat_sources = test.array({
+                        {
+                            id = "stamina-bytime",
+                            stat = "item_stamina_bytime",
+                            value = 4 * ((-10 + 256) + (20 + 256) * 1024),
+                        },
+                    }),
+                }),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local vitals = ecs.get(player(), "d2legacy.player.vitals")
+                test.expect(vitals:get("max_stamina_raw")):equals(104 * 256)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("level_up_refills_the_new_derived_maximum", {
             test.submit_system({
                 tick = 1,

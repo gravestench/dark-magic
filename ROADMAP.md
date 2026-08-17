@@ -5,7 +5,7 @@ the target-locked party-XP probe contract, and the G5 production Warp Lab,
 post-warp route invalidation, semantic motion ownership, stat-derived locomotion
 playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
 armor/shield/cold-source ordering, and progression/source-derived maximum-
-stamina slices. G9 remains current through
+stamina plus environment-period source slices. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -309,10 +309,19 @@ and monster chase exist. Still required:
   recovered double/truncate/clamp callback, zero remains zero, and level-up
   explicitly fills the new derived maximum. Owned Expansion 1.14d tests pin the
   relevant ItemStatCost operations and `stam`/`stam/lvl` Properties links.
-- [ ] Add the environment-period evaluator required by `item_stamina_bytime`
-  and pin stat-allocation/max-callback ordering before exposing a live base-
-  Vitality allocation command. These are explicit maximum-stamina holdouts,
-  not permission to trust admitted redundant max-resource fields.
+- [x] Add a checkpointed per-act environment cycle and the Properties func 18
+  signed packed-min/max evaluator required by ItemStatCost op 6
+  `item_stamina_bytime`. The high-confidence recovered 360-unit cycle preserves
+  normal, Act III night, and Act IV cadence, 15-unit rounding, wraparound, and
+  linear center/opposite interpolation. Owned Expansion 1.14d records pin stat
+  ID 295, op 6, its `maxstamina` dependency, and the `stam/time` property.
+  Source changes flow through the same proportional max-resource callback and
+  checkpoint/replay boundary as every other maximum-stamina operand.
+- [ ] Pin stat-allocation/max-callback ordering before exposing a live base-
+  Vitality allocation command. Also connect the Act II Tainted Sun quest to
+  the existing eclipse cycle facts only after its target-runtime transition is
+  captured. These are explicit holdouts, not permission to trust admitted
+  redundant max-resource fields.
 - [x] Centralize the high-confidence recovered movement order: item Faster
   Run/Walk receives its 150-point diminishing conversion, then joins skill,
   state, and equipped armor/shield `velocitypercent` sources before the final
@@ -692,8 +701,8 @@ probes remain:
 - combat/motion: block, avoidance, mitigation, absorb, critical/deadly/mastery,
   Crushing Blow, Open Wounds, poison, leech, hit recovery, durability, PvP,
   attack-rate breakpoints/dual wield/mid-action changes, cast timing, path
-  types, time-of-day stamina sources, base-Vitality allocation/max-callback
-  ordering, owned-runtime cold/freeze boundaries, and inactive rooms;
+  types, Tainted Sun environment activation, base-Vitality allocation/max-
+  callback ordering, owned-runtime cold/freeze boundaries, and inactive rooms;
 - items/economy: NoDrop, MF, runewords, charms, sockets, Cube operations, and pricing;
 - world: object operations, doors, chests, shrines, warps, waypoints, portals,
   quest dialogue, difficulty consumers, and endgame eligibility;

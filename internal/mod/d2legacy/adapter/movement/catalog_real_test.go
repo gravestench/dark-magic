@@ -54,6 +54,7 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 		"skill_staminapercent":         {"ID": "162", "op": "1", "op stat1": "maxstamina"},
 		"skill_passive_staminapercent": {"ID": "163", "op": "1", "op stat1": "maxstamina"},
 		"item_stamina_perlevel":        {"ID": "242", "op": "2", "op base": "level", "op param": "3", "op stat1": "maxstamina"},
+		"item_stamina_bytime":          {"ID": "295", "op": "6", "Signed": "1", "Divide": "1024", "op stat1": "maxstamina"},
 	} {
 		row := movementRowBy(stats, "Stat", stat)
 		for field, value := range expected {
@@ -81,6 +82,11 @@ func TestOwnedExpansion114dClassMovementRates(t *testing.T) {
 		if row == nil || row["stat1"] != expected {
 			t.Fatalf("owned stamina property %s = %#v", code, row)
 		}
+	}
+	byTime := movementRowBy(properties, "code", "stam/time")
+	if byTime == nil || byTime["func1"] != "18" || byTime["stat1"] != "item_stamina_bytime" ||
+		byTime["*param"] != "center period" || byTime["*notes"] != "max at center period, min at opposite period, linear progression" {
+		t.Fatalf("owned stamina bytime property = %#v", byTime)
 	}
 	armor, err := pinned.Load("data/global/excel/armor.txt")
 	if err != nil {

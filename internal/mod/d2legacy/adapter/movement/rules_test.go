@@ -87,9 +87,19 @@ func TestMaximumStaminaUsesExpansionFixedPointDependencyGraph(t *testing.T) {
 	withSources := MaximumStamina(rates, 10, 29, StaminaMaximumSources{
 		BonusVitality: 5, FlatMaximum: 10, SkillStaminaPercent: 25,
 		SkillPassiveStaminaPercent: 10, ItemStaminaPerLevel: 8,
+		ItemStaminaByTime: 20,
 	})
-	if withSources != 39997 {
-		t.Fatalf("source-derived maximum = %d, want 39997", withSources)
+	if withSources != 45117 {
+		t.Fatalf("source-derived maximum = %d, want 45117", withSources)
+	}
+}
+
+func TestByTimeAdjustmentDecodesRoundsWrapsAndInterpolates(t *testing.T) {
+	packed := int64(0 + 4*((-10+256)+(20+256)*1024))
+	for baseTime, want := range map[int64]int64{0: 20, 7: 20, 8: 18, 90: 5, 180: -10, 270: 5, 359: 20} {
+		if got := ByTimeAdjustment(packed, baseTime); got != want {
+			t.Fatalf("base time %d adjustment = %d, want %d", baseTime, got, want)
+		}
 	}
 }
 

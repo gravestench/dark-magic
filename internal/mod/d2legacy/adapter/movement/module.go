@@ -14,18 +14,23 @@ func RulesModule(catalog Catalog) modruntime.Module {
 		Help: modruntime.ModuleHelp{
 			Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 			Commands: map[string]modruntime.CommandHelp{
-				"animation_rate":  {Usage: "d2legacy.movement_rules.animation_rate(class, running, velocitypercent?, item_frw?)", Summary: "Return the Expansion walk/run animation rate after the shared velocity ordering."},
-				"velocity":        {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
-				"rates":           {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
-				"class_facts":     {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, stamina progression terms, and starting Vitality."},
-				"is_town":         {Usage: "d2legacy.movement_rules.is_town(level_id)", Summary: "Report whether a level is one of the five target act towns."},
-				"stamina":         {Usage: "d2legacy.movement_rules.stamina(current, maximum, run_drain, armor, slower_drain, recovery, running, moving, town, can_recover)", Summary: "Advance one authoritative 25 Hz 8.8 stamina tick."},
-				"maximum_stamina": {Usage: "d2legacy.movement_rules.maximum_stamina(class, level, base_vitality, bonus_vitality, flat_maximum, skill_percent, passive_percent, item_per_level)", Summary: "Resolve Expansion 1.14d maximum stamina in 8.8 units."},
-				"rescale_stamina": {Usage: "d2legacy.movement_rules.rescale_stamina(current, previous_maximum, new_maximum)", Summary: "Apply the maxstamina source-change callback."},
+				"animation_rate":     {Usage: "d2legacy.movement_rules.animation_rate(class, running, velocitypercent?, item_frw?)", Summary: "Return the Expansion walk/run animation rate after the shared velocity ordering."},
+				"by_time_adjustment": {Usage: "d2legacy.movement_rules.by_time_adjustment(packed, base_time)", Summary: "Evaluate a Properties func 18 operand against the 360-unit environment cycle."},
+				"velocity":           {Usage: "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)", Summary: "Return authoritative x/y velocity and whether movement is active."},
+				"rates":              {Usage: "d2legacy.movement_rules.rates(class, velocitypercent?, item_frw?)", Summary: "Return effective walk and run rates."},
+				"class_facts":        {Usage: "d2legacy.movement_rules.class_facts(class)", Summary: "Return pinned starting stamina, RunDrain, stamina progression terms, and starting Vitality."},
+				"is_town":            {Usage: "d2legacy.movement_rules.is_town(level_id)", Summary: "Report whether a level is one of the five target act towns."},
+				"stamina":            {Usage: "d2legacy.movement_rules.stamina(current, maximum, run_drain, armor, slower_drain, recovery, running, moving, town, can_recover)", Summary: "Advance one authoritative 25 Hz 8.8 stamina tick."},
+				"maximum_stamina":    {Usage: "d2legacy.movement_rules.maximum_stamina(class, level, base_vitality, bonus_vitality, flat_maximum, skill_percent, passive_percent, item_per_level, item_by_time)", Summary: "Resolve Expansion 1.14d maximum stamina in 8.8 units."},
+				"rescale_stamina":    {Usage: "d2legacy.movement_rules.rescale_stamina(current, previous_maximum, new_maximum)", Summary: "Apply the maxstamina source-change callback."},
 			},
 		},
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"by_time_adjustment": func(state *lua.LState) int {
+					state.Push(lua.LNumber(ByTimeAdjustment(int64(state.CheckInt(1)), int64(state.CheckInt(2)))))
+					return 1
+				},
 				"animation_rate": func(state *lua.LState) int {
 					rates, found := catalog.Rates(state.CheckString(1))
 					if !found {
@@ -98,7 +103,7 @@ func RulesModule(catalog Catalog) modruntime.Module {
 					value := MaximumStamina(rates, int64(state.CheckInt(2)), int64(state.CheckInt(3)), StaminaMaximumSources{
 						BonusVitality: int64(state.OptInt(4, 0)), FlatMaximum: int64(state.OptInt(5, 0)),
 						SkillStaminaPercent: int64(state.OptInt(6, 0)), SkillPassiveStaminaPercent: int64(state.OptInt(7, 0)),
-						ItemStaminaPerLevel: int64(state.OptInt(8, 0)),
+						ItemStaminaPerLevel: int64(state.OptInt(8, 0)), ItemStaminaByTime: int64(state.OptInt(9, 0)),
 					})
 					state.Push(lua.LNumber(value))
 					return 1
