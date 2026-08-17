@@ -223,6 +223,20 @@ return test.suite({
                 local player = player_entity()
                 local vitals = ecs.get(player, "d2legacy.player.vitals")
                 test.assert(vitals:get("mana") == 20, [=[zero-cost Attack preserves mana]=])
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local melee = ecs.get(resolved[1], "d2legacy.combat.melee_event")
+                test.assert(melee:get("hit"), [=[deterministic fixture resolves the basic attack as a hit]=])
+                local damage = ecs.get(resolved[1], "d2legacy.combat.event")
+                test.assert(damage ~= nil, [=[successful melee composes a shared damage event on the same entity]=])
+                test.assert(
+                    damage:get("source_kind") == "melee"
+                        and damage:get("damage_channel") == "physical"
+                        and damage:get("rolled_damage_raw") >= damage:get("damage_raw")
+                        and damage:get("damage_raw") == melee:get("damage_raw")
+                        and damage:get("remaining_health_raw") == melee:get("remaining_health_raw"),
+                    [=[melee and generic consumers observe one ordered damage result]=]
+                )
             end),
         }),
         test.case("uses_resolved_attack_rate_for_the_shared_animdata_schedule", {

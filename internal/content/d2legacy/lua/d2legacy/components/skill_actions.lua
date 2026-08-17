@@ -71,13 +71,15 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.combat.event",
-        version = 1,
+        version = 2,
         fields = {
             { name = "kind", type = "string" },
             { name = "tick", type = "i64" },
             { name = "attacker_id", type = "string" },
             { name = "target_id", type = "string" },
+            { name = "source_kind", type = "string" },
             { name = "damage_channel", type = "string" },
+            { name = "rolled_damage_raw", type = "i64" },
             { name = "damage_raw", type = "i64" },
             { name = "remaining_health_raw", type = "i64" },
         },

@@ -56,20 +56,35 @@ The output should be a replayable result record or equivalent deterministic muta
 
 ## Current Dark Magic boundary
 
-Dark Magic already has the pieces a combat subsystem should plug into:
+Dark Magic now has one renderer-independent authoritative `d2legacy` Lua
+simulation over the shared ECS/session mechanisms:
 
-- `internal/game/session` owns ordered fixed-tick command admission, replay, checkpoints, and trusted mutation;
-- `internal/game/player` materializes live player stats and skill knowledge into ECS;
-- `internal/game/item` owns equipment/container identity and transaction state;
-- `internal/game/loot` already evaluates a substantial portion of Diablo item-property semantics;
-- `internal/game/targeting` provides stable semantic target kinds;
-- `internal/game/world` owns collision and navigation facts;
-- the typed game-data catalog already loads `ItemStatCost`, `Properties`, `Skills`, `Missiles`, `States`, `MonStats`, `MonLvl`, `DifficultyLevels`, and related tables.
+- the session owns ordered fixed ticks, command admission, deterministic RNG,
+  replay, checkpoint, and trusted mutation mechanisms;
+- Lua materializes player/monster combat state and owns target, melee, missile,
+  mitigation, state, death, loot, and item policy;
+- ECS components remain the composable semantic facts consumed by independent
+  systems; no separate combat object graph exists;
+- mounted records provide `ItemStatCost`, `Properties`, `Skills`, `Missiles`,
+  `States`, `MonStats`, `MonLvl`, `DifficultyLevels`, locale TBL evidence, and
+  related target-version inputs.
 
-The next combat work must preserve these owners' tested invariants while M21.14
-migrates D2 policy into `d2legacy`. Do not create a second stat store, a second
-item/equipment owner, or a parallel combat simulation; replace each
-transitional Go owner through a complete vertical migration.
+The first G8 consolidation routes successful basic melee and straight-missile
+contact through `d2legacy.policy.damage.resolve`. It returns an explicit ordered
+record containing the source channel, rolled raw damage, mitigated damage that
+was actually committed, remaining raw health, and lethality. Missile contact
+emits `d2legacy.combat.event`; a successful melee result composes that component
+and `d2legacy.combat.melee_event` on the same ECS entity. Thus generic death or
+future proc consumers and melee-specific reaction consumers share one fact
+without a parallel event graph. Misses remain melee-resolution facts and carry
+no generic damage component.
+
+Player vitals currently store whole health while monster health is raw 8.8.
+The shared boundary therefore quantizes player damage once and reports only the
+amount represented by committed ECS state. This is a Dark Magic consistency
+constraint, not a verified Expansion 1.14d fractional-life rule. Exact
+Expansion 1.14d storage, rounding, and ordering require owned-runtime evidence;
+the 1.10f observations below remain architectural/research evidence only.
 
 ## D2MOO 1.10f damage pipeline evidence
 
