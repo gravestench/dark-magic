@@ -74,7 +74,7 @@ local function byte_or(row, column, fallback, label)
     return value
 end
 
-local function decode(skill, missile, skills_by_name)
+local function decode(skill, missile, missiles, skills_by_name, behavior)
     local skill_id = assert(tonumber(skill.Id), "straight-missile skill has no numeric ID")
     local label = skill.skill or ("skill " .. skill_id)
     local missile_id =
@@ -96,8 +96,20 @@ local function decode(skill, missile, skills_by_name)
         assert(missile.CelFile and missile.CelFile ~= "" and missile.CelFile, label .. " missile has no CelFile")
     local synergy_ids, synergy_percent =
         skill_modifiers.hard_level_sum_percent(skill, "EDmgSymPerCalc", "Param8", skills_by_name, label)
+    local impact_radius = 0
+    local impact = nil
+    if behavior == "missile.straight-impact-area" then
+        assert(missile.pSrvHitFunc == "1", label .. " has unsupported impact function")
+        impact_radius = required_integer(missile, "sHitPar1", nil, label)
+        assert(impact_radius > 0, label .. " has no impact radius")
+        local impact_id =
+            assert(missile.ExplosionMissile ~= "" and missile.ExplosionMissile, label .. " has no impact missile")
+        impact = assert(missiles[impact_id], label .. " impact missile is missing")
+        assert(impact.Explosion == "1", label .. " impact missile is not an explosion")
+    end
     return {
-        behavior = "missile.straight",
+        behavior = behavior,
+        trajectory = "straight",
         skill_id = math.floor(skill_id),
         mana_cost_raw = shifted(skill, "mana", "manashift", nil, label),
         mana_cost_per_level_raw = shifted_or(skill, "lvlmana", "manashift", 0, label),
@@ -117,6 +129,16 @@ local function decode(skill, missile, skills_by_name)
         collision_radius = required_integer(missile, "Size", nil, label) / 2,
         destroy_on_contact = true,
         next_hit_delay = 0,
+        impact_radius = impact_radius,
+        impact_missile_id = impact and impact.Missile or "",
+        impact_dcc = impact and "data/global/missiles/" .. impact.CelFile .. ".dcc" or "",
+        impact_palette = impact and "data/global/palette/units/pal.dat" or "",
+        impact_lifetime_ticks = impact and required_integer(impact, "Range", nil, label) or 0,
+        impact_directions = impact and math.max(integer_or(impact, "NumDirections", 1), 1) or 1,
+        impact_frames_per_second = impact and math.max(math.floor(integer_or(impact, "AnimSpeed", 16) * 25 / 16), 1)
+            or 1,
+        impact_loop = impact and impact.LoopAnim == "1" or false,
+        impact_sound = impact and impact.TravelSound or "",
         -- Preserve the target-authored byte without yet assigning binary-owned
         -- chance/result semantics to it.
         knockback_value = byte_or(missile, "KnockBack", 0, label),
@@ -135,8 +157,13 @@ local function decode(skill, missile, skills_by_name)
     }
 end
 
-function M.load(supported_ids)
+function M.load(supported_ids, behavior)
     assert(type(supported_ids) == "table", "supported straight-missile skill IDs are required")
+    behavior = behavior or "missile.straight"
+    assert(
+        behavior == "missile.straight" or behavior == "missile.straight-impact-area",
+        "unsupported straight-missile behavior"
+    )
     local skill_rows = assert(records.load("data/global/excel/skills.txt"))
     local skills = index(skill_rows, "Id")
     local skills_by_name = skill_modifiers.by_name(skill_rows)
@@ -145,10 +172,11 @@ function M.load(supported_ids)
     for _, skill_id in ipairs(supported_ids) do
         -- Narrow suite fixtures need not reproduce every admitted retail row.
         -- Mounted-data coverage and owned-archive boot remain the strict target
-        -- completeness gates; any row present here is still decoded by ID.
+        -- completeness gates; any row carrying this family's missile contract
+        -- is still decoded by exact ID. Name-only synergy fixtures are ignored.
         local skill = skills[tostring(skill_id)]
-        if skill then
-            local definition = decode(skill, missiles[skill.srvmissile], skills_by_name)
+        if skill and skill.srvmissile and skill.srvmissile ~= "" then
+            local definition = decode(skill, missiles[skill.srvmissile], missiles, skills_by_name, behavior)
             assert(not definitions[definition.skill_id], "duplicate straight-missile skill ID")
             definitions[definition.skill_id] = definition
         end

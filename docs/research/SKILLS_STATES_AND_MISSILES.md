@@ -75,6 +75,8 @@ The renderer-independent `d2legacy` Lua authority now owns:
 - a reusable `missile.radial` family that composes one targetless cast into
   ordinary projectile entities sharing a cast identity plus independent ECS
   cast-target contact locks;
+- a reusable straight-missile area-impact family that separates the damaging
+  radius transaction from a presentation-only ECS aftermath entity;
 - a reusable self-state family and timed state-instance lifecycle; and
 - the shared melee action path.
 
@@ -106,8 +108,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 4
-explicitly admitted configurations, and 353 missing configurations. Every
+archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 5
+explicitly admitted configurations, and 352 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -178,6 +180,25 @@ items, PvP conversion, resistance, and other modifier families remains open;
 the decoder rejects unreviewed formula shapes rather than treating this as a
 general-purpose legacy expression evaluator.
 
+Fire Ball is the first exact `missile.straight-impact-area` consumer. Its owned
+Expansion 1.14d rows bind travel function 1 to hit function 1, collision type
+3, `sHitPar1=4`, and `ExplosionMissile=explodingarrowexp`; the referenced
+explosion row supplies `ExpArrowExplode` and a 16-tick lifetime. Its joined TBL
+describes an explosive sphere of fire, while `EDmgSymPerCalc` resolves Fire
+Bolt and Meteor hard levels at owned `Param8=14`. Generic swept contact now
+computes one impact point, selects same-level targets in semantic-ID order, and
+emits one independently rolled shared fire-damage result per in-radius target.
+The separately materialized `d2legacy.missile.effect` owns only spatial,
+presentation, and lifetime facts. It survives checkpoint reconstruction but
+cannot deal damage, so a visual aftermath cannot replay the impact transaction.
+A second synthetic record shape proves decoder reuse without admitting another
+retail skill.
+
+The area behavior remains partial. Radius 4 is preserved directly from the
+owned server-hit parameter, but exact 1.14d conversion against unit footprints,
+impact-point rounding, per-target RNG sequencing, and ordering against mastery,
+resistance, PvP conversion, and secondary effects require owned-runtime vectors.
+
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
 1/1, an A1 weapon action, attack-rate and target/search flags, weapon source
@@ -247,7 +268,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 353 missing configurations,
+classification and implementation of the 352 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

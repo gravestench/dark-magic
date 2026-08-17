@@ -34,7 +34,7 @@ local function projectile_components(caster, cast, definition, velocity_x, veloc
     local owner_id = selectable_id(caster)
     local shared_cast_id = cast_id(caster, cast)
     local projectile_id = shared_cast_id
-    if definition.behavior == "missile.radial" then
+    if definition.trajectory == "radial" then
         projectile_id = projectile_id .. ":instance:" .. instance
     end
     local minimum_damage, maximum_damage =
@@ -55,6 +55,15 @@ local function projectile_components(caster, cast, definition, velocity_x, veloc
             collision_radius = definition.collision_radius,
             destroy_on_contact = definition.destroy_on_contact,
             next_hit_delay = definition.next_hit_delay,
+            impact_radius = definition.impact_radius or 0,
+            impact_missile_id = definition.impact_missile_id or "",
+            impact_dcc = definition.impact_dcc or "",
+            impact_palette = definition.impact_palette or "",
+            impact_lifetime_ticks = definition.impact_lifetime_ticks or 0,
+            impact_directions = definition.impact_directions or 1,
+            impact_frames_per_second = definition.impact_frames_per_second or 1,
+            impact_loop = definition.impact_loop or false,
+            impact_sound = definition.impact_sound or "",
             knockback_value = definition.knockback_value or 0,
             minimum_damage_raw = minimum_damage,
             maximum_damage_raw = maximum_damage,
@@ -144,10 +153,10 @@ function M.register(definitions)
                 local cast = ecs.get(caster, "d2legacy.skill.cast")
                 local definition = definitions[cast:get("skill_id")]
                 if definition and not cast:get("effect_emitted") and context.tick >= cast:get("effect_tick") then
-                    if definition.behavior == "missile.straight" then
+                    if definition.trajectory == "straight" then
                         spawn_straight(caster, cast, definition, structural)
                         cast:set("effect_emitted", true)
-                    elseif definition.behavior == "missile.radial" then
+                    elseif definition.trajectory == "radial" then
                         spawn_radial(caster, cast, definition, structural)
                         cast:set("effect_emitted", true)
                     end

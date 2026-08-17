@@ -139,8 +139,16 @@ cross-skill damage-modifier slice now resolves Fire Bolt's exact
 snapshots their combined level-derived percentage on the generic cast, and
 applies it to the generic level-scaled damage range. Joined localized TBL text
 confirms both player-visible relationships and the `%s` heading token. Exact
-1.14d percentage rounding and modifier ordering remain probe-gated. A matched
-frontend profile also removed the title-to-main-menu
+1.14d percentage rounding and modifier ordering remain probe-gated. The next
+family now admits Fire Ball as an exact-ID
+`missile.straight-impact-area` configuration. Swept first contact produces a
+stable impact point, one deterministic radius query, independently rolled
+generic fire results for ordered targets, and a separate short-lived
+presentation-only missile-effect entity. The latter has no damage component
+and can cross checkpoints without reapplying policy. Exact 1.14d footprint/
+radius units, per-target RNG stream behavior, impact-point rounding, and
+mastery/resistance ordering remain partial. A matched frontend profile also
+removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
 staged title/menu, secondary-destination, and character-interaction preload
 bundles then reduced the settled main-menu heap from 487 MB to 216 MB without
@@ -202,7 +210,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 4 exact-ID implementations, 353 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 5 exact-ID implementations, 352 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references; unresolved records and source-sensitive mappings remain research work. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Client assembly now consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Ebitengine native audio, console drawing, and GPU palette parity remain before it can become release-equivalent. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -848,6 +856,13 @@ runtime composition and the coverage report.
   checkpoint coverage proves the resulting damage bounds without a skill-ID
   branch. Keep exact percentage rounding and broader modifier ordering partial
   pending owned 1.14d vectors.
+- [x] Add a reusable straight-missile area-impact family and admit exact
+  Expansion 1.14d Fire Ball by ID. Validate missile/hit functions, authored
+  radius, explosion-missile presentation, level bands, mana, and the generic
+  hard-point modifier; resolve a swept impact once, damage stable ordered
+  in-radius targets through the shared damage boundary, and materialize a
+  separate non-damaging ECS effect with record-authored lifetime. Prove family
+  reuse with a synthetic configuration and checkpoint the live aftermath.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -870,8 +885,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 4 explicitly admitted
-configurations, and 353 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 5 explicitly admitted
+configurations, and 352 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -906,6 +921,20 @@ families composable without making the missile or damage systems recognize Fire
 Bolt. Integer floor-after-percentage is current high-confidence policy; exact
 1.14d rounding and ordering against mastery, resistance, PvP, and other source
 families remain an owned-runtime probe.
+
+Fire Ball is the first `missile.straight-impact-area` configuration. The exact
+owned missile row requires server travel function 1, server hit function 1,
+collision type 3, one-shot collision, `sHitPar1=4`, and
+`ExplosionMissile=explodingarrowexp`; the referenced row must be an authored
+explosion with a 16-tick presentation lifetime. On first swept contact, the
+generic system computes one impact point, selects same-level targets in stable
+semantic-ID order, and routes each result through the shared typed fire-damage
+boundary. It separately creates `d2legacy.missile.effect`, which carries only
+position/location/presentation/lifetime facts and therefore cannot apply damage
+again. The localized TBL text calls Fire Ball an explosive sphere of fire and
+the owned skill row reuses the generic Fire Bolt/Meteor hard-level modifier at
+14% each. Exact 1.14d radius/footprint units, impact rounding, per-target RNG,
+and ordering against mastery, resistance, PvP, and other sources remain probes.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID

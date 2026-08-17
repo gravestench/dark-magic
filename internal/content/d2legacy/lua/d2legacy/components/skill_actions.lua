@@ -41,7 +41,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 3,
+        version = 4,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "cast_id", type = "string" },
@@ -55,6 +55,15 @@ function M.register()
             { name = "collision_radius", type = "f64" },
             { name = "destroy_on_contact", type = "bool" },
             { name = "next_hit_delay", type = "i64" },
+            { name = "impact_radius", type = "f64" },
+            { name = "impact_missile_id", type = "string" },
+            { name = "impact_dcc", type = "string" },
+            { name = "impact_palette", type = "string" },
+            { name = "impact_lifetime_ticks", type = "i64" },
+            { name = "impact_directions", type = "i64" },
+            { name = "impact_frames_per_second", type = "i64" },
+            { name = "impact_loop", type = "bool" },
+            { name = "impact_sound", type = "string" },
             { name = "knockback_value", type = "i64" },
             { name = "minimum_damage_raw", type = "i64" },
             { name = "maximum_damage_raw", type = "i64" },
@@ -65,6 +74,30 @@ function M.register()
             { name = "travel_sound", type = "string" },
             { name = "hit_sound", type = "string" },
             { name = "directions", type = "i64" },
+            { name = "frames_per_second", type = "i64" },
+            { name = "loop", type = "bool" },
+            { name = "offset_x", type = "f64" },
+            { name = "offset_y", type = "f64" },
+            { name = "offset_z", type = "f64" },
+        },
+    })
+
+    -- Presentation-bearing aftermath is its own short-lived ECS entity. It
+    -- has no damage capability, so rendering an impact cannot reapply policy.
+    ecs.component({
+        name = "d2legacy.missile.effect",
+        version = 1,
+        fields = {
+            { name = "owner_id", type = "string" },
+            { name = "cast_id", type = "string" },
+            { name = "remaining_ticks", type = "i64" },
+            { name = "missile_id", type = "string" },
+            { name = "dcc", type = "string" },
+            { name = "palette", type = "string" },
+            { name = "travel_sound", type = "string" },
+            { name = "hit_sound", type = "string" },
+            { name = "directions", type = "i64" },
+            { name = "logical_direction", type = "i64" },
             { name = "frames_per_second", type = "i64" },
             { name = "loop", type = "bool" },
             { name = "offset_x", type = "f64" },
