@@ -143,6 +143,7 @@ local function stop_monster(monster, structural)
     structural:remove(monster, "d2legacy.monster.ai")
     structural:remove(monster, "d2legacy.world.collider")
     structural:remove(monster, "d2legacy.world.selectable")
+    structural:remove(monster, "engine.world.velocity_mover")
 end
 
 local function commit_death(context, entities, structural, monster, killers)
@@ -212,6 +213,7 @@ function M.register()
             "d2legacy.world.velocity",
             "d2legacy.world.collider",
             "d2legacy.world.selectable",
+            "engine.world.velocity_mover",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
         },

@@ -332,6 +332,16 @@ At minimum future monster death needs to coordinate:
 - resurrection restrictions;
 - removal/inactivation timing.
 
+Current Dark Magic commits the ordinary corpse on the monster's existing ECS
+entity. The death transaction records deterministic death/loot/credit facts,
+sets death presentation mode, zeros velocity, and removes AI, collider,
+selection, and the generic engine velocity-mover opt-in. The corpse can then
+cross room deactivate -> checkpoint -> restore -> reactivate with its identity,
+death/loot state, appearance, position/location, occupancy, and room identity
+unchanged, without regaining a live simulation capability. Exact Expansion
+1.14d corpse lifetime, usability, consumption, search, revival, and long-
+inactive mutation policy remain unresolved.
+
 ### Softcore player death
 
 Research separately:

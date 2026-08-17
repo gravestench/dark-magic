@@ -548,6 +548,13 @@ expiration on the first active tick. This does not claim that graph distance,
 phase ordering, timer aging, healing, corpse policy, or separate presentation-
 only residency matches expansion 1.14d.
 
+An ordinary corpse is now a second explicit residency kind. The death
+transaction removes AI, collider, selection, and the generic velocity-mover
+marker before room deactivation. Its inactive record therefore pins
+`velocity_mover=false`, and checkpoint reconstruction/reactivation preserve the
+semantic corpse without restoring a movement surface. Corpse lifetime and
+skill/object eligibility remain outside this streaming slice.
+
 ## Streaming policy should be deterministic
 
 Research still needs the exact original activation radius/call order. Whatever Dark Magic policy chooses, activation/inactivation must not depend on host scheduling races.
@@ -663,8 +670,9 @@ surface restoration, while a moving non-monster proves current-room membership
 replaces spawn-room membership before activation. The path is deterministic,
 checkpointed, and renderer-independent. Production resolved DS1 interaction
 targets now attach to this boundary. An owned resident's relationship graph and
-lifecycle filter also cross it without a second archive; stateful objects,
-corpses, ground items, projectiles, and pending-action residency remain.
+lifecycle filter also cross it without a second archive. An ordinary corpse
+retains its semantic entity while all live movement surfaces remain absent;
+stateful objects, ground items, projectiles, and pending-action residency remain.
 
 ### MV6 — streaming policy (synthetic foundation implemented)
 
