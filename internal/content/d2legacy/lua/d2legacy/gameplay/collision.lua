@@ -33,4 +33,26 @@ function M.melee_clear(level_id, from_x, from_y, to_x, to_y)
     return collision:barrier_clear(from_x, from_y, to_x, to_y)
 end
 
+function M.destination_clear(level_id, x, y, radius)
+    local collision = M.for_level(level_id)
+    if not collision then
+        return false
+    end
+    local reach = math.ceil(radius)
+    for offset_y = -reach, reach do
+        for offset_x = -reach, reach do
+            local distance = math.sqrt(offset_x * offset_x + offset_y * offset_y)
+            if distance <= radius + 0.5 and collision:blocked_position(x + offset_x, y + offset_y) then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+function M.line_clear(level_id, from_x, from_y, to_x, to_y)
+    local collision = M.for_level(level_id)
+    return collision ~= nil and collision:line_clear(from_x, from_y, to_x, to_y)
+end
+
 return M

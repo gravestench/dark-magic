@@ -6,12 +6,14 @@
 local components = require("d2legacy.components.skill_actions")
 local shared_components = require("d2legacy.components.shared")
 local missile_skill_data = require("d2legacy.data.missile_skills")
+local point_movement_skill_data = require("d2legacy.data.point_movement_skills")
 local radial_missile_skill_data = require("d2legacy.data.radial_missile_skills")
 local melee_skill_data = require("d2legacy.data.melee_skills")
 local skill_behavior_coverage = require("d2legacy.data.skill_behavior_coverage")
 local cast_command = require("d2legacy.commands.cast")
 local cast_system = require("d2legacy.systems.cast")
 local missile_skill_system = require("d2legacy.systems.missile_skill")
+local point_movement_skill_system = require("d2legacy.systems.point_movement_skill")
 local melee_skill_system = require("d2legacy.systems.melee_skill")
 local state_skill_system = require("d2legacy.systems.state_skill")
 local reactive_state = require("d2legacy.systems.reactive_state")
@@ -96,6 +98,8 @@ function M.start()
     M.radial_missile_skills =
         radial_missile_skill_data.load(M.skill_behavior_coverage.by_family["missile.radial"] or {})
     M.melee_skills = melee_skill_data.load(M.skill_behavior_coverage.by_family["action.melee"] or {})
+    M.point_movement_skills =
+        point_movement_skill_data.load(M.skill_behavior_coverage.by_family["movement.point-relocate"] or {})
     M.progression = progression_data.load()
     M.state_skills = state_skill_data.load(M.skill_behavior_coverage.by_family["state.self-timed"] or {})
     M.cast_skills = {}
@@ -126,10 +130,15 @@ function M.start()
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
+    for skill_id, definition in pairs(M.point_movement_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
     cast_command.register(M.cast_skills)
     cast_system.register(M.cast_skills)
     melee_skill_system.register(M.melee_skills)
     missile_skill_system.register(M.cast_skills)
+    point_movement_skill_system.register(M.point_movement_skills)
     state_skill_system.register(M.state_skills)
     projectile_system.register()
     melee_system.register()
@@ -174,6 +183,7 @@ function M.stop()
     M.freeze_missile_skills = nil
     M.area_freeze_missile_skills = nil
     M.melee_skills = nil
+    M.point_movement_skills = nil
     M.state_skills = nil
     M.cast_skills = nil
     M.skill_behavior_coverage = nil

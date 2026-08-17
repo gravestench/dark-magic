@@ -110,8 +110,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 7
-explicitly admitted configurations, and 350 missing configurations. Every
+archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 8
+explicitly admitted configurations, and 349 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -143,6 +143,10 @@ its Blizzard freeze-duration modifier. Its layered TBL records call it a
 magical ice comet that freezes or kills nearby enemies and provide radius and
 freeze labels; the exact Skills/Missiles formulas remain the arithmetic and
 event-shape authority.
+Teleport has no cross-skill formula. Its owned `skillld54` TBL key resolves to
+the explicit claim that it instantly moves to a destination within line of
+sight; Skills.txt and Levels.txt remain authoritative for assignment, signed
+mana, dispatch, and per-level permission facts.
 Attack resolves to the localized name `Attack` and description `normal attack`
 with no cross-skill modifier formula. Nova resolves to the localized name and
 descriptions "creates an electrically charged ring" and "to shock nearby
@@ -247,6 +251,24 @@ resistance/immunity, monster-class effectiveness, cross-source replacement,
 PvP chill conversion, ejecta presentation, and action timing remain target
 1.14d probes.
 
+Teleport is the first exact `movement.point-relocate` consumer. Its owned skill
+row supplies server-do 27, `warp=1`, SC action, right-skill-only assignment,
+`range=none`, and 24 base mana reduced by 1 per level to an authored 1-mana
+floor. The generic decoder preserves the signed progression rather than
+forcing every skill's level delta nonnegative. It also pins all numeric
+Levels.txt Teleport policies; only null level 0 is disabled and Duriel's Lair
+ID 73 uses policy 2 instead of the ordinary 1.
+
+At the effect tick, the point-movement system validates same-level bounds,
+static footprint collision, and blocking ECS occupancy. Policy 2 additionally
+uses the distinct BlockLOS trace. A successful action atomically updates the
+existing player position, stops semantic/raw/forced motion, and emits a generic
+value-only relocation event; failure emits an explicit outcome without moving.
+The localized line-of-sight wording and recovered policy-2 description do not
+resolve exact viewport/range, the policy-2 boundary, invalid-target mana
+consumption, nearest-free fallback, room-edge order, owned-unit following, or
+SC/presentation timing. Those remain owned 1.14d probes.
+
 Ordinary Attack is exact skill ID 0 in the owned Expansion 1.14d Skills.txt,
 not a non-skill command. Its row supplies server/client start and do functions
 1/1, an A1 weapon action, attack-rate and target/search flags, weapon source
@@ -316,7 +338,7 @@ ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 350 missing configurations,
+classification and implementation of the 349 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 

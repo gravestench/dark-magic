@@ -13,6 +13,7 @@ return test.suite({
                 test.expect(coverage.by_family["missile.straight-impact-area"][1]):equals(47)
                 test.expect(coverage.by_family["missile.straight-impact-area-freeze"][1]):equals(55)
                 test.expect(coverage.by_family["missile.straight-freeze"][1]):equals(45)
+                test.expect(coverage.by_family["movement.point-relocate"][1]):equals(54)
                 test.expect(coverage.by_family["state.self-timed"][1]):equals(40)
                 test.expect(coverage.by_id[36].evidence_status)
                     :equals("owned-target-records-and-localized-synergy-partial")

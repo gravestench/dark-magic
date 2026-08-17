@@ -174,6 +174,17 @@ function M.register()
         { name = "requested_distance", type = "f64" },
         { name = "applied_distance", type = "f64" },
     })
+    component("d2legacy.world.relocation_event", {
+        { name = "kind", type = "string" },
+        { name = "outcome", type = "string" },
+        { name = "tick", type = "i64" },
+        { name = "source_id", type = "string" },
+        { name = "target_id", type = "string" },
+        { name = "start_x", type = "f64" },
+        { name = "start_y", type = "f64" },
+        { name = "end_x", type = "f64" },
+        { name = "end_y", type = "f64" },
+    })
     component("d2legacy.world.selectable", {
         { name = "id", type = "string" },
         { name = "kind", type = "string" },
