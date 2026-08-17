@@ -222,3 +222,32 @@ func TestMovementSourceDoesNotReplanHeldPointerInsideCollisionCell(t *testing.T)
 		t.Fatalf("path searches = %d, want one for held-pointer movement within a collision cell", paths.calls)
 	}
 }
+
+func TestMovementSourceInvalidatesWorldRelativeRouteWhenNavigationChanges(t *testing.T) {
+	engine := gameecs.New()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
+		t.Fatal(err)
+	}
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(20, 10); err != nil {
+		t.Fatal(err)
+	}
+	source, err := NewMovementSource(engine, &inputstate.Store{}, "alpha", "game_world", controller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.path = []gameworld.Point{{X: 10, Y: 10}, {X: 11, Y: 10}}
+	source.pathTarget = &MoveTarget{X: 20, Y: 10}
+
+	source.SetNavigation(&gameworld.Map{})
+
+	if controller.HasMoveTarget() || source.path != nil || source.pathTarget != nil {
+		t.Fatalf("world replacement retained route state: controller=%t path=%v target=%v",
+			controller.HasMoveTarget(), source.path, source.pathTarget)
+	}
+}

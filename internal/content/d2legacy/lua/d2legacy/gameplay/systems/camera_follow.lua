@@ -62,6 +62,23 @@ local function follow(entity, elapsed)
     camera_position:set("y", relationship:get("origin_y") + (relationship:get("destination_y") - relationship:get("origin_y")) * amount)
 end
 
+-- Cross-level relocation is a discontinuity, not ordinary camera motion. Snap
+-- every interpolation fact to the relocated target so pointer projection in
+-- the new map never observes coordinates retained from the previous map.
+function M.snap(entity)
+    local relationship = assert(ecs.get(entity, "d2legacy.world.camera_follow"))
+    local target_position = assert(ecs.get(relationship:get("target"), "d2legacy.world.position"))
+    local camera_position = assert(ecs.get(entity, "d2legacy.world.position"))
+    local target_x, target_y = target_position:get("x"), target_position:get("y")
+    camera_position:set("x", target_x)
+    camera_position:set("y", target_y)
+    relationship:set("origin_x", target_x)
+    relationship:set("origin_y", target_y)
+    relationship:set("destination_x", target_x)
+    relationship:set("destination_y", target_y)
+    relationship:set("elapsed", 0)
+end
+
 function M.register()
     ecs.system({
         id = "d2legacy.world.camera_follow",

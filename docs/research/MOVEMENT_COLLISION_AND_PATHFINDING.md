@@ -13,7 +13,8 @@ Dark Magic now has a good general navigation core:
 - no diagonal corner cutting;
 - stopping rings around occupied interaction targets;
 - semantic target coordinates admitted through the fixed-tick session;
-- trusted zone-transition boundaries.
+- trusted zone-transition boundaries;
+- explicit invalidation of pointer routes when their world/navigation changes.
 
 The next movement work is **not "implement pathfinding."** It is to add the movement policies Diablo gameplay needs above that foundation:
 
@@ -47,7 +48,8 @@ Its behavior includes:
 - goal acceptance within a configurable stopping radius;
 - explicit unreachable errors.
 
-`internal/game/session/movement.go` currently:
+`internal/mod/d2legacy/adapter/movement/movement.go` and the authoritative
+`d2legacy.commands.move_player` handler currently:
 
 - admits `player.move` commands through the fixed tick;
 - normalizes diagonal direct input;
@@ -57,18 +59,23 @@ Its behavior includes:
 - derives authoritative facing/mode;
 - uses the player collider radius when planning.
 
+Route targets are scoped to the map that planned them. Cross-level relocation
+replaces navigation and atomically drops the client target, accepted waypoints,
+pending presentation selection, and held hostile selection. Camera interpolation
+also snaps to the relocated player before the destination map accepts pointer
+projection. None of those presentation-side facts is authoritative relocation
+state.
+
 These are strong engine foundations and should remain generic, renderer-independent tools.
 
 ## Current fidelity gaps
 
 Several values in the current player movement path are intentionally simple policy rather than verified Diablo behavior, including:
 
-- hard-coded walk/run speeds (`10` / `15` in the current handler);
 - target completion threshold around `0.2`;
 - waypoint advancement threshold around `0.3`;
 - one circle/radius abstraction for footprints;
 - A* as the universal click-navigation algorithm;
-- no stamina drain/recovery integration yet;
 - no verified acceleration/velocity stepping;
 - no special path types for combat skills/missiles/knockback;
 - no authoritative dynamic-unit occupancy in ordinary route planning yet.
@@ -467,9 +474,13 @@ runtime probes before widening modifier content.
 
 Keep existing A* unchanged.
 
-### MV2 — motion-state abstraction
+### MV2 — motion-state abstraction (next)
 
-Separate route plan from authoritative velocity/progress/path strategy. Preserve current ordinary movement behavior as one strategy.
+Separate route plan from authoritative velocity/progress/path strategy. Preserve
+current ordinary movement behavior as one strategy. Cross-level invalidation is
+already explicit at the navigation/presentation boundary; move that ownership
+rule into the semantic motion-state model rather than reconstructing it from raw
+velocity.
 
 ### MV3 — dynamic occupancy
 

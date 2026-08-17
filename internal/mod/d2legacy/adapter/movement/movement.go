@@ -147,6 +147,11 @@ func (source *MovementSource) SetNavigation(world *gameworld.Map) {
 	source.navigation = world
 	source.path = nil
 	source.pathTarget = nil
+	// Pointer targets and their accepted route are coordinates in one world.
+	// Keeping the target while swapping maps can replan an old town coordinate
+	// in the wilderness (or vice versa), where it then competes with fresh input.
+	// Treat every navigation replacement as an explicit route invalidation.
+	source.control.clearMoveTarget()
 }
 
 func NewMovementSource(engine *gameecs.Engine, input *inputstate.Store, player, focusID string, controllers ...*MovementController) (*MovementSource, error) {

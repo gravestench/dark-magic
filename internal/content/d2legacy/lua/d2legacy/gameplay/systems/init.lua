@@ -20,4 +20,8 @@ function M.set_collision(level_id, collision)
     movement.set_collision(level_id, collision)
 end
 
+function M.snap_camera(entity)
+    camera_follow.snap(entity)
+end
+
 return M

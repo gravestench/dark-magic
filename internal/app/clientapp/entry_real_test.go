@@ -507,6 +507,13 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	if app.playerControl.HasMoveTarget() {
 		t.Fatal("Warp Lab player never reached the wilderness-side warp")
 	}
+	// Model a route sample that remains queued while authority commits the
+	// interaction. World-relative intent from level 2 must be invalidated when
+	// presentation/navigation follows the player back to level 1; otherwise it
+	// can be replanned in town and keep ownership ahead of the next click.
+	if err := app.playerControl.SetMoveTarget(returnX+8, returnY); err != nil {
+		t.Fatal(err)
+	}
 	if err := app.commandIntents.Submit("interaction.open", map[string]any{
 		"at": true, "x": returnX, "y": returnY,
 	}); err != nil {
@@ -520,6 +527,9 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	level, _ = location.Get("level_id")
 	if level != int64(app.transitionSeam.Town.LevelID) || app.activeWorldLevel != app.transitionSeam.Town.LevelID {
 		t.Fatalf("Warp Lab return left authority/presentation at %v/%d", level, app.activeWorldLevel)
+	}
+	if app.playerControl.HasMoveTarget() {
+		t.Fatal("Warp Lab return retained a route target from the previous world")
 	}
 
 	playerPosition, _ := positions.Get(player)

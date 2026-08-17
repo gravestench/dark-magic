@@ -276,7 +276,11 @@ and monster chase exist. Still required:
   interaction admission, shared relocation, animation, camera, and world
   presentation; retain only read-only diagnostics and masking in the lab. Pin
   both arrival anchors against the full player footprint and prove round-trip
-  travel followed by fresh locomotion.
+  travel followed by fresh locomotion. Cross-level presentation activation now
+  invalidates the old world-relative target/path/selection state and snaps
+  camera interpolation before accepting pointer coordinates in the new map;
+  the acceptance deliberately queues a stale return-side route and proves it
+  cannot retain motion ownership in town.
 - [x] Gate click-to-operate on authoritative route completion and treat stale
   mutable target/range observations as rejected actions rather than fatal
   session errors; cover the actual point-click ordering in the owned-data lab.
@@ -569,7 +573,8 @@ audio, and UI observe committed semantic state.
   and one relocation transaction shared with authored level seams; prove the
   pair through interaction admission, production locomotion, checkpoint restore,
   bidirectional active-world switching, footprint-safe arrival, post-return
-  locomotion, and the ordinary game renderer in Warp Lab.
+  locomotion, old-world route/selection invalidation, camera discontinuity, and
+  the ordinary game renderer in Warp Lab.
 - [ ] Pin and implement expansion 1.14d Town Portal creation, owner/party access,
   replacement, lifetime, origin/return placement, and teardown behavior before
   treating the development pair as the Town Portal gameplay feature.
