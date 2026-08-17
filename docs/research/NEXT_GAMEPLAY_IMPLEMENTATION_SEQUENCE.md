@@ -206,7 +206,9 @@ Extend the basic transaction with evidence-backed slices:
 - leech/drain;
 - regeneration and periodic damage;
 - durability consequences;
-- player death/corpse/XP-loss;
+- remaining player corpse/equipment, gold, XP-loss/recovery, respawn, and
+  Hardcore persistence after the common same-entity death/action-filter
+  foundation;
 - difficulty and PvP scalars.
 
 Keep exact arithmetic behind `COMBAT_SIMULATION_VERIFICATION_QUEUE.md` until supported. Temporary Dark Magic scaffolding must remain labeled as scaffolding.
@@ -335,7 +337,8 @@ Implementation should continue while exact compatibility questions are researche
 - Cube operation/output details;
 - complete vendor pricing/repair/gambling rules;
 - object operation timing, shrine reset/math, portal and waypoint details;
-- player death/corpse/XP-loss behavior;
+- exact player death DT/DD timing plus corpse/equipment, gold, XP-loss/recovery,
+  respawn, multiple-corpse, save, and Hardcore persistence behavior;
 - `Sounds.txt` pitch/fade/compound/falloff/tracking/solo/block semantics and `Levels.SoundEnv` behavior;
 - party reward sharing, hostility/PvP edge cases, trade UX/state;
 

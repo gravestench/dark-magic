@@ -70,6 +70,9 @@ end
 
 function M.apply(command)
     local player = assert(find_player(command.player), "cast player does not exist")
+    if ecs.get(player, "d2legacy.player.death") then
+        return
+    end
     local payload = command.payload
     local assignments =
         assert(ecs.get(player, "d2legacy.player.skill_assignment"), "cast player has no skill assignments")

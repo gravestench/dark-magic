@@ -258,6 +258,15 @@ leaving the entity available to independent proc, quest, audio, or presentation
 consumers. Those consumers should own separate marker components; final event
 retirement waits for that complete contract instead of one central dispatcher.
 
+Player death is now a second independent consumer of that same common result.
+It composes `d2legacy.combat.player_death_observed`, so monster and player death
+passes neither suppress nor retire each other's evidence. An explicit
+`unit_died` targeting a zero-health player commits `d2legacy.player.death` onto
+the existing character entity and emits `d2legacy.player.death_event` exactly
+once. Owned-unit attribution retains the immediate killer and ultimate owner.
+This is only the common dead/action-disabled boundary; consequence consumers
+remain pending.
+
 Basic melee now also composes `d2legacy.combat.attack_result` on every resolved
 impact. Current outcomes are `hit`, RNG `miss`, and `invalidated` when target
 legality/range/life/barrier revalidation fails at impact. Attack rating, defense,
@@ -395,6 +404,19 @@ unchanged, without regaining a live simulation capability. Exact Expansion
 inactive mutation policy remain unresolved.
 
 ### Softcore player death
+
+Current Dark Magic foundation preserves the selected player's ECS identity and
+spatial entity, records the lethal tick/killer/credited owner and immutable
+Hardcore-rule snapshot, stops semantic locomotion and raw velocity, removes
+in-flight cast/melee/forced-motion components, and filters dead actors from
+future action systems. The `DT` mode is currently a clearly bounded presentation
+handoff, not a verified claim about exact Expansion 1.14d DT/DD transition
+timing. The value-only death event is exposed to presentation without granting
+presentation authority over recovery.
+
+`consequences_pending=true` is deliberate: this foundation does not transfer
+equipment, remove/drop gold, change XP, create/select a corpse, respawn in town,
+or mutate durable character status. Those require the evidence below.
 
 Research separately:
 

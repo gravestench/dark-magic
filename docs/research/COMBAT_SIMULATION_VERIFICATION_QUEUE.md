@@ -137,6 +137,10 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 
 ## P2: player death and PvP
 
+- Implemented foundation: an explicit common lethal result composes dead/action-
+  disabled state on the same checkpointed player entity, retains owned-unit
+  attribution, emits one semantic event, and leaves all consequences pending.
+- Exact Expansion 1.14d player DT/DD transition and action-interruption timing.
 - Softcore corpse equipment transfer.
 - Carried/stashed gold loss/drop rules.
 - Nightmare/Hell XP loss and corpse-recovery XP restoration.

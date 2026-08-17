@@ -33,7 +33,10 @@ function M.register(definitions)
         id = "d2legacy.state.apply_skill",
         phase = "pre_simulation",
         after = { "d2legacy.skill.cast_lifecycle" },
-        query = { any = { "d2legacy.skill.cast", "d2legacy.player.learned_skill" } },
+        query = {
+            any = { "d2legacy.skill.cast", "d2legacy.player.learned_skill" },
+            none = { "d2legacy.player.death" },
+        },
         read = { "d2legacy.skill.cast", "d2legacy.player.learned_skill", "d2legacy.player.identity" },
         write = { "d2legacy.skill.cast", "d2legacy.state.request", "d2legacy.skill.cast_event" },
         update = function(context, entities, structural)

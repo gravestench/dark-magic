@@ -130,6 +130,15 @@ function M.register()
         version = 1,
         fields = {},
     })
+
+    -- Empty independent consumer marker. Player-death policy can observe the
+    -- same generic result as monster death without either consumer retiring or
+    -- mutating the other's view of the event.
+    ecs.component({
+        name = "d2legacy.combat.player_death_observed",
+        version = 1,
+        fields = {},
+    })
 end
 
 return M

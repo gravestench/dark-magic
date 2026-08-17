@@ -77,6 +77,7 @@ function M.register()
                 "d2legacy.world.position",
                 "d2legacy.world.velocity",
             },
+            none = { "d2legacy.player.death" },
         },
         read = {
             "d2legacy.player.motion",
@@ -84,6 +85,7 @@ function M.register()
             "d2legacy.player.vitals",
             "d2legacy.player.movement_stats",
             "d2legacy.world.position",
+            "d2legacy.player.death",
         },
         write = {
             "d2legacy.world.velocity",

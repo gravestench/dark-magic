@@ -8,7 +8,10 @@ function M.register(definitions)
         id = "d2legacy.skill.emit_melee_action",
         phase = "pre_simulation",
         after = { "d2legacy.skill.cast_lifecycle" },
-        query = { all = { "d2legacy.skill.cast", "d2legacy.player.identity" } },
+        query = {
+            all = { "d2legacy.skill.cast", "d2legacy.player.identity" },
+            none = { "d2legacy.player.death" },
+        },
         read = { "d2legacy.skill.cast", "d2legacy.player.identity" },
         write = { "d2legacy.skill.cast", "d2legacy.skill.cast_event" },
         update = function(context, casters, structural)

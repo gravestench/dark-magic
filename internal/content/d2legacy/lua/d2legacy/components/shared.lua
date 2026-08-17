@@ -28,6 +28,26 @@ function M.register()
         { name = "stamina_raw", type = "i64" },
         { name = "max_stamina_raw", type = "i64" },
     })
+    -- Player death is a state transition on the durable character entity, not
+    -- a replacement entity. Consequences remain pending until separately
+    -- verified corpse, gold, experience, respawn, or Hardcore consumers commit.
+    component("d2legacy.player.death", {
+        { name = "tick", type = "i64" },
+        { name = "killer_id", type = "string" },
+        { name = "credited_id", type = "string" },
+        { name = "hardcore", type = "bool" },
+        { name = "stage", type = "string" },
+        { name = "consequences_pending", type = "bool" },
+    })
+    component("d2legacy.player.death_event", {
+        { name = "kind", type = "string" },
+        { name = "tick", type = "i64" },
+        { name = "player_id", type = "string" },
+        { name = "killer_id", type = "string" },
+        { name = "credited_id", type = "string" },
+        { name = "hardcore", type = "bool" },
+        { name = "consequences_pending", type = "bool" },
+    })
     component("d2legacy.player.stamina_progression", {
         { name = "base_vitality", type = "i64" },
         { name = "vitality", type = "i64" },

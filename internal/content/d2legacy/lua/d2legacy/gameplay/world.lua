@@ -264,6 +264,7 @@ function M.semantic_cues(observed)
     local entities, known = {}, {}
     for _, component in ipairs({
         "d2legacy.monster.death_event",
+        "d2legacy.player.death_event",
         "d2legacy.missile.event",
         "d2legacy.combat.attack_animation_event",
         "d2legacy.combat.melee_event",
@@ -286,6 +287,10 @@ function M.semantic_cues(observed)
         local death = optional_component(entity, "d2legacy.monster.death_event")
         if death then
             kind, values = "monster_death", death:snapshot()
+        end
+        local player_death = optional_component(entity, "d2legacy.player.death_event")
+        if player_death then
+            kind, values = "player_death", player_death:snapshot()
         end
         local missile = optional_component(entity, "d2legacy.missile.event")
         if missile then

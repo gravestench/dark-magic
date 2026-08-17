@@ -24,9 +24,12 @@ local function projectile_components(caster, cast, definition)
     local dx, dy =
         geometry.normalized_direction(position:get("x"), position:get("y"), cast:get("target_x"), cast:get("target_y"))
     local owner_id = selectable_id(caster)
-    local projectile_id = "projectile:" .. owner_id
-        .. ":skill:" .. cast:get("skill_id")
-        .. ":effect:" .. cast:get("effect_tick")
+    local projectile_id = "projectile:"
+        .. owner_id
+        .. ":skill:"
+        .. cast:get("skill_id")
+        .. ":effect:"
+        .. cast:get("effect_tick")
     local components = {
         ["d2legacy.world.position"] = { x = position:get("x"), y = position:get("y") },
         ["d2legacy.world.location"] = location:snapshot(),
@@ -57,12 +60,8 @@ local function projectile_components(caster, cast, definition)
             offset_z = definition.offset_z,
         },
     }
-    local resident = population.resident_at(
-        projectile_id,
-        location:get("level_id"),
-        position:get("x"),
-        position:get("y")
-    )
+    local resident =
+        population.resident_at(projectile_id, location:get("level_id"), position:get("x"), position:get("y"))
     if resident then
         components["d2legacy.world.room_resident"] = resident
     end
@@ -80,6 +79,7 @@ function M.register(definitions)
                 "d2legacy.world.position",
                 "d2legacy.world.location",
             },
+            none = { "d2legacy.player.death" },
         },
         read = {
             "d2legacy.skill.cast",

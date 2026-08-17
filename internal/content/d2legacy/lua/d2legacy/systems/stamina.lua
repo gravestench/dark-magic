@@ -64,6 +64,7 @@ function M.register()
                 "d2legacy.world.velocity",
                 "d2legacy.world.location",
             },
+            none = { "d2legacy.player.death" },
         },
         read = {
             "d2legacy.player.identity",

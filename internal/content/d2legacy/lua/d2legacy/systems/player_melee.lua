@@ -113,7 +113,10 @@ function M.register()
         id = "d2legacy.combat.accept_player_melee",
         phase = "pre_simulation",
         after = { "d2legacy.skill.emit_melee_action" },
-        query = { any = { "d2legacy.skill.cast_event", "d2legacy.world.player_control" } },
+        query = {
+            any = { "d2legacy.skill.cast_event", "d2legacy.world.player_control" },
+            none = { "d2legacy.player.death" },
+        },
         read = {
             "d2legacy.skill.cast_event",
             "d2legacy.world.player_control",
@@ -156,7 +159,7 @@ function M.register()
         phase = "pre_simulation",
         query = {
             any = { "d2legacy.combat.attack_approach", "d2legacy.world.selectable" },
-            none = { "d2legacy.world.inactive" },
+            none = { "d2legacy.world.inactive", "d2legacy.player.death" },
         },
         read = {
             "d2legacy.combat.attack_approach",
@@ -242,7 +245,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.combat.player_melee_animation",
         phase = "pre_simulation",
-        query = { all = { "d2legacy.combat.attack_animation" } },
+        query = {
+            all = { "d2legacy.combat.attack_animation" },
+            none = { "d2legacy.player.death" },
+        },
         read = {
             "d2legacy.combat.attack_animation",
             "d2legacy.player.motion",
