@@ -47,6 +47,11 @@
       "skill_id": 52,
       "family": "state.targeted-timed",
       "evidence_status": "owned-target-records-and-localized-weapon-enchantment-partial"
+    },
+    {
+      "skill_id": 66,
+      "family": "state.point-area-curse",
+      "evidence_status": "owned-target-records-and-localized-physical-amplification-partial"
     }
   ]
 }

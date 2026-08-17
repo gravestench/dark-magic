@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 52, 54, 55}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,5 +93,20 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		len(localized["dsc3texta1"].ReplacementTokens) != 1 ||
 		localized["dsc3texta1"].ReplacementTokens[0] != "%s" {
 		t.Fatalf("Glacial Spike localization = %#v", glacial.Localization)
+	}
+	amplify := report.Skills[6]
+	if len(amplify.CrossSkillModifiers) != 0 {
+		t.Fatalf("Amplify Damage modifiers = %#v", amplify.CrossSkillModifiers)
+	}
+	amplifyLocalized := map[string]LocalizationReference{}
+	for _, evidence := range amplify.Localization {
+		amplifyLocalized[evidence.Column] = evidence
+	}
+	if amplifyLocalized["str name"].Text != "Amplify Damage" ||
+		!strings.Contains(amplifyLocalized["str long"].Text, "non-magic damage") ||
+		amplifyLocalized["dsc2texta1"].Text != "Damage Taken: " ||
+		amplifyLocalized["desctexta2"].Text != "Duration: " ||
+		amplifyLocalized["desctexta3"].Text != "Radius: " {
+		t.Fatalf("Amplify Damage localization = %#v", amplify.Localization)
 	}
 }

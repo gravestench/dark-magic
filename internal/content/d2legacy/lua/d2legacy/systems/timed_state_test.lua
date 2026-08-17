@@ -189,6 +189,122 @@ return test.suite({
                 test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(0)
             end),
         }),
+        test.case("ranked_exclusive_state_rejects_lower_and_accepts_higher_priority", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.create({
+                    ["d2legacy.combat.defense"] = {
+                        base_physical_resist = 0,
+                        base_fire_resist = 0,
+                    },
+                })
+                local function request(state, source, priority, value)
+                    ecs.create({
+                        ["d2legacy.state.request"] = {
+                            operation = "apply",
+                            target = target,
+                            state_id = state,
+                            source_id = source,
+                            duration = 100,
+                            policy = "refresh_same_source",
+                            exclusive_group = "state-group:curse",
+                            replacement_priority = priority,
+                            reject_lower_priority = true,
+                        },
+                    })
+                    ecs.create({
+                        ["d2legacy.state.stat_request"] = {
+                            target = target,
+                            owner_source_id = source,
+                            source_id = source .. ":physical_resist",
+                            stat = "physical_resist",
+                            operation = "add",
+                            value = value,
+                            order = 300,
+                        },
+                    })
+                end
+                request("strongcurse", "skill:alice:strong", 3, -50)
+                request("same_tick_weak", "skill:bob:same-tick-weak", 2, -100)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local target = ecs.query({ all = { "d2legacy.combat.defense" } })[1]
+                ecs.create({
+                    ["d2legacy.state.request"] = {
+                        operation = "apply",
+                        target = target,
+                        state_id = "weakcurse",
+                        source_id = "skill:bob:weak",
+                        duration = 100,
+                        policy = "refresh_same_source",
+                        exclusive_group = "state-group:curse",
+                        replacement_priority = 2,
+                        reject_lower_priority = true,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.state.stat_request"] = {
+                        target = target,
+                        owner_source_id = "skill:bob:weak",
+                        source_id = "skill:bob:weak:physical_resist",
+                        stat = "physical_resist",
+                        operation = "add",
+                        value = -100,
+                        order = 300,
+                    },
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local instance =
+                    ecs.get(ecs.query({ all = { "d2legacy.state.instance" } })[1], "d2legacy.state.instance")
+                test.expect(instance:get("state_id")):equals("strongcurse")
+                local target = ecs.query({ all = { "d2legacy.combat.defense" } })[1]
+                ecs.create({
+                    ["d2legacy.state.request"] = {
+                        operation = "apply",
+                        target = target,
+                        state_id = "strongestcurse",
+                        source_id = "skill:bob:strongest",
+                        duration = 100,
+                        policy = "refresh_same_source",
+                        exclusive_group = "state-group:curse",
+                        replacement_priority = 4,
+                        reject_lower_priority = true,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.state.stat_request"] = {
+                        target = target,
+                        owner_source_id = "skill:bob:strongest",
+                        source_id = "skill:bob:strongest:physical_resist",
+                        stat = "physical_resist",
+                        operation = "add",
+                        value = -75,
+                        order = 300,
+                    },
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local instances = ecs.query({ all = { "d2legacy.state.instance" } })
+                local sources = ecs.query({ all = { "d2legacy.stat.source" } })
+                test.expect(#instances):equals(1)
+                test.expect(#sources):equals(1)
+                test.expect(ecs.get(instances[1], "d2legacy.state.instance"):get("state_id")):equals("strongestcurse")
+                test.expect(ecs.get(sources[1], "d2legacy.stat.source"):get("value")):equals(-75)
+                local rejected = false
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.state.event" } })) do
+                    local event = ecs.get(entity, "d2legacy.state.event")
+                    rejected = rejected or event:get("reason") == "lower_replacement_priority"
+                end
+                test.assert(rejected, [=[lower-priority exclusive state is explicitly rejected]=])
+            end),
+        }),
         test.case("cold_velocity_orders_with_skill_armor_and_item_frw_then_expires", {
             test.submit_system({
                 tick = 1,
