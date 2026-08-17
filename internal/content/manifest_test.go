@@ -389,6 +389,11 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// The timed/reactive state-skill family additionally declares States.txt so
 	// authored state groups and reaction states remain generation-pinned data,
 	// not presentation dependencies.
+	// Generic state presentation now follows those semantic state IDs through
+	// Overlay.txt and resolves record-authored DCCs under the audited dynamic
+	// data/global/overlays prefix. Owned 1.14d tests pin the admitted state rows,
+	// overlay recipes, and referenced DCC members without enumerating copyrighted
+	// record-selected filenames in a shipping manifest.
 	// The additional code-owned paths are Lua test fixtures colocated with the
 	// production modules; they are not new presentation asset dependencies. The
 	// AM RN HTH path joins the existing AM WL fixtures to cover the runtime
@@ -413,7 +418,7 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// ExpArrowExplode DCC to the static Lua/test inventory. It remains under the
 	// existing dynamic missile prefix until record-derived presentation paths
 	// migrate into a generated manifest.
-	const auditedFingerprint = "2090cf86802f0664ebd168400fa457d7a957ed8b4e38fa40a5ab10be2640723f"
+	const auditedFingerprint = "c746b02bd73a984c104a91dc12a2620d6dc2fc4587fc5159eff7559e64325976"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
