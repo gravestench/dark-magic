@@ -1,6 +1,13 @@
 # Multiplayer parties, hostility, PvP, trading, and shared-progress research
 
-Status: implementation-oriented research baseline. Dark Magic already has a transport-independent authoritative fixed-tick session, stable item identity/containers, trusted player/item/world commands, deterministic replay/checkpoints and a future-facing server composition root. This document defines multiplayer gameplay state that belongs above those foundations without copying the legacy D2GS protocol.
+Status: implementation-oriented research baseline. Dark Magic has a
+transport-independent authoritative fixed-tick session, stable item
+identity/containers, trusted player/item/world commands, deterministic
+replay/checkpoints, and a checkpointed `d2legacy.party/v1` authority for
+invite/cancel/accept/leave, stable membership identity, same-level living-member
+queries, game-departure cleanup, and reconnect continuity. Reward integration,
+party projection, hostility, and trade remain. This document defines those
+multiplayer gameplay systems without copying the legacy D2GS protocol.
 
 ## Executive conclusion
 

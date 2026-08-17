@@ -119,6 +119,24 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if second.HUD.Player.PlayerID != "alice-2" || second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
 	}
+	invitePayload, _ := json.Marshal(map[string]any{"target": "alice-2"})
+	if err := connected.Submit(ctx, gameserver.CommandIntent{TargetTick: connected.NextInputTick(time.Now()), Sequence: 1,
+		Kind: "party.invite", Payload: invitePayload}); err != nil {
+		t.Fatal(err)
+	}
+	waitForPartyInvite(t, ctx, host.Authority.State, "alice-1", "alice-2")
+	acceptPayload, _ := json.Marshal(map[string]any{"inviter": "alice-1"})
+	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: second.NextInputTick(time.Now()), Sequence: 1,
+		Kind: "party.accept", Payload: acceptPayload}); err != nil {
+		t.Fatal(err)
+	}
+	partyID := waitForPartyMembership(t, ctx, host.Authority.State, "alice-1", "alice-2")
+	if err := second.Reconnect(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if reconnectedParty := waitForPartyMembership(t, ctx, host.Authority.State, "alice-1", "alice-2"); reconnectedParty != partyID {
+		t.Fatalf("reconnect changed party identity from %q to %q", partyID, reconnectedParty)
+	}
 	if hostPeer, found := findWorldEntity(second.World.Entities, "player:alice-1", "player"); !found {
 		t.Fatalf("host player absent from second client's initial projection: %#v", second.World.Entities)
 	} else if hostPeer.Owner != "alice-1" || hostPeer.Class != "Amazon" || hostPeer.Token != "AM" || hostPeer.Position.X != 10 || hostPeer.Position.Y != 10 {
@@ -161,7 +179,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	secondHUD, secondWorld := second.View()
 	secondInitialTick, secondInitialX := secondWorld.Tick, secondWorld.Origin.X
 	secondCommandTick := second.NextInputTick(time.Now())
-	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: secondCommandTick, Sequence: 1,
+	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: secondCommandTick, Sequence: 2,
 		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +205,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stopWatch()
-	if err := connected.Submit(ctx, gameserver.CommandIntent{ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 1,
+	if err := connected.Submit(ctx, gameserver.CommandIntent{ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 2,
 		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
 		t.Fatal(err)
 	}
@@ -220,6 +238,57 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	stopRun()
 	assertCanceledLoop(t, ctx, runErrors, "session")
 	assertCanceledLoop(t, ctx, serveErrors, "QUIC")
+}
+
+type livePartyState struct {
+	Membership map[string]string                     `json:"membership"`
+	Invites    map[string]map[string]json.RawMessage `json:"invites"`
+}
+
+func readLivePartyState(t *testing.T, store *simulation.StateStore) livePartyState {
+	t.Helper()
+	registered, found := store.Read("d2legacy.party")
+	if !found {
+		t.Fatal("live party authority state is missing")
+	}
+	var state livePartyState
+	if err := json.Unmarshal(registered.Data, &state); err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func waitForPartyInvite(t *testing.T, ctx context.Context, store *simulation.StateStore, inviter, target string) {
+	t.Helper()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if state := readLivePartyState(t, store); state.Invites[target][inviter] != nil {
+			return
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("party invitation %s -> %s timed out: %v", inviter, target, ctx.Err())
+		}
+	}
+}
+
+func waitForPartyMembership(t *testing.T, ctx context.Context, store *simulation.StateStore, first, second string) string {
+	t.Helper()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		state := readLivePartyState(t, store)
+		if partyID := state.Membership[first]; partyID != "" && state.Membership[second] == partyID {
+			return partyID
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("party membership for %s/%s timed out: %v", first, second, ctx.Err())
+		}
+	}
 }
 
 func waitForTransformDatagram(t *testing.T, ctx context.Context, session *Session) {
