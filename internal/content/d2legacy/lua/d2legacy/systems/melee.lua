@@ -75,7 +75,10 @@ function M.register()
         -- One broad deterministic query supplies both attackers and candidate
         -- targets. Systems may not perform a hidden second ECS query while a
         -- tick is running.
-        query = { any = { "d2legacy.combat.basic_attack_request", "d2legacy.world.selectable" } },
+        query = {
+            any = { "d2legacy.combat.basic_attack_request", "d2legacy.world.selectable" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = {
             "d2legacy.combat.basic_attack_request",
             "d2legacy.world.selectable",

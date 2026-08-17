@@ -18,33 +18,7 @@ local M = {}
 local MAX_LEVEL_MONSTERS = 25
 local DENSITY_SCALE = 100000
 local PLAN_ID = "d2legacy.population.plan"
-local PLAN_SCHEMA = "d2legacy.population.plan/v2"
-
--- Every archived field is a scalar or semantic string ID. Entity references
--- and transient cross-entity event records are intentionally excluded from
--- this first inactive-unit slice.
-local ARCHIVE_COMPONENTS = {
-    "d2legacy.population.room_resident",
-    "d2legacy.monster.identity",
-    "d2legacy.monster.stats",
-    "d2legacy.combat.melee_profile",
-    "d2legacy.monster.appearance",
-    "d2legacy.monster.ai",
-    "d2legacy.combat.basic_attack_request",
-    "d2legacy.combat.attack_approach",
-    "d2legacy.combat.attack_animation",
-    "d2legacy.monster.death",
-    "d2legacy.world.position",
-    "d2legacy.world.velocity",
-    "d2legacy.world.facing",
-    "d2legacy.world.location",
-    "d2legacy.world.collider",
-    "d2legacy.world.occupancy",
-    "d2legacy.world.forced_motion",
-    "d2legacy.combat.knockback_target",
-    "engine.world.velocity_mover",
-    "d2legacy.world.selectable",
-}
+local PLAN_SCHEMA = "d2legacy.population.plan/v3"
 
 local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
@@ -195,7 +169,7 @@ function M.apply(command)
     for _, room in ipairs(zone.rooms) do
         room.activated = false
         room.active = false
-        room.archived = {}
+        room.inactive_residents = {}
     end
     zone.created = 0
     zone.installed = true
@@ -247,34 +221,46 @@ local function player_count(entities)
     return math.max(count, 1)
 end
 
-local function archive_room(room, entities, structural)
-    local archived = {}
+local function deactivate_room(room, entities, structural)
+    local residents = {}
     for _, entity in ipairs(entities) do
         local resident = ecs.get(entity, "d2legacy.population.room_resident")
-        if resident and resident:get("room_id") == room.id then
-            local components = {}
-            for _, name in ipairs(ARCHIVE_COMPONENTS) do
-                local component = ecs.get(entity, name)
-                if component then
-                    components[name] = component:snapshot()
-                end
-            end
-            local identity = assert(components["d2legacy.monster.identity"], "room resident has no monster identity")
-            archived[#archived + 1] = { spawn_id = identity.spawn_id, components = components }
-            structural:destroy(entity)
+        local inactive = ecs.get(entity, "d2legacy.world.inactive")
+        if resident and not inactive and resident:get("room_id") == room.id then
+            local identity =
+                assert(ecs.get(entity, "d2legacy.monster.identity"), "room resident has no monster identity")
+            residents[#residents + 1] = { spawn_id = identity:get("spawn_id") }
+            structural:set(entity, "d2legacy.world.inactive", {})
+            -- The engine velocity integrator uses its own opt-in empty tag.
+            -- Remove that activation surface while the mod-owned inactive tag
+            -- suppresses authoritative Lua systems and presentation queries.
+            structural:remove(entity, "engine.world.velocity_mover")
         end
     end
-    table.sort(archived, function(left, right)
+    table.sort(residents, function(left, right)
         return left.spawn_id < right.spawn_id
     end)
-    room.archived = archived
+    room.inactive_residents = residents
 end
 
-local function restore_room(room, structural)
-    for _, archived in ipairs(room.archived or {}) do
-        structural:create(archived.components)
+local function restore_room(room, entities, structural)
+    local wanted = {}
+    for _, resident in ipairs(room.inactive_residents or {}) do
+        wanted[resident.spawn_id] = true
     end
-    room.archived = {}
+    for _, entity in ipairs(entities) do
+        local identity = ecs.get(entity, "d2legacy.monster.identity")
+        local inactive = ecs.get(entity, "d2legacy.world.inactive")
+        if identity and inactive and wanted[identity:get("spawn_id")] then
+            structural:remove(entity, "d2legacy.world.inactive")
+            structural:set(entity, "engine.world.velocity_mover", {})
+            wanted[identity:get("spawn_id")] = nil
+        end
+    end
+    for spawn_id in pairs(wanted) do
+        error("inactive room resident is missing: " .. spawn_id)
+    end
+    room.inactive_residents = {}
 end
 
 local function activate(context, entities, structural)
@@ -290,11 +276,11 @@ local function activate(context, entities, structural)
     for _, room in ipairs(plan.rooms) do
         local wanted = active[room.id] == true
         if room.active and not wanted then
-            archive_room(room, entities, structural)
+            deactivate_room(room, entities, structural)
             room.active, changed = false, true
         elseif wanted and not room.active then
-            if #(room.archived or {}) > 0 then
-                restore_room(room, structural)
+            if #(room.inactive_residents or {}) > 0 then
+                restore_room(room, entities, structural)
             elseif not room.activated then
                 if not level then
                     level = assert(
@@ -364,6 +350,7 @@ function M.register()
             "d2legacy.combat.knockback_target",
             "engine.world.velocity_mover",
             "d2legacy.world.selectable",
+            "d2legacy.world.inactive",
         },
         write = {
             "d2legacy.monster.identity",
@@ -386,6 +373,7 @@ function M.register()
             "d2legacy.combat.knockback_target",
             "engine.world.velocity_mover",
             "d2legacy.world.selectable",
+            "d2legacy.world.inactive",
         },
         update = activate,
     })

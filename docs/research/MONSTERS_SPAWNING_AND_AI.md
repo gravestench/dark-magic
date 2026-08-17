@@ -309,13 +309,16 @@ Room streaming must preserve all deterministic AI/combat/state/RNG information n
 
 Do not despawn a monster merely because its render node was culled.
 
-Current implementation status: `d2legacy.population.plan/v2` now keeps a
-deterministic inactive archive per generated room. Ordinary generated monsters
-carry a semantic room-resident component, and the occupied-room-plus-neighbors
-policy archives/restores their current component-owned identity, stats, combat,
-appearance, AI/action, death, motion, location, collision, and selection facts.
-Checkpoint continuation proves deactivate/restore/reactivate parity. External
-state-instance/event graphs, owned units, corpses/items/objects, and exact 1.14d
+Current implementation status: `d2legacy.population.plan/v3` keeps stable
+inactive resident IDs per generated room. Ordinary generated monsters retain
+their ECS entity and full component/relationship graph; the deterministic
+occupied-room-plus-neighbors policy adds an empty `d2legacy.world.inactive`
+filter tag and removes the velocity-movement opt-in rather than copying an
+allowlisted scalar record and destroying the entity. Lua simulation systems and
+local/remote presentation projections exclude inactive residents. Checkpoint
+continuation preserves timed-state, stat-source, and state-event target
+references and proves deactivate/restore/reactivate parity. Owned-unit graphs,
+corpses/items/objects/projectiles, inactive timer-aging policy, and exact 1.14d
 activation or long-inactive mutation policy remain unresolved.
 
 ## Death, corpses, resurrection
@@ -434,10 +437,11 @@ Add explicit leader/minion relationships and one command-sharing/group behavior.
 
 ### M-AI5 — quality and lifecycle (partial)
 
-Death/corpse and XP/loot event integration plus the first ordinary-monster room
-inactivation/resume path are implemented. Champion/unique modifier composition,
-external state graphs, specialized corpses, and broader inactive-unit kinds
-remain.
+Death/corpse and XP/loot event integration plus the first persistent-identity
+ordinary-monster room inactivation/resume path are implemented. Timed-state,
+stat-source, and state-event references survive that path. Champion/unique
+modifier composition, owned-unit/item/object/projectile activation graphs,
+specialized corpses, and broader inactive-unit kinds remain.
 
 ## Verification backlog
 

@@ -176,6 +176,7 @@ function M.monster_snapshots()
             "d2legacy.world.facing",
             "d2legacy.world.location",
         },
+        none = { "d2legacy.world.inactive" },
     })
     for _, entity in ipairs(entities) do
         local identity = ecs.get(entity, "d2legacy.monster.identity"):snapshot()
@@ -226,6 +227,7 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
                 "d2legacy.world.facing",
                 "d2legacy.world.location",
             },
+            none = { "d2legacy.world.inactive" },
         }))
     do
         local identity = ecs.get(entity, "d2legacy.player.identity")
@@ -364,6 +366,7 @@ function M.warp_snapshots()
                 "d2legacy.world.location",
                 "d2legacy.world.selectable",
             },
+            none = { "d2legacy.world.inactive" },
         }))
     do
         local appearance = ecs.get(entity, "d2legacy.world.warp_appearance")

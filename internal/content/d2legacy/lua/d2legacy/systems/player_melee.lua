@@ -154,7 +154,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.combat.player_melee_approach",
         phase = "pre_simulation",
-        query = { any = { "d2legacy.combat.attack_approach", "d2legacy.world.selectable" } },
+        query = {
+            any = { "d2legacy.combat.attack_approach", "d2legacy.world.selectable" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = {
             "d2legacy.combat.attack_approach",
             "d2legacy.world.selectable",

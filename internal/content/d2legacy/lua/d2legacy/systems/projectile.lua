@@ -130,7 +130,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.missile.contact",
         phase = "combat",
-        query = { any = { "d2legacy.missile.projectile", "d2legacy.world.selectable" } },
+        query = {
+            any = { "d2legacy.missile.projectile", "d2legacy.world.selectable" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = {
             "d2legacy.missile.projectile",
             "d2legacy.world.position",

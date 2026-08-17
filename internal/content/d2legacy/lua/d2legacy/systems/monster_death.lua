@@ -189,6 +189,7 @@ function M.register()
                 "d2legacy.world.selectable",
                 "d2legacy.player.identity",
             },
+            none = { "d2legacy.world.inactive" },
         },
         read = {
             "d2legacy.monster.stats",

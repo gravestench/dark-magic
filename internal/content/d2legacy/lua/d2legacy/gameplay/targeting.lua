@@ -72,6 +72,7 @@ function M.selectable_at(pointer_x, pointer_y, level_id)
     for _, entity in
         ipairs(ecs.query({
             all = { "d2legacy.world.selectable", "d2legacy.world.position" },
+            none = { "d2legacy.world.inactive" },
         }))
     do
         local candidate = copy_candidate(entity, pointer_x, pointer_y, level_id)

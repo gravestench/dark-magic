@@ -50,7 +50,8 @@ function M.snapshot()
         if context:get("owner") == local_owner() then
             local target = context:get("target")
             local value = target and ecs.get(target, "d2legacy.interaction.target") or nil
-            if not value then
+            local inactive = target and ecs.get(target, "d2legacy.world.inactive") or nil
+            if not value or inactive then
                 return { active = false, categories = {}, services = {} }
             end
             return {

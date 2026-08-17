@@ -43,6 +43,7 @@ function M.register()
                 "d2legacy.state.instance",
                 "d2legacy.world.selectable",
             },
+            none = { "d2legacy.world.inactive" },
         },
         read = {
             "d2legacy.combat.melee_event",

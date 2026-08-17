@@ -76,7 +76,10 @@ function M.register()
     ecs.system({
         id = "d2legacy.world.environment_cycle",
         phase = "pre_simulation",
-        query = { any = { "d2legacy.world.environment", "d2legacy.world.location" } },
+        query = {
+            any = { "d2legacy.world.environment", "d2legacy.world.location" },
+            none = { "d2legacy.world.inactive" },
+        },
         read = { "d2legacy.world.environment", "d2legacy.world.location" },
         write = { "d2legacy.world.environment" },
         update = function(_, entities, structural)

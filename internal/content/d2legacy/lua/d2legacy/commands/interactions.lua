@@ -53,6 +53,7 @@ local function target_by_id(id)
     for _, entity in
         ipairs(ecs.query({
             all = { "d2legacy.interaction.target" },
+            none = { "d2legacy.world.inactive" },
         }))
     do
         local value = ecs.get(entity, "d2legacy.interaction.target")
@@ -109,6 +110,7 @@ local function target_at(owner, x, y)
     for _, entity in
         ipairs(ecs.query({
             all = { "d2legacy.interaction.target" },
+            none = { "d2legacy.world.inactive" },
         }))
     do
         local target = ecs.get(entity, "d2legacy.interaction.target")

@@ -7,8 +7,8 @@ return test.suite({
         test.case("selects_by_priority_distance_and_stable_id", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
-                local function spawn(id, kind, x, priority)
-                    ecs.create({
+                local function spawn(id, kind, x, priority, inactive)
+                    local components = {
                         ["d2legacy.world.position"] = { x = x, y = 10 },
                         ["d2legacy.world.selectable"] = {
                             id = id,
@@ -18,11 +18,16 @@ return test.suite({
                             radius = 3,
                             priority = priority,
                         },
-                    })
+                    }
+                    if inactive then
+                        components["d2legacy.world.inactive"] = {}
+                    end
+                    ecs.create(components)
                 end
                 spawn("near", "npc", 10, 0)
                 spawn("far", "npc", 12, 0)
                 spawn("item", "item", 12, 5)
+                spawn("inactive", "monster", 10, 100, true)
                 spawn("distance-near", "npc", 20, 0)
                 spawn("distance-far", "npc", 22, 0)
                 spawn("stable-b", "npc", 30, 0)
