@@ -310,7 +310,11 @@ and monster chase exist. Still required:
   class/stat speed, and exhaustion correction. Explicit locomotion
   replaces attack approach, exhaustion downgrades the same fact, and relocation
   clears ownership instead of relying on zero velocity as an implicit signal.
-- [ ] Keep presentation animation rate separate from authoritative distance.
+- [x] Keep presentation animation rate separate from authoritative distance.
+  Simulation integrates only committed velocity; player composite cadence comes
+  from the mode/weapon-class `AnimData.d2` record and presentation/network time.
+  A focused regression proves Faster Run/Walk and different displacement cannot
+  change the WL/RN playback clock or frame selection.
 
 ### G6 — Dynamic occupancy and knockback
 

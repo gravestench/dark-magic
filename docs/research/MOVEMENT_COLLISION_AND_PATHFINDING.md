@@ -485,7 +485,10 @@ kind, direction/target, and requested run mode into class/stat-derived velocity,
 WL/RN mode, and stamina execution. Explicit locomotion replaces attack approach,
 exhaustion downgrades run intent, and relocation clears ownership. Raw velocity
 is now an execution output rather than the signal used to infer which player
-action owns movement. Extend the strategy vocabulary for forced motion in MV4.
+action owns movement. Player composite playback separately consumes the
+mode/weapon-class `AnimData.d2` rate and presentation/network time; velocity,
+Faster Run/Walk, and integrated distance cannot advance its frame clock. Extend
+the strategy vocabulary for forced motion in MV4.
 
 ### MV3 — dynamic occupancy
 
