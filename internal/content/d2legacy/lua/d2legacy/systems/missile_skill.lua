@@ -35,6 +35,7 @@ local function projectile_components(caster, cast, definition)
             previous_y = position:get("y"),
             remaining_ticks = definition.lifetime_ticks,
             collision_radius = definition.collision_radius,
+            knockback_value = definition.knockback_value,
             minimum_damage_raw = definition.minimum_damage_raw,
             maximum_damage_raw = definition.maximum_damage_raw,
             damage_channel = definition.damage_channel,

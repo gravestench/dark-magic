@@ -46,6 +46,16 @@ local function integer_or(row, column, fallback)
     return math.floor(value)
 end
 
+local function byte_or(row, column, fallback, label)
+    local authored = row[column]
+    if authored == nil or authored == "" then
+        return fallback
+    end
+    local value = tonumber(authored)
+    assert(value and value >= 0 and value <= 255 and value == math.floor(value), label .. " has invalid " .. column)
+    return value
+end
+
 local function decode(skill, missile)
     local skill_id = assert(tonumber(skill.Id), "straight-missile skill has no numeric ID")
     local label = skill.skill or ("skill " .. skill_id)
@@ -79,6 +89,9 @@ local function decode(skill, missile)
         lifetime_ticks = lifetime,
         maximum_range = velocity * lifetime / 25,
         collision_radius = required_integer(missile, "Size", nil, label) / 2,
+        -- Preserve the target-authored byte without yet assigning binary-owned
+        -- chance/result semantics to it.
+        knockback_value = byte_or(missile, "KnockBack", 0, label),
         damage_channel = damage_channel,
         missile_id = missile_id,
         dcc = "data/global/missiles/" .. cel .. ".dcc",
