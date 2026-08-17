@@ -109,6 +109,7 @@ function M.register()
         { name = "eclipse", type = "bool" },
     })
     component("d2legacy.world.collider", { { name = "radius", type = "f64" } })
+    component("d2legacy.world.occupancy", { { name = "blocks_movement", type = "bool" } })
     component("d2legacy.world.selectable", {
         { name = "id", type = "string" },
         { name = "kind", type = "string" },

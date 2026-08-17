@@ -249,6 +249,7 @@ function M.apply(command)
         ["d2legacy.world.location"] = { act = p.act, level_id = p.level_id },
         -- A player occupies two subtiles across in legacy D2: radius one.
         ["d2legacy.world.collider"] = { radius = 1 },
+        ["d2legacy.world.occupancy"] = { blocks_movement = true },
         ["d2legacy.world.selectable"] = {
             id = "player:" .. p.player,
             kind = "player",

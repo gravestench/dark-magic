@@ -109,6 +109,7 @@ function M.components(command, game_player_count)
         ["d2legacy.world.facing"] = { direction = 0, directions = 8 },
         ["d2legacy.world.location"] = { act = spawn.act, level_id = spawn.level_id },
         ["d2legacy.world.collider"] = { radius = definition.collider_radius },
+        ["d2legacy.world.occupancy"] = { blocks_movement = true },
         ["engine.world.velocity_mover"] = {},
         ["d2legacy.world.selectable"] = {
             id = "monster:" .. spawn.spawn_id,

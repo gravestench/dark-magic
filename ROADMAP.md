@@ -5,7 +5,8 @@ the target-locked party-XP probe contract, and the G5 production Warp Lab,
 post-warp route invalidation, semantic motion ownership, stat-derived locomotion
 playback, pinned class movement/stamina, authoritative drain/recovery/FRW,
 armor/shield/cold-source ordering, and progression/source-derived maximum-
-stamina plus environment-period source slices. G9 remains current through
+stamina plus environment-period source slices, and the first G6 deterministic
+dynamic-occupancy boundary. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -355,10 +356,23 @@ and monster chase exist. Still required:
 
 ### G6 — Dynamic occupancy and knockback
 
-Status: **not started**.
+Status: **partial**.
 
-- [ ] Separate unit footprint from movement collision policy.
-- [ ] Resolve multi-unit space contention deterministically without scheduler-race winners.
+- [x] Separate unit footprint radius from an explicit `blocks_movement`
+  occupancy policy. Players and living monsters opt in; monster death already
+  removes the collider, and inactive-monster archive/restore now carries the
+  policy with the rest of the unit graph.
+- [x] Resolve same-level multi-unit motion contention in stable ECS order using
+  current plus already-committed positions. Axis-separated static collision and
+  dynamic circle footprints compose without renderer geometry; simultaneous
+  contenders cannot swap or enter the same occupied space, and an explicit
+  nonblocking unit remains passable. Admission and warp anchors may begin in a
+  temporary overlap, so movement that strictly increases separation is allowed
+  while entry or deeper overlap remains blocked. Checkpoint parity pins both
+  decisions.
+- [ ] Verify target-runtime category rules for players, monsters, hirelings,
+  summons, NPCs, and corpses, then decide which categories participate in A*
+  planning versus only fixed-tick motion resolution.
 - [ ] Add a semantic knockback request resolved by movement/collision authority.
 - [ ] Cover blocked, partial, competing, replay, and checkpoint cases.
 

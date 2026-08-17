@@ -216,7 +216,20 @@ The F3/F4/F5 world diagnostics that recently landed are valuable tools for valid
 
 Ordinary navigation currently checks static map flags plus the mover's radius. Full gameplay needs dynamic occupancy policy.
 
-Questions include:
+The first motion-resolution boundary is now implemented. `world.collider`
+continues to describe continuous footprint radius, while a separate
+`world.occupancy.blocks_movement` fact decides whether that footprint blocks
+ordinary unit motion. Players and living monsters carry both facts; inactive
+monster archive/restore retains them. The Lua movement phase processes stable
+ECS order and consults each other same-level unit's current or already-committed
+position during both axis steps. Two contenders therefore cannot swap through
+one another or enter the same footprint, and an explicitly nonblocking unit is
+passable. Admission and warp placement can temporarily overlap footprints; a
+unit may move only when its candidate position strictly increases separation,
+preventing that transient condition from trapping locomotion. Static DT1
+collision remains an independent input.
+
+Remaining target questions include:
 
 - do monsters block players and each other during planning or only during motion resolution?
 - can friendly owned units be pushed/passed?
@@ -225,7 +238,8 @@ Questions include:
 - do missiles use entity collision in path planning, contact checks, or both?
 - when multiple entities attempt to enter the same space on one tick, which stable ordering resolves the conflict?
 
-Do not solve this with nondeterministic mutex/timing winner behavior. Fixed-tick entity movement must have deterministic conflict policy.
+The remaining planning and category rules must extend this deterministic fixed-
+tick policy; they must not introduce mutex/timing winners.
 
 ## Doors and objects
 
@@ -539,7 +553,11 @@ MV4.
 
 ### MV3 — dynamic occupancy
 
-Add deterministic unit-footprint occupancy/contact resolution with synthetic multi-unit conflict tests.
+Deterministic same-level unit-footprint occupancy/contact resolution now covers
+simultaneous contenders, explicit nonblocking policy, archive/restore, and
+checkpoint parity, including escape from a pre-existing admission/warp overlap.
+Extend it with target-verified unit categories and decide which dynamic
+footprints affect A* planning before calling MV3 complete.
 
 ### MV4 — forced movement
 
