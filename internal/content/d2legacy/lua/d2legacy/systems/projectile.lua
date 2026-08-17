@@ -8,6 +8,7 @@ local ecs = require("engine.ecs/v1")
 local damage = require("d2legacy.policy.damage")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
 local geometry = require("d2legacy.policy.geometry")
+local population = require("d2legacy.bootstrap.population")
 
 local M = {}
 
@@ -74,7 +75,7 @@ local function first_contact(projectile_entity, projectile, position, location, 
             end
         end
     end
-    return best
+    return best, best_along
 end
 
 local function emit_hit(context, projectile, target, result, structural)
@@ -92,6 +93,71 @@ local function emit_hit(context, projectile, target, result, structural)
         },
         ["d2legacy.combat.damage_bundle"] = damage_bundle.stage_component(result.rolled, result.mitigated),
     })
+end
+
+local function apply_hit(context, projectile, target, structural)
+    local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
+    local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
+    local result = damage.resolve(target.entity, bundle, ecs)
+    emit_hit(context, projectile, target, result, structural)
+end
+
+local function impact_targets(projectile, location, targets, x, y)
+    local result = {}
+    for _, target in ipairs(targets) do
+        if
+            target.id ~= projectile:get("owner_id")
+            and target.act == location:get("act")
+            and target.level_id == location:get("level_id")
+        then
+            local dx, dy = target.x - x, target.y - y
+            local radius = projectile:get("impact_radius") + target.radius
+            if dx * dx + dy * dy <= radius * radius then
+                result[#result + 1] = target
+            end
+        end
+    end
+    return result
+end
+
+local function emit_impact(context, projectile, target, location, x, y, structural)
+    local effect_id = projectile:get("cast_id") .. ":impact:" .. target.id .. ":tick:" .. context.tick
+    local components = {
+        ["d2legacy.world.position"] = { x = x, y = y },
+        ["d2legacy.world.location"] = location:snapshot(),
+        ["d2legacy.missile.effect"] = {
+            owner_id = projectile:get("owner_id"),
+            cast_id = projectile:get("cast_id"),
+            remaining_ticks = projectile:get("impact_lifetime_ticks"),
+            missile_id = projectile:get("impact_missile_id"),
+            dcc = projectile:get("impact_dcc"),
+            palette = projectile:get("impact_palette"),
+            travel_sound = projectile:get("impact_sound"),
+            hit_sound = projectile:get("hit_sound"),
+            directions = projectile:get("impact_directions"),
+            logical_direction = 0,
+            frames_per_second = projectile:get("impact_frames_per_second"),
+            loop = projectile:get("impact_loop"),
+            offset_x = 0,
+            offset_y = 0,
+            offset_z = 0,
+        },
+    }
+    local resident = population.resident_at(effect_id, location:get("level_id"), x, y)
+    if resident then
+        components["d2legacy.world.room_resident"] = resident
+    end
+    structural:create(components)
+end
+
+local function age_effects(effects, structural)
+    for _, entity in ipairs(effects) do
+        local effect = ecs.get(entity, "d2legacy.missile.effect")
+        effect:set("remaining_ticks", effect:get("remaining_ticks") - 1)
+        if effect:get("remaining_ticks") <= 0 then
+            structural:destroy(entity)
+        end
+    end
 end
 
 local function resolve_contacts(context, entities, structural)
@@ -120,12 +186,19 @@ local function resolve_contacts(context, entities, structural)
         if projectile then
             local position = ecs.get(entity, "d2legacy.world.position")
             local location = ecs.get(entity, "d2legacy.world.location")
-            local target = first_contact(entity, projectile, position, location, targets, locks)
+            local target, along = first_contact(entity, projectile, position, location, targets, locks)
             if target then
-                local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
-                local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
-                local result = damage.resolve(target.entity, bundle, ecs)
-                emit_hit(context, projectile, target, result, structural)
+                if projectile:get("impact_radius") > 0 then
+                    local previous_x, previous_y = projectile:get("previous_x"), projectile:get("previous_y")
+                    local impact_x = previous_x + (position:get("x") - previous_x) * along
+                    local impact_y = previous_y + (position:get("y") - previous_y) * along
+                    for _, area_target in ipairs(impact_targets(projectile, location, targets, impact_x, impact_y)) do
+                        apply_hit(context, projectile, area_target, structural)
+                    end
+                    emit_impact(context, projectile, target, location, impact_x, impact_y, structural)
+                else
+                    apply_hit(context, projectile, target, structural)
+                end
                 local delay = projectile:get("next_hit_delay")
                 if delay > 0 then
                     local key = contact_key(projectile, target.id)
@@ -191,8 +264,26 @@ function M.register()
             "d2legacy.combat.event",
             "d2legacy.combat.damage_bundle",
             "d2legacy.missile.contact_lock",
+            "d2legacy.missile.effect",
+            "d2legacy.world.position",
+            "d2legacy.world.location",
+            "d2legacy.world.room_resident",
         },
         update = resolve_contacts,
+    })
+
+    ecs.system({
+        id = "d2legacy.missile.effect_lifetime",
+        phase = "movement",
+        query = {
+            all = { "d2legacy.missile.effect" },
+            none = { "d2legacy.world.inactive" },
+        },
+        read = { "d2legacy.missile.effect" },
+        write = { "d2legacy.missile.effect" },
+        update = function(_, effects, structural)
+            age_effects(effects, structural)
+        end,
     })
 end
 

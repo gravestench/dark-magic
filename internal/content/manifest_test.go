@@ -409,7 +409,11 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// presentation-coverage verified both files in the mounted archive.
 	// The Create Game pane uses the archive-authored four-state numeric arrow
 	// sheet for its capacity and character-level restriction selectors.
-	const auditedFingerprint = "9e4c4d422f267816d991786de1e828759b7d01ddfaf4f9dab9eeae2b2d2140be"
+	// Fire Ball's record-driven impact projection adds the owned
+	// ExpArrowExplode DCC to the static Lua/test inventory. It remains under the
+	// existing dynamic missile prefix until record-derived presentation paths
+	// migrate into a generated manifest.
+	const auditedFingerprint = "2090cf86802f0664ebd168400fa457d7a957ed8b4e38fa40a5ab10be2640723f"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

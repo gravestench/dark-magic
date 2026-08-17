@@ -19,6 +19,11 @@
       "evidence_status": "owned-target-records-and-official-pvm-effect-partial"
     },
     {
+      "skill_id": 47,
+      "family": "missile.straight-impact-area",
+      "evidence_status": "owned-target-records-and-localized-impact-intent-partial"
+    },
+    {
       "skill_id": 48,
       "family": "missile.radial",
       "evidence_status": "owned-target-records-and-localized-intent-partial"

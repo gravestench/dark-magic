@@ -334,7 +334,7 @@ function M.missile_snapshots()
     local result = {}
     -- Projectile schemas are d2legacy authority facts. Presentation copies
     -- either supported shape without deciding how the projectile behaves.
-    for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile" }) do
+    for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile", "d2legacy.missile.effect" }) do
         local ok, entities = pcall(ecs.query, {
             all = {
                 component,

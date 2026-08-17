@@ -58,6 +58,7 @@ local function decode(skill, missiles)
     local animation_speed = tonumber(missile.AnimSpeed) or 16
     return {
         behavior = "missile.radial",
+        trajectory = "radial",
         skill_id = id,
         mana_cost_raw = shifted_mana(skill, "mana", label),
         mana_cost_per_level_raw = shifted_mana(skill, "lvlmana", label),
@@ -76,6 +77,15 @@ local function decode(skill, missiles)
         collision_radius = integer(missile, "Size", label, 1) / 2,
         destroy_on_contact = false,
         next_hit_delay = integer(missile, "NextDelay", label, 1),
+        impact_radius = 0,
+        impact_missile_id = "",
+        impact_dcc = "",
+        impact_palette = "",
+        impact_lifetime_ticks = 0,
+        impact_directions = 1,
+        impact_frames_per_second = 1,
+        impact_loop = false,
+        impact_sound = "",
         damage_channel = channel,
         missile_id = missile_id,
         dcc = "data/global/missiles/" .. cel .. ".dcc",
