@@ -90,6 +90,7 @@ func authoritativeCapabilityVersions() map[string]string {
 		"engine.authority_command": "v1",
 		"engine.authority_random":  "v1",
 		"engine.authority_state":   "v1",
+		"engine.animdata":          "v1",
 		"engine.data":              "v1",
 		"engine.deterministic":     "v1",
 		"engine.ecs":               "v1",

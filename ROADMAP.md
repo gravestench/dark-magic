@@ -2,8 +2,8 @@
 
 Status: fully refreshed through the G4 player-population/override correction,
 the target-locked party-XP probe contract, and the G9 target-locked mounted-data,
-localized skill evidence, generic melee action, missile, timed-state, and
-reactive-state slices on 2026-08-16.
+localized skill evidence, AnimData-timed generic melee action, missile, timed-
+state, and reactive-state slices on 2026-08-16.
 
 This file is the implementation-status authority. The documents under
 `docs/research/` are the fidelity and evidence authorities. A checked item here
@@ -116,6 +116,8 @@ Still required:
 - [x] Narrow its byte input from the presentation-inclusive mounted asset set to
   the effective authoritative `.txt` data paths and preserve their winning
   layer/path provenance.
+- [x] Include the effective `AnimData.d2` binary in that same immutable
+  generation now that its fixed-point records schedule gameplay action events.
 - [x] Pin copied immutable record bytes for one live authority; invalidation can
   only reparse that generation, while source edits or mount changes create a
   different store and generation for a future authority.
@@ -335,6 +337,9 @@ runtime composition and the coverage report.
 - [x] Replace Attack's skill-ID-zero command branch with an exact-ID,
   definition-driven `action.melee` family routed through the same learned-skill,
   resource, cast, effect, and completion lifecycle as mana-costing skills.
+- [x] Replace fallback base melee impact/completion ticks with the definition's
+  animation mode plus the actor/weapon composite's pinned AnimData fixed-point
+  attack event and cursor-wrap schedule.
 - [x] Prove the definition decoder handles multiple authored configurations
   without skill-name/ID branches; keep the second configuration synthetic so it
   does not claim incomplete behavior for another retail skill.
@@ -408,15 +413,22 @@ Ordinary Attack is now the first `action.melee` configuration rather than an
 exception outside the skill system. Its exact Expansion 1.14d Skills.txt row
 must declare ID 0, server/client start and do functions 1/1, the A1 weapon
 action, attack-rate and target/search flags, weapon source damage, and zero mana
-before the decoder constructs its immutable definition. `player.use_skill`
+before the decoder constructs its immutable definition. The mode is carried
+through the generic cast event and combined with the actor token and equipped
+weapon class. The session-pinned `AnimData.d2` record then supplies its 24.8
+rate, frame count, and typed event bytes through renderer-free
+`engine.animdata/v1`; Lua schedules the first attack marker and cursor wrap at
+integer simulation ticks. The owned unarmed Amazon `AMA1HTH` record is 13
+frames at rate 256 with its attack event on frame 8, producing impact/completion
+delays of 8/13 ticks before attack-rate modifiers. `player.use_skill`
 creates the same generic cast request used by Fire Bolt and Frozen Armor; the
 shared lifecycle verifies the authoritative learned level and accepts the
 literal zero cost, then a family adapter emits the reusable approach, selected-
 hand, animation, and impact action. No command, component, or system branches
 on Attack's ID or name, and a synthetic second-row decoder test proves family
 reuse without claiming another retail melee skill. Exact 1.14d target/range/LOS
-checks and AnimData-derived action timing remain incomplete, so this does not
-admit Bash, Jab, or any other superficially similar row.
+checks remain incomplete, so this does not admit Bash, Jab, or any other
+superficially similar row.
 
 The shared lifecycle rejects a mana-costing skill before creating its cast when
 the authoritative 8.8 fixed-point balance is below the computed cost. It
@@ -429,9 +441,8 @@ Fire Bolt has owned-target record evidence. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: replace Attack's reviewed fallback animation ticks with target-derived
-AnimData action timing and complete its target/range/LOS admission boundary;
-in evidence order, finish Frozen Armor's remaining target-sensitive cold-
+Next: complete Attack's target/range/LOS admission boundary and probe/admit its
+attack-rate modifier formula; in evidence order, finish Frozen Armor's remaining target-sensitive cold-
 duration/PvP rules. Then use the report to select one high-leverage missing
 target/point/area signature. Evidence upgrades and exact-ID declarations land
 together; no declaration is added merely because another skill shares server

@@ -5,6 +5,7 @@
 -- lets melee resolution choose an enemy already within weapon reach.
 
 local ecs = require("engine.ecs/v1")
+local animdata = require("engine.animdata/v1")
 local direction = require("d2legacy.policy.direction")
 local melee = require("d2legacy.policy.melee")
 local weapon_selection = require("d2legacy.policy.weapon_selection")
@@ -77,23 +78,39 @@ local function attack_hand(attacker, selector, sequence_frame)
     )
 end
 
-local function start_swing(context, attacker, skill_id, target_id, dx, dy, selector, structural)
-    stop(attacker, "A1", context.tick)
+local function action_timing(attacker, mode)
+    local appearance = assert(ecs.get(attacker, "d2legacy.player.appearance"), "player has no composite appearance")
+    local key = string.upper(appearance:get("token") .. mode .. appearance:get("weapon_class"))
+    local timing, err = animdata.record(key)
+    assert(timing, err or ("missing authoritative AnimData record " .. key))
+    local impact_delay
+    for _, event in ipairs(timing.events) do
+        if event.kind == "attack" then
+            impact_delay = impact_delay and math.min(impact_delay, event.delay) or event.delay
+        end
+    end
+    assert(impact_delay, "AnimData record " .. key .. " has no attack event")
+    assert(impact_delay < timing.complete_delay, "AnimData attack event must precede completion for " .. key)
+    return impact_delay, timing.complete_delay
+end
+
+local function start_swing(context, attacker, skill_id, target_id, dx, dy, selector, mode, structural)
+    stop(attacker, mode, context.tick)
     local facing = ecs.get(attacker, "d2legacy.world.facing")
     if facing and (dx ~= 0 or dy ~= 0) then
         facing:set("direction", direction.quantize(dx, dy, facing:get("directions")))
     end
-    -- These reviewed fallback ticks keep simulation independent of renderer
-    -- frames. Typed AnimData timing will replace the defaults through mod data.
+    local impact_delay, complete_delay = action_timing(attacker, mode)
     local attack = {
         skill_id = skill_id,
         target_id = target_id,
         start_tick = context.tick,
-        impact_tick = context.tick + 3,
-        complete_tick = context.tick + 8,
+        impact_tick = context.tick + impact_delay,
+        complete_tick = context.tick + complete_delay,
         impact_fired = false,
         weapon_selection = selector,
         hand = attack_hand(attacker, selector, context.tick),
+        animation_mode = mode,
     }
     structural:set(attacker, "d2legacy.combat.attack_animation", attack)
     animation_event(structural, attacker, attack, "attack_started", context.tick)
@@ -132,6 +149,7 @@ function M.register()
                                 target_x = event:get("target_x"),
                                 target_y = event:get("target_y"),
                                 weapon_selection = event:get("weapon_selection"),
+                                animation_mode = event:get("animation_mode"),
                             })
                         end
                     end
@@ -152,6 +170,7 @@ function M.register()
             "d2legacy.world.location",
             "d2legacy.world.collider",
             "d2legacy.combat.melee_profile",
+            "d2legacy.player.appearance",
         },
         write = {
             "d2legacy.combat.attack_approach",
@@ -181,6 +200,7 @@ function M.register()
                             approach:get("target_x") - position:get("x"),
                             approach:get("target_y") - position:get("y"),
                             approach:get("weapon_selection"),
+                            approach:get("animation_mode"),
                             structural
                         )
                     elseif not target then
@@ -206,6 +226,7 @@ function M.register()
                                 dx,
                                 dy,
                                 approach:get("weapon_selection"),
+                                approach:get("animation_mode"),
                                 structural
                             )
                         elseif length > 0 then

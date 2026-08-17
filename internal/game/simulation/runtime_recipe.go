@@ -11,8 +11,8 @@ import (
 const (
 	RuntimeRecipeSchema      = "dark-magic.runtime-recipe/v2"
 	RuntimeNetworkProtocol   = "dark-magic.game-session/v2"
-	GameDataGenerationSchema = "dark-magic.game-data-generation/v1"
-	RecordParserSchema       = "dark-magic.records-tsv/v1"
+	GameDataGenerationSchema = "dark-magic.game-data-generation/v2"
+	RecordParserSchema       = "dark-magic.authoritative-records/v2"
 	// EmptyAssetSetID is the canonical identity for runtimes with no external
 	// mounted game data, such as hermetic unit tests and synthetic fixtures.
 	EmptyAssetSetID = "sha256:4b5f42b9b0f48dc738578940d8ca3db3eaac90364a5106411f83012d47998ef6"

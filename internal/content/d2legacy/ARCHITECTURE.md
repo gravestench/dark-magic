@@ -200,7 +200,8 @@ UI submits player.use_skill
   -> commands/cast.lua validates assignment and writes skill.cast_request
   -> systems/cast.lua admits exact skill ID 0 at its row-derived zero mana cost
   -> systems/melee_skill.lua emits the generic action.melee effect
-  -> systems/player_melee.lua owns approach and attack-animation state
+  -> systems/player_melee.lua selects pinned AnimData timing by actor/mode/weapon
+     and owns approach plus attack-animation state
   -> impact creates combat.basic_attack_request
   -> systems/melee.lua resolves range, AR/defense, hit, damage, and health
   -> combat.melee_event records the outcome for presentation/diagnostics

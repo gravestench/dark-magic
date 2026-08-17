@@ -30,6 +30,7 @@ function M.register(definitions)
                             skill_id = cast:get("skill_id"),
                             skill_level = cast:get("skill_level"),
                             behavior = definition.behavior,
+                            animation_mode = definition.animation_mode,
                             weapon_selection = definition.weapon_selection,
                             target_x = cast:get("target_x"),
                             target_y = cast:get("target_y"),

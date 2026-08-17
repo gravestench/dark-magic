@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"sort"
 	"strings"
 	"testing/fstest"
 )
@@ -14,9 +15,10 @@ import (
 var ErrNoAuthoritativeTables = errors.New("recordstore: no authoritative tables")
 
 const (
-	GenerationSchema  = "dark-magic.game-data-generation/v2"
-	ParserSchema      = "dark-magic.records-tsv/v1"
+	GenerationSchema  = "dark-magic.game-data-generation/v3"
+	ParserSchema      = "dark-magic.authoritative-records/v2"
 	AuthoritativeRoot = "data/global/excel"
+	AnimationDataPath = "data/global/AnimData.d2"
 )
 
 type generationSource interface {
@@ -40,7 +42,7 @@ type Generation struct {
 	ID     string           `json:"-"`
 }
 
-// Pin copies the effective authoritative table bytes into an immutable store.
+// Pin copies the effective authoritative table and timing bytes into an immutable store.
 // Later mounts, invalidations, or file edits cannot change this session view.
 func Pin(source generationSource) (*Store, Generation, error) {
 	if source == nil {
@@ -53,6 +55,12 @@ func Pin(source generationSource) (*Store, Generation, error) {
 	if len(paths) == 0 {
 		return nil, Generation{}, fmt.Errorf("%w below %q", ErrNoAuthoritativeTables, AuthoritativeRoot)
 	}
+	if _, statErr := fs.Stat(source, AnimationDataPath); statErr == nil {
+		paths = append(paths, AnimationDataPath)
+	} else if !errors.Is(statErr, fs.ErrNotExist) {
+		return nil, Generation{}, fmt.Errorf("recordstore: inspect authoritative animation data: %w", statErr)
+	}
+	sort.Strings(paths)
 	files := make(fstest.MapFS, len(paths))
 	generation := Generation{Schema: GenerationSchema, Parser: ParserSchema, Files: make([]GenerationFile, 0, len(paths))}
 	for _, name := range paths {

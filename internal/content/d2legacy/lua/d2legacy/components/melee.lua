@@ -41,6 +41,7 @@ function M.register()
             { name = "skill_id", type = "i64" },
             { name = "skill_level", type = "i64" },
             { name = "behavior", type = "string" },
+            { name = "animation_mode", type = "string" },
             { name = "target_x", type = "f64" },
             { name = "target_y", type = "f64" },
             { name = "target_id", type = "string" },
@@ -57,6 +58,7 @@ function M.register()
             { name = "target_x", type = "f64" },
             { name = "target_y", type = "f64" },
             { name = "weapon_selection", type = "i64" },
+            { name = "animation_mode", type = "string" },
         },
     })
     ecs.component({
@@ -70,6 +72,7 @@ function M.register()
             { name = "impact_fired", type = "bool" },
             { name = "hand", type = "string" },
             { name = "weapon_selection", type = "i64" },
+            { name = "animation_mode", type = "string" },
         },
     })
     ecs.component({

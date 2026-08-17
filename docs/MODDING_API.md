@@ -92,8 +92,10 @@ handles in globals or transfer them between component instances.
 ## Engine APIs and trust
 
 Engine APIs are exact versioned modules such as `engine.scene/v1`,
-`engine.render/v1`, `engine.records/v1`, `engine.ecs/v1`, and deterministic
-authority modules. `d2legacy.help()` and `d2legacy.capabilities()` expose
+`engine.render/v1`, `engine.records/v1`, `engine.animdata/v1`, `engine.ecs/v1`,
+and deterministic authority modules. The read-only AnimData capability exposes
+format facts from the session-pinned authoritative generation without assigning
+them skill or combat meaning. `d2legacy.help()` and `d2legacy.capabilities()` expose
 metadata for modules registered in the current runtime.
 
 The manifest intentionally has no `capabilities` permission field. Modules are

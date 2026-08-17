@@ -32,7 +32,11 @@ func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(t.Context(), content.D2Legacy(), recordstore.New(assets), engine, session, 314)
+	pinned, _, err := recordstore.Pin(assets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := Start(t.Context(), content.D2Legacy(), pinned, engine, session, 314)
 	if err != nil {
 		t.Fatal(err)
 	}

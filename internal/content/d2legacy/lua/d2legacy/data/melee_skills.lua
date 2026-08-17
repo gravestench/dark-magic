@@ -62,6 +62,7 @@ local function decode(row)
         mana_cost_raw = 0,
         effect_delay = 0,
         complete_delay = 1,
+        animation_mode = row.anim,
         -- The target Attack row leaves selector 0 implicit with an empty cell.
         weapon_selection = integer_or(row, "weapsel", 0),
     }

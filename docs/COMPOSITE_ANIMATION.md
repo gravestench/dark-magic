@@ -425,9 +425,12 @@ The first Dark Magic adapter now follows the split above:
   and active-hand weapon classes, without publishing archive paths;
 - COF shadow flags produce a separate tinted shadow draw before their layer.
 
-This is the legacy adapter, not simulation authority. Frame events are facts for
-presentation consumers; attacks, missiles, sounds, and other gameplay effects
-must still become fixed-tick commands or systems before they can affect state.
+The composite renderer remains a legacy presentation adapter, but AnimData is
+no longer presentation-only input. Its effective binary is pinned with the
+authoritative data generation, and a separate renderer-free capability exposes
+the same frame count, 24.8 rate, and typed event bytes to gameplay. d2legacy
+chooses the actor/mode/weapon key and converts the relevant marker and cursor
+wrap into fixed simulation ticks; rendering cannot decide or delay the effect.
 
 ## Open questions after the first implementation
 
