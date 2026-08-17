@@ -66,12 +66,14 @@ function M.register(definitions)
                 "d2legacy.skill.cast",
                 "d2legacy.player.learned_skill",
             },
+            none = { "d2legacy.player.death" },
         },
         read = {
             "d2legacy.skill.cast_request",
             "d2legacy.skill.cast",
             "d2legacy.player.learned_skill",
             "d2legacy.player.vitals",
+            "d2legacy.player.death",
         },
         write = {
             "d2legacy.skill.cast_request",

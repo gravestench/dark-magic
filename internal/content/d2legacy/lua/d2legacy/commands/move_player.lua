@@ -55,6 +55,9 @@ function M.apply(command)
     if not entity then
         return
     end
+    if ecs.get(entity, "d2legacy.player.death") then
+        return
+    end
 
     local payload = command.payload
     local explicit = payload.target ~= nil or payload.x ~= 0 or payload.y ~= 0

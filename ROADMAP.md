@@ -109,7 +109,16 @@ only sanitized visual observations from an owned Expansion 1.14d single-player
 runtime with a recorded executable SHA-256. It rejects Classic, earlier patches,
 server/community-tool sources, mismatched controls, and outcome/health/reaction
 contradictions. No block or avoidance arithmetic is promoted until that matrix
-is populated. G9 remains current through
+is populated. The first player-death foundation now consumes the same explicit
+`unit_died` result through its own empty `player_death_observed` marker. It
+composes checkpointed death state onto the existing durable player entity,
+preserves immediate and ultimate-owned-unit attribution, snapshots the immutable
+Hardcore rule without committing permanence, stops semantic/raw motion, removes
+in-flight action components, filters dead actors from action systems, and emits
+one value-only semantic event. Corpse/equipment transfer, gold and XP penalties,
+recovery/respawn, exact DT/DD timing, multiple-corpse rules, save boundaries, and
+Hardcore persistence remain explicitly unresolved Expansion 1.14d probes. G9
+remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
 melee target revalidation, missile, timed-state, and reactive-state slices as
@@ -181,7 +190,7 @@ policy**, and **unresolved**.
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, an owned-unit graph, corpse, straight projectile, imported ground item, stateful interaction object, and separately resident pending-action relationship survive inactivation without scalar graph copies. The inactive ECS tag removes live capabilities, suspends opted-in systems, and filters projections; generic pre-plan attachment plus pickup/re-drop transitions reuse the same contract. Public loot policy, retail object/event families, exact corpse/projectile/event timing, 1.14d streaming behavior, and campaign breadth remain. |
-| M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Melee and missile contact now share one ordered direct-damage commit/result boundary, with ECS component composition preserving both generic and source-specific semantics. Block/avoidance, typed bundle breadth, secondary damage effects, player death, movement, item activation, object, and content breadth remain below. |
+| M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Melee and missile contact share one ordered direct-damage commit/result boundary, and lethal player results now compose death/action-filter state onto the same character entity with independent consumer markers. Block/avoidance, typed bundle breadth, secondary damage effects, player-death consequences, movement, item activation, object, and content breadth remain below. |
 | M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
@@ -693,8 +702,9 @@ recovered inactive-unit code is architectural evidence only.
 ### G8 — Combat fidelity tranche 1
 
 Status: **partial**. One Lua-owned melee/missile damage path, timed states,
-death transaction, fixed-point vocabulary, deterministic vectors, and an
-explicit shared direct-damage result record exist.
+monster-death transaction, first player-death state transition, fixed-point
+vocabulary, deterministic vectors, and an explicit shared direct-damage result
+record exist.
 
 - [x] Route successful melee and straight-missile contact through one Lua-owned
   health-mutation boundary that reports channel, rolled raw damage, damage
@@ -735,6 +745,13 @@ explicit shared direct-damage result record exist.
   capture; require matched controls and normalize miss/damage/block/avoid/lethal
   rates without accepting Classic, older patches, servers, saves, community
   tools, or reconstructed-runtime observations.
+- [x] Commit the first ordinary player-death state transition from an explicit
+  generic `unit_died` result. Preserve the durable ECS player entity and raw/
+  ultimate-owner attribution; compose checkpointed death state plus one semantic
+  event; use an independent empty consumer marker; stop motion and remove/filter
+  live action capabilities. Record unresolved consequences as pending rather
+  than inventing corpse, gold, XP, respawn, animation-timing, save, or Hardcore
+  permanence policy.
 - [ ] Populate standing/moving/attacking melee/missile shield-block and passive-
   avoidance matrices from that owned runtime, then promote only the ordering,
   eligibility, cap, and movement facts the observations resolve.
@@ -748,7 +765,8 @@ explicit shared direct-damage result record exist.
   avoidance, resistance caps/negative values, pierce, absorb, critical/deadly/
   mastery, Crushing Blow, Open Wounds, leech, hit recovery, poison/periodic
   damage, and durability.
-- [ ] Complete ordinary softcore player death, corpse, gold, and XP semantics
+- [ ] Complete remaining ordinary softcore corpse/equipment, gold, XP,
+  recovery/respawn, multiple-corpse, exact animation-timing, and save semantics
   before Hardcore durable death or broad PvP.
 
 Implement one shared ordered transaction for chance-to-hit, block, avoidance,
