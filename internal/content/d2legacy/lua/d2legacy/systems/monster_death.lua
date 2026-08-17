@@ -8,6 +8,7 @@ local ecs = require("engine.ecs/v1")
 local loot = require("d2legacy.loot.generate")
 local attribution = require("d2legacy.owned_units.attribution")
 local player_count = require("d2legacy.policy.player_count")
+local party = require("d2legacy.policy.party")
 local M = {}
 
 local function selectable_by_id(entities, wanted)
@@ -58,18 +59,29 @@ local function count_game_players(entities)
     return math.max(count, 1)
 end
 
-local function roll_loot(entities, identity, stats)
+local function no_drop_context(entities, credited_id, monster_player_count)
+    local credited = selectable_by_id(entities, credited_id)
+    local credited_identity = credited and ecs.get(credited, "d2legacy.player.identity")
+    local nearby_party_members = 0
+    if credited_identity then
+        nearby_party_members = party.additional_living_members_in_same_level(credited_identity:get("player"), entities)
+    end
+    return player_count.no_drop(count_game_players(entities), nearby_party_members, monster_player_count)
+end
+
+local function roll_loot(entities, identity, stats, credited_id)
     local monster_player_count = math.max(stats:get("player_count"), 1)
+    local context = no_drop_context(entities, credited_id, monster_player_count)
     local drops = loot.roll(identity:get("treasure_class"), {
         version = 100,
         monster_level = stats:get("level"),
         magic_find = 0,
-        player_count = player_count.no_drop(count_game_players(entities), 0, monster_player_count),
+        player_count = context,
     })
-    return loot.encode(drops)
+    return loot.encode(drops), context
 end
 
-local function death_values(context, identity, killer, credited, experience, drops)
+local function death_values(context, identity, killer, credited, experience, drops, counts)
     return {
         tick = context.tick,
         killer_id = killer,
@@ -78,6 +90,11 @@ local function death_values(context, identity, killer, credited, experience, dro
         loot_seed = identity:get("seed"),
         treasure_class = identity:get("treasure_class"),
         drops = drops,
+        game_player_count = counts.game_player_count,
+        effective_player_count = counts.effective_player_count,
+        nearby_party_member_count = counts.nearby_party_member_count,
+        monster_player_count = counts.monster_player_count,
+        no_drop_player_count = counts.no_drop_player_count,
         active = false,
         corpse_usable = true,
     }
@@ -102,6 +119,11 @@ local function emit_events(structural, context, identity, values)
                 loot_seed = values.loot_seed,
                 treasure_class = values.treasure_class,
                 drops = values.drops,
+                game_player_count = values.game_player_count,
+                effective_player_count = values.effective_player_count,
+                nearby_party_member_count = values.nearby_party_member_count,
+                monster_player_count = values.monster_player_count,
+                no_drop_player_count = values.no_drop_player_count,
             },
         })
     end
@@ -138,8 +160,8 @@ local function commit_death(context, entities, structural, monster, killers)
     local experience = stats:get("experience")
     credit_experience(entities, credited, experience)
 
-    local drops = roll_loot(entities, identity, stats)
-    local values = death_values(context, identity, killer, credited, experience, drops)
+    local drops, counts = roll_loot(entities, identity, stats, credited)
+    local values = death_values(context, identity, killer, credited, experience, drops, counts)
     structural:set(monster, "d2legacy.monster.death", values)
     stop_monster(monster, structural)
     emit_events(structural, context, identity, values)
@@ -176,6 +198,8 @@ function M.register()
             "d2legacy.combat.event",
             "d2legacy.world.selectable",
             "d2legacy.player.identity",
+            "d2legacy.player.vitals",
+            "d2legacy.world.location",
             "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",

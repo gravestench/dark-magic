@@ -161,17 +161,18 @@ they are not a substitute for one immutable game-wide semantic context.
 
 ### G4 — Multiplayer player-count and party context
 
-Status: **partial; party authority, active-room spawn counts, and NoDrop count
-contexts established; reward consumers and UI pending**.
+Status: **partial; party authority and party-aware NoDrop implemented; other
+reward consumers and UI pending**.
 
 - [ ] Represent game player count, effective `/players X` count, nearby eligible
   count, and party reward eligibility as distinct contexts.
 - [ ] Implement verified monster-life, monster-XP, NoDrop, and difficulty consumers.
 - [x] Implement authoritative invite, cancel, accept, leave, membership,
   identity, game-departure cleanup, and reconnect party state.
+- [x] Feed the credited player/owned-unit owner and living same-level party
+  count into monster-death NoDrop policy.
 - [ ] Extend same-level living-member queries with verified proximity, then add
-  party XP, kill/owned-unit credit, quest credit, gold sharing, and NoDrop
-  party consumers.
+  party XP, kill/owned-unit credit, quest credit, and gold sharing.
 - [ ] Project party state to UI; do not make the UI roster authoritative.
 
 Monster spawn now pins the effective player count and applies the expansion
@@ -181,19 +182,22 @@ members, and the monster's spawn count; the latter caps later drop benefits.
 Blood Moor population is no longer created eagerly at startup: the authority
 checkpoints the generated room plan, activates the room containing a player plus
 its immediate graph neighbors, and pins the current all-player count when each
-monster is materialized. Until party reward eligibility is integrated, monster
-death passes zero additional nearby party members explicitly. Broader level
-population and party-derived proximity remain open, so the combined consumer
-gate is not yet complete.
+monster is materialized. Monster death resolves the credited player through
+owned-unit attribution, counts their living party members in the same level,
+and passes that context into NoDrop while retaining the spawn-count cap. Durable
+death/event facts record each input and the final eligible count for replay
+diagnostics. Broader level population and any narrower target-version proximity
+rule remain open, so the combined consumer gate is not yet complete.
 
 Party relationships now live in one checkpointed `d2legacy.party/v1` state.
 Authenticated player commands can invite/cancel/accept/leave without supplying
 a party ID; acceptance allocates one stable authority-owned identity, and
 explicit game departure removes invitations/membership while transport
 reconnect preserves both. Living same-level member queries are available to
-future reward consumers. Checkpoint continuation and live QUIC reconnect tests
-cover the state boundary. Exact 1.14d roster-event timing still requires its
-owned-runtime probe and is not inferred from older protocol behavior.
+reward consumers, with NoDrop as the first integrated path. Checkpoint
+continuation and live QUIC reconnect tests cover the state boundary. Exact
+1.14d roster-event timing and NoDrop proximity details still require their
+owned-runtime probes and are not inferred from older protocol behavior.
 
 ### G5 — Locomotion and motion-state foundation
 

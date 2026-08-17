@@ -17,9 +17,10 @@ local function present(value)
     return type(value) == "string" and value:match("%S") ~= nil
 end
 
-local function player_entity(player_id)
-    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
-        if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
+local function player_entity(player_id, entities)
+    for _, entity in ipairs(entities or ecs.query({ all = { "d2legacy.player.identity" } })) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        if identity and identity:get("player") == player_id then
             return entity
         end
     end
@@ -174,9 +175,9 @@ function M.depart(player_id)
     end
 end
 
-function M.living_members_in_same_level(player_id)
+function M.living_members_in_same_level(player_id, entities)
     assert(present(player_id), "party player is required")
-    local source = assert(player_entity(player_id), "party player is not present")
+    local source = assert(player_entity(player_id, entities), "party player is not present")
     local source_location = assert(ecs.get(source, "d2legacy.world.location"))
     local value = current()
     local party_id = value.membership[player_id]
@@ -185,7 +186,7 @@ function M.living_members_in_same_level(player_id)
         or { player_id }
     local result = {}
     for _, member in ipairs(candidates) do
-        local entity = player_entity(member)
+        local entity = player_entity(member, entities)
         if entity then
             local location = ecs.get(entity, "d2legacy.world.location")
             local vitals = ecs.get(entity, "d2legacy.player.vitals")
@@ -202,8 +203,8 @@ function M.living_members_in_same_level(player_id)
     return result
 end
 
-function M.additional_living_members_in_same_level(player_id)
-    local members = M.living_members_in_same_level(player_id)
+function M.additional_living_members_in_same_level(player_id, entities)
+    local members = M.living_members_in_same_level(player_id, entities)
     for index, member in ipairs(members) do
         if member == player_id then
             table.remove(members, index)

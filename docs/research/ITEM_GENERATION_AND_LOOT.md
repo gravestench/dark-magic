@@ -1,6 +1,12 @@
 # Item generation, treasure classes, drops, and ground-item lifecycle
 
-Status: implementation-oriented research baseline. Dark Magic already has a substantial deterministic M6 loot subsystem; this document records what is already strong, what differs from the pinned 1.10f runtime, and which missing semantics should become bounded follow-up work rather than a replacement loot engine.
+Status: implementation-oriented research baseline. Dark Magic has a substantial
+deterministic M6 loot subsystem. Monster death now supplies distinct actual,
+effective, credited-owner living same-level party, and pinned monster counts to
+NoDrop and records that context on durable death facts. The exact expansion
+1.14d proximity boundary remains a probe. This document records what is strong,
+what differs from recovered behavior, and which missing semantics should become
+bounded follow-up work rather than a replacement loot engine.
 
 Read with:
 
@@ -116,6 +122,12 @@ with further monster-side capping in the observed path.
 The original then adjusts NoDrop by exponentiating the base NoDrop probability by effective player count and converting it back into a weight.
 
 This should become a dedicated, unit-tested policy function rather than being buried inside TC traversal.
+
+Implementation status: the dedicated policy and monster-death consumer are
+active. Ultimate owned-unit attribution selects the credited player, whose
+living same-level party members contribute to the count; the monster's pinned
+spawn count caps later benefits. This is high-confidence recovered structure,
+not yet a verified 1.14d proximity claim.
 
 ### Follow-up implications
 
@@ -379,7 +391,10 @@ Add explicit source/context metadata to generated item recipes and diagnostics w
 
 ### L2 — effective player/party NoDrop policy
 
-Implement verified 1.10f NoDrop scaling behind explicit policy/tests, using session/party ownership rather than UI values.
+Implemented as high-confidence recovered structure behind explicit policy and
+multiplayer death-path tests, using authoritative session/party/owned-unit state
+rather than UI values. Retain the 1.14d proximity probe before marking fidelity
+verified.
 
 ### L3 — TC quality vector corpus
 

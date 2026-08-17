@@ -153,6 +153,11 @@ function M.register()
         { name = "loot_seed", type = "string" },
         { name = "treasure_class", type = "string" },
         { name = "drops", type = "string" },
+        { name = "game_player_count", type = "i64" },
+        { name = "effective_player_count", type = "i64" },
+        { name = "nearby_party_member_count", type = "i64" },
+        { name = "monster_player_count", type = "i64" },
+        { name = "no_drop_player_count", type = "i64" },
         { name = "active", type = "bool" },
         { name = "corpse_usable", type = "bool" },
     })
@@ -166,6 +171,11 @@ function M.register()
         { name = "loot_seed", type = "string" },
         { name = "treasure_class", type = "string" },
         { name = "drops", type = "string" },
+        { name = "game_player_count", type = "i64" },
+        { name = "effective_player_count", type = "i64" },
+        { name = "nearby_party_member_count", type = "i64" },
+        { name = "monster_player_count", type = "i64" },
+        { name = "no_drop_player_count", type = "i64" },
     })
     component("d2legacy.state.request", {
         { name = "operation", type = "string" },
