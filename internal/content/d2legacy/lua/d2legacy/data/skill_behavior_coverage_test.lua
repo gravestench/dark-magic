@@ -8,6 +8,7 @@ return test.suite({
         test.case("loads_exact_target_locked_family_ids", function(t)
             t:run(function()
                 local coverage = require("d2legacy.data.skill_behavior_coverage").load()
+                test.expect(coverage.by_family["action.melee"][1]):equals(0)
                 test.expect(coverage.by_family["missile.straight"][1]):equals(36)
                 test.expect(coverage.by_family["state.self-timed"][1]):equals(40)
                 test.expect(coverage.by_id[36].evidence_status):equals("owned-target-records-verified")

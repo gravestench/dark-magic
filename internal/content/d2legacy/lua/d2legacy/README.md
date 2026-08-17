@@ -58,6 +58,22 @@ own exact-ID declaration and evidence status. Generated reports stay local.
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
 
+## Melee-action skill execution order
+
+1. The target-locked behavior manifest admits exact skill ID 0 to
+   `action.melee`; matching function IDs never admit another skill.
+2. `data/melee_skills.lua` validates the owned Expansion 1.14d Attack row into
+   a zero-mana immutable definition.
+3. `commands/cast.lua` emits the same cast request used by other skill families,
+   and `systems/cast.lua` verifies the learned level and zero resource cost.
+4. `systems/melee_skill.lua` emits the configured action effect.
+5. `systems/player_melee.lua` owns approach, selected hand, fallback action
+   timing, and impact; `systems/melee.lua` owns factual hit and damage resolution.
+
+Attack is therefore a skill configuration, not a special command path. Exact
+target/range/LOS policy and AnimData-derived action timing remain incomplete;
+other melee skills need their own reviewed declaration and behavior evidence.
+
 ## Timed self-state/stat execution order
 
 1. The target-locked behavior manifest admits one exact skill ID.

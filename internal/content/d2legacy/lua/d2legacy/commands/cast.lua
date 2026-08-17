@@ -6,11 +6,8 @@
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
-local skills = require("d2legacy.data.skill")
-
 local M = {}
-local state_skills = {}
-local missile_skills = {}
+local definitions = {}
 
 local function finite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
@@ -88,38 +85,15 @@ function M.apply(command)
         target_id = payload.target_id or "",
         request_tick = command.tick,
     }
-    if state_skills[skill_id] or missile_skills[skill_id] then
-        if missile_skills[skill_id] then
-            assert(finite(payload.target_x) and finite(payload.target_y), "missile cast target must be finite")
-        end
-        ecs.set(player, "d2legacy.skill.cast_request", values)
-        return
+    local definition = assert(definitions[skill_id], "assigned skill has not migrated to d2legacy")
+    if definition.requires_point_target then
+        assert(finite(payload.target_x) and finite(payload.target_y), "skill point target must be finite")
     end
-
-    -- The approach/animation adapter consumes this semantic fact. Cast
-    -- admission and Diablo policy no longer cross into the old Go lifecycle.
-    assert(skill_id == 0, "assigned skill has not migrated to d2legacy")
-    local learned = assert(learned_skill(player, skill_id), "skill is not learned")
-    ecs.create({
-        ["d2legacy.skill.cast_event"] = {
-            kind = "skill_effect",
-            tick = command.tick,
-            player = command.player,
-            skill_id = skill_id,
-            skill_level = learned:get("level"),
-            behavior = "basic.melee",
-            weapon_selection = skills.weapon_selection(skill_id),
-            target_x = payload.target_x,
-            target_y = payload.target_y,
-            target_id = payload.target_id or "",
-            reason = "",
-        },
-    })
+    ecs.set(player, "d2legacy.skill.cast_request", values)
 end
 
-function M.register(state_definitions, missile_definitions)
-    state_skills = state_definitions or {}
-    missile_skills = missile_definitions or {}
+function M.register(skill_definitions)
+    definitions = skill_definitions or {}
     commands.register({
         kind = "player.assign_skills",
         authorities = { "player" },

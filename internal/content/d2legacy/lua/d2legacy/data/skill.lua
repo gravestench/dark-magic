@@ -99,11 +99,6 @@ function M.load(id)
     }
 end
 
-function M.weapon_selection(id)
-    local skill = find(records.load("data/global/excel/skills.txt"), "Id", tostring(id))
-    return skill and math.floor(tonumber(skill.weapsel) or 0) or 0
-end
-
 -- starting_for_class builds the authoritative initial learned-skill set.
 -- Go imports the durable class name but does not interpret these D2 tables.
 function M.starting_for_class(class)

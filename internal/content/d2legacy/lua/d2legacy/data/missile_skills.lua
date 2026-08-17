@@ -74,6 +74,7 @@ local function decode(skill, missile)
         maximum_damage_raw = shifted(skill, "EMax", "HitShift", "emax", label),
         effect_delay = 1,
         complete_delay = 2,
+        requires_point_target = true,
         speed_per_tick = velocity / 25,
         lifetime_ticks = lifetime,
         maximum_range = velocity * lifetime / 25,

@@ -4,6 +4,11 @@
   "target": "diablo-ii-lod-1.14d-expansion",
   "implementations": [
     {
+      "skill_id": 0,
+      "family": "action.melee",
+      "evidence_status": "owned-target-records-verified-action-timing-partial"
+    },
+    {
       "skill_id": 36,
       "family": "missile.straight",
       "evidence_status": "owned-target-records-verified"
