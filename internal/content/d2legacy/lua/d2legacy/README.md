@@ -74,12 +74,13 @@ purpose-named engine stream, so replay and checkpoint restore reproduce them.
 3. `commands/cast.lua` emits the same cast request used by other skill families,
    and `systems/cast.lua` verifies the learned level and zero resource cost.
 4. `systems/melee_skill.lua` emits the configured action effect.
-5. `systems/player_melee.lua` owns approach, selected hand, fallback action
-   timing, and impact; `systems/melee.lua` owns factual hit and damage resolution.
+5. `systems/player_melee.lua` owns approach, selected hand, and the impact/
+   completion schedule read from the session-pinned composite AnimData record;
+   `systems/melee.lua` owns factual hit and damage resolution.
 
 Attack is therefore a skill configuration, not a special command path. Exact
-target/range/LOS policy and AnimData-derived action timing remain incomplete;
-other melee skills need their own reviewed declaration and behavior evidence.
+target/range/LOS policy remains incomplete; other melee skills need their own
+reviewed declaration and behavior evidence.
 
 ## Timed self-state/stat execution order
 

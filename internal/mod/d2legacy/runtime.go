@@ -299,9 +299,16 @@ func ConfigureModuleRuntime(runtime *modruntime.Runtime, source fs.FS, records R
 	if err := runtime.RegisterInstallerDefault(modruntime.ContentRequire(source, "lua")); err != nil {
 		return err
 	}
+	var animationSource interface {
+		Read(string) ([]byte, error)
+	}
+	animationSource, _ = records.(interface {
+		Read(string) ([]byte, error)
+	})
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
-		modruntime.DataModule(source), modruntime.RecordsModule(records), modruntime.AuthorityRandomModule(random),
+		modruntime.DataModule(source), modruntime.RecordsModule(records), modruntime.AnimDataModule(animationSource),
+		modruntime.AuthorityRandomModule(random),
 		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(),
 	} {
 		if err := runtime.RegisterModule(module); err != nil {

@@ -124,7 +124,15 @@ D2MOO's item data includes both an item seed object and an initial/start seed. T
 
 ## Scheduled events
 
-Authoritative scheduling should use integer ticks:
+Authoritative scheduling should use integer ticks.
+
+For composite actions backed by `AnimData.d2`, Dark Magic advances the authored
+24.8 frame cursor at the format's 25 Hz rate. A marker on zero-based frame `f`
+at speed `s` is scheduled after `max(1, ceil(f * 256 / s))` ticks; completion is
+the first cursor wrap, `ceil(frames * 256 / s)`. The effective binary and codec
+schema are part of the immutable game-data generation. This keeps gameplay
+headless and deterministic while presentation consumes the same raw timing
+facts independently.
 
 ```text
 ScheduledEvent

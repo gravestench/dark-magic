@@ -72,7 +72,7 @@ RawTableDocument
 
 This is **not** required for ordinary typed gameplay reads. It is useful only when diagnostics must expose duplicate headers, unknown columns, column order, or trailing cells; source-faithful rewriting is not a product requirement.
 
-The current generic parser fills missing cells with empty strings. Extra cells beyond the header are not represented in the row map. A raw document should preserve them and report them, even if typed decoding ignores them.
+The current generic parser fills missing cells with empty strings. Extra cells beyond the header are not represented in the row map. A raw document should preserve them and report them, even if typed decoding ignores them. The pinned generation also includes `data/global/AnimData.d2`: unlike DCC/COF textures used only for presentation, its typed fixed-point timing and event bytes now schedule authoritative actions.
 
 ## Typed catalog generations
 

@@ -89,6 +89,11 @@ local function assert_attack_lifecycle_events(events)
         ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed,
         [=[ticks.attack_started < ticks.attack_impact and ticks.attack_impact < ticks.attack_completed]=]
     )
+    -- The synthetic AMA1HTH record has speed 128, its attack marker on frame
+    -- three, and eight total frames: ceil(3*256/128)=6 ticks to impact and
+    -- ceil(8*256/128)=16 ticks to completion.
+    test.expect(ticks.attack_impact - ticks.attack_started):equals(6)
+    test.expect(ticks.attack_completed - ticks.attack_started):equals(16)
 end
 
 return test.suite({
@@ -183,7 +188,7 @@ return test.suite({
                 },
             }),
             -- Advance through enough ticks for approach, attack, and completion.
-            test.step(11),
+            test.step(19),
             test.run(function()
                 local events = collect_attack_events()
                 assert_attack_lifecycle_events(events)

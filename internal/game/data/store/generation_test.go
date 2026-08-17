@@ -9,6 +9,7 @@ import (
 
 func TestPinHashesEffectiveTablesAndFreezesTheirBytes(t *testing.T) {
 	base := fstest.MapFS{
+		"data/global/AnimData.d2":      &fstest.MapFile{Data: []byte("authoritative animation timing")},
 		"data/global/excel/armor.txt":  &fstest.MapFile{Data: []byte("code\nbase\n")},
 		"data/global/excel/skills.txt": &fstest.MapFile{Data: []byte("skill\nbase\n")},
 		"data/global/ui/panel.dc6":     &fstest.MapFile{Data: []byte("presentation")},
@@ -27,8 +28,9 @@ func TestPinHashesEffectiveTablesAndFreezesTheirBytes(t *testing.T) {
 	if err := generation.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if len(generation.Files) != 2 || generation.Files[0].Path != "data/global/excel/armor.txt" ||
-		generation.Files[0].Source != "patch" || generation.Files[1].Source != "base" {
+	if len(generation.Files) != 3 || generation.Files[0].Path != AnimationDataPath ||
+		generation.Files[1].Path != "data/global/excel/armor.txt" || generation.Files[1].Source != "patch" ||
+		generation.Files[2].Source != "base" {
 		t.Fatalf("generation files = %#v", generation.Files)
 	}
 	patch["data/global/excel/armor.txt"].Data = []byte("code\nchanged\n")
@@ -47,12 +49,27 @@ func TestPinHashesEffectiveTablesAndFreezesTheirBytes(t *testing.T) {
 	if generation.ID == sameGeneration.ID {
 		t.Fatal("changed effective table bytes did not create a new generation")
 	}
+	base[AnimationDataPath].Data = []byte("changed authoritative animation timing")
+	pinnedAnimation, err := pinned.Read(AnimationDataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(pinnedAnimation) != "authoritative animation timing" {
+		t.Fatalf("pinned AnimData changed after source mutation: %q", pinnedAnimation)
+	}
+	_, animationChanged, err := Pin(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sameGeneration.ID == animationChanged.ID {
+		t.Fatal("changed AnimData bytes did not create a new generation")
+	}
 	base["data/global/ui/panel.dc6"].Data = []byte("changed presentation")
 	_, presentationOnly, err := Pin(source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sameGeneration.ID != presentationOnly.ID {
+	if animationChanged.ID != presentationOnly.ID {
 		t.Fatal("presentation-only bytes changed the authoritative generation")
 	}
 }

@@ -41,8 +41,11 @@ The game-data subsystem should provide:
   only the tables required by the tested path.
 
 Authoritative gameplay systems load immutable generic rows through the versioned
-records capability and interpret them inside d2legacy. Native code may depend on
-a focused adapter value, never an application-wide catalog or snapshot.
+records capability and interpret them inside d2legacy. Format-level binary facts
+that affect simulation belong to the same pinned generation: the renderer-free
+`engine.animdata/v1` capability exposes typed fixed-point timing/event records,
+while d2legacy chooses what an attack marker means. Native code may depend on a
+focused adapter value, never an application-wide catalog or snapshot.
 
 ## Authentic-data policy
 

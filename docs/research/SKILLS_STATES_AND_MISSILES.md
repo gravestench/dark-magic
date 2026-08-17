@@ -121,8 +121,15 @@ contract and creates the same definition shape consumed by shared cast
 admission. A generic family system then emits the reusable approach, selected-
 hand, animation, and impact mechanism. The command no longer contains an ID-0
 branch, and the family decoder accepts a second synthetic ID without branching
-on name or ID. Exact target/range/LOS policy and AnimData-derived action timing
-remain unresolved; other melee skills are not admitted by resemblance.
+on name or ID. Its `anim` field now flows through the generic action event. The
+actor token, that mode, and equipped weapon class select a record from the
+session-pinned AnimData binary; the record's 24.8 speed advances at 25 ticks per
+second, its first attack marker schedules impact, and cursor wrap schedules
+completion. Owned 1.14d `AMA1HTH` is 13 frames at rate 256 with an attack marker
+on frame 8, so the target fixture resolves to +8 impact and +13 completion.
+Those are base record timings; the `UseAttackRate` modifier formula/breakpoints
+still require target evidence. Exact target/range/LOS policy also remains
+unresolved; other melee skills are not admitted by resemblance.
 
 The timed self-state fixture is selected by exact ID through the same manifest
 rather than by the string `Frozen Armor`. The generic decoder validates the
