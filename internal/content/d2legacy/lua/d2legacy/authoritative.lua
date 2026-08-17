@@ -39,6 +39,8 @@ local progression = require("d2legacy.systems.progression")
 local owned_unit_lifecycle = require("d2legacy.systems.owned_unit_lifecycle")
 local movement = require("d2legacy.gameplay.systems.movement")
 local game_rules = require("d2legacy.policy.game_rules")
+local party = require("d2legacy.policy.party")
+local party_commands = require("d2legacy.commands.party")
 
 local M = {
     id = "d2legacy.authoritative",
@@ -46,6 +48,7 @@ local M = {
 
 function M.start()
     game_rules.initialize()
+    party.initialize()
     shared_components.register()
     components.register()
     melee_components.register()
@@ -79,6 +82,7 @@ function M.start()
     interaction_commands.register()
     quest_commands.register()
     population.register()
+    party_commands.register()
     move_player.register()
     movement.register()
     owned_units.register()

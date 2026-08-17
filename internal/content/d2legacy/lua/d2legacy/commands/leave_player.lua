@@ -6,6 +6,7 @@
 
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
+local party = require("d2legacy.policy.party")
 local M = {}
 
 local function player_entity(player_id)
@@ -82,6 +83,7 @@ function M.apply(command)
         return true
     end)
 
+    party.depart(player_id)
     ecs.destroy(player)
 end
 
