@@ -217,6 +217,7 @@ local function runtime_definition(stats, graphics, values, difficulty)
         knockback_mode = truth(graphics, "mKB"),
         knockback_size = knockback_size(graphics),
         corpse_selectable = truth(graphics, "corpseSel"),
+        revivable = truth(graphics, "revive"),
         min_group = math.max(integer(stats, "MinGrp", 1), 1),
         max_group = math.max(integer(stats, "MaxGrp", 1), 1),
         rarity = math.max(integer(stats, "Rarity", 1), 1),
@@ -236,6 +237,57 @@ function M.load(id, ...)
     local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
     local level = indexed.levels[stats.Level]
     return runtime_definition(stats, graphics, scaled_stats(stats, level, difficulty), difficulty)
+end
+
+-- Summoned monsters are authored MonStats units but intentionally are not
+-- ordinary population candidates (`isSpawn` is blank). Resolve the same
+-- graphics and combat records without weakening the population admission
+-- gate, and add the level-indexed pet defense/attack baselines recovered from
+-- D2's summon initialization path.
+function M.summon(id, pet_level, ...)
+    assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
+    assert(type(pet_level) == "number" and pet_level >= 1, "summon pet level must be positive")
+    pet_level = math.floor(pet_level)
+    local difficulty = game_rules.difficulty()
+    local indexed = monster_catalog()
+    local stats = assert(indexed.stats[id], "missing summoned MonStats row")
+    assert(truth(stats, "enabled") and not truth(stats, "npc"), "summoned monster is unavailable")
+    local graphics = assert(indexed.graphics[graphics_id(stats)], "missing summoned MonStats2 row")
+    local values = raw_stats(stats, difficulty)
+    local definition = runtime_definition(stats, graphics, values, difficulty)
+    local level = assert(indexed.levels[tostring(pet_level)], "missing summoned MonLvl row")
+    definition.level = pet_level
+    definition.defense = definition.defense + difficulty_value(level, columns("L-AC"), difficulty)
+    definition.attack_rating = definition.attack_rating + difficulty_value(level, columns("L-TH"), difficulty)
+    definition.experience = 0
+    definition.treasure_class = ""
+    definition.corpse_selectable = false
+    definition.revivable = false
+    return definition
+end
+
+-- Revive preserves the target monster type and level (capped by its owner in
+-- the skill system) rather than substituting an authored pet class or summon
+-- level baseline. Rebuild the source type through the ordinary MonStats/2 and
+-- MonLvl join, then strip rewards and corpse capabilities from the owned copy.
+function M.revive(id, monster_level, ...)
+    assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
+    assert(type(monster_level) == "number" and monster_level >= 1, "revived monster level must be positive")
+    monster_level = math.floor(monster_level)
+    local difficulty = game_rules.difficulty()
+    local indexed = monster_catalog()
+    local stats = assert(indexed.stats[id], "missing revived MonStats row")
+    assert(truth(stats, "enabled") and not truth(stats, "npc"), "revived monster is unavailable")
+    local graphics = assert(indexed.graphics[graphics_id(stats)], "missing revived MonStats2 row")
+    assert(truth(graphics, "revive"), "monster type is not revivable")
+    local level = assert(indexed.levels[tostring(monster_level)], "missing revived MonLvl row")
+    local definition = runtime_definition(stats, graphics, scaled_stats(stats, level, difficulty), difficulty)
+    definition.level = monster_level
+    definition.experience = 0
+    definition.treasure_class = ""
+    definition.corpse_selectable = false
+    definition.revivable = false
+    return definition
 end
 
 local function encoded_components(values)

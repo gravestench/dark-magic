@@ -10,7 +10,7 @@ local melee = require("d2legacy.policy.melee")
 local M = {}
 
 local function alive(entity, kind)
-    if kind == "hostile" then
+    if kind == "hostile" or kind == "friendly" then
         local stats = ecs.get(entity, "d2legacy.monster.stats")
         return stats and stats:get("health") > 0
     end
@@ -24,6 +24,8 @@ end
 local function opponents(attacker_kind, target_kind)
     return (attacker_kind == "player" and target_kind == "hostile")
         or (attacker_kind == "hostile" and target_kind == "player")
+        or (attacker_kind == "friendly" and target_kind == "hostile")
+        or (attacker_kind == "hostile" and target_kind == "friendly")
 end
 
 function M.unit(attacker, target)

@@ -25,7 +25,9 @@ do not replace the issue's completion rule.
 This document is intentionally a stable, high-level overview. It does not carry
 task checklists, per-slice evidence ledgers, completion counters, target dates,
 or a "next implementation cursor." Those details change frequently and belong
-in the live trackers above.
+in the live trackers above. Edit this file only when the product boundary,
+technical direction, or high-level program shape changes—not when an issue is
+started, completed, deferred, or reordered.
 
 ## Product boundary
 

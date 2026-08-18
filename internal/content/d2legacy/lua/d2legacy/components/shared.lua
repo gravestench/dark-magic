@@ -231,6 +231,18 @@ function M.register()
     -- state separately owns whether the resulting corpse remains usable after
     -- a resurrection, redemption, shatter, or other corpse transaction.
     component("d2legacy.monster.corpse_selectable", {})
+    -- MonStats2.revive is distinct from general corpse selection: effects such
+    -- as Raise Skeleton can consume any usable corpse, while Revive admits
+    -- only monster types carrying this immutable capability marker.
+    component("d2legacy.monster.revivable", {})
+    -- A summoned monster may receive an authored skill at a level calculated
+    -- by its summoning record. Keeping the grant as ECS data lets a generic
+    -- monster-skill consumer execute it without teaching ownership or summon
+    -- materialization about named skills.
+    component("d2legacy.monster.granted_skill", {
+        { name = "skill", type = "string" },
+        { name = "level", type = "i64" },
+    })
     component("d2legacy.monster.ai", {
         { name = "behavior", type = "string" },
         { name = "state", type = "string" },

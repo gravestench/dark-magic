@@ -458,6 +458,7 @@ function M.register()
         write = {
             "d2legacy.monster.identity",
             "d2legacy.monster.corpse_selectable",
+            "d2legacy.monster.revivable",
             "d2legacy.world.room_resident",
             "d2legacy.monster.stats",
             "d2legacy.combat.melee_profile",

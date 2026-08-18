@@ -12,6 +12,7 @@ local direction = require("d2legacy.policy.direction")
 local player_motion = require("d2legacy.gameplay.player_motion")
 local skill_progression = require("d2legacy.policy.skill_progression")
 local resources = require("d2legacy.policy.resources")
+local corpse_target = require("d2legacy.gameplay.corpse_target")
 
 local M = {}
 
@@ -115,7 +116,14 @@ local function finish_action(context, player, commands)
     commands:remove(player, "d2legacy.skill.cast_action")
 end
 
-local function begin_cast(context, player, request, definitions, actions, levels, commands)
+local function target_is_valid(player, request, definition, entities)
+    if definition.requires_corpse_target then
+        return corpse_target.named(player, request:get("target_id"), entities, definition) ~= nil
+    end
+    return true
+end
+
+local function begin_cast(context, player, request, definitions, actions, levels, entities, commands)
     local vitals = ecs.get(player, "d2legacy.player.vitals")
     local available = resources.mana_raw(vitals)
 
@@ -125,6 +133,7 @@ local function begin_cast(context, player, request, definitions, actions, levels
     local valid = request:get("request_tick") <= context.tick
         and definition ~= nil
         and known_level > 0
+        and target_is_valid(player, request, definition, entities)
         and available >= skill_progression.mana_cost(definition, known_level)
 
     if valid then
@@ -172,6 +181,8 @@ function M.register(definitions, actions)
                 "d2legacy.skill.cast_request",
                 "d2legacy.skill.cast",
                 "d2legacy.player.learned_skill",
+                "d2legacy.world.selectable",
+                "d2legacy.monster.death",
             },
             none = { "d2legacy.player.death" },
         },
@@ -190,6 +201,11 @@ function M.register(definitions, actions)
             "d2legacy.world.position",
             "d2legacy.skill.cast_action",
             "d2legacy.skill.cast_cue",
+            "d2legacy.world.selectable",
+            "d2legacy.world.location",
+            "d2legacy.world.inactive",
+            "d2legacy.monster.death",
+            "d2legacy.monster.revivable",
         },
         write = {
             "d2legacy.skill.cast_request",
@@ -209,7 +225,7 @@ function M.register(definitions, actions)
                 local request = ecs.get(player, "d2legacy.skill.cast_request")
                 local cast = ecs.get(player, "d2legacy.skill.cast")
                 if request and not cast then
-                    begin_cast(context, player, request, definitions, actions, levels, structural)
+                    begin_cast(context, player, request, definitions, actions, levels, entities, structural)
                 elseif cast and context.tick >= cast:get("complete_tick") then
                     finish_action(context, player, structural)
                     structural:remove(player, "d2legacy.skill.cast")

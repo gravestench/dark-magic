@@ -54,6 +54,21 @@
       "evidence_status": "owned-target-records-and-localized-physical-amplification-partial"
     },
     {
+      "skill_id": 70,
+      "family": "summon.targeted-corpse",
+      "evidence_status": "owned-target-records-localized-modifier-text-official-vectors-and-recovered-summon-ordering-partial"
+    },
+    {
+      "skill_id": 80,
+      "family": "summon.targeted-corpse",
+      "evidence_status": "owned-target-records-localized-modifier-text-and-recovered-summon-ordering-partial"
+    },
+    {
+      "skill_id": 95,
+      "family": "summon.targeted-corpse",
+      "evidence_status": "owned-target-records-localized-modifier-text-and-recovered-revive-lifetime-partial"
+    },
+    {
       "skill_id": 72,
       "family": "state.point-area-curse",
       "evidence_status": "owned-target-records-and-localized-outgoing-damage-reduction-partial"

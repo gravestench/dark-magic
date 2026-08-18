@@ -259,8 +259,13 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	if app.remoteMirrors[alive.ID] != entity {
 		t.Fatal("living monster and corpse did not retain one presentation identity")
 	}
-	if _, found := selectables.Get(entity); found {
-		t.Fatal("corpse remained selectable in the disposable client ECS")
+	deadSelectable, found := selectables.Get(entity)
+	if !found {
+		t.Fatal("corpse lost the selectable needed by corpse-target skills")
+	}
+	deadKind, _ := deadSelectable.Get("kind")
+	if deadKind != "corpse" {
+		t.Fatalf("corpse selectable kind=%v, want corpse", deadKind)
 	}
 	if _, found := colliders.Get(entity); found {
 		t.Fatal("corpse remained a locomotion obstacle in the disposable client ECS")

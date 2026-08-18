@@ -85,7 +85,22 @@ The renderer-independent `d2legacy` Lua authority now owns:
   effects, or deterministic corpse operations without manufacturing casts,
   plus a bounded connected presentation relationship that reuses the offline
   aura renderer without exporting gameplay policy; and
+- the complete exact-ID `summon.targeted-corpse` family for Raise Skeleton,
+  Raise Skeletal Mage, and Revive. One decoder joins `Skills.txt`, `PetType.txt`,
+  Skeleton Mastery, and Summon Resist; one transaction validates and
+  revalidates the corpse around mana payment, consumes it once, applies a
+  record-selected pet/source-monster materialization policy, and creates an
+  ordinary friendly monster with owned-unit, AI, combat, limit, modifier, and
+  lifetime facts; and
 - the shared melee action path.
+
+`MonStats2.revive` becomes the empty `d2legacy.monster.revivable` capability,
+separate from general corpse selection and mutable corpse usability. Skeletal
+Mage's record-calculated `NecromageMissile` grant is likewise an ECS fact so a
+future generic monster-skill executor can consume it. Exact mage elemental
+variant/projectile execution and the full revived-monster AI/skill inheritance
+surface remain downstream monster-skill work; their absence is not hidden by
+the corpse-summon family declaration.
 
 Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
 fixture. It is decoded from Skills.txt/Missiles.txt by generic family code and

@@ -57,6 +57,19 @@ of copying the summon into a private archive. It evaluates an already-passed
 absolute expiration on the first active tick; exact Expansion 1.14d inactive
 timer aging remains unresolved.
 
+The targeted-corpse summon family now exercises that relationship with all
+three Expansion 1.14d Necromancer corpse summons. Raise Skeleton and Raise
+Skeletal Mage materialize their authored pet types with tiered limits,
+skill/mastery stat snapshots, Summon Resist, deterministic oldest replacement,
+and owner-attributed AI/combat. The mage's record-calculated
+`NecromageMissile` grant is retained as a typed ECS fact for the monster-skill
+system rather than executed by a summon-specific callback. Revive requires the
+`MonStats2.revive` ECS capability, preserves the corpse monster definition,
+caps its level to the owner, applies its mastery life/damage and velocity
+policy, uses a skill-level count limit, and expires through the shared absolute
+lifetime system. Exact mage elemental selection/projectiles and complete
+revived-monster AI/skill inheritance remain explicit downstream mechanisms.
+
 The hireling system should extend those owners rather than invent a second inventory, second combat calculator, or separate renderer-driven actor model.
 
 ## PetType is an ownership/lifetime category

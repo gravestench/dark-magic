@@ -424,7 +424,10 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// Vigor adds only its owned Stamina_front and Stamina_back DCC fixtures. Both
 	// remain record-selected beneath the existing dynamic overlay prefix; the
 	// static references pin the exact admitted presentation evidence.
-	const auditedFingerprint = "8104812705a5979877401bae3a0cc181fc99d1f3704f086f40d2fe5102587163"
+	// Targeted corpse summons add PetType.txt to the code-owned authoritative
+	// tables. It is formula/category policy, not a presentation dependency, and
+	// remains covered by the existing dynamic Excel prefix.
+	const auditedFingerprint = "be588611b8617d07efe4f7e47c571edd658e245a0a4227e0a250250c4e144dc0"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}
