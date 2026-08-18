@@ -50,6 +50,7 @@ local area_curse_skill_data = require("d2legacy.data.area_curse_skills")
 local area_curse_skill_system = require("d2legacy.systems.area_curse_skill")
 local aura_skill_data = require("d2legacy.data.aura_skills")
 local periodic_aura_skill_data = require("d2legacy.data.periodic_aura_skills")
+local corpse_aura_skill_data = require("d2legacy.data.corpse_aura_skills")
 local aura_skill_system = require("d2legacy.systems.aura_skill")
 local aura_pulse_system = require("d2legacy.systems.aura_pulse")
 local learned_passive_skill_system = require("d2legacy.systems.learned_passive_skill")
@@ -122,6 +123,12 @@ function M.start()
     M.periodic_aura_skills, M.periodic_aura_state_policy =
         periodic_aura_skill_data.load(M.skill_behavior_coverage.by_family["aura.selected-party-periodic"] or {})
     for skill_id, definition in pairs(M.periodic_aura_skills) do
+        assert(not M.aura_skills[skill_id], "skill has multiple selected-aura behavior declarations")
+        M.aura_skills[skill_id] = definition
+    end
+    M.corpse_aura_skills =
+        corpse_aura_skill_data.load(M.skill_behavior_coverage.by_family["aura.selected-corpse-periodic"] or {})
+    for skill_id, definition in pairs(M.corpse_aura_skills) do
         assert(not M.aura_skills[skill_id], "skill has multiple selected-aura behavior declarations")
         M.aura_skills[skill_id] = definition
     end

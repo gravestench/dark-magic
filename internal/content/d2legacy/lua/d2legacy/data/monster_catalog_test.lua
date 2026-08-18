@@ -21,6 +21,7 @@ return test.suite({
                                     OverlayHeight = "3",
                                     mKB = "1",
                                     small = "1",
+                                    corpseSel = "1",
                                 },
                             }
                         end
@@ -56,6 +57,7 @@ return test.suite({
                 test.expect(definition.knockback_mode):equals(true)
                 test.expect(definition.knockback_size):equals("small")
                 test.expect(definition.overlay_height):equals(3)
+                test.expect(definition.corpse_selectable):equals(true)
 
                 test.expect(loads["data/global/excel/monstats.txt"]):equals(1)
                 test.expect(loads["data/global/excel/monstats2.txt"]):equals(1)

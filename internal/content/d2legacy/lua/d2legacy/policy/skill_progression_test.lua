@@ -132,6 +132,32 @@ return test.suite({
                 for level, value in ipairs(meditation) do
                     test.expect(progression.linear(300, 25, level)):equals(value)
                 end
+                local redemption_chance = {
+                    23,
+                    34,
+                    42,
+                    49,
+                    55,
+                    59,
+                    63,
+                    65,
+                    69,
+                    71,
+                    73,
+                    75,
+                    77,
+                    79,
+                    80,
+                    82,
+                    82,
+                    83,
+                    84,
+                    85,
+                }
+                for level, value in ipairs(redemption_chance) do
+                    test.expect(progression.diminishing(10, 100, level)):equals(value)
+                    test.expect(progression.linear(25, 5, level)):equals(20 + level * 5)
+                end
             end)
         end),
         test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)

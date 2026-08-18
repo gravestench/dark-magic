@@ -227,6 +227,10 @@ function M.register()
         { name = "physical_max", type = "i64" },
         { name = "experience", type = "i64" },
     })
+    -- Authored MonStats2 corpseSel is an immutable capability marker. Death
+    -- state separately owns whether the resulting corpse remains usable after
+    -- a resurrection, redemption, shatter, or other corpse transaction.
+    component("d2legacy.monster.corpse_selectable", {})
     component("d2legacy.monster.ai", {
         { name = "behavior", type = "string" },
         { name = "state", type = "string" },

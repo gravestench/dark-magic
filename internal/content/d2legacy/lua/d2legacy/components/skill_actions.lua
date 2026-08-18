@@ -82,6 +82,12 @@ function M.register()
             { name = "mana_cost_raw", type = "i64" },
             { name = "period_ticks", type = "i64" },
             { name = "next_tick", type = "i64" },
+            -- Target enumeration is durable schedule policy. Party-member and
+            -- world-corpse pulses share timing without pretending they share
+            -- the same relationships or effect recipients.
+            { name = "target_policy", type = "string" },
+            { name = "radius", type = "i64" },
+            { name = "chance", type = "i64" },
         },
     })
 
@@ -97,6 +103,25 @@ function M.register()
             { name = "order", type = "i64" },
             { name = "kind", type = "string" },
             { name = "value", type = "i64" },
+        },
+    })
+
+    -- A periodic world operation emits one durable semantic result after its
+    -- ordered effects commit. Replay/checkpoint tests can observe the outcome,
+    -- and presentation can later map it to target-owned assets without reading
+    -- private ECS implementation details.
+    ecs.component({
+        name = "d2legacy.skill.aura_pulse_event",
+        version = 1,
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "tick", type = "i64" },
+            { name = "emitter", type = "entity" },
+            { name = "target", type = "entity" },
+            { name = "source_id", type = "string" },
+            { name = "skill_id", type = "i64" },
+            { name = "life_delta_raw", type = "i64" },
+            { name = "mana_delta_raw", type = "i64" },
         },
     })
 

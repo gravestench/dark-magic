@@ -137,6 +137,7 @@ func NewRandomStreams(seed uint64) (*simulation.RandomStreams, error) {
 		"d2legacy.combat.missile.damage",
 		"d2legacy.combat.basic_melee.hit",
 		"d2legacy.combat.basic_melee.damage",
+		"d2legacy.skill.aura.corpse_chance",
 		"d2legacy.monster.spawn.life",
 		"d2legacy.population.density", "d2legacy.population.family",
 		"d2legacy.population.group", "d2legacy.population.seed",

@@ -6,11 +6,13 @@
 -- so a repeated step cannot apply the same pulse twice.
 
 local ecs = require("engine.ecs/v1")
+local random = require("engine.authority_random/v1")
 local progression = require("d2legacy.policy.skill_progression")
 local resources = require("d2legacy.policy.resources")
+local movement_rules = require("d2legacy.movement_rules/v1")
 local M = {}
 
-local function pulse_targets(entities, emitter)
+local function aura_member_targets(entities, emitter)
     local result = {}
     local seen = {}
     for _, entity in ipairs(entities) do
@@ -34,6 +36,47 @@ local function pulse_targets(entities, emitter)
         local left_identity = ecs.get(left, "d2legacy.player.identity")
         local right_identity = ecs.get(right, "d2legacy.player.identity")
         return left_identity:get("player") < right_identity:get("player")
+    end)
+    return result
+end
+
+local function eligible_corpses(entities, emitter, radius)
+    local source_position = ecs.get(emitter, "d2legacy.world.position")
+    local source_location = ecs.get(emitter, "d2legacy.world.location")
+    if not source_position or not source_location or movement_rules.is_town(source_location:get("level_id")) then
+        return {}
+    end
+    local result = {}
+    for _, entity in ipairs(entities) do
+        local death = ecs.get(entity, "d2legacy.monster.death")
+        local position = ecs.get(entity, "d2legacy.world.position")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        if
+            death
+            and death:get("corpse_usable")
+            and ecs.get(entity, "d2legacy.monster.corpse_selectable")
+            and position
+            and location
+            and not ecs.get(entity, "d2legacy.world.inactive")
+            and location:get("act") == source_location:get("act")
+            and location:get("level_id") == source_location:get("level_id")
+        then
+            local dx = position:get("x") - source_position:get("x")
+            local dy = position:get("y") - source_position:get("y")
+            if dx * dx + dy * dy <= radius * radius then
+                result[#result + 1] = entity
+            end
+        end
+    end
+    table.sort(result, function(left, right)
+        local left_identity = ecs.get(left, "d2legacy.monster.identity")
+        local right_identity = ecs.get(right, "d2legacy.monster.identity")
+        local left_id = left_identity and left_identity:get("spawn_id") or ""
+        local right_id = right_identity and right_identity:get("spawn_id") or ""
+        if left_id ~= right_id then
+            return left_id < right_id
+        end
+        return left:id() < right:id()
     end)
     return result
 end
@@ -108,7 +151,7 @@ local function scale_remaining_timed_state(entities, target, tick, percentage, s
     return changed
 end
 
-local function apply_effect(entities, target, tick, effect, state_policy)
+local function apply_member_effect(entities, target, tick, effect, state_policy)
     local kind = effect:get("kind")
     if kind == "heal_life" then
         return heal_life(target, effect:get("value"))
@@ -119,7 +162,61 @@ local function apply_effect(entities, target, tick, effect, state_policy)
     error("unsupported aura pulse effect " .. kind)
 end
 
-local function execute_pulse(context, entities, emitter, pulse, state_policy)
+local function apply_corpse_effect(emitter, corpse, effect)
+    local kind = effect:get("kind")
+    if kind == "restore_owner_life" then
+        return resources.restore_health(ecs.get(emitter, "d2legacy.player.vitals"), effect:get("value")), 0, false
+    end
+    if kind == "restore_owner_mana" then
+        return 0, resources.restore_mana(ecs.get(emitter, "d2legacy.player.vitals"), effect:get("value")), false
+    end
+    if kind == "consume_corpse" then
+        local death = ecs.get(corpse, "d2legacy.monster.death")
+        if death:get("corpse_usable") then
+            death:set("corpse_usable", false)
+            return 0, 0, true
+        end
+        return 0, 0, false
+    end
+    error("unsupported corpse aura pulse effect " .. kind)
+end
+
+local function emit_corpse_event(structural, context, emitter, corpse, source_id, life_delta, mana_delta)
+    local aura = assert(ecs.get(emitter, "d2legacy.skill.aura_emitter"), "corpse pulse emitter has no aura fact")
+    structural:create({
+        ["d2legacy.skill.aura_pulse_event"] = {
+            kind = "corpse_consumed",
+            tick = context.tick,
+            emitter = emitter,
+            target = corpse,
+            source_id = source_id,
+            skill_id = aura:get("skill_id"),
+            life_delta_raw = life_delta,
+            mana_delta_raw = mana_delta,
+        },
+    })
+end
+
+local function execute_corpse_pulse(context, entities, structural, emitter, pulse, effects)
+    local changed = false
+    for _, corpse in ipairs(eligible_corpses(entities, emitter, pulse:get("radius"))) do
+        if random.integer("d2legacy.skill.aura.corpse_chance", 100) < pulse:get("chance") then
+            local life_delta, mana_delta, consumed = 0, 0, false
+            for _, effect in ipairs(effects) do
+                local life, mana, did_consume = apply_corpse_effect(emitter, corpse, effect)
+                life_delta = life_delta + life
+                mana_delta = mana_delta + mana
+                consumed = consumed or did_consume
+            end
+            assert(consumed, "successful corpse aura pulse did not consume its target")
+            emit_corpse_event(structural, context, emitter, corpse, pulse:get("source_id"), life_delta, mana_delta)
+            changed = true
+        end
+    end
+    return changed
+end
+
+local function execute_pulse(context, entities, structural, emitter, pulse, state_policy)
     local owner_vitals = ecs.get(emitter, "d2legacy.player.vitals")
     if not owner_vitals then
         return false
@@ -131,9 +228,14 @@ local function execute_pulse(context, entities, emitter, pulse, state_policy)
     local effects = pulse_effects(entities, emitter, pulse:get("source_id"))
     assert(#effects > 0, "aura pulse has no composed effects")
     local changed = false
-    for _, target in ipairs(pulse_targets(entities, emitter)) do
-        for _, effect in ipairs(effects) do
-            changed = apply_effect(entities, target, context.tick, effect, state_policy) or changed
+    if pulse:get("target_policy") == "eligible_corpses" then
+        changed = execute_corpse_pulse(context, entities, structural, emitter, pulse, effects)
+    else
+        assert(pulse:get("target_policy") == "aura_members", "unsupported aura pulse target policy")
+        for _, target in ipairs(aura_member_targets(entities, emitter)) do
+            for _, effect in ipairs(effects) do
+                changed = apply_member_effect(entities, target, context.tick, effect, state_policy) or changed
+            end
         end
     end
     if changed and cost > 0 then
@@ -197,6 +299,8 @@ function M.register(state_policy)
                 "d2legacy.player.vitals",
                 "d2legacy.state.instance",
                 "d2legacy.resource.mana_regen_suppression",
+                "d2legacy.monster.death",
+                "d2legacy.monster.corpse_selectable",
             },
         },
         read = {
@@ -206,12 +310,20 @@ function M.register(state_policy)
             "d2legacy.player.death",
             "d2legacy.world.inactive",
             "d2legacy.resource.mana_regen_suppression",
+            "d2legacy.skill.aura_emitter",
+            "d2legacy.monster.identity",
+            "d2legacy.monster.corpse_selectable",
+            "d2legacy.monster.death",
+            "d2legacy.world.position",
+            "d2legacy.world.location",
         },
         write = {
             "d2legacy.skill.aura_pulse",
             "d2legacy.player.vitals",
             "d2legacy.state.instance",
             "d2legacy.resource.mana_regen_suppression",
+            "d2legacy.monster.death",
+            "d2legacy.skill.aura_pulse_event",
         },
         update = function(context, entities, structural)
             local removed = remove_stale_suppressions(entities, structural)
@@ -219,7 +331,7 @@ function M.register(state_policy)
                 local pulse = ecs.get(emitter, "d2legacy.skill.aura_pulse")
                 if pulse and context.tick >= pulse:get("next_tick") then
                     pulse:set("next_tick", progression.next_periodic_tick(context.tick, pulse:get("period_ticks")))
-                    local suppress = execute_pulse(context, entities, emitter, pulse, state_policy)
+                    local suppress = execute_pulse(context, entities, structural, emitter, pulse, state_policy)
                     reconcile_suppression(entities, emitter, pulse:get("source_id"), suppress, structural, removed)
                 end
             end

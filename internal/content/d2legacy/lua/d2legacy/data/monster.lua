@@ -216,6 +216,7 @@ local function runtime_definition(stats, graphics, values, difficulty)
         overlay_height = overlay_height,
         knockback_mode = truth(graphics, "mKB"),
         knockback_size = knockback_size(graphics),
+        corpse_selectable = truth(graphics, "corpseSel"),
         min_group = math.max(integer(stats, "MinGrp", 1), 1),
         max_group = math.max(integer(stats, "MaxGrp", 1), 1),
         rarity = math.max(integer(stats, "Rarity", 1), 1),

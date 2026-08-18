@@ -192,6 +192,7 @@ local function decode(row, states_by_name, item_stats_by_name)
         target_state_id = target_state.state,
         radius_base = required_integer(row, "Param1", label),
         radius_per_level = required_integer(row, "Param2", label),
+        target_policy = "aligned_players_and_monsters",
         stats = aura_stats,
         stat = aura_stats[1].stat,
         stat_operation = aura_stats[1].operation,
