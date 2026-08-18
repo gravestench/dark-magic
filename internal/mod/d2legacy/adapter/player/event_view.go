@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	EventViewVersion      uint32 = 1
+	EventViewVersion      uint32 = 2
 	EventViewHistoryTicks        = 64
 	MaxEventViewEvents           = 256
 	maxEventKindBytes            = 32
@@ -37,15 +37,16 @@ type EventView struct {
 }
 
 type SemanticEvent struct {
-	ID        uint64            `json:"id"`
-	Type      string            `json:"type"`
-	Tick      uint64            `json:"tick"`
-	Position  HUDPosition       `json:"position"`
-	Act       int64             `json:"act"`
-	LevelID   int64             `json:"level_id"`
-	Direction int64             `json:"direction"`
-	Cast      *SemanticCastCue  `json:"cast,omitempty"`
-	State     *SemanticStateCue `json:"state,omitempty"`
+	ID            uint64            `json:"id"`
+	Type          string            `json:"type"`
+	Tick          uint64            `json:"tick"`
+	Position      HUDPosition       `json:"position"`
+	Act           int64             `json:"act"`
+	LevelID       int64             `json:"level_id"`
+	Direction     int64             `json:"direction"`
+	OverlayHeight int64             `json:"overlay_height"`
+	Cast          *SemanticCastCue  `json:"cast,omitempty"`
+	State         *SemanticStateCue `json:"state,omitempty"`
 }
 
 type SemanticCastCue struct {
@@ -81,6 +82,7 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 	positions, positioned := findComponent(snapshot, "d2legacy.world.position")
 	locations, located := findComponent(snapshot, "d2legacy.world.location")
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
+	monsterAppearances, _ := findComponent(snapshot, "d2legacy.monster.appearance")
 	if !positioned || !located {
 		return EventView{}, ErrEventView
 	}
@@ -93,6 +95,10 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 		return EventView{}, ErrEventView
 	}
 	facingByEntity, ok := indexEventComponent(facings)
+	if !ok {
+		return EventView{}, ErrEventView
+	}
+	monsterAppearanceByEntity, ok := indexEventComponent(monsterAppearances)
 	if !ok {
 		return EventView{}, ErrEventView
 	}
@@ -148,6 +154,11 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 			event := SemanticEvent{ID: instance.Entity, Type: eventType, Tick: tick, Position: HUDPosition{X: x, Y: y}, Act: act, LevelID: levelID}
 			if facing, exists := facingByEntity[actor]; exists {
 				event.Direction = intField(facing, "direction")
+			}
+			if appearance, exists := monsterAppearanceByEntity[actor]; exists {
+				event.OverlayHeight = intField(appearance, "overlay_height")
+			} else if _, exists := eventInstanceByEntity(identities, actor); exists {
+				event.OverlayHeight = 2
 			}
 			switch eventType {
 			case "cast":
@@ -232,7 +243,8 @@ func validateEventView(view EventView, tick uint64) error {
 	for index, event := range view.Events {
 		if event.ID == 0 || event.Tick < view.FromTick || event.Tick > view.Tick || event.Tick > math.MaxInt64 || !finiteView(event.Position.X, event.Position.Y) ||
 			!boundedRequired(event.Type, maxEventKindBytes) || event.Act < 1 || event.Act > maxEventAct ||
-			event.LevelID < 0 || event.LevelID > maxEventLevelID || event.Direction < 0 || event.Direction > maxEventDirection {
+			event.LevelID < 0 || event.LevelID > maxEventLevelID || event.Direction < 0 || event.Direction > maxEventDirection ||
+			event.OverlayHeight < 0 || event.OverlayHeight > 4 {
 			return ErrClientView
 		}
 		if _, duplicate := seen[event.ID]; duplicate {
@@ -257,6 +269,17 @@ func validateEventView(view EventView, tick uint64) error {
 		}
 	}
 	return nil
+}
+
+func eventInstanceByEntity(component gameecs.ComponentSnapshot, entity uint64) (map[string]gameecs.ValueSnapshot, bool) {
+	for _, instance := range component.Instances {
+		if instance.Entity != entity {
+			continue
+		}
+		fields, ok := eventInstanceFields(component, instance)
+		return fields, ok
+	}
+	return nil, false
 }
 
 func validCastCue(cue SemanticCastCue) bool {

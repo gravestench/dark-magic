@@ -224,7 +224,7 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 	if casts.Len() != 0 {
 		t.Fatalf("baseline replayed %d historical cues", casts.Len())
 	}
-	current := playeradapter.SemanticEvent{ID: 21, Type: "cast", Tick: 101, Position: playeradapter.HUDPosition{X: 12, Y: 13}, Act: 1, LevelID: 2, Direction: 4,
+	current := playeradapter.SemanticEvent{ID: 21, Type: "cast", Tick: 101, Position: playeradapter.HUDPosition{X: 12, Y: 13}, Act: 1, LevelID: 2, Direction: 4, OverlayHeight: 3,
 		Cast: &playeradapter.SemanticCastCue{Kind: "cast_effect", EffectTick: 101, Player: "alice", SkillID: 47, Target: playeradapter.HUDPosition{X: 20, Y: 21}}}
 	view := playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 101, FromTick: 38, Events: []playeradapter.SemanticEvent{historical, current}}
 	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
@@ -237,6 +237,12 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 	position := currentPosition(engine.World(), entity)
 	if position != current.Position {
 		t.Fatalf("semantic anchor = %+v, want %+v", position, current.Position)
+	}
+	anchors, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.overlay_anchor")
+	anchor, _ := anchors.Get(entity)
+	height, _ := anchor.Get("height")
+	if height != int64(3) {
+		t.Fatalf("semantic overlay height = %v, want 3", height)
 	}
 	cast, _ := casts.Get(entity)
 	skillID, _ := cast.Get("skill_id")
@@ -312,6 +318,7 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 		{Name: "d2legacy.player.combat_stats", Fields: []akara.Field{field("attack_rating", akara.FieldInt64), field("defense", akara.FieldInt64)}},
 		{Name: "d2legacy.player.animation", Fields: []akara.Field{field("direction", akara.FieldInt64), field("mode", akara.FieldString), field("start_tick", akara.FieldInt64)}},
 		{Name: "d2legacy.presentation.animation_clock", Fields: []akara.Field{field("seconds", akara.FieldFloat64)}},
+		{Name: "d2legacy.presentation.overlay_anchor", Fields: []akara.Field{field("height", akara.FieldInt64)}},
 		{Name: "d2legacy.player.appearance", Fields: []akara.Field{field("cof", akara.FieldString), field("token", akara.FieldString), field("palette", akara.FieldString), field("weapon_class", akara.FieldString)}},
 		{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{field("running", akara.FieldBool)}},
 		{Name: "d2legacy.player.movement_stats", Fields: []akara.Field{field("run_drain", akara.FieldInt64), field("velocitypercent", akara.FieldInt64), field("item_fastermovevelocity", akara.FieldInt64), field("staminarecoverybonus", akara.FieldInt64), field("item_staminadrainpct", akara.FieldInt64), field("armor_run_drain", akara.FieldInt64)}},

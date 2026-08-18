@@ -54,11 +54,28 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	monsterGraphics, err := store.Load("data/global/excel/monstats2.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	heightCategories := map[string]bool{}
+	for _, row := range monsterGraphics {
+		value := row["OverlayHeight"]
+		if value != "" && value != "0" && value != "1" && value != "2" && value != "3" && value != "4" {
+			t.Fatalf("owned Expansion 1.14d MonStats2 OverlayHeight %q is outside 0..4", value)
+		}
+		heightCategories[value] = true
+	}
+	for _, value := range []string{"1", "2", "3", "4"} {
+		if !heightCategories[value] {
+			t.Fatalf("owned Expansion 1.14d MonStats2 has no OverlayHeight category %s", value)
+		}
+	}
 	want := map[string]map[string]string{
 		"frozenarmor":        {"Filename": "FrozenArmor", "Frames": "24", "AnimRate": "16", "Trans": "3"},
 		"curse_hit":          {"Filename": "CurseHit", "Frames": "10", "AnimRate": "16", "Trans": "3"},
-		"curseamplifydamage": {"Filename": "CurseAmplifyDamageEffect", "Frames": "24", "AnimRate": "16", "Trans": "3"},
-		"curseweaken":        {"Filename": "CurseWeakenEffect", "Frames": "24", "AnimRate": "16", "Trans": "3"},
+		"curseamplifydamage": {"Filename": "CurseAmplifyDamageEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "64", "Blue": "64"},
+		"curseweaken":        {"Filename": "CurseWeakenEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "210", "Blue": "210"},
 		"enchant":            {"Filename": "FireEnchant", "Frames": "17", "AnimRate": "16", "Trans": "3"},
 		"fire_cast_1":        {"Filename": "FireCast_for_Sorceress", "Frames": "14", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
 		"fire_cast_2":        {"Filename": "FireCast2", "Frames": "16", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},

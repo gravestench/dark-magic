@@ -35,6 +35,22 @@ local function optional_component(entity, name)
     return component
 end
 
+local function overlay_height(entity)
+    local anchor = optional_component(entity, "d2legacy.presentation.overlay_anchor")
+    if anchor then
+        return anchor:get("height")
+    end
+    local monster = optional_component(entity, "d2legacy.monster.appearance")
+    if monster then
+        return monster:get("overlay_height")
+    end
+    if optional_component(entity, "d2legacy.player.identity") then
+        -- Overlay.txt Height2 is the authored player-unit attachment offset.
+        return 2
+    end
+    return 0
+end
+
 function M.create(width, height, collision, player)
     -- world.lua is the composition root: it chooses which data and behavior
     -- make up this playable world, while the imported modules explain details.
@@ -210,6 +226,7 @@ function M.monster_snapshots()
             components = appearance.components,
             name_key = appearance.name_key,
             death_sound = appearance.death_sound,
+            overlay_height = appearance.overlay_height,
             x = position:get("x"),
             y = position:get("y"),
             velocity_x = velocity:get("x"),
@@ -291,6 +308,7 @@ function M.state_snapshots()
                     act = location:get("act"),
                     level_id = location:get("level_id"),
                     direction = facing and facing:get("direction") or 0,
+                    overlay_height = overlay_height(target),
                 }
             end
         end
@@ -370,6 +388,7 @@ function M.semantic_cues(observed)
                     values.x, values.y = position:get("x"), position:get("y")
                     values.act, values.level_id = location:get("act"), location:get("level_id")
                     values.direction = facing and facing:get("direction") or 0
+                    values.overlay_height = overlay_height(target)
                 end
             end
         end
@@ -387,6 +406,7 @@ function M.semantic_cues(observed)
                     values.x, values.y = position:get("x"), position:get("y")
                     values.act, values.level_id = location:get("act"), location:get("level_id")
                     values.direction = facing and facing:get("direction") or 0
+                    values.overlay_height = overlay_height(caster)
                 end
             end
         end

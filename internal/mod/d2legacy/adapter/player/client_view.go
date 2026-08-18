@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ClientViewVersion    uint32 = 7
+	ClientViewVersion    uint32 = 8
 	MaxHUDLearnedSkills         = 256
 	MaxHUDBeltSlots             = 16
 	MaxPrivateItems             = 1024

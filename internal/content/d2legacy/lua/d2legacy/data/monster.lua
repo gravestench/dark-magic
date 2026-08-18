@@ -186,6 +186,8 @@ end
 
 local function runtime_definition(stats, graphics, values, difficulty)
     local size = math.max(integer(graphics, "SizeX", 2), integer(graphics, "SizeY", 2)) / 2
+    local overlay_height = integer(graphics, "OverlayHeight", 0)
+    assert(overlay_height >= 0 and overlay_height <= 4, "MonStats2 OverlayHeight must be in 0..4")
     return {
         id = stats.Id,
         base_id = stats.BaseId or "",
@@ -211,6 +213,7 @@ local function runtime_definition(stats, graphics, values, difficulty)
         think_interval = math.max(integer(stats, "aidel", 1), 1),
         aggro_radius = aggro_radius(stats),
         attack_range = math.max(integer(graphics, "MeleeRng", 1), 1),
+        overlay_height = overlay_height,
         knockback_mode = truth(graphics, "mKB"),
         knockback_size = knockback_size(graphics),
         min_group = math.max(integer(stats, "MinGrp", 1), 1),

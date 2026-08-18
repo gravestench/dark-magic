@@ -18,6 +18,7 @@ return test.suite({
                                     SizeX = "2",
                                     SizeY = "2",
                                     MeleeRng = "1",
+                                    OverlayHeight = "3",
                                     mKB = "1",
                                     small = "1",
                                 },
@@ -54,6 +55,7 @@ return test.suite({
 
                 test.expect(definition.knockback_mode):equals(true)
                 test.expect(definition.knockback_size):equals("small")
+                test.expect(definition.overlay_height):equals(3)
 
                 test.expect(loads["data/global/excel/monstats.txt"]):equals(1)
                 test.expect(loads["data/global/excel/monstats2.txt"]):equals(1)

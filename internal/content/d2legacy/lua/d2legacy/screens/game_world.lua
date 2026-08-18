@@ -545,6 +545,7 @@ local function update_overlay_node(self, overlay, snapshot)
     overlay.node:set_position(
         x - self.world_canvas_width / 2 + overlay.recipe.offset_x,
         y - self.world_canvas_height / 2 + overlay.recipe.offset_y
+            + state_overlay_presentation.height_offset(overlay.recipe, snapshot.overlay_height)
     )
     local behind = overlay.recipe.predraw or overlay.recipe.layer == "back"
     overlay.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y) + (behind and -1 or 1))

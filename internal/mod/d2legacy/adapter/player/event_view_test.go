@@ -23,7 +23,7 @@ func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
 		t.Fatalf("cast event = %+v", cast)
 	}
 	state := view.Events[1]
-	if state.ID != 21 || state.Type != "state" || state.State == nil || state.State.StateID != "frozenarmor" {
+	if state.ID != 21 || state.Type != "state" || state.OverlayHeight != 4 || state.State == nil || state.State.StateID != "frozenarmor" {
 		t.Fatalf("state event = %+v", state)
 	}
 }
@@ -37,11 +37,12 @@ func TestValidateEventViewRejectsUntrustedUnionAndOrdering(t *testing.T) {
 		t.Fatalf("valid event view: %v", err)
 	}
 	for name, mutate := range map[string]func(*EventView){
-		"duplicate id":      func(view *EventView) { view.Events[1].ID = 1 },
-		"wrong union":       func(view *EventView) { view.Events[0].State = &SemanticStateCue{Kind: "applied", StateID: "armor"} },
-		"non-finite target": func(view *EventView) { view.Events[0].Cast.Target.X = math.NaN() },
-		"unknown type":      func(view *EventView) { view.Events[0].Type = "payload" },
-		"wrong tail window": func(view *EventView) { view.FromTick = 1 },
+		"duplicate id":       func(view *EventView) { view.Events[1].ID = 1 },
+		"wrong union":        func(view *EventView) { view.Events[0].State = &SemanticStateCue{Kind: "applied", StateID: "armor"} },
+		"non-finite target":  func(view *EventView) { view.Events[0].Cast.Target.X = math.NaN() },
+		"unknown type":       func(view *EventView) { view.Events[0].Type = "payload" },
+		"wrong tail window":  func(view *EventView) { view.FromTick = 1 },
+		"bad overlay height": func(view *EventView) { view.Events[1].OverlayHeight = 5 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			candidate := valid
@@ -112,6 +113,7 @@ func semanticCheckpoint() simulation.Checkpoint {
 			gameecs.InstanceSnapshot{Entity: caster, Values: []gameecs.ValueSnapshot{intValue(1), intValue(2)}},
 			gameecs.InstanceSnapshot{Entity: target, Values: []gameecs.ValueSnapshot{intValue(1), intValue(2)}}),
 		component("d2legacy.world.facing", []string{"direction"}, gameecs.InstanceSnapshot{Entity: caster, Values: []gameecs.ValueSnapshot{intValue(3)}}),
+		component("d2legacy.monster.appearance", []string{"overlay_height"}, gameecs.InstanceSnapshot{Entity: target, Values: []gameecs.ValueSnapshot{intValue(4)}}),
 		component("d2legacy.skill.cast_cue", []string{"kind", "tick", "effect_tick", "caster", "player", "skill_id", "target_x", "target_y", "target_id"},
 			gameecs.InstanceSnapshot{Entity: 20, Values: []gameecs.ValueSnapshot{stringValue("cast_effect"), intValue(98), intValue(98), entityValue(caster), stringValue("alice"), intValue(47), floatValue(20), floatValue(21), stringValue("")}},
 			gameecs.InstanceSnapshot{Entity: 22, Values: []gameecs.ValueSnapshot{stringValue("cast_started"), intValue(2), intValue(5), entityValue(caster), stringValue("alice"), intValue(47), floatValue(20), floatValue(21), stringValue("")}}),
