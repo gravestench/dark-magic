@@ -29,6 +29,11 @@ func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	if characters[0].Stats.Mana != 4096 || characters[0].Stats.MaxMana != 4096 {
 		t.Fatalf("Spell Lab mana = %+v", characters[0].Stats)
 	}
+	app := &application{options: options}
+	skills := app.developmentSkillsBootstrapData()
+	if skills["all_implemented"] != true || skills["skill_ids"] != nil {
+		t.Fatalf("Spell Lab skill source = %#v, want the target-locked implementation manifest", skills)
+	}
 }
 
 func TestWarpLabSuppliesProductionTransitionState(t *testing.T) {

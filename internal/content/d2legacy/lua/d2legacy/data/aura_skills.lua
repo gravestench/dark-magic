@@ -3,6 +3,11 @@
 local records = require("engine.records/v1")
 local M = {}
 
+local stat_recipes = {
+    damagepercent = { stat = "damagepercent", operation = "percent" },
+    skill_armor_percent = { stat = "defense", operation = "percent" },
+}
+
 local function index(rows, column)
     local result = {}
     for _, row in ipairs(rows) do
@@ -30,14 +35,15 @@ local function decode(row, states_by_name)
     )
     assert(row.aurafilter == "73731", label .. " has unsupported target filter")
     assert(row.aurarangecalc == "ln12", label .. " has unsupported radius formula")
-    assert(row.aurastat1 == "damagepercent" and row.aurastatcalc1 == "ln34", label .. " has unsupported stat formula")
+    local stat_recipe = assert(stat_recipes[row.aurastat1], label .. " has unsupported aura stat")
+    assert(row.aurastatcalc1 == "ln34", label .. " has unsupported stat formula")
     assert(
         required_integer(row, "mana", label) == 0 and required_integer(row, "lvlmana", label) == 0,
         label .. " unexpectedly consumes mana"
     )
     local state = assert(states_by_name[row.aurastate], label .. " has an unknown owner state")
     local target_state = assert(states_by_name[row.auratargetstate], label .. " has an unknown target state")
-    assert(state.aura == "1" and state.stat == "damagepercent", label .. " owner state is not a damage aura")
+    assert(state.aura == "1" and state.stat == row.aurastat1, label .. " owner state does not match its aura stat")
     assert(target_state.aura == "1", label .. " target state is not an aura")
     return {
         behavior = "aura.selected-party-stat",
@@ -51,8 +57,8 @@ local function decode(row, states_by_name)
         target_state_id = target_state.state,
         radius_base = required_integer(row, "Param1", label),
         radius_per_level = required_integer(row, "Param2", label),
-        stat = "damagepercent",
-        stat_operation = "percent",
+        stat = stat_recipe.stat,
+        stat_operation = stat_recipe.operation,
         stat_value_base = required_integer(row, "Param3", label),
         stat_value_per_level = required_integer(row, "Param4", label),
         record_refresh_delay = required_integer(row, "perdelay", label),

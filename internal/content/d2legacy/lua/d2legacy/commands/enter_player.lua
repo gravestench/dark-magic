@@ -107,7 +107,16 @@ local function configured_skills(class)
             by_id[skill.id] = skill
         end
     end
-    for _, skill in ipairs(skills.learned_for_ids(config.skill_ids or {}, config.skill_level or 1)) do
+    local configured_ids = config.skill_ids or {}
+    if config.all_implemented == true then
+        configured_ids = {}
+        local coverage = require("d2legacy.data.skill_behavior_coverage").load()
+        for skill_id in pairs(coverage.by_id) do
+            configured_ids[#configured_ids + 1] = skill_id
+        end
+        table.sort(configured_ids)
+    end
+    for _, skill in ipairs(skills.learned_for_ids(configured_ids, config.skill_level or 1)) do
         by_id[skill.id] = skill
     end
     learned = {}

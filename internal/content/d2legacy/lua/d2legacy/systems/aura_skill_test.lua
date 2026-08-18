@@ -9,6 +9,7 @@ local function entry(player, class, x)
         class = class,
         x = x,
         y = 12,
+        defense = 100,
         vitality = class == "Paladin" and 25 or 20,
     })
 end
@@ -81,13 +82,41 @@ return test.suite({
                 leftskill = "1",
                 passive = "0",
             },
+            {
+                Id = "104",
+                skill = "Fixture Defiance",
+                skilldesc = "defiance",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "defiance",
+                auratargetstate = "defiance",
+                aurastat1 = "skill_armor_percent",
+                aurastatcalc1 = "ln34",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "70",
+                Param4 = "10",
+                perdelay = "50",
+            },
         },
         ["data/global/excel/skilldesc.txt"] = {
             { skilldesc = "might", ListRow = "1", IconCel = "4" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
+            { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
+            { state = "defiance", id = "37", aura = "1", stat = "skill_armor_percent" },
         },
     },
     cases = {
@@ -276,6 +305,93 @@ return test.suite({
                     test.expect(effect:get("source_id")):equals("aura:carol:98")
                     test.expect(effect:get("skill_level")):equals(2)
                     test.expect(source:get("value")):equals(50)
+                end
+            end),
+        }),
+        test.case("different_selected_aura_states_stack_on_each_party_member", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.submit_system({
+                tick = 1,
+                sequence = 2,
+                kind = "system.player.enter",
+                payload = entry("carol", "Paladin", 12),
+            }),
+            test.step(2),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "party.invite",
+                payload = { target = "carol" },
+            }),
+            test.step(1),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "carol",
+                kind = "party.accept",
+                payload = { inviter = "alice" },
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "carol" then
+                        ecs.create({
+                            ["d2legacy.player.learned_skill"] = {
+                                owner = player,
+                                skill_id = 104,
+                                level = 1,
+                                list_row = 3,
+                                left_allowed = false,
+                                right_allowed = true,
+                            },
+                        })
+                    end
+                end
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 2,
+                player = "carol",
+                kind = "player.assign_skills",
+                payload = { right = 104 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local effects = aura_effects()
+                test.assert(#effects == 4, [=[two distinct aura states produce two relationships per target]=])
+                local counts = { might = 0, defiance = 0 }
+                for _, entity in ipairs(effects) do
+                    local effect = ecs.get(entity, "d2legacy.skill.aura_effect")
+                    local source = ecs.get(entity, "d2legacy.stat.source")
+                    local state = effect:get("state_id")
+                    counts[state] = counts[state] + 1
+                    if state == "might" then
+                        test.assert(
+                            source:get("stat") == "damagepercent" and source:get("value") == 40,
+                            [=[Might retains its damage source]=]
+                        )
+                    else
+                        test.assert(
+                            state == "defiance"
+                                and source:get("stat") == "defense"
+                                and source:get("operation") == "percent"
+                                and source:get("value") == 70,
+                            [=[Defiance owns a generic defense percentage source]=]
+                        )
+                    end
+                end
+                test.assert(counts.might == 2 and counts.defiance == 2, [=[both states affect both party members]=])
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.combat_stats" } })) do
+                    test.expect(ecs.get(player, "d2legacy.player.combat_stats"):get("defense")):equals(178)
                 end
             end),
         }),

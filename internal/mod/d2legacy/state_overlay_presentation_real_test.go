@@ -72,19 +72,21 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
-		"aura_might_back":    {"Filename": "AuraMightBack"},
-		"aura_might_front":   {"Filename": "AuraMightFront"},
-		"frozenarmor":        {"Filename": "FrozenArmor", "Frames": "24", "AnimRate": "16", "Trans": "3"},
-		"curse_hit":          {"Filename": "CurseHit", "Frames": "10", "AnimRate": "16", "Trans": "3"},
-		"curseamplifydamage": {"Filename": "CurseAmplifyDamageEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "64", "Blue": "64"},
-		"curseweaken":        {"Filename": "CurseWeakenEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "210", "Blue": "210"},
-		"enchant":            {"Filename": "FireEnchant", "Frames": "17", "AnimRate": "16", "Trans": "3"},
-		"fire_cast_1":        {"Filename": "FireCast_for_Sorceress", "Frames": "14", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
-		"fire_cast_2":        {"Filename": "FireCast2", "Frames": "16", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
-		"ice_cast_1":         {"Filename": "IceCastNew01", "Frames": "15", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
-		"ice_cast_2":         {"Filename": "IceCastNew02", "Frames": "15", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
-		"light_cast_1":       {"Filename": "LightningCast", "Frames": "10", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
-		"teleport":           {"Filename": "Teleport", "Frames": "18", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"aura_defiance_back":  {"Filename": "AuraDefianceBack", "Frames": "15", "AnimRate": "8", "Trans": "3"},
+		"aura_defiance_front": {"Filename": "AuraDefianceFront", "Frames": "15", "AnimRate": "8", "Trans": "3"},
+		"aura_might_back":     {"Filename": "AuraMightBack"},
+		"aura_might_front":    {"Filename": "AuraMightFront"},
+		"frozenarmor":         {"Filename": "FrozenArmor", "Frames": "24", "AnimRate": "16", "Trans": "3"},
+		"curse_hit":           {"Filename": "CurseHit", "Frames": "10", "AnimRate": "16", "Trans": "3"},
+		"curseamplifydamage":  {"Filename": "CurseAmplifyDamageEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "64", "Blue": "64"},
+		"curseweaken":         {"Filename": "CurseWeakenEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "210", "Blue": "210"},
+		"enchant":             {"Filename": "FireEnchant", "Frames": "17", "AnimRate": "16", "Trans": "3"},
+		"fire_cast_1":         {"Filename": "FireCast_for_Sorceress", "Frames": "14", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"fire_cast_2":         {"Filename": "FireCast2", "Frames": "16", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"ice_cast_1":          {"Filename": "IceCastNew01", "Frames": "15", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"ice_cast_2":          {"Filename": "IceCastNew02", "Frames": "15", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"light_cast_1":        {"Filename": "LightningCast", "Frames": "10", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
+		"teleport":            {"Filename": "Teleport", "Frames": "18", "AnimRate": "16", "NumDirections": "1", "Trans": "3"},
 	}
 	for id, fields := range want {
 		row := rowBy(overlays, "overlay", id)
