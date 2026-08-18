@@ -67,6 +67,11 @@
       "skill_id": 104,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-defense-intent-and-official-aura-control-partial"
+    },
+    {
+      "skill_id": 108,
+      "family": "aura.selected-party-stat",
+      "evidence_status": "owned-target-records-localized-attack-rating-intent-and-official-hard-point-passive-partial"
     }
   ]
 }

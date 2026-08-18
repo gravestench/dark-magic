@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 13
-explicitly admitted configurations, and 344 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 14
+explicitly admitted configurations, and 343 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 344 missing configurations,
+classification and implementation of the 343 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -879,6 +879,28 @@ Defiance. Real-MPQ tests also pin the Defiance overlay rows and DCC members.
 This evidence does not resolve filter membership beyond current living player
 party targets, exact leave/refresh ordering, general visual cadence, or sound
 lifetime.
+
+Blessed Aim is the third exact selected party-stat aura and the first admitted
+row with an inseparable learned passive. Its active fields produce
+`item_tohit_percent=75+15*(level-1)` for eligible party targets. Its separate
+`passivestate=penetrate`, `passivestat1=item_tohit_percent`, and
+`skill('Blessed Aim'.blvl) * par8` with Param8=5 encode a personal 5% attack-
+rating bonus per hard point. The joined SkillDesc/TBL evidence labels the
+active values Attack and Radius and describes the party effect. Blizzard's
+[Expansion Blessed Aim reference](https://classic.battle.net/diablo2exp/skills/paladin-offense.shtml)
+states the complementary behavior: 5% attack rating per hard point while the
+aura is not active.
+
+The decoder admits a reviewed self-hard-level/parameter formula shape and an
+`item_tohit_percent` stat recipe; it does not branch on ID 108 or the English
+name. A separate learned-passive ECS reconciler composes the personal source
+onto the existing learned-skill entity. When that same skill is selected on
+the right, the personal source is removed before the selected-party aura
+becomes the active contribution; switching away restores it. Authority tests
+pin 10% passive and 90% active values at level two across checkpoint restore.
+Owned-archive tests pin both state rows, formula fields, SkillDesc/TBL labels,
+sound key, Overlay rows, and DCC members. Item-granted soft levels and exact
+external-aura-plus-passive ordering remain target-runtime probes.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

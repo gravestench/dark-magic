@@ -235,10 +235,23 @@ states that the active aura increases party defense, and the pinned Defiance
 state/Overlay rows select its front/back DCCs. A two-Paladin checkpoint test
 proves Defiance and Might remain independent relationships on both targets;
 generic derived defense consumes Defiance without recognizing skill ID 104.
+Blessed Aim is the third exact configuration and the first admitted skill with
+two simultaneous record-declared roles. Its selected-right aura projects
+`item_tohit_percent=75+15*(level-1)` to eligible party members. Separately,
+its `passivestate=penetrate` formula grants the owner 5% attack rating per
+learned hard point while Blessed Aim is not the selected active aura. A generic
+learned-passive reconciler composes that personal stat source onto the existing
+learned-skill entity, so forgetting the skill or removing the player removes
+the modifier through ordinary ECS ownership. Selecting Blessed Aim removes the
+passive source before the active aura applies; switching away restores it. No
+decoder or system recognizes skill ID 108 or its name. Owned Skills, States,
+SkillDesc, layered TBL, Overlay, sound-key, and DCC evidence pins both halves;
+Blizzard's Expansion documentation independently states the 5% per-hard-point
+inactive-aura rule.
 
 Spell Lab now wraps the production Blood Moor scene instead of maintaining a
 parallel spell simulator. Its ephemeral level-30 Sorceress fixture
-learns all 13 exact-ID configurations at level 20 through the owned
+learns all 14 exact-ID configurations at level 20 through the owned
 Skills/SkillDesc records, begins with Fire Bolt and Amplify Damage assigned, and
 uses the ordinary HUD, command admission, mana, cast, projectile, state, damage,
 monster, and renderer paths. A real-MPQ acceptance casts Fire Bolt and proves
@@ -359,7 +372,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 13 exact-ID implementations, 344 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might and Defiance Skills, States, SkillDesc, locale TBL, sound keys, front/back Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 14 exact-ID implementations, 343 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might, Defiance, and Blessed Aim Skills, States, SkillDesc, locale TBL, sound keys, front/back Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence; Blessed Aim additionally pins its self-hard-point passive formula and state. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states and aura relationships resolve States/Overlay records into shared world overlays without skill branches. Distinct aura modifiers stay active while presentation rotates one aura graphic per affected unit using the record period. Connected authority projects only bounded target/state/period relationships and the disposable client ECS binds them to existing unit mirrors, so the identical Lua cycle/overlay path works without exposing source identity, skill level, stats, radius, filter/party policy, or arbitration. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, aura gameplay facts, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate aura sound and cross-family cadence, client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -1075,6 +1088,15 @@ runtime composition and the coverage report.
   Defiance relationships coexist on every eligible party target. Keep the
   family decoder selected by record shape and exact manifest admission, never
   by skill name or ID.
+- [x] Admit both record-declared halves of exact Expansion 1.14d Blessed Aim.
+  Map active `item_tohit_percent` through the selected-party-aura family, decode
+  the self-`blvl`/Param8 learned passive into a separate generic reconciler,
+  compose its source onto the learned-skill entity, and suppress only that
+  personal passive while the same skill is selected as the active aura. Prove
+  5% per hard point, 75% + 15% per active level, assignment transitions, and
+  checkpoint parity. Keep item-granted soft levels and cross-owner active-plus-
+  passive ordering probe-gated rather than silently treating all skill levels
+  as hard points.
 - [x] Add a production-backed Spell Lab scene that grants only the exact-ID
   manifest through owned Skills/SkillDesc records, delegates world/HUD/input/
   authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
@@ -1164,8 +1186,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 13 explicitly admitted
-configurations, and 344 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 14 explicitly admitted
+configurations, and 343 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -1177,7 +1199,7 @@ exact-ID count, current left/right assignments, and mana. Immutable initial
 data enables a development-only learned-skill fixture whose IDs are derived
 from the target-locked implementation manifest, resolved through the normal
 owned Skills/SkillDesc records, and rejected if unknown, passive, or
-unassignable. It currently grants the 13 manifest-backed Expansion
+unassignable. It currently grants the 14 manifest-backed Expansion
 1.14d configurations at level 20, assigns Fire Bolt left and Amplify Damage
 right, places three production hostiles in Blood Moor, and supplies a deep mana
 pool for repeated inspection. Ordinary HUD selection and world clicks still
@@ -1591,6 +1613,29 @@ Overlay, sound-key, and DCC contracts. This does not broaden the unresolved
 target filter, owned-unit, refresh/leave, cross-family cadence, or sound
 lifetime claims.
 
+Blessed Aim is the third `aura.selected-party-stat` configuration and the first
+one that also declares a learned passive. Exact skill ID 108 retains the same
+selected-right, immediate, zero-mana, filter, radius, and period contract, with
+active `item_tohit_percent=75+15*(level-1)`. Its distinct
+`passivestate=penetrate`, `passivestat1=item_tohit_percent`, and
+`skill('Blessed Aim'.blvl) * par8`/Param8=5 fields define a personal 5% attack-
+rating source per hard point. SkillDesc/TBL evidence labels Attack and Radius
+and describes the active party effect; the [official Expansion skill
+reference](https://classic.battle.net/diablo2exp/skills/paladin-offense.shtml)
+states that the passive is 5% per hard point while the aura is inactive.
+
+The aura decoder recognizes the reviewed stat and self-hard-level formula
+shapes, not Blessed Aim's identity. A separate ECS system reconciles decoded
+learned passives on each `d2legacy.player.learned_skill` entity. This makes the
+skill fact itself own the generic stat source and gives player/skill teardown
+the correct lifecycle without a parallel registry. When that skill is selected
+on the right, the personal source is removed and the ordinary active-aura
+relationship becomes the sole Blessed Aim contribution; switching away
+restores the passive. Checkpoint tests pin 10% passive at two hard points and
+90% active aura at level two. Soft-level bonuses and exact ordering when an
+external Blessed Aim aura overlaps the owner's inactive-aura passive remain
+unresolved target-version probes.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. The targeted-state decoder independently validates
@@ -1721,16 +1766,16 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: investigate Blessed Aim as the first selected aura whose exact record
-combines an active party stat with a learned-skill passive modifier. Its owned
-row exposes active `item_tohit_percent=75+15*(level-1)` and a separate
-`skill('Blessed Aim'.blvl)*Param8` passive formula, while layered TBL text
-documents the active party attack-rating effect. Verify the latest Expansion
-behavior and passive intent before designing a reusable learned passive-source
-family; do not silently admit only the visible aura half. If that evidence is
-insufficient, select another complete record/TBL shape rather than adding a
-Blessed-Aim-specific exception. Do not infer pulse damage/healing, target-filter
-breadth, or sound lifetime from record names.
+Next: investigate the Resist Fire/Cold/Lightning passive-max-resistance shape
+as the next selected-aura composition boundary. Begin with the joined locale
+TBL text and exact Skills/States formulas, then verify the Expansion 1.14d
+hard-point passive semantics and rounding before admission. Implement active
+resistance and learned maximum-resistance contributions as generic stat-source
+recipes; do not admit only the visible aura half, infer all three elements from
+one row, or conflate hard points with item-granted soft levels. If the evidence
+cannot pin both halves, choose a complete record/TBL shape rather than adding
+an element- or skill-specific exception. Do not infer pulse damage/healing,
+target-filter breadth, or sound lifetime from record names.
 In parallel, capture owned Expansion 1.14d player/hireling/summon entry/leave
 observations for `aurafilter=73731`, 50-tick application/removal ordering,
 equal-strength same-aura ownership, and `onsound` lifetime. Promote those

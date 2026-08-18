@@ -72,6 +72,8 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"blessedaimback":      {"Filename": "BlessedAim_back", "Frames": "10", "AnimRate": "8", "Trans": "3"},
+		"blessedaimfront":     {"Filename": "BlessedAim_front", "Frames": "10", "AnimRate": "8", "Trans": "3"},
 		"aura_defiance_back":  {"Filename": "AuraDefianceBack", "Frames": "15", "AnimRate": "8", "Trans": "3"},
 		"aura_defiance_front": {"Filename": "AuraDefianceFront", "Frames": "15", "AnimRate": "8", "Trans": "3"},
 		"aura_might_back":     {"Filename": "AuraMightBack"},
