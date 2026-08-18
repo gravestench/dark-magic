@@ -245,6 +245,13 @@ function M.register()
         { name = "name_key", type = "string" },
         { name = "components", type = "string" },
         { name = "death_sound", type = "string" },
+        { name = "overlay_height", type = "i64" },
+    })
+    -- A presentation-only attachment category. Connected semantic event
+    -- mirrors carry this tiny component because their target is the disposable
+    -- event entity, not the authority's monster/player entity.
+    component("d2legacy.presentation.overlay_anchor", {
+        { name = "height", type = "i64" },
     })
     component("d2legacy.player.progress", {
         { name = "level", type = "i64" },

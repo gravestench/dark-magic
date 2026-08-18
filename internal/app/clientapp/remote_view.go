@@ -201,9 +201,10 @@ func installSemanticEvent(world *akara.World, event playeradapter.SemanticEvent)
 		return 0, err
 	}
 	for name, values := range map[string]map[string]any{
-		"d2legacy.world.position": {"x": event.Position.X, "y": event.Position.Y},
-		"d2legacy.world.location": {"act": event.Act, "level_id": event.LevelID},
-		"d2legacy.world.facing":   {"direction": event.Direction, "directions": int64(16)},
+		"d2legacy.world.position":              {"x": event.Position.X, "y": event.Position.Y},
+		"d2legacy.world.location":              {"act": event.Act, "level_id": event.LevelID},
+		"d2legacy.world.facing":                {"direction": event.Direction, "directions": int64(16)},
+		"d2legacy.presentation.overlay_anchor": {"height": event.OverlayHeight},
 	} {
 		store, found := akara.GetDynamicStore(world, name)
 		if !found {

@@ -47,7 +47,29 @@ local function recipe(overlays, id, layer, loop)
         blend = compat.draw_mode(integer(row, "Trans", 0)),
         offset_x = integer(row, "Xoffset", 0),
         offset_y = integer(row, "Yoffset", 0),
+        height_offsets = {
+            integer(row, "Height1", 0),
+            integer(row, "Height2", 0),
+            integer(row, "Height3", 0),
+            integer(row, "Height4", 0),
+        },
+        light = {
+            initial_radius = integer(row, "InitRadius", 0),
+            radius = integer(row, "Radius", 0),
+            red = integer(row, "Red", 0),
+            green = integer(row, "Green", 0),
+            blue = integer(row, "Blue", 0),
+        },
     }
+end
+
+function M.height_offset(value, overlay_height)
+    if not value or not value.height_offsets then
+        return 0
+    end
+    local category = math.floor(tonumber(overlay_height) or 0)
+    assert(category >= 0 and category <= 4, "overlay height category must be in 0..4")
+    return value.height_offsets[category] or 0
 end
 
 function M.from_rows(states, overlay_rows, state_id)

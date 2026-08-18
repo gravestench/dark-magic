@@ -26,6 +26,7 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 local world = require("d2legacy.gameplay.world")
                 local target = ecs.create({
+                    ["d2legacy.monster.appearance"] = { overlay_height = 4 },
                     ["d2legacy.world.position"] = { x = 12, y = 8 },
                     ["d2legacy.world.location"] = { act = 1, level_id = 2 },
                     ["d2legacy.world.facing"] = { direction = 5, directions = 16 },
@@ -60,7 +61,8 @@ return test.suite({
                         and snapshots[1].x == 12
                         and snapshots[1].y == 8
                         and snapshots[1].level_id == 2
-                        and snapshots[1].direction == 5,
+                        and snapshots[1].direction == 5
+                        and snapshots[1].overlay_height == 4,
                     [=[active state snapshot follows its live ECS target]=]
                 )
                 local cues = world.semantic_cues()
@@ -71,7 +73,8 @@ return test.suite({
                         and cue.target == nil
                         and cue.target_entity_id == target:id()
                         and cue.x == 12
-                        and cue.y == 8,
+                        and cue.y == 8
+                        and cue.overlay_height == 4,
                     [=[state event copies target identity and current position]=]
                 )
             end),

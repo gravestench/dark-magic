@@ -97,6 +97,7 @@ function M.components(command, game_player_count)
             name_key = definition.name_key,
             components = encode_components(definition.components),
             death_sound = definition.death_sound or "",
+            overlay_height = definition.overlay_height or 0,
         },
         ["d2legacy.monster.ai"] = {
             behavior = definition.ai,

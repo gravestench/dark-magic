@@ -26,6 +26,15 @@ return test.suite({
                         Trans = "3",
                         Xoffset = "2",
                         Yoffset = "-4",
+                        Height1 = "14",
+                        Height2 = "0",
+                        Height3 = "-14",
+                        Height4 = "-60",
+                        InitRadius = "1",
+                        Radius = "6",
+                        Red = "255",
+                        Green = "64",
+                        Blue = "64",
                     },
                     { overlay = "curse_back", Filename = "Back", Frames = "8", AnimRate = "16", Trans = "0" },
                     { overlay = "curse_cast", Filename = "Cast", Frames = "10", AnimRate = "20", Trans = "3" },
@@ -43,8 +52,18 @@ return test.suite({
                         and resolved.active[2].blend == "screen"
                         and resolved.active[2].offset_x == 2
                         and resolved.active[2].offset_y == -4
+                        and adapter.height_offset(resolved.active[2], 1) == 14
+                        and adapter.height_offset(resolved.active[2], 2) == 0
+                        and adapter.height_offset(resolved.active[2], 3) == -14
+                        and adapter.height_offset(resolved.active[2], 4) == -60
+                        and adapter.height_offset(resolved.active[2], 0) == 0
+                        and resolved.active[2].light.initial_radius == 1
+                        and resolved.active[2].light.radius == 6
+                        and resolved.active[2].light.red == 255
+                        and resolved.active[2].light.green == 64
+                        and resolved.active[2].light.blue == 64
                         and resolved.active[2].duration_seconds == 2,
-                    [=[overlay1 preserves its authored presentation recipe]=]
+                    [=[overlay1 preserves its authored attachment and light recipe]=]
                 )
                 test.assert(
                     resolved.applied.path == overlay_path .. "Cast.dcc"

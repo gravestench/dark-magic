@@ -12,6 +12,8 @@ type Overlay struct {
 	YOffset       int    `csv:"Yoffset"`       // Sets the vertical offset of the overlay on the unit. Positive values move it down and negative values move it up.
 	Height1       int    `csv:"Height1"`       // Additional value added to "Yoffset" depending on "OverlayHeight" field value from monstats2.txt.
 	Height2       int    `csv:"Height2"`       // Additional value added to "Yoffset" for player unit types.
+	Height3       int    `csv:"Height3"`       // Additional value added to "Yoffset" for OverlayHeight category 3.
+	Height4       int    `csv:"Height4"`       // Additional value added to "Yoffset" for OverlayHeight category 4.
 	AnimRate      int    `csv:"AnimRate"`      // Controls the animation frame rate of the Overlay. The value is the number of frames that will update per second.
 	LoopWaitTime  int    `csv:"LoopWaitTime"`  // Controls the number of periodic frames to wait until redrawing the Overlay. This only works with Overlays that are a loop type.
 	Trans         int    `csv:"Trans"`         // Controls the alpha mode for how the Overlay is displayed, which can affect transparency and blending.
