@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ClientViewVersion    uint32 = 10
+	ClientViewVersion    uint32 = 11
 	MaxHUDLearnedSkills         = 256
 	MaxHUDBeltSlots             = 16
 	MaxPrivateItems             = 1024
@@ -132,7 +132,7 @@ func validateHUDView(hud HUD) error {
 }
 
 func validateDecodedWorldView(world WorldView) error {
-	if len(world.Entities) > MaxWorldViewEntities || len(world.Missiles) > MaxWorldViewMissiles ||
+	if len(world.Entities) > MaxWorldViewEntities || len(world.Missiles) > MaxWorldViewMissiles || len(world.States) > MaxWorldViewStates ||
 		!finiteView(world.Origin.X, world.Origin.Y) {
 		return ErrClientView
 	}
@@ -160,6 +160,17 @@ func validateDecodedWorldView(world WorldView) error {
 			return ErrClientView
 		}
 		seen[missile.ID] = struct{}{}
+	}
+	states := make(map[worldStateKey]struct{}, len(world.States))
+	for _, state := range world.States {
+		if err := validateWorldState(state); err != nil {
+			return err
+		}
+		key := worldStateKey{targetID: state.TargetID, stateID: state.StateID}
+		if _, duplicate := states[key]; duplicate {
+			return ErrClientView
+		}
+		states[key] = struct{}{}
 	}
 	return nil
 }

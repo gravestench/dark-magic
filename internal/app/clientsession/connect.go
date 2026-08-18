@@ -145,6 +145,7 @@ func clonePresentationView(hud playeradapter.HUD, world playeradapter.WorldView)
 	hud.Skills.Learned = append([]playeradapter.HUDLearnedSkill(nil), hud.Skills.Learned...)
 	world.Entities = append([]playeradapter.WorldEntity(nil), world.Entities...)
 	world.Missiles = append([]playeradapter.WorldMissile(nil), world.Missiles...)
+	world.States = append([]playeradapter.WorldState(nil), world.States...)
 	for index := range world.Entities {
 		if health := world.Entities[index].Health; health != nil {
 			value := *health

@@ -243,6 +243,96 @@ func (client *clientWorld) reconcileMissiles(app *application, projected []playe
 	return nil
 }
 
+// reconcilePersistentStates binds the reliable semantic aura projection to
+// existing disposable unit mirrors. The reconstructed component is visual
+// only: no stat value, radius, source, party/filter decision, or authority
+// lifecycle enters the connected client ECS.
+func (client *clientWorld) reconcilePersistentStates(app *application, projected []playeradapter.WorldState) error {
+	if client == nil || app == nil || app.clientSimulation == nil {
+		return nil
+	}
+	world := app.clientSimulation.World()
+	selectables, found := akara.GetDynamicStore(world, "d2legacy.world.selectable")
+	if !found {
+		return fmt.Errorf("remote presentation: selectable component is unavailable")
+	}
+	states, found := akara.GetDynamicStore(world, "d2legacy.presentation.state")
+	if !found {
+		return fmt.Errorf("remote presentation: persistent state component is unavailable")
+	}
+	targets := make(map[string]akara.Entity, selectables.Len())
+	for _, entity := range selectables.Entities() {
+		selectable, ok := selectables.Get(entity)
+		if !ok {
+			continue
+		}
+		id, _ := selectable.Get("id")
+		if value, ok := id.(string); ok && value != "" {
+			targets[value] = entity
+		}
+	}
+	if identities, available := akara.GetDynamicStore(world, "d2legacy.player.identity"); available {
+		for _, entity := range identities.Entities() {
+			identity, ok := identities.Get(entity)
+			if !ok {
+				continue
+			}
+			player, _ := identity.Get("player")
+			if value, ok := player.(string); ok && value != "" {
+				targets["player:"+value] = entity
+			}
+		}
+	}
+	if client.stateEntities == nil {
+		client.stateEntities = make(map[presentationStateKey]akara.Entity)
+	}
+	seen := make(map[presentationStateKey]struct{}, len(projected))
+	for _, projectedState := range projected {
+		key := presentationStateKey{targetID: projectedState.TargetID, stateID: projectedState.StateID}
+		if _, duplicate := seen[key]; duplicate {
+			return fmt.Errorf("remote presentation: duplicate persistent state target=%q state=%q", key.targetID, key.stateID)
+		}
+		seen[key] = struct{}{}
+		target, available := targets[projectedState.TargetID]
+		if !available {
+			continue
+		}
+		entity, retained := client.stateEntities[key]
+		if !retained {
+			var err error
+			entity, err = world.CreateEntity()
+			if err != nil {
+				return fmt.Errorf("remote presentation: create persistent state target=%q state=%q: %w", key.targetID, key.stateID, err)
+			}
+			client.stateEntities[key] = entity
+		}
+		component, present := states.Get(entity)
+		changed := !present
+		if present {
+			currentTarget, _ := component.Get("target")
+			currentState, _ := component.Get("state_id")
+			currentPeriod, _ := component.Get("period_ticks")
+			changed = currentTarget != target || currentState != projectedState.StateID || currentPeriod != projectedState.PeriodTicks
+		}
+		if changed {
+			if _, err := states.Set(entity, map[string]any{
+				"target": target, "state_id": projectedState.StateID, "period_ticks": projectedState.PeriodTicks,
+			}); err != nil {
+				return fmt.Errorf("remote presentation: set persistent state target=%q state=%q: %w", key.targetID, key.stateID, err)
+			}
+		}
+	}
+	for key, entity := range client.stateEntities {
+		_, retained := seen[key]
+		_, targetRetained := targets[key.targetID]
+		if !retained || !targetRetained {
+			world.DestroyEntity(entity)
+			delete(client.stateEntities, key)
+		}
+	}
+	return nil
+}
+
 func latestSemanticCursor(events []playeradapter.SemanticEvent) (uint64, uint64) {
 	if len(events) == 0 {
 		return 0, 0

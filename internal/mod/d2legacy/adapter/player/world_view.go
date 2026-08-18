@@ -8,19 +8,22 @@ import (
 	"sort"
 	"strings"
 
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
 const (
-	WorldViewVersion        uint32 = 4
+	WorldViewVersion        uint32 = 5
 	WorldViewRadius                = 80.0
 	MaxWorldViewEntities           = 256
 	MaxWorldViewMissiles           = 512
+	MaxWorldViewStates             = 512
 	maxWorldIDBytes                = 128
 	maxWorldKindBytes              = 32
 	maxWorldLabelBytes             = 256
 	maxWorldAssetBytes             = 512
 	maxWorldComponentsBytes        = 4096
+	maxWorldStateBytes             = 128
 )
 
 var ErrWorldView = errors.New("player world view: invalid public projection")
@@ -31,7 +34,23 @@ type WorldView struct {
 	Origin    HUDPosition    `json:"origin"`
 	Entities  []WorldEntity  `json:"entities"`
 	Missiles  []WorldMissile `json:"missiles"`
+	States    []WorldState   `json:"states"`
 	Truncated bool           `json:"truncated"`
+}
+
+// WorldState is a persistent presentation-safe relationship. The target and
+// state vocabulary are sufficient to draw the effect; source identity, stats,
+// range, party/filter decisions, and arbitration remain server-only.
+type WorldState struct {
+	TargetID    string `json:"target_id"`
+	StateID     string `json:"state_id"`
+	PeriodTicks int64  `json:"period_ticks"`
+	distance2   float64
+}
+
+type worldStateKey struct {
+	targetID string
+	stateID  string
 }
 
 // WorldMissile is the bounded visual subset of an authoritative projectile or
@@ -134,7 +153,15 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
 	movementStats, _ := findComponent(snapshot, "d2legacy.player.movement_stats")
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
-	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}, Missiles: []WorldMissile{}}
+	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}, Missiles: []WorldMissile{}, States: []WorldState{}}
+	publicIDs := map[uint64]string{playerEntity: "player:" + playerID}
+	for _, instance := range selectables.Instances {
+		if fields, found := findInstance(selectables, instance.Entity); found {
+			if id := stringField(fields, "id"); id != "" {
+				publicIDs[instance.Entity] = id
+			}
+		}
+	}
 	seen := make(map[string]struct{})
 	decorateMonster := func(entity *WorldEntity, source uint64) {
 		if identity, found := findInstance(monsterIdentities, source); found {
@@ -278,7 +305,92 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	if len(view.Missiles) > MaxWorldViewMissiles {
 		view.Missiles, view.Truncated = view.Missiles[:MaxWorldViewMissiles], true
 	}
+	visibleIDs := map[string]struct{}{"player:" + playerID: {}}
+	for _, entity := range view.Entities {
+		visibleIDs[entity.ID] = struct{}{}
+	}
+	visibleTargets := make(map[uint64]string, len(publicIDs))
+	for entity, id := range publicIDs {
+		if _, visible := visibleIDs[id]; visible {
+			visibleTargets[entity] = id
+		}
+	}
+	view.States, found = projectWorldStates(snapshot, visibleTargets, origin, originAct, originLevel)
+	if !found {
+		return nil, ErrWorldView
+	}
+	if len(view.States) > MaxWorldViewStates {
+		view.States, view.Truncated = view.States[:MaxWorldViewStates], true
+	}
 	return json.Marshal(view)
+}
+
+func projectWorldStates(snapshot gameecs.Snapshot, publicIDs map[uint64]string, origin HUDPosition, originAct, originLevel int64) ([]WorldState, bool) {
+	effects, exists := findComponent(snapshot, "d2legacy.skill.aura_effect")
+	if !exists {
+		return []WorldState{}, true
+	}
+	positions, positioned := findComponent(snapshot, "d2legacy.world.position")
+	locations, located := findComponent(snapshot, "d2legacy.world.location")
+	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
+	if !positioned || !located {
+		return nil, false
+	}
+	result := make([]WorldState, 0, len(effects.Instances))
+	seen := make(map[worldStateKey]struct{}, len(effects.Instances))
+	for _, instance := range effects.Instances {
+		fields, found := findInstance(effects, instance.Entity)
+		if !found {
+			return nil, false
+		}
+		target := entityField(fields, "target")
+		targetID, public := publicIDs[target]
+		position, hasPosition := findInstance(positions, target)
+		location, hasLocation := findInstance(locations, target)
+		if !public || !hasPosition || !hasLocation {
+			continue
+		}
+		if _, dormant := findInstance(inactive, target); dormant {
+			continue
+		}
+		if intField(location, "act") != originAct || intField(location, "level_id") != originLevel {
+			continue
+		}
+		dx, dy := floatField(position, "x")-origin.X, floatField(position, "y")-origin.Y
+		state := WorldState{
+			TargetID: targetID, StateID: stringField(fields, "state_id"),
+			PeriodTicks: intField(fields, "refresh_delay"), distance2: dx*dx + dy*dy,
+		}
+		if state.distance2 > WorldViewRadius*WorldViewRadius {
+			continue
+		}
+		if err := validateWorldState(state); err != nil {
+			return nil, false
+		}
+		key := worldStateKey{targetID: state.TargetID, stateID: state.StateID}
+		if _, duplicate := seen[key]; duplicate {
+			return nil, false
+		}
+		seen[key] = struct{}{}
+		result = append(result, state)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].distance2 != result[j].distance2 {
+			return result[i].distance2 < result[j].distance2
+		}
+		if result[i].TargetID != result[j].TargetID {
+			return result[i].TargetID < result[j].TargetID
+		}
+		return result[i].StateID < result[j].StateID
+	})
+	return result, true
+}
+
+func validateWorldState(state WorldState) error {
+	if !boundedRequired(state.TargetID, maxWorldIDBytes) || !boundedRequired(state.StateID, maxWorldStateBytes) || state.PeriodTicks < 1 || state.PeriodTicks > math.MaxInt32 {
+		return ErrWorldView
+	}
+	return nil
 }
 
 // monsterPresentationMode collapses server-only AI and velocity facts into

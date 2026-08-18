@@ -81,7 +81,9 @@ The renderer-independent `d2legacy` Lua authority now owns:
   emits ordinary timed-state requests after nonlethal contact;
 - a reusable self-state family and timed state-instance lifecycle;
 - a selected-right party-aura family whose ECS emitter and target relations
-  own ordinary stat sources without manufacturing casts; and
+  own ordinary stat sources without manufacturing casts, plus a bounded
+  connected presentation relationship that reuses the offline aura renderer
+  without exporting gameplay policy; and
 - the shared melee action path.
 
 Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
@@ -831,6 +833,19 @@ cadence, while non-aura timed-state graphics remain independent. Thus cycling a
 ground graphic never disables a modifier. The Might front/back Overlay rows and
 DCC members are pinned by the owned-asset test.
 
+Connected presentation uses `WorldView/v5`, not the short-lived semantic-event
+tail, because an aura relationship persists until authority removes it. The
+reliable projection carries at most 512 stable records containing only public
+target ID, state ID, and positive record period. `ClientView/v11` rejects
+oversized lists, malformed periods, and duplicate target/state pairs. The
+client binds each record to an existing disposable unit mirror through
+`d2legacy.presentation.state`; Lua's ordinary state snapshot then feeds the
+same cycle and Overlay lookup used offline. Distinct state IDs on one target
+remain separate records so their gameplay effects can coexist while the visual
+selector displays one aura graphic at a time. Source identity, skill ID/level,
+stat values, radius, party/filter eligibility, and same-state arbitration have
+no network fields and remain authoritative.
+
 Potential flow:
 
 ```text
@@ -847,12 +862,11 @@ The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,
 other owned units, town/PvP alignment, line-of-sight implications, the exact
 application/leave tick relative to `perdelay`, equal-strength source ownership,
-owner-vs-target state distinctions, sound lifetime, and connected persistent
-overlay projection remain explicit Expansion 1.14d probes. The two-second Might
-graphic handoff follows its owned 50-tick period and corroborating visual
-evidence; a controlled target-runtime capture must still determine whether
-every aura family uses its own periodic field for visual handoff or a separate
-client state scheduler.
+owner-vs-target state distinctions, and sound lifetime remain explicit
+Expansion 1.14d probes. The two-second Might graphic handoff follows its owned
+50-tick period and corroborating visual evidence; a controlled target-runtime
+capture must still determine whether every aura family uses its own periodic
+field for visual handoff or a separate client state scheduler.
 
 ## Summons and owned units
 

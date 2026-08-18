@@ -29,6 +29,12 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	})
 	monsterDeath := registerProjectionStore(t, engine, "d2legacy.monster.death", []akara.Field{{Name: "tick", Kind: akara.FieldInt64}, {Name: "drops", Kind: akara.FieldString}})
 	monsterAI := registerProjectionStore(t, engine, "d2legacy.monster.ai", []akara.Field{{Name: "target_id", Kind: akara.FieldString}, {Name: "state", Kind: akara.FieldString}})
+	auraEffect := registerProjectionStore(t, engine, "d2legacy.skill.aura_effect", []akara.Field{
+		{Name: "emitter", Kind: akara.FieldEntity}, {Name: "target", Kind: akara.FieldEntity},
+		{Name: "source_id", Kind: akara.FieldString}, {Name: "skill_id", Kind: akara.FieldInt64},
+		{Name: "skill_level", Kind: akara.FieldInt64}, {Name: "state_id", Kind: akara.FieldString},
+		{Name: "refresh_delay", Kind: akara.FieldInt64},
+	})
 	player := engine.World().MustCreateEntity()
 	nearB := engine.World().MustCreateEntity()
 	nearA := engine.World().MustCreateEntity()
@@ -37,6 +43,16 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	_, _ = identity.Set(player, map[string]any{"character_id": "character", "player": "alice", "name": "Alice", "class": "Amazon"})
 	_, _ = position.Set(player, map[string]any{"x": 10.0, "y": 10.0})
 	_, _ = location.Set(player, map[string]any{"act": int64(1), "level_id": int64(2)})
+	effect := engine.World().MustCreateEntity()
+	_, _ = auraEffect.Set(effect, map[string]any{
+		"emitter": player, "target": player, "source_id": "server-secret-source",
+		"skill_id": int64(98), "skill_level": int64(20), "state_id": "might", "refresh_delay": int64(50),
+	})
+	secondEffect := engine.World().MustCreateEntity()
+	_, _ = auraEffect.Set(secondEffect, map[string]any{
+		"emitter": nearA, "target": player, "source_id": "second-secret-source",
+		"skill_id": int64(99), "skill_level": int64(9), "state_id": "prayer", "refresh_delay": int64(75),
+	})
 	setPublic := func(entity akara.Entity, id string, x, y float64) {
 		_, _ = position.Set(entity, map[string]any{"x": x, "y": y})
 		_, _ = location.Set(entity, map[string]any{"act": int64(1), "level_id": int64(2)})
@@ -84,8 +100,15 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		dead.ID != "monster:corpse" || dead.Kind != "corpse" || dead.Label != "Fallen" || dead.Mode != "DT" || dead.SpawnID != "corpse" {
 		t.Fatalf("living=%#v corpse=%#v", living, dead)
 	}
+	if len(view.States) != 2 ||
+		view.States[0] != (WorldState{TargetID: "player:alice", StateID: "might", PeriodTicks: 50}) ||
+		view.States[1] != (WorldState{TargetID: "player:alice", StateID: "prayer", PeriodTicks: 75}) {
+		t.Fatalf("world states = %#v", view.States)
+	}
 	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "7777") || strings.Contains(string(payload), "server-only-drop") ||
 		strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "attack") ||
+		strings.Contains(string(payload), "server-secret-source") || strings.Contains(string(payload), "second-secret-source") || strings.Contains(string(payload), "source_id") ||
+		strings.Contains(string(payload), "skill_id") || strings.Contains(string(payload), "skill_level") ||
 		strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
 		t.Fatalf("world view leaked hidden/far state: %s", payload)
 	}

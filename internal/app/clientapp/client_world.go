@@ -32,6 +32,13 @@ type clientWorld struct {
 	eventCursorID         uint64
 	semanticEventEntities []akara.Entity
 	missileEntities       map[string]akara.Entity
+	projectedStates       []playeradapter.WorldState
+	stateEntities         map[presentationStateKey]akara.Entity
+}
+
+type presentationStateKey struct {
+	targetID string
+	stateID  string
 }
 
 func newClientWorld() *clientWorld {
@@ -106,6 +113,7 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 		if err := world.reconcileMissiles(app, projection.Missiles); err != nil {
 			return err
 		}
+		world.projectedStates = append(world.projectedStates[:0], projection.States...)
 		world.lastCorrection = max(world.lastCorrection, projection.Tick)
 		world.lastViewRevision = revision
 		world.history.Upsert(projection)
@@ -145,6 +153,9 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 		return err
 	}
 	if err := app.applyAnimationTimeline(hud.Player.PlayerID, timeline, session.StepDuration()); err != nil {
+		return err
+	}
+	if err := world.reconcilePersistentStates(app, world.projectedStates); err != nil {
 		return err
 	}
 	world.lastHUD = hud

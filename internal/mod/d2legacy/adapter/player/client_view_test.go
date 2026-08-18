@@ -20,6 +20,16 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		"duplicate world ID": func(view *ClientView) {
 			view.World.Entities = append(view.World.Entities, view.World.Entities[0])
 		},
+		"excess persistent states": func(view *ClientView) {
+			view.World.States = make([]WorldState, MaxWorldViewStates+1)
+		},
+		"invalid persistent state period": func(view *ClientView) {
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "might"}}
+		},
+		"duplicate persistent state": func(view *ClientView) {
+			state := WorldState{TargetID: "player:player", StateID: "might", PeriodTicks: 50}
+			view.World.States = []WorldState{state, state}
+		},
 		"excess private items": func(view *ClientView) {
 			view.Private.Items.Items = make([]ItemEntityView, MaxPrivateItems+1)
 		},

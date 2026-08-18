@@ -129,12 +129,17 @@ MPQ tables, AnimData/effective-rate melee and spell actions, current-state melee
 target revalidation, straight-missile, timed-state, reactive-state, shared cast
 cues/overlays/sounds, exact standalone-DCC ground anchoring and missile
 direction/blend presentation, reconnect-safe connected semantic cast/state/
-monster-death projection through a bounded `ClientView/v10`/`EventView/v3`
+monster-death projection through a bounded `ClientView/v11`/`EventView/v3`
 tail and disposable ECS mirrors, including record-authored monster/player
-overlay-height attachment, and a bounded `WorldView/v4` living-monster, corpse,
+overlay-height attachment, and a bounded `WorldView/v5` living-monster, corpse,
 and live-missile projection whose 25 Hz position, facing, and effective monster-
 mode updates feed the same presentation-only ECS recipes used offline without
-exposing AI policy, alongside definition-driven radial-missile slices as of
+exposing AI policy. The reliable view also carries bounded persistent target/
+state/record-period relationships and reconstructs them as disposable
+presentation-only ECS entities. Connected aura graphics therefore use the
+offline overlay/cycle path without exposing source identity, skill level,
+stats, radius, party/filter decisions, or arbitration, alongside definition-
+driven radial-missile slices as of
 2026-08-18. Nova is now the first
 exact-ID `missile.radial` configuration: one targetless cast creates a shared-
 identity ring of ordinary ECS projectile entities, level-scaled count/mana/
@@ -219,8 +224,9 @@ the relationship and modifier together. Offline presentation follows the
 pinned Might States/Overlay records and cycles one active aura graphic per
 affected unit at the record's 50-tick period without disabling the other aura
 effects. Exact `aurafilter=73731` owned-unit coverage, application/leave tick
-ordering, equal-source ownership, cross-family visual cadence, sound lifetime,
-and connected persistent overlays remain explicit 1.14d probes.
+ordering, equal-source ownership, cross-family visual cadence, and sound
+lifetime remain explicit 1.14d probes. Connected persistent overlays now cross
+a bounded semantic relationship rather than copying aura gameplay facts.
 
 Spell Lab now wraps the production Blood Moor scene instead of maintaining a
 parallel spell simulator. Its ephemeral level-30 Sorceress fixture
@@ -245,7 +251,7 @@ the renderer contains no skill/state-name branch. Owned Expansion records and
 DCC members are pinned for Frozen Armor, Enchant, Amplify Damage, and Weaken.
 Monster definitions now retain their exact MonStats2 `OverlayHeight` category;
 the shared renderer selects the corresponding Overlay.txt `Height1..4` offset,
-while player targets select Height2. `ClientView/v10` carries only that bounded
+while player targets select Height2. `ClientView/v11` carries only that bounded
 attachment category and reconstructs it as a disposable ECS presentation
 anchor, keeping offline and connected state effects on the same path.
 The shared cast adapter now also joins every admitted Skills.txt row to its
@@ -262,7 +268,7 @@ their table-specific luminous blend paths. A held-pointer gate now emits one
 request per authoritative ECS action, so a multi-frame click cannot queue a
 second cast while a deliberate hold still repeats after completion. Connected
 clients now receive nearby live projectile/effect visuals through bounded
-`WorldView/v4` records and reconstruct only a `d2legacy.presentation.missile`
+`WorldView/v5` records and reconstruct only a `d2legacy.presentation.missile`
 component. The reliable stream owns lifecycle and record-derived DCC/palette/
 direction/timing/blend/offset facts; the 25 Hz disposable transform stream
 updates positions for already admitted identities. Damage, collision, target,
@@ -346,13 +352,13 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 12 exact-ID implementations, 345 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might's Skills, States, SkillDesc, locale TBL, sound key, front/back Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states and offline aura relationships resolve States/Overlay records into shared world overlays without skill branches. Distinct aura modifiers stay active while presentation rotates one aura graphic per affected unit using the record period. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, aura gameplay facts, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate aura sound/connected overlay semantics, client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states and aura relationships resolve States/Overlay records into shared world overlays without skill branches. Distinct aura modifiers stay active while presentation rotates one aura graphic per affected unit using the record period. Connected authority projects only bounded target/state/period relationships and the disposable client ECS binds them to existing unit mirrors, so the identical Lua cycle/overlay path works without exposing source identity, skill level, stats, radius, filter/party policy, or arbitration. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, aura gameplay facts, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate aura sound and cross-family cadence, client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, an owned-unit graph, corpse, straight projectile, imported ground item, stateful interaction object, and separately resident pending-action relationship survive inactivation without scalar graph copies. The inactive ECS tag removes live capabilities, suspends opted-in systems, and filters projections; generic pre-plan attachment plus pickup/re-drop transitions reuse the same contract. Public loot policy, retail object/event families, exact corpse/projectile/event timing, 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Melee and missile contact share one ordered direct-damage commit/result boundary, and lethal player results now compose death/action-filter state onto the same character entity with independent consumer markers. Block/avoidance, typed bundle breadth, secondary damage effects, player-death consequences, movement, item activation, object, and content breadth remain below. |
-| M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. `ClientView/v10` embeds a strongly typed `EventView/v3` and `WorldView/v4`: the former is a proximity-filtered reliable 64-tick/256-entry semantic cast/state/monster-death tail with explicit truncation/gap detection and reconnect epochs; the latter adds bounded nearby living-monster composites, retained corpse presentation, and at most 512 presentation-only missile records. Untrusted-input validation bounds both. Actor/missile transforms share the fixed 25 Hz datagram budget by distance; actor records carry position, facing, and effective two-byte animation mode, never private monster AI state. Corpse identity and visual lifecycle remain reliable. |
+| M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. `ClientView/v11` embeds a strongly typed `EventView/v3` and `WorldView/v5`: the former is a proximity-filtered reliable 64-tick/256-entry semantic cast/state/monster-death tail with explicit truncation/gap detection and reconnect epochs; the latter adds bounded nearby living-monster composites, retained corpse presentation, at most 512 presentation-only missile records, and at most 512 persistent target/state/period relationships. Untrusted-input validation bounds each collection, rejects duplicate relationship keys, and preserves stable ordering. Actor/missile transforms share the fixed 25 Hz datagram budget by distance; actor records carry position, facing, and effective two-byte animation mode, never private monster AI state. Aura source identity, skill/stat facts, radius, eligibility, and arbitration never enter the view. Corpse identity and visual lifecycle remain reliable. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
 | M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. Staged frontend bundles then reduced settled main-menu heap from 487 MB to 216 MB, preloader-retained heap from 357 MB to 112 MB, and decoded-cache weight from 339 MB to 59 MB with zero pending preloads. A new compile-time Raylib/Ebitengine experiment keeps simulation and composition identical, compiles both clients in CI, and owns a matched capture/profile/summary command rather than relying on subjective window feel. Measured backend results and Ebitengine feature parity remain open. |
@@ -1045,8 +1051,15 @@ runtime composition and the coverage report.
   states deterministically, remove effects atomically on eligibility changes,
   and rotate the offline target's record-authored aura graphic without turning
   gameplay modifiers off. Keep the complete target filter, owned units,
-  refresh/leave ordering, sound, equal-source ownership, and connected
-  persistent presentation partial pending owned 1.14d evidence.
+  refresh/leave ordering, sound, and equal-source ownership partial pending
+  owned 1.14d evidence.
+- [x] Carry persistent aura presentation across the reliable connected view as
+  a versioned, bounded target/state/record-period list. Preserve multiple
+  distinct states on one target, reject duplicate keys and invalid periods,
+  bind each relationship to an already admitted disposable unit mirror, and
+  feed the shared Lua aura-cycle/Overlay renderer. Keep emitter identity,
+  skill/level, stats, radius, filter/party policy, and same-state arbitration
+  server-only.
 - [x] Add a production-backed Spell Lab scene that grants only the exact-ID
   manifest through owned Skills/SkillDesc records, delegates world/HUD/input/
   authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
@@ -1072,12 +1085,12 @@ runtime composition and the coverage report.
   lifecycle so a click spanning multiple render frames submits one cast while
   a deliberate hold repeats only after the prior action completes.
 - [x] Project nearby cast/state semantic facts through a bounded reliable
-  `ClientView/v10`/`EventView/v3` tail, baseline durable history on join/reconnect, reject
+  `ClientView/v11`/`EventView/v3` tail, baseline durable history on join/reconnect, reject
   gaps/truncation instead of silently losing presentation, and materialize only
   new facts as short-lived spatial ECS entities in the disposable connected
   client world so the offline Lua cue/overlay/sound path remains the sole
   presentation consumer.
-- [x] Add `WorldView/v4` live projectile/effect presentation for connected
+- [x] Add `WorldView/v5` live projectile/effect presentation for connected
   clients. Project only bounded record-derived visual and spatial fields,
   reconstruct a presentation-only ECS component, keep lifecycle reliable, and
   merge actor/missile positions by distance into the existing 25 Hz datagram
@@ -1091,7 +1104,7 @@ runtime composition and the coverage report.
   typed `monster_death_presented` cue needed for record-authored death audio;
   keep loot, XP, credit, player-count policy, and corpse-use facts server-only.
 - [x] Publish the effective living-monster animation outcome through the
-  existing `WorldView/v4` actor transform. Match offline precedence by keeping
+  existing `WorldView/v5` actor transform. Match offline precedence by keeping
   death terminal, selecting `A1` for authority attack state, `WL` for nonzero
   motion, and the authored mode otherwise; carry only mode/facing at 25 Hz and
   prove that AI state/target policy never enters the JSON view or client ECS.
@@ -1197,7 +1210,7 @@ typed two-field payload: presentation kind and stable monster spawn ID. Loot,
 XP, killer/credit identity, player-count inputs, treasure class, and drops are
 not serialized. `EventView/v3` retains a 64-tick tail capped at 256 entries;
 its `from_tick` and `truncated` facts make a correction gap detectable.
-`ClientView/v10` validates type unions, identities, strings, ticks,
+`ClientView/v11` validates type unions, identities, strings, ticks,
 coordinates, ordering, and allocation bounds as untrusted network input. It
 carries only the bounded 0..4 overlay-height category—not arbitrary appearance
 data—and the client mirrors it into an ECS presentation anchor. Join,
@@ -1211,7 +1224,7 @@ forced-motion semantic events still need equally typed consumers before they
 join this network view; no arbitrary component payload is serialized.
 
 Connected monster state now uses the same presentation-only ECS boundary.
-`WorldView/v4` projects a living monster's stable spawn/definition identity,
+`WorldView/v5` projects a living monster's stable spawn/definition identity,
 localized name key, MonStats2 composite token/mode/weapon class/components,
 death-sound record key, bounded overlay-height category, facing, position, and
 public health. For live animation, the projector applies the same precedence as
@@ -1233,7 +1246,7 @@ to those systems. Corpse usability, lifetime, loot, XP, attribution, AI, and
 occupancy policy remain authoritative and absent from the client view.
 
 Live server-missile presentation now crosses a separate state boundary because
-a moving projectile is not a replayable one-shot event. `WorldView/v4` joins
+a moving projectile is not a replayable one-shot event. `WorldView/v5` joins
 nearby `d2legacy.missile.projectile` and `d2legacy.missile.effect` entities to
 their authoritative positions/locations, filters out invisible helper
 missiles, and copies at most 512 visual records. Each record contains only the
@@ -1519,12 +1532,25 @@ timed states. A presentation-only cycle retains every gameplay effect but
 selects one aura state per target, advancing at the selected row's `perdelay`
 converted from the 25 Hz simulation cadence. The shared States/Overlay adapter
 then renders Might's pinned back/front DCC pair and normal attachment rules.
+`WorldView/v5` applies the same semantic boundary to connected sessions: its
+reliable list contains only public target ID, active state ID, and positive
+record period, is capped at 512 stable entries, and rejects duplicate target/
+state keys. It deliberately has no field capable of carrying emitter identity,
+skill ID or level, stat values, radius, party/filter decisions, or same-state
+arbitration. `ClientView/v11` validation treats the list as untrusted input.
+The disposable client ECS binds each admitted relationship to an existing
+local/peer/monster mirror as `d2legacy.presentation.state`; missing mirrors are
+retried on later reconciliation, and removal destroys the presentation entity.
+Lua consumes that component through the same aura snapshot and cycling path as
+offline authority. Multiple distinct state IDs on one target survive the wire
+and remain independently active even though only one aura graphic is selected
+for a presentation interval.
+
 The exact meaning of all filter bits, non-player owned-unit membership,
 application/removal tick order, equal-strength source ownership, whether every
-aura's visual cadence follows `perdelay`, `onsound` lifetime, and connected
-persistent overlay projection remain explicit target-runtime work. No Classic,
-older patch, vanilla server/save, or community-tool compatibility behavior is
-introduced.
+aura's visual cadence follows `perdelay`, and `onsound` lifetime remain
+explicit target-runtime work. No Classic, older patch, vanilla server/save, or
+community-tool compatibility behavior is introduced.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
@@ -1656,17 +1682,17 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: close the first aura family's bounded multiplayer presentation before
-adding more aura IDs. Project only target identity, active semantic state, and
-record period through the reliable connected view; reconstruct disposable
-presentation relationships and prove that multiple distinct aura states remain
-effective while one graphic cycles. Do not expose stat values, party policy,
-filter decisions, radius, source arbitration, or other authority. In parallel,
-capture owned Expansion 1.14d player/hireling/summon entry/leave observations
-for `aurafilter=73731`, 50-tick application/removal ordering, equal-strength
-same-aura ownership, and `onsound` lifetime. Promote those results before
-broadening Might beyond living same-level player party members or treating
-`perdelay` as a universal client cadence.
+Next: inspect owned Skills/States/SkillDesc and layered locale TBL evidence for
+the next selected-aura configuration, prioritizing a record-complete stat-only
+shape that exercises the generic decoder rather than adding a Might-specific
+branch. Admit an exact ID only when its formulas, state/stat recipe, selection
+rules, and player-visible modifier intent are all established. Do not infer
+pulse damage/healing, target-filter breadth, or sound lifetime from record names.
+In parallel, capture owned Expansion 1.14d player/hireling/summon entry/leave
+observations for `aurafilter=73731`, 50-tick application/removal ordering,
+equal-strength same-aura ownership, and `onsound` lifetime. Promote those
+results before broadening Might beyond living same-level player party members
+or treating `perdelay` as a universal client cadence.
 
 Also populate and review the owned Expansion 1.14d missile-audio matrix, the
 client-function-30 visual matrix, and the SC/SQ/FCR/weapon-class timing matrix.
@@ -1678,7 +1704,7 @@ referenced client-only curse missile layers without guessing the `cltmissilea`/
 `cltmissilec` attachment and motion roles. Pin Overlay light,
 variant, character restriction, and multi-direction behavior without skill-
 specific renderer branches. Live monster/corpse and server projectile/effect
-presentation already use the typed `WorldView/v4` boundary, and monster death
+presentation already use the typed `WorldView/v5` boundary, and monster death
 audio uses the typed `EventView/v3` boundary; extend the semantic event view
 only as those remaining semantic-event consumers become presentation-ready;
 never expose arbitrary ECS payloads. Use the completed timing report to
