@@ -8,8 +8,10 @@ local stat_recipes = {
     coldresist = { stat = "cold_resist", operation = "add", formula = "dm34" },
     fireresist = { stat = "fire_resist", operation = "add", formula = "dm34" },
     item_tohit_percent = { stat = "item_tohit_percent", operation = "percent", formula = "ln34" },
+    lightresist = { stat = "lightning_resist", operation = "add", formula = "dm34" },
     maxfireresist = { stat = "max_fire_resist", operation = "add", formula = "self_hard_level" },
     maxcoldresist = { stat = "max_cold_resist", operation = "add", formula = "self_hard_level" },
+    maxlightresist = { stat = "max_lightning_resist", operation = "add", formula = "self_hard_level" },
     skill_armor_percent = { stat = "defense", operation = "percent", formula = "ln34" },
 }
 

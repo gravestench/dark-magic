@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 16
-explicitly admitted configurations, and 341 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 17
+explicitly admitted configurations, and 340 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 341 missing configurations,
+classification and implementation of the 340 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -955,6 +955,27 @@ checkpoint test proves 76 active cold resistance, maximum 78, +1 inactive
 maximum resistance, and 1000 raw cold damage reduced to 240. Cold-duration and
 freeze/chill rules, absorb, PvP, item-source ordering, and future hard-versus-
 soft level integration remain independent target-version probes.
+
+Resist Lightning is the sixth exact selected party-stat aura. Its independent
+owned evidence pins skill ID 110, `lightresist=dm34`,
+`maxlightresist=skill('Resist Lightning'.blvl)`, inactive
+`maxlightresist=skill('Resist Lightning'.blvl)/2`, states 5/183, localized
+lightning-protection text, `paladin_aura_resistlightning`, and the
+`aura_resistlight`/`cast_resistlight` Overlay and DCC members. Params 3/4 are
+35/150, so the reviewed staged integer recipe produces Blizzard's published
+52..131 active vector. The same [Expansion defensive-aura
+reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+pins the +1 active/floor-half inactive hard-point maximum-resistance rule, 95%
+cap, and soft-level exclusion. Similar neighboring rows justify decoder reuse,
+not exact-ID admission.
+
+The generic consumer now includes base/effective lightning resistance and
+maximum lightning resistance in combat defense, preserves the character-entry
+value, resolves both ordinary stat-source keys, and maps lightning through the
+shared elemental mitigation table. A level-three checkpoint proves 76 active
+resistance, maximum 78, +1 inactive maximum, and 1000 raw lightning damage
+reduced to 240. Lightning absorb, PvP conversion, item-source ordering, and the
+future hard-versus-soft level model remain separate target-version probes.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

@@ -72,11 +72,13 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"aura_resistlight":    {"Filename": "AuraResistLightningBack", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "InitRadius": "6", "Radius": "6", "Red": "255", "Green": "255", "Blue": "200"},
 		"aura_resistcold":     {"Filename": "AuraResistColdBack", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "InitRadius": "6", "Radius": "6", "Red": "210", "Green": "210", "Blue": "255"},
 		"aura_resistfire":     {"Filename": "AuraResistFireFront", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "InitRadius": "6", "Radius": "6", "Red": "255", "Green": "193", "Blue": "103"},
 		"blessedaimback":      {"Filename": "BlessedAim_back", "Frames": "10", "AnimRate": "8", "Trans": "3"},
 		"blessedaimfront":     {"Filename": "BlessedAim_front", "Frames": "10", "AnimRate": "8", "Trans": "3"},
 		"cast_resistfire":     {"Filename": "AuraResistFireFrontCast", "Frames": "11", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "InitRadius": "1", "Radius": "10", "Red": "255", "Green": "193", "Blue": "103"},
+		"cast_resistlight":    {"Filename": "AuraResistLightningBackCast", "Frames": "11", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "InitRadius": "1", "Radius": "10", "Red": "255", "Green": "255", "Blue": "200"},
 		"cast_resistcold":     {"Filename": "AuraResistColdBackCast", "Frames": "11", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "InitRadius": "1", "Radius": "10", "Red": "210", "Green": "210", "Blue": "255"},
 		"aura_defiance_back":  {"Filename": "AuraDefianceBack", "Frames": "15", "AnimRate": "8", "Trans": "3"},
 		"aura_defiance_front": {"Filename": "AuraDefianceFront", "Frames": "15", "AnimRate": "8", "Trans": "3"},
