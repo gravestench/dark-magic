@@ -122,11 +122,11 @@ end
 local function execute_pulse(context, entities, emitter, pulse, state_policy)
     local owner_vitals = ecs.get(emitter, "d2legacy.player.vitals")
     if not owner_vitals then
-        return
+        return false
     end
     local cost = pulse:get("mana_cost_raw")
     if resources.mana_raw(owner_vitals) < cost then
-        return
+        return false
     end
     local effects = pulse_effects(entities, emitter, pulse:get("source_id"))
     assert(#effects > 0, "aura pulse has no composed effects")
@@ -138,7 +138,49 @@ local function execute_pulse(context, entities, emitter, pulse, state_policy)
     end
     if changed and cost > 0 then
         assert(resources.spend_mana(owner_vitals, cost))
+        return true
     end
+    return false
+end
+
+local function reconcile_suppression(entities, emitter, source_id, desired, structural, removed)
+    local existing
+    for _, entity in ipairs(entities) do
+        local suppression = ecs.get(entity, "d2legacy.resource.mana_regen_suppression")
+        if suppression and not removed[entity:id()] and suppression:get("target"):id() == emitter:id() then
+            if suppression:get("source_id") == source_id and not existing then
+                existing = entity
+            elseif suppression:get("source_id") == source_id or suppression:get("source_id"):match("^aura:") then
+                structural:destroy(entity)
+            end
+        end
+    end
+    if desired and not existing then
+        structural:create({
+            ["d2legacy.resource.mana_regen_suppression"] = {
+                target = emitter,
+                source_id = source_id,
+            },
+        })
+    elseif not desired and existing then
+        structural:destroy(existing)
+    end
+end
+
+local function remove_stale_suppressions(entities, structural)
+    local removed = {}
+    for _, entity in ipairs(entities) do
+        local suppression = ecs.get(entity, "d2legacy.resource.mana_regen_suppression")
+        if suppression and suppression:get("source_id"):match("^aura:") then
+            local target = suppression:get("target")
+            local pulse = ecs.get(target, "d2legacy.skill.aura_pulse")
+            if not pulse or pulse:get("source_id") ~= suppression:get("source_id") then
+                structural:destroy(entity)
+                removed[entity:id()] = true
+            end
+        end
+    end
+    return removed
 end
 
 function M.register(state_policy)
@@ -154,6 +196,7 @@ function M.register(state_policy)
                 "d2legacy.skill.aura_effect",
                 "d2legacy.player.vitals",
                 "d2legacy.state.instance",
+                "d2legacy.resource.mana_regen_suppression",
             },
         },
         read = {
@@ -162,18 +205,22 @@ function M.register(state_policy)
             "d2legacy.player.identity",
             "d2legacy.player.death",
             "d2legacy.world.inactive",
+            "d2legacy.resource.mana_regen_suppression",
         },
         write = {
             "d2legacy.skill.aura_pulse",
             "d2legacy.player.vitals",
             "d2legacy.state.instance",
+            "d2legacy.resource.mana_regen_suppression",
         },
-        update = function(context, entities)
+        update = function(context, entities, structural)
+            local removed = remove_stale_suppressions(entities, structural)
             for _, emitter in ipairs(entities) do
                 local pulse = ecs.get(emitter, "d2legacy.skill.aura_pulse")
                 if pulse and context.tick >= pulse:get("next_tick") then
                     pulse:set("next_tick", progression.next_periodic_tick(context.tick, pulse:get("period_ticks")))
-                    execute_pulse(context, entities, emitter, pulse, state_policy)
+                    local suppress = execute_pulse(context, entities, emitter, pulse, state_policy)
+                    reconcile_suppression(entities, emitter, pulse:get("source_id"), suppress, structural, removed)
                 end
             end
         end,

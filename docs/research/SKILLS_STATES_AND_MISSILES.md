@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 22
-explicitly admitted configurations, and 335 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 23
+explicitly admitted configurations, and 334 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -467,7 +467,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 335 missing configurations,
+classification and implementation of the 334 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1092,8 +1092,8 @@ change-gated payment, capped direct-stat changes, and the global-period-plus-one
 tick schedule
 ([basic aura execution](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/SKILLS/SkillPal.cpp#L227),
 [resource and periodic helpers](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/SKILLS/Skills.cpp#L1157)).
-That recovered source principally reconstructs 1.10, so exact 1.14d pulse phase,
-payment ordering, and mana-regeneration suppression remain probe-gated.
+That recovered source principally reconstructs 1.10, so exact 1.14d pulse phase
+and payment/regeneration event ordering remain probe-gated.
 Hirelings and summons are also excluded until the current owned-unit target
 filter exists, despite Blizzard's Prayer page including hirelings.
 
@@ -1138,9 +1138,47 @@ exact 1.14d shrine callback classification and same-tick expiry-event order
 remain explicit probes. Owned `cleansingfront`/`cleansingback` rows and DCC
 members pin persistent presentation separately.
 
+Meditation is the third exact periodic-aura configuration and the first to
+compose a maintained stat with a direct-effect schedule. Its ID 120 row pins
+filter 73729, zero mana, state 48, the shared radius/50-tick contract,
+`manarecoverybonus=ln34`, and `hitpoints=skill('Prayer'.edns)`. Params 3/4 of
+300/25 produce the official level 1-20 mana-recovery vector 300..775. The
+periodic decoder preserves both authored operations on one definition: ordinary
+keyed stat sources maintain the recovery bonus on current aura relationships,
+while the existing pulse evaluates Prayer healing from the owner's learned
+Prayer level. Removing Prayer reduces only the heal to zero; removing
+Meditation removes the stat source, pulse, and presentation relationship.
+
+Mana now advances through its own 25 Hz resource consumer. For each player it
+computes `base=max(1,floor(maxManaRaw/(25*CharStats.ManaRegen)))`, applies
+`manarecoverybonus+100` with integer truncation, adds flat `manarecovery`, and
+clamps the 8.8 result to zero/maximum. Narrow fixtures may omit `ManaRegen`, but
+mounted target rows pin it; Paladin authors 120. This makes Meditation a named
+stat source consumed by ordinary resource simulation rather than a skill-owned
+mana mutation.
+
+The same consumer makes Prayer's recovered `STATE_NOMANAREGEN` behavior
+meaningful. A useful paid pulse owns a
+`d2legacy.resource.mana_regen_suppression` relationship on its caster. Base
+regeneration remains suppressed until a later pulse is ineffective or
+underfunded, or the aura is deselected; independently authored flat
+`manarecovery` still applies. Source ownership permits future non-aura
+suppressors without teaching mana regeneration skill identities.
+
+Blizzard's official Expansion page confirms party mana recovery, the 300..775
+vector, free Prayer behavior, and that Meditation does not work on hirelings.
+That matches filter 73729 omitting the monster-unit bit present in 73731. Owned
+SkillDesc/TBL rows independently label the mana recovery and Prayer dependency;
+owned State/Overlay/DCC rows pin sound and persistent presentation. Exact 1.14d
+stat-regeneration ordering relative to same-tick casts, aura refresh, and
+resource spending remains a runtime probe because the arithmetic/order source
+principally reconstructs 1.10.
+
 The current target set is intentionally narrower than `aurafilter=73731`: only
-living player party members in the same level are admitted. Hirelings, summons,
-other owned units, town/PvP alignment, line-of-sight implications, the exact
+living player party members in the same level are admitted. Meditation's 73729
+filter and official no-hireling rule match that player-only breadth. For 73731
+auras, hirelings, summons, and other owned units remain explicit gaps. Town/PvP
+alignment, line-of-sight implications, the exact
 application/leave tick relative to `perdelay`, equal-strength source ownership,
 owner-vs-target state distinctions, and sound lifetime remain explicit
 Expansion 1.14d probes. The two-second Might graphic handoff follows its owned

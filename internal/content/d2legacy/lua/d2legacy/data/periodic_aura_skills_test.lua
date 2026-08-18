@@ -68,10 +68,41 @@ return test.suite({
                 perdelay = "50",
                 HitShift = "8",
             },
+            {
+                Id = "120",
+                skill = "Meditation",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                InTown = "1",
+                aurafilter = "73729",
+                aurarangecalc = "ln12",
+                aurastate = "meditation",
+                auratargetstate = "meditation",
+                aurastat1 = "manarecoverybonus",
+                aurastatcalc1 = "ln34",
+                aurastat2 = "hitpoints",
+                aurastatcalc2 = "skill('Prayer'.edns)",
+                mana = "0",
+                lvlmana = "0",
+                minmana = "0",
+                manashift = "8",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "300",
+                Param4 = "25",
+                perdelay = "50",
+                HitShift = "8",
+            },
         },
         ["data/global/excel/states.txt"] = {
             { state = "prayer", id = "34", aura = "1", stat = "" },
             { state = "cleansing", id = "45", aura = "1", stat = "" },
+            { state = "meditation", id = "48", aura = "1", stat = "" },
             { state = "poison", id = "2" },
             { state = "curable", id = "9", curse = "1", curable = "1" },
             { state = "incurable", id = "10", curse = "1", curable = "" },
@@ -114,6 +145,21 @@ return test.suite({
                 test.expect(policy.duration_reduced_states.curable):equals(true)
                 test.expect(policy.duration_reduced_states.shrine_armor):equals(true)
                 test.expect(policy.duration_reduced_states.incurable):equals(nil)
+            end)
+        end),
+        test.case("composes_a_maintained_resource_stat_with_linked_healing", function(t)
+            t:run(function()
+                local definition = require("d2legacy.data.periodic_aura_skills").load({ 120 })[120]
+                test.expect(definition.target_policy):equals("aligned_players")
+                test.expect(#definition.stats):equals(1)
+                test.expect(definition.stats[1].stat):equals("manarecoverybonus")
+                test.expect(definition.stats[1].progression):equals("ln34")
+                test.expect(definition.stats[1].value_base):equals(300)
+                test.expect(definition.stats[1].value_per_level):equals(25)
+                test.expect(#definition.pulse.effects):equals(1)
+                test.expect(definition.pulse.effects[1].kind):equals("heal_life")
+                test.expect(definition.pulse.effects[1].source_skill_id):equals(99)
+                test.expect(definition.pulse.effects[1].level_source):equals("learned_skill")
             end)
         end),
     },

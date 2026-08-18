@@ -140,6 +140,8 @@ local function create_passive_sources(player, sources)
                 or source.stat == "velocitypercent"
                 or source.stat == "item_fastermovevelocity"
                 or source.stat == "staminarecoverybonus"
+                or source.stat == "manarecoverybonus"
+                or source.stat == "manarecovery"
                 or source.stat == "item_staminadrainpct"
                 or source.stat == "vitality"
                 or source.stat == "maxstamina"
@@ -247,6 +249,11 @@ function M.apply(command)
             max_stamina = p.max_stamina,
             stamina_raw = p.stamina * 256,
             max_stamina_raw = p.max_stamina * 256,
+        },
+        ["d2legacy.player.resource_stats"] = {
+            mana_regen_frames = player_stats.mana_regen_frames(p.class),
+            manarecoverybonus = 0,
+            manarecovery = 0,
         },
         ["d2legacy.player.stamina_progression"] = {
             base_vitality = p.vitality,

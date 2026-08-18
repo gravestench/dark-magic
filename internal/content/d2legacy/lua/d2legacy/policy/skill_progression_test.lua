@@ -107,6 +107,31 @@ return test.suite({
                 for level, value in ipairs(thorns) do
                     test.expect(progression.linear(250, 40, level)):equals(value)
                 end
+                local meditation = {
+                    300,
+                    325,
+                    350,
+                    375,
+                    400,
+                    425,
+                    450,
+                    475,
+                    500,
+                    525,
+                    550,
+                    575,
+                    600,
+                    625,
+                    650,
+                    675,
+                    700,
+                    725,
+                    750,
+                    775,
+                }
+                for level, value in ipairs(meditation) do
+                    test.expect(progression.linear(300, 25, level)):equals(value)
+                end
             end)
         end),
         test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)

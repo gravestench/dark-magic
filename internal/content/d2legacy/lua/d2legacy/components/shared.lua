@@ -28,6 +28,18 @@ function M.register()
         { name = "stamina_raw", type = "i64" },
         { name = "max_stamina_raw", type = "i64" },
     })
+    component("d2legacy.player.resource_stats", {
+        { name = "mana_regen_frames", type = "i64" },
+        { name = "manarecoverybonus", type = "i64" },
+        { name = "manarecovery", type = "i64" },
+    })
+    -- Resource suppression is a relationship rather than a flag embedded in
+    -- one skill. Multiple future effects can own independent reasons, while
+    -- the mana consumer only needs to filter targets with any active source.
+    component("d2legacy.resource.mana_regen_suppression", {
+        { name = "target", type = "entity" },
+        { name = "source_id", type = "string" },
+    })
     -- Player death is a state transition on the durable character entity, not
     -- a replacement entity. Consequences remain pending until separately
     -- verified corpse, gold, experience, respawn, or Hardcore consumers commit.

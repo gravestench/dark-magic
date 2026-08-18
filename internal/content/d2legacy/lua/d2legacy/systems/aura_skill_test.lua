@@ -340,6 +340,38 @@ return test.suite({
                 HitShift = "8",
             },
             {
+                Id = "120",
+                skill = "Meditation",
+                skilldesc = "meditation",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                InTown = "1",
+                aurafilter = "73729",
+                aurarangecalc = "ln12",
+                aurastate = "meditation",
+                auratargetstate = "meditation",
+                aurastat1 = "manarecoverybonus",
+                aurastatcalc1 = "ln34",
+                aurastat2 = "hitpoints",
+                aurastatcalc2 = "skill('Prayer'.edns)",
+                mana = "0",
+                lvlmana = "0",
+                minmana = "0",
+                manashift = "8",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "300",
+                Param4 = "25",
+                perdelay = "50",
+                HitShift = "8",
+            },
+            {
                 Id = "997",
                 skill = "Fixture Idle",
                 skilldesc = "idle",
@@ -589,6 +621,7 @@ return test.suite({
             { skilldesc = "might", ListRow = "1", IconCel = "4" },
             { skilldesc = "prayer", ListRow = "3", IconCel = "6" },
             { skilldesc = "cleansing", ListRow = "3", IconCel = "38" },
+            { skilldesc = "meditation", ListRow = "3", IconCel = "48" },
             { skilldesc = "thorns", ListRow = "10", IconCel = "14" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
@@ -603,6 +636,7 @@ return test.suite({
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
             { state = "prayer", id = "34", aura = "1", stat = "" },
             { state = "cleansing", id = "45", aura = "1", stat = "" },
+            { state = "meditation", id = "48", aura = "1", stat = "" },
             { state = "poison", id = "2" },
             { state = "amplifydamage", id = "9", curse = "1", curable = "1" },
             { state = "battlecry", id = "89", curse = "1", curable = "" },
@@ -767,6 +801,136 @@ return test.suite({
                 test.expect(#pulse_effects(alice)):equals(0)
             end),
         }),
+        test.case("meditation_composes_mana_recovery_with_the_owners_learned_prayer_effect", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.submit_system({
+                tick = 1,
+                sequence = 2,
+                kind = "system.player.enter",
+                payload = entry("bob", "Amazon", 12),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local bob = player_named("bob")
+                for _, skill in ipairs({ { id = 99, level = 3 }, { id = 120, level = 3 } }) do
+                    ecs.create({
+                        ["d2legacy.player.learned_skill"] = {
+                            owner = alice,
+                            skill_id = skill.id,
+                            level = skill.level,
+                            list_row = 3,
+                            left_allowed = false,
+                            right_allowed = true,
+                        },
+                    })
+                end
+                for _, target in ipairs({ alice, bob }) do
+                    local vitals = ecs.get(target, "d2legacy.player.vitals")
+                    vitals:set("max_health", 50)
+                    vitals:set("health", 40)
+                    vitals:set("max_mana_raw", 300 * 256)
+                    vitals:set("max_mana", 300)
+                    vitals:set("mana_raw", 0)
+                    vitals:set("mana", 0)
+                    ecs.get(target, "d2legacy.player.resource_stats"):set("mana_regen_frames", 120)
+                end
+                reflected_damage_attacker("monster:meditation-filter", 100 * 256)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "party.invite",
+                payload = { target = "bob" },
+            }),
+            test.step(1),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "bob",
+                kind = "party.accept",
+                payload = { inviter = "alice" },
+            }),
+            test.submit({
+                tick = 4,
+                sequence = 2,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 120 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local pulse = ecs.get(alice, "d2legacy.skill.aura_pulse")
+                test.assert(pulse ~= nil, "Meditation did not compose its pulse schedule")
+                test.expect(pulse:get("mana_cost_raw")):equals(0)
+                test.expect(pulse:get("next_tick")):equals(51)
+                local effects = pulse_effects(alice)
+                test.expect(#effects):equals(1)
+                test.expect(effects[1]:get("kind")):equals("heal_life")
+                test.expect(effects[1]:get("value")):equals(4)
+                test.expect(#aura_effects()):equals(2)
+                for _, effect_entity in ipairs(aura_effects()) do
+                    test.expect(aura_source(effect_entity, "manarecoverybonus"):get("value")):equals(350)
+                    local target = ecs.get(effect_entity, "d2legacy.skill.aura_effect"):get("target")
+                    test.assert(ecs.get(target, "d2legacy.player.identity") ~= nil, "filter 73729 admitted a monster")
+                    test.expect(ecs.get(target, "d2legacy.player.resource_stats"):get("manarecoverybonus")):equals(350)
+                    local vitals = ecs.get(target, "d2legacy.player.vitals")
+                    vitals:set("mana_raw", 0)
+                    vitals:set("mana", 0)
+                end
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(ecs.get(player_named("alice"), "d2legacy.player.vitals"):get("mana_raw")):equals(112)
+                test.expect(ecs.get(player_named("bob"), "d2legacy.player.vitals"):get("mana_raw")):equals(112)
+            end),
+            test.step(44),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local bob = player_named("bob")
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("health")):equals(44)
+                test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("health")):equals(44)
+                ecs.destroy(assert(learned_skill(alice, 99), "fixture Prayer skill is missing"))
+            end),
+            test.step(50),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local bob = player_named("bob")
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("health")):equals(44)
+                test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("health")):equals(44)
+                test.expect(pulse_effects(alice)[1]:get("value")):equals(0)
+            end),
+            test.submit({
+                tick = 102,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
+                test.expect(#pulse_effects(alice)):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
+                test.expect(ecs.get(alice, "d2legacy.player.resource_stats"):get("manarecoverybonus")):equals(0)
+            end),
+        }),
         test.case("periodic_aura_heals_only_when_the_full_pulse_cost_is_funded_and_useful", {
             test.submit_system({
                 tick = 1,
@@ -852,6 +1016,7 @@ return test.suite({
                 test.expect(bob_vitals:get("health")):equals(45)
                 test.expect(alice_vitals:get("mana_raw")):equals(351)
                 test.expect(ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse"):get("next_tick")):equals(101)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
                 alice_vitals:set("mana_raw", 352)
                 alice_vitals:set("mana", 1)
             end),
@@ -864,6 +1029,11 @@ return test.suite({
                 test.expect(bob_vitals:get("health")):equals(49)
                 test.expect(alice_vitals:get("mana_raw")):equals(0)
                 test.expect(alice_vitals:get("mana")):equals(0)
+                local suppressions = ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })
+                test.expect(#suppressions):equals(1)
+                local suppression = ecs.get(suppressions[1], "d2legacy.resource.mana_regen_suppression")
+                test.expect(suppression:get("target"):id()):equals(player_named("alice"):id())
+                test.expect(suppression:get("source_id")):equals("aura:alice:99")
             end),
             test.step(1),
             test.run(function()
@@ -884,6 +1054,7 @@ return test.suite({
                 local alice = player_named("alice")
                 test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("mana_raw")):equals(352)
                 test.expect(ecs.get(alice, "d2legacy.skill.aura_pulse"):get("next_tick")):equals(201)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
             end),
             test.submit({
                 tick = 153,
@@ -898,6 +1069,62 @@ return test.suite({
                 local alice = player_named("alice")
                 test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
                 test.expect(#pulse_effects(alice)):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
+            end),
+        }),
+        test.case("deselecting_a_paid_periodic_aura_removes_its_mana_regen_suppression", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 99,
+                        level = 1,
+                        list_row = 3,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                local vitals = ecs.get(alice, "d2legacy.player.vitals")
+                vitals:set("max_health", 50)
+                vitals:set("health", 40)
+                vitals:set("mana_raw", 1000)
+                vitals:set("mana", 3)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 99 },
+            }),
+            test.step(49),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(ecs.get(player_named("alice"), "d2legacy.player.vitals"):get("health")):equals(42)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(1)
+            end),
+            test.submit({
+                tick = 52,
+                sequence = 2,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
+                test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
             end),
         }),
         test.case("thorns_reflects_committed_melee_physical_damage_through_attacker_mitigation", {
