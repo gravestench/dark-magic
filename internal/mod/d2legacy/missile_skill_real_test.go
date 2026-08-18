@@ -52,6 +52,10 @@ func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 			t.Fatalf("owned expansion 1.14d missile %q KnockBack = %#v, want %q", missile, row, want)
 		}
 	}
+	fireball := rowBy(missiles, "Missile", "fireball")
+	if fireball == nil || fireball["CelFile"] != "Fireball" || fireball["NumDirections"] != "16" || fireball["Trans"] != "1" {
+		t.Fatalf("owned expansion 1.14d fireball presentation fields = %#v", fireball)
+	}
 	authority, err := Start(t.Context(), content.D2Legacy(), pinned, engine, session, 314)
 	if err != nil {
 		t.Fatal(err)

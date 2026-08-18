@@ -5,6 +5,7 @@
 
 local components = require("d2legacy.components.skill_actions")
 local shared_components = require("d2legacy.components.shared")
+local cast_action_data = require("d2legacy.data.cast_actions")
 local missile_skill_data = require("d2legacy.data.missile_skills")
 local point_movement_skill_data = require("d2legacy.data.point_movement_skills")
 local radial_missile_skill_data = require("d2legacy.data.radial_missile_skills")
@@ -150,8 +151,9 @@ function M.start()
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
+    M.cast_actions = cast_action_data.load(M.cast_skills)
     cast_command.register(M.cast_skills)
-    cast_system.register(M.cast_skills)
+    cast_system.register(M.cast_skills, M.cast_actions)
     melee_skill_system.register(M.melee_skills)
     missile_skill_system.register(M.cast_skills)
     point_movement_skill_system.register(M.point_movement_skills)
@@ -206,6 +208,7 @@ function M.stop()
     M.targeted_state_skills = nil
     M.area_curse_skills = nil
     M.cast_skills = nil
+    M.cast_actions = nil
     M.skill_behavior_coverage = nil
     M.progression = nil
 end

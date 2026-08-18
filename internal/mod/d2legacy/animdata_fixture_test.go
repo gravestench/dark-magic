@@ -14,26 +14,29 @@ func (fixtureRecords) Read(path string) ([]byte, error) {
 
 func attackAnimDataFixture() []byte {
 	const blocks, eventBytes = 256, 144
-	data := make([]byte, 0, blocks*4+160)
+	records := []string{"AMA1HTH", "AMSCHTH"}
+	data := make([]byte, 0, blocks*4+len(records)*160)
 	for block := 0; block < blocks; block++ {
 		word := make([]byte, 4)
 		if block == 0 {
-			binary.LittleEndian.PutUint32(word, 1)
+			binary.LittleEndian.PutUint32(word, uint32(len(records)))
 		}
 		data = append(data, word...)
 		if block != 0 {
 			continue
 		}
-		data = append(data, []byte{'A', 'M', 'A', '1', 'H', 'T', 'H', 0}...)
-		binary.LittleEndian.PutUint32(word, 8)
-		data = append(data, word...)
-		half := make([]byte, 2)
-		binary.LittleEndian.PutUint16(half, 128)
-		data = append(data, half...)
-		data = append(data, 0, 0)
-		events := make([]byte, eventBytes)
-		events[3] = 1
-		data = append(data, events...)
+		for _, name := range records {
+			data = append(data, append([]byte(name), 0)...)
+			binary.LittleEndian.PutUint32(word, 8)
+			data = append(data, word...)
+			half := make([]byte, 2)
+			binary.LittleEndian.PutUint16(half, 128)
+			data = append(data, half...)
+			data = append(data, 0, 0)
+			events := make([]byte, eventBytes)
+			events[3] = 1
+			data = append(data, events...)
+		}
 	}
 	return data
 }

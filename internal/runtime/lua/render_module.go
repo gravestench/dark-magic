@@ -414,6 +414,11 @@ func rgbaDCCFrame(frame *dcc.Frame, palette *color.Palette) *image.RGBA {
 	return result
 }
 
+func dccGroundOrigin(bounds image.Rectangle) (float64, float64) {
+	return float64(-bounds.Min.X) / float64(max(bounds.Dx(), 1)),
+		float64(-bounds.Min.Y) / float64(max(bounds.Dy(), 1))
+}
+
 // dccDirectionForCOF translates a spatial COF priority direction into the
 // separately interleaved direction order stored by DCC. OpenDiablo2 has two
 // distinct Dir64ToCof and Dir64ToDcc tables; using one index for both pairs a
@@ -2429,6 +2434,11 @@ func registerRenderNodeType(state *lua.LState) {
 				state.RaiseError("updating DCC render node: %v", err)
 			}
 			bounds := asset.direction.Frames()[frameIndex].Bounds()
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.OriginX, current.OriginY = dccGroundOrigin(bounds)
+			}); err != nil {
+				state.RaiseError("updating DCC ground origin: %v", err)
+			}
 			state.Push(lua.LNumber(bounds.Dx()))
 			state.Push(lua.LNumber(bounds.Dy()))
 			state.Push(lua.LNumber(bounds.Min.X))
@@ -2466,6 +2476,12 @@ func registerRenderNodeType(state *lua.LState) {
 			if err := node.setAnimation(frames, time.Duration(float64(time.Second)/framesPerSecond), loop); err != nil {
 				state.RaiseError("updating DCC animation: %v", err)
 				return 0
+			}
+			canvas := directionFrames[0].Bounds()
+			if err := node.composer.Update(node.id, func(current *render.Node) {
+				current.OriginX, current.OriginY = dccGroundOrigin(canvas)
+			}); err != nil {
+				state.RaiseError("updating DCC animation ground origin: %v", err)
 			}
 			state.Push(lua.LNumber(len(frames)))
 			return 1

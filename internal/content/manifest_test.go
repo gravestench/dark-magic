@@ -418,7 +418,10 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// ExpArrowExplode DCC to the static Lua/test inventory. It remains under the
 	// existing dynamic missile prefix until record-derived presentation paths
 	// migrate into a generated manifest.
-	const auditedFingerprint = "c746b02bd73a984c104a91dc12a2620d6dc2fc4587fc5159eff7559e64325976"
+	// Shared cast presentation now follows Skills.txt castoverlay into Overlay.txt;
+	// the focused adapter fixture adds FireCast2 to the static inventory while
+	// all owned cast overlays remain audited beneath the dynamic overlay prefix.
+	const auditedFingerprint = "17a4d67fb944c23f11f1d52e9728b03a637e23231643b6263fe03ce758119cb0"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

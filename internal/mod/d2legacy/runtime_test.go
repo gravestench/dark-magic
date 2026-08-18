@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
@@ -15,6 +16,14 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 	lua "github.com/yuin/gopher-lua"
 )
+
+const runtimeFixtureExecutionBudget = 10 * time.Second
+
+func startRuntimeFixture(ctx context.Context, engine *gameecs.Engine, session *gamesession.Session, seed uint64) (*Authority, error) {
+	return StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{
+		Seed: seed, ExecutionBudget: runtimeFixtureExecutionBudget,
+	})
+}
 
 func TestConfigureRuntimePreservesClientCatalogOverrides(t *testing.T) {
 	runtime := modruntime.New()
@@ -96,7 +105,7 @@ func TestAuthorityMaterializesPlayerEntryThroughLua(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
+	authority, err := startRuntimeFixture(ctx, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +153,7 @@ func TestGameRulesCheckpointRestoreAndIdentityDrift(t *testing.T) {
 			return nil, nil, nil, err
 		}
 		authority, err := StartWithConfig(t.Context(), content.D2Legacy(), runtimeFixtureRecords{}, engine, session,
-			Config{Seed: 7, InitialData: initial, Restore: restore})
+			Config{Seed: 7, InitialData: initial, Restore: restore, ExecutionBudget: runtimeFixtureExecutionBudget})
 		if err != nil {
 			_ = session.Close()
 			_ = engine.Close()
@@ -245,7 +254,7 @@ func TestAuthorityMonsterSpawnUsesCheckpointedLuaRandomStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 99)
+	authority, err := startRuntimeFixture(ctx, engine, session, 99)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +304,7 @@ func TestMonsterMeleeReachIncludesBothActorFootprints(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 17)
+	authority, err := startRuntimeFixture(ctx, engine, session, 17)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +399,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
+	authority, err := startRuntimeFixture(ctx, engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +428,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 7, Restore: checkpoint.Participants, ExecutionBudget: runtimeFixtureExecutionBudget})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,7 +451,7 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 77)
+	authority, err := startRuntimeFixture(ctx, engine, session, 77)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,7 +493,7 @@ func TestAuthorityCheckpointRestoreContinuesWithIdenticalOutcome(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 77, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 77, Restore: checkpoint.Participants, ExecutionBudget: runtimeFixtureExecutionBudget})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +526,7 @@ func TestStraightMissileCheckpointRestoreParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := Start(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 123)
+	authority, err := startRuntimeFixture(ctx, engine, session, 123)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -594,7 +603,7 @@ func TestStraightMissileCheckpointRestoreParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 123, Restore: checkpoint.Participants})
+	restored, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 123, Restore: checkpoint.Participants, ExecutionBudget: runtimeFixtureExecutionBudget})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -633,7 +642,7 @@ func TestAuthorityBootsWithoutClientOrRenderer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.Close()
-	authority, err := Start(context.Background(), content.D2Legacy(), runtimeFixtureRecords{}, engine, session, 7)
+	authority, err := startRuntimeFixture(context.Background(), engine, session, 7)
 	if err != nil {
 		t.Fatal(err)
 	}

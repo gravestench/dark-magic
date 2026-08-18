@@ -10,7 +10,7 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
-func TestOwnedTargetArchivesPinAttackAnimationTiming(t *testing.T) {
+func TestOwnedTargetArchivesPinPlayerActionAnimationTiming(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
@@ -49,6 +49,17 @@ func TestOwnedTargetArchivesPinAttackAnimationTiming(t *testing.T) {
 		}
 		if frames, speed, events := movement.FramesPerDirection(), movement.Speed(), movement.Events(); frames != 8 || speed != 256 || len(events) != 0 {
 			t.Fatalf("generation=%s %s frames=%d speed=%d events=%v", generation.ID, key, frames, speed, events)
+		}
+	}
+	for _, key := range []string{"SOSCHTH", "SOSC1HS", "SOSCSTF"} {
+		cast := catalog.GetRecord(key)
+		if cast == nil {
+			t.Fatalf("owned target is missing %s", key)
+		}
+		events := cast.Events()
+		if cast.FramesPerDirection() != 14 || cast.Speed() != 256 || len(events) != 1 || events[7] != cof.EventAttack {
+			t.Fatalf("generation=%s %s frames=%d speed=%d events=%v", generation.ID,
+				key, cast.FramesPerDirection(), cast.Speed(), events)
 		}
 	}
 }

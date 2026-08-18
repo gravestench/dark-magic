@@ -184,6 +184,7 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         impact_frames_per_second = impact and math.max(math.floor(integer_or(impact, "AnimSpeed", 16) * 25 / 16), 1)
             or 1,
         impact_loop = impact and impact.LoopAnim == "1" or false,
+        impact_transparency_mode = impact and integer_or(impact, "Trans", 0) or 0,
         impact_sound = impact and impact.TravelSound or "",
         effect_duration_base = duration_base,
         effect_duration_per_level = duration_per_level,
@@ -212,6 +213,7 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         directions = math.max(integer_or(missile, "NumDirections", 1), 1),
         frames_per_second = math.max(math.floor(animation_speed * 25 / 16), 1),
         loop = missile.LoopAnim == "1",
+        transparency_mode = integer_or(missile, "Trans", 0),
         offset_x = integer_or(missile, "Xoffset", 0),
         offset_y = integer_or(missile, "Yoffset", 0),
         offset_z = integer_or(missile, "Zoffset", 0),

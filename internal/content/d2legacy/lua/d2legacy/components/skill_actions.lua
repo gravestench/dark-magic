@@ -25,7 +25,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.skill.cast",
-        version = 3,
+        version = 4,
         fields = {
             { name = "skill_id", type = "i64" },
             { name = "skill_level", type = "i64" },
@@ -37,12 +37,41 @@ function M.register()
             { name = "elemental_damage_percent", type = "i64" },
             { name = "effect_duration_ticks", type = "i64" },
             { name = "effect_emitted", type = "bool", default = false },
+            { name = "effect_cue_emitted", type = "bool", default = false },
+        },
+    })
+
+    -- Empty action ownership tag. The cast lifecycle owns its duration while
+    -- locomotion and other competing simulation systems use it as a cheap ECS
+    -- exclusion filter instead of learning spell or animation identities.
+    ecs.component({
+        name = "d2legacy.skill.cast_action",
+        version = 1,
+        fields = {},
+    })
+
+    -- Value-only semantic cast boundary. Presentation resolves skill-owned
+    -- overlays, sounds, and client missiles from pinned records; authority
+    -- emits only who cast what, where, and when.
+    ecs.component({
+        name = "d2legacy.skill.cast_cue",
+        version = 1,
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "tick", type = "i64" },
+            { name = "effect_tick", type = "i64" },
+            { name = "caster", type = "entity" },
+            { name = "player", type = "string" },
+            { name = "skill_id", type = "i64" },
+            { name = "target_x", type = "f64" },
+            { name = "target_y", type = "f64" },
+            { name = "target_id", type = "string" },
         },
     })
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 5,
+        version = 6,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "cast_id", type = "string" },
@@ -64,6 +93,7 @@ function M.register()
             { name = "impact_directions", type = "i64" },
             { name = "impact_frames_per_second", type = "i64" },
             { name = "impact_loop", type = "bool" },
+            { name = "impact_transparency_mode", type = "i64" },
             { name = "impact_sound", type = "string" },
             { name = "on_hit_state_id", type = "string" },
             { name = "on_hit_state_source_id", type = "string" },
@@ -83,6 +113,7 @@ function M.register()
             { name = "directions", type = "i64" },
             { name = "frames_per_second", type = "i64" },
             { name = "loop", type = "bool" },
+            { name = "transparency_mode", type = "i64" },
             { name = "offset_x", type = "f64" },
             { name = "offset_y", type = "f64" },
             { name = "offset_z", type = "f64" },
@@ -93,7 +124,7 @@ function M.register()
     -- has no damage capability, so rendering an impact cannot reapply policy.
     ecs.component({
         name = "d2legacy.missile.effect",
-        version = 1,
+        version = 2,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "cast_id", type = "string" },
@@ -107,6 +138,7 @@ function M.register()
             { name = "logical_direction", type = "i64" },
             { name = "frames_per_second", type = "i64" },
             { name = "loop", type = "bool" },
+            { name = "transparency_mode", type = "i64" },
             { name = "offset_x", type = "f64" },
             { name = "offset_y", type = "f64" },
             { name = "offset_z", type = "f64" },

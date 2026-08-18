@@ -80,7 +80,7 @@ local function load_catalog()
     local records = require("engine.records/v1")
     local states = assert(records.load("data/global/excel/States.txt"))
     local overlays = assert(records.load("data/global/excel/Overlay.txt"))
-    catalog = { states = states, overlays = overlays, recipes = {} }
+    catalog = { states = states, overlays = overlays, overlay_index = index(overlays, "overlay"), recipes = {} }
     return catalog
 end
 
@@ -90,6 +90,14 @@ function M.resolve(state_id)
         loaded.recipes[state_id] = M.from_rows(loaded.states, loaded.overlays, state_id) or false
     end
     return loaded.recipes[state_id] or nil
+end
+
+function M.overlay(overlay_id, layer, loop)
+    if not overlay_id or overlay_id == "" then
+        return nil
+    end
+    local loaded = load_catalog()
+    return recipe(loaded.overlay_index, overlay_id, layer or "front", loop == true)
 end
 
 return M

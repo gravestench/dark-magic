@@ -125,14 +125,16 @@ equipment/inventory/gold/XP/corpse transitions, rejects imported saves and every
 unsupported runtime/tool source, and promotes no behavior until its matrix is
 populated. G9 remains current through
 target-locked mounted-data and localized TBL skill evidence, case-stable pinned
-MPQ tables, AnimData/effective-attack-rate generic melee action, current-state
-melee target revalidation, straight-missile, timed-state, reactive-state, and
-definition-driven radial-missile slices as of 2026-08-17. Nova is now the first
+MPQ tables, AnimData/effective-rate melee and spell actions, current-state melee
+target revalidation, straight-missile, timed-state, reactive-state, shared cast
+cues/overlays/sounds, exact standalone-DCC ground anchoring and missile
+direction/blend presentation, and definition-driven radial-missile slices as of
+2026-08-17. Nova is now the first
 exact-ID `missile.radial` configuration: one targetless cast creates a shared-
 identity ring of ordinary ECS projectile entities, level-scaled count/mana/
 five-band lightning damage, and separate cast-target contact-lock entities.
 The family is reusable and contains no Nova ID/name branch. Exact 1.14d radial
-angular phase, negative acceleration, animation action timing, and complete
+angular phase, negative acceleration, and complete
 `LastCollide`/`NextHit` ordering remain explicitly partial. The first reusable
 cross-skill damage-modifier slice now resolves Fire Bolt's exact
 `EDmgSymPerCalc` hard-point references by skill name to Fire Ball/Meteor IDs,
@@ -174,15 +176,15 @@ footprint, dynamic ECS occupancy, and the conservative limited-level line
 trace, then atomically relocates the existing player entity, stops semantic and
 raw motion, cancels forced motion, and emits one generic ECS relocation fact.
 Exact viewport/visibility range, policy-2 meaning, invalid-target mana behavior,
-nearest-free fallback, room-edge timing, owned-unit following, and SC/presentation
-timing remain explicit 1.14d probes. The first friendly-target timed multi-stat
+nearest-free fallback, room-edge/effect ordering, owned-unit following, and
+remaining presentation semantics remain explicit 1.14d probes. The first friendly-target timed multi-stat
 family now admits exact-ID Enchant. Its owned Skills/States/SkillDesc/skillcalc
 and layered TBL evidence drives target-or-self resolution, one checkpointed
 state owning three independent ECS stat sources, level-band fire damage, Warmth
 hard-point synergy, duration, and attack-rating percentage. Shared melee
 consumes the resulting fire and to-hit sources without recognizing Enchant.
 Ranged-weapon one-third fire damage, party/PvP target distinctions, target
-range/LOS, replacement across casters, animation/overlay timing, and exact
+range/LOS, replacement across casters, action-rate/modifier timing, and exact
 modifier/rounding order remain explicit Expansion 1.14d probes. The first
 point-centered area-curse family now admits exact-ID Amplify Damage.
 Its owned row drives stable hostile-area selection, timed curse-state/stat
@@ -190,7 +192,7 @@ sources, level-ranked one-curse replacement, and the one-fifth resistance
 reduction when attempting to break a monster's physical immunity. Shared
 physical mitigation consumes the resulting source without recognizing the
 skill. Exact LineOfSight-4/radius units, curse resistance, target-class
-eligibility, PvP, equal-level cross-caster ownership, animation/overlay timing,
+eligibility, PvP, equal-level cross-caster ownership, client-only curse missile presentation,
 and ordering against other resistance sources remain explicit 1.14d probes.
 The same family now admits exact-ID Weaken from its distinct owned record/TBL
 shape. It emits a generic negative outgoing-physical-damage percentage source;
@@ -204,7 +206,8 @@ learns all 11 exact-ID configurations at level 20 through the owned
 Skills/SkillDesc records, begins with Fire Bolt and Amplify Damage assigned, and
 uses the ordinary HUD, command admission, mana, cast, projectile, state, damage,
 monster, and renderer paths. A real-MPQ acceptance casts Fire Bolt and proves
-its record-derived three-mana payment and projectile damage. This makes current
+its record-derived three-mana payment, Sorceress SC action/release/completion,
+and projectile damage. This makes current
 presentation omissions directly observable without giving the lab or renderer
 skill-specific policy. The same acceptance exposed `MonLvl.txt` as another
 retail hash-table member absent from incomplete MPQ listfiles; it is now pinned
@@ -218,9 +221,22 @@ blend through ordinary retained world nodes. Apply/refresh/remove events drive
 one-shot effects while persistent overlays follow the current target position;
 the renderer contains no skill/state-name branch. Owned Expansion records and
 DCC members are pinned for Frozen Armor, Enchant, Amplify Damage, and Weaken.
-Skills.txt cast overlays, actor SC/SQ action timing, overlay height/light/1-of-N
-details, and connected-client state projection remain explicit presentation
-work. A
+The shared cast adapter now also joins every admitted Skills.txt row to its
+`anim`, `seqtrans`, start/effect sound, cast-overlay, and client-missile fields.
+Non-melee SC actions stop competing motion through an empty ECS action filter,
+face the target, use token/mode/weapon-class AnimData for release/completion,
+emit semantic start/effect cues, and return to neutral. Offline presentation
+resolves those cues into record-selected sounds and the same generic overlay
+renderer. Standalone DCC rendering preserves the codec's authored ground
+origin, fixing both Fire Ball launch height and `FireCast2` attachment; missile
+velocity uses `math.atan2` plus exact owned 1/4/8/16/32-way DCC order instead of
+an eight-way collapse. Missiles.txt `Trans=1` and Overlay.txt `Trans=3` select
+their table-specific luminous blend paths. A held-pointer gate now emits one
+request per authoritative ECS action, so a multi-frame click cannot queue a
+second cast while a deliberate hold still repeats after completion. SQ
+sequences, faster-cast-rate/equipment timing, overlay height/light/1-of-N and
+multi-direction details, client-only curse missiles, interruption/refund, and
+connected-client cue/state projection remain explicit presentation work. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -285,7 +301,7 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs and sounds, and semantic timed states now resolve States/Overlay records into shared active/apply/remove world overlays without skill-specific renderer branches. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` build tag supplies an experimental retained-composition/input/capture adapter. Skills cast overlays/action timing, exact overlay height/light/variant semantics, connected-state projection, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. Admitted Skills rows now drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay height/light/variant semantics, client-only skill missiles, connected cue/state projection, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -957,7 +973,8 @@ runtime composition and the coverage report.
   policy, validate static/dynamic destination occupancy, atomically relocate the
   existing ECS player while stopping competing motion, and emit a generic
   relocation-result entity. Keep viewport/range, limited-level meaning,
-  invalid-target payment/fallback, owned-unit, and presentation timing partial.
+  invalid-target payment/fallback, owned-unit, effect ordering, and remaining
+  presentation semantics partial; the shared SC action/cue path is present.
 - [x] Add the first reusable friendly-target timed multi-stat family and admit
   exact Expansion 1.14d Enchant by ID. Decode its target flags, duration,
   level-band fire range, `toht` attack bonus, and Warmth hard-point modifier;
@@ -985,6 +1002,20 @@ runtime composition and the coverage report.
   Overlay.txt, render active front/back layers and apply/remove one-shots, and
   audit the dynamic `data/global/overlays/` asset family. Pin owned target rows
   and DCC members without recognizing a skill/state name in presentation.
+- [x] Join every admitted exact skill ID to its shared Skills.txt action fields,
+  run non-melee SC actions from token/mode/weapon-class AnimData, filter
+  locomotion with an empty ECS cast-action component, emit semantic start and
+  effect cues, and resolve record-selected cast sounds/overlays without a
+  skill-name or ID renderer branch. Pin the owned Sorceress SC +7 release/+14
+  completion schedule through the production Spell Lab acceptance.
+- [x] Preserve standalone DCC authored ground origins and exact owned
+  1/4/8/16/32-way missile direction interleave, use Lua 5.1 `math.atan2` for
+  continuous velocity, and map Missiles/Overlay transparency through their
+  table-specific luminous modes. Pin Fire Ball's 16 directions, `Trans=1`,
+  missile canvas, and `FireCast2` canvas from owned Expansion 1.14d assets.
+- [x] Edge-gate held left-skill input against the authoritative ECS action
+  lifecycle so a click spanning multiple render frames submits one cast while
+  a deliberate hold repeats only after the prior action completes.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -997,8 +1028,10 @@ runtime composition and the coverage report.
   freeze length/synergies, expansion difficulty divisors, checkpointing, and
   monster action suppression.
 - [ ] Complete Frozen Armor's PvP chill conversion, target resistance/immunity
-  and monster-class duration modifiers, exact integer/tick ordering, animation
-  action timing, and presentation before upgrading it from partial behavior.
+  and monster-class duration modifiers, exact integer/tick ordering, and
+  remaining state-effect presentation semantics before upgrading it from
+  partial behavior. Its generic SC action, cast sound/overlay, and persistent
+  state overlay now use the shared paths.
 - [ ] Extend the now-present targeted, point, self, area/nova, buff/curse,
   movement, and missile primitives into missing debuff/aura, summon, corpse, trap,
   and ranged-weapon families in dependency order.
@@ -1026,9 +1059,10 @@ right, places three production hostiles in Blood Moor, and supplies a deep mana
 pool for repeated inspection. Ordinary HUD selection and world clicks still
 create the same semantic commands used by offline, listen, dedicated, and Realm
 sessions. The owned-asset acceptance asserts the learned set and assignments,
-then observes Fire Bolt's three-mana payment and damage after shared projectile
-contact. No lab, client, renderer, or presentation system branches on Fire Bolt
-or any other skill ID.
+then observes Fire Bolt's Sorceress SC mode, AnimData +7 effect and +14
+completion, return to neutral, three-mana payment, and damage after shared
+projectile contact. No lab, client, renderer, or presentation system branches
+on Fire Bolt or any other skill ID.
 
 That test also closed an asset-generation blind spot: retail `MonLvl.txt` can
 be addressable by hash while absent from an MPQ `(listfile)`, just like the
@@ -1054,9 +1088,41 @@ directory, while owned 1.14d coverage proves the Frozen Armor, Enchant,
 Amplify Damage, Weaken, and shared curse-hit rows and DCCs exist. This does not
 yet claim exact Height1-4 attachment, light radius/color, `1ofN`, character
 restriction, multi-direction mapping, or connected-client state projection.
-Skills.txt cast overlays and actor SC/SQ animation/action timing are a separate
-generic cast-presentation slice; Fire Bolt remains governed by its record-
-selected missile DCC/sounds but does not yet receive those missing cast cues.
+
+Cast presentation now follows a second generic record join. `cast_actions`
+copies Skills.txt `anim`, `seqtrans`, `seqnum`, `UseAttackRate`, start/effect
+sounds, `castoverlay`, and client-missile references for all 11 admitted IDs.
+The cast lifecycle combines the actor token and current weapon class with the
+SC mode, schedules release at the first non-sound AnimData event, completes at
+the AnimData cursor wrap, and owns an empty `d2legacy.skill.cast_action` ECS
+filter which excludes locomotion. Start/effect semantic cue entities carry only
+skill/actor/target/tick facts; the offline world adapter re-resolves Skills and
+Overlay records to play sounds and one-shot overlays. The owned Sorceress
+`SOSCHTH`, `SOSC1HS`, and `SOSCSTF` records all pin 14-frame actions with release
+at frame 7. SQ sequence semantics, faster cast rate, weapon/equipment changes,
+interrupt/refund rules, client-only curse missile layers, and connected cue
+projection are still open.
+
+Standalone DCC presentation now retains the stable decoded direction canvas and
+sets the authored zero point as the render-node origin, matching the ground-
+origin treatment already used by COF character composites. Owned Fire Ball
+evidence pins `Fireball.dcc` direction 4 to `(-17,-81)-(17,-26)`, placing the
+whole missile 26–81 pixels above its semantic world anchor, and `FireCast2.dcc`
+to `(-74,-89)-(71,44)`. No guessed character-height offset is stored in the
+skill. Velocity direction selection uses Lua 5.1 `math.atan2`, quantizes in
+world space, and applies the exact DCC interleave for every direction count in
+the owned Missiles table; 16/32-way art is no longer collapsed to actor facings.
+Missiles.txt mode 1 and Overlay.txt mode 3 independently map to the renderer's
+luminous screen blend. The remaining Height/light/variant/directional overlay
+fields stay explicit follow-up rather than being inferred from these fixes.
+
+World input now distinguishes a physical press from its subsequent rendered
+down frames. One request is latched until an authoritative cast-action,
+melee-approach, or melee-animation ECS component is observed and later clears.
+Releasing rearms the next click; continuing to hold repeats only after that
+action boundary. A fast module test covers both cases, closing the gap that let
+a single ordinary click queue two back-to-back casts despite simulation tests
+correctly validating each admitted command in isolation.
 
 `skill_evidence` is the required companion investigation report for skill-tree
 synergies and skills that modify other skills. It accepts exact IDs and a locale,
@@ -1147,7 +1213,7 @@ duration. A nonlethal contact then emits an ordinary
 the existing cold policy, while timed-state instances and generic action
 filters own checkpointing, refresh, suppression, and expiration. Exact target
 resistance/immunity, monster-class cold effectiveness, cross-source state
-replacement, PvP freeze-to-chill conversion, and impact/action timing remain
+replacement, PvP freeze-to-chill conversion, and impact/state ordering remain
 owned-runtime probes.
 
 Glacial Spike is the first `missile.straight-impact-area-freeze`
@@ -1164,7 +1230,7 @@ instances and action filters own the rest. The record also references
 single-effect presentation recipe. Exact radius/footprint units, impact and
 percentage rounding, per-target RNG, resistance/immunity, monster-class cold
 effectiveness, cross-source replacement, PvP chill conversion, secondary
-ejecta presentation, and action timing remain owned-runtime probes.
+ejecta presentation, and impact/state ordering remain owned-runtime probes.
 
 Teleport is the first `movement.point-relocate` configuration. Its exact row
 requires server-do function 27, `warp=1`, SC action, right-skill-only assignment,
@@ -1181,7 +1247,9 @@ an explicit outcome. The current 2-to-line-trace interpretation is conservative
 secondary evidence, not a completed target-runtime claim. Exact viewport/
 visibility range, type-2 meaning, payment on invalid destinations, nearest-free
 fallback, player room-edge sequencing, owned-unit following, and action/
-presentation timing remain owned 1.14d probes.
+effect/relocation ordering plus remaining presentation semantics remain owned
+1.14d probes; the generic SC action and teleport cast overlay now resolve
+through the shared action/cue path.
 
 Enchant is the first `state.targeted-timed` configuration. Its exact row binds
 server-do function 25, friendly/pet targeting, SC action, 25 base mana plus one
@@ -1198,7 +1266,7 @@ consume the attack bonus and generic weapon-melee damage consumes the fire
 range, so neither boundary knows Enchant's ID or name. Ranged weapon attacks do
 not yet exist, so the localized one-third ranged-fire rule is recorded but not
 claimed. Exact party/PvP ally policy, target range/LOS, state replacement among
-different casters, animation/overlay timing, and ordering against mastery,
+different casters, action-rate/modifier timing, and ordering against mastery,
 equipment fire damage, and other percentage sources remain owned 1.14d probes.
 
 Amplify Damage is the first `state.point-area-curse` configuration and the
@@ -1218,7 +1286,8 @@ state/source graph. Exact LineOfSight-4 meaning and radius units, curse
 resistance/duration reduction, monster class/mode and boss eligibility, town
 and PvP targets, Attract precedence, equal-level same-skill cross-caster source
 ownership, presentation timing, and ordering with other resistance sources
-remain owned 1.14d probes.
+remain owned 1.14d probes. The generic SC actor action and start sound are
+present; the record-referenced client-only curse missile layers are not.
 
 Weaken is the second `state.point-area-curse` configuration. Its exact row
 binds the same server-do/filter/LOS shape to point-centered radius
@@ -1232,8 +1301,9 @@ rolling; the deterministic unarmed fixture proves the `-33` source changes its
 Amplify Damage and Weaken mutually exclusive and uses learned level as
 replacement priority. Exact
 ordering with equipment/skill enhanced damage and strength, monster non-weapon
-attacks, hireling/summon attacks, curse resistance, eligibility, PvP, animation,
-and overlays remain owned 1.14d probes.
+attacks, hireling/summon attacks, curse resistance, eligibility, PvP,
+client-only curse missile layers, and exact overlay semantics remain owned
+1.14d probes. The generic SC actor action and start sound are present.
 
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
@@ -1267,7 +1337,9 @@ the official full/half/quarter cold-length relationship. Applying another state
 in the same authored group removes the displaced instance and its exact stat
 source. Frozen Armor remains partial because PvP must chill rather than freeze;
 target cold resistance/immunity, monster-class modifiers, exact rounding/tick
-ordering, animation timing, and presentation are not yet implemented.
+ordering, and remaining state-effect presentation semantics are not yet
+implemented. Its SC action/cast overlay and persistent armor overlay use the
+shared presentation paths.
 
 `d2legacy.data.radial_missile_skills` validates Nova's exact Expansion 1.14d
 server/client function 22/25 shape, three matching `nova` server-missile slots,
@@ -1281,7 +1353,7 @@ four-tick cast/target repeat delay without making the projectile or damage
 system know Nova. Headless coverage proves one target is damaged once during
 that lock, the ring survives checkpoint reconstruction, and all projectiles and
 locks expire. The current evenly spaced phase is deterministic Dark Magic
-policy: exact initial phase, the missile row's `Accel=-1000`, action timing,
+policy: exact initial phase, the missile row's `Accel=-1000`, faster-cast-rate timing,
 and the complete meaning/order of `LastCollide=1`, `NextHit=1`, and
 `NextDelay=4` still require owned 1.14d vectors, so Nova remains partial.
 
@@ -1355,12 +1427,12 @@ percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: continue using Spell Lab to close the remaining shared presentation gaps:
-resolve Skills.txt cast overlays, cast sounds, and SC/SQ actor action timing;
-then project semantic states/cues to connected clients and pin Overlay height,
-light, variant, and multi-direction behavior without skill-specific renderer
-branches. Missile travel/impact graphics and sounds already follow the pinned
-Skills/Missiles graph. Then probe and replace Attack's remaining inferred distance, dynamic-door,
+Next: project semantic cast/state cues through connected client views, then add
+the record-referenced client-only curse missile layers and pin Overlay height,
+light, variant, character restriction, and multi-direction behavior without
+skill-specific renderer branches. Complete SQ sequences, faster-cast-rate and
+equipped-weapon-class timing, plus interruption/refund behavior against owned
+Expansion 1.14d vectors. Then probe and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive

@@ -59,6 +59,7 @@ local function stop_actions(player, context, structural)
     for _, component in ipairs({
         "d2legacy.skill.cast_request",
         "d2legacy.skill.cast",
+        "d2legacy.skill.cast_action",
         "d2legacy.combat.attack_approach",
         "d2legacy.combat.attack_animation",
         "d2legacy.combat.basic_attack_request",
@@ -148,6 +149,7 @@ function M.register()
             "d2legacy.player.animation",
             "d2legacy.skill.cast_request",
             "d2legacy.skill.cast",
+            "d2legacy.skill.cast_action",
             "d2legacy.combat.attack_approach",
             "d2legacy.combat.attack_animation",
             "d2legacy.combat.basic_attack_request",

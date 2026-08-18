@@ -6,6 +6,33 @@ return test.suite({
     profile = "authority",
     tier = "integration",
     covers = { "internal/game/combat", "internal/game/skill", "internal/game/missile" },
+    records = {
+        ["data/global/excel/skills.txt"] = {
+            {
+                Id = "36",
+                skill = "Fire Bolt",
+                skilldesc = "firebolt",
+                leftskill = "1",
+                general = "0",
+                passive = "0",
+                srvmissile = "firebolt",
+                etype = "fire",
+                interrupt = "1",
+                srvstfunc = "",
+                srvdofunc = "",
+                mana = "5",
+                manashift = "7",
+                emin = "3",
+                emax = "6",
+                HitShift = "8",
+                -- Synthetic cross-family fixture: the harness pins AMA1HTH,
+                -- so A1 proves generic action ownership without pretending
+                -- Fire Bolt uses anything but SC in the owned target.
+                anim = "A1",
+                seqtrans = "A1",
+            },
+        },
+    },
     cases = {
         test.case("configured_straight_missile_runs_headlessly", {
             test.submit_system(fixtures.command("system.player.enter", fixtures.straight_missile_entry, {
@@ -26,7 +53,7 @@ return test.suite({
                 sequence = 1,
                 player = "alice",
             })),
-            test.step(6),
+            test.step(20),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
@@ -64,6 +91,48 @@ return test.suite({
                     ecs.get(events[1], "d2legacy.combat.death_observed") ~= nil,
                     [=[generic death consumer marks the missile result exactly once]=]
                 )
+            end),
+        }),
+        test.case("funded_cast_owns_animation_until_the_pinned_action_completes", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.straight_missile_entry, {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.submit(fixtures.command("player.use_skill", {
+                side = "left",
+                target_x = 8,
+                target_y = 0,
+            }, {
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+            })),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local cast = ecs.get(player, "d2legacy.skill.cast")
+                test.expect(ecs.get(player, "d2legacy.player.animation"):get("mode")):equals("A1")
+                test.assert(ecs.get(player, "d2legacy.skill.cast_action") ~= nil)
+                test.expect(cast:get("effect_tick") - 2):equals(6)
+                test.expect(cast:get("complete_tick") - 2):equals(16)
+                local cues = ecs.query({ all = { "d2legacy.skill.cast_cue" } })
+                test.expect(#cues):equals(1)
+                test.expect(ecs.get(cues[1], "d2legacy.skill.cast_cue"):get("kind")):equals("cast_started")
+            end),
+            test.step(16),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.player.animation"):get("mode")):equals("NU")
+                test.assert(ecs.get(player, "d2legacy.skill.cast") == nil)
+                test.assert(ecs.get(player, "d2legacy.skill.cast_action") == nil)
+                local kinds = {}
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.skill.cast_cue" } })) do
+                    kinds[ecs.get(entity, "d2legacy.skill.cast_cue"):get("kind")] = true
+                end
+                test.assert(kinds.cast_started and kinds.cast_effect)
             end),
         }),
         test.case("underfunded_cast_has_no_effect_and_preserves_mana", {

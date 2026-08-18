@@ -27,6 +27,8 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local cast_presentation = require("d2legacy.gameplay.cast_presentation")
+local held_skill_input = require("d2legacy.gameplay.held_skill_input")
 local state_overlay_presentation = require("d2legacy.gameplay.state_overlay_presentation")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
@@ -500,12 +502,14 @@ local function retained_state_overlay(self, collection, key, recipe)
     overlay = {
         node = render.create("world", self.map.root),
         recipe = recipe,
-        pending_job = render.preload({ {
-            kind = "dcc",
-            path = recipe.path,
-            palette = recipe.palette,
-            direction = 0,
-        } }),
+        pending_job = render.preload({
+            {
+                kind = "dcc",
+                path = recipe.path,
+                palette = recipe.palette,
+                direction = 0,
+            },
+        }),
     }
     overlay.node:set_visible(false)
     collection[key] = overlay
@@ -518,7 +522,8 @@ local function update_overlay_node(self, overlay, snapshot)
         if status.done then
             if status.failed == 0 then
                 local recipe = overlay.recipe
-                local direction = recipe.directions > 1 and math.floor((snapshot.direction or 0) / 2) % recipe.directions
+                local direction = recipe.directions > 1
+                        and math.floor((snapshot.direction or 0) / 2) % recipe.directions
                     or 0
                 overlay.node:set_dcc_animation(
                     recipe.path,
@@ -559,6 +564,32 @@ local function queue_state_overlay_effect(self, cue)
     local overlay = retained_state_overlay(self, self.state_overlay_effects, key, recipe)
     overlay.snapshot = cue
     overlay.remaining_seconds = recipe.duration_seconds
+end
+
+local function queue_cast_overlay_effect(self, cue, recipe)
+    if not recipe or not cue.x or not cue.y or cue.level_id ~= self.world_level_id then
+        return
+    end
+    self.state_overlay_effects = self.state_overlay_effects or {}
+    local key = "cast:" .. tostring(cue.entity_id)
+    local overlay = retained_state_overlay(self, self.state_overlay_effects, key, recipe)
+    overlay.snapshot = cue
+    overlay.remaining_seconds = recipe.duration_seconds
+end
+
+local function update_held_skill_gate(self, primary_pressed, primary_down)
+    local active = self.gameplay and self.gameplay.hero
+        and self.gameplay_world.skill_action_active(self.gameplay.hero)
+        or false
+    local ready
+    ready, self.held_skill_gate =
+        held_skill_input.update(self.held_skill_gate, primary_pressed, primary_down, active)
+    return ready
+end
+
+local function request_left_skill(self, x, y, target_id)
+    self.player.request_skill("left", x, y, target_id)
+    held_skill_input.submitted(self.held_skill_gate)
 end
 
 local function update_state_overlays(self, elapsed)
@@ -619,6 +650,19 @@ local function observe_semantic_cues(self)
             if cue.cue_type == "state" then
                 queue_state_overlay_effect(self, cue)
             end
+            if cue.cue_type == "cast" then
+                local recipe = cast_presentation.resolve(cue.skill_id)
+                if recipe then
+                    if cue.kind == "cast_started" then
+                        if recipe.start_sound ~= "" then
+                            pcall(legacy_audio.play_record, recipe.start_sound, cue.tick or 0)
+                        end
+                        queue_cast_overlay_effect(self, cue, recipe.overlay)
+                    elseif cue.kind == "cast_effect" and recipe.effect_sound ~= "" then
+                        pcall(legacy_audio.play_record, recipe.effect_sound, cue.tick or 0)
+                    end
+                end
+            end
         end
     end
 end
@@ -658,6 +702,7 @@ local function update_missiles(self)
                             ready.frames_per_second,
                             ready.loop
                         )
+                        missile.node:set_blend(ready.blend)
                         missile.node:set_visible(true)
                         missile.ready = true
                     else
@@ -1029,6 +1074,7 @@ return {
         end
         local primary_pressed = input.pressed("pointer_primary")
         local primary_down = input.down("pointer_primary")
+        local held_skill_ready = update_held_skill_gate(self, primary_pressed, primary_down)
         local stand_still = input.down("shift") or input.pressed("shift")
         if input.released("pointer_primary") or not primary_down then
             self.held_hostile = nil
@@ -1051,10 +1097,12 @@ return {
             end
             if self.held_hostile then
                 self.pending_interaction = nil
-                if stand_still then
-                    self.player.request_skill("left", target_world_x, target_world_y, "")
-                else
-                    self.player.request_skill("left", target_world_x, target_world_y, self.held_hostile.id)
+                if held_skill_ready then
+                    if stand_still then
+                        request_left_skill(self, target_world_x, target_world_y, "")
+                    else
+                        request_left_skill(self, target_world_x, target_world_y, self.held_hostile.id)
+                    end
                 end
             elseif selected and primary_pressed then
                 if selected.kind == "hostile" then
@@ -1062,10 +1110,10 @@ return {
                     if stand_still then
                         -- Shift attacks the point, even when a unit happens to be there.
                         -- It therefore cannot create a chase when that unit moves away.
-                        self.player.request_skill("left", selected.x, selected.y, "")
+                        request_left_skill(self, selected.x, selected.y, "")
                     else
                         self.held_hostile = { id = selected.id }
-                        self.player.request_skill("left", selected.x, selected.y, selected.id)
+                        request_left_skill(self, selected.x, selected.y, selected.id)
                     end
                 elseif selected.kind == "static-object" or selected.kind == "dynamic-object" then
                     self.pending_interaction = selected
@@ -1078,7 +1126,9 @@ return {
                 -- Shift-click deliberately casts at empty ground. It is the legacy
                 -- way to swing or cast toward the pointer without chasing a unit.
                 self.pending_interaction = nil
-                self.player.request_skill("left", target_world_x, target_world_y, "", true)
+                if held_skill_ready then
+                    request_left_skill(self, target_world_x, target_world_y, "")
+                end
             else
                 self.pending_interaction = nil
                 self.player.request_move(target_world_x, target_world_y)
