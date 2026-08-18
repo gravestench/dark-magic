@@ -282,18 +282,23 @@ function M.player_snapshots(local_player, include_local, excluded_entity)
     return result
 end
 
--- Copy active timed-state relationships together with their current target
--- position. State IDs remain semantic; the presentation adapter follows them
--- through pinned States/Overlay records after this authority boundary.
+-- Copy active state relationships together with their current target position.
+-- Timed instances and selected-aura membership use different lifecycle owners,
+-- but both expose the same semantic state ID to the record-driven overlay
+-- adapter after this read-only presentation boundary.
 function M.state_snapshots()
     local result = {}
-    local ok, instances = pcall(ecs.query, { all = { "d2legacy.state.instance" } })
+    local ok, instances = pcall(ecs.query, {
+        any = { "d2legacy.state.instance", "d2legacy.skill.aura_effect" },
+    })
     if not ok then
         return result
     end
     for _, entity in ipairs(instances) do
-        local instance = ecs.get(entity, "d2legacy.state.instance")
-        local target = instance:get("target")
+        local instance = optional_component(entity, "d2legacy.state.instance")
+        local aura = optional_component(entity, "d2legacy.skill.aura_effect")
+        local relationship = assert(instance or aura, "state snapshot entity has no state relationship")
+        local target = relationship:get("target")
         if target and target:exists() and not optional_component(target, "d2legacy.world.inactive") then
             local position = optional_component(target, "d2legacy.world.position")
             local location = optional_component(target, "d2legacy.world.location")
@@ -302,7 +307,9 @@ function M.state_snapshots()
                 result[#result + 1] = {
                     entity_id = entity:id(),
                     target_entity_id = target:id(),
-                    state_id = instance:get("state_id"),
+                    state_id = relationship:get("state_id"),
+                    aura = aura ~= nil,
+                    aura_period_ticks = aura and aura:get("refresh_delay") or 0,
                     x = position:get("x"),
                     y = position:get("y"),
                     act = location:get("act"),

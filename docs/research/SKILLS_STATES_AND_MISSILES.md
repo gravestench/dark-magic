@@ -79,7 +79,9 @@ The renderer-independent `d2legacy` Lua authority now owns:
   radius transaction from a presentation-only ECS aftermath entity;
 - a reusable straight-missile on-hit state family that snapshots duration and
   emits ordinary timed-state requests after nonlethal contact;
-- a reusable self-state family and timed state-instance lifecycle; and
+- a reusable self-state family and timed state-instance lifecycle;
+- a selected-right party-aura family whose ECS emitter and target relations
+  own ordinary stat sources without manufacturing casts; and
 - the shared melee action path.
 
 Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
@@ -110,8 +112,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-17 it reports 357 skill rows, 172 distinct signatures, 8
-explicitly admitted configurations, and 349 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 12
+explicitly admitted configurations, and 345 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -462,7 +464,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 349 missing configurations,
+classification and implementation of the 345 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -781,7 +783,53 @@ Other groups and same-state/multiple-source policies remain family-specific.
 
 ## Auras and continuously applied states
 
-Auras are better modeled as **owned periodic/proximity sources** than as permanent edits to every nearby entity.
+Auras are better modeled as **owned periodic/proximity sources** than as
+permanent edits to every nearby entity. Might is the first executable
+`aura.selected-party-stat` configuration and establishes that boundary without
+a Might-specific command, component, system, or stat consumer.
+
+The owned Expansion 1.14d rows establish the following exact facts for skill ID
+98:
+
+- `aura=1`, `immediate=1`, blank `leftskill`, and `range=none` make selection in
+  the right skill slot the activation; a click does not start a cast;
+- `mana=0` and `lvlmana=0` make that activation free;
+- `aurarangecalc=ln12` with Param1/2 gives radius `16 + 2*(level-1)`;
+- `aurastat1=damagepercent` and `aurastatcalc1=ln34` with Param3/4 gives
+  `40 + 10*(level-1)` percent damage;
+- owner and target state are `might`, whose States row is marked `aura=1`,
+  references `paladin_aura_might`, and selects the front/back Might overlays;
+- `perdelay=50` supplies the record period used by the presentation cycle; and
+- the layered English TBL says the aura increases damage done by the owner and
+  party, while `StrSkill4`/`StrSkill18` label the displayed damage and radius.
+
+The official Blizzard Expansion [skill
+basics](https://classic.battle.net/diablo2exp/skills/basics.shtml) and [Paladin
+offensive-aura](https://classic.battle.net/diablo2exp/skills/paladin-offense.shtml)
+documentation independently state that Paladin auras operate while readied as
+the right-mouse skill, that a Paladin can select only one aura at a time, and
+that different auras supplied by party members can coexist. Those control facts
+are consistent with the target rows; they do not substitute for unresolved
+1.14d runtime timing/filter evidence.
+
+Authority materializes one `d2legacy.skill.aura_emitter` on each living owner
+whose right assignment is an admitted aura. It reconciles living same-level
+party members inside the record-derived radius into
+`d2legacy.skill.aura_effect` relationship entities. Each relationship is
+co-composed with its ordinary `d2legacy.stat.source`, so leaving the party,
+level, range, life, active room, or selection destroys the modifier and its
+provenance atomically. Distinct aura state IDs use distinct target/state keys
+and therefore remain simultaneously effective. Duplicate copies of the same
+state select the strongest learned level, then the strongest value, with a
+stable source-ID tie breaker; this prevents a weaker duplicate from multiplying
+the effective stat while keeping replay/checkpoint order deterministic.
+
+Presentation preserves all of those gameplay relationships but chooses only
+one aura snapshot per affected unit. It alternates distinct aura graphics at
+each selected aura's `perdelay` period converted from the 25 Hz simulation
+cadence, while non-aura timed-state graphics remain independent. Thus cycling a
+ground graphic never disables a modifier. The Might front/back Overlay rows and
+DCC members are pinned by the owned-asset test.
 
 Potential flow:
 
@@ -795,7 +843,16 @@ AuraOwner state
 
 This design also works for monster auras and some environmental effects.
 
-Exact aura pulse cadence and update ordering remain probe items.
+The current target set is intentionally narrower than `aurafilter=73731`: only
+living player party members in the same level are admitted. Hirelings, summons,
+other owned units, town/PvP alignment, line-of-sight implications, the exact
+application/leave tick relative to `perdelay`, equal-strength source ownership,
+owner-vs-target state distinctions, sound lifetime, and connected persistent
+overlay projection remain explicit Expansion 1.14d probes. The two-second Might
+graphic handoff follows its owned 50-tick period and corroborating visual
+evidence; a controlled target-runtime capture must still determine whether
+every aura family uses its own periodic field for visual handoff or a separate
+client state scheduler.
 
 ## Summons and owned units
 

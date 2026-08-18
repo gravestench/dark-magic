@@ -89,6 +89,12 @@ function M.apply(command)
         request_tick = command.tick,
     }
     local definition = assert(definitions[skill_id], "assigned skill has not migrated to d2legacy")
+    if definition.activation == "selected_right" then
+        assert(payload.side == "right", "selected aura must use the right skill assignment")
+        -- The assignment itself is the authoritative passive activation. A
+        -- rendered right-button press must not fabricate a cast or mana cost.
+        return
+    end
     if definition.requires_point_target then
         assert(finite(payload.target_x) and finite(payload.target_y), "skill point target must be finite")
     end

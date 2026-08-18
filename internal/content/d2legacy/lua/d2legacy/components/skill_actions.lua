@@ -50,6 +50,44 @@ function M.register()
         fields = {},
     })
 
+    -- A selected aura is durable capability on its owner, not a cast. The
+    -- right-skill assignment drives this component while a separate relation
+    -- entity owns each currently affected target and its ordinary stat source.
+    ecs.component({
+        name = "d2legacy.skill.aura_emitter",
+        version = 1,
+        fields = {
+            { name = "source_id", type = "string" },
+            { name = "skill_id", type = "i64" },
+            { name = "skill_level", type = "i64" },
+            { name = "state_id", type = "string" },
+            { name = "target_state_id", type = "string" },
+            { name = "radius", type = "i64" },
+            { name = "stat", type = "string" },
+            { name = "operation", type = "string" },
+            { name = "value", type = "i64" },
+            { name = "refresh_delay", type = "i64" },
+            { name = "activated_tick", type = "i64" },
+        },
+    })
+
+    -- The relationship is the lifecycle owner for the co-composed stat source.
+    -- Leaving range, party, level, life, or the selected aura destroys one
+    -- entity and therefore cannot leave a detached modifier behind.
+    ecs.component({
+        name = "d2legacy.skill.aura_effect",
+        version = 1,
+        fields = {
+            { name = "emitter", type = "entity" },
+            { name = "target", type = "entity" },
+            { name = "source_id", type = "string" },
+            { name = "skill_id", type = "i64" },
+            { name = "skill_level", type = "i64" },
+            { name = "state_id", type = "string" },
+            { name = "refresh_delay", type = "i64" },
+        },
+    })
+
     -- Value-only semantic cast boundary. Presentation resolves skill-owned
     -- overlays, sounds, and client missiles from pinned records; authority
     -- emits only who cast what, where, and when.

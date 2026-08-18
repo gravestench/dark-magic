@@ -206,9 +206,25 @@ ordinary melee consumes that source without recognizing Weaken, while shared
 curse exclusivity and ranked replacement remain owned by the timed-state
 mechanism. Exact outgoing modifier ordering, non-weapon monster attacks,
 hirelings/summons, target eligibility, PvP, and presentation remain explicit
-1.14d probes. Spell Lab now wraps the production Blood Moor scene instead of
-maintaining a parallel spell simulator. Its ephemeral level-30 Sorceress fixture
-learns all 11 exact-ID configurations at level 20 through the owned
+1.14d probes. Might now opens the selected-right party-aura family. Its owned
+Skills/States/SkillDesc/TBL records and Blizzard's Expansion control
+documentation make the right assignment itself authoritative: left assignment
+is rejected, clicking the selected aura creates no cast, and zero mana is
+preserved. One ECS emitter reconciles living same-level party members inside
+the level-scaled radius into relationship entities co-composed with ordinary
+`damagepercent` stat sources. Distinct aura states coexist, while duplicate
+Might sources select the strongest level and a deterministic equal-strength
+source. Leaving range, party, level, life, room activity, or selection destroys
+the relationship and modifier together. Offline presentation follows the
+pinned Might States/Overlay records and cycles one active aura graphic per
+affected unit at the record's 50-tick period without disabling the other aura
+effects. Exact `aurafilter=73731` owned-unit coverage, application/leave tick
+ordering, equal-source ownership, cross-family visual cadence, sound lifetime,
+and connected persistent overlays remain explicit 1.14d probes.
+
+Spell Lab now wraps the production Blood Moor scene instead of maintaining a
+parallel spell simulator. Its ephemeral level-30 Sorceress fixture
+learns all 12 exact-ID configurations at level 20 through the owned
 Skills/SkillDesc records, begins with Fire Bolt and Amplify Damage assigned, and
 uses the ordinary HUD, command admission, mana, cast, projectile, state, damage,
 monster, and renderer paths. A real-MPQ acceptance casts Fire Bolt and proves
@@ -329,8 +345,8 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation. Target-locked real-MPQ tests also pin the current straight/radial missile audio references and joined Sounds filename/group/loop/stream rows; runtime timing and multiplicity remain evidence work rather than record inference. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 12 exact-ID implementations, 345 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might's Skills, States, SkillDesc, locale TBL, sound key, front/back Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states and offline aura relationships resolve States/Overlay records into shared world overlays without skill branches. Distinct aura modifiers stay active while presentation rotates one aura graphic per affected unit using the record period. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, aura gameplay facts, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate aura sound/connected overlay semantics, client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -1021,6 +1037,16 @@ runtime composition and the coverage report.
   `damagepercent` stat recipe. Make ordinary melee consume that generic
   outgoing-physical-damage source without a skill ID/name branch, while the
   shared timed-state mechanism owns curse exclusivity and replacement.
+- [x] Add the first selected-right party-aura family and admit exact Expansion
+  1.14d Might by ID. Decode its right-only, zero-mana activation, level-scaled
+  radius/damage, aura states, filter, and period; reconcile one ECS emitter into
+  self/party target relationships co-composed with ordinary stat sources.
+  Preserve different aura states concurrently, suppress weaker duplicate
+  states deterministically, remove effects atomically on eligibility changes,
+  and rotate the offline target's record-authored aura graphic without turning
+  gameplay modifiers off. Keep the complete target filter, owned units,
+  refresh/leave ordering, sound, equal-source ownership, and connected
+  persistent presentation partial pending owned 1.14d evidence.
 - [x] Add a production-backed Spell Lab scene that grants only the exact-ID
   manifest through owned Skills/SkillDesc records, delegates world/HUD/input/
   authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
@@ -1101,16 +1127,17 @@ runtime composition and the coverage report.
   partial behavior. Its generic SC action, cast sound/overlay, and persistent
   state overlay now use the shared paths.
 - [ ] Extend the now-present targeted, point, self, area/nova, buff/curse,
-  movement, and missile primitives into missing debuff/aura, summon, corpse, trap,
-  and ranged-weapon families in dependency order.
+  selected-party-aura, movement, and missile primitives into missing debuff,
+  aura-stat/pulse, summon, corpse, trap, and ranged-weapon families in
+  dependency order.
 - [ ] Use representative skills as fixtures; do not implement seven trees independently.
 
 `skill_behavior_coverage` mounts owned archives, reads the winning Expansion
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 11 explicitly admitted
-configurations, and 346 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 12 explicitly admitted
+configurations, and 345 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -1121,7 +1148,7 @@ its only authored presentation is a read-only legend reporting the admitted
 exact-ID count, current left/right assignments, and mana. Immutable initial
 data enables a development-only learned-skill fixture whose IDs are resolved
 through the normal owned Skills/SkillDesc records and rejected if unknown,
-passive, or unassignable. It currently grants the 11 manifest-backed Expansion
+passive, or unassignable. It currently grants the 12 manifest-backed Expansion
 1.14d configurations at level 20, assigns Fire Bolt left and Amplify Damage
 right, places three production hostiles in Blood Moor, and supplies a deep mana
 pool for repeated inspection. Ordinary HUD selection and world clicks still
@@ -1243,7 +1270,7 @@ seven-case Expansion 1.14d matrix first.
 
 Cast presentation now follows a second generic record join. `cast_actions`
 copies Skills.txt `anim`, `seqtrans`, `seqnum`, `UseAttackRate`, start/effect
-sounds, `castoverlay`, and client-missile references for all 11 admitted IDs.
+sounds, `castoverlay`, and client-missile references for all 12 admitted IDs.
 The cast lifecycle combines the actor token and current weapon class with the
 SC mode, schedules release at the first non-sound AnimData event, completes at
 the AnimData cursor wrap, and owns an empty `d2legacy.skill.cast_action` ECS
@@ -1464,6 +1491,41 @@ attacks, hireling/summon attacks, curse resistance, eligibility, PvP,
 client-only curse missile layers, and exact overlay semantics remain owned
 1.14d probes. The generic SC actor action and start sound are present.
 
+Might is the first `aura.selected-party-stat` configuration. Its exact skill
+row binds server-do 65, `aura=1`, `immediate=1`, blank `leftskill`, zero mana,
+filter 73731, radius `16 + 2*(level-1)`, `damagepercent` value
+`40 + 10*(level-1)`, the `might` owner/target states, and `perdelay=50`.
+SkillDesc joins those formulas to `StrSkill4` Damage and `StrSkill18` Radius;
+the layered TBL long text says the effect applies to the owner and party.
+Blizzard's Expansion skill basics and offensive-aura documentation corroborate
+the right-mouse activation, one selected aura per Paladin, and coexistence of
+different party auras. The learned-skill record makes left assignment
+impossible, and using the right button while selected returns before cast or
+mana state exists.
+
+The generic authority owns one emitter component on the selected living player
+and one relationship entity per eligible target/state pair. The relationship
+co-owns its normal stat source, so range, party, level, death, room-inactive, or
+selection changes cannot orphan a modifier. Target/state identity lets
+different aura states coexist; same-state candidates select learned level,
+then value, then a stable source-ID tie breaker. Authority tests cover solo and
+party application, range loss, assignment loss, checkpoint restoration,
+right-button no-cast/no-mana behavior, deterministic equal-level suppression,
+and stronger-source replacement. Generic melee already consumes the resulting
+`damagepercent` source.
+
+Offline state snapshots mark aura relationships without collapsing them into
+timed states. A presentation-only cycle retains every gameplay effect but
+selects one aura state per target, advancing at the selected row's `perdelay`
+converted from the 25 Hz simulation cadence. The shared States/Overlay adapter
+then renders Might's pinned back/front DCC pair and normal attachment rules.
+The exact meaning of all filter bits, non-player owned-unit membership,
+application/removal tick order, equal-strength source ownership, whether every
+aura's visual cadence follows `perdelay`, `onsound` lifetime, and connected
+persistent overlay projection remain explicit target-runtime work. No Classic,
+older patch, vanilla server/save, or community-tool compatibility behavior is
+introduced.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. The targeted-state decoder independently validates
@@ -1594,7 +1656,19 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: populate and review the owned Expansion 1.14d missile-audio matrix, the
+Next: close the first aura family's bounded multiplayer presentation before
+adding more aura IDs. Project only target identity, active semantic state, and
+record period through the reliable connected view; reconstruct disposable
+presentation relationships and prove that multiple distinct aura states remain
+effective while one graphic cycles. Do not expose stat values, party policy,
+filter decisions, radius, source arbitration, or other authority. In parallel,
+capture owned Expansion 1.14d player/hireling/summon entry/leave observations
+for `aurafilter=73731`, 50-tick application/removal ordering, equal-strength
+same-aura ownership, and `onsound` lifetime. Promote those results before
+broadening Might beyond living same-level player party members or treating
+`perdelay` as a universal client cadence.
+
+Also populate and review the owned Expansion 1.14d missile-audio matrix, the
 client-function-30 visual matrix, and the SC/SQ/FCR/weapon-class timing matrix.
 Use the completed audio report to define one generic lifecycle/multiplicity
 contract, then produce typed semantic missile cues and extend `EventView/v3`

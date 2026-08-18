@@ -86,7 +86,7 @@ func (app *application) developmentSkillsBootstrapData() map[string]any {
 		"replace": true,
 		"skill_ids": []any{
 			float64(0), float64(36), float64(40), float64(45), float64(47), float64(48),
-			float64(52), float64(54), float64(55), float64(66), float64(72),
+			float64(52), float64(54), float64(55), float64(66), float64(72), float64(98),
 		},
 		"skill_level": float64(20),
 		"left":        float64(36),

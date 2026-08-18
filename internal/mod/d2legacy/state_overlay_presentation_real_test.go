@@ -72,6 +72,8 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"aura_might_back":    {"Filename": "AuraMightBack"},
+		"aura_might_front":   {"Filename": "AuraMightFront"},
 		"frozenarmor":        {"Filename": "FrozenArmor", "Frames": "24", "AnimRate": "16", "Trans": "3"},
 		"curse_hit":          {"Filename": "CurseHit", "Frames": "10", "AnimRate": "16", "Trans": "3"},
 		"curseamplifydamage": {"Filename": "CurseAmplifyDamageEffect", "Frames": "24", "AnimRate": "16", "Trans": "3", "Character": "all", "1ofN": "1", "Height1": "14", "Height2": "0", "Height3": "-14", "Height4": "-60", "InitRadius": "1", "Radius": "6", "Red": "255", "Green": "64", "Blue": "64"},

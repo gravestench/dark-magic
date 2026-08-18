@@ -24,6 +24,18 @@ return test.suite({
         test.case("state_snapshots_preserve_target_relationship_and_events_copy_position", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
+                ecs.component({
+                    name = "d2legacy.skill.aura_effect",
+                    fields = {
+                        { name = "emitter", type = "entity" },
+                        { name = "target", type = "entity" },
+                        { name = "source_id", type = "string" },
+                        { name = "skill_id", type = "i64" },
+                        { name = "skill_level", type = "i64" },
+                        { name = "state_id", type = "string" },
+                        { name = "refresh_delay", type = "i64" },
+                    },
+                })
                 local world = require("d2legacy.gameplay.world")
                 local target = ecs.create({
                     ["d2legacy.monster.appearance"] = { overlay_height = 4 },
@@ -41,6 +53,17 @@ return test.suite({
                         policy = "refresh_same_source",
                     },
                 })
+                local aura = ecs.create({
+                    ["d2legacy.skill.aura_effect"] = {
+                        emitter = target,
+                        target = target,
+                        source_id = "aura:owner:98",
+                        skill_id = 98,
+                        skill_level = 1,
+                        state_id = "might",
+                        refresh_delay = 50,
+                    },
+                })
                 ecs.create({
                     ["d2legacy.state.event"] = {
                         kind = "state_applied",
@@ -53,17 +76,31 @@ return test.suite({
                     },
                 })
                 local snapshots = world.state_snapshots()
-                test.assert(#snapshots == 1, [=[#snapshots == 1]=])
+                test.assert(#snapshots == 2, [=[#snapshots == 2]=])
+                local by_state = {}
+                for _, snapshot in ipairs(snapshots) do
+                    by_state[snapshot.state_id] = snapshot
+                end
+                local timed = by_state.syntheticcurse
                 test.assert(
-                    snapshots[1].entity_id == instance:id()
-                        and snapshots[1].target_entity_id == target:id()
-                        and snapshots[1].state_id == "syntheticcurse"
-                        and snapshots[1].x == 12
-                        and snapshots[1].y == 8
-                        and snapshots[1].level_id == 2
-                        and snapshots[1].direction == 5
-                        and snapshots[1].overlay_height == 4,
+                    timed.entity_id == instance:id()
+                        and timed.target_entity_id == target:id()
+                        and timed.x == 12
+                        and timed.y == 8
+                        and timed.level_id == 2
+                        and timed.direction == 5
+                        and timed.overlay_height == 4,
                     [=[active state snapshot follows its live ECS target]=]
+                )
+                local aura_snapshot = by_state.might
+                test.assert(
+                    aura_snapshot.entity_id == aura:id()
+                        and aura_snapshot.target_entity_id == target:id()
+                        and aura_snapshot.aura
+                        and aura_snapshot.aura_period_ticks == 50
+                        and aura_snapshot.x == 12
+                        and aura_snapshot.y == 8,
+                    [=[active aura snapshot uses the same presentation contract]=]
                 )
                 local cues = world.semantic_cues()
                 local cue = cues[#cues]
