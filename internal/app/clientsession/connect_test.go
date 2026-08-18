@@ -320,7 +320,9 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if session.World.Tick != 11 || len(session.World.Entities) != 1 || session.World.Entities[0].Position != (playeradapter.HUDPosition{X: 8, Y: 9}) {
+	if session.World.Tick != 11 || len(session.World.Entities) != 1 ||
+		session.World.Entities[0].Position != (playeradapter.HUDPosition{X: 8, Y: 9}) ||
+		session.World.Entities[0].Direction != 3 || session.World.Entities[0].Mode != "WL" {
 		t.Fatalf("transformed world = %#v", session.World)
 	}
 	if len(session.World.Missiles) != 1 || session.World.Missiles[0].Position != (playeradapter.HUDPosition{X: 10, Y: 11}) {

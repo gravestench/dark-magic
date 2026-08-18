@@ -127,6 +127,8 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	monsterIdentities, _ := findComponent(snapshot, "d2legacy.monster.identity")
 	monsterAppearances, _ := findComponent(snapshot, "d2legacy.monster.appearance")
 	monsterDeaths, _ := findComponent(snapshot, "d2legacy.monster.death")
+	monsterAI, _ := findComponent(snapshot, "d2legacy.monster.ai")
+	velocities, _ := findComponent(snapshot, "d2legacy.world.velocity")
 	players, _ := findComponent(snapshot, "d2legacy.player.identity")
 	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
 	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
@@ -149,6 +151,14 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 			entity.Components = stringField(appearance, "components")
 			entity.DeathSound = stringField(appearance, "death_sound")
 			entity.OverlayHeight = intField(appearance, "overlay_height")
+			brain, _ := findInstance(monsterAI, source)
+			velocity, _ := findInstance(velocities, source)
+			entity.Mode = monsterPresentationMode(
+				entity.Mode,
+				stringField(brain, "state"),
+				floatField(velocity, "x"),
+				floatField(velocity, "y"),
+			)
 		}
 	}
 	for _, instance := range selectables.Instances {
@@ -269,6 +279,24 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		view.Missiles, view.Truncated = view.Missiles[:MaxWorldViewMissiles], true
 	}
 	return json.Marshal(view)
+}
+
+// monsterPresentationMode collapses server-only AI and velocity facts into
+// the two-byte animation vocabulary already carried by the public transform
+// stream. Its death -> attack -> movement -> authored precedence matches the
+// offline monster snapshot adapter, so the client learns what to draw without
+// learning why the monster chose it.
+func monsterPresentationMode(authoredMode, aiState string, velocityX, velocityY float64) string {
+	if authoredMode == "DT" {
+		return authoredMode
+	}
+	if aiState == "attack" {
+		return "A1"
+	}
+	if velocityX != 0 || velocityY != 0 {
+		return "WL"
+	}
+	return authoredMode
 }
 
 func validateWorldEntity(entity WorldEntity) error {
