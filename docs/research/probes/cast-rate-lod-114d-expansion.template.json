@@ -1,0 +1,52 @@
+{
+  "schema": "d2legacy.cast_rate_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "runtime": {
+    "patch": "1.14d",
+    "mode": "expansion",
+    "session": "single-player",
+    "character_origin": "probe-created",
+    "executable_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256",
+    "record_generation_id": "sha256:REPLACE_WITH_64_LOWERCASE_HEX_GENERATION_DIGEST",
+    "observation": "video-frame-log",
+    "stat_identification": "owned-itemstatcost-properties-tbl",
+    "locale": "eng",
+    "game_frames_per_second": 25
+  },
+  "cases": [
+    {
+      "id": "fire-bolt-hth-fcr-0",
+      "skill_id": 36,
+      "skill_record": "Fire Bolt",
+      "character_class": "sor",
+      "animation_mode": "SC",
+      "sequence_transition": "SC",
+      "weapon_class": "HTH",
+      "raw_faster_cast_rate": 0,
+      "modifier_key": "ModStr4v",
+      "modifier_text": "Faster Cast Rate",
+      "modifier_sources": [],
+      "start_frame": 100,
+      "effect_frame": 107,
+      "neutral_frame": 114
+    },
+    {
+      "id": "lightning-hth-fcr-0",
+      "skill_id": 49,
+      "skill_record": "Lightning",
+      "character_class": "sor",
+      "animation_mode": "SQ",
+      "sequence_transition": "SC",
+      "sequence_number": 12,
+      "weapon_class": "HTH",
+      "raw_faster_cast_rate": 0,
+      "modifier_key": "ModStr4v",
+      "modifier_text": "Faster Cast Rate",
+      "modifier_sources": [],
+      "start_frame": 200,
+      "effect_frame": 207,
+      "neutral_frame": 214
+    }
+  ]
+}

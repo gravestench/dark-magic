@@ -134,7 +134,7 @@ ECS mirrors, including record-authored monster/player overlay-height attachment,
 and a bounded `WorldView/v3` live-missile projection whose 25 Hz position
 updates feed the same presentation-only ECS recipe used offline,
 and definition-driven radial-missile slices as of
-2026-08-17. Nova is now the first
+2026-08-18. Nova is now the first
 exact-ID `missile.radial` configuration: one targetless cast creates a shared-
 identity ring of ordinary ECS projectile entities, level-scaled count/mana/
 five-band lightning damage, and separate cast-target contact-lock entities.
@@ -255,7 +255,11 @@ and multi-direction details, client-only curse missiles, interruption/refund, an
 remaining semantic event families remain explicit presentation work. A
 strict client-function-30 visual probe now gates the curse missiles on a
 fingerprinted owned Expansion 1.14d empty/single/multi-target matrix rather
-than recovered/community behavior. A
+than recovered/community behavior. A separate strict cast-rate analyzer now
+joins owned ItemStatCost/Properties/Skills/TBL identities to visual SC, SQ,
+weapon-class, and raw-FCR observations. It reports a missing target matrix and
+promotes no breakpoint formula, preventing older-version tables from becoming
+1.14d behavior by assumption. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -320,7 +324,7 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients receive a bounded reliable cast/state event tail plus a bounded live projectile/effect visual collection; both reconstruct presentation-only ECS components, so offline and connected play use the same Lua renderer without exposing authority. Missile identities and visual recipes remain reliable while the existing 25 Hz disposable transform channel carries nearby positions. A strict owned-runtime probe gates client-function-30 curse attachment/motion on a complete six-case target matrix. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients receive a bounded reliable cast/state event tail plus a bounded live projectile/effect visual collection; both reconstruct presentation-only ECS components, so offline and connected play use the same Lua renderer without exposing authority. Missile identities and visual recipes remain reliable while the existing 25 Hz disposable transform channel carries nearby positions. Strict owned-runtime probes gate client-function-30 curse attachment/motion and SC/SQ/FCR/weapon-class timing on complete target matrices; neither promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated SQ/FCR timing vectors, exact overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -1052,6 +1056,11 @@ runtime composition and the coverage report.
   community/imported-save evidence, normalizes both record-referenced missile
   layers, and reports the missing empty/single/multi-target matrix without
   promoting an attachment or motion role.
+- [x] Add a strict owned Expansion 1.14d cast-rate capture/analyzer. Pin
+  ItemStatCost ID 105, Properties `cast1/2/3`, `ModStr4v` TBL text, Fire Bolt's
+  SC action, and Lightning's SQ/12 transition; normalize visual release and
+  completion timing across a raw-FCR/weapon-class matrix without embedding an
+  older breakpoint formula or admitting Lightning's unfinished behavior.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -1177,8 +1186,14 @@ filter which excludes locomotion. Start/effect semantic cue entities carry only
 skill/actor/target/tick facts; the offline world adapter re-resolves Skills and
 Overlay records to play sounds and one-shot overlays. The owned Sorceress
 `SOSCHTH`, `SOSC1HS`, and `SOSCSTF` records all pin 14-frame actions with release
-at frame 7. SQ sequence semantics, faster cast rate, weapon/equipment changes,
-interrupt/refund rules and client-only curse missile layers are still open.
+at frame 7. Owned ItemStatCost ID 105 and Properties `cast1/2/3` identify
+`item_fastercastrate`; `ModStr4v` resolves through owned `string.tbl` to
+`Faster Cast Rate`. A strict target-runtime analyzer now requires 25 Hz SC and
+SQ/12 visual timing across HTH/1HS/STF and discriminating raw-FCR values before
+the shared scheduler changes. The probe reports evidence coverage rather than
+declaring a breakpoint formula. Populating that matrix, implementing SQ/FCR,
+mid-action weapon/equipment changes, interrupt/refund rules, and client-only
+curse missile layers are still open.
 
 Standalone DCC presentation now retains the stable decoded direction canvas and
 sets the authored zero point as the render-node origin, matching the ground-
@@ -1514,16 +1529,18 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: populate and review that owned Expansion 1.14d client-function-30 visual
-matrix, then add the record-referenced client-only curse missile layers without guessing
-the `cltmissilea`/`cltmissilec` attachment and motion roles. Pin Overlay light,
+Next: populate and review the owned Expansion 1.14d client-function-30 visual
+matrix and the SC/SQ/FCR/weapon-class timing matrix. Then add the record-
+referenced client-only curse missile layers without guessing the `cltmissilea`/
+`cltmissilec` attachment and motion roles. Pin Overlay light,
 variant, character restriction, and multi-direction behavior without skill-
 specific renderer branches. Live server projectile/effect presentation already
 uses the typed `WorldView/v3` boundary; extend the semantic event view
 only as those remaining semantic-event consumers become presentation-ready;
-never expose arbitrary ECS payloads. Complete SQ sequences, faster-cast-rate and
-equipped-weapon-class timing, plus interruption/refund behavior against owned
-Expansion 1.14d vectors. Then probe and replace Attack's remaining inferred distance, dynamic-door,
+never expose arbitrary ECS payloads. Use the completed timing report to
+implement SQ sequences, faster-cast-rate and equipped-weapon-class timing, plus
+interruption/refund behavior against owned Expansion 1.14d vectors. Then probe
+and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,
 dual-wield, slow, sequence, and mid-action boundaries against owned 1.14d
 runtime vectors. In evidence order, finish Frozen Armor's remaining target-sensitive
