@@ -551,3 +551,92 @@ func TestOwnedTargetSalvationAuraRecordsAndLocalizedIntent(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnedTargetVigorAuraRecordsAndLocalizedIntent(t *testing.T) {
+	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
+	if directory == "" {
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
+	}
+	t.Setenv("MPQ_DIRECTORY", directory)
+	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer assets.Close()
+	store := recordstore.New(assets)
+	store.SetLogger(nil)
+	skills, err := store.Load("data/global/excel/skills.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vigor := rowBy(skills, "Id", "115")
+	if vigor == nil {
+		t.Fatal("owned expansion 1.14d Vigor row is missing")
+	}
+	for field, want := range map[string]string{
+		"skill": "Vigor", "srvstfunc": "", "srvdofunc": "65", "aura": "1", "immediate": "1",
+		"leftskill": "", "range": "none", "InGame": "1", "aurafilter": "73731",
+		"aurarangecalc": "ln12", "aurastate": "stamina", "auratargetstate": "stamina",
+		"aurastat1": "staminarecoverybonus", "aurastatcalc1": "ln34",
+		"aurastat2": "skill_staminapercent", "aurastatcalc2": "ln34",
+		"aurastat3": "velocitypercent", "aurastatcalc3": "dm56",
+		"passivestate": "", "passivestat1": "", "passivecalc1": "", "mana": "0", "lvlmana": "0",
+		"Param1": "16", "Param2": "3", "Param3": "50", "Param4": "25",
+		"Param5": "7", "Param6": "50", "perdelay": "50",
+	} {
+		if vigor[field] != want {
+			t.Fatalf("owned expansion 1.14d Vigor %s = %q, want %q", field, vigor[field], want)
+		}
+	}
+	states, err := store.Load("data/global/excel/states.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := rowBy(states, "state", "stamina")
+	if state == nil {
+		t.Fatal("owned expansion 1.14d Vigor state is missing")
+	}
+	for field, want := range map[string]string{
+		"id": "41", "aura": "1", "stat": "maxstamina", "onsound": "paladin_aura_stamina",
+		"overlay1": "staminafront", "overlay2": "staminaback", "castoverlay": "",
+	} {
+		if state[field] != want {
+			t.Fatalf("owned expansion 1.14d Vigor state %s = %q, want %q", field, state[field], want)
+		}
+	}
+	itemStats, err := store.Load("data/global/excel/ItemStatCost.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	staminaPercent := rowBy(itemStats, "Stat", "skill_staminapercent")
+	if staminaPercent == nil || staminaPercent["op"] != "1" || staminaPercent["op stat1"] != "maxstamina" {
+		t.Fatalf("owned expansion 1.14d skill_staminapercent ItemStatCost row = %#v", staminaPercent)
+	}
+	descriptions, err := store.Load("data/global/excel/SkillDesc.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	description := rowBy(descriptions, "skilldesc", "vigor")
+	if description == nil || description["desccalca1"] != "ln34" || description["desccalca2"] != "ln34" ||
+		description["desccalca3"] != "dm56" || description["desccalca4"] != "ln12" ||
+		description["desctexta1"] != "StrSkill69" || description["desctexta2"] != "StrSkill71" ||
+		description["desctexta3"] != "StrSkill70" || description["desctexta4"] != "StrSkill18" {
+		t.Fatalf("owned expansion 1.14d Vigor SkillDesc row = %#v", description)
+	}
+	locale := localization.New(assets, "English")
+	for key, want := range map[string]string{
+		"skillname115": "Vigor",
+		"skillsd115":   "aura - increases speed and stamina recovery",
+		"skillld115":   "and movement speed for you and your party\nwhen active, aura increases stamina recovery rate, maximum stamina",
+		"StrSkill69":   "Stamina Recovery Rate: ",
+		"StrSkill71":   "Stamina Bonus: ",
+		"StrSkill70":   "Velocity: ",
+		"StrSkill23":   " percent",
+		"StrSkill18":   "Radius: ",
+	} {
+		text, _, resolveErr := locale.Resolve(key)
+		if resolveErr != nil || text != want {
+			t.Fatalf("owned English TBL %s = %q, %v; want %q", key, text, resolveErr, want)
+		}
+	}
+}

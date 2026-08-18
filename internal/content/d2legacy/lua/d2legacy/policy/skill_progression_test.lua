@@ -52,6 +52,11 @@ return test.suite({
                 for level, value in ipairs(resist_all) do
                     test.expect(progression.diminishing(50, 120, level)):equals(value)
                 end
+                local movement = { 13, 18, 22, 25, 28, 30, 32, 33, 35, 36, 37, 38, 39, 40, 40, 41, 41, 42, 42, 43 }
+                for level, value in ipairs(movement) do
+                    test.expect(progression.diminishing(7, 50, level)):equals(value)
+                    test.expect(progression.linear(50, 25, level)):equals(25 + level * 25)
+                end
             end)
         end),
         test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)

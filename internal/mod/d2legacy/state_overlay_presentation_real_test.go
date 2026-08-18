@@ -72,6 +72,8 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"staminafront":         {"Filename": "Stamina_front", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
+		"staminaback":          {"Filename": "Stamina_back", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"aura_resistall_front": {"Filename": "AuraResistAllFront", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "InitRadius": "6", "Radius": "6", "Red": "211", "Green": "148", "Blue": "255"},
 		"aura_resistall_back":  {"Filename": "AuraResistAllBack", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "InitRadius": "6", "Radius": "6", "Red": "211", "Green": "148", "Blue": "255"},
 		"cast_resistall":       {"Filename": "AuraResistAllCast", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "InitRadius": "1", "Radius": "10", "Red": "211", "Green": "148", "Blue": "255"},

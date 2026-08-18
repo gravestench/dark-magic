@@ -12,7 +12,10 @@ local stat_recipes = {
     maxfireresist = { stat = "max_fire_resist", operation = "add", formula = "self_hard_level" },
     maxcoldresist = { stat = "max_cold_resist", operation = "add", formula = "self_hard_level" },
     maxlightresist = { stat = "max_lightning_resist", operation = "add", formula = "self_hard_level" },
+    skill_staminapercent = { stat = "skill_staminapercent", operation = "add", formula = "ln34" },
     skill_armor_percent = { stat = "defense", operation = "percent", formula = "ln34" },
+    staminarecoverybonus = { stat = "staminarecoverybonus", operation = "add", formula = "ln34" },
+    velocitypercent = { stat = "velocitypercent", operation = "add", formula = "dm56" },
 }
 
 local function index(rows, column)
@@ -82,10 +85,12 @@ local function decode_aura_stat(row, index_number, label)
         assert(expression == "ln34", label .. " has an unsupported linear aura stat formula")
         result.value_base = required_integer(row, "Param3", label)
         result.value_per_level = required_integer(row, "Param4", label)
-    elseif recipe.formula == "dm34" then
-        assert(expression == "dm34", label .. " has an unsupported diminishing aura stat formula")
-        result.value_minimum = required_integer(row, "Param3", label)
-        result.value_maximum = required_integer(row, "Param4", label)
+    elseif string.sub(recipe.formula, 1, 2) == "dm" then
+        assert(expression == recipe.formula, label .. " has an unsupported diminishing aura stat formula")
+        local minimum_parameter, maximum_parameter = string.match(recipe.formula, "^dm([1-8])([1-8])$")
+        assert(minimum_parameter and maximum_parameter, label .. " has an invalid diminishing parameter pair")
+        result.value_minimum = required_integer(row, "Param" .. minimum_parameter, label)
+        result.value_maximum = required_integer(row, "Param" .. maximum_parameter, label)
     else
         local skill_name = assert(
             string.match(expression, "^skill%('([^']+)'%.blvl%)$"),
@@ -111,19 +116,28 @@ local function decode_aura_stats(row, label)
     return result
 end
 
-local function state_stat_is_authored(row, state_stat)
+local function state_stat_is_authored(row, state_stat, item_stats_by_name)
     if not state_stat or state_stat == "" then
         return false
     end
     for index_number = 1, 6 do
-        if row["aurastat" .. index_number] == state_stat then
+        local authored_stat = row["aurastat" .. index_number]
+        if authored_stat == state_stat then
             return true
+        end
+        local item_stat = item_stats_by_name[authored_stat]
+        if item_stat and item_stat.op and item_stat.op ~= "" then
+            for operand_index = 1, 3 do
+                if item_stat["op stat" .. operand_index] == state_stat then
+                    return true
+                end
+            end
         end
     end
     return false
 end
 
-local function decode(row, states_by_name)
+local function decode(row, states_by_name, item_stats_by_name)
     local id = required_integer(row, "Id", "party aura skill")
     local label = row.skill or ("skill " .. id)
     assert(row.srvstfunc == "" and row.srvdofunc == "65", label .. " has unsupported server functions")
@@ -141,7 +155,7 @@ local function decode(row, states_by_name)
     local state = assert(states_by_name[row.aurastate], label .. " has an unknown owner state")
     local target_state = assert(states_by_name[row.auratargetstate], label .. " has an unknown target state")
     assert(
-        state.aura == "1" and state_stat_is_authored(row, state.stat),
+        state.aura == "1" and state_stat_is_authored(row, state.stat, item_stats_by_name),
         label .. " owner state does not match any authored aura stat"
     )
     assert(target_state.aura == "1", label .. " target state is not an aura")
@@ -171,11 +185,12 @@ function M.load(supported_ids)
     assert(type(supported_ids) == "table", "supported party-aura skill IDs are required")
     local skills = index(assert(records.load("data/global/excel/skills.txt")), "Id")
     local states = index(assert(records.load("data/global/excel/states.txt")), "state")
+    local item_stats = index(assert(records.load("data/global/excel/ItemStatCost.txt")), "Stat")
     local result = {}
     for _, skill_id in ipairs(supported_ids) do
         local row = skills[tostring(skill_id)]
         if row then
-            local definition = decode(row, states)
+            local definition = decode(row, states, item_stats)
             assert(not result[definition.skill_id], "duplicate party-aura skill ID")
             result[definition.skill_id] = definition
         end
