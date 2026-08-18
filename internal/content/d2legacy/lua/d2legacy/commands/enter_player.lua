@@ -11,7 +11,11 @@ local player_stats = require("d2legacy.data.player_stats")
 local item_bootstrap = require("d2legacy.items.bootstrap")
 local game_rules = require("d2legacy.policy.game_rules")
 local movement_rules = require("d2legacy.movement_rules/v1")
+local collision_registry = require("d2legacy.gameplay.collision")
 local M = {}
+
+local PLAYER_RADIUS = 1
+local ENTRY_SPACING = 8
 
 local initial_available, initial = pcall(require, "engine.initial_data/v1")
 
@@ -30,6 +34,114 @@ local function already_entered(player_id)
         end
     end
     return false
+end
+
+local function same_level(location, act, level_id)
+    return location:get("act") == act and location:get("level_id") == level_id
+end
+
+local function static_entry_clear(level_id, x, y, radius)
+    local collision = collision_registry.for_level(level_id)
+    if not collision then
+        return true
+    end
+    local reach = math.ceil(radius)
+    for offset_y = -reach, reach do
+        for offset_x = -reach, reach do
+            local distance = math.sqrt(offset_x * offset_x + offset_y * offset_y)
+            if distance <= radius + 0.5 and collision:blocked_position(x + offset_x, y + offset_y) then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+local function entry_clear(p, x, y)
+    if x < 0 or y < 0 or x >= p.world_width or y >= p.world_height then
+        return false
+    end
+    if not static_entry_clear(p.level_id, x, y, PLAYER_RADIUS) then
+        return false
+    end
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.world.position",
+                "d2legacy.world.collider",
+                "d2legacy.world.occupancy",
+                "d2legacy.world.location",
+            },
+        }))
+    do
+        local occupancy = ecs.get(entity, "d2legacy.world.occupancy")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        if occupancy:get("blocks_movement") and same_level(location, p.act, p.level_id) then
+            local position = ecs.get(entity, "d2legacy.world.position")
+            local collider = ecs.get(entity, "d2legacy.world.collider")
+            local dx, dy = x - position:get("x"), y - position:get("y")
+            local combined = PLAYER_RADIUS + collider:get("radius")
+            if dx * dx + dy * dy < combined * combined then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- A Realm worker owns one trusted entry anchor for the game, not one position
+-- per membership. Resolve that anchor against the live ECS at command-apply
+-- time so every transport topology gets the same collision-valid result and a
+-- restored session repeats the same placement. Eight-subtile candidate spacing
+-- also keeps full player composites visually distinct at the initial camera.
+local function entry_position(p)
+    if entry_clear(p, p.x, p.y) then
+        return p.x, p.y
+    end
+
+    local visited = {}
+    local function candidate(grid_x, grid_y)
+        local key = tostring(grid_x) .. ":" .. tostring(grid_y)
+        if visited[key] then
+            return nil, nil
+        end
+        visited[key] = true
+        local x, y = p.x + grid_x * ENTRY_SPACING, p.y + grid_y * ENTRY_SPACING
+        if entry_clear(p, x, y) then
+            return x, y
+        end
+        return nil, nil
+    end
+
+    local maximum_ring = math.ceil(math.max(p.world_width, p.world_height) / ENTRY_SPACING) + 1
+    for ring = 1, maximum_ring do
+        local preferred = {
+            { ring, 0 },
+            { -ring, 0 },
+            { 0, ring },
+            { 0, -ring },
+        }
+        for _, offset in ipairs(preferred) do
+            local x, y = candidate(offset[1], offset[2])
+            if x then
+                return x, y
+            end
+        end
+        for offset = -ring, ring do
+            for _, edge in ipairs({
+                { offset, ring },
+                { offset, -ring },
+                { ring, offset },
+                { -ring, offset },
+            }) do
+                local x, y = candidate(edge[1], edge[2])
+                if x then
+                    return x, y
+                end
+            end
+        end
+    end
+    error("player entry has no collision-valid position near the trusted destination")
 end
 
 function M.validate(command)
@@ -197,6 +309,7 @@ function M.apply(command)
     local learned, preferred_skills = configured_skills(p.class)
     local _, run_drain = movement_rules.class_facts(p.class)
     local left, right = initial_skills(learned, preferred_skills)
+    local spawn_x, spawn_y = entry_position(p)
     local player = ecs.create({
         ["d2legacy.player.identity"] = {
             character_id = p.character_id,
@@ -286,7 +399,7 @@ function M.apply(command)
             weapon_class = "HTH",
         },
         ["d2legacy.player.animation"] = { direction = p.direction or 0, mode = "NU", start_tick = command.tick },
-        ["d2legacy.world.position"] = { x = p.x, y = p.y },
+        ["d2legacy.world.position"] = { x = spawn_x, y = spawn_y },
         ["d2legacy.world.velocity"] = { x = 0, y = 0 },
         ["d2legacy.world.facing"] = { direction = p.direction or 0, directions = 16 },
         ["d2legacy.player.movement_mode"] = { running = false },
@@ -295,14 +408,20 @@ function M.apply(command)
             kind = "idle",
             x = 0,
             y = 0,
-            target_x = p.x,
-            target_y = p.y,
+            target_x = spawn_x,
+            target_y = spawn_y,
             has_target = false,
             running = false,
             active = false,
         },
         ["d2legacy.player.skill_assignment"] = { left = left, right = right },
-        ["d2legacy.player.skill_intent"] = { side = "", skill_id = 0, target_x = p.x, target_y = p.y, target_id = "" },
+        ["d2legacy.player.skill_intent"] = {
+            side = "",
+            skill_id = 0,
+            target_x = spawn_x,
+            target_y = spawn_y,
+            target_id = "",
+        },
         ["d2legacy.player.belt"] = { capacity = 4 },
         ["d2legacy.world.player_control"] = { player = p.player },
         ["d2legacy.world.bounds"] = { width = p.world_width, height = p.world_height },

@@ -303,6 +303,14 @@ prediction or interpolation timeline instead of accumulating render-frame time.
 Listen and dedicated authorities install every generated level's collision map
 and route movement collision by each entity's authoritative level. Public
 interest filtering requires the same act and level before applying distance.
+Realm workers publish one trusted entry anchor for a game; that anchor is not a
+reserved coordinate for every membership. When an entry command applies, the
+shared d2legacy authority keeps the anchor for the first available footprint and
+otherwise searches deterministic eight-subtile rings for a position accepted by
+both the level collision map and live blocking ECS occupancy. Resolving this in
+the checkpointed simulation, rather than Realm or QUIC code, prevents joining
+players from overlapping and suppressing each other's locomotion while keeping
+offline, listen, dedicated, replay, and restored sessions on one placement rule.
 One canonical checkpoint is captured per server tick and shared by all per-player
 projections. Each membership owns at most one long-lived correction stream.
 Explicit leave revokes transport membership immediately. QUIC connection loss
