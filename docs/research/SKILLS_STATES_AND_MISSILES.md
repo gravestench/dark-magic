@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 19
-explicitly admitted configurations, and 338 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 20
+explicitly admitted configurations, and 337 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 338 missing configurations,
+classification and implementation of the 337 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1021,6 +1021,43 @@ production walk velocity from 6 to 7.32. Changing selection removes all three
 sources atomically, and checkpoint restore preserves the result. Owned locale
 text, `paladin_aura_stamina`, the `staminafront`/`staminaback` Overlay rows, and
 their DCC members pin intent and presentation independently.
+
+Thorns is the ninth exact selected party-stat aura and the first relationship
+whose ordinary stat source is consumed reactively after another entity commits
+melee damage. Its owned ID 103 row declares server-do 65, filter 73731, state
+36, `thorns_percent=ln34`, Params 3/4 of 250/40, zero mana, and a 50-tick
+period. The corresponding state intentionally leaves its representative stat
+blank, and Skills.txt intentionally leaves `immediate` blank. The decoder
+accepts those absences only through reviewed recipe flags on
+`thorns_percent`; unrelated aura rows cannot bypass either validation rule.
+SkillDesc and layered TBL text identify returned damage and radius, while the
+[official Expansion skill reference](https://classic.battle.net/diablo2exp/skills/paladin-offense.shtml)
+publishes the 250,290,...,1010 level vector and restricts the trigger to actual
+melee hits against affected party members.
+
+The aura relationship owns an ordinary `thorns_percent` stat source. A generic
+ECS reflection consumer observes factual melee attack, combat, and typed damage
+components after the original hit resolves, then adds an empty observation
+marker before doing any work. Misses, missile hits, and attacks with no applied
+physical damage cannot reflect. For supported PvM, the reflected basis is the
+lesser of post-defender-mitigation physical damage and actual committed damage;
+the percentage result then enters the shared physical-damage policy against the
+attacker. At level three, 20 raw physical becomes 10 after defender resistance,
+330% produces 33 returned physical, and 50% attacker resistance commits 16.5.
+The ordinary damage/death result attributes a lethal reflection to the aura
+bearer, and checkpoint, duplicate-step, and aura-removal coverage prove the
+same source and observation lifecycles without a Thorns callback.
+
+That ordering is **high-confidence recovered behavior**, not yet target-runtime
+verification. Pinned recovered code applies Thorns after successful melee and
+defender mitigation, caps the basis by remaining life, and sends the returned
+physical damage through the attacker damage pipeline
+([damage-result ordering](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/UNIT/SUnitDmg.cpp#L2377),
+[Paladin reflection calculation](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/SKILLS/SkillPal.cpp#L1555)).
+Those sources principally reconstruct 1.10 behavior. Player/hireling attackers
+are therefore excluded until the target 1.14d hostility and one-eighth PvP
+rule are verified. The owned front/back aura overlays and `hit_thorns` overlay
+are pinned, but the hit-reaction graphic is not emitted yet.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

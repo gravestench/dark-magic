@@ -182,6 +182,7 @@ function M.register()
     ecs.system({
         id = "d2legacy.monster.death",
         phase = "effects",
+        after = { "d2legacy.combat.reflect_melee" },
         query = {
             any = {
                 "d2legacy.monster.stats",

@@ -83,6 +83,32 @@ Attack is therefore a skill configuration, not a special command path. Exact
 target/range/LOS policy remains incomplete; other melee skills need their own
 reviewed declaration and behavior evidence.
 
+## Reactive melee-reflection execution order
+
+1. `systems/melee.lua` resolves an attack into co-composed factual
+   `attack_result`, `melee_event`, `combat.event`, and `damage_bundle`
+   components.
+2. `systems/reflected_damage.lua` runs before generic death observation and
+   selects only successful melee results with committed physical damage.
+3. It immediately adds the empty `reflection_observed` component. Independent
+   consumers can retain the same result entity without allowing reflection to
+   run twice after another simulation step or checkpoint restore.
+4. The system resolves `thorns_percent` from the defender's ordinary stat
+   sources. It does not inspect a selected skill ID or English skill name.
+5. The reflected basis is post-defender-mitigation physical damage capped by
+   the damage actually committed to life. The configured percentage is then
+   resolved as a new physical hit against the attacker through the shared
+   damage policy, including the attacker's mitigation.
+6. The returned hit emits an ordinary combat result with the defender as its
+   source, so the existing death consumer owns lethal attribution.
+
+This is currently a PvM boundary. Player attackers are excluded until
+Expansion 1.14d hostility, hireling classification, and the documented reduced
+PvP return are verified. Missiles and non-physical melee damage do not satisfy
+the factual input. The front/back aura presentation is shared with other aura
+states; the distinct `hit_thorns` reaction overlay remains a presentation
+follow-up.
+
 ## Timed self-state/stat execution order
 
 1. The target-locked behavior manifest admits one exact skill ID.

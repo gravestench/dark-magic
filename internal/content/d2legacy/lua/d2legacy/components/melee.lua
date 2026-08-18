@@ -107,6 +107,12 @@ function M.register()
             { name = "defender_effects_processed", type = "bool", default = false },
         },
     })
+    -- Empty consumer marker. Reflected damage owns an independent observation
+    -- lifecycle so other melee-result consumers do not share mutable flags.
+    ecs.component({
+        name = "d2legacy.combat.reflection_observed",
+        fields = {},
+    })
 end
 
 return M

@@ -69,6 +69,11 @@
       "evidence_status": "owned-target-records-localized-fire-resistance-intent-and-official-hard-point-passive-partial"
     },
     {
+      "skill_id": 103,
+      "family": "aura.selected-party-stat",
+      "evidence_status": "owned-target-records-localized-melee-reflection-intent-and-recovered-damage-ordering-partial"
+    },
+    {
       "skill_id": 104,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-defense-intent-and-official-aura-control-partial"

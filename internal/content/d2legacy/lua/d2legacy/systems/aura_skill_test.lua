@@ -36,6 +36,148 @@ local function aura_source(effect_entity, stat)
     return nil
 end
 
+local function player_named(name)
+    local ecs = require("engine.ecs/v1")
+    for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+        if ecs.get(player, "d2legacy.player.identity"):get("player") == name then
+            return player
+        end
+    end
+    return nil
+end
+
+local function reflected_damage_attacker(id, health_raw)
+    local ecs = require("engine.ecs/v1")
+    id = id or "monster:reflect-attacker"
+    health_raw = health_raw or 100 * 256
+    return ecs.create({
+        ["d2legacy.monster.identity"] = {
+            spawn_id = id,
+            definition_id = "reflection-test",
+            base_id = "",
+            graphics_id = "",
+            seed = "1",
+            treasure_class = "",
+        },
+        ["d2legacy.monster.stats"] = {
+            level = 1,
+            health = health_raw,
+            max_health = health_raw,
+            defense = 0,
+            attack_rating = 100,
+        },
+        ["d2legacy.combat.defense"] = {
+            base_physical_resist = 50,
+            base_fire_resist = 0,
+            base_cold_resist = 0,
+            base_lightning_resist = 0,
+            physical_resist = 50,
+            fire_resist = 0,
+            cold_resist = 0,
+            lightning_resist = 0,
+            max_fire_resist = 75,
+            max_cold_resist = 75,
+            max_lightning_resist = 75,
+            physical_reduction_raw = 0,
+        },
+        ["d2legacy.world.selectable"] = {
+            id = id,
+            kind = "hostile",
+            label = "Reflection attacker",
+            owner = "",
+            radius = 0.5,
+            priority = 1,
+        },
+    })
+end
+
+local function emit_melee_damage(attacker_id, rolled_physical_raw)
+    local ecs = require("engine.ecs/v1")
+    local damage = require("d2legacy.policy.damage")
+    local bundle = require("d2legacy.policy.damage_bundle")
+    local defender = player_named("alice")
+    test.assert(defender ~= nil, "fixture Paladin is missing")
+    local resolved = damage.resolve(defender, bundle.single("physical", rolled_physical_raw), ecs)
+    return ecs.create({
+        ["d2legacy.combat.melee_event"] = {
+            kind = "hit_resolved",
+            tick = 7,
+            attacker_id = attacker_id,
+            target_id = "player:alice",
+            hit = true,
+            damage_raw = resolved.damage_raw,
+            remaining_health_raw = resolved.remaining_health_raw,
+            hand = "rarm",
+            outcome = "hit",
+        },
+        ["d2legacy.combat.attack_result"] = {
+            tick = 7,
+            attacker_id = attacker_id,
+            target_id = "player:alice",
+            source_kind = "melee",
+            outcome = "hit",
+        },
+        ["d2legacy.combat.event"] = {
+            kind = resolved.lethal and "unit_died" or "damage_applied",
+            tick = 7,
+            attacker_id = attacker_id,
+            target_id = "player:alice",
+            source_kind = "melee",
+            damage_channel = resolved.channel,
+            rolled_damage_raw = resolved.rolled_damage_raw,
+            damage_raw = resolved.damage_raw,
+            remaining_health_raw = resolved.remaining_health_raw,
+        },
+        ["d2legacy.combat.damage_bundle"] = bundle.stage_component(resolved.rolled, resolved.mitigated),
+    })
+end
+
+local function emit_non_reflecting_damage_boundaries()
+    local ecs = require("engine.ecs/v1")
+    local bundle = require("d2legacy.policy.damage_bundle")
+    ecs.create({
+        ["d2legacy.combat.melee_event"] = {
+            kind = "hit_resolved",
+            attacker_id = "monster:reflect-attacker",
+            target_id = "player:alice",
+            hit = false,
+            outcome = "miss",
+        },
+    })
+    local fire = bundle.normalize({ fire = 5 * 256 })
+    ecs.create({
+        ["d2legacy.combat.melee_event"] = {
+            kind = "hit_resolved",
+            attacker_id = "monster:reflect-attacker",
+            target_id = "player:alice",
+            hit = true,
+            damage_raw = 5 * 256,
+            outcome = "hit",
+        },
+        ["d2legacy.combat.event"] = {
+            kind = "damage_applied",
+            attacker_id = "monster:reflect-attacker",
+            target_id = "player:alice",
+            source_kind = "melee",
+            damage_channel = "fire",
+            rolled_damage_raw = 5 * 256,
+            damage_raw = 5 * 256,
+        },
+        ["d2legacy.combat.damage_bundle"] = bundle.stage_component(fire, fire),
+    })
+    ecs.create({
+        ["d2legacy.combat.event"] = {
+            kind = "damage_applied",
+            attacker_id = "monster:reflect-attacker",
+            target_id = "player:alice",
+            source_kind = "missile",
+            damage_channel = "physical",
+            rolled_damage_raw = 5 * 256,
+            damage_raw = 5 * 256,
+        },
+    })
+end
+
 return test.suite({
     profile = "authority",
     tier = "fast",
@@ -101,6 +243,32 @@ return test.suite({
                 general = "1",
                 leftskill = "1",
                 passive = "0",
+            },
+            {
+                Id = "103",
+                skill = "Fixture Thorns",
+                skilldesc = "thorns",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "thorns",
+                auratargetstate = "thorns",
+                aurastat1 = "thorns_percent",
+                aurastatcalc1 = "ln34",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "250",
+                Param4 = "40",
+                perdelay = "50",
             },
             {
                 Id = "104",
@@ -316,6 +484,7 @@ return test.suite({
         },
         ["data/global/excel/skilldesc.txt"] = {
             { skilldesc = "might", ListRow = "1", IconCel = "4" },
+            { skilldesc = "thorns", ListRow = "10", IconCel = "14" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
             { skilldesc = "blessed aim", ListRow = "4", IconCel = "24" },
@@ -327,6 +496,7 @@ return test.suite({
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
+            { state = "thorns", id = "36", aura = "1", stat = "" },
             { state = "defiance", id = "37", aura = "1", stat = "skill_armor_percent" },
             { state = "blessedaim", id = "40", aura = "1", stat = "item_tohit_percent" },
             { state = "penetrate", id = "67" },
@@ -341,6 +511,133 @@ return test.suite({
         },
     },
     cases = {
+        test.case("thorns_reflects_committed_melee_physical_damage_through_attacker_mitigation", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(alice ~= nil, "fixture Paladin is missing")
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 103,
+                        level = 3,
+                        list_row = 10,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                ecs.get(alice, "d2legacy.combat.defense"):set("base_physical_resist", 50)
+                ecs.get(alice, "d2legacy.combat.defense"):set("physical_resist", 50)
+                reflected_damage_attacker()
+            end),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 103 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                local source = aura_source(effects[1], "thorns_percent")
+                test.expect(source:get("operation")):equals("add")
+                test.expect(source:get("value")):equals(330)
+                emit_non_reflecting_damage_boundaries()
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monster = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+                test.expect(ecs.get(monster, "d2legacy.monster.stats"):get("health")):equals(100 * 256)
+                test.expect(#ecs.query({ all = { "d2legacy.combat.reflection_observed" } })):equals(2)
+                test.expect(#ecs.query({ all = { "d2legacy.combat.event", "d2legacy.combat.melee_event" } })):equals(1)
+            end),
+            test.run(function()
+                emit_melee_damage("monster:reflect-attacker", 20 * 256)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monsters = ecs.query({ all = { "d2legacy.monster.stats" } })
+                test.expect(#monsters):equals(1)
+                -- The defender first mitigates 20 to 10. Level-three Thorns
+                -- reflects 330% (33), then the attacker's 50% resistance
+                -- reduces that second physical transaction to 16.5.
+                test.expect(ecs.get(monsters[1], "d2legacy.monster.stats"):get("health")):equals(21376)
+                local reflected
+                local observed = 0
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.combat.event" } })) do
+                    local event = ecs.get(entity, "d2legacy.combat.event")
+                    if event:get("source_kind") == "melee_reflection" then
+                        reflected = event
+                    end
+                    if ecs.get(entity, "d2legacy.combat.reflection_observed") then
+                        observed = observed + 1
+                    end
+                end
+                test.assert(reflected ~= nil, "successful physical melee damage did not produce reflection")
+                test.expect(reflected:get("rolled_damage_raw")):equals(33 * 256)
+                test.expect(reflected:get("damage_raw")):equals(4224)
+                test.expect(observed):equals(2)
+            end),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monster = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+                test.expect(ecs.get(monster, "d2legacy.monster.stats"):get("health")):equals(21376)
+            end),
+            test.run(function()
+                reflected_damage_attacker("monster:lethal-reflect-attacker", 8 * 256)
+                emit_melee_damage("monster:lethal-reflect-attacker", 10 * 256)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local lethal
+                for _, monster in ipairs(ecs.query({ all = { "d2legacy.monster.identity" } })) do
+                    local identity = ecs.get(monster, "d2legacy.monster.identity")
+                    if identity:get("spawn_id") == "monster:lethal-reflect-attacker" then
+                        lethal = monster
+                    end
+                end
+                test.assert(lethal ~= nil, "lethal reflection attacker is missing")
+                test.expect(ecs.get(lethal, "d2legacy.monster.stats"):get("health")):equals(0)
+                local death = ecs.get(lethal, "d2legacy.monster.death")
+                test.assert(death ~= nil, "lethal reflected damage bypassed the shared monster death consumer")
+                test.expect(death:get("killer_id")):equals("player:alice")
+                test.expect(death:get("credited_id")):equals("player:alice")
+            end),
+            test.submit({
+                tick = 11,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(1)
+                emit_melee_damage("monster:reflect-attacker", 2 * 256)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monster = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+                test.expect(ecs.get(monster, "d2legacy.monster.stats"):get("health")):equals(21376)
+            end),
+        }),
         test.case("right_selected_aura_tracks_party_range_without_casting", {
             test.submit_system({
                 tick = 1,

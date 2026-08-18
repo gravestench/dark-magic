@@ -24,8 +24,8 @@ REJECT
 NEEDS MORE RESEARCH
 ```
 
-An `ACCEPT` or successful `PROTOTYPE` can become a numbered roadmap milestone
-only after it has:
+An `ACCEPT` or successful `PROTOTYPE` can become a scheduled GitHub issue and
+milestone only after it has:
 
 - a concrete problem statement;
 - repository ownership and package boundaries;
@@ -585,9 +585,10 @@ general plugin system.
 ## No silent milestone promotion
 
 When research produces a decision, update this file with the evidence and then
-add a concrete numbered milestone to `ROADMAP.md` and/or
-`docs/CREATURE_ASSET_ROADMAP.md` in a separate planning review. Do not implement
-an R-track simply because it appears here.
+create a concrete GitHub issue, assign it to an appropriate milestone, and add
+it to the Roadmap project in a separate planning review. Update
+`docs/CREATURE_ASSET_ROADMAP.md` only when its durable technical plan changes.
+Do not implement an R-track simply because it appears here.
 
 # Suggested review order
 

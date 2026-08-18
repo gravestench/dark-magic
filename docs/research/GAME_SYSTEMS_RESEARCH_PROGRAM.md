@@ -11,7 +11,7 @@ Status: research baseline complete / implementation and verification program act
 
 All 28 workstreams in [GAME_SYSTEMS_INDEX.md](GAME_SYSTEMS_INDEX.md) now have implementation-oriented baseline documents. That means ownership, major state/data relationships, implementation slices, and explicit unknowns are documented. It does **not** mean all legacy behavior is implemented or empirically validated.
 
-Dark Magic also moved substantially while this research was being assembled: the authoritative simulation now includes shared stat-source provenance, fixed-point combat vocabulary, ordinary hostile materialization, scheduled basic monster AI, a semantic melee transaction, immutable cast requests, and a checkpointed generic skill cast lifecycle. Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) together with `ROADMAP.md` to determine the current implementation cursor.
+Dark Magic also moved substantially while this research was being assembled: the authoritative simulation now includes shared stat-source provenance, fixed-point combat vocabulary, ordinary hostile materialization, scheduled basic monster AI, a semantic melee transaction, immutable cast requests, and a checkpointed generic skill cast lifecycle. Use the [Roadmap project](https://github.com/users/gravestench/projects/1), its linked issues, and GitHub milestones for the current implementation cursor. [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) remains dependency and historical planning guidance.
 
 Dark Magic already has substantial engine foundations: a typed game-data catalog, a fixed-step authoritative session, replay/checkpoint support, authoritative item containers, deterministic loot generation, renderer-neutral world facts, Lua capability boundaries, provenance-preserving stat sources, and the beginning of a typed combat/monster/skill simulation. The purpose of this research program is therefore **not** to invent parallel systems. It identifies the Diablo II fidelity work that remains inside or beside those owners.
 
@@ -151,12 +151,13 @@ All 28 indexed workstreams have reached that **baseline** threshold. The next ma
 
 Do not reopen broad workstreams by default. Instead:
 
-1. take the next implementation checkpoint from `ROADMAP.md` and [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md);
+1. take an actionable issue from the current Roadmap project and milestone;
 2. read the relevant baseline plus its verification queue;
 3. identify only the exact unresolved behavior needed by that checkpoint;
 4. run the smallest lawful probe or source comparison that can answer it;
 5. record version/confidence and synthetic or owned-game vectors;
 6. implement the bounded checkpoint in the existing owner;
-7. update roadmap evidence and, when warranted, promote the specific research claim from baseline to validated.
+7. update the issue's acceptance evidence and, when warranted, promote the
+   specific durable research claim from baseline to validated.
 
 See [GAME_SYSTEMS_INDEX.md](GAME_SYSTEMS_INDEX.md) for the complete system map and [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md) for the current evidence inventory.

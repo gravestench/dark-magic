@@ -1,14 +1,17 @@
 # Next gameplay implementation sequence
 
-Status: superseded implementation-planning history. The post-networking G1-G20
-queue in `ROADMAP.md` is current. This document remains useful for the evidence
-and rationale behind the completed M21 spine, but its old assumption that M22
-networking follows gameplay is obsolete.
+Status: superseded implementation-planning history. The
+[Dark Magic Roadmap project](https://github.com/users/gravestench/projects/1),
+its linked issues, and GitHub milestones own the current queue. This document
+remains useful for the evidence and rationale behind the completed M21 spine,
+but its old assumption that M22 networking follows gameplay is obsolete.
 
 Target: expansion-only Diablo II: Lord of Destruction 1.14d. Classic and
 earlier-patch behavior are not implementation targets.
 
-This document is deliberately more volatile than the individual research baselines. Reassess it whenever a dependent M21 checkpoint merges. `ROADMAP.md` remains the implementation-status authority; the system research documents remain the fidelity/evidence authority.
+This document is historical planning guidance, not an implementation-status
+authority. GitHub issues and milestones own status; the system research
+documents remain the fidelity/evidence authority.
 
 ## Current implementation cursor
 
@@ -192,7 +195,9 @@ references a missile.
 
 ## Breadth queue after the first simulation loop
 
-The merged research baselines imply this dependency order. These are implementation themes, not invented milestone numbers; `ROADMAP.md` should assign/checkpoint them.
+The merged research baselines imply this dependency order. These are historical
+implementation themes, not live milestone assignments. Promote remaining work
+through a concrete GitHub issue and milestone before implementation.
 
 ### A. Combat fidelity and player combat
 
@@ -347,12 +352,15 @@ Implementation should continue while exact compatibility questions are researche
 Before starting a gameplay checkpoint:
 
 1. inspect current `main` because dependent work is merging rapidly;
-2. read the roadmap checkpoint;
+2. read the linked issue, milestone, and acceptance boundary;
 3. read the relevant baseline and verification queue;
 4. summarize **known / inferred / unresolved** before implementing source-sensitive behavior;
 5. extend the existing owner instead of creating a parallel subsystem;
 6. keep the PR to one reviewable behavioral objective;
 7. add synthetic tests first, then owned-game/MPQ/save/network probes where the claim requires them;
-8. update `ROADMAP.md` in the same PR once objective acceptance is satisfied.
+8. update the issue's evidence and status when objective acceptance is
+   satisfied, and change repository documentation only when durable technical
+   claims changed.
 
-This file is planning guidance, not a substitute for the roadmap's evidence/checkbox policy.
+This file is historical planning guidance, not a substitute for live issue and
+milestone acceptance.
