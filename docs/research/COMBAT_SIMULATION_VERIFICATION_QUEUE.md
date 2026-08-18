@@ -131,7 +131,11 @@ The point is to turn uncertain reverse-engineering claims into **small executabl
 - Death persistence through save/exit/rejoin.
 - Follow/leash/teleport and town/zone-transition behavior.
 - PetType maximum modification and deterministic excess removal.
-- Summon replacement semantics by pet category.
+- Summon replacement semantics by pet category. Fire Golem's replacement and
+  combat-death splash now have a strict Expansion 1.14d analyzer and capture
+  template at `internal/dev/tools/fire_golem_death_probe` and
+  `docs/research/probes/fire-golem-death-lod-114d-expansion.template.json`;
+  gameplay values remain gated on a reviewed owned-runtime report.
 - Revive source-monster inheritance and duration.
 - Owner-attributed PvP/quest/XP/loot rules.
 
