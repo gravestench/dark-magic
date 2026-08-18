@@ -168,6 +168,81 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 	}
 }
 
+func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
+	engine := gameecs.New()
+	t.Cleanup(func() { _ = engine.Close() })
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	client := newClientWorld()
+	location := playeradapter.HUDLocation{Act: 1, LevelID: 2}
+	health, maximum := int64(8), int64(10)
+	alive := playeradapter.WorldEntity{
+		ID: "monster:fallen-a", Kind: "monster", Label: "Fallen", SpawnID: "fallen-a", DefinitionID: "fallen1",
+		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Radius: .75, Health: &health, MaxHealth: &maximum,
+		Token: "FA", Mode: "NU", WeaponClass: "HTH", Components: "HD=LIT", DeathSound: "fallen_death",
+		OverlayHeight: 3, Act: 1, LevelID: 2,
+	}
+	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{alive}, location); err != nil {
+		t.Fatal(err)
+	}
+	entity := app.remoteMirrors[alive.ID]
+	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
+	colliders, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.collider")
+	if _, found := selectables.Get(entity); !found {
+		t.Fatal("living monster mirror is not selectable")
+	}
+	if _, found := colliders.Get(entity); !found {
+		t.Fatal("living monster mirror has no collider")
+	}
+
+	dead := alive
+	dead.Kind, dead.Mode, health = "corpse", "DT", 0
+	dead.Health, dead.Radius = &health, 0
+	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{dead}, location); err != nil {
+		t.Fatal(err)
+	}
+	if app.remoteMirrors[alive.ID] != entity {
+		t.Fatal("living monster and corpse did not retain one presentation identity")
+	}
+	if _, found := selectables.Get(entity); found {
+		t.Fatal("corpse remained selectable in the disposable client ECS")
+	}
+	if _, found := colliders.Get(entity); found {
+		t.Fatal("corpse remained a locomotion obstacle in the disposable client ECS")
+	}
+	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
+	appearance, _ := appearances.Get(entity)
+	mode, _ := appearance.Get("mode")
+	sound, _ := appearance.Get("death_sound")
+	if mode != "DT" || sound != "fallen_death" {
+		t.Fatalf("corpse appearance mode=%v death_sound=%v", mode, sound)
+	}
+
+	baseline := playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 10, FromTick: 0}
+	if err := client.reconcileSemanticEvents(app, baseline, 1); err != nil {
+		t.Fatal(err)
+	}
+	death := playeradapter.SemanticEvent{
+		ID: 40, Type: "monster_death", Tick: 11, Position: dead.Position, Act: 1, LevelID: 2,
+		MonsterDeath: &playeradapter.SemanticMonsterDeathCue{Kind: "monster_death_presented", MonsterID: "fallen-a"},
+	}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
+		Version: playeradapter.EventViewVersion, Tick: 11, FromTick: 0, Events: []playeradapter.SemanticEvent{death},
+	}, 1); err != nil {
+		t.Fatal(err)
+	}
+	deathEvents, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.death_event")
+	if deathEvents.Len() != 1 {
+		t.Fatalf("connected monster death cues = %d, want 1", deathEvents.Len())
+	}
+	cue, _ := deathEvents.Get(deathEvents.Entities()[0])
+	monsterID, _ := cue.Get("monster_id")
+	drops, _ := cue.Get("drops")
+	if monsterID != "fallen-a" || drops != "" {
+		t.Fatalf("connected death cue monster=%v drops=%v", monsterID, drops)
+	}
+}
+
 func TestCorrectionDoesNotMoveAnExistingPresentationMirror(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -360,6 +435,10 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 	}
 	schemas := []akara.Schema{
 		{Name: "d2legacy.player.identity", Fields: []akara.Field{field("character_id", akara.FieldString), field("player", akara.FieldString), field("name", akara.FieldString), field("class", akara.FieldString)}},
+		{Name: "d2legacy.monster.identity", Fields: []akara.Field{field("spawn_id", akara.FieldString), field("definition_id", akara.FieldString), field("base_id", akara.FieldString), field("graphics_id", akara.FieldString), field("seed", akara.FieldString), field("treasure_class", akara.FieldString)}},
+		{Name: "d2legacy.monster.appearance", Fields: []akara.Field{field("token", akara.FieldString), field("mode", akara.FieldString), field("weapon_class", akara.FieldString), field("name_key", akara.FieldString), field("components", akara.FieldString), field("death_sound", akara.FieldString), field("overlay_height", akara.FieldInt64)}},
+		{Name: "d2legacy.monster.stats", Fields: []akara.Field{field("level", akara.FieldInt64), field("health", akara.FieldInt64), field("max_health", akara.FieldInt64), field("defense", akara.FieldInt64), field("attack_rating", akara.FieldInt64), field("physical_min", akara.FieldInt64), field("physical_max", akara.FieldInt64), field("experience", akara.FieldInt64)}},
+		{Name: "d2legacy.monster.death_event", Fields: []akara.Field{field("kind", akara.FieldString), field("tick", akara.FieldInt64), field("monster_id", akara.FieldString), field("killer_id", akara.FieldString), field("credited_id", akara.FieldString), field("xp", akara.FieldInt64), field("loot_seed", akara.FieldString), field("treasure_class", akara.FieldString), field("drops", akara.FieldString), field("game_player_count", akara.FieldInt64), field("effective_player_count", akara.FieldInt64), field("nearby_party_member_count", akara.FieldInt64), field("monster_player_count", akara.FieldInt64), field("no_drop_player_count", akara.FieldInt64)}},
 		{Name: "d2legacy.player.vitals", Fields: []akara.Field{field("health", akara.FieldInt64), field("max_health", akara.FieldInt64), field("mana", akara.FieldInt64), field("max_mana", akara.FieldInt64), field("mana_raw", akara.FieldInt64), field("max_mana_raw", akara.FieldInt64), field("stamina", akara.FieldInt64), field("max_stamina", akara.FieldInt64), field("stamina_raw", akara.FieldInt64), field("max_stamina_raw", akara.FieldInt64)}},
 		{Name: "d2legacy.player.progress", Fields: []akara.Field{field("level", akara.FieldInt64), field("experience", akara.FieldInt64), field("unspent_skill_points", akara.FieldInt64)}},
 		{Name: "d2legacy.player.combat_stats", Fields: []akara.Field{field("attack_rating", akara.FieldInt64), field("defense", akara.FieldInt64)}},

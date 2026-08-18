@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	EventViewVersion      uint32 = 2
+	EventViewVersion      uint32 = 3
 	EventViewHistoryTicks        = 64
 	MaxEventViewEvents           = 256
 	maxEventKindBytes            = 32
@@ -37,16 +37,17 @@ type EventView struct {
 }
 
 type SemanticEvent struct {
-	ID            uint64            `json:"id"`
-	Type          string            `json:"type"`
-	Tick          uint64            `json:"tick"`
-	Position      HUDPosition       `json:"position"`
-	Act           int64             `json:"act"`
-	LevelID       int64             `json:"level_id"`
-	Direction     int64             `json:"direction"`
-	OverlayHeight int64             `json:"overlay_height"`
-	Cast          *SemanticCastCue  `json:"cast,omitempty"`
-	State         *SemanticStateCue `json:"state,omitempty"`
+	ID            uint64                   `json:"id"`
+	Type          string                   `json:"type"`
+	Tick          uint64                   `json:"tick"`
+	Position      HUDPosition              `json:"position"`
+	Act           int64                    `json:"act"`
+	LevelID       int64                    `json:"level_id"`
+	Direction     int64                    `json:"direction"`
+	OverlayHeight int64                    `json:"overlay_height"`
+	Cast          *SemanticCastCue         `json:"cast,omitempty"`
+	State         *SemanticStateCue        `json:"state,omitempty"`
+	MonsterDeath  *SemanticMonsterDeathCue `json:"monster_death,omitempty"`
 }
 
 type SemanticCastCue struct {
@@ -66,6 +67,14 @@ type SemanticStateCue struct {
 	Reason      string `json:"reason,omitempty"`
 }
 
+// SemanticMonsterDeathCue is the presentation-safe subset of the durable
+// death event. XP, loot, player-count policy, and attribution never cross the
+// client boundary.
+type SemanticMonsterDeathCue struct {
+	Kind      string `json:"kind"`
+	MonsterID string `json:"monster_id"`
+}
+
 func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventView, error) {
 	if checkpoint.Snapshot == nil || strings.TrimSpace(playerID) == "" {
 		return EventView{}, ErrEventView
@@ -83,6 +92,7 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 	locations, located := findComponent(snapshot, "d2legacy.world.location")
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
 	monsterAppearances, _ := findComponent(snapshot, "d2legacy.monster.appearance")
+	monsterIdentities, _ := findComponent(snapshot, "d2legacy.monster.identity")
 	if !positioned || !located {
 		return EventView{}, ErrEventView
 	}
@@ -191,6 +201,63 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 	if err := appendEvent("d2legacy.state.event", "state", "target"); err != nil {
 		return EventView{}, fmt.Errorf("%w: state cue", err)
 	}
+	monsterBySpawnID := make(map[string]uint64, len(monsterIdentities.Instances))
+	for _, instance := range monsterIdentities.Instances {
+		fields, ok := eventInstanceFields(monsterIdentities, instance)
+		if !ok {
+			return EventView{}, ErrEventView
+		}
+		spawnID := stringField(fields, "spawn_id")
+		if spawnID == "" {
+			continue
+		}
+		if _, duplicate := monsterBySpawnID[spawnID]; duplicate {
+			return EventView{}, ErrEventView
+		}
+		monsterBySpawnID[spawnID] = instance.Entity
+	}
+	if deaths, exists := findComponent(snapshot, "d2legacy.monster.death_event"); exists {
+		for _, instance := range deaths.Instances {
+			fields, ok := eventInstanceFields(deaths, instance)
+			if !ok {
+				return EventView{}, ErrEventView
+			}
+			if stringField(fields, "kind") != "monster_death_presented" {
+				continue
+			}
+			tick, valid := nonnegativeTick(fields, "tick")
+			if !valid || tick > checkpoint.Tick {
+				return EventView{}, ErrEventView
+			}
+			if tick < fromTick {
+				continue
+			}
+			monsterID := stringField(fields, "monster_id")
+			actor := monsterBySpawnID[monsterID]
+			position, hasPosition := positionByEntity[actor]
+			location, hasLocation := locationByEntity[actor]
+			if actor == 0 || !hasPosition || !hasLocation {
+				continue
+			}
+			x, y := floatField(position, "x"), floatField(position, "y")
+			act, levelID := intField(location, "act"), intField(location, "level_id")
+			if act != originAct || levelID != originLevel || math.Hypot(x-originX, y-originY) > WorldViewRadius {
+				continue
+			}
+			event := SemanticEvent{
+				ID: instance.Entity, Type: "monster_death", Tick: tick,
+				Position: HUDPosition{X: x, Y: y}, Act: act, LevelID: levelID,
+				MonsterDeath: &SemanticMonsterDeathCue{Kind: "monster_death_presented", MonsterID: monsterID},
+			}
+			if facing, found := facingByEntity[actor]; found {
+				event.Direction = intField(facing, "direction")
+			}
+			if appearance, found := monsterAppearanceByEntity[actor]; found {
+				event.OverlayHeight = intField(appearance, "overlay_height")
+			}
+			retain(event)
+		}
+	}
 	sortSemanticEvents(view.Events)
 	if err := validateEventView(view, checkpoint.Tick); err != nil {
 		return EventView{}, err
@@ -257,11 +324,15 @@ func validateEventView(view EventView, tick uint64) error {
 		previous = event
 		switch event.Type {
 		case "cast":
-			if event.Cast == nil || event.State != nil || !validCastCue(*event.Cast) {
+			if event.Cast == nil || event.State != nil || event.MonsterDeath != nil || !validCastCue(*event.Cast) {
 				return ErrClientView
 			}
 		case "state":
-			if event.State == nil || event.Cast != nil || !validStateCue(*event.State) {
+			if event.State == nil || event.Cast != nil || event.MonsterDeath != nil || !validStateCue(*event.State) {
+				return ErrClientView
+			}
+		case "monster_death":
+			if event.MonsterDeath == nil || event.Cast != nil || event.State != nil || !validMonsterDeathCue(*event.MonsterDeath) {
 				return ErrClientView
 			}
 		default:
@@ -297,6 +368,10 @@ func eventViewFromTick(tick uint64) uint64 {
 func validStateCue(cue SemanticStateCue) bool {
 	return boundedRequired(cue.Kind, maxEventKindBytes) && boundedRequired(cue.StateID, maxEventSourceBytes) &&
 		bounded(cue.SourceID, maxEventSourceBytes) && bounded(cue.Reason, maxEventKindBytes) && cue.ExpiresTick <= math.MaxInt64
+}
+
+func validMonsterDeathCue(cue SemanticMonsterDeathCue) bool {
+	return cue.Kind == "monster_death_presented" && boundedRequired(cue.MonsterID, maxViewIdentityBytes)
 }
 
 func nonnegativeTick(fields map[string]gameecs.ValueSnapshot, name string) (uint64, bool) {

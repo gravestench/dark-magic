@@ -12,13 +12,15 @@ import (
 )
 
 const (
-	WorldViewVersion     uint32 = 3
-	WorldViewRadius             = 80.0
-	MaxWorldViewEntities        = 256
-	MaxWorldViewMissiles        = 512
-	maxWorldIDBytes             = 128
-	maxWorldKindBytes           = 32
-	maxWorldLabelBytes          = 256
+	WorldViewVersion        uint32 = 4
+	WorldViewRadius                = 80.0
+	MaxWorldViewEntities           = 256
+	MaxWorldViewMissiles           = 512
+	maxWorldIDBytes                = 128
+	maxWorldKindBytes              = 32
+	maxWorldLabelBytes             = 256
+	maxWorldAssetBytes             = 512
+	maxWorldComponentsBytes        = 4096
 )
 
 var ErrWorldView = errors.New("player world view: invalid public projection")
@@ -68,8 +70,14 @@ type WorldEntity struct {
 	Health                 *int64      `json:"health,omitempty"`
 	MaxHealth              *int64      `json:"max_health,omitempty"`
 	Class                  string      `json:"class,omitempty"`
+	SpawnID                string      `json:"spawn_id,omitempty"`
+	DefinitionID           string      `json:"definition_id,omitempty"`
 	Token                  string      `json:"token,omitempty"`
 	Mode                   string      `json:"mode,omitempty"`
+	WeaponClass            string      `json:"weapon_class,omitempty"`
+	Components             string      `json:"components,omitempty"`
+	DeathSound             string      `json:"death_sound,omitempty"`
+	OverlayHeight          int64       `json:"overlay_height,omitempty"`
 	Direction              int64       `json:"direction,omitempty"`
 	AnimationStartTick     uint64      `json:"animation_start_tick,omitempty"`
 	VelocityPercent        int64       `json:"velocitypercent,omitempty"`
@@ -116,6 +124,9 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	selectables, _ := findComponent(snapshot, "d2legacy.world.selectable")
 	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
 	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
+	monsterIdentities, _ := findComponent(snapshot, "d2legacy.monster.identity")
+	monsterAppearances, _ := findComponent(snapshot, "d2legacy.monster.appearance")
+	monsterDeaths, _ := findComponent(snapshot, "d2legacy.monster.death")
 	players, _ := findComponent(snapshot, "d2legacy.player.identity")
 	appearances, _ := findComponent(snapshot, "d2legacy.player.appearance")
 	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
@@ -123,6 +134,23 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
 	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}, Missiles: []WorldMissile{}}
 	seen := make(map[string]struct{})
+	decorateMonster := func(entity *WorldEntity, source uint64) {
+		if identity, found := findInstance(monsterIdentities, source); found {
+			entity.SpawnID = stringField(identity, "spawn_id")
+			entity.DefinitionID = stringField(identity, "definition_id")
+		}
+		if appearance, found := findInstance(monsterAppearances, source); found {
+			if nameKey := stringField(appearance, "name_key"); nameKey != "" {
+				entity.Label = nameKey
+			}
+			entity.Token = stringField(appearance, "token")
+			entity.Mode = stringField(appearance, "mode")
+			entity.WeaponClass = stringField(appearance, "weapon_class")
+			entity.Components = stringField(appearance, "components")
+			entity.DeathSound = stringField(appearance, "death_sound")
+			entity.OverlayHeight = intField(appearance, "overlay_height")
+		}
+	}
 	for _, instance := range selectables.Instances {
 		if instance.Entity == playerEntity {
 			continue
@@ -144,9 +172,6 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		if entity.Act != originAct || entity.LevelID != originLevel {
 			continue
 		}
-		if err := validateWorldEntity(entity); err != nil {
-			return nil, err
-		}
 		if _, duplicate := seen[entity.ID]; duplicate {
 			return nil, fmt.Errorf("%w: duplicate public ID %q", ErrWorldView, entity.ID)
 		}
@@ -160,9 +185,13 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 			health, maximum := intField(stats, "health"), intField(stats, "max_health")
 			entity.Health, entity.MaxHealth = &health, &maximum
 		}
+		decorateMonster(&entity, instance.Entity)
 		if appearance, found := findInstance(appearances, instance.Entity); found {
 			entity.Token = stringField(appearance, "token")
 			entity.Mode = stringField(appearance, "mode")
+		}
+		if facing, ok := findInstance(facings, instance.Entity); ok {
+			entity.Direction = intField(facing, "direction")
 		}
 		if identity, found := findInstance(players, instance.Entity); found {
 			entity.Class = stringField(identity, "class")
@@ -170,15 +199,58 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 				entity.Mode = stringField(animation, "mode")
 				entity.AnimationStartTick = uint64(max(0, intField(animation, "start_tick")))
 			}
-			if facing, ok := findInstance(facings, instance.Entity); ok {
-				entity.Direction = intField(facing, "direction")
-			}
 			if movement, ok := findInstance(movementStats, instance.Entity); ok {
 				entity.VelocityPercent = intField(movement, "velocitypercent")
 				entity.ItemFasterMoveVelocity = intField(movement, "item_fastermovevelocity")
 			}
 		}
+		if err := validateWorldEntity(entity); err != nil {
+			return nil, err
+		}
 		view.Entities = append(view.Entities, entity)
+	}
+	// Death removes selection and collision from authority, but the same entity
+	// remains a visible corpse. Project only its presentation identity and
+	// spatial facts; loot, XP, corpse usability, and attribution stay server-only.
+	for _, instance := range monsterDeaths.Instances {
+		if _, dormant := findInstance(inactive, instance.Entity); dormant {
+			continue
+		}
+		identity, identified := findInstance(monsterIdentities, instance.Entity)
+		position, positioned := findInstance(positions, instance.Entity)
+		location, located := findInstance(locations, instance.Entity)
+		if !identified || !positioned || !located {
+			continue
+		}
+		spawnID := stringField(identity, "spawn_id")
+		entity := WorldEntity{
+			ID: "monster:" + spawnID, Kind: "corpse", Label: stringField(identity, "definition_id"),
+			Position: HUDPosition{X: floatField(position, "x"), Y: floatField(position, "y")},
+			Act:      intField(location, "act"), LevelID: intField(location, "level_id"),
+		}
+		if _, alreadyProjected := seen[entity.ID]; alreadyProjected {
+			continue
+		}
+		if entity.Act != originAct || entity.LevelID != originLevel {
+			continue
+		}
+		if stats, found := findInstance(monsters, instance.Entity); found {
+			health, maximum := intField(stats, "health"), intField(stats, "max_health")
+			entity.Health, entity.MaxHealth = &health, &maximum
+		}
+		decorateMonster(&entity, instance.Entity)
+		if facing, found := findInstance(facings, instance.Entity); found {
+			entity.Direction = intField(facing, "direction")
+		}
+		if err := validateWorldEntity(entity); err != nil {
+			return nil, err
+		}
+		seen[entity.ID] = struct{}{}
+		dx, dy := entity.Position.X-origin.X, entity.Position.Y-origin.Y
+		entity.distance2 = dx*dx + dy*dy
+		if entity.distance2 <= WorldViewRadius*WorldViewRadius {
+			view.Entities = append(view.Entities, entity)
+		}
 	}
 	sort.Slice(view.Entities, func(i, j int) bool {
 		if view.Entities[i].distance2 != view.Entities[j].distance2 {
@@ -200,7 +272,15 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 }
 
 func validateWorldEntity(entity WorldEntity) error {
-	if entity.ID == "" || entity.Kind == "" || len(entity.ID) > maxWorldIDBytes || len(entity.Kind) > maxWorldKindBytes || len(entity.Label) > maxWorldLabelBytes || len(entity.Owner) > maxWorldIDBytes || math.IsNaN(entity.Position.X) || math.IsNaN(entity.Position.Y) || math.IsInf(entity.Position.X, 0) || math.IsInf(entity.Position.Y, 0) || entity.Radius < 0 || math.IsNaN(entity.Radius) || math.IsInf(entity.Radius, 0) {
+	if entity.ID == "" || entity.Kind == "" || len(entity.ID) > maxWorldIDBytes || len(entity.Kind) > maxWorldKindBytes ||
+		len(entity.Label) > maxWorldLabelBytes || len(entity.Owner) > maxWorldIDBytes || len(entity.SpawnID) > maxWorldIDBytes ||
+		len(entity.DefinitionID) > maxWorldIDBytes || len(entity.Token) > maxWorldAssetBytes || len(entity.Mode) > maxWorldKindBytes ||
+		len(entity.WeaponClass) > maxWorldKindBytes || len(entity.Components) > maxWorldComponentsBytes || len(entity.DeathSound) > maxWorldAssetBytes ||
+		entity.OverlayHeight < 0 || entity.OverlayHeight > 4 || math.IsNaN(entity.Position.X) || math.IsNaN(entity.Position.Y) ||
+		math.IsInf(entity.Position.X, 0) || math.IsInf(entity.Position.Y, 0) || entity.Radius < 0 || math.IsNaN(entity.Radius) || math.IsInf(entity.Radius, 0) {
+		return ErrWorldView
+	}
+	if entity.Kind == "corpse" && (entity.SpawnID == "" || entity.Token == "" || entity.Mode != "DT") {
 		return ErrWorldView
 	}
 	return nil

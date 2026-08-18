@@ -19,11 +19,20 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	selectable := registerProjectionStore(t, engine, "d2legacy.world.selectable", []akara.Field{{Name: "id", Kind: akara.FieldString}, {Name: "kind", Kind: akara.FieldString}, {Name: "label", Kind: akara.FieldString}, {Name: "owner", Kind: akara.FieldString}, {Name: "radius", Kind: akara.FieldFloat64}, {Name: "priority", Kind: akara.FieldInt64}})
 	inactive := registerProjectionStore(t, engine, "d2legacy.world.inactive", nil)
 	monster := registerProjectionStore(t, engine, "d2legacy.monster.stats", []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "hidden_damage", Kind: akara.FieldInt64}})
+	monsterIdentity := registerProjectionStore(t, engine, "d2legacy.monster.identity", []akara.Field{{Name: "spawn_id", Kind: akara.FieldString}, {Name: "definition_id", Kind: akara.FieldString}})
+	monsterAppearance := registerProjectionStore(t, engine, "d2legacy.monster.appearance", []akara.Field{
+		{Name: "token", Kind: akara.FieldString}, {Name: "mode", Kind: akara.FieldString},
+		{Name: "weapon_class", Kind: akara.FieldString}, {Name: "components", Kind: akara.FieldString},
+		{Name: "name_key", Kind: akara.FieldString}, {Name: "death_sound", Kind: akara.FieldString},
+		{Name: "overlay_height", Kind: akara.FieldInt64},
+	})
+	monsterDeath := registerProjectionStore(t, engine, "d2legacy.monster.death", []akara.Field{{Name: "tick", Kind: akara.FieldInt64}, {Name: "drops", Kind: akara.FieldString}})
 	secret := registerProjectionStore(t, engine, "d2legacy.monster.ai", []akara.Field{{Name: "target_id", Kind: akara.FieldString}})
 	player := engine.World().MustCreateEntity()
 	nearB := engine.World().MustCreateEntity()
 	nearA := engine.World().MustCreateEntity()
 	far := engine.World().MustCreateEntity()
+	corpse := engine.World().MustCreateEntity()
 	_, _ = identity.Set(player, map[string]any{"character_id": "character", "player": "alice", "name": "Alice", "class": "Amazon"})
 	_, _ = position.Set(player, map[string]any{"x": 10.0, "y": 10.0})
 	_, _ = location.Set(player, map[string]any{"act": int64(1), "level_id": int64(2)})
@@ -37,7 +46,21 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	setPublic(nearB, "monster:b", 12, 10)
 	_, _ = inactive.Set(nearB, nil)
 	setPublic(nearA, "monster:a", 8, 10)
+	_, _ = monsterIdentity.Set(nearA, map[string]any{"spawn_id": "a", "definition_id": "fallen1"})
+	_, _ = monsterAppearance.Set(nearA, map[string]any{
+		"token": "FA", "mode": "NU", "weapon_class": "HTH", "components": "HD=LIT",
+		"name_key": "Fallen", "death_sound": "fallen_death", "overlay_height": int64(3),
+	})
 	setPublic(far, "monster:far", 500, 500)
+	_, _ = position.Set(corpse, map[string]any{"x": 9.0, "y": 12.0})
+	_, _ = location.Set(corpse, map[string]any{"act": int64(1), "level_id": int64(2)})
+	_, _ = monster.Set(corpse, map[string]any{"health": int64(0), "max_health": int64(10), "hidden_damage": int64(7777)})
+	_, _ = monsterIdentity.Set(corpse, map[string]any{"spawn_id": "corpse", "definition_id": "fallen1"})
+	_, _ = monsterAppearance.Set(corpse, map[string]any{
+		"token": "FA", "mode": "DT", "weapon_class": "HTH", "components": "HD=LIT",
+		"name_key": "Fallen", "death_sound": "fallen_death", "overlay_height": int64(3),
+	})
+	_, _ = monsterDeath.Set(corpse, map[string]any{"tick": int64(7), "drops": "server-only-drop"})
 	snapshot, err := engine.Snapshot()
 	if err != nil {
 		t.Fatal(err)
@@ -50,10 +73,16 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	if err := json.Unmarshal(payload, &view); err != nil {
 		t.Fatal(err)
 	}
-	if len(view.Entities) != 1 || view.Entities[0].ID != "monster:a" || view.Entities[0].Health == nil || *view.Entities[0].Health != 8 {
+	if len(view.Entities) != 2 || view.Entities[0].ID != "monster:a" || view.Entities[0].Health == nil || *view.Entities[0].Health != 8 {
 		t.Fatalf("world view = %#v", view)
 	}
-	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
+	living, dead := view.Entities[0], view.Entities[1]
+	if living.Token != "FA" || living.Mode != "NU" || living.DeathSound != "fallen_death" || living.OverlayHeight != 3 ||
+		dead.ID != "monster:corpse" || dead.Kind != "corpse" || dead.Label != "Fallen" || dead.Mode != "DT" || dead.SpawnID != "corpse" {
+		t.Fatalf("living=%#v corpse=%#v", living, dead)
+	}
+	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "7777") || strings.Contains(string(payload), "server-only-drop") ||
+		strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
 		t.Fatalf("world view leaked hidden/far state: %s", payload)
 	}
 }

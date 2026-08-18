@@ -403,6 +403,26 @@ unchanged, without regaining a live simulation capability. Exact Expansion
 1.14d corpse lifetime, usability, consumption, search, revival, and long-
 inactive mutation policy remain unresolved.
 
+Connected presentation now preserves that same semantic transition without
+copying the death transaction into the client. `WorldView/v4` exposes only the
+stable spawn/definition identity and the MonStats2-derived composite, name,
+death-sound, overlay-height, facing, position, and public-health facts needed by
+the shared renderer. A living `monster:<spawn_id>` mirror becomes a `DT` corpse
+under the same key. The disposable client ECS removes its selectable and
+collider components, which excludes the corpse from interaction and locomotion
+queries while leaving its identity/appearance/spatial components renderable.
+
+Death audio crosses the separate reliable `EventView/v3` tail as a typed
+`monster_death_presented` cue containing only the spawn ID. The projector uses
+the authoritative identity component to join that ID to the current nearby
+position and rejects unrelated death-event kinds. The client reconstructs a
+short-lived presentation cue with empty authority-only fields. XP, loot seed,
+treasure class, drops, immediate/ultimate kill attribution, player-count
+policy, corpse usability, and lifetime remain server-owned. This boundary
+serves the project goal of identical offline/connected rendering without
+turning a presentation mirror into a second simulation or compatibility
+protocol for vanilla/community servers.
+
 ### Softcore player death
 
 Current Dark Magic foundation preserves the selected player's ECS identity and
