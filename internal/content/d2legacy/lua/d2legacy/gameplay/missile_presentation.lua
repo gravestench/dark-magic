@@ -97,7 +97,7 @@ function M.resolve(snapshot)
     return {
         path = snapshot.dcc,
         palette = snapshot.palette ~= "" and snapshot.palette or "data/global/palette/units/pal.dat",
-        direction = snapshot.logical_direction ~= nil
+        direction = snapshot.logical_direction ~= nil and snapshot.logical_direction >= 0
                 and M.logical_direction(snapshot.logical_direction, snapshot.directions)
             or M.direction(snapshot.velocity_x, snapshot.velocity_y, snapshot.directions),
         frames_per_second = snapshot.frames_per_second > 0 and snapshot.frames_per_second or 25,

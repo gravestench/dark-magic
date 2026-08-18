@@ -144,6 +144,7 @@ func clonePresentationView(hud playeradapter.HUD, world playeradapter.WorldView)
 	hud.Belt.Slots = append([]string(nil), hud.Belt.Slots...)
 	hud.Skills.Learned = append([]playeradapter.HUDLearnedSkill(nil), hud.Skills.Learned...)
 	world.Entities = append([]playeradapter.WorldEntity(nil), world.Entities...)
+	world.Missiles = append([]playeradapter.WorldMissile(nil), world.Missiles...)
 	for index := range world.Entities {
 		if health := world.Entities[index].Health; health != nil {
 			value := *health
@@ -746,7 +747,8 @@ func (session *Session) applyTransform(frame sessionquic.TransformFrame) (player
 	before := session.World
 	world := session.World
 	world.Entities = append([]playeradapter.WorldEntity(nil), session.World.Entities...)
-	indexes := make(map[uint64]int, len(world.Entities))
+	world.Missiles = append([]playeradapter.WorldMissile(nil), session.World.Missiles...)
+	indexes := make(map[uint64]int, len(world.Entities)+len(world.Missiles))
 	for index, entity := range world.Entities {
 		hash := sessionquic.PublicIDHash(entity.ID)
 		if _, duplicate := indexes[hash]; duplicate {
@@ -754,15 +756,28 @@ func (session *Session) applyTransform(frame sessionquic.TransformFrame) (player
 		}
 		indexes[hash] = index
 	}
+	missileIndexes := make(map[uint64]int, len(world.Missiles))
+	for index, missile := range world.Missiles {
+		hash := sessionquic.PublicIDHash(missile.ID)
+		if _, duplicate := indexes[hash]; duplicate {
+			return playeradapter.WorldDelta{}, ErrStaleCorrection
+		}
+		if _, duplicate := missileIndexes[hash]; duplicate {
+			return playeradapter.WorldDelta{}, ErrStaleCorrection
+		}
+		missileIndexes[hash] = index
+	}
 	for _, transform := range frame.Entities {
-		index, found := indexes[transform.IDHash]
-		if !found {
+		if index, found := indexes[transform.IDHash]; found {
+			world.Entities[index].Position = playeradapter.HUDPosition{X: transform.X, Y: transform.Y}
+			world.Entities[index].Direction = int64(transform.Direction)
+			world.Entities[index].Mode = strings.TrimRight(string(transform.Mode[:]), "\x00")
+			world.Entities[index].AnimationStartTick = transform.AnimationStartTick
 			continue
 		}
-		world.Entities[index].Position = playeradapter.HUDPosition{X: transform.X, Y: transform.Y}
-		world.Entities[index].Direction = int64(transform.Direction)
-		world.Entities[index].Mode = strings.TrimRight(string(transform.Mode[:]), "\x00")
-		world.Entities[index].AnimationStartTick = transform.AnimationStartTick
+		if index, found := missileIndexes[transform.IDHash]; found {
+			world.Missiles[index].Position = playeradapter.HUDPosition{X: transform.X, Y: transform.Y}
+		}
 	}
 	world.Tick = frame.Tick
 	world.Origin = playeradapter.HUDPosition{X: frame.OwnerX, Y: frame.OwnerY}
@@ -805,6 +820,16 @@ func mergeReliablePresentation(reliableHUD playeradapter.HUD, reliableWorld play
 			reliableWorld.Entities[index].Direction = current.Direction
 			reliableWorld.Entities[index].Mode = current.Mode
 			reliableWorld.Entities[index].AnimationStartTick = current.AnimationStartTick
+		}
+	}
+	missileTransforms := make(map[string]playeradapter.HUDPosition, len(currentWorld.Missiles))
+	for _, missile := range currentWorld.Missiles {
+		missileTransforms[missile.ID] = missile.Position
+	}
+	reliableWorld.Missiles = append([]playeradapter.WorldMissile(nil), reliableWorld.Missiles...)
+	for index := range reliableWorld.Missiles {
+		if position, found := missileTransforms[reliableWorld.Missiles[index].ID]; found {
+			reliableWorld.Missiles[index].Position = position
 		}
 	}
 	reliableWorld.Tick = currentWorld.Tick

@@ -121,6 +121,53 @@ func TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles(t *testi
 	}
 }
 
+func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	client := newClientWorld()
+	fireball := playeradapter.WorldMissile{
+		ID: "missile:42", Kind: "projectile", MissileID: "fireball",
+		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Velocity: playeradapter.HUDPosition{X: 1, Y: 0},
+		Act: 1, LevelID: 2, DCC: "data/global/missiles/Fireball.dcc",
+		LogicalDirection: -1, Directions: 16, FramesPerSecond: 16, Loop: true, TransparencyMode: 1,
+	}
+	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{fireball}); err != nil {
+		t.Fatal(err)
+	}
+	entity := client.missileEntities[fireball.ID]
+	visuals, ok := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.missile")
+	if !ok {
+		t.Fatal("presentation missile store is unavailable")
+	}
+	visual, found := visuals.Get(entity)
+	if !found {
+		t.Fatal("connected missile has no presentation component")
+	}
+	dcc, _ := visual.Get("dcc")
+	blend, _ := visual.Get("transparency_mode")
+	if dcc != fireball.DCC || blend != int64(1) || currentPosition(engine.World(), entity) != fireball.Position {
+		t.Fatalf("connected fireball dcc=%v blend=%v position=%+v", dcc, blend, currentPosition(engine.World(), entity))
+	}
+	if _, authorityPresent := akara.GetDynamicStore(engine.World(), "d2legacy.missile.projectile"); authorityPresent {
+		t.Fatal("test schema unexpectedly gives connected presentation projectile authority")
+	}
+	updated := fireball
+	updated.Position = playeradapter.HUDPosition{X: 11, Y: 20}
+	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
+		t.Fatal(err)
+	}
+	if client.missileEntities[fireball.ID] != entity || currentPosition(engine.World(), entity) != updated.Position {
+		t.Fatalf("missile identity/position was not updated in place")
+	}
+	if err := client.reconcileMissiles(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(client.missileEntities) != 0 || engine.World().EntityExists(entity) {
+		t.Fatal("retired connected missile remains in the disposable ECS")
+	}
+}
+
 func TestCorrectionDoesNotMoveAnExistingPresentationMirror(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -319,6 +366,13 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 		{Name: "d2legacy.player.animation", Fields: []akara.Field{field("direction", akara.FieldInt64), field("mode", akara.FieldString), field("start_tick", akara.FieldInt64)}},
 		{Name: "d2legacy.presentation.animation_clock", Fields: []akara.Field{field("seconds", akara.FieldFloat64)}},
 		{Name: "d2legacy.presentation.overlay_anchor", Fields: []akara.Field{field("height", akara.FieldInt64)}},
+		{Name: "d2legacy.presentation.missile", Fields: []akara.Field{
+			field("missile_id", akara.FieldString), field("dcc", akara.FieldString), field("palette", akara.FieldString),
+			field("velocity_x", akara.FieldFloat64), field("velocity_y", akara.FieldFloat64), field("logical_direction", akara.FieldInt64),
+			field("directions", akara.FieldInt64), field("frames_per_second", akara.FieldInt64), field("loop", akara.FieldBool),
+			field("transparency_mode", akara.FieldInt64), field("offset_x", akara.FieldFloat64),
+			field("offset_y", akara.FieldFloat64), field("offset_z", akara.FieldFloat64),
+		}},
 		{Name: "d2legacy.player.appearance", Fields: []akara.Field{field("cof", akara.FieldString), field("token", akara.FieldString), field("palette", akara.FieldString), field("weapon_class", akara.FieldString)}},
 		{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{field("running", akara.FieldBool)}},
 		{Name: "d2legacy.player.movement_stats", Fields: []akara.Field{field("run_drain", akara.FieldInt64), field("velocitypercent", akara.FieldInt64), field("item_fastermovevelocity", akara.FieldInt64), field("staminarecoverybonus", akara.FieldInt64), field("item_staminadrainpct", akara.FieldInt64), field("armor_run_drain", akara.FieldInt64)}},

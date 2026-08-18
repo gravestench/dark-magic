@@ -183,6 +183,66 @@ func (client *clientWorld) reconcileSemanticEvents(app *application, view player
 	return nil
 }
 
+// reconcileMissiles mirrors the reliable, allowlisted visual subset of live
+// authority into presentation-only ECS entities. The ordinary Lua world
+// renderer can therefore draw connected projectiles and impacts without a
+// network-specific render path, while the client never receives components
+// capable of damage, collision, contact locking, or lifetime advancement.
+func (client *clientWorld) reconcileMissiles(app *application, projected []playeradapter.WorldMissile) error {
+	if client == nil || app == nil || app.clientSimulation == nil {
+		return nil
+	}
+	world := app.clientSimulation.World()
+	if client.missileEntities == nil {
+		client.missileEntities = make(map[string]akara.Entity)
+	}
+	seen := make(map[string]struct{}, len(projected))
+	for _, missile := range projected {
+		if _, duplicate := seen[missile.ID]; duplicate {
+			return fmt.Errorf("remote presentation: duplicate missile %q", missile.ID)
+		}
+		seen[missile.ID] = struct{}{}
+		entity, found := client.missileEntities[missile.ID]
+		if !found {
+			var err error
+			entity, err = world.CreateEntity()
+			if err != nil {
+				return fmt.Errorf("remote presentation: create missile %q: %w", missile.ID, err)
+			}
+			client.missileEntities[missile.ID] = entity
+		}
+		updates := map[string]map[string]any{
+			"d2legacy.world.position": {"x": missile.Position.X, "y": missile.Position.Y},
+			"d2legacy.world.location": {"act": missile.Act, "level_id": missile.LevelID},
+			"d2legacy.presentation.missile": {
+				"missile_id": missile.MissileID, "dcc": missile.DCC, "palette": missile.Palette,
+				"velocity_x": missile.Velocity.X, "velocity_y": missile.Velocity.Y,
+				"logical_direction": missile.LogicalDirection, "directions": missile.Directions,
+				"frames_per_second": missile.FramesPerSecond, "loop": missile.Loop,
+				"transparency_mode": missile.TransparencyMode,
+				"offset_x":          missile.OffsetX, "offset_y": missile.OffsetY, "offset_z": missile.OffsetZ,
+			},
+		}
+		for name, values := range updates {
+			store, available := akara.GetDynamicStore(world, name)
+			if !available {
+				return fmt.Errorf("remote presentation: missile component %q is unavailable", name)
+			}
+			if _, err := store.Set(entity, values); err != nil {
+				return fmt.Errorf("remote presentation: set missile %s: %w", name, err)
+			}
+		}
+	}
+	for id, entity := range client.missileEntities {
+		if _, retained := seen[id]; retained {
+			continue
+		}
+		world.DestroyEntity(entity)
+		delete(client.missileEntities, id)
+	}
+	return nil
+}
+
 func latestSemanticCursor(events []playeradapter.SemanticEvent) (uint64, uint64) {
 	if len(events) == 0 {
 		return 0, 0
