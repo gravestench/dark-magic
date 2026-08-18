@@ -4,175 +4,68 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"runtime"
-	"strconv"
-	"strings"
 
-	"github.com/gravestench/dark-magic/internal/app/clientapp"
 	"github.com/gravestench/dark-magic/internal/app/envconfig"
-	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/dev/capture"
-	"github.com/gravestench/dark-magic/internal/dev/profiling"
-	"github.com/gravestench/dark-magic/internal/distribution"
-	"github.com/gravestench/dark-magic/internal/game/simulation"
-	"github.com/gravestench/dark-magic/internal/logging"
-	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
-	"github.com/gravestench/dark-magic/internal/modcache"
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
-	"github.com/gravestench/dark-magic/internal/shell"
 )
 
+// main owns process exit semantics while runMain owns client startup and cleanup.
 func main() {
-	exitCode := 0
-	// Cleanups run before this final exit. Think of it like putting every toy
-	// away before turning off the room light.
-	defer func() { os.Exit(exitCode) }()
-
 	// macOS requires the window to live on the first operating-system thread.
 	// Locking here keeps that rule out of the rest of the application.
 	runtime.LockOSThread()
+	os.Exit(runMain())
+}
+
+// runMain assembles process-owned resources and returns the operating-system exit code.
+func runMain() int {
 	environment, err := envconfig.Bootstrap("client", os.Args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		exitCode = 1
-		return
+		return 1
 	}
 
-	_ = flag.String("env-file", environment.DefaultPath, "environment file (overrides the default client.env selection)")
-	logLevelFlag := flag.String("log-level", environmentDefault("DARK_MAGIC_LOG_LEVEL", "info"), "log verbosity: trace, debug, info, warn, or error")
-	profileDirectory := flag.String("profile-dir", os.Getenv("DARK_MAGIC_PROFILE_DIR"), "capture CPU and heap profiles plus PDF reports in this directory")
-	profileScenes := flag.String("profile-scenes", os.Getenv("DARK_MAGIC_PROFILE_SCENES"), "comma-separated scene IDs (or all) for per-scene CPU and heap reports")
-	captureDirectoryFlag := flag.String("capture-dir", os.Getenv("DARK_MAGIC_CAPTURE_DIR"), "write local scene screenshots and report.json to this directory")
-	captureScenes := flag.String("capture-scenes", os.Getenv("DARK_MAGIC_CAPTURE_SCENES"), "comma-separated scene IDs to capture (defaults to loading,title)")
-	captureSettle := flag.Int("capture-settle-frames", 10, "stable frames to wait before capturing a scene")
-	startScene := flag.String("start-scene", os.Getenv("DARK_MAGIC_START_SCENE"), "development-only scene ID to enter after boot")
-	startOverlays := flag.String("start-overlays", os.Getenv("DARK_MAGIC_START_OVERLAYS"), "development-only comma-separated overlays to open above the start scene")
-	fixtureCharacters := flag.Int("fixture-characters", 0, "development-only number of in-memory characters to create")
-	fixtureWorldLevel := flag.Int("fixture-world-level", 0, "development-only authoritative level for the selected fixture character (scene default when omitted)")
-	fixtureWorldSpawn := flag.String("fixture-world-spawn", "entry", "development-only fixture spawn: entry or seam")
-	fixturePointerMove := flag.Bool("fixture-pointer-move", false, "development-only click-to-move acceptance before capture")
-	outputPalette := flag.String("output-palette", os.Getenv("DARK_MAGIC_OUTPUT_PALETTE"), "quantize the final display through this mounted pal.dat asset")
-	viewportFit := flag.String("viewport-fit", environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"), "game viewport fit: contain or stretch")
-	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
-	fullscreen := flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless window")
-	nativeAudio := flag.Bool("native-audio", true, "enable the selected backend's native audio adapter")
-	presentationProfile := flag.String("presentation-profile", os.Getenv("DARK_MAGIC_PRESENTATION_PROFILE"), "manifest-owned presentation profile ID")
-	modsFlag := flag.String("mods", os.Getenv("DARK_MAGIC_MODS"), "temporary comma-separated extension IDs, or 'none' for vanilla d2legacy")
-	flag.Parse()
-
-	logLevel, err := parseLogLevel(*logLevelFlag)
+	config, err := parseClientConfig(environment.DefaultPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		exitCode = 1
-		return
-	}
-	logs := shell.NewLogBuffer(1000)
-	handler := logging.NewHandlerWithObserver(&slog.HandlerOptions{Level: logLevel}, func(record logging.Record) {
-		logs.Append(shell.LogEntry{At: record.At, Level: record.Level.String(), Message: record.Message, Attributes: record.Attributes})
-	})
-	slog.SetDefault(slog.New(handler))
-
-	var profile *profiling.Session
-	if *profileDirectory != "" {
-		profile, err = profiling.Start(*profileDirectory, true)
-		if err != nil {
-			slog.Error("starting profiler", "error", err)
-			exitCode = 1
-			return
-		}
-		profile.ConfigureScenes(*profileScenes)
-		defer func() {
-			if err := profile.Stop(); err != nil {
-				slog.Error("finishing profiler", "error", err)
-			}
-		}()
+		return 1
 	}
 
-	mods, err := distribution.PrepareMods(*modsFlag)
+	logs := configureLogging(config.logLevel)
+	profile, err := startProfiler(config.profileDirectory, config.profileScenes)
 	if err != nil {
-		slog.Error("preparing mod profile", "error", err)
-		exitCode = 1
-		return
+		slog.Error("starting profiler", "error", err)
+		return 1
 	}
-	defer func() {
-		if err := mods.Close(); err != nil {
-			slog.Error("closing mod packages", "error", err)
-		}
-	}()
-	contentFS, err := content.FromEnvironment(mods.Layers...)
-	if err == nil {
-		err = content.ValidateClientAssets(contentFS)
+	if profile != nil {
+		defer stopProfiler(profile)
 	}
+
+	mods, contentFS, err := prepareContent(config.mods)
 	if err != nil {
 		slog.Error("preparing client content", "error", err)
-		exitCode = 1
-		return
+		return 1
 	}
+	defer closeContent(mods)
 
-	*captureDirectoryFlag, *captureScenes = capture.Defaults(*captureDirectoryFlag, *captureScenes)
-	captureDirectory, err := darkpaths.ExpandHost(*captureDirectoryFlag)
+	config.captureDirectory, config.captureScenes = capture.Defaults(
+		config.captureDirectory,
+		config.captureScenes,
+	)
+	config.captureDirectory, err = darkpaths.ExpandHost(config.captureDirectory)
 	if err != nil {
 		slog.Error("expanding capture directory", "error", err)
-		exitCode = 1
-		return
+		return 1
 	}
-	if err := run(contentFS, &mods.Resolved, mods.Packages, mods.Cache, profile, captureDirectory, *captureScenes, *captureSettle, *startScene, *startOverlays, *fixtureCharacters, *fixtureWorldLevel, *fixtureWorldSpawn, *fixturePointerMove, *outputPalette, *viewportFit, *fullscreen, *nativeAudio, *presentationProfile, logs); err != nil {
+
+	if err := run(contentFS, mods, profile, config, logs); err != nil {
 		slog.Error("running Dark Magic", "error", err)
-		exitCode = 1
+		return 1
 	}
+	return 0
 }
-
-func environmentDefault(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-		return value
-	}
-	return fallback
-}
-
-func parseLogLevel(value string) (slog.Level, error) { return logging.ParseLevel(value) }
-
-// run is intentionally boring. The command hands the pieces to the client
-// application package, and that package explains how the pieces fit together.
-func run(contentFS *content.FS, mods *modcache.ResolvedSet, packages simulation.RuntimePackageSet, modStore *modcache.Store, profile *profiling.Session, captureDirectory, captureScenes string, captureSettle int, startScene, startOverlays string, fixtureCharacters, fixtureWorldLevel int, fixtureWorldSpawn string, fixturePointerMove bool, outputPalette, viewportFit string, fullscreen, nativeAudio bool, presentationProfileID string, logs *shell.LogBuffer) error {
-	assetSetID, err := content.AssetSetIdentityFromEnvironment()
-	if err != nil {
-		return fmt.Errorf("identify external game assets: %w", err)
-	}
-	slog.Debug("identified external game asset set", "asset_set_id", assetSetID)
-	playerProfilePath := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE"))
-	if playerProfilePath == "" {
-		configurationDirectory, err := os.UserConfigDir()
-		if err != nil {
-			return fmt.Errorf("resolve player profile directory: %w", err)
-		}
-		playerProfilePath = filepath.Join(configurationDirectory, "dark-magic", "player-profile.json")
-	}
-	options := clientapp.Options{
-		Content: contentFS, Mods: mods, Packages: packages, AssetSetID: assetSetID, ModCache: modStore, NewCapture: func(directory, scenes string, settle int, renderer clientapp.Screenshotter) (clientapp.Capture, error) {
-			return capture.New(directory, scenes, settle, renderer)
-		}, CaptureDirectory: captureDirectory,
-		CaptureScenes: captureScenes, CaptureSettle: captureSettle, StartScene: startScene, StartOverlays: startOverlays,
-		FixtureCharacters: fixtureCharacters, FixtureWorldLevel: fixtureWorldLevel, FixtureWorldSpawn: fixtureWorldSpawn, FixturePointerMove: fixturePointerMove, OutputPalette: outputPalette,
-		PlayerProfilePath: playerProfilePath,
-		ViewportFit:       viewportFit, BorderlessFullscreen: fullscreen, DisableNativeAudio: !nativeAudio, PresentationProfileID: presentationProfileID, Logs: logs,
-	}
-	// A nil pointer stored inside an interface looks non-nil. Only put the
-	// profiler in the box when one was really started.
-	if profile != nil {
-		options.Profile = profile
-	}
-	return clientapp.Run(options)
-}
-
-// Keep this tiny forwarding function for the command's historical tests. The
-// fixture recipe itself belongs beside the client application that consumes it.
-func developmentCharacters(count int) []d2save.Character {
-	return clientapp.DevelopmentCharacters(count)
-}
-
-func buildVersion() string { return clientapp.BuildVersion() }
