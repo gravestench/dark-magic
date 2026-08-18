@@ -118,9 +118,8 @@ function M.start()
     M.area_curse_skills =
         area_curse_skill_data.load(M.skill_behavior_coverage.by_family["state.point-area-curse"] or {})
     M.aura_skills = aura_skill_data.load(M.skill_behavior_coverage.by_family["aura.selected-party-stat"] or {})
-    M.periodic_aura_skills = periodic_aura_skill_data.load(
-        M.skill_behavior_coverage.by_family["aura.selected-party-periodic"] or {}
-    )
+    M.periodic_aura_skills, M.periodic_aura_state_policy =
+        periodic_aura_skill_data.load(M.skill_behavior_coverage.by_family["aura.selected-party-periodic"] or {})
     for skill_id, definition in pairs(M.periodic_aura_skills) do
         assert(not M.aura_skills[skill_id], "skill has multiple selected-aura behavior declarations")
         M.aura_skills[skill_id] = definition
@@ -179,7 +178,7 @@ function M.start()
     targeted_state_skill_system.register(M.targeted_state_skills)
     area_curse_skill_system.register(M.area_curse_skills)
     aura_skill_system.register(M.aura_skills)
-    aura_pulse_system.register()
+    aura_pulse_system.register(M.periodic_aura_state_policy)
     learned_passive_skill_system.register(M.aura_skills)
     projectile_system.register()
     melee_system.register()
@@ -231,6 +230,7 @@ function M.stop()
     M.area_curse_skills = nil
     M.aura_skills = nil
     M.periodic_aura_skills = nil
+    M.periodic_aura_state_policy = nil
     M.cast_skills = nil
     M.cast_actions = nil
     M.skill_behavior_coverage = nil

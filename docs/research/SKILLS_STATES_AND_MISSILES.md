@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 21
-explicitly admitted configurations, and 336 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 22
+explicitly admitted configurations, and 335 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -467,7 +467,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 336 missing configurations,
+classification and implementation of the 335 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1072,15 +1072,17 @@ mana, and says the effect occurs every two seconds. The owned front/back
 Overlay rows independently pin the persistent Prayer presentation assets.
 
 The periodic-aura decoder contributes immutable pulse facts to the generic
-emitter; `d2legacy.skill.aura_pulse` keeps the source, value, cost, period, and
-next tick durable on the owner. A separate ECS consumer gathers current aura
-relationships, orders targets by stable player identity, clamps each heal to
-maximum life, and makes one all-or-nothing resource transaction. A pulse with
-insufficient mana heals nobody and consumes nothing. A funded pulse spends the
-full 8.8 cost only if at least one eligible target gains life, so an all-full-
-health party also consumes nothing. The schedule advances before application,
-which prevents duplicate effects after repeated stepping or checkpoint restore.
-Switching the selected aura removes the pulse through the same source lifecycle.
+emitter. `d2legacy.skill.aura_pulse` keeps the source, cost, period, and next
+tick durable on the owner; ordered `aura_pulse_effect` entities carry each
+authored operation and evaluated value. A separate ECS consumer gathers current
+aura relationships, orders targets by stable player identity, clamps each heal
+to maximum life, and makes one all-or-nothing resource transaction. A pulse
+with insufficient mana heals nobody and consumes nothing. A funded pulse
+spends the full 8.8 cost only if at least one eligible target gains life, so an
+all-full-health party also consumes nothing. The schedule advances before
+application, which prevents duplicate effects after repeated stepping or
+checkpoint restore. Switching the selected aura removes the schedule and its
+effect entities through the same source lifecycle.
 
 Blizzard's [Expansion defensive-aura
 reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
@@ -1101,6 +1103,40 @@ level selectors. It resolves Cleansing and Meditation's
 formulas to exact Prayer ID 99 without admitting either dependent skill. That
 evidence defines the dependency edge for their future reusable behavior
 families; it does not guess the selector arithmetic.
+
+Cleansing is the second exact periodic-aura configuration and the first to
+compose multiple authored operations on one schedule. Its ID 109 row pins zero
+mana, state 45, the shared filter/radius/50-tick contract,
+`item_poisonlengthresist=100-dm34`, and
+`hitpoints=skill('Prayer'.edns)`. Params 3/4 of 30/90 produce the displayed
+level 1-20 duration-reduction vector 39..80 and the corresponding current-
+remaining-duration multiplier 61..20. The linked selector resolves to exact
+Prayer ID 99; its heal uses the owner's current learned Prayer level and that
+row's five-band `EMin` progression, independently of Cleansing's own level. No
+learned Prayer means zero healing while duration reduction continues.
+
+On every due pulse, each target's active poison and admitted duration state is
+rescheduled to `tick + floor((expires-tick)*remainingPercent/100)`. This scales
+the current remaining duration again on later pulses instead of installing a
+permanent percentage stat. Effects retain Skills.txt column order, targets and
+state instances use stable identity/source order, and the zero-cost Cleansing
+schedule never enters a mana transaction. A level-three checkpoint scenario
+pins 49% remaining duration for owner and party, curable-curse expiry, repeated
+poison compounding, Prayer level-three healing of four, zero healing after
+Prayer removal, unrelated Battle Cry preservation, and source cleanup on aura
+selection change.
+
+Blizzard's same official Expansion page explicitly states that Cleansing
+reduces poison, curse, and shrine duration for all party members and grants the
+same healing as Prayer without mana cost. Owned States rows identify curable
+curse states and the `shrine_*` duration family. The pinned recovered callback
+corroborates current-remaining integer scaling for poison/curable curses and the
+linked Prayer operation, but principally reconstructs 1.10 and does not expose
+the official shrine branch. Dark Magic therefore includes the target-documented
+shrine family while leaving unrelated non-curable curse states unchanged;
+exact 1.14d shrine callback classification and same-tick expiry-event order
+remain explicit probes. Owned `cleansingfront`/`cleansingback` rows and DCC
+members pin persistent presentation separately.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

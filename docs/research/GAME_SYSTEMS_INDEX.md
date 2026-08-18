@@ -82,10 +82,10 @@ The research program now has a baseline for every indexed workstream. Implementa
   existing ECS player, stops competing motion, and emits a generic relocation
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
-- G9 selected-aura tranche: active; exact-ID Might, Prayer, Defiance, Blessed
-  Aim, Resist Fire, Resist Cold, Resist Lightning, Salvation, Vigor, and Thorns
-  use the same right-selected ECS emitter and target relationships with ordinary
-  stat sources. Reviewed record recipes map
+- G9 selected-aura tranche: active; exact-ID Might, Prayer, Cleansing, Defiance,
+  Blessed Aim, Resist Fire, Resist Cold, Resist Lightning, Salvation, Vigor, and
+  Thorns use the same right-selected ECS emitter and target relationships.
+  Reviewed record recipes map
   Might to outgoing
   damage percent and Defiance to generic defense percent; a checkpoint test
   proves independent distinct-state stacking, while same-state suppression
@@ -149,6 +149,13 @@ The research program now has a baseline for every indexed workstream. Implementa
   phase and payment ordering are high-confidence recovered behavior pending a
   1.14d runtime probe. Hirelings/summons, mana-regeneration suppression, and
   selection-switch timing remain explicit gaps.
+  Cleansing generalizes one periodic schedule into ordered effect entities. It
+  scales the current remaining duration of poison, curable curse, and official
+  `shrine_*` duration states with the owned `100-dm34` vector, then evaluates
+  Prayer's `.edns` direct effect from the owner's learned Prayer level. The
+  official Expansion page establishes the shrine and free-Prayer behavior;
+  recovered current-duration integer ordering remains partial 1.10 evidence.
+  Exact 1.14d shrine classification and same-tick expiry ordering remain probes.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/

@@ -79,11 +79,24 @@ function M.register()
         version = 1,
         fields = {
             { name = "source_id", type = "string" },
-            { name = "kind", type = "string" },
-            { name = "value", type = "i64" },
             { name = "mana_cost_raw", type = "i64" },
             { name = "period_ticks", type = "i64" },
             { name = "next_tick", type = "i64" },
+        },
+    })
+
+    -- Authored aura-stat columns become ordered effect entities so one pulse
+    -- schedule can compose healing, duration changes, and later verified
+    -- direct operations without widening the schedule component per skill.
+    ecs.component({
+        name = "d2legacy.skill.aura_pulse_effect",
+        version = 1,
+        fields = {
+            { name = "emitter", type = "entity" },
+            { name = "source_id", type = "string" },
+            { name = "order", type = "i64" },
+            { name = "kind", type = "string" },
+            { name = "value", type = "i64" },
         },
     })
 
