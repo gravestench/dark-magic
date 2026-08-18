@@ -111,6 +111,18 @@ local function decode_aura_stats(row, label)
     return result
 end
 
+local function state_stat_is_authored(row, state_stat)
+    if not state_stat or state_stat == "" then
+        return false
+    end
+    for index_number = 1, 6 do
+        if row["aurastat" .. index_number] == state_stat then
+            return true
+        end
+    end
+    return false
+end
+
 local function decode(row, states_by_name)
     local id = required_integer(row, "Id", "party aura skill")
     local label = row.skill or ("skill " .. id)
@@ -128,7 +140,10 @@ local function decode(row, states_by_name)
     )
     local state = assert(states_by_name[row.aurastate], label .. " has an unknown owner state")
     local target_state = assert(states_by_name[row.auratargetstate], label .. " has an unknown target state")
-    assert(state.aura == "1" and state.stat == row.aurastat1, label .. " owner state does not match its aura stat")
+    assert(
+        state.aura == "1" and state_stat_is_authored(row, state.stat),
+        label .. " owner state does not match any authored aura stat"
+    )
     assert(target_state.aura == "1", label .. " target state is not an aura")
     return {
         behavior = "aura.selected-party-stat",

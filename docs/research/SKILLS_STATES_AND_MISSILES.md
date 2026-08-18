@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 17
-explicitly admitted configurations, and 340 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 18
+explicitly admitted configurations, and 339 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 340 missing configurations,
+classification and implementation of the 339 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -976,6 +976,25 @@ shared elemental mitigation table. A level-three checkpoint proves 76 active
 resistance, maximum 78, +1 inactive maximum, and 1000 raw lightning damage
 reduced to 240. Lightning absorb, PvP conversion, item-source ordering, and the
 future hard-versus-soft level model remain separate target-version probes.
+
+Salvation is the seventh exact selected party-stat aura and the first admitted
+relationship with three same-progression stats. Its independently owned ID 125
+row declares fire, cold, and lightning resistance through `dm34` with Params
+3/4 of 50/120 and no passive or maximum-resistance fields. State 8 records
+`lightresist` as its representative stat, so the generic decoder now validates
+that a state stat matches any authored aura stat rather than assuming column
+one. Empty and unrelated state stats remain rejected.
+
+The owned SkillDesc and layered TBL text resolve “Resist All” to fire, cold, and
+lightning specifically, with no poison effect. Blizzard's [Expansion defensive-
+aura reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+independently publishes the 60..108 level vector and says distinct Paladin auras
+from multiple Paladins stack. At level three, the relationship owns three
+ordinary sources worth 75 each; the existing derived-stat and mitigation
+consumers reduce 1000 fire, cold, or lightning damage to 250 and remove all
+three sources atomically when selection changes. Owned `resistall` state,
+`paladin_aura_salvation` sound, front/back/cast Overlay rows, and DCC members
+pin presentation independently of the neighboring aura records.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

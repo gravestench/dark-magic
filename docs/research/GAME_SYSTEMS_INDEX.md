@@ -83,7 +83,8 @@ The research program now has a baseline for every indexed workstream. Implementa
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
 - G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim,
-  Resist Fire, Resist Cold, and Resist Lightning use the same right-selected ECS emitter and
+  Resist Fire, Resist Cold, Resist Lightning, and Salvation use the same
+  right-selected ECS emitter and
   target relationships with ordinary stat sources. Reviewed record recipes map
   Might to outgoing
   damage percent and Defiance to generic defense percent; a checkpoint test
@@ -117,6 +118,10 @@ The research program now has a baseline for every indexed workstream. Implementa
   facts. Level-three acceptance proves 76 resistance, maximum 78, and 240/1000
   lightning damage; absorb, PvP, item ordering, and soft-level integration
   remain probes.
+  Salvation independently admits ID 125/state 8 and lets one relationship own
+  three keyed `dm34` sources. Level-three acceptance proves 75 fire/cold/
+  lightning resistance, 250/1000 mitigation in each channel, and atomic removal;
+  no passive or maximum-resistance effect is inferred.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/
