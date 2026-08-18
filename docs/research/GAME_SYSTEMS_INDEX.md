@@ -82,10 +82,10 @@ The research program now has a baseline for every indexed workstream. Implementa
   existing ECS player, stops competing motion, and emits a generic relocation
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
-- G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim,
-  Resist Fire, Resist Cold, Resist Lightning, Salvation, Vigor, and Thorns use the same
-  right-selected ECS emitter and
-  target relationships with ordinary stat sources. Reviewed record recipes map
+- G9 selected-aura tranche: active; exact-ID Might, Prayer, Defiance, Blessed
+  Aim, Resist Fire, Resist Cold, Resist Lightning, Salvation, Vigor, and Thorns
+  use the same right-selected ECS emitter and target relationships with ordinary
+  stat sources. Reviewed record recipes map
   Might to outgoing
   damage percent and Defiance to generic defense percent; a checkpoint test
   proves independent distinct-state stacking, while same-state suppression
@@ -139,6 +139,16 @@ The research program now has a baseline for every indexed workstream. Implementa
   high-confidence recovered behavior pending a target-runtime confirmation.
   PvP/hireling reduction and the `hit_thorns` reaction overlay remain explicit
   gaps rather than inheriting older recovered semantics.
+  Prayer extends the same relationship authority with a co-composed periodic
+  effect component rather than a skill-specific system. Its owned rows and TBL
+  records establish party healing, fixed-point mana progression, a 50-tick
+  period, and the dependency selectors consumed by Cleansing and Meditation.
+  A generic pulse consumer heals eligible targets in stable order and spends
+  the full cost atomically only when at least one target actually gains life;
+  insufficient mana and all-full-health pulses consume nothing. Exact pulse
+  phase and payment ordering are high-confidence recovered behavior pending a
+  1.14d runtime probe. Hirelings/summons, mana-regeneration suppression, and
+  selection-switch timing remain explicit gaps.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/

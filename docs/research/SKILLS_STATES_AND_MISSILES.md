@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 20
-explicitly admitted configurations, and 337 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 21
+explicitly admitted configurations, and 336 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -127,12 +127,13 @@ exact skill investigation, especially synergy and cross-skill modifier work. It
 joins Skills.txt -> SkillDesc.txt -> the requested locale's layered base,
 Expansion, and patch TBL records; reports each resolved key, text, winning
 virtual source, and printf-style replacement token; and resolves every
-`skill('name'.blvl|lvl)` expression back to an exact skill ID. The format path
-is executable against owned 1.14d data after correcting the string-TBL decoder
-to the authored version-1 header. TBL wording is documentation evidence, not a
-replacement for formula/probe evidence: it identifies intended relationships
-and labels, while Skills.txt parameters and owned runtime vectors decide exact
-values, integer rounding, and event order.
+`skill('name'.selector)` expression back to an exact skill ID while preserving
+the authored selector (including `.blvl`, `.lvl`, `.edns`, and `.edmn`). The
+format path is executable against owned 1.14d data after correcting the string-
+TBL decoder to the authored version-1 header. TBL wording is documentation
+evidence, not a replacement for formula/probe evidence: it identifies intended
+relationships and labels, while Skills.txt parameters and owned runtime vectors
+decide exact values, integer rounding, and event order.
 
 For the current fixtures, the joined report confirms Fire Bolt receives hard-
 level fire-damage bonuses from Fire Ball and Meteor. It separately confirms
@@ -466,7 +467,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 337 missing configurations,
+classification and implementation of the 336 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1058,6 +1059,48 @@ Those sources principally reconstruct 1.10 behavior. Player/hireling attackers
 are therefore excluded until the target 1.14d hostility and one-eighth PvP
 rule are verified. The owned front/back aura overlays and `hit_thorns` overlay
 are pinned, but the hit-reaction graphic is not emitted yet.
+
+Prayer is the first `aura.selected-party-periodic` configuration. It reuses the
+selected-aura emitter, party/radius relationship, state arbitration, and
+presentation authority, but its authored `hitpoints=edns` field represents a
+checkpointed direct effect rather than a maintained stat source. The exact ID
+99 row pins server-do 65, filter 73731, `ln12` radius, Prayer owner/target state,
+50-tick period, and 8.8 fixed-point mana progression. Its five-band `EMin`
+progression produces the official level 1-20 healing vector. Layered TBL text
+identifies life regeneration for the owner and party, labels healing/radius/
+mana, and says the effect occurs every two seconds. The owned front/back
+Overlay rows independently pin the persistent Prayer presentation assets.
+
+The periodic-aura decoder contributes immutable pulse facts to the generic
+emitter; `d2legacy.skill.aura_pulse` keeps the source, value, cost, period, and
+next tick durable on the owner. A separate ECS consumer gathers current aura
+relationships, orders targets by stable player identity, clamps each heal to
+maximum life, and makes one all-or-nothing resource transaction. A pulse with
+insufficient mana heals nobody and consumes nothing. A funded pulse spends the
+full 8.8 cost only if at least one eligible target gains life, so an all-full-
+health party also consumes nothing. The schedule advances before application,
+which prevents duplicate effects after repeated stepping or checkpoint restore.
+Switching the selected aura removes the pulse through the same source lifecycle.
+
+Blizzard's [Expansion defensive-aura
+reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+corroborates party healing and publishes the healing and displayed-mana
+vectors. Pinned recovered server code corroborates full-cost admission,
+change-gated payment, capped direct-stat changes, and the global-period-plus-one
+tick schedule
+([basic aura execution](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/SKILLS/SkillPal.cpp#L227),
+[resource and periodic helpers](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/SKILLS/Skills.cpp#L1157)).
+That recovered source principally reconstructs 1.10, so exact 1.14d pulse phase,
+payment ordering, and mana-regeneration suppression remain probe-gated.
+Hirelings and summons are also excluded until the current owned-unit target
+filter exists, despite Blizzard's Prayer page including hirelings.
+
+The evidence report now preserves generic cross-skill selectors, not just hard-
+level selectors. It resolves Cleansing and Meditation's
+`skill('Prayer'.edns)` Skills formulas and `skill('Prayer'.edmn)` SkillDesc
+formulas to exact Prayer ID 99 without admitting either dependent skill. That
+evidence defines the dependency edge for their future reusable behavior
+families; it does not guess the selector arithmetic.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

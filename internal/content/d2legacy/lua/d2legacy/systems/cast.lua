@@ -11,6 +11,7 @@ local animdata = require("engine.animdata/v1")
 local direction = require("d2legacy.policy.direction")
 local player_motion = require("d2legacy.gameplay.player_motion")
 local skill_progression = require("d2legacy.policy.skill_progression")
+local resources = require("d2legacy.policy.resources")
 
 local M = {}
 
@@ -116,10 +117,7 @@ end
 
 local function begin_cast(context, player, request, definitions, actions, levels, commands)
     local vitals = ecs.get(player, "d2legacy.player.vitals")
-    local available = vitals:get("mana_raw")
-    if available == 0 then
-        available = vitals:get("mana") * 256
-    end
+    local available = resources.mana_raw(vitals)
 
     local player_levels = levels[player:id()] or {}
     local known_level = player_levels[request:get("skill_id")] or 0
@@ -132,9 +130,7 @@ local function begin_cast(context, player, request, definitions, actions, levels
     if valid then
         local effect_delay, complete_delay, animation_mode =
             cast_timing(player, definition, actions[request:get("skill_id")])
-        local remaining = available - skill_progression.mana_cost(definition, known_level)
-        vitals:set("mana_raw", remaining)
-        vitals:set("mana", math.floor(remaining / 256))
+        assert(resources.spend_mana(vitals, skill_progression.mana_cost(definition, known_level)))
         commands:set(player, "d2legacy.skill.cast", {
             skill_id = request:get("skill_id"),
             skill_level = known_level,

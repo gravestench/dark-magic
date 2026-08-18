@@ -49,7 +49,9 @@ local targeted_state_skill_system = require("d2legacy.systems.targeted_state_ski
 local area_curse_skill_data = require("d2legacy.data.area_curse_skills")
 local area_curse_skill_system = require("d2legacy.systems.area_curse_skill")
 local aura_skill_data = require("d2legacy.data.aura_skills")
+local periodic_aura_skill_data = require("d2legacy.data.periodic_aura_skills")
 local aura_skill_system = require("d2legacy.systems.aura_skill")
+local aura_pulse_system = require("d2legacy.systems.aura_pulse")
 local learned_passive_skill_system = require("d2legacy.systems.learned_passive_skill")
 local quest_components = require("d2legacy.components.quests")
 local quest_commands = require("d2legacy.commands.quests")
@@ -116,6 +118,13 @@ function M.start()
     M.area_curse_skills =
         area_curse_skill_data.load(M.skill_behavior_coverage.by_family["state.point-area-curse"] or {})
     M.aura_skills = aura_skill_data.load(M.skill_behavior_coverage.by_family["aura.selected-party-stat"] or {})
+    M.periodic_aura_skills = periodic_aura_skill_data.load(
+        M.skill_behavior_coverage.by_family["aura.selected-party-periodic"] or {}
+    )
+    for skill_id, definition in pairs(M.periodic_aura_skills) do
+        assert(not M.aura_skills[skill_id], "skill has multiple selected-aura behavior declarations")
+        M.aura_skills[skill_id] = definition
+    end
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
         M.cast_skills[skill_id] = definition
@@ -170,6 +179,7 @@ function M.start()
     targeted_state_skill_system.register(M.targeted_state_skills)
     area_curse_skill_system.register(M.area_curse_skills)
     aura_skill_system.register(M.aura_skills)
+    aura_pulse_system.register()
     learned_passive_skill_system.register(M.aura_skills)
     projectile_system.register()
     melee_system.register()
@@ -220,6 +230,7 @@ function M.stop()
     M.targeted_state_skills = nil
     M.area_curse_skills = nil
     M.aura_skills = nil
+    M.periodic_aura_skills = nil
     M.cast_skills = nil
     M.cast_actions = nil
     M.skill_behavior_coverage = nil

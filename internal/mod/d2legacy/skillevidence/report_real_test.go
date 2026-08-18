@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72, 99, 109, 120}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,5 +124,16 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		weakenLocalized["desctexta3"].Text != "Radius: " ||
 		weakenLocalized["dsc2textb1"].Text != " percent" {
 		t.Fatalf("Weaken localization = %#v", weaken.Localization)
+	}
+	if len(report.Skills[8].CrossSkillModifiers) != 0 {
+		t.Fatalf("Prayer modifiers = %#v", report.Skills[8].CrossSkillModifiers)
+	}
+	for _, skill := range report.Skills[9:11] {
+		modifiers := skill.CrossSkillModifiers
+		if len(modifiers) != 3 || modifiers[0].ReferencedID != 99 || modifiers[0].Selector != "edns" ||
+			modifiers[1].ReferencedID != 99 || modifiers[1].Selector != "edmn" ||
+			modifiers[2].ReferencedID != 99 || modifiers[2].Selector != "edmn" {
+			t.Fatalf("%s Prayer references = %#v", skill.Name, modifiers)
+		}
 	}
 }

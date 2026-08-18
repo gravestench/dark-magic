@@ -72,6 +72,8 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"aura_prayer_front":    {"Filename": "AuraPrayerFront", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
+		"aura_prayer_back":     {"Filename": "AuraPrayerBack", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"aura_thorns_front":    {"Filename": "AuraThornsFront", "Frames": "18", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"aura_thorns_back":     {"Filename": "AuraThornsBack", "Frames": "18", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"hit_thorns":           {"Filename": "AuraThornsHit", "Frames": "10", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},

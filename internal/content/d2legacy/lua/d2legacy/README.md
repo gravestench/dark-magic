@@ -60,8 +60,9 @@ Run `MPQ_DIRECTORY=/path/to/mpqs make skill-evidence` to join the default exact
 skill IDs to SkillDesc and English base/Expansion/patch TBL text. Override
 `SKILL_IDS=...` for the skill under investigation or pass another locale to the
 underlying tool. The report retains localized replacement tokens and resolves
-cross-skill `.blvl`/`.lvl` formulas to exact IDs; it is required evidence for
-synergies and skills that modify other skills, not a gameplay formula engine.
+generic cross-skill formula selectors such as `.blvl`, `.lvl`, `.edns`, and
+`.edmn` to exact IDs; it is required evidence for synergies and skills that
+modify other skills, not a gameplay formula engine.
 
 All mutable facts live in ECS or registered engine state. Random rolls use a
 purpose-named engine stream, so replay and checkpoint restore reproduce them.
@@ -108,6 +109,29 @@ PvP return are verified. Missiles and non-physical melee damage do not satisfy
 the factual input. The front/back aura presentation is shared with other aura
 states; the distinct `hit_thorns` reaction overlay remains a presentation
 follow-up.
+
+## Periodic selected-aura execution order
+
+1. The target-locked manifest admits an exact skill ID to
+   `aura.selected-party-periodic`; matching server functions do not admit other
+   skills.
+2. `data/periodic_aura_skills.lua` validates the owned aura, state, direct-
+   effect, fixed-point cost, radius, and period fields into immutable facts.
+3. `systems/aura_skill.lua` reuses the selected-right emitter and current
+   party/radius relationships, then co-composes one durable `aura_pulse` on the
+   owner. Selection changes remove it through the same source lifecycle.
+4. `systems/aura_pulse.lua` advances the checkpointed schedule, gathers the
+   emitter's eligible relationships in stable player order, and requires the
+   entire authored mana cost before changing any target.
+5. The direct effect clamps each target to its maximum and spends mana once
+   only when at least one value changes. An underfunded or all-full-health pulse
+   consumes nothing; `policy/resources.lua` keeps that transaction shared with
+   ordinary casts.
+
+Prayer is the first admitted configuration. Its target breadth currently stops
+at living same-level player party members; hirelings, summons, exact 1.14d
+pulse phase, payment/regen ordering, and selection-switch timing remain explicit
+evidence gaps.
 
 ## Timed self-state/stat execution order
 

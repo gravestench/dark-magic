@@ -39,6 +39,25 @@ return test.suite({
                 test.expect(progression.mana_cost(decreasing, 30)):equals(5 * 256)
             end)
         end),
+        test.case("applies_the_owned_prayer_direct_effect_bands", function(t)
+            t:run(function()
+                local progression = require("d2legacy.policy.skill_progression")
+                local want = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 21, 23, 25 }
+                for level, value in ipairs(want) do
+                    test.expect(progression.banded(2, { 1, 1, 2, 2, 3 }, level)):equals(value)
+                end
+            end)
+        end),
+        test.case("aligns_periodic_effects_to_the_recovered_global_phase", function(t)
+            t:run(function()
+                local progression = require("d2legacy.policy.skill_progression")
+                test.expect(progression.next_periodic_tick(0, 50)):equals(1)
+                test.expect(progression.next_periodic_tick(1, 50)):equals(51)
+                test.expect(progression.next_periodic_tick(49, 50)):equals(51)
+                test.expect(progression.next_periodic_tick(50, 50)):equals(51)
+                test.expect(progression.next_periodic_tick(51, 50)):equals(101)
+            end)
+        end),
         test.case("uses_staged_integer_arithmetic_for_dm_parameter_pairs", function(t)
             t:run(function()
                 local progression = require("d2legacy.policy.skill_progression")

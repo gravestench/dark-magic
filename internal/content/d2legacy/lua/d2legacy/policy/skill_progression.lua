@@ -13,10 +13,9 @@ function M.diminishing(minimum, maximum, level)
     return minimum + math.floor(scale * (maximum - minimum) / 100)
 end
 
--- Damage columns use five authored per-level bands: levels 2-8, 9-16,
--- 17-22, 23-28, and 29+. Values are already shifted into 8.8 raw units by
--- the definition decoder before they reach this function.
-function M.damage(base, gains, level)
+-- Elemental damage and direct-effect columns use five authored per-level
+-- bands: levels 2-8, 9-16, 17-22, 23-28, and 29+.
+function M.banded(base, gains, level)
     local remaining = math.max(level - 1, 0)
     local result = base
     for index, width in ipairs({ 7, 8, 6, 6 }) do
@@ -27,9 +26,22 @@ function M.damage(base, gains, level)
     return result + remaining * gains[5]
 end
 
+-- Damage values are already shifted into 8.8 raw units by the definition
+-- decoder before they reach this alias.
+function M.damage(base, gains, level)
+    return M.banded(base, gains, level)
+end
+
 function M.mana_cost(definition, level)
     local cost = M.linear(definition.mana_cost_raw, definition.mana_cost_per_level_raw or 0, level)
     return math.max(cost, definition.minimum_mana_cost_raw or 0)
+end
+
+-- Recovered periodic skill events align to the next global period boundary
+-- plus one tick rather than measuring a fresh interval from selection time.
+function M.next_periodic_tick(tick, period)
+    assert(period > 0, "period must be positive")
+    return period * math.floor((tick + period - 1) / period) + 1
 end
 
 function M.damage_range(definition, level, damage_percent)

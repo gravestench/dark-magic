@@ -37,8 +37,28 @@ func TestBuildJoinsTooltipTextTokensAndHardLevelModifiers(t *testing.T) {
 		t.Fatalf("localization = %#v", skill.Localization)
 	}
 	if len(skill.CrossSkillModifiers) != 2 || skill.CrossSkillModifiers[0].ReferencedID != 50 ||
-		skill.CrossSkillModifiers[1].ReferencedID != 60 || skill.CrossSkillModifiers[1].LevelSelector != "blvl" {
+		skill.CrossSkillModifiers[1].ReferencedID != 60 || skill.CrossSkillModifiers[1].Selector != "blvl" {
 		t.Fatalf("modifiers = %#v", skill.CrossSkillModifiers)
+	}
+}
+
+func TestBuildReportsGenericCrossSkillFormulaSelectors(t *testing.T) {
+	skills := []map[string]string{
+		{"Id": "99", "skill": "Prayer", "skilldesc": "prayer"},
+		{"Id": "109", "skill": "Cleansing", "skilldesc": "cleansing", "aurastatcalc2": "skill('Prayer'.edns)"},
+	}
+	descriptions := []map[string]string{
+		{"skilldesc": "prayer", "str name": "prayer"},
+		{"skilldesc": "cleansing", "str name": "cleansing", "desccalca1": "skill('Prayer'.edmn)"},
+	}
+	report, err := Build([]int{109}, skills, descriptions, fixtureLocale{"cleansing": "Cleansing"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	modifiers := report.Skills[0].CrossSkillModifiers
+	if len(modifiers) != 2 || modifiers[0].ReferencedID != 99 || modifiers[0].Selector != "edns" ||
+		modifiers[1].ReferencedID != 99 || modifiers[1].Selector != "edmn" {
+		t.Fatalf("modifiers = %#v", modifiers)
 	}
 }
 
