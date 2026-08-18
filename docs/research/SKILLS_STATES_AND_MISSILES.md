@@ -375,6 +375,52 @@ go run ./internal/dev/tools/curse_presentation_probe \
 No client-function-30 role is promoted into production until the report says
 the six-case matrix is complete and the underlying frame log is reviewed.
 
+## Missile travel and impact audio probe
+
+The owned Expansion 1.14d records identify candidate sounds but do not define
+their complete playback lifecycle. `Missiles.txt` maps Fire Bolt, Fire Ball,
+Ice Blast, and Glacial Spike to distinct travel records and impact records;
+Nova has a travel record and no `HitSound`. The joined `Sounds.txt` rows mark
+the four straight-missile travel records `Loop=1`, their impact records
+`Loop=0`, and Nova's `sorceress_nova` record `Loop=0`. That difference matters:
+a looping row may require a retained emitter tied to projectile creation,
+movement, collision, expiration, and visibility, while Nova may be one cast
+sound or one sound per radial projectile. Record names and comments cannot
+establish either policy.
+
+`internal/dev/tools/missile_audio_probe` turns those unknowns into a reviewable
+capture contract. It accepts only isolated audio/video frame logs from a
+probe-created character in an executable-fingerprinted, owned Expansion 1.14d
+single-player runtime. The camera and actors must remain fixed, and sound
+identity must be established by comparing the capture to waveforms from the
+owned MPQs. Classic, older patches, vanilla servers, community tools, memory
+inspection, and imported save characters are outside the schema.
+
+The target-locked matrix compares Fire Bolt expiration with Fire Bolt, Fire
+Ball, Ice Blast, and Glacial Spike contact, plus empty and three-target Nova
+casts. Every referenced travel/hit record must be reported even when it is not
+audible. The analyzer fingerprints the original capture and normalizes
+projectile lifetime, contact timing, sound interval timing, and observed
+instance count. It preserves the record's `Loop` fact in the report but does
+not turn that flag into an inferred start/stop or multiplicity rule. The
+permanent real-MPQ test separately pins all referenced `Missiles.txt` and
+`Sounds.txt` rows, filenames, group sizes, loop flags, stream flags, impact
+effect references, and the immutable record-generation identity.
+
+Start from
+`docs/research/probes/missile-audio-lod-114d-expansion.template.json`, replace
+the example observation with measured values, add the remaining matrix rows,
+and run:
+
+```shell
+go run ./internal/dev/tools/missile_audio_probe \
+  -input /path/to/sanitized-missile-audio.json
+```
+
+The example is a capture-shape illustration, not evidence. No semantic missile
+audio event, looping handle policy, or network projection should be implemented
+until the report covers all seven cases and its isolated tracks are reviewed.
+
 ## Faster-cast-rate and SQ timing probe
 
 The owned Expansion 1.14d records identify the inputs but do not, by

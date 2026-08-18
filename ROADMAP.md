@@ -260,7 +260,12 @@ than recovered/community behavior. A separate strict cast-rate analyzer now
 joins owned ItemStatCost/Properties/Skills/TBL identities to visual SC, SQ,
 weapon-class, and raw-FCR observations. It reports a missing target matrix and
 promotes no breakpoint formula, preventing older-version tables from becoming
-1.14d behavior by assumption. A
+1.14d behavior by assumption. Missile audio now has the same evidence boundary:
+owned `Missiles.txt`/`Sounds.txt` joins pin the referenced wave records and
+their loop/group/stream facts, while a strict seven-case isolated-audio/video
+probe measures start, stop, contact/expiration, and radial multiplicity. The
+existing unproduced missile-event consumer is deliberately not wired until the
+complete Expansion 1.14d matrix establishes lifecycle semantics. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -324,8 +329,8 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate client-function-30 curse attachment/motion and SC/SQ/FCR/weapon-class timing on complete target matrices; neither promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated SQ/FCR timing vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation. Target-locked real-MPQ tests also pin the current straight/radial missile audio references and joined Sounds filename/group/loop/stream rows; runtime timing and multiplicity remain evidence work rather than record inference. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -1074,6 +1079,11 @@ runtime composition and the coverage report.
   SC action, and Lightning's SQ/12 transition; normalize visual release and
   completion timing across a raw-FCR/weapon-class matrix without embedding an
   older breakpoint formula or admitting Lightning's unfinished behavior.
+- [x] Add a strict owned Expansion 1.14d missile-audio capture/analyzer. Pin
+  Fire Bolt, Fire Ball, Nova, Ice Blast, and Glacial Spike `Missiles.txt` sound
+  references plus joined `Sounds.txt` filename/group/loop/stream facts; measure
+  effect/contact/removal frames and audible instance intervals across the exact
+  seven-case matrix without treating `Loop=1` or radial count as runtime policy.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -1213,6 +1223,23 @@ targets, remaining ticks, and other authority never enter the client schema.
 This closes connected presentation for admitted server projectiles and impact
 effects; Skills.txt client-only missile functions such as curse function 30
 remain gated by their separate owned-runtime probe.
+
+Missile audio now has a separate strict evidence contract because the records
+do not establish the lifecycle needed by a semantic event producer. Owned
+`Missiles.txt` rows bind Fire Bolt, Fire Ball, Ice Blast, and Glacial Spike to
+distinct travel/impact sounds and bind Nova to a travel sound without a hit
+sound. Their joined `Sounds.txt` rows show that all four straight-projectile
+travel records loop while the impact rows and Nova do not. A target-pinned
+real-MPQ test protects those filenames, group sizes, loop/stream flags, impact
+effect references, and immutable generation identity. The
+`missile_audio_probe` then requires fixed-camera, stationary, isolated audio/
+video observations and owned-MPQ waveform identification across Fire Bolt
+expiration/contact, the other three straight-projectile contacts, and empty/
+three-target Nova casts. Its report fingerprints the capture and normalizes
+sound intervals against effect, contact, and removal frames. It does not create
+`d2legacy.missile.event`, decide retained-handle ownership, or expose those
+events through `EventView/v3`; those changes require a complete reviewed
+seven-case Expansion 1.14d matrix first.
 
 Cast presentation now follows a second generic record join. `cast_actions`
 copies Skills.txt `anim`, `seqtrans`, `seqnum`, `UseAttackRate`, start/effect
@@ -1567,8 +1594,12 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: populate and review the owned Expansion 1.14d client-function-30 visual
-matrix and the SC/SQ/FCR/weapon-class timing matrix. Then add the record-
+Next: populate and review the owned Expansion 1.14d missile-audio matrix, the
+client-function-30 visual matrix, and the SC/SQ/FCR/weapon-class timing matrix.
+Use the completed audio report to define one generic lifecycle/multiplicity
+contract, then produce typed semantic missile cues and extend `EventView/v3`
+without shipping collision, damage, lifetime, or target authority to clients.
+Add the record-
 referenced client-only curse missile layers without guessing the `cltmissilea`/
 `cltmissilec` attachment and motion roles. Pin Overlay light,
 variant, character restriction, and multi-direction behavior without skill-
