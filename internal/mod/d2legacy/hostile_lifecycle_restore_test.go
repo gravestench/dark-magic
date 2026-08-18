@@ -1102,7 +1102,7 @@ func generatedHostileRecords() fixtureRecords {
 		"Rarity": "1", "TreasureClass1": "fallen-drop",
 	}}
 	records["data/global/excel/monstats2.txt"] = []map[string]string{{
-		"Id": "fallen", "BaseW": "HTH", "SizeX": "1", "SizeY": "1", "MeleeRng": "1",
+		"Id": "fallen", "BaseW": "HTH", "SizeX": "1", "SizeY": "1", "MeleeRng": "1", "corpseSel": "1",
 	}}
 	records["data/global/excel/monlvl.txt"] = []map[string]string{{"Level": "1"}}
 	records["data/global/excel/treasureclassex.txt"] = []map[string]string{{

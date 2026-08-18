@@ -114,6 +114,11 @@
       "evidence_status": "owned-target-records-localized-mana-recovery-and-prayer-link-with-recovered-regen-ordering-partial"
     },
     {
+      "skill_id": 124,
+      "family": "aura.selected-corpse-periodic",
+      "evidence_status": "owned-target-records-localized-corpse-redemption-and-official-level-vectors-with-recovered-ordering-partial"
+    },
+    {
       "skill_id": 125,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-all-elemental-resistance-intent-and-official-level-vector-partial"

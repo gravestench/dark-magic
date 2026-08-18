@@ -61,7 +61,7 @@ function M.components(command, game_player_count)
     local scaling = player_count.monster_spawn(game_player_count, definition.evil ~= false)
     local health = (base_health + percentage(base_health, scaling.life_bonus_percent)) * 256
     local experience = definition.experience + percentage(definition.experience, scaling.experience_bonus_percent)
-    return {
+    local result = {
         ["d2legacy.monster.identity"] = {
             spawn_id = spawn.spawn_id,
             definition_id = definition.id,
@@ -125,6 +125,10 @@ function M.components(command, game_player_count)
             priority = 20,
         },
     }
+    if definition.corpse_selectable == true then
+        result["d2legacy.monster.corpse_selectable"] = {}
+    end
+    return result
 end
 
 function M.apply(command)

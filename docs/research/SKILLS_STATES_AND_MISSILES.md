@@ -80,10 +80,11 @@ The renderer-independent `d2legacy` Lua authority now owns:
 - a reusable straight-missile on-hit state family that snapshots duration and
   emits ordinary timed-state requests after nonlethal contact;
 - a reusable self-state family and timed state-instance lifecycle;
-- a selected-right party-aura family whose ECS emitter and target relations
-  own ordinary stat sources without manufacturing casts, plus a bounded
-  connected presentation relationship that reuses the offline aura renderer
-  without exporting gameplay policy; and
+- selected-right aura families whose ECS emitter, target policy, relations,
+  and checkpointed pulse schedule compose maintained stats, direct party
+  effects, or deterministic corpse operations without manufacturing casts,
+  plus a bounded connected presentation relationship that reuses the offline
+  aura renderer without exporting gameplay policy; and
 - the shared melee action path.
 
 Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
@@ -114,8 +115,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 23
-explicitly admitted configurations, and 334 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 24
+explicitly admitted configurations, and 333 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -467,7 +468,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 334 missing configurations,
+classification and implementation of the 333 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1173,6 +1174,42 @@ owned State/Overlay/DCC rows pin sound and persistent presentation. Exact 1.14d
 stat-regeneration ordering relative to same-tick casts, aura refresh, and
 resource spending remains a runtime probe because the arithmetic/order source
 principally reconstructs 1.10.
+
+Redemption is the first `aura.selected-corpse-periodic` configuration. Its ID
+124 row pins server-do 82, owner state 50, filter 4354, a 50-tick schedule, a
+constant `ln12` radius from Params 1/2, `dm34` per-corpse chance from Params
+3/4, and equal `ln56` life/mana recovery from Params 5/6. The owned English TBL
+records call the operation an attempt to redeem slain enemies for life and
+mana, and label the recovery, chance, radius, and percent values. The official
+[Expansion defensive-aura reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+independently publishes the level 1-20 chance/recovery vectors, says the effect
+benefits only the aura owner, and states that a redeemed corpse cannot be
+resurrected.
+
+The reusable corpse-aura decoder turns those fields into a target policy,
+chance progression, and ordered `restore_owner_life`, `restore_owner_mana`, and
+`consume_corpse` effects. Monster construction maps authored
+`MonStats2.corpseSel` to an empty immutable ECS capability; death state owns the
+separate mutable `corpse_usable` fact. Each due pulse excludes town, inactive,
+other-level, out-of-radius, non-capable, and already-consumed entities, sorts
+the remaining corpses by stable spawn identity, and rolls the named
+checkpointed RNG stream once per candidate. A success clamps both owner
+resources before making the corpse unusable, even when both resources were
+already full, then emits a semantic pulse-result entity for later presentation.
+Selection removal deletes the pulse and effects through the existing aura
+source lifecycle. Integration coverage pins eligibility, stable ordering,
+failure/success, full-resource consumption, town exclusion, deselection, and
+checkpoint continuation without a skill-name or ID branch.
+
+Owned State, Overlay, Missiles, DCC, and TBL records pin the persistent owner
+aura and the `redeemed`/success/failure presentation vocabulary, but runtime
+presentation does not map the semantic result to those assets yet. Exact 1.14d
+radius-unit conversion, corpse-roll sequencing against unrelated RNG work,
+same-tick death eligibility, and visual/sound timing remain explicit probes.
+Pinned recovered server code corroborates corpse selection, per-corpse chance,
+life-then-mana clamping, and post-success corpse invalidation, but principally
+reconstructs 1.10 and therefore remains architecture evidence rather than the
+target authority.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Meditation's 73729

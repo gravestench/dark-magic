@@ -84,7 +84,7 @@ local function roll_loot(entities, identity, stats, credited_id)
     return loot.encode(drops), context
 end
 
-local function death_values(context, identity, killer, credited, experience, drops, counts)
+local function death_values(context, monster, identity, killer, credited, experience, drops, counts)
     return {
         tick = context.tick,
         killer_id = killer,
@@ -99,7 +99,7 @@ local function death_values(context, identity, killer, credited, experience, dro
         monster_player_count = counts.monster_player_count,
         no_drop_player_count = counts.no_drop_player_count,
         active = false,
-        corpse_usable = true,
+        corpse_usable = ecs.get(monster, "d2legacy.monster.corpse_selectable") ~= nil,
     }
 end
 
@@ -165,7 +165,7 @@ local function commit_death(context, entities, structural, monster, killers)
     credit_experience(entities, credited, experience)
 
     local drops, counts = roll_loot(entities, identity, stats, credited)
-    local values = death_values(context, identity, killer, credited, experience, drops, counts)
+    local values = death_values(context, monster, identity, killer, credited, experience, drops, counts)
     structural:set(monster, "d2legacy.monster.death", values)
     stop_monster(monster, structural)
     emit_events(structural, context, identity, values)
@@ -199,6 +199,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.monster.identity",
             "d2legacy.monster.death",
+            "d2legacy.monster.corpse_selectable",
             "d2legacy.combat.event",
             "d2legacy.world.selectable",
             "d2legacy.player.identity",

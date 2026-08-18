@@ -128,6 +128,34 @@ local function reflected_damage_attacker(id, health_raw)
     })
 end
 
+local function corpse(id, x, level_id, selectable, inactive)
+    local ecs = require("engine.ecs/v1")
+    local components = {
+        ["d2legacy.monster.identity"] = {
+            spawn_id = id,
+            definition_id = "corpse-fixture",
+            base_id = "corpse-fixture",
+            graphics_id = "corpse-fixture",
+            seed = id,
+            treasure_class = "",
+        },
+        ["d2legacy.monster.death"] = {
+            tick = 1,
+            active = false,
+            corpse_usable = true,
+        },
+        ["d2legacy.world.position"] = { x = x, y = 12 },
+        ["d2legacy.world.location"] = { act = 1, level_id = level_id or 2 },
+    }
+    if selectable ~= false then
+        components["d2legacy.monster.corpse_selectable"] = {}
+    end
+    if inactive then
+        components["d2legacy.world.inactive"] = {}
+    end
+    return ecs.create(components)
+end
+
 local function emit_melee_damage(attacker_id, rolled_physical_raw)
     local ecs = require("engine.ecs/v1")
     local damage = require("d2legacy.policy.damage")
@@ -370,6 +398,38 @@ return test.suite({
                 Param4 = "25",
                 perdelay = "50",
                 HitShift = "8",
+            },
+            {
+                Id = "124",
+                skill = "Fixture Redemption",
+                skilldesc = "redemption",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "82",
+                aura = "1",
+                immediate = "",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                InTown = "1",
+                aurafilter = "4354",
+                aurarangecalc = "ln12",
+                aurastate = "redemption",
+                auratargetstate = "",
+                calc1 = "dm34",
+                calc2 = "ln56",
+                calc3 = "ln56",
+                mana = "0",
+                lvlmana = "0",
+                minmana = "0",
+                manashift = "8",
+                Param1 = "16",
+                Param2 = "0",
+                Param3 = "10",
+                Param4 = "100",
+                Param5 = "25",
+                Param6 = "5",
+                perdelay = "50",
             },
             {
                 Id = "997",
@@ -622,6 +682,7 @@ return test.suite({
             { skilldesc = "prayer", ListRow = "3", IconCel = "6" },
             { skilldesc = "cleansing", ListRow = "3", IconCel = "38" },
             { skilldesc = "meditation", ListRow = "3", IconCel = "48" },
+            { skilldesc = "redemption", ListRow = "3", IconCel = "54" },
             { skilldesc = "thorns", ListRow = "10", IconCel = "14" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
@@ -637,6 +698,7 @@ return test.suite({
             { state = "prayer", id = "34", aura = "1", stat = "" },
             { state = "cleansing", id = "45", aura = "1", stat = "" },
             { state = "meditation", id = "48", aura = "1", stat = "" },
+            { state = "redemption", id = "50", aura = "1", stat = "" },
             { state = "poison", id = "2" },
             { state = "amplifydamage", id = "9", curse = "1", curable = "1" },
             { state = "battlecry", id = "89", curse = "1", curable = "" },
@@ -929,6 +991,226 @@ return test.suite({
                 test.expect(#pulse_effects(alice)):equals(0)
                 test.expect(#ecs.query({ all = { "d2legacy.resource.mana_regen_suppression" } })):equals(0)
                 test.expect(ecs.get(alice, "d2legacy.player.resource_stats"):get("manarecoverybonus")):equals(0)
+            end),
+        }),
+        test.case("corpse_periodic_aura_uses_stable_eligibility_and_consumes_each_success_once", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                ecs.get(alice, "d2legacy.world.location"):set("level_id", 2)
+                local definition = require("d2legacy.authoritative").aura_skills[124]
+                definition.pulse.chance_minimum = 0
+                definition.pulse.chance_maximum = 0
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 124,
+                        level = 3,
+                        list_row = 3,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                local vitals = ecs.get(alice, "d2legacy.player.vitals")
+                vitals:set("health", 10)
+                vitals:set("max_health", 200)
+                vitals:set("mana_raw", 0)
+                vitals:set("mana", 0)
+                vitals:set("max_mana_raw", 200 * 256)
+                vitals:set("max_mana", 200)
+                ecs.get(alice, "d2legacy.player.resource_stats"):set("mana_regen_frames", 0)
+                corpse("eligible-b", 13, 2, true, false)
+                corpse("eligible-a", 12, 2, true, false)
+                corpse("missing-capability", 11, 2, false, false)
+                corpse("out-of-range", 40, 2, true, false)
+                corpse("other-level", 12, 3, true, false)
+                corpse("inactive", 12, 2, true, true)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 124 },
+            }),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local pulse = ecs.get(alice, "d2legacy.skill.aura_pulse")
+                test.expect(pulse:get("target_policy")):equals("eligible_corpses")
+                test.expect(pulse:get("radius")):equals(16)
+                test.expect(pulse:get("chance")):equals(0)
+                test.expect(pulse:get("next_tick")):equals(51)
+                test.expect(pulse:get("mana_cost_raw")):equals(0)
+                local effects = pulse_effects(alice)
+                test.expect(#effects):equals(3)
+                test.expect(effects[1]:get("kind")):equals("restore_owner_life")
+                test.expect(effects[1]:get("value")):equals(35 * 256)
+                test.expect(effects[2]:get("kind")):equals("restore_owner_mana")
+                test.expect(effects[2]:get("value")):equals(35 * 256)
+                test.expect(effects[3]:get("kind")):equals("consume_corpse")
+                test.expect(#aura_effects()):equals(1)
+                local owner_state = ecs.get(aura_effects()[1], "d2legacy.skill.aura_effect")
+                test.expect(owner_state:get("target"):id()):equals(alice:id())
+                test.expect(owner_state:get("state_id")):equals("redemption")
+            end),
+            test.step(46),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.monster.death" } })) do
+                    test.expect(ecs.get(entity, "d2legacy.monster.death"):get("corpse_usable")):equals(true)
+                end
+                test.expect(#ecs.query({ all = { "d2legacy.skill.aura_pulse_event" } })):equals(0)
+                local definition = require("d2legacy.authoritative").aura_skills[124]
+                definition.pulse.chance_minimum = 100
+                definition.pulse.chance_maximum = 100
+            end),
+            test.step(50),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local pulse = ecs.get(alice, "d2legacy.skill.aura_pulse")
+                test.expect(pulse:get("chance")):equals(100)
+                test.expect(pulse:get("next_tick")):equals(151)
+                local vitals = ecs.get(alice, "d2legacy.player.vitals")
+                test.expect(vitals:get("health")):equals(80)
+                test.expect(vitals:get("mana_raw")):equals(70 * 256)
+                local consumed = {}
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.monster.death" } })) do
+                    local id = ecs.get(entity, "d2legacy.monster.identity"):get("spawn_id")
+                    consumed[id] = not ecs.get(entity, "d2legacy.monster.death"):get("corpse_usable")
+                end
+                test.assert(consumed["eligible-a"] and consumed["eligible-b"], "eligible corpses were not consumed")
+                test.assert(
+                    not consumed["missing-capability"]
+                        and not consumed["out-of-range"]
+                        and not consumed["other-level"]
+                        and not consumed["inactive"],
+                    "corpse target filtering changed"
+                )
+                local events = ecs.query({ all = { "d2legacy.skill.aura_pulse_event" } })
+                test.expect(#events):equals(2)
+                local first = ecs.get(events[1], "d2legacy.skill.aura_pulse_event")
+                local second = ecs.get(events[2], "d2legacy.skill.aura_pulse_event")
+                local ordered = {
+                    ecs.get(first:get("target"), "d2legacy.monster.identity"):get("spawn_id"),
+                    ecs.get(second:get("target"), "d2legacy.monster.identity"):get("spawn_id"),
+                }
+                test.expect(table.concat(ordered, ",")):equals("eligible-a,eligible-b")
+                test.expect(first:get("life_delta_raw")):equals(35 * 256)
+                test.expect(first:get("mana_delta_raw")):equals(35 * 256)
+                test.expect(second:get("life_delta_raw")):equals(35 * 256)
+                test.expect(second:get("mana_delta_raw")):equals(35 * 256)
+                vitals:set("health", vitals:get("max_health"))
+                vitals:set("mana_raw", vitals:get("max_mana_raw"))
+                vitals:set("mana", vitals:get("max_mana"))
+            end),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.skill.aura_pulse_event" } })):equals(2)
+                local definition = require("d2legacy.authoritative").aura_skills[124]
+                definition.pulse.chance_minimum = 100
+                definition.pulse.chance_maximum = 100
+                local vitals = ecs.get(player_named("alice"), "d2legacy.player.vitals")
+                vitals:set("health", vitals:get("max_health"))
+                vitals:set("mana_raw", vitals:get("max_mana_raw"))
+                vitals:set("mana", vitals:get("max_mana"))
+                corpse("full-resource", 12, 2, true, false)
+            end),
+            test.step(50),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local full
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.monster.identity" } })) do
+                    if ecs.get(entity, "d2legacy.monster.identity"):get("spawn_id") == "full-resource" then
+                        full = entity
+                    end
+                end
+                test.assert(full ~= nil, "full-resource corpse fixture is missing")
+                test.expect(ecs.get(full, "d2legacy.monster.death"):get("corpse_usable")):equals(false)
+                local events = ecs.query({ all = { "d2legacy.skill.aura_pulse_event" } })
+                test.expect(#events):equals(3)
+                local final = ecs.get(events[3], "d2legacy.skill.aura_pulse_event")
+                test.expect(final:get("life_delta_raw")):equals(0)
+                test.expect(final:get("mana_delta_raw")):equals(0)
+            end),
+            test.step(1),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.skill.aura_pulse_event" } })):equals(3)
+            end),
+        }),
+        test.case("corpse_periodic_aura_does_no_corpse_work_in_town_or_after_deselection", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                ecs.get(alice, "d2legacy.world.location"):set("level_id", 1)
+                local definition = require("d2legacy.authoritative").aura_skills[124]
+                definition.pulse.chance_minimum = 100
+                definition.pulse.chance_maximum = 100
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 124,
+                        level = 20,
+                        list_row = 3,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                corpse("town-corpse", 12, 1, true, false)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 124 },
+            }),
+            test.step(3),
+            test.step(46),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local corpse_entity = ecs.query({ all = { "d2legacy.monster.death" } })[1]
+                test.expect(ecs.get(corpse_entity, "d2legacy.monster.death"):get("corpse_usable")):equals(true)
+            end),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                ecs.get(alice, "d2legacy.world.location"):set("level_id", 2)
+                local corpse_entity = ecs.query({ all = { "d2legacy.monster.death" } })[1]
+                ecs.get(corpse_entity, "d2legacy.world.location"):set("level_id", 2)
+            end),
+            test.submit({
+                tick = 52,
+                sequence = 2,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(50),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local corpse_entity = ecs.query({ all = { "d2legacy.monster.death" } })[1]
+                test.expect(ecs.get(corpse_entity, "d2legacy.monster.death"):get("corpse_usable")):equals(true)
+                test.assert(ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse") == nil)
             end),
         }),
         test.case("periodic_aura_heals_only_when_the_full_pulse_cost_is_funded_and_useful", {

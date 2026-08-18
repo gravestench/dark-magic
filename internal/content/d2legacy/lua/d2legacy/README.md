@@ -148,6 +148,35 @@ official reference both exclude hirelings. Other 73731 auras currently stop at
 living same-level player party members. Exact 1.14d pulse/shrine/stat-regeneration
 event ordering and selection-switch timing remain explicit evidence gaps.
 
+## Corpse-periodic selected-aura execution order
+
+1. The manifest admits an exact skill ID to
+   `aura.selected-corpse-periodic`; sharing server-do 82 never enables another
+   record.
+2. `data/corpse_aura_skills.lua` validates the owned owner-state, corpse filter,
+   radius/chance/recovery formulas, zero cost, and period into a generic target
+   policy plus ordered operations.
+3. Monster construction projects `MonStats2.corpseSel` into the empty
+   `monster.corpse_selectable` capability. Death separately creates mutable
+   `corpse_usable` state, so authored eligibility and one-time consumption are
+   not conflated.
+4. `systems/aura_pulse.lua` excludes town and enumerates usable same-level,
+   in-radius, active corpses in stable spawn-ID order. A purpose-named
+   checkpointed stream rolls the evaluated chance once for each candidate.
+5. Each success applies its definition's ordered owner-resource operations,
+   clamps through shared resource policy, and then consumes the corpse. Full
+   resources do not prevent consumption because success is about redeeming the
+   corpse, not whether either resource changed.
+6. The committed operation emits `skill.aura_pulse_event`, a durable semantic
+   result that presentation can map to the owned target assets without reading
+   internal death/resource components or rerunning gameplay.
+
+Redemption is the first admitted configuration. Its exact Expansion 1.14d
+records and localized TBL intent pin the behavior shape and level vectors;
+owned State/Overlay/Missiles assets pin presentation vocabulary separately.
+The semantic event is not yet rendered, and exact radius units, target-runtime
+RNG ordering, and same-tick corpse eligibility remain probe-gated.
+
 ## Timed self-state/stat execution order
 
 1. The target-locked behavior manifest admits one exact skill ID.

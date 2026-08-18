@@ -44,6 +44,10 @@ local function evaluated_pulse_effect(effect, aura_level, owner_levels)
         value = level > 0 and progression.banded(effect.value_base, effect.value_per_level, level) or 0
     elseif effect.progression == "one_minus_diminishing" then
         value = 100 - progression.diminishing(effect.value_minimum, effect.value_maximum, aura_level)
+    elseif effect.progression == "linear_raw" then
+        value = progression.linear(effect.value_base, effect.value_per_level, aura_level)
+    elseif effect.progression == "constant" then
+        value = effect.value_base
     else
         error("unsupported aura pulse progression " .. tostring(effect.progression))
     end
@@ -58,10 +62,18 @@ local function evaluated_pulse(definition, level, owner_levels)
     for _, effect in ipairs(definition.pulse.effects) do
         effects[#effects + 1] = evaluated_pulse_effect(effect, level, owner_levels)
     end
+    local chance = 100
+    if definition.pulse.chance_progression == "dm34" then
+        chance = progression.diminishing(definition.pulse.chance_minimum, definition.pulse.chance_maximum, level)
+    elseif definition.pulse.chance_progression then
+        error("unsupported aura pulse chance progression " .. tostring(definition.pulse.chance_progression))
+    end
     return {
         effects = effects,
         mana_cost_raw = progression.mana_cost(definition, level),
         period_ticks = definition.pulse.period_ticks,
+        target_policy = definition.pulse.target_policy or "aura_members",
+        chance = chance,
     }
 end
 
@@ -102,6 +114,7 @@ local function emitter_values(context, player, definition, level, player_id, cur
         value = primary and primary.value or primary_pulse.value,
         stats = stats,
         pulse = pulse,
+        target_policy = definition.target_policy,
         refresh_delay = definition.record_refresh_delay,
         activated_tick = activated,
         entity = player,
@@ -175,12 +188,18 @@ local function reconcile_pulse(context, entities, player, values, structural)
     if current and current:get("source_id") == values.source_id then
         current:set("mana_cost_raw", pulse.mana_cost_raw)
         current:set("period_ticks", pulse.period_ticks)
+        current:set("target_policy", pulse.target_policy)
+        current:set("radius", values.radius)
+        current:set("chance", pulse.chance)
     else
         structural:set(player, "d2legacy.skill.aura_pulse", {
             source_id = values.source_id,
             mana_cost_raw = pulse.mana_cost_raw,
             period_ticks = pulse.period_ticks,
             next_tick = progression.next_periodic_tick(context.tick, pulse.period_ticks),
+            target_policy = pulse.target_policy,
+            radius = values.radius,
+            chance = pulse.chance,
         })
     end
     reconcile_pulse_effects(entities, player, values.source_id, pulse.effects, structural)
@@ -276,30 +295,53 @@ end
 local function desired_effects(entities, emitters, players)
     local result = {}
     for _, emitter in ipairs(emitters) do
-        for _, player_id in ipairs(party.living_members_in_same_level(emitter.player_id, entities)) do
-            local target = players[player_id]
-            if
-                target
-                and not ecs.get(target, "d2legacy.world.inactive")
-                and in_radius(emitter.entity, target, emitter.radius)
-            then
-                local key = target:id() .. ":" .. emitter.target_state_id
-                local candidate = {
-                    key = key,
-                    emitter = emitter.entity,
-                    target = target,
-                    source_id = emitter.source_id,
-                    skill_id = emitter.skill_id,
-                    skill_level = emitter.skill_level,
-                    state_id = emitter.target_state_id,
-                    stat = emitter.stat,
-                    operation = emitter.operation,
-                    value = emitter.value,
-                    stats = emitter.stats,
-                    refresh_delay = emitter.refresh_delay,
-                }
-                if candidate_wins(candidate, result[key]) then
-                    result[key] = candidate
+        if emitter.target_policy == "owner" then
+            local target = emitter.entity
+            local key = target:id() .. ":" .. emitter.target_state_id
+            result[key] = {
+                key = key,
+                emitter = emitter.entity,
+                target = target,
+                source_id = emitter.source_id,
+                skill_id = emitter.skill_id,
+                skill_level = emitter.skill_level,
+                state_id = emitter.target_state_id,
+                stat = emitter.stat,
+                operation = emitter.operation,
+                value = emitter.value,
+                stats = emitter.stats,
+                refresh_delay = emitter.refresh_delay,
+            }
+        else
+            assert(
+                emitter.target_policy == "aligned_players" or emitter.target_policy == "aligned_players_and_monsters",
+                "unsupported selected aura target policy " .. tostring(emitter.target_policy)
+            )
+            for _, player_id in ipairs(party.living_members_in_same_level(emitter.player_id, entities)) do
+                local target = players[player_id]
+                if
+                    target
+                    and not ecs.get(target, "d2legacy.world.inactive")
+                    and in_radius(emitter.entity, target, emitter.radius)
+                then
+                    local key = target:id() .. ":" .. emitter.target_state_id
+                    local candidate = {
+                        key = key,
+                        emitter = emitter.entity,
+                        target = target,
+                        source_id = emitter.source_id,
+                        skill_id = emitter.skill_id,
+                        skill_level = emitter.skill_level,
+                        state_id = emitter.target_state_id,
+                        stat = emitter.stat,
+                        operation = emitter.operation,
+                        value = emitter.value,
+                        stats = emitter.stats,
+                        refresh_delay = emitter.refresh_delay,
+                    }
+                    if candidate_wins(candidate, result[key]) then
+                        result[key] = candidate
+                    end
                 end
             end
         end
