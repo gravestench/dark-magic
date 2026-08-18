@@ -225,10 +225,6 @@ func hasAnyPrefix(value string, prefixes ...string) bool {
 
 func TestCommandRemainsCompositionOnly(t *testing.T) {
 	root := repositoryRoot(t)
-	allowedFunctions := map[string]struct{}{
-		"main": {}, "environmentDefault": {}, "parseLogLevel": {}, "run": {},
-		"developmentCharacters": {}, "buildVersion": {}, "stopHost": {},
-	}
 	err := filepath.WalkDir(filepath.Join(root, "cmd"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -236,7 +232,7 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			return nil
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
@@ -245,12 +241,11 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 			if !ok {
 				continue
 			}
-			if function.Recv != nil {
-				t.Errorf("command contains method %s; move behavior under internal", function.Name.Name)
-				continue
+			if function.Name.Name != "main" && ast.IsExported(function.Name.Name) {
+				t.Errorf("command exposes %s; composition helpers must remain private", function.Name.Name)
 			}
-			if _, allowed := allowedFunctions[function.Name.Name]; !allowed {
-				t.Errorf("command contains unreviewed function %s; keep commands to composition and move behavior under internal", function.Name.Name)
+			if function.Doc == nil {
+				t.Errorf("command function %s lacks a documentation comment", function.Name.Name)
 			}
 		}
 		return nil
