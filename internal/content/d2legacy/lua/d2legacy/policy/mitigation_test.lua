@@ -13,6 +13,8 @@ return test.suite({
                         physical_reduction_raw = 20,
                         fire_resist = 120,
                         max_fire_resist = 95,
+                        cold_resist = 120,
+                        max_cold_resist = 95,
                     },
                     get = function(self, name)
                         return self.values[name]
@@ -27,8 +29,8 @@ return test.suite({
                     [=[mitigation.apply(1000, "fire", defense) == 50]=]
                 )
                 test.assert(
-                    mitigation.apply(1000, "cold", defense) == 1000,
-                    [=[mitigation.apply(1000, "cold", defense) == 1000]=]
+                    mitigation.apply(1000, "cold", defense) == 50,
+                    [=[mitigation.apply(1000, "cold", defense) == 50]=]
                 )
                 test.assert(
                     mitigation.apply(1000, "fire", nil) == 1000,

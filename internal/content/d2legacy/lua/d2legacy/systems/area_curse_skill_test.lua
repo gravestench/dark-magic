@@ -68,9 +68,12 @@ local function monster(id, x, base_physical_resist)
         ["d2legacy.combat.defense"] = {
             base_physical_resist = base_physical_resist,
             base_fire_resist = 0,
+            base_cold_resist = 0,
             physical_resist = base_physical_resist,
             fire_resist = 0,
+            cold_resist = 0,
             max_fire_resist = 75,
+            max_cold_resist = 75,
             physical_reduction_raw = 0,
         },
         ["d2legacy.world.position"] = { x = x, y = 12 },

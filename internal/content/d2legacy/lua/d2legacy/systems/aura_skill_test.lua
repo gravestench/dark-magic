@@ -157,6 +157,37 @@ return test.suite({
                 perdelay = "50",
             },
             {
+                Id = "105",
+                skill = "Fixture Resist Cold",
+                skilldesc = "resist cold",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "resistcold",
+                auratargetstate = "resistcold",
+                aurastat1 = "coldresist",
+                aurastatcalc1 = "dm34",
+                aurastat2 = "maxcoldresist",
+                aurastatcalc2 = "skill('Fixture Resist Cold'.blvl)",
+                passivestate = "passive_resistcold",
+                passivestat1 = "maxcoldresist",
+                passivecalc1 = "skill('Fixture Resist Cold'.blvl)/2",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "35",
+                Param4 = "150",
+                perdelay = "50",
+            },
+            {
                 Id = "108",
                 skill = "Fixture Blessed Aim",
                 skilldesc = "blessed aim",
@@ -193,6 +224,7 @@ return test.suite({
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
             { skilldesc = "blessed aim", ListRow = "4", IconCel = "24" },
             { skilldesc = "resist fire", ListRow = "5", IconCel = "8" },
+            { skilldesc = "resist cold", ListRow = "6", IconCel = "18" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
@@ -201,6 +233,8 @@ return test.suite({
             { state = "penetrate", id = "67" },
             { state = "resistfire", id = "3", aura = "1", stat = "fireresist" },
             { state = "passive_resistfire", id = "181" },
+            { state = "resistcold", id = "4", aura = "1", stat = "coldresist" },
+            { state = "passive_resistcold", id = "182" },
         },
     },
     cases = {
@@ -672,6 +706,84 @@ return test.suite({
                 end
                 test.expect(aura_sources):equals(1)
                 test.expect(passive_sources):equals(1)
+            end),
+        }),
+        test.case("cold_resistance_reuses_multi_stat_aura_and_rational_passive", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "alice" then
+                        ecs.create({
+                            ["d2legacy.player.learned_skill"] = {
+                                owner = player,
+                                skill_id = 105,
+                                level = 3,
+                                list_row = 6,
+                                left_allowed = false,
+                                right_allowed = true,
+                            },
+                        })
+                    end
+                end
+            end),
+            test.step(2),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local passive
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    if ecs.get(entity, "d2legacy.player.learned_skill"):get("skill_id") == 105 then
+                        passive = ecs.get(entity, "d2legacy.stat.source")
+                    end
+                end
+                test.expect(passive:get("stat")):equals("max_cold_resist")
+                test.expect(passive:get("value")):equals(1)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("cold_resist")):equals(0)
+                    test.expect(defense:get("max_cold_resist")):equals(76)
+                end
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 105 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                test.expect(aura_source(effects[1], "cold_resist"):get("value")):equals(76)
+                test.expect(aura_source(effects[1], "max_cold_resist"):get("value")):equals(3)
+                local passive_count = 0
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    if ecs.get(entity, "d2legacy.player.learned_skill"):get("skill_id") == 105 then
+                        passive_count = passive_count + 1
+                    end
+                end
+                test.expect(passive_count):equals(0)
+                local mitigation = require("d2legacy.policy.mitigation")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("cold_resist")):equals(76)
+                    test.expect(defense:get("max_cold_resist")):equals(78)
+                    test.expect(mitigation.apply(1000, "cold", defense)):equals(240)
+                end
             end),
         }),
     },

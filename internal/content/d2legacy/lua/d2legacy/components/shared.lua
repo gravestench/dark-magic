@@ -288,9 +288,12 @@ function M.register()
     component("d2legacy.combat.defense", {
         { name = "base_physical_resist", type = "i64" },
         { name = "base_fire_resist", type = "i64" },
+        { name = "base_cold_resist", type = "i64" },
         { name = "physical_resist", type = "i64" },
         { name = "fire_resist", type = "i64" },
+        { name = "cold_resist", type = "i64" },
         { name = "max_fire_resist", type = "i64" },
+        { name = "max_cold_resist", type = "i64" },
         { name = "physical_reduction_raw", type = "i64" },
     })
     component("d2legacy.stat.source", {
