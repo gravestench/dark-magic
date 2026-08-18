@@ -1,5 +1,18 @@
 # Systems research changelog
 
+## Legacy patch-history baseline
+
+Added the complete original Diablo II and Lord of Destruction version line from
+retail 1.00 through legacy 1.14d, including the 1.04c PC hotfix, Macintosh
+variants, 1.10 beta series, 1.10 Realm content activation, and 1.13 public-test
+builds. The baseline separates executable patch, Classic/Expansion mode,
+session type, platform, content era, and character origin.
+
+Documented how the cumulative history constrains Expansion 1.14d feature
+presence and removal, why patch notes cannot prove exact formulas or runtime
+ordering, and how to combine them with mounted 1.14d data, D2MOO 1.10f,
+libd2, and owned-runtime probes.
+
 ## Realm chat command baseline
 
 Added a scoped command catalog for the realm lobby and in-game chat. It separates
