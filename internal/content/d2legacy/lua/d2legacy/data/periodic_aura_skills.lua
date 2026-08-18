@@ -1,8 +1,13 @@
--- Decode explicitly admitted right-selected party auras whose authored stat is
--- a periodic direct effect rather than a maintained modifier.
+-- Decode explicitly admitted right-selected party auras which own a periodic
+-- direct-effect schedule. Authored columns may also contribute maintained stat
+-- sources; Meditation deliberately exercises both paths on one definition.
 
 local records = require("engine.records/v1")
 local M = {}
+
+local maintained_stat_recipes = {
+    manarecoverybonus = { stat = "manarecoverybonus", operation = "add", progression = "ln34" },
+}
 
 local function required_nonnegative_integer(row, column, label)
     local value = tonumber(row[column])
@@ -40,6 +45,19 @@ local function banded_effect(row, label, source_skill_id, level_source)
 end
 
 local function decode_effect(row, stat, formula, skills_by_name, order, label)
+    local maintained = maintained_stat_recipes[stat]
+    if maintained then
+        assert(formula == maintained.progression, label .. " has unsupported maintained-stat formula")
+        return {
+            mode = "maintained",
+            stat = maintained.stat,
+            operation = maintained.operation,
+            progression = maintained.progression,
+            value_base = required_nonnegative_integer(row, "Param3", label),
+            value_per_level = required_nonnegative_integer(row, "Param4", label),
+            order = order,
+        }
+    end
     if stat == "item_poisonlengthresist" then
         assert(formula == "100-dm34", label .. " has unsupported duration-reduction formula")
         return {
@@ -83,14 +101,20 @@ local function decode(row, states_by_name, skills_by_name)
             and row.InTown == "1",
         label .. " has unsupported activation flags"
     )
-    assert(row.aurafilter == "73731", label .. " has unsupported target filter")
+    assert(row.aurafilter == "73731" or row.aurafilter == "73729", label .. " has unsupported target filter")
     assert(row.aurarangecalc == "ln12", label .. " has unsupported radius formula")
-    local effects = {}
+    local stats, effects = {}, {}
     for index_number = 1, 6 do
         local stat = row["aurastat" .. index_number] or ""
         local formula = row["aurastatcalc" .. index_number] or ""
         if stat ~= "" then
-            effects[#effects + 1] = decode_effect(row, stat, formula, skills_by_name, index_number, label)
+            local decoded = decode_effect(row, stat, formula, skills_by_name, index_number, label)
+            if decoded.mode == "maintained" then
+                decoded.mode = nil
+                stats[#stats + 1] = decoded
+            else
+                effects[#effects + 1] = decoded
+            end
         else
             assert(formula == "", label .. " has a formula without an aura stat")
         end
@@ -114,7 +138,8 @@ local function decode(row, states_by_name, skills_by_name)
         target_state_id = target_state.state,
         radius_base = required_nonnegative_integer(row, "Param1", label),
         radius_per_level = required_nonnegative_integer(row, "Param2", label),
-        stats = {},
+        target_policy = row.aurafilter == "73729" and "aligned_players" or "aligned_players_and_monsters",
+        stats = stats,
         pulse = {
             effects = effects,
             period_ticks = required_nonnegative_integer(row, "perdelay", label),

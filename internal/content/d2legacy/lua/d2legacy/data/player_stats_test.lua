@@ -15,6 +15,7 @@ return test.suite({
                 RunDrain = "20",
                 StaminaPerLevel = "4",
                 StaminaPerVitality = "4",
+                ManaRegen = "120",
             },
         },
     },
@@ -24,6 +25,7 @@ return test.suite({
                 local stats = require("d2legacy.data.player_stats")
                 test.expect(stats.base_attack_rating("Amazon", 20, 3)):equals(73)
                 test.expect(stats.base_defense(23, 40)):equals(45)
+                test.expect(stats.mana_regen_frames("Amazon")):equals(120)
             end),
         }),
     },

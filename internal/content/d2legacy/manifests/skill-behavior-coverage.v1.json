@@ -109,6 +109,11 @@
       "evidence_status": "owned-target-records-localized-movement-and-stamina-intent-and-official-level-vectors-partial"
     },
     {
+      "skill_id": 120,
+      "family": "aura.selected-party-periodic",
+      "evidence_status": "owned-target-records-localized-mana-recovery-and-prayer-link-with-recovered-regen-ordering-partial"
+    },
+    {
       "skill_id": 125,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-all-elemental-resistance-intent-and-official-level-vector-partial"

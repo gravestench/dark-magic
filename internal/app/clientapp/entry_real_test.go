@@ -374,8 +374,8 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	if !ok {
 		t.Fatal("Spell Lab has no authoritative learned skills")
 	}
-	if learned.Len() != 22 {
-		t.Fatalf("Spell Lab learned skills = %d, want 22 exact-ID behaviors", learned.Len())
+	if learned.Len() != 23 {
+		t.Fatalf("Spell Lab learned skills = %d, want 23 exact-ID behaviors", learned.Len())
 	}
 	learnedIDs := map[int64]bool{}
 	for _, entity := range learned.Entities() {
@@ -387,7 +387,7 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 			learnedIDs[id.(int64)] = level == int64(20)
 		}
 	}
-	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 72, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 125} {
+	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 72, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 125} {
 		if !learnedIDs[id] {
 			t.Fatalf("Spell Lab skill %d is missing or not level 20: %#v", id, learnedIDs)
 		}

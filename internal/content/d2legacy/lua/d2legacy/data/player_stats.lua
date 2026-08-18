@@ -1,4 +1,4 @@
--- Interpret class-dependent combat constants from CharStats.txt.
+-- Interpret class-dependent combat and resource constants from CharStats.txt.
 
 local records = require("engine.records/v1")
 local M = {}
@@ -20,6 +20,24 @@ end
 
 function M.base_defense(dexterity, armor_class)
     return math.floor((dexterity or 0) / 4) + (armor_class or 0)
+end
+
+function M.mana_regen_frames(class)
+    local authored = class_row(class).ManaRegen
+    if authored == nil or authored == "" then
+        -- Narrow record fixtures which do not exercise resources can omit the
+        -- column. Mounted target rows always author it.
+        return 0
+    end
+    local frames = math.floor(assert(tonumber(authored), "CharStats ManaRegen is invalid"))
+    -- The recovered runtime substitutes 7500 ticks when 25 * ManaRegen is
+    -- zero. Keeping the equivalent 300-frame record value here lets the
+    -- per-tick consumer retain one arithmetic path.
+    if frames == 0 then
+        return 300
+    end
+    assert(frames > 0, "CharStats ManaRegen must be nonnegative")
+    return frames
 end
 
 return M

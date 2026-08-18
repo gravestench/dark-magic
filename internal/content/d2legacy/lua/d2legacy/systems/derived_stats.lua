@@ -14,6 +14,7 @@ function M.register()
                 "d2legacy.player.combat_stats",
                 "d2legacy.combat.action_rate",
                 "d2legacy.player.movement_stats",
+                "d2legacy.player.resource_stats",
                 "d2legacy.stat.source",
             },
             none = { "d2legacy.world.inactive" },
@@ -23,6 +24,7 @@ function M.register()
             "d2legacy.player.combat_stats",
             "d2legacy.combat.action_rate",
             "d2legacy.player.movement_stats",
+            "d2legacy.player.resource_stats",
             "d2legacy.stat.source",
         },
         write = {
@@ -30,6 +32,7 @@ function M.register()
             "d2legacy.player.combat_stats",
             "d2legacy.combat.action_rate",
             "d2legacy.player.movement_stats",
+            "d2legacy.player.resource_stats",
         },
         update = function(_, entities)
             for _, target in ipairs(entities) do
@@ -37,7 +40,8 @@ function M.register()
                 local combat = ecs.get(target, "d2legacy.player.combat_stats")
                 local action_rate = ecs.get(target, "d2legacy.combat.action_rate")
                 local movement = ecs.get(target, "d2legacy.player.movement_stats")
-                if defense or combat or action_rate or movement then
+                local resources = ecs.get(target, "d2legacy.player.resource_stats")
+                if defense or combat or action_rate or movement or resources then
                     if combat then
                         local attack_rating =
                             stat_sources.resolve(entities, target, "attack_rating", combat:get("base_attack_rating"))
@@ -113,6 +117,13 @@ function M.register()
                             stat_sources.resolve(entities, target, "item_staminadrainpct", 0)
                         )
                         movement:set("armor_run_drain", stat_sources.resolve(entities, target, "armor_run_drain", 0))
+                    end
+                    if resources then
+                        resources:set(
+                            "manarecoverybonus",
+                            stat_sources.resolve(entities, target, "manarecoverybonus", 0)
+                        )
+                        resources:set("manarecovery", stat_sources.resolve(entities, target, "manarecovery", 0))
                     end
                 end
             end

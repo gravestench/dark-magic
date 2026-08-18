@@ -72,6 +72,7 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"meditationfront":      {"Filename": "Meditation", "Frames": "13", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"cleansingfront":       {"Filename": "Cleansing_front", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"cleansingback":        {"Filename": "Cleansing_back", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"aura_prayer_front":    {"Filename": "AuraPrayerFront", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
