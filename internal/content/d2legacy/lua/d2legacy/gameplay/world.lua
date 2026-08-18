@@ -121,6 +121,15 @@ function M.position(entity)
     return position:get("x"), position:get("y")
 end
 
+-- Presentation may edge-trigger one request and then repeat only after the
+-- authoritative action lifecycle becomes idle. These empty/data components
+-- are the ECS filter; presentation never predicts an action duration.
+function M.skill_action_active(entity)
+    return ecs.get(entity, "d2legacy.skill.cast_action") ~= nil
+        or ecs.get(entity, "d2legacy.combat.attack_approach") ~= nil
+        or ecs.get(entity, "d2legacy.combat.attack_animation") ~= nil
+end
+
 function M.refresh_camera_settings(entity)
     local follow = assert(ecs.get(entity, "d2legacy.world.camera_follow"))
     local settings = require("engine.settings/v1")
@@ -304,6 +313,7 @@ function M.semantic_cues(observed)
         "d2legacy.combat.event",
         "d2legacy.world.forced_motion_event",
         "d2legacy.state.event",
+        "d2legacy.skill.cast_cue",
     }) do
         local ok, matches = pcall(ecs.query, { all = { component } })
         if ok then
@@ -356,6 +366,23 @@ function M.semantic_cues(observed)
                 local position = optional_component(target, "d2legacy.world.position")
                 local location = optional_component(target, "d2legacy.world.location")
                 local facing = optional_component(target, "d2legacy.world.facing")
+                if position and location then
+                    values.x, values.y = position:get("x"), position:get("y")
+                    values.act, values.level_id = location:get("act"), location:get("level_id")
+                    values.direction = facing and facing:get("direction") or 0
+                end
+            end
+        end
+        local cast = optional_component(entity, "d2legacy.skill.cast_cue")
+        if cast then
+            kind, values = "cast", cast:snapshot()
+            local caster = values.caster
+            values.caster = nil
+            if caster and caster:exists() then
+                values.caster_entity_id = caster:id()
+                local position = optional_component(caster, "d2legacy.world.position")
+                local location = optional_component(caster, "d2legacy.world.location")
+                local facing = optional_component(caster, "d2legacy.world.facing")
                 if position and location then
                     values.x, values.y = position:get("x"), position:get("y")
                     values.act, values.level_id = location:get("act"), location:get("level_id")

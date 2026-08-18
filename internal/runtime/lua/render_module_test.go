@@ -16,6 +16,13 @@ import (
 	dc6 "github.com/gravestench/dc6/pkg"
 )
 
+func TestDCCGroundOriginPreservesAuthoredCanvasAnchor(t *testing.T) {
+	x, y := dccGroundOrigin(image.Rect(-12, -48, 20, 16))
+	if x != 0.375 || y != 0.75 {
+		t.Fatalf("ground origin = (%v, %v), want (0.375, 0.75)", x, y)
+	}
+}
+
 func TestNormalizedDC6FramesPreserveSharedAnchor(t *testing.T) {
 	asset := &dc6.DC6{Directions: []*dc6.Direction{{Frames: []*dc6.Frame{
 		{Width: 2, Height: 1, OffsetX: 5, OffsetY: 10, IndexData: []byte{1, 1}},

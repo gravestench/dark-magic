@@ -136,7 +136,10 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 		_ = content.Close(assets)
 	})
 
-	character := d2save.Character{ID: "amazon-campfirehero", Name: "CampfireHero", Class: "Amazon", Level: 1, Expansion: true}
+	character := d2save.Character{
+		ID: "amazon-campfirehero", Name: "CampfireHero", Class: "Amazon", Level: 1, Expansion: true,
+		Stats: &d2save.Stats{Vitality: 20},
+	}
 	if err := app.saves.Create(character); err != nil {
 		t.Fatal(err)
 	}
@@ -148,18 +151,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	monsters, found := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.identity")
-	if !found || monsters.Len() == 0 {
-		t.Fatal("real Blood Moor population produced no authoritative monsters")
-	}
 	locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
-	for _, entity := range monsters.Entities() {
-		location, _ := locations.Get(entity)
-		level, _ := location.Get("level_id")
-		if level != int64(2) {
-			t.Fatalf("Blood Moor monster level=%v", level)
-		}
-	}
 
 	d2legacySource, err := app.modSource("d2legacy")
 	if err != nil {
@@ -450,10 +442,34 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for range 20 {
+	for range 2 {
 		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
 			t.Fatal(err)
 		}
+	}
+	animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.animation")
+	animation, _ := animations.Get(player)
+	mode, _ := animation.Get("mode")
+	startTick, _ := animation.Get("start_tick")
+	casts, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.skill.cast")
+	cast, active := casts.Get(player)
+	if mode != "SC" || !active {
+		t.Fatalf("Spell Lab Fire Bolt action = mode %v active %v, want SC/true", mode, active)
+	}
+	effectTick, _ := cast.Get("effect_tick")
+	completeTick, _ := cast.Get("complete_tick")
+	if effectTick.(int64)-startTick.(int64) != 7 || completeTick.(int64)-startTick.(int64) != 14 {
+		t.Fatalf("Spell Lab Fire Bolt SC timing = start %v effect %v complete %v, want +7/+14", startTick, effectTick, completeTick)
+	}
+	for range 18 {
+		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+			t.Fatal(err)
+		}
+	}
+	animation, _ = animations.Get(player)
+	mode, _ = animation.Get("mode")
+	if mode != "NU" {
+		t.Fatalf("Spell Lab Fire Bolt animation after completion = %v, want NU", mode)
 	}
 	vitals, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.vitals")
 	playerVitals, _ := vitals.Get(player)

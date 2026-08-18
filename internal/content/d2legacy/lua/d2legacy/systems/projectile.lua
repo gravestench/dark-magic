@@ -171,6 +171,7 @@ local function emit_impact(context, projectile, target, location, x, y, structur
             logical_direction = 0,
             frames_per_second = projectile:get("impact_frames_per_second"),
             loop = projectile:get("impact_loop"),
+            transparency_mode = projectile:get("impact_transparency_mode"),
             offset_x = 0,
             offset_y = 0,
             offset_z = 0,
