@@ -167,6 +167,56 @@
       "skill_id": 125,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-all-elemental-resistance-intent-and-official-level-vector-partial"
+    },
+    {
+      "skill_id": 251,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-synergy-partial"
+    },
+    {
+      "skill_id": 256,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-count-synergy-partial"
+    },
+    {
+      "skill_id": 257,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-weapon-patrol-intent-partial"
+    },
+    {
+      "skill_id": 261,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-bolt-shot-synergies-partial"
+    },
+    {
+      "skill_id": 262,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-wave-shot-intent-partial"
+    },
+    {
+      "skill_id": 266,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-per-blade-mana-intent-partial"
+    },
+    {
+      "skill_id": 271,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-shot-synergies-partial"
+    },
+    {
+      "skill_id": 272,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-range-damage-synergies-partial"
+    },
+    {
+      "skill_id": 276,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-corpse-life-damage-intent-partial"
+    },
+    {
+      "skill_id": 277,
+      "family": "trap.assassin-family",
+      "evidence_status": "owned-target-records-and-localized-periodic-weapon-state-intent-partial"
     }
   ]
 }

@@ -71,7 +71,7 @@ function M.register()
         phase = "intent",
         query = {
             any = { "d2legacy.monster.ai", "d2legacy.world.selectable", "d2legacy.state.instance", "d2legacy.stat.source" },
-            none = { "d2legacy.world.inactive" },
+            none = { "d2legacy.world.inactive", "d2legacy.world.stationary" },
         },
         read = {
             "d2legacy.world.selectable",

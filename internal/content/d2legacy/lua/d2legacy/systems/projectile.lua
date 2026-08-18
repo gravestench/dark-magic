@@ -168,8 +168,8 @@ local function impact_targets(projectile, location, targets, x, y)
     return result
 end
 
-local function emit_impact(context, projectile, target, location, x, y, structural)
-    local effect_id = projectile:get("cast_id") .. ":impact:" .. target.id .. ":tick:" .. context.tick
+local function emit_impact(context, projectile, impact_id, location, x, y, structural)
+    local effect_id = projectile:get("cast_id") .. ":impact:" .. impact_id .. ":tick:" .. context.tick
     local components = {
         ["d2legacy.world.position"] = { x = x, y = y },
         ["d2legacy.world.location"] = location:snapshot(),
@@ -197,6 +197,13 @@ local function emit_impact(context, projectile, target, location, x, y, structur
         components["d2legacy.world.room_resident"] = resident
     end
     structural:create(components)
+end
+
+local function apply_area_impact(context, projectile, location, targets, x, y, structural)
+    for _, area_target in ipairs(impact_targets(projectile, location, targets, x, y)) do
+        local damage_result = apply_hit(context, projectile, area_target, structural)
+        apply_on_hit_state(projectile, area_target, damage_result, structural)
+    end
 end
 
 local function age_effects(effects, structural)
@@ -241,16 +248,13 @@ local function resolve_contacts(context, entities, structural)
                 local impact_x = previous_x + (position:get("x") - previous_x) * along
                 local impact_y = previous_y + (position:get("y") - previous_y) * along
                 if projectile:get("impact_radius") > 0 then
-                    for _, area_target in ipairs(impact_targets(projectile, location, targets, impact_x, impact_y)) do
-                        local damage_result = apply_hit(context, projectile, area_target, structural)
-                        apply_on_hit_state(projectile, area_target, damage_result, structural)
-                    end
+                    apply_area_impact(context, projectile, location, targets, impact_x, impact_y, structural)
                 else
                     local damage_result = apply_hit(context, projectile, target, structural)
                     apply_on_hit_state(projectile, target, damage_result, structural)
                 end
                 if projectile:get("impact_missile_id") ~= "" then
-                    emit_impact(context, projectile, target, location, impact_x, impact_y, structural)
+                    emit_impact(context, projectile, target.id, location, impact_x, impact_y, structural)
                 end
                 local delay = projectile:get("next_hit_delay")
                 if delay > 0 then
@@ -268,6 +272,13 @@ local function resolve_contacts(context, entities, structural)
                     structural:destroy(entity)
                 end
             elseif projectile:get("remaining_ticks") <= 0 then
+                if projectile:get("impact_on_expiry") then
+                    local impact_x, impact_y = position:get("x"), position:get("y")
+                    apply_area_impact(context, projectile, location, targets, impact_x, impact_y, structural)
+                    if projectile:get("impact_missile_id") ~= "" then
+                        emit_impact(context, projectile, "ground", location, impact_x, impact_y, structural)
+                    end
+                end
                 structural:destroy(entity)
             end
         end
