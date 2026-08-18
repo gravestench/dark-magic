@@ -295,6 +295,19 @@ func installSemanticEvent(world *akara.World, event playeradapter.SemanticEvent)
 			"kind": cue.Kind, "tick": int64(event.Tick), "target": entity, "state_id": cue.StateID,
 			"source_id": cue.SourceID, "expires_tick": int64(cue.ExpiresTick), "reason": cue.Reason,
 		})
+	case "monster_death":
+		store, found := akara.GetDynamicStore(world, "d2legacy.monster.death_event")
+		if !found || event.MonsterDeath == nil {
+			return fail(fmt.Errorf("remote presentation: monster death component is unavailable"))
+		}
+		cue := event.MonsterDeath
+		_, err = store.Set(entity, map[string]any{
+			"kind": cue.Kind, "tick": int64(event.Tick), "monster_id": cue.MonsterID,
+			"killer_id": "", "credited_id": "", "xp": int64(0), "loot_seed": "",
+			"treasure_class": "", "drops": "", "game_player_count": int64(0),
+			"effective_player_count": int64(0), "nearby_party_member_count": int64(0),
+			"monster_player_count": int64(0), "no_drop_player_count": int64(0),
+		})
 	default:
 		return fail(fmt.Errorf("remote presentation: unsupported semantic event %q", event.Type))
 	}
@@ -340,6 +353,13 @@ func movementBound(value float64) float64 {
 func movementRadius(value float64) float64 {
 	if value <= 0 {
 		return 1
+	}
+	return value
+}
+
+func monsterWeaponClass(value string) string {
+	if value == "" {
+		return "HTH"
 	}
 	return value
 }
@@ -490,23 +510,40 @@ func installWorldMirror(world *akara.World, entity akara.Entity, value playerada
 	}
 	values := map[string]map[string]any{
 		"d2legacy.monster.identity": {
-			"spawn_id": value.ID, "definition_id": value.Label, "base_id": value.Label,
+			"spawn_id": value.SpawnID, "definition_id": value.DefinitionID, "base_id": value.DefinitionID,
 			"graphics_id": value.Token, "seed": "", "treasure_class": "",
 		},
 		"d2legacy.monster.appearance": {
-			"token": value.Token, "mode": value.Mode, "weapon_class": "HTH",
-			"name_key": value.Label, "components": "", "death_sound": "",
+			"token": value.Token, "mode": value.Mode, "weapon_class": monsterWeaponClass(value.WeaponClass),
+			"name_key": value.Label, "components": value.Components, "death_sound": value.DeathSound,
+			"overlay_height": value.OverlayHeight,
 		},
 		"d2legacy.monster.stats": {
 			"level": int64(1), "health": pointed(value.Health), "max_health": pointed(value.MaxHealth),
 			"defense": int64(0), "attack_rating": int64(0), "physical_min": int64(0),
 			"physical_max": int64(0), "experience": int64(0),
 		},
-		"d2legacy.world.velocity":   {"x": float64(0), "y": float64(0)},
-		"d2legacy.world.facing":     {"direction": value.Direction, "directions": int64(16)},
-		"d2legacy.world.location":   {"act": worldLocation(value.Act, location.Act), "level_id": worldLocation(value.LevelID, location.LevelID)},
-		"d2legacy.world.collider":   {"radius": value.Radius},
-		"d2legacy.world.selectable": {"id": value.ID, "kind": value.Kind, "label": value.Label, "owner": value.Owner, "radius": value.Radius, "priority": value.Priority},
+		"d2legacy.world.velocity": {"x": float64(0), "y": float64(0)},
+		"d2legacy.world.facing":   {"direction": value.Direction, "directions": int64(16)},
+		"d2legacy.world.location": {"act": worldLocation(value.Act, location.Act), "level_id": worldLocation(value.LevelID, location.LevelID)},
+	}
+	if value.Kind != "corpse" {
+		values["d2legacy.world.collider"] = map[string]any{"radius": value.Radius}
+		values["d2legacy.world.selectable"] = map[string]any{
+			"id": value.ID, "kind": value.Kind, "label": value.Label, "owner": value.Owner,
+			"radius": value.Radius, "priority": value.Priority,
+		}
+	} else {
+		// A corpse keeps the living monster's presentation entity. Removing the
+		// selectable and collider components changes the ECS queries it can enter,
+		// so the mirror remains renderable without becoming a stale interaction or
+		// locomotion obstacle in the disposable client simulation.
+		if selectable, found := akara.GetDynamicStore(world, "d2legacy.world.selectable"); found {
+			selectable.Remove(entity)
+		}
+		if colliders, found := akara.GetDynamicStore(world, "d2legacy.world.collider"); found {
+			colliders.Remove(entity)
+		}
 	}
 	if err := moveMirrorToward(world, entity, value.Position, correctionAlpha(snap)); err != nil {
 		return err

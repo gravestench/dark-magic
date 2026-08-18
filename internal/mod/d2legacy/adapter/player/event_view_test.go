@@ -14,7 +14,7 @@ func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if view.FromTick != 37 || view.Tick != 100 || view.Truncated || len(view.Events) != 2 {
+	if view.FromTick != 37 || view.Tick != 100 || view.Truncated || len(view.Events) != 3 {
 		t.Fatalf("event window = %+v", view)
 	}
 	cast := view.Events[0]
@@ -25,6 +25,11 @@ func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
 	state := view.Events[1]
 	if state.ID != 21 || state.Type != "state" || state.OverlayHeight != 4 || state.State == nil || state.State.StateID != "frozenarmor" {
 		t.Fatalf("state event = %+v", state)
+	}
+	death := view.Events[2]
+	if death.ID != 23 || death.Type != "monster_death" || death.Position != (HUDPosition{X: 13, Y: 10}) ||
+		death.MonsterDeath == nil || death.MonsterDeath.Kind != "monster_death_presented" || death.MonsterDeath.MonsterID != "fallen-a" {
+		t.Fatalf("monster death event = %+v", death)
 	}
 }
 
@@ -80,8 +85,8 @@ func TestProjectEventViewCapsTheNewestSemanticEvents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !view.Truncated || len(view.Events) != MaxEventViewEvents || view.Events[0].ID != 145 ||
-		view.Events[len(view.Events)-2].ID != 399 || view.Events[len(view.Events)-1].Type != "state" {
+	if !view.Truncated || len(view.Events) != MaxEventViewEvents || view.Events[0].ID != 146 ||
+		view.Events[len(view.Events)-3].ID != 399 || view.Events[len(view.Events)-2].Type != "state" || view.Events[len(view.Events)-1].Type != "monster_death" {
 		t.Fatalf("bounded semantic tail first=%d penultimate=%d last=%+v count=%d truncated=%v", view.Events[0].ID, view.Events[len(view.Events)-2].ID, view.Events[len(view.Events)-1], len(view.Events), view.Truncated)
 	}
 }
@@ -102,7 +107,7 @@ func semanticCheckpoint() simulation.Checkpoint {
 		return result
 	}
 	player, caster, target := uint64(1), uint64(2), uint64(3)
-	return simulation.Checkpoint{Tick: 100, Snapshot: &gameecs.Snapshot{Version: gameecs.SnapshotVersion, Tick: 100, Entities: []uint64{player, caster, target, 20, 21, 22}, Components: []gameecs.ComponentSnapshot{
+	return simulation.Checkpoint{Tick: 100, Snapshot: &gameecs.Snapshot{Version: gameecs.SnapshotVersion, Tick: 100, Entities: []uint64{player, caster, target, 20, 21, 22, 23}, Components: []gameecs.ComponentSnapshot{
 		component("d2legacy.player.identity", []string{"player"}, gameecs.InstanceSnapshot{Entity: player, Values: []gameecs.ValueSnapshot{stringValue("alice")}}),
 		component("d2legacy.world.position", []string{"x", "y"},
 			gameecs.InstanceSnapshot{Entity: player, Values: []gameecs.ValueSnapshot{floatValue(10), floatValue(10)}},
@@ -114,10 +119,13 @@ func semanticCheckpoint() simulation.Checkpoint {
 			gameecs.InstanceSnapshot{Entity: target, Values: []gameecs.ValueSnapshot{intValue(1), intValue(2)}}),
 		component("d2legacy.world.facing", []string{"direction"}, gameecs.InstanceSnapshot{Entity: caster, Values: []gameecs.ValueSnapshot{intValue(3)}}),
 		component("d2legacy.monster.appearance", []string{"overlay_height"}, gameecs.InstanceSnapshot{Entity: target, Values: []gameecs.ValueSnapshot{intValue(4)}}),
+		component("d2legacy.monster.identity", []string{"spawn_id"}, gameecs.InstanceSnapshot{Entity: target, Values: []gameecs.ValueSnapshot{stringValue("fallen-a")}}),
 		component("d2legacy.skill.cast_cue", []string{"kind", "tick", "effect_tick", "caster", "player", "skill_id", "target_x", "target_y", "target_id"},
 			gameecs.InstanceSnapshot{Entity: 20, Values: []gameecs.ValueSnapshot{stringValue("cast_effect"), intValue(98), intValue(98), entityValue(caster), stringValue("alice"), intValue(47), floatValue(20), floatValue(21), stringValue("")}},
 			gameecs.InstanceSnapshot{Entity: 22, Values: []gameecs.ValueSnapshot{stringValue("cast_started"), intValue(2), intValue(5), entityValue(caster), stringValue("alice"), intValue(47), floatValue(20), floatValue(21), stringValue("")}}),
 		component("d2legacy.state.event", []string{"kind", "tick", "target", "state_id", "source_id", "expires_tick", "reason"},
 			gameecs.InstanceSnapshot{Entity: 21, Values: []gameecs.ValueSnapshot{stringValue("applied"), intValue(99), entityValue(target), stringValue("frozenarmor"), stringValue("skill:40"), intValue(200), stringValue("")}}),
+		component("d2legacy.monster.death_event", []string{"kind", "tick", "monster_id"},
+			gameecs.InstanceSnapshot{Entity: 23, Values: []gameecs.ValueSnapshot{stringValue("monster_death_presented"), intValue(100), stringValue("fallen-a")}}),
 	}}}
 }
