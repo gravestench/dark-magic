@@ -11,16 +11,17 @@ local mitigation = require("d2legacy.policy.mitigation")
 local M = {}
 
 function M.roll(minimum_raw, maximum_raw)
-    assert(maximum_raw >= minimum_raw, "invalid missile damage range")
-    return minimum_raw + random.integer("d2legacy.combat.missile.damage", maximum_raw - minimum_raw + 1)
+    assert(maximum_raw >= minimum_raw, "invalid direct damage range")
+    return minimum_raw + random.integer("d2legacy.combat.damage.roll", maximum_raw - minimum_raw + 1)
 end
 
 function M.resolve(target, rolled_bundle, ecs)
     local rolled = bundle_policy.normalize(rolled_bundle)
     local mitigated = {}
     local defense = ecs.get(target, "d2legacy.combat.defense")
+    local monster = ecs.get(target, "d2legacy.monster.stats")
     for _, channel in ipairs(bundle_policy.channels) do
-        mitigated[channel] = mitigation.apply(rolled[channel], channel, defense)
+        mitigated[channel] = mitigation.apply(rolled[channel], channel, defense, monster ~= nil)
     end
     -- Percent fire absorption is a post-resistance transaction: the absorbed
     -- portion is removed from incoming damage and restored as life before the
@@ -36,7 +37,6 @@ function M.resolve(target, rolled_bundle, ecs)
     -- this immediate-health total until its rate/duration transaction exists.
     local rolled_total = bundle_policy.immediate_total(rolled)
     local mitigated_total = bundle_policy.immediate_total(mitigated)
-    local monster = ecs.get(target, "d2legacy.monster.stats")
     if monster then
         local before = monster:get("health")
         local healed = math.min(monster:get("max_health"), before + absorbed_fire)

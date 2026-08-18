@@ -21,24 +21,6 @@ return test.suite({
         },
         ["data/global/excel/skills.txt"] = {
             {
-                Id = "36",
-                skill = "Fire Bolt",
-                srvmissile = "firebolt",
-                skilldesc = "firebolt",
-                leftskill = "1",
-                general = "0",
-                passive = "0",
-                etype = "fire",
-                interrupt = "1",
-                srvstfunc = "",
-                srvdofunc = "",
-                mana = "5",
-                manashift = "7",
-                emin = "3",
-                emax = "6",
-                HitShift = "8",
-            },
-            {
                 Id = "40",
                 skill = "Frozen Armor",
                 skilldesc = "frozenarmor",
@@ -83,7 +65,6 @@ return test.suite({
             },
         },
         ["data/global/excel/skilldesc.txt"] = {
-            { skilldesc = "firebolt", ListRow = "0", IconCel = "0" },
             { skilldesc = "frozenarmor", ListRow = "1", IconCel = "1" },
             { skilldesc = "shiverarmor", ListRow = "2", IconCel = "2" },
             { skilldesc = "chillingarmor", ListRow = "3", IconCel = "3" },
@@ -91,7 +72,9 @@ return test.suite({
         ["data/global/excel/states.txt"] = {
             { state = "frozenarmor", id = "10", group = "1" },
             { state = "freeze", id = "1", group = "0" },
+            { state = "cold", id = "11", group = "0" },
         },
+        ["data/global/excel/Missiles.txt"] = { { Missile = "unused" } },
     },
     cases = {
         test.case("targetless_non_damage_skill_applies_self_state", {
@@ -139,7 +122,7 @@ return test.suite({
                 test.assert(
                     #events == 1
                         and ecs.get(events[1], "d2legacy.skill.cast_event"):get("behavior")
-                            == "state.self-timed-stat"
+                            == "state.self-timed-reactive"
                 )
             end),
             test.submit({
@@ -168,7 +151,7 @@ return test.suite({
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local monster = ecs.create({
-                    ["d2legacy.monster.stats"] = {},
+                    ["d2legacy.monster.stats"] = { health = 2560, max_health = 2560 },
                     ["d2legacy.monster.ai"] = {
                         behavior = "fixture",
                         state = "attack",
@@ -229,7 +212,10 @@ return test.suite({
                 test.expect(ecs.get(monster, "d2legacy.monster.ai"):get("state")):equals("disabled")
                 local events = ecs.query({ all = { "d2legacy.combat.melee_event" } })
                 test.assert(#events == 1, [=[#events == 1]=])
-                test.assert(ecs.get(events[1], "d2legacy.combat.melee_event"):get("defender_effects_processed"))
+                test.assert(
+                    ecs.get(events[1], "d2legacy.state.reaction_observed") ~= nil,
+                    [=[the state reaction has an independent observation marker]=]
+                )
                 test.assert(
                     ecs.get(events[1], "d2legacy.combat.death_observed") == nil,
                     [=[melee-only reactions are not inferred as generic damage results]=]

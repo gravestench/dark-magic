@@ -343,6 +343,7 @@ function M.semantic_cues(observed)
         "d2legacy.world.forced_motion_event",
         "d2legacy.state.event",
         "d2legacy.skill.cast_cue",
+        "d2legacy.presentation.effect_cue",
     }) do
         local ok, matches = pcall(ecs.query, { all = { component } })
         if ok then
@@ -388,6 +389,24 @@ function M.semantic_cues(observed)
         local state = optional_component(entity, "d2legacy.state.event")
         if state then
             kind, values = "state", state:snapshot()
+            local target = values.target
+            values.target = nil
+            if target and target:exists() then
+                values.target_entity_id = target:id()
+                local position = optional_component(target, "d2legacy.world.position")
+                local location = optional_component(target, "d2legacy.world.location")
+                local facing = optional_component(target, "d2legacy.world.facing")
+                if position and location then
+                    values.x, values.y = position:get("x"), position:get("y")
+                    values.act, values.level_id = location:get("act"), location:get("level_id")
+                    values.direction = facing and facing:get("direction") or 0
+                    values.overlay_height = overlay_height(target)
+                end
+            end
+        end
+        local effect = optional_component(entity, "d2legacy.presentation.effect_cue")
+        if effect then
+            kind, values = "effect", effect:snapshot()
             local target = values.target
             values.target = nil
             if target and target:exists() then

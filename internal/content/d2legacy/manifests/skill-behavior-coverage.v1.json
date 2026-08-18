@@ -16,7 +16,17 @@
     {
       "skill_id": 40,
       "family": "state.self-timed",
-      "evidence_status": "owned-target-records-and-official-pvm-effect-partial"
+      "evidence_status": "owned-target-records-localized-synergy-text-and-official-reaction-vectors-partial"
+    },
+    {
+      "skill_id": 50,
+      "family": "state.self-timed",
+      "evidence_status": "owned-target-records-localized-synergy-text-and-official-reaction-vectors-partial"
+    },
+    {
+      "skill_id": 60,
+      "family": "state.self-timed",
+      "evidence_status": "owned-target-records-localized-synergy-text-and-official-reaction-vectors-partial"
     },
     {
       "skill_id": 45,

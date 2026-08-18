@@ -139,8 +139,7 @@ function M.start()
     end
     M.corpse_summon_skills =
         corpse_summon_skill_data.load(M.skill_behavior_coverage.by_family["summon.targeted-corpse"] or {})
-    M.golem_summon_skills =
-        golem_summon_skill_data.load(M.skill_behavior_coverage.by_family["summon.golem"] or {})
+    M.golem_summon_skills = golem_summon_skill_data.load(M.skill_behavior_coverage.by_family["summon.golem"] or {})
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
         M.cast_skills[skill_id] = definition
@@ -222,7 +221,7 @@ function M.start()
     enter_player.register()
     leave_player.register()
     world_transition.register()
-    reactive_state.register()
+    reactive_state.register(M.state_skills)
     timed_state.register()
     equipment.register()
     derived_stats.register()

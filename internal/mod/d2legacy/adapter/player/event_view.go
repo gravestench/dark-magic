@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	EventViewVersion      uint32 = 3
+	EventViewVersion      uint32 = 4
 	EventViewHistoryTicks        = 64
 	MaxEventViewEvents           = 256
 	maxEventKindBytes            = 32
@@ -47,6 +47,7 @@ type SemanticEvent struct {
 	OverlayHeight int64                    `json:"overlay_height"`
 	Cast          *SemanticCastCue         `json:"cast,omitempty"`
 	State         *SemanticStateCue        `json:"state,omitempty"`
+	Effect        *SemanticEffectCue       `json:"effect,omitempty"`
 	MonsterDeath  *SemanticMonsterDeathCue `json:"monster_death,omitempty"`
 }
 
@@ -65,6 +66,12 @@ type SemanticStateCue struct {
 	SourceID    string `json:"source_id,omitempty"`
 	ExpiresTick uint64 `json:"expires_tick"`
 	Reason      string `json:"reason,omitempty"`
+}
+
+type SemanticEffectCue struct {
+	Kind      string `json:"kind"`
+	OverlayID string `json:"overlay_id,omitempty"`
+	Sound     string `json:"sound,omitempty"`
 }
 
 // SemanticMonsterDeathCue is the presentation-safe subset of the durable
@@ -190,6 +197,11 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 					Kind: stringField(fields, "kind"), StateID: stringField(fields, "state_id"), SourceID: stringField(fields, "source_id"),
 					ExpiresTick: expiresTick, Reason: stringField(fields, "reason"),
 				}
+			case "effect":
+				event.Effect = &SemanticEffectCue{
+					Kind: stringField(fields, "kind"), OverlayID: stringField(fields, "overlay_id"),
+					Sound: stringField(fields, "sound"),
+				}
 			}
 			retain(event)
 		}
@@ -200,6 +212,9 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 	}
 	if err := appendEvent("d2legacy.state.event", "state", "target"); err != nil {
 		return EventView{}, fmt.Errorf("%w: state cue", err)
+	}
+	if err := appendEvent("d2legacy.presentation.effect_cue", "effect", "target"); err != nil {
+		return EventView{}, fmt.Errorf("%w: presentation effect cue", err)
 	}
 	monsterBySpawnID := make(map[string]uint64, len(monsterIdentities.Instances))
 	for _, instance := range monsterIdentities.Instances {
@@ -324,15 +339,19 @@ func validateEventView(view EventView, tick uint64) error {
 		previous = event
 		switch event.Type {
 		case "cast":
-			if event.Cast == nil || event.State != nil || event.MonsterDeath != nil || !validCastCue(*event.Cast) {
+			if event.Cast == nil || event.State != nil || event.Effect != nil || event.MonsterDeath != nil || !validCastCue(*event.Cast) {
 				return ErrClientView
 			}
 		case "state":
-			if event.State == nil || event.Cast != nil || event.MonsterDeath != nil || !validStateCue(*event.State) {
+			if event.State == nil || event.Cast != nil || event.Effect != nil || event.MonsterDeath != nil || !validStateCue(*event.State) {
+				return ErrClientView
+			}
+		case "effect":
+			if event.Effect == nil || event.Cast != nil || event.State != nil || event.MonsterDeath != nil || !validEffectCue(*event.Effect) {
 				return ErrClientView
 			}
 		case "monster_death":
-			if event.MonsterDeath == nil || event.Cast != nil || event.State != nil || !validMonsterDeathCue(*event.MonsterDeath) {
+			if event.MonsterDeath == nil || event.Cast != nil || event.State != nil || event.Effect != nil || !validMonsterDeathCue(*event.MonsterDeath) {
 				return ErrClientView
 			}
 		default:
@@ -368,6 +387,11 @@ func eventViewFromTick(tick uint64) uint64 {
 func validStateCue(cue SemanticStateCue) bool {
 	return boundedRequired(cue.Kind, maxEventKindBytes) && boundedRequired(cue.StateID, maxEventSourceBytes) &&
 		bounded(cue.SourceID, maxEventSourceBytes) && bounded(cue.Reason, maxEventKindBytes) && cue.ExpiresTick <= math.MaxInt64
+}
+
+func validEffectCue(cue SemanticEffectCue) bool {
+	return boundedRequired(cue.Kind, maxEventKindBytes) && bounded(cue.OverlayID, maxEventSourceBytes) &&
+		bounded(cue.Sound, maxEventSourceBytes) && (cue.OverlayID != "" || cue.Sound != "")
 }
 
 func validMonsterDeathCue(cue SemanticMonsterDeathCue) bool {

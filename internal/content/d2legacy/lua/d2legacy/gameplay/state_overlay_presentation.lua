@@ -92,6 +92,8 @@ function M.from_rows(states, overlay_rows, state_id)
         active = active,
         applied = recipe(overlays, state.castoverlay, "front", false),
         removed = recipe(overlays, state.removerlay, "front", false),
+        applied_sound = state.onsound or "",
+        removed_sound = state.offsound or "",
     }
 end
 

@@ -385,6 +385,16 @@ func installSemanticEvent(world *akara.World, event playeradapter.SemanticEvent)
 			"kind": cue.Kind, "tick": int64(event.Tick), "target": entity, "state_id": cue.StateID,
 			"source_id": cue.SourceID, "expires_tick": int64(cue.ExpiresTick), "reason": cue.Reason,
 		})
+	case "effect":
+		store, found := akara.GetDynamicStore(world, "d2legacy.presentation.effect_cue")
+		if !found || event.Effect == nil {
+			return fail(fmt.Errorf("remote presentation: effect cue component is unavailable"))
+		}
+		cue := event.Effect
+		_, err = store.Set(entity, map[string]any{
+			"kind": cue.Kind, "tick": int64(event.Tick), "target": entity,
+			"overlay_id": cue.OverlayID, "sound": cue.Sound,
+		})
 	case "monster_death":
 		store, found := akara.GetDynamicStore(world, "d2legacy.monster.death_event")
 		if !found || event.MonsterDeath == nil {

@@ -11,7 +11,7 @@ local function percent(value, resistance)
     return math.floor(value * (100 - resistance) / 100)
 end
 
-function M.apply(raw, channel, defense)
+function M.apply(raw, channel, defense, monster_target)
     assert(raw >= 0, "damage must be non-negative")
     if not defense then
         return raw
@@ -22,6 +22,9 @@ function M.apply(raw, channel, defense)
     end
     local element = elemental_resistance[channel]
     if element then
+        if monster_target and defense:get(element.resistance) >= 100 then
+            return 0
+        end
         local maximum = math.max(0, math.min(95, defense:get(element.maximum)))
         local resistance = math.max(-100, math.min(maximum, defense:get(element.resistance)))
         return math.max(0, percent(raw, resistance))

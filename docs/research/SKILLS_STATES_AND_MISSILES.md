@@ -138,8 +138,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 31
-explicitly admitted configurations, and 326 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 33
+explicitly admitted configurations, and 324 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -160,10 +160,12 @@ relationships and labels, while Skills.txt parameters and owned runtime vectors
 decide exact values, integer rounding, and event order.
 
 For the current fixtures, the joined report confirms Fire Bolt receives hard-
-level fire-damage bonuses from Fire Ball and Meteor. It separately confirms
-Frozen Armor receives hard-level modifiers from Shiver Armor and Chilling Armor
-for both seconds-per-level duration and freeze-length-per-level, matching the
-two owned Skills.txt expressions already decoded by the generic state family.
+level fire-damage bonuses from Fire Ball and Meteor. It separately confirms all
+three cold armors name the other two family members as bonus sources. Frozen
+Armor uses those hard levels for duration and freeze length; Shiver Armor and
+Chilling Armor use them for duration and cold damage. The localized `Sksyn`
+heading retains its `%s` replacement token, while Skills formulas remain the
+arithmetic authority.
 Ice Blast resolves its Ice Bolt/Blizzard/Frozen Orb cold-damage references,
 Glacial Spike freeze-length reference, and localized direct-freeze claim; the
 owned parameters remain the arithmetic authority.
@@ -331,16 +333,21 @@ and again at impact. Exact 1.14d distance arithmetic, dynamic-door collision,
 special-unit exceptions, PvP hostility, and path-to-range behavior remain
 unresolved; other melee skills are not admitted by resemblance.
 
-The timed self-state fixture is selected by exact ID through the same manifest
-rather than by the string `Frozen Armor`. The generic decoder validates the
-owned row's server function, state/stat names, linear defense formula, and
-linear-plus-hard-point-synergy duration shape. Its shared cast path pays 7 mana;
-level 1 applies `frozenarmor` for 3000 frames, attaches a 30% named defense
-source, adds 300 frames and 5 defense percentage points per skill level, and
-adds 250 frames per hard point in each of Shiver Armor and Chilling Armor.
-Refresh, checkpoint, expiration, and exact stat-source removal are executable.
-These values match Blizzard's official 120-second/30% level-1 table and
-10-second duration synergies.
+The three Sorceress cold armors are selected by exact ID through the same
+manifest, not by skill names in runtime policy. One decoder validates their
+common server function, exclusive States group, defense/duration formulas,
+mana, reaction event/function, damage bands, hard-point formulas, overlays,
+sounds, and Chilling Armor missile. Effective cast level drives ordinary level
+scaling; only `.blvl` expressions read hard skill points. This prevents bonuses
+from equipment from incorrectly multiplying synergy contributions.
+
+Frozen Armor level 1 pays 7 mana, applies `frozenarmor` for 3000 frames, adds a
+30% named defense source, gains 300 frames and 5 defense percentage points per
+skill level, and gains 250 frames per hard point in Shiver Armor and Chilling
+Armor. Shiver Armor and Chilling Armor use the same state transaction with
+their own owned vectors and cross-family hard-point damage/duration synergies.
+Recast refresh, group replacement, checkpoint restore, expiration, and exact
+stat-source removal are executable for the family.
 
 Mana admission is shared behavior, not a property of either fixture. Blizzard's
 Expansion skill guide says that lack of mana makes a skill unusable, while its
@@ -350,21 +357,23 @@ preserves the available mana; executable coverage locks that boundary. Exact
 cost formulas, rounding, successful-cast charge timing, and interruption/refund
 rules remain probe-gated by behavior family.
 
-The generic decoder now also validates the owned row's `damagedinmelee` event
-function 2, Param5/6 freeze formula, Param8 hard-point synergy percentage, the
-target `freeze` state, and the armor state's States.txt group. A factual
-successful melee hit applies a source-tagged freeze state to a monster attacker;
-the row produces 30 + 3 frames per skill level and +5% per hard point in each
-named synergy. The immutable Normal/Nightmare/Hell rule applies the official
-full/half/quarter cold-length relationship. While active, the generic disabled-
-action fact stops the monster AI and motion; expiration restores eligibility.
-The same state engine replaces another active state in the owned exclusive group
-and removes the displaced stat source exactly.
+The reaction pair is record-driven. `damagedinmelee`/2 requires a successful
+damaging hit before Frozen Armor applies its 30 + 3 frames per level freeze and
+5% hard-point length bonuses. `attackedinmelee`/3 makes Shiver Armor roll and
+mitigate cold damage on every melee attempt, including a miss.
+`hitbymissile`/1 makes Chilling Armor launch the owned `chillingarmorbolt`
+through the ordinary projectile, collision, damage, chill, audio, and
+presentation path.
 
-Evidence remains deliberately partial. PvP must chill instead of freeze, and
-target cold resistance/immunity, champion/boss modifiers, exact integer/tick
-ordering, presentation, and animation action timing remain absent. These edges
-must not be inferred from the older reconstruction.
+Cold resistance independently scales state length and a raw resistance of 100
+suppresses cold damage and chill. Monster state length uses the immutable
+Normal/Nightmare/Hell full/half/quarter rule. Players and monster entities with
+the empty `monster.freeze_immune` classification receive `cold` chill rather
+than the action-disabling `freeze` state; boss population currently installs
+that marker, and later champion/unique generation can reuse it without changing
+the armor system. This follows Blizzard's published rule that champions,
+uniques, super uniques, and bosses can only be chilled. Exact action-frame and
+same-tick cross-system ordering remain target-runtime probes.
 
 ## Client-function-30 curse presentation probe
 
@@ -491,7 +500,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 326 missing configurations,
+classification and implementation of the 324 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -1367,6 +1376,9 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
 - Blizzard's official [Sorceress Cold Spells](https://classic.battle.net/diablo2exp/skills/sorceress-cold.shtml)
   table supplies the published Frozen Armor effect, level vectors, synergies,
   PvP distinction, cold-armor exclusion, and difficulty cold-length warning.
+- Blizzard's official [Monster Bonuses](https://classic.battle.net/diablo2exp/monsters/bonus.shtml)
+  page supplies the champion/unique hard-freeze exclusion; the corresponding
+  Super Unique and Boss pages publish the same chill-only rule.
 - Blizzard's official [Basic Skill Information](https://classic.battle.net/diablo2exp/skills/basics.shtml)
   says a lack of mana makes an active skill unusable; its
   [Character Information](https://classic.battle.net/diablo2exp/basics/characters.shtml)

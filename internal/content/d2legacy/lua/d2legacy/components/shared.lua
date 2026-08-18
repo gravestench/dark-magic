@@ -244,6 +244,10 @@ function M.register()
     -- monster classes without re-reading MonStats or matching definition IDs.
     component("d2legacy.monster.boss", {})
     component("d2legacy.monster.prime_evil", {})
+    -- Champions, uniques, super uniques, and bosses cannot receive a hard
+    -- freeze. Population policy can add this capability without teaching a
+    -- skill system how a monster acquired its quality.
+    component("d2legacy.monster.freeze_immune", {})
     -- A summoned monster may receive an authored skill at a level calculated
     -- by its summoning record. Keeping the grant as ECS data lets a generic
     -- monster-skill consumer execute it without teaching ownership or summon
@@ -445,9 +449,18 @@ function M.register()
         { name = "exclusive_group", type = "string" },
         { name = "replacement_priority", type = "i64" },
         { name = "reject_lower_priority", type = "bool" },
-        { name = "on_melee_hit_state_id", type = "string" },
-        { name = "on_melee_hit_duration", type = "i64" },
-        { name = "on_melee_hit_disables_action", type = "bool" },
+        { name = "reaction", type = "string" },
+        { name = "reaction_skill_id", type = "i64" },
+        { name = "reaction_state_id", type = "string" },
+        { name = "reaction_chill_state_id", type = "string" },
+        { name = "reaction_stat", type = "string" },
+        { name = "reaction_stat_value", type = "i64" },
+        { name = "reaction_chill_stat", type = "string" },
+        { name = "reaction_chill_stat_value", type = "i64" },
+        { name = "reaction_duration", type = "i64" },
+        { name = "reaction_disables_action", type = "bool" },
+        { name = "reaction_minimum_damage_raw", type = "i64" },
+        { name = "reaction_maximum_damage_raw", type = "i64" },
         { name = "action_disabled", type = "bool" },
     })
     component("d2legacy.state.stat_request", {
@@ -473,9 +486,18 @@ function M.register()
         { name = "exclusive_group", type = "string" },
         { name = "replacement_priority", type = "i64" },
         { name = "reject_lower_priority", type = "bool" },
-        { name = "on_melee_hit_state_id", type = "string" },
-        { name = "on_melee_hit_duration", type = "i64" },
-        { name = "on_melee_hit_disables_action", type = "bool" },
+        { name = "reaction", type = "string" },
+        { name = "reaction_skill_id", type = "i64" },
+        { name = "reaction_state_id", type = "string" },
+        { name = "reaction_chill_state_id", type = "string" },
+        { name = "reaction_stat", type = "string" },
+        { name = "reaction_stat_value", type = "i64" },
+        { name = "reaction_chill_stat", type = "string" },
+        { name = "reaction_chill_stat_value", type = "i64" },
+        { name = "reaction_duration", type = "i64" },
+        { name = "reaction_disables_action", type = "bool" },
+        { name = "reaction_minimum_damage_raw", type = "i64" },
+        { name = "reaction_maximum_damage_raw", type = "i64" },
         { name = "action_disabled", type = "bool" },
     })
     component("d2legacy.state.event", {
@@ -487,6 +509,10 @@ function M.register()
         { name = "expires_tick", type = "i64" },
         { name = "reason", type = "string" },
     })
+    -- Each combat-result entity can be consumed independently by the active
+    -- state-reaction system. The marker prevents replaying a reaction without
+    -- sharing mutable ownership with death, reflection, or future observers.
+    component("d2legacy.state.reaction_observed", {})
 end
 
 return M
