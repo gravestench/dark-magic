@@ -1,0 +1,96 @@
+{
+  "schema": "d2legacy.fire_golem_death_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "runtime": {
+    "patch": "1.14d",
+    "mode": "expansion",
+    "session": "single-player",
+    "character_origin": "probe-created",
+    "executable_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256",
+    "observation": "debugger-stat-log-plus-video",
+    "executable_unmodified": true
+  },
+  "records": {
+    "skill_id": 94,
+    "skill_name_key": "REPLACE_WITH_OWNED_SKILLS_NAME_KEY",
+    "localized_skill_name": "REPLACE_WITH_OWNED_TBL_TEXT",
+    "locale": "REPLACE_WITH_LOCALE",
+    "monster_id": "firegolem",
+    "death_damage_enabled": true,
+    "extracted_records_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256"
+  },
+  "cases": [
+    {
+      "id": "replacement-normal-level-1",
+      "trigger": "replacement",
+      "difficulty": "normal",
+      "skill_level": 1,
+      "player_level": 30,
+      "map_seed": 0,
+      "event_frames": {
+        "old_golem_removed": -1,
+        "explosion_started": -1,
+        "new_golem_created": -1
+      },
+      "explosion_center": {
+        "x_subtiles": 0,
+        "y_subtiles": 0
+      },
+      "targets": [
+        {
+          "id": "near-hostile-monster",
+          "kind": "hostile_monster",
+          "hostile_to_owner": true,
+          "position": {
+            "x_subtiles": 0,
+            "y_subtiles": 0
+          },
+          "distance_millisubtiles": 0,
+          "health_before_raw": 1,
+          "health_after_raw": 1,
+          "fire_resistance_percent": 0,
+          "physical_resistance_percent": 0,
+          "no_absorb_or_flat_damage_reduction": true,
+          "pre_mitigation_channels_raw": {
+            "physical": 0,
+            "fire": 0,
+            "cold": 0,
+            "lightning": 0,
+            "poison": 0,
+            "magic": 0
+          },
+          "damage_event": false,
+          "hit_reaction": false,
+          "died": false
+        },
+        {
+          "id": "far-hostile-monster",
+          "kind": "hostile_monster",
+          "hostile_to_owner": true,
+          "position": {
+            "x_subtiles": 0,
+            "y_subtiles": 0
+          },
+          "distance_millisubtiles": 0,
+          "health_before_raw": 1,
+          "health_after_raw": 1,
+          "fire_resistance_percent": 0,
+          "physical_resistance_percent": 0,
+          "no_absorb_or_flat_damage_reduction": true,
+          "pre_mitigation_channels_raw": {
+            "physical": 0,
+            "fire": 0,
+            "cold": 0,
+            "lightning": 0,
+            "poison": 0,
+            "magic": 0
+          },
+          "damage_event": false,
+          "hit_reaction": false,
+          "died": false
+        }
+      ]
+    }
+  ]
+}

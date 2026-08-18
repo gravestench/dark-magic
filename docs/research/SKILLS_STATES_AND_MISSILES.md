@@ -511,6 +511,37 @@ that target-facing description about affected unit classes. Exact 1.14d
 damage, channels, radius, target filter, and replacement/death ordering remain
 probe-gated rather than inheriting older behavior silently.
 
+`internal/dev/tools/fire_golem_death_probe` turns that unknown into a bounded
+1.14d evidence contract. It accepts only an unmodified, executable-fingerprinted
+Expansion 1.14d runtime using probe-created characters, plus the owned
+`Skills.txt`, English TBL name, and `MonStats.txt` record anchors. An
+instrumented raw-stat log supplies exact health and pre-mitigation channel
+values while paired video establishes visible ordering; neither source can
+silently stand in for the other. Classic, earlier patches, imported saves,
+community-tool output, and modified executables are rejected.
+
+The required matrix covers both combat death and successful golem replacement;
+Normal, Nightmare, and Hell; skill levels 1, 2, and 20; affected and unaffected
+samples on both sides of the radius boundary; owner, allied/hostile player,
+allied minion, neutral monster, and hostile monster classes; and zero, partial,
+and immune fire/physical resistance controls with absorb and flat reduction
+removed. Local-hosted multiplayer is permitted only to observe player
+hostility classes in the target runtime. It does not add vanilla-server,
+protocol, or save compatibility to Dark Magic.
+
+Start with
+`docs/research/probes/fire-golem-death-lod-114d-expansion.template.json`, retain
+the proprietary raw capture outside the repository, and normalize the sanitized
+observation with:
+
+```shell
+go run ./internal/dev/tools/fire_golem_death_probe \
+  -input /path/to/sanitized-fire-golem-death.json
+```
+
+Only a reviewed report covering that matrix may promote explosion values or
+ordering into the shared ECS death-splash policy.
+
 ## Skills.txt dispatch is strongly data-driven
 
 D2MOO's `Skills.cpp` reconstructs large server start/do dispatch tables. `Skills.txt` records identify behavior families by numeric server-function IDs, and those IDs route many named skills through shared implementations.
