@@ -22,6 +22,16 @@ function M.resolve(target, rolled_bundle, ecs)
     for _, channel in ipairs(bundle_policy.channels) do
         mitigated[channel] = mitigation.apply(rolled[channel], channel, defense)
     end
+    -- Percent fire absorption is a post-resistance transaction: the absorbed
+    -- portion is removed from incoming damage and restored as life before the
+    -- remaining channels commit. Fire Golem reaches this through the same
+    -- defense component as future item/state sources.
+    local absorbed_fire = 0
+    if defense and mitigated.fire > 0 then
+        local absorb = math.max(0, math.min(100, defense:get("fire_absorb_percent")))
+        absorbed_fire = math.floor(mitigated.fire * absorb / 100)
+        mitigated.fire = mitigated.fire - absorbed_fire
+    end
     -- Poison remains an independently recorded stage fact. It does not enter
     -- this immediate-health total until its rate/duration transaction exists.
     local rolled_total = bundle_policy.immediate_total(rolled)
@@ -29,7 +39,8 @@ function M.resolve(target, rolled_bundle, ecs)
     local monster = ecs.get(target, "d2legacy.monster.stats")
     if monster then
         local before = monster:get("health")
-        local remaining = math.max(0, before - mitigated_total)
+        local healed = math.min(monster:get("max_health"), before + absorbed_fire)
+        local remaining = math.max(0, healed - mitigated_total)
         monster:set("health", remaining)
         return {
             channel = bundle_policy.label(rolled),
@@ -48,6 +59,10 @@ function M.resolve(target, rolled_bundle, ecs)
     -- the state that was actually committed. Exact Expansion 1.14d player-life
     -- storage and fractional-damage ordering remain an owned-runtime probe.
     local before = player:get("health")
+    if absorbed_fire > 0 then
+        before = math.min(player:get("max_health"), before + math.floor(absorbed_fire / 256))
+        player:set("health", before)
+    end
     local applied_raw = math.floor(mitigated_total / 256) * 256
     applied_raw = math.min(before * 256, applied_raw)
     local remaining = math.max(0, before - math.floor(applied_raw / 256))

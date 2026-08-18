@@ -130,6 +130,7 @@ can already do.
 | Combat Lab | Production world + authoritative combat diagnostics | `make play-combat-lab` |
 | Monster Lab | Typed monster records and composites | `make play-monster-lab` |
 | Missile Lab | Typed missile records and presentation | `make play-missile-lab` |
+| Spell Lab | Production assignment, casts, missiles, states, and summon families | `make play-spell-lab` |
 | Warp Lab | Production movement, interaction, and level transitions | `make play-warp-lab` |
 | Composite Lab | Player composite animation assembly | `go run ./cmd/client --start-scene=composite_lab` |
 | DT1 Lab | Tileset decoding and inspection | `go run ./cmd/client --start-scene=dt1_lab` |

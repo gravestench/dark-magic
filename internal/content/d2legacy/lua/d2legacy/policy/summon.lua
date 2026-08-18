@@ -11,6 +11,8 @@ function M.pet_limit(definition, level)
         authored = level < 4 and level or 2 + math.floor(level / 3)
     elseif definition.limit_policy == "skill_level" then
         authored = level
+    elseif definition.limit_policy == "fixed_one" then
+        authored = 1
     else
         error("unsupported summon pet-limit policy " .. tostring(definition.limit_policy))
     end

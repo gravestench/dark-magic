@@ -62,6 +62,7 @@ local function learned_skill(skill, description)
     return {
         id = math.floor(id),
         level = 1,
+        hard_level = 1,
         list_row = math.floor(list_row),
         left_allowed = skill.leftskill == "1",
         right_allowed = true,
@@ -144,6 +145,7 @@ function M.learned_for_ids(ids, level)
         local skill = assert(skills_by_id[id], "unknown skill ID " .. id)
         local learned = assert(learned_skill(skill, descriptions[skill.skilldesc]), "skill ID is not learnable " .. id)
         learned.level = level
+        learned.hard_level = level
         result[#result + 1] = learned
     end
     table.sort(result, function(left, right)

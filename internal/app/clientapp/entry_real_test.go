@@ -330,9 +330,9 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 }
 
 // Spell Lab adds only ephemeral fixture learning and a read-only legend to the
-// production world. This acceptance path proves its default Fire Bolt still
-// crosses ordinary assignment, mana, cast, missile, and combat authority.
-func TestSpellLabCastsProductionFireBolt(t *testing.T) {
+// production world. This acceptance path proves a straight missile and the
+// complete golem family cross their shared authoritative behavior systems.
+func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
 	}
@@ -374,8 +374,8 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	if !ok {
 		t.Fatal("Spell Lab has no authoritative learned skills")
 	}
-	if learned.Len() != 27 {
-		t.Fatalf("Spell Lab learned skills = %d, want 27 exact-ID behaviors", learned.Len())
+	if learned.Len() != 31 {
+		t.Fatalf("Spell Lab learned skills = %d, want 31 exact-ID behaviors", learned.Len())
 	}
 	learnedIDs := map[int64]bool{}
 	for _, entity := range learned.Entities() {
@@ -387,7 +387,7 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 			learnedIDs[id.(int64)] = level == int64(20)
 		}
 	}
-	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 70, 72, 80, 95, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
+	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 70, 72, 75, 80, 85, 90, 94, 95, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
 		if !learnedIDs[id] {
 			t.Fatalf("Spell Lab skill %d is missing or not level 20: %#v", id, learnedIDs)
 		}
@@ -490,6 +490,351 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 		if afterHealth.(int64) >= beforeHealth.(int64) {
 			t.Fatalf("Spell Lab Fire Bolt left target health unchanged at %v", afterHealth)
 		}
+	}
+
+	// Exercise the complete golem family through the same assignment/cast path.
+	// Each new member replaces the prior member of PetType `golem`; Iron Golem
+	// additionally proves that an identified ground item is consumed only by a
+	// successful cast and leaves durable provenance on the summon.
+	advance := func(frames int) {
+		t.Helper()
+		for range frames {
+			if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	castGolem := func(skillID int64, targetID string) {
+		t.Helper()
+		if err := app.commandIntents.Submit("player.assign_skills", map[string]any{"right": skillID}); err != nil {
+			t.Fatal(err)
+		}
+		advance(1)
+		if err := app.commandIntents.Submit("player.use_skill", map[string]any{
+			"side": "right", "target_x": playerX.(float64) + 2, "target_y": playerY.(float64), "target_id": targetID,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		advance(1)
+		if skillID == 90 {
+			activeCasts, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.skill.cast")
+			if _, active := activeCasts.Get(player); !active {
+				vitals, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.vitals")
+				playerVitals, _ := vitals.Get(player)
+				manaRaw, _ := playerVitals.Get("mana_raw")
+				assignments, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.skill_assignment")
+				assignment, _ := assignments.Get(player)
+				rightSkill, _ := assignment.Get("right")
+				items, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.identity")
+				placements, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.placement")
+				positions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.position")
+				locations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.location")
+				inactive, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.inactive")
+				var targetTypes, identified, placement, position, location any
+				var unavailable bool
+				for _, entity := range items.Entities() {
+					item, _ := items.Get(entity)
+					id, _ := item.Get("id")
+					if id == targetID {
+						targetTypes, _ = item.Get("item_types")
+						identified, _ = item.Get("identified")
+						if component, found := placements.Get(entity); found {
+							placement, _ = component.Snapshot()
+						}
+						if component, found := positions.Get(entity); found {
+							position, _ = component.Snapshot()
+						}
+						if component, found := locations.Get(entity); found {
+							location, _ = component.Snapshot()
+						}
+						_, unavailable = inactive.Get(entity)
+					}
+				}
+				playerLocation, _ := locations.Get(player)
+				playerLocationSnapshot, _ := playerLocation.Snapshot()
+				t.Fatalf("Spell Lab Iron Golem request failed preflight before mana payment; mana_raw=%v right_skill=%v item types=%v identified=%v placement=%v position=%v location=%v player_location=%v inactive=%v",
+					manaRaw, rightSkill, targetTypes, identified, placement, position, location, playerLocationSnapshot, unavailable)
+			}
+		}
+		advance(17)
+	}
+	assertOnlyGolem := func(definition string) akara.Entity {
+		t.Helper()
+		owned, ok := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.owned_unit")
+		if !ok || owned.Len() != 1 {
+			t.Fatalf("Spell Lab owned golems = %d, want one", owned.Len())
+		}
+		entity := owned.Entities()[0]
+		monster, found := monsters.Get(entity)
+		if !found {
+			t.Fatalf("Spell Lab golem %d has no monster identity", entity)
+		}
+		actual, _ := monster.Get("definition_id")
+		if actual != definition {
+			events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.skill.summon_event")
+			var outcome, reason any
+			for _, eventEntity := range events.Entities() {
+				event, _ := events.Get(eventEntity)
+				kind, _ := event.Get("kind")
+				if kind == "golem_summon" {
+					outcome, _ = event.Get("outcome")
+					reason, _ = event.Get("reason")
+				}
+			}
+			t.Fatalf("Spell Lab golem definition = %v, want %s; last outcome=%v reason=%v", actual, definition, outcome, reason)
+		}
+		return entity
+	}
+	createMeleeEvent := func(attackerID, defenderID string, damageRaw int64) {
+		t.Helper()
+		entity := app.entitySimulation.World().MustCreateEntity()
+		events, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.melee_event")
+		if _, err := events.Set(entity, map[string]any{
+			"kind": "hit_resolved", "tick": int64(0), "attacker_id": attackerID,
+			"target_id": defenderID, "hit": true, "damage_raw": damageRaw,
+			"remaining_health_raw": int64(1), "hand": "rarm", "attack_rating": int64(1),
+			"defense": int64(0), "hit_chance": int64(95), "outcome": "hit",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	castGolem(75, "")
+	clay := assertOnlyGolem("claygolem")
+	claySelectable, _ := selectables.Get(clay)
+	clayID, _ := claySelectable.Get("id")
+	createMeleeEvent(targetID.(string), clayID.(string), 256)
+	advance(2)
+	states, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.state.instance")
+	statSources, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.stat.source")
+	claySlow, velocitySlow, attackSlow := false, false, false
+	for _, entity := range states.Entities() {
+		state, _ := states.Get(entity)
+		stateTarget, _ := state.Get("target")
+		stateID, _ := state.Get("state_id")
+		if stateTarget == target && stateID == "slowed" {
+			claySlow = true
+		}
+	}
+	for _, entity := range statSources.Entities() {
+		source, _ := statSources.Get(entity)
+		sourceTarget, _ := source.Get("target")
+		stat, _ := source.Get("stat")
+		value, _ := source.Get("value")
+		if sourceTarget == target && value.(int64) < 0 {
+			velocitySlow = velocitySlow || stat == "velocitypercent"
+			attackSlow = attackSlow || stat == "attackrate"
+		}
+	}
+	if !claySlow || !velocitySlow || !attackSlow {
+		t.Fatalf("Spell Lab Clay Golem melee reaction state=%v velocity=%v attack=%v", claySlow, velocitySlow, attackSlow)
+	}
+	castGolem(85, "")
+	blood := assertOnlyGolem("bloodgolem")
+	reactions, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.reactive_effect")
+	if _, found := reactions.Get(blood); !found {
+		t.Fatal("Spell Lab Blood Golem has no record-derived reactive effect")
+	}
+	bloodStats, _ := stats.Get(blood)
+	bloodMaximum, _ := bloodStats.Get("max_health")
+	if err := bloodStats.Set("health", bloodMaximum.(int64)-20*256); err != nil {
+		t.Fatal(err)
+	}
+	playerVitals, _ = vitals.Get(player)
+	playerMaximum, _ := playerVitals.Get("max_health")
+	if err := playerVitals.Set("health", playerMaximum.(int64)-10); err != nil {
+		t.Fatal(err)
+	}
+	bloodSelectable, _ := selectables.Get(blood)
+	bloodID, _ := bloodSelectable.Get("id")
+	createMeleeEvent(bloodID.(string), targetID.(string), 10*256)
+	advance(1)
+	bloodHealth, _ := bloodStats.Get("health")
+	playerHealth, _ := playerVitals.Get("health")
+	if bloodHealth.(int64) <= bloodMaximum.(int64)-20*256 || playerHealth.(int64) <= playerMaximum.(int64)-10 {
+		t.Fatalf("Spell Lab Blood Golem did not split stolen life: golem=%v owner=%v", bloodHealth, playerHealth)
+	}
+	beforeOwnerTransfer := bloodHealth.(int64)
+	if err := playerVitals.Set("health", playerHealth.(int64)+4); err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	bloodHealth, _ = bloodStats.Get("health")
+	if bloodHealth.(int64)-beforeOwnerTransfer != 256 {
+		t.Fatalf("Spell Lab Blood Golem owner-healing transfer = %d raw, want 256", bloodHealth.(int64)-beforeOwnerTransfer)
+	}
+	castGolem(94, "")
+	fire := assertOnlyGolem("firegolem")
+	grants, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.monster.granted_skill")
+	grant, found := grants.Get(fire)
+	if !found {
+		t.Fatal("Spell Lab Fire Golem has no granted Holy Fire fact")
+	}
+	grantedName, _ := grant.Get("skill")
+	grantedLevel, _ := grant.Get("level")
+	if grantedName != "holy fire" || grantedLevel != int64(27) {
+		t.Fatalf("Spell Lab Fire Golem grant = %v level %v, want holy fire/27", grantedName, grantedLevel)
+	}
+	periodicDamage, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.periodic_damage")
+	periodic, found := periodicDamage.Get(fire)
+	if !found {
+		t.Fatal("Spell Lab Fire Golem has no decoded periodic-damage schedule")
+	}
+	period, _ := periodic.Get("period_ticks")
+	channel, _ := periodic.Get("channel")
+	if period != int64(50) || channel != "fire" {
+		t.Fatalf("Spell Lab Fire Golem periodic damage = period %v channel %v", period, channel)
+	}
+	fireSelectable, _ := selectables.Get(fire)
+	fireID, _ := fireSelectable.Get("id")
+	targetStats, _ := stats.Get(target)
+	targetMaximum, _ := targetStats.Get("max_health")
+	if err := targetStats.Set("health", targetMaximum); err != nil {
+		t.Fatal(err)
+	}
+	advance(51)
+	periodicEvents, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.combat.event")
+	firePulse := false
+	for _, entity := range periodicEvents.Entities() {
+		event, _ := periodicEvents.Get(entity)
+		sourceKind, _ := event.Get("source_kind")
+		attackerID, _ := event.Get("attacker_id")
+		if sourceKind == "periodic_damage" && attackerID == fireID {
+			firePulse = true
+		}
+	}
+	if !firePulse {
+		t.Fatal("Spell Lab Fire Golem emitted no Holy Fire damage event")
+	}
+	if err := app.commandIntents.Submit("item.move", map[string]any{
+		"item_id":     "fixture-short-sword",
+		"destination": map[string]any{"container": "world", "x": playerX.(float64), "y": playerY.(float64)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance(2)
+	items, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.identity")
+	placements, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.placement")
+	inactiveItems, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.world.inactive")
+	var ironItem akara.Entity
+	var itemMinimum, itemMaximum int64
+	for _, entity := range items.Entities() {
+		item, _ := items.Get(entity)
+		id, _ := item.Get("id")
+		if id == "fixture-short-sword" {
+			ironItem = entity
+			itemTypes, _ := item.Get("item_types")
+			materialFlags, _ := item.Get("material_flags")
+			identified, _ := item.Get("identified")
+			placement, _ := placements.Get(entity)
+			container, _ := placement.Get("container")
+			if itemTypes == "" || materialFlags.(int64)&2 == 0 || identified != true || container != "world" {
+				t.Fatalf("Spell Lab Iron target types=%v material=%v identified=%v container=%v",
+					itemTypes, materialFlags, identified, container)
+			}
+			itemMelee, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.melee")
+			melee, _ := itemMelee.Get(entity)
+			minimum, _ := melee.Get("physical_min")
+			maximum, _ := melee.Get("physical_max")
+			itemMinimum, itemMaximum = minimum.(int64), maximum.(int64)
+			if _, inactive := inactiveItems.Get(entity); inactive {
+				t.Fatal("Spell Lab Iron target item became inactive in the player's current room")
+			}
+			break
+		}
+	}
+	if ironItem == 0 {
+		t.Fatal("Spell Lab Iron target item is missing before cast")
+	}
+	// Enhanced Damage is local to the consumed weapon. Iron Golem must fold it
+	// into the weapon's own damage before transferring the remaining property
+	// sources; treating it as a whole-monster percentage would also multiply
+	// the golem's intrinsic damage.
+	modifierEntity := app.entitySimulation.World().MustCreateEntity()
+	itemModifiers, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.item.stat_modifier")
+	if _, err := itemModifiers.Set(modifierEntity, map[string]any{
+		"item": ironItem, "source_id": "acceptance-enhanced-damage", "source_kind": "affix",
+		"stat": "damagepercent", "operation": "local_percent", "value": int64(50), "order": int64(10),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Start an otherwise-valid Iron Golem cast, then remove its item before the
+	// SC action event. The effect-time revalidation must preserve the item and
+	// existing Fire Golem while retaining the already-paid mana transaction.
+	playerVitals, _ = vitals.Get(player)
+	beforeInvalidatedMana, _ := playerVitals.Get("mana_raw")
+	if err := app.commandIntents.Submit("player.assign_skills", map[string]any{"right": int64(90)}); err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	if err := app.commandIntents.Submit("player.use_skill", map[string]any{
+		"side": "right", "target_x": playerX.(float64) + 2, "target_y": playerY.(float64),
+		"target_id": "fixture-short-sword",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	if err := app.commandIntents.Submit("item.move", map[string]any{
+		"item_id": "fixture-short-sword", "destination": map[string]any{"container": "inventory", "x": 8, "y": 0},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance(17)
+	playerVitals, _ = vitals.Get(player)
+	afterInvalidatedMana, _ := playerVitals.Get("mana_raw")
+	if afterInvalidatedMana.(int64) >= beforeInvalidatedMana.(int64) {
+		t.Fatal("Spell Lab invalidated Iron Golem cast did not retain its paid mana cost")
+	}
+	assertOnlyGolem("firegolem")
+	if _, found := items.Get(ironItem); !found {
+		t.Fatal("Spell Lab invalidated Iron Golem cast consumed its target item")
+	}
+	summonEvents, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.skill.summon_event")
+	invalidated := false
+	for _, entity := range summonEvents.Entities() {
+		event, _ := summonEvents.Get(entity)
+		outcome, _ := event.Get("outcome")
+		reason, _ := event.Get("reason")
+		if outcome == "invalidated" && reason == "item_not_on_ground" {
+			invalidated = true
+		}
+	}
+	if !invalidated {
+		t.Fatal("Spell Lab emitted no item_not_on_ground result for invalidated Iron Golem cast")
+	}
+	if err := app.commandIntents.Submit("item.move", map[string]any{
+		"item_id":     "fixture-short-sword",
+		"destination": map[string]any{"container": "world", "x": playerX.(float64), "y": playerY.(float64)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance(2)
+	castGolem(90, "fixture-short-sword")
+	iron := assertOnlyGolem("irongolem")
+	provenance, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.summon.item_provenance")
+	itemSource, found := provenance.Get(iron)
+	if !found {
+		t.Fatal("Spell Lab Iron Golem has no consumed-item provenance")
+	}
+	consumedID, _ := itemSource.Get("item_id")
+	identified, _ := itemSource.Get("identified")
+	resolvedMinimum, _ := itemSource.Get("resolved_weapon_minimum_raw")
+	resolvedMaximum, _ := itemSource.Get("resolved_weapon_maximum_raw")
+	if consumedID != "fixture-short-sword" || identified != true {
+		t.Fatalf("Spell Lab Iron Golem provenance = %v identified=%v", consumedID, identified)
+	}
+	if resolvedMinimum != itemMinimum*150/100 || resolvedMaximum != itemMaximum*150/100 {
+		t.Fatalf("Spell Lab Iron Golem local Enhanced Damage = %v-%v, want %d-%d",
+			resolvedMinimum, resolvedMaximum, itemMinimum*150/100, itemMaximum*150/100)
+	}
+	if _, found := itemModifiers.Get(modifierEntity); found {
+		t.Fatal("Spell Lab Iron Golem retained the consumed item's local modifier entity")
+	}
+	ironStats, _ := stats.Get(iron)
+	ironMinimum, _ := ironStats.Get("physical_min")
+	ironMaximum, _ := ironStats.Get("physical_max")
+	if ironMinimum.(int64) <= itemMinimum || ironMaximum.(int64) <= itemMaximum {
+		t.Fatalf("Spell Lab Iron Golem base-item damage = %v-%v, consumed item %d-%d",
+			ironMinimum, ironMaximum, itemMinimum, itemMaximum)
 	}
 }
 

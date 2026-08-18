@@ -30,6 +30,12 @@ function M.register()
             { name = "right_allowed", type = "bool" },
         },
     })
+
+    ecs.component({
+        name = "d2legacy.player.skill_hard_level",
+        version = 1,
+        fields = { { name = "level", type = "i64" } },
+    })
 end
 
 return M

@@ -84,14 +84,23 @@ The renderer-independent `d2legacy` Lua authority now owns:
   and checkpointed pulse schedule compose maintained stats, direct party
   effects, or deterministic corpse operations without manufacturing casts,
   plus a bounded connected presentation relationship that reuses the offline
-  aura renderer without exporting gameplay policy; and
+  aura renderer without exporting gameplay policy;
 - the complete exact-ID `summon.targeted-corpse` family for Raise Skeleton,
   Raise Skeletal Mage, and Revive. One decoder joins `Skills.txt`, `PetType.txt`,
   Skeleton Mastery, and Summon Resist; one transaction validates and
   revalidates the corpse around mana payment, consumes it once, applies a
   record-selected pet/source-monster materialization policy, and creates an
   ordinary friendly monster with owned-unit, AI, combat, limit, modifier, and
-  lifetime facts; and
+  lifetime facts;
+- the complete admitted exact-ID `summon.golem` family for Clay, Blood, Iron,
+  and Fire Golem. One decoder joins all four Skills rows to Golem Mastery,
+  Summon Resist, PetType, SkillDesc localized synergy keys, and the granted
+  Holy Fire row. One effect transaction creates an ordinary friendly monster,
+  enforces the shared PetType limit, distinguishes hard synergy points from
+  effective cast level, and revalidates Iron Golem's metal ground item before
+  replacement and consumption. Generic ECS reactions cover Clay slowing,
+  Blood life exchange, Iron item provenance/properties, thorns, fire absorb,
+  and scheduled Holy Fire pulses;
 - the shared melee action path.
 
 `MonStats2.revive` becomes the empty `d2legacy.monster.revivable` capability,
@@ -102,14 +111,13 @@ variant/projectile execution and the full revived-monster AI/skill inheritance
 surface remain downstream monster-skill work; their absence is not hidden by
 the corpse-summon family declaration.
 
-Fire Bolt is the first explicitly configured expansion 1.14d straight-missile
-fixture. It is decoded from Skills.txt/Missiles.txt by generic family code and
-does not own a command branch, component schema, system, damage function, or RNG
-stream. A second synthetic record-pair test proves decoder reuse without
-claiming incomplete retail behavior for Ice Bolt or another named skill. An
-opt-in owned-archive test boots the authority against the target expansion
-1.14d records so the generic decoder's production contract is checked without
-placing copyrighted tables in Git.
+Fire Bolt remains an explicitly configured Expansion 1.14d acceptance fixture,
+not a standalone implementation. It is decoded from Skills.txt/Missiles.txt by
+generic family code and does not own a command branch, component schema, system,
+damage function, or RNG stream. Straight, radial, area-impact, and on-hit-state
+records compose shared cast/projectile/contact mechanisms. Opt-in owned-archive
+tests boot the authority against target records without placing copyrighted
+tables in Git.
 
 When that generic family materializes inside an installed generated-level
 plan, it now attaches `d2legacy.world.room_resident` using the common canonical
@@ -130,8 +138,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 24
-explicitly admitted configurations, and 333 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 31
+explicitly admitted configurations, and 326 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -483,9 +491,16 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 333 missing configurations,
+classification and implementation of the 326 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
+
+Fire Golem's authored `MonStats.deathDmg` flag is established, and Blizzard's
+Expansion documentation confirms that replacing the golem explodes the old
+one. The available recovered 1.10f general death-damage routine conflicts with
+that target-facing description about affected unit classes. Exact 1.14d
+damage, channels, radius, target filter, and replacement/death ordering remain
+probe-gated rather than inheriting older behavior silently.
 
 ## Skills.txt dispatch is strongly data-driven
 

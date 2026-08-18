@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local combat_target = require("d2legacy.gameplay.combat_target")
+local stat_sources = require("d2legacy.gameplay.stat_sources")
 local M = {}
 
 local function combat_targets(entities)
@@ -69,7 +70,7 @@ function M.register()
         id = "d2legacy.monster.basic_ai",
         phase = "intent",
         query = {
-            any = { "d2legacy.monster.ai", "d2legacy.world.selectable", "d2legacy.state.instance" },
+            any = { "d2legacy.monster.ai", "d2legacy.world.selectable", "d2legacy.state.instance", "d2legacy.stat.source" },
             none = { "d2legacy.world.inactive" },
         },
         read = {
@@ -81,6 +82,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.state.instance",
+            "d2legacy.stat.source",
         },
         write = { "d2legacy.monster.ai", "d2legacy.world.velocity", "d2legacy.combat.basic_attack_request" },
         update = function(context, entities, structural)
@@ -94,7 +96,11 @@ function M.register()
                     stop(velocity)
                     structural:remove(monster, "d2legacy.combat.basic_attack_request")
                 elseif brain and velocity and brain:get("next_think_tick") <= context.tick then
-                    brain:set("next_think_tick", context.tick + brain:get("think_interval"))
+                    local attack_rate = math.max(15,
+                        stat_sources.resolve(entities, monster, "attackrate", 100))
+                    local think_delay = math.max(1,
+                        math.ceil(brain:get("think_interval") * 100 / attack_rate))
+                    brain:set("next_think_tick", context.tick + think_delay)
                     local target, facts = choose(monster, brain, targets)
                     if not target then
                         brain:set("state", "idle")
@@ -116,7 +122,8 @@ function M.register()
                             )
                         else
                             brain:set("state", "chase")
-                            local speed = brain:get("speed")
+                            local speed = math.max(brain:get("speed") * 0.25,
+                                stat_sources.resolve(entities, monster, "velocitypercent", brain:get("speed")))
                             velocity:set("x", dx / length * speed)
                             velocity:set("y", dy / length * speed)
                             structural:remove(monster, "d2legacy.combat.basic_attack_request")
